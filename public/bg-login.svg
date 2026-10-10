@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+<defs>
+<radialGradient id="g1" cx="22%" cy="25%" r="55%"><stop offset="0" stop-color="#10b981" stop-opacity=".55"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/></radialGradient>
+<radialGradient id="g2" cx="82%" cy="78%" r="60%"><stop offset="0" stop-color="#06b6d4" stop-opacity=".5"/><stop offset="1" stop-color="#06b6d4" stop-opacity="0"/></radialGradient>
+<radialGradient id="g3" cx="70%" cy="12%" r="40%"><stop offset="0" stop-color="#6366f1" stop-opacity=".28"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></radialGradient>
+<pattern id="hex" width="56" height="97" patternUnits="userSpaceOnUse" patternTransform="scale(1.1)">
+<path d="M28 0l28 16v32L28 64 0 48V16zM28 64v33M0 48L-28 64M56 48l28 16" fill="none" stroke="#7dd3fc" stroke-opacity=".10" stroke-width="1"/>
+</pattern>
+<linearGradient id="fade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
+<mask id="m"><rect width="1600" height="1000" fill="url(#fade)"/></mask>
+</defs>
+<rect width="1600" height="1000" fill="#050b16"/>
+<rect width="1600" height="1000" fill="url(#g1)"/>
+<rect width="1600" height="1000" fill="url(#g2)"/>
+<rect width="1600" height="1000" fill="url(#g3)"/>
+<rect width="1600" height="1000" fill="url(#hex)" mask="url(#m)"/>
+<g fill="none" stroke="#34d399" stroke-opacity=".16" stroke-width="1.2">
+<circle cx="1220" cy="260" r="120"/><circle cx="1220" cy="260" r="200"/><circle cx="1220" cy="260" r="300"/>
+<path d="M1220 -60V580M900 260h640"/>
+</g>
+<g stroke="#22d3ee" stroke-opacity=".10" stroke-width="1.5"><path d="M-100 820L700 20M-40 920L760 120M60 980L860 180"/></g>
+</svg>

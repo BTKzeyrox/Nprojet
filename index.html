@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#050b16" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Delta Force Boosting Operations System</title>
+    <meta name="description" content="Tactical management system for Delta Force boosting teams with anti-cheat validation, shift tracking, proof lightbox, payroll, and interactive calendar." />
+    <meta property="og:title" content="Delta Force Boosting Operations System" />
+    <meta property="og:description" content="Tactical management system for Delta Force boosting teams with anti-cheat validation, shift tracking, proof lightbox, payroll, and interactive calendar." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet"></noscript>
+    <script>
+      // Thème clair mémorisé : l'écran de démarrage le respecte dès le premier affichage
+      try { if (localStorage.getItem('delta_theme') === 'light') document.documentElement.classList.add('df-splash-light'); } catch (e) {}
+    </script>
+    <style id="df-splash-css">
+      #df-splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;overflow:hidden;
+        background:radial-gradient(ellipse at 50% 42%,#0c2233 0%,#071322 45%,#050b16 100%);color:#e2e8f0;
+        font-family:Sora,Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:opacity .45s ease,transform .45s ease}
+      #df-splash.dfs-out{opacity:0;transform:scale(1.04);pointer-events:none}
+      .dfs-stage{position:relative;display:flex;flex-direction:column;align-items:center;width:min(78vw,420px);padding:0 8px}
+      .dfs-ring{will-change:transform,opacity;position:absolute;left:50%;top:calc(50% - 38px);width:210px;height:210px;margin:-105px 0 0 -105px;border-radius:50%;
+        border:1.5px solid rgba(52,211,153,.35);opacity:0;animation:dfs-ring 2.8s ease-out .2s infinite}
+      .dfs-ring2{animation-delay:1.6s;border-color:rgba(6,182,212,.35)}
+      .dfs-glow{position:absolute;left:50%;top:44%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;
+        background:radial-gradient(circle,rgba(16,185,129,.22) 0%,rgba(6,182,212,.10) 38%,transparent 68%);animation:dfs-glow 3.2s ease-in-out infinite}
+      .dfs-logo{position:relative;width:100%;height:auto}
+      .dfs-p{fill:none;stroke:url(#dfsg);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 2;stroke-dashoffset:1;
+        animation:dfs-draw .75s cubic-bezier(.65,0,.35,1) forwards}
+      .dfs-b{animation-delay:.15s}.dfs-t{animation-delay:.6s;animation-duration:.65s}.dfs-k{animation-delay:.95s;animation-duration:.8s}
+      .dfs-tag{margin-top:18px;font-size:11px;letter-spacing:.34em;font-weight:600;color:#7dd3c0;opacity:0;animation:dfs-fade .7s ease 1.3s forwards;text-align:center}
+      .dfs-slow{display:none;margin-top:18px;font-size:12px;line-height:1.5;color:#94a3b8;text-align:center}
+      .dfs-slow a{color:#7dd3c0;text-decoration:underline}
+      #df-splash.dfs-slow-on .dfs-slow{display:block}
+      @keyframes dfs-draw{to{stroke-dashoffset:0}}
+      @keyframes dfs-ring{0%{opacity:.7;transform:scale(.55)}100%{opacity:0;transform:scale(1.5)}}
+      @keyframes dfs-glow{0%,100%{opacity:.65;transform:scale(.96)}50%{opacity:1;transform:scale(1.05)}}
+      @keyframes dfs-fade{to{opacity:1}}
+      html.df-splash-light #df-splash{background:radial-gradient(ellipse at 50% 42%,#dfe6ee 0%,#d3dce6 50%,#c9d3df 100%);color:#0f172a}
+      html.df-splash-light .dfs-tag{color:#0f766e}
+      html.df-splash-light .dfs-slow{color:#475569}
+      html.df-splash-light .dfs-slow a{color:#0f766e}
+      @media (prefers-reduced-motion:reduce){
+        .dfs-p{animation:none;stroke-dashoffset:0}
+        .dfs-ring,.dfs-glow{animation:none}
+        .dfs-ring{display:none}
+        .dfs-tag{animation:none;opacity:1}
+        #df-splash{transition:opacity .2s ease}
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <div id="df-splash" role="status" aria-live="polite" aria-label="Chargement en cours">
+      <div class="dfs-glow"></div>
+      <div class="dfs-stage">
+        <div class="dfs-ring"></div>
+        <div class="dfs-ring dfs-ring2"></div>
+        <svg class="dfs-logo" viewBox="0 0 270 100" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="dfsg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="270" y2="0">
+              <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <path class="dfs-p dfs-b" pathLength="1" d="M16 86 L16 14 L46 14 Q68 14 68 32 Q68 50 46 50 L16 50 L48 50 Q72 50 72 68 Q72 86 48 86 L16 86"/>
+          <path class="dfs-p dfs-t" pathLength="1" d="M92 14 L172 14 M132 14 L132 86"/>
+          <path class="dfs-p dfs-k" pathLength="1" d="M196 14 L196 86 M252 14 L200 52 L254 86"/>
+        </svg>
+        <div class="dfs-tag">DELTA FORCE // BOOSTING OPS</div>
+        <div class="dfs-slow">Le chargement est plus long que prévu.<br><a href="/">Recharger</a> · <a href="/secours.html">Page de secours</a></div>
+      </div>
+    </div>
+    <script>
+      // Heure de départ (durée minimale d'affichage) et message si le chargement dépasse 15 s
+      window.__dfSplashStart = Date.now();
+      setTimeout(function () { var s = document.getElementById('df-splash'); if (s) s.classList.add('dfs-slow-on'); }, 15000);
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

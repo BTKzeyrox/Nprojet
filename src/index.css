@@ -1,0 +1,548 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-feature-settings: 'cv11' on, 'ss01' on;
+  }
+}
+
+/* ===== Polices modernes ===== */
+.font-tactical {
+  font-family: 'Sora', 'Inter', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: 0.005em;
+}
+.font-mono,
+.font-mono-numbers {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Double fond : image + dégradé ===== */
+html.theme-dark { background: #050b16; }
+html.theme-light { background: #eef4f8; }
+
+.df-bg-login,
+.df-bg-app {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+html.theme-dark .df-bg-login {
+  background-image:
+    linear-gradient(135deg, rgba(4, 12, 24, 0.80) 0%, rgba(5, 40, 46, 0.55) 55%, rgba(4, 16, 36, 0.82) 100%),
+    url('/bg-login.svg');
+}
+html.theme-dark .df-bg-app {
+  background-image:
+    linear-gradient(180deg, rgba(5, 12, 24, 0.30) 0%, rgba(6, 18, 32, 0.58) 100%),
+    url('/bg-app.svg');
+}
+html.theme-light .df-bg-login {
+  background-image:
+    linear-gradient(135deg, rgba(240, 249, 255, 0.90) 0%, rgba(220, 252, 241, 0.80) 55%, rgba(224, 242, 254, 0.90) 100%),
+    url('/bg-login.svg');
+}
+html.theme-light .df-bg-app {
+  background-image:
+    linear-gradient(180deg, rgba(244, 249, 252, 0.72) 0%, rgba(232, 244, 248, 0.86) 100%),
+    url('/bg-app.svg');
+}
+
+/* ===== Cartes en verre (thème sombre) ===== */
+html.theme-dark [class*="bg-[#"] {
+  background-color: rgba(14, 28, 48, 0.50) !important;
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.theme-dark aside {
+  background-image: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.06) 60%, rgba(59, 130, 246, 0.10) 100%) !important;
+}
+html.theme-dark header {
+  background-image: linear-gradient(90deg, rgba(16, 185, 129, 0.10), rgba(6, 182, 212, 0.05)) !important;
+}
+/* Le flou (backdrop-filter) est très lourd : plus aucun flou sur le menu, les cartes et la barre du haut.
+   Le menu de gauche a un fond PLEIN (on ne voit plus la page passer derrière). */
+html.theme-dark aside {
+  background-color: #090f17 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.theme-dark header {
+  background-color: #0a111a !important;
+}
+
+/* (content-visibility retiré : il laissait un « vide noir » quand on défilait vite sur les postes) */
+/* Survol : seulement avec une souris. Sur téléphone, le premier appui comptait comme un « survol »
+   et il fallait appuyer deux fois pour ouvrir une page. */
+@media (hover: hover) {
+  html.theme-dark button[class*="bg-[#"]:hover,
+  html.theme-dark a[class*="bg-[#"]:hover {
+    background-color: rgba(30, 58, 84, 0.72) !important;
+  }
+}
+html.theme-dark [class*="border-slate-"] {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+html.theme-dark [class*="rounded-2xl"][class*="border"] {
+  box-shadow: 0 12px 32px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Thème clair adouci (moins lumineux) ===== */
+html.theme-light { background: #d3dbe5; color-scheme: light; }
+html.theme-light .df-bg-login {
+  background-image: linear-gradient(135deg, #dbe3ec 0%, #d2dbe6 55%, #cbd5e1 100%);
+}
+html.theme-light .df-bg-app {
+  background-image: linear-gradient(180deg, #dde4ec 0%, #d1d9e3 100%);
+}
+html.theme-light .bg-white { background-color: #e8ecf1; }
+html.theme-light .bg-slate-50 { background-color: #e1e7ee; }
+html.theme-light .bg-slate-100 { background-color: #d9e0e8; }
+html.theme-light .bg-slate-200 { background-color: #cdd6e0; }
+html.theme-light .border-slate-100,
+html.theme-light .border-slate-200,
+html.theme-light .border-slate-300 { border-color: #b9c4d1; }
+html.theme-light .text-slate-900 { color: #1f2937; }
+html.theme-light .text-slate-800 { color: #273244; }
+html.theme-light .text-slate-700 { color: #364358; }
+html.theme-light [class~="bg-emerald-50"] { background-color: #d3e6df; }
+html.theme-light [class~="bg-cyan-50"],
+html.theme-light [class~="bg-sky-50"] { background-color: #d1e3ea; }
+html.theme-light [class~="bg-amber-50"],
+html.theme-light [class~="bg-yellow-50"],
+html.theme-light [class~="bg-orange-50"] { background-color: #e8ddc8; }
+html.theme-light [class~="bg-red-50"],
+html.theme-light [class~="bg-rose-50"] { background-color: #ead5d5; }
+html.theme-light [class~="bg-blue-50"],
+html.theme-light [class~="bg-indigo-50"] { background-color: #d3deec; }
+html.theme-light [class~="bg-purple-50"],
+html.theme-light [class~="bg-violet-50"] { background-color: #ddd7ec; }
+html.theme-light [class*="rounded-2xl"][class*="border"],
+html.theme-light [class*="rounded-xl"][class*="border"] {
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.28);
+}
+
+/* ===== Boutons et champs ===== */
+.bg-emerald-600 {
+  background-image: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
+}
+button, a {
+  transition: background-color .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease;
+}
+button:active:not(:disabled) { transform: scale(0.98); }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
+/* ===== Lisibilité : plus de textes minuscules ===== */
+[class*="text-[8px]"] { font-size: 10px !important; }
+[class*="text-[9px]"] { font-size: 10.5px !important; }
+img, video, svg { max-width: 100%; }
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+}
+
+/* Custom scrollbars for responsive tables and panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.55);
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.98); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes alert-radar {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.animate-radar-alert {
+  animation: alert-radar 2s infinite;
+}
+
+
+
+/* ===== Formes carrées (aucun arrondi) ===== */
+[class*="rounded"] { border-radius: 0 !important; }
+/* Seuls restent ronds : les petits points de statut et les icônes de chargement */
+.rounded-full.animate-spin,
+.rounded-full.animate-pulse,
+.rounded-full[class~="w-1"],
+.rounded-full[class~="w-1.5"],
+.rounded-full[class~="w-2"],
+.rounded-full[class~="w-2.5"],
+.rounded-full[class~="w-3"] { border-radius: 9999px !important; }
+input[type="range"], input[type="checkbox"], input[type="radio"] { border-radius: 0; }
+
+/* ===== Mots jamais coupés ===== */
+.truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.line-clamp-1, .line-clamp-2, .line-clamp-3 { -webkit-line-clamp: unset !important; overflow: visible !important; }
+aside .whitespace-nowrap,
+form .whitespace-nowrap,
+.fixed .whitespace-nowrap { white-space: normal !important; }
+label, button, h1, h2, h3, h4, p, span { overflow-wrap: anywhere; }
+select { text-overflow: clip; }
+
+/* Fenêtres (formulaires) : fond sombre et flou pour que le texte derrière ne se mélange pas */
+.fixed.inset-0[class*="bg-black/"] {
+  background-color: rgba(2, 6, 12, 0.88) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* Petites fenêtres déroulantes (notifications, suggestions de recherche) : fond PLEIN, rien ne se voit à travers */
+html.theme-dark .df-popover {
+  background-color: #0f1722 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.theme-light .df-popover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Élément atteint depuis la recherche ou une notification : contour qui clignote */
+@keyframes navflash {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(34, 211, 238, 0); }
+  20%, 60% { box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95), inset 0 0 26px rgba(34, 211, 238, 0.55); }
+}
+.nav-flash {
+  animation: navflash 2.8s ease-in-out 1;
+  position: relative;
+  z-index: 2;
+}
+
+/* Barre du haut : couleur UNIE (pas de verre, pas de dégradé, pas de reflet, pas de flou) */
+header.df-topbar {
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.theme-dark header.df-topbar {
+  background-color: #0c2f29 !important;
+  border-color: #17594e !important;
+}
+html.theme-light header.df-topbar {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+/* ===== iPhone : plus de zoom dans les champs, défilement qui reste dans les fenêtres ===== */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+.fixed.inset-0,
+.overflow-y-auto,
+.overflow-auto {
+  overscroll-behavior: contain;
+}
+
+/* ===== Retour visuel immédiat (le site paraît plus rapide) ===== */
+/* Fondu à chaque changement de page (opacité seulement : ne gêne pas les fenêtres plein écran) */
+@keyframes df-fade-a { from { opacity: 0; } to { opacity: 1; } }
+@keyframes df-fade-b { from { opacity: 0; } to { opacity: 1; } }
+.df-fade-a { animation: df-fade-a 0.18s ease-out both; }
+.df-fade-b { animation: df-fade-b 0.18s ease-out both; }
+
+/* Barre de chargement sous l'en-tête */
+@keyframes df-loadbar-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+.df-loadbar { background: rgba(16, 185, 129, 0.18); }
+.df-loadbar-run { animation: df-loadbar-run 1s ease-in-out infinite; }
+
+/* Appui visible sur les boutons + pas de délai du toucher sur téléphone */
+button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); transition: transform 0.06s ease-out; }
+html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
+
+@media (prefers-reduced-motion: reduce) {
+  .df-fade-a, .df-fade-b, .df-loadbar-run { animation: none; }
+  button:not(:disabled):active, [role="button"]:active { transform: none; }
+}
+
+
+/* Tous les formulaires / fenêtres s'ouvrent SOUS le header fixe (jamais derrière), et défilent si trop longs */
+body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
+  top: calc(57px + var(--vvt, 0px));
+  bottom: auto;
+  height: calc(var(--vvh, 100dvh) - 57px);
+  max-height: calc(var(--vvh, 100dvh) - 57px);
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+  align-items: safe center;
+  overscroll-behavior: contain;
+}
+
+/* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
+html { scroll-padding-bottom: 6rem; }
+main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
+
+/* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
+html.theme-light { background: #cdd6e1; }
+html.theme-light .df-bg-app { background-image: linear-gradient(180deg, #d5dce6 0%, #c8d1dd 100%); }
+html.theme-light .bg-white { background-color:#dde4ec }
+html.theme-light .bg-slate-50 { background-color:#d6dee8 }
+html.theme-light [class^="bg-[#0"],
+html.theme-light [class*=" bg-[#0"],
+html.theme-light [class^="bg-[#10"],
+html.theme-light [class*=" bg-[#10"],
+html.theme-light [class^="bg-[#11"],
+html.theme-light [class*=" bg-[#11"],
+html.theme-light [class^="bg-[#12"],
+html.theme-light [class*=" bg-[#12"],
+html.theme-light [class^="bg-[#13"],
+html.theme-light [class*=" bg-[#13"] { background-color:#e1e7ee }
+html.theme-light [class^="bg-[#14"],
+html.theme-light [class*=" bg-[#14"],
+html.theme-light [class^="bg-[#15"],
+html.theme-light [class*=" bg-[#15"],
+html.theme-light [class^="bg-[#16"],
+html.theme-light [class*=" bg-[#16"],
+html.theme-light [class^="bg-[#17"],
+html.theme-light [class*=" bg-[#17"],
+html.theme-light [class^="bg-[#18"],
+html.theme-light [class*=" bg-[#18"],
+html.theme-light [class^="bg-[#19"],
+html.theme-light [class*=" bg-[#19"],
+html.theme-light [class^="bg-[#1a"],
+html.theme-light [class*=" bg-[#1a"],
+html.theme-light [class^="bg-[#1b"],
+html.theme-light [class*=" bg-[#1b"],
+html.theme-light [class^="bg-[#1c"],
+html.theme-light [class*=" bg-[#1c"],
+html.theme-light [class^="bg-[#1d"],
+html.theme-light [class*=" bg-[#1d"],
+html.theme-light [class^="bg-[#1e"],
+html.theme-light [class*=" bg-[#1e"],
+html.theme-light [class^="bg-[#1f"],
+html.theme-light [class*=" bg-[#1f"] { background-color:#d3dce6 }
+html.theme-light [class^="bg-slate-8"],
+html.theme-light [class*=" bg-slate-8"],
+html.theme-light [class^="bg-slate-9"],
+html.theme-light [class*=" bg-slate-9"],
+html.theme-light [class^="bg-black"],
+html.theme-light [class*=" bg-black"],
+html.theme-light [class^="bg-gray-8"],
+html.theme-light [class*=" bg-gray-8"],
+html.theme-light [class^="bg-gray-9"],
+html.theme-light [class*=" bg-gray-9"],
+html.theme-light [class^="bg-zinc-9"],
+html.theme-light [class*=" bg-zinc-9"] { background-color:#d3dce6 }
+html.theme-light [class^="bg-emerald-9"],
+html.theme-light [class*=" bg-emerald-9"],
+html.theme-light [class^="bg-emerald-8"],
+html.theme-light [class*=" bg-emerald-8"] { background-color:#d3e6df }
+html.theme-light [class^="bg-teal-9"],
+html.theme-light [class*=" bg-teal-9"],
+html.theme-light [class^="bg-teal-8"],
+html.theme-light [class*=" bg-teal-8"] { background-color:#d1e6e3 }
+html.theme-light [class^="bg-cyan-9"],
+html.theme-light [class*=" bg-cyan-9"],
+html.theme-light [class^="bg-cyan-8"],
+html.theme-light [class*=" bg-cyan-8"] { background-color:#d1e3ea }
+html.theme-light [class^="bg-sky-9"],
+html.theme-light [class*=" bg-sky-9"],
+html.theme-light [class^="bg-sky-8"],
+html.theme-light [class*=" bg-sky-8"] { background-color:#d1e3ea }
+html.theme-light [class^="bg-amber-9"],
+html.theme-light [class*=" bg-amber-9"],
+html.theme-light [class^="bg-amber-8"],
+html.theme-light [class*=" bg-amber-8"] { background-color:#eadfc9 }
+html.theme-light [class^="bg-yellow-9"],
+html.theme-light [class*=" bg-yellow-9"],
+html.theme-light [class^="bg-yellow-8"],
+html.theme-light [class*=" bg-yellow-8"] { background-color:#eadfc9 }
+html.theme-light [class^="bg-orange-9"],
+html.theme-light [class*=" bg-orange-9"],
+html.theme-light [class^="bg-orange-8"],
+html.theme-light [class*=" bg-orange-8"] { background-color:#ecdccb }
+html.theme-light [class^="bg-red-9"],
+html.theme-light [class*=" bg-red-9"],
+html.theme-light [class^="bg-red-8"],
+html.theme-light [class*=" bg-red-8"] { background-color:#ead5d5 }
+html.theme-light [class^="bg-rose-9"],
+html.theme-light [class*=" bg-rose-9"],
+html.theme-light [class^="bg-rose-8"],
+html.theme-light [class*=" bg-rose-8"] { background-color:#ead5d5 }
+html.theme-light [class^="bg-blue-9"],
+html.theme-light [class*=" bg-blue-9"],
+html.theme-light [class^="bg-blue-8"],
+html.theme-light [class*=" bg-blue-8"] { background-color:#d3deec }
+html.theme-light [class^="bg-indigo-9"],
+html.theme-light [class*=" bg-indigo-9"],
+html.theme-light [class^="bg-indigo-8"],
+html.theme-light [class*=" bg-indigo-8"] { background-color:#d3deec }
+html.theme-light [class^="bg-purple-9"],
+html.theme-light [class*=" bg-purple-9"],
+html.theme-light [class^="bg-purple-8"],
+html.theme-light [class*=" bg-purple-8"] { background-color:#ddd7ec }
+html.theme-light [class^="bg-violet-9"],
+html.theme-light [class*=" bg-violet-9"],
+html.theme-light [class^="bg-violet-8"],
+html.theme-light [class*=" bg-violet-8"] { background-color:#ddd7ec }
+html.theme-light [class^="bg-green-9"],
+html.theme-light [class*=" bg-green-9"],
+html.theme-light [class^="bg-green-8"],
+html.theme-light [class*=" bg-green-8"] { background-color:#d3e6d8 }
+html.theme-light [class^="border-slate-6"],
+html.theme-light [class*=" border-slate-6"],
+html.theme-light [class^="border-slate-7"],
+html.theme-light [class*=" border-slate-7"],
+html.theme-light [class^="border-slate-8"],
+html.theme-light [class*=" border-slate-8"],
+html.theme-light [class^="border-slate-9"],
+html.theme-light [class*=" border-slate-9"] { border-color:#b4bfcd }
+html.theme-light .text-white,
+html.theme-light .text-slate-100,
+html.theme-light .text-slate-200 { color:#1f2937 }
+html.theme-light .text-slate-300 { color:#334155 }
+html.theme-light .text-slate-400 { color:#475569 }
+html.theme-light .text-slate-500 { color:#566274 }
+html.theme-light .text-emerald-300,
+html.theme-light .text-emerald-400 { color:#047857 }
+html.theme-light .text-teal-300,
+html.theme-light .text-teal-400 { color:#0f766e }
+html.theme-light .text-cyan-300,
+html.theme-light .text-cyan-400,
+html.theme-light .text-sky-300,
+html.theme-light .text-sky-400 { color:#0e7490 }
+html.theme-light .text-amber-200,
+html.theme-light .text-amber-300,
+html.theme-light .text-amber-400,
+html.theme-light .text-yellow-300,
+html.theme-light .text-yellow-400 { color:#92400e }
+html.theme-light .text-orange-300,
+html.theme-light .text-orange-400 { color:#c2410c }
+html.theme-light .text-red-300,
+html.theme-light .text-red-400 { color:#b91c1c }
+html.theme-light .text-rose-300,
+html.theme-light .text-rose-400 { color:#be123c }
+html.theme-light .text-blue-300,
+html.theme-light .text-blue-400,
+html.theme-light .text-indigo-300,
+html.theme-light .text-indigo-400 { color:#1d4ed8 }
+html.theme-light .text-purple-300,
+html.theme-light .text-purple-400,
+html.theme-light .text-violet-300,
+html.theme-light .text-violet-400 { color:#6d28d9 }
+html.theme-light .text-green-300,
+html.theme-light .text-green-400 { color:#15803d }
+html.theme-light [class~="bg-emerald-500"].text-white,
+html.theme-light [class~="bg-emerald-500"] .text-white,
+html.theme-light [class~="bg-emerald-600"].text-white,
+html.theme-light [class~="bg-emerald-600"] .text-white,
+html.theme-light [class~="bg-emerald-700"].text-white,
+html.theme-light [class~="bg-emerald-700"] .text-white,
+html.theme-light [class~="bg-teal-600"].text-white,
+html.theme-light [class~="bg-teal-600"] .text-white,
+html.theme-light [class~="bg-cyan-600"].text-white,
+html.theme-light [class~="bg-cyan-600"] .text-white,
+html.theme-light [class~="bg-blue-600"].text-white,
+html.theme-light [class~="bg-blue-600"] .text-white,
+html.theme-light [class~="bg-red-500"].text-white,
+html.theme-light [class~="bg-red-500"] .text-white,
+html.theme-light [class~="bg-red-600"].text-white,
+html.theme-light [class~="bg-red-600"] .text-white,
+html.theme-light [class~="bg-purple-600"].text-white,
+html.theme-light [class~="bg-purple-600"] .text-white,
+html.theme-light [class~="bg-amber-600"].text-white,
+html.theme-light [class~="bg-amber-600"] .text-white,
+html.theme-light [class~="bg-gradient-to-r"].text-white,
+html.theme-light [class~="bg-gradient-to-r"] .text-white,
+html.theme-light [class~="bg-gradient-to-l"].text-white,
+html.theme-light [class~="bg-gradient-to-l"] .text-white,
+html.theme-light [class~="bg-gradient-to-b"].text-white,
+html.theme-light [class~="bg-gradient-to-b"] .text-white,
+html.theme-light [class~="bg-gradient-to-t"].text-white,
+html.theme-light [class~="bg-gradient-to-t"] .text-white,
+html.theme-light [class~="bg-gradient-to-br"].text-white,
+html.theme-light [class~="bg-gradient-to-br"] .text-white,
+html.theme-light [class~="bg-gradient-to-bl"].text-white,
+html.theme-light [class~="bg-gradient-to-bl"] .text-white,
+html.theme-light [class~="bg-gradient-to-tr"].text-white,
+html.theme-light [class~="bg-gradient-to-tr"] .text-white,
+html.theme-light [class~="bg-gradient-to-tl"].text-white,
+html.theme-light [class~="bg-gradient-to-tl"] .text-white { color:#fff }
+
+/* ===== Menu de gauche en bande d'icônes (tablette, ou réduit sur grand écran) ===== */
+.df-sb-compact { cursor: e-resize; }
+.df-sb-compact .df-sb-text { display: none !important; }
+.df-sb-compact > div:nth-child(1) { flex-direction: column; gap: .5rem; padding: .75rem .25rem; justify-content: center; }
+.df-sb-compact > div:nth-child(2) { justify-content: center; padding: .5rem .25rem; }
+.df-sb-compact > div:nth-child(3) { padding: .5rem .35rem; }
+.df-sb-compact nav button { justify-content: center; padding: .5rem 0; position: relative; }
+.df-sb-compact nav button > div { justify-content: center; }
+.df-sb-compact nav button > span { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0; width: 8px; height: 8px; min-width: 0; border-radius: 9999px; font-size: 0; overflow: hidden; background: #f59e0b; border: 0; }
+.df-sb-compact > div:nth-child(4) { padding: .5rem .35rem; }
+.df-sb-compact .grid-cols-2 { grid-template-columns: 1fr; }
+.df-sb-compact > div:nth-child(4) button { padding-left: .25rem; padding-right: .25rem; }
+
+/* ===== Cartes de poste : le texte s'adapte à la largeur réelle d'une carte (réglage « colonnes ») ===== */
+.pc-grid[data-d="l"] .pc-head, .pc-grid[data-d="m"] .pc-head, .pc-grid[data-d="s"] .pc-head, .pc-grid[data-d="xs"] .pc-head { flex-direction: column; align-items: flex-start; }
+.pc-grid:not([data-d="xl"]) .pc-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pc-grid:not([data-d="xl"]) .pc-tag { display: none; }
+.pc-grid:not([data-d="xl"]) .pc { padding: .75rem; }
+.pc-grid:not([data-d="xl"]) .pc-name, .pc-grid:not([data-d="xl"]) .pc-name h3 { min-width: 0; max-width: 100%; }
+.pc-grid:not([data-d="xl"]) .pc-name h3 { font-size: .8rem; word-break: normal; overflow-wrap: anywhere; }
+.pc-grid[data-d="m"] .pc-badge { font-size: 1.5rem; }
+.pc-grid[data-d="s"] .pc-badge, .pc-grid[data-d="xs"] .pc-badge { font-size: 1.15rem; padding: .1rem .35rem; }
+.pc-grid[data-d="s"] .pc-name h3, .pc-grid[data-d="xs"] .pc-name h3 { font-size: .68rem; }
+.pc-grid[data-d="s"] .pc-metrics > *, .pc-grid[data-d="xs"] .pc-metrics > * { padding: .25rem .3rem; min-width: 0; overflow: hidden; }
+.pc-grid[data-d="s"] .pc-metrics span, .pc-grid[data-d="xs"] .pc-metrics span { font-size: 9px !important; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; word-break: normal; overflow-wrap: normal; }
+.pc-grid[data-d="s"] .pc-metrics span.font-bold, .pc-grid[data-d="xs"] .pc-metrics span.font-bold { font-size: 10px !important; }
+.pc-grid[data-d="xs"] .pc-metrics span.uppercase { font-size: 7px !important; }
+.pc-grid[data-d="s"] .pc-status, .pc-grid[data-d="xs"] .pc-status { max-width: 100%; }
+.pc-grid[data-d="s"] .pc-status span, .pc-grid[data-d="xs"] .pc-status span { font-size: 8px !important; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; word-break: normal; }
+.pc-grid[data-d="s"] .pc-act button, .pc-grid[data-d="xs"] .pc-act button { font-size: 8px !important; padding: .35rem .15rem !important; letter-spacing: 0 !important; word-break: normal; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; }
+.pc-grid[data-d="xs"] .pc-act button svg { display: none; }
+.pc-grid[data-d="s"] select, .pc-grid[data-d="xs"] select { font-size: 9px !important; padding: .1rem !important; text-overflow: ellipsis !important; }
+
+/* Petites cartes : le numéro et le nom passent l'un sous l'autre (jamais de lettres empilées) */
+.pc-grid[data-d="s"] .pc-head > div:first-child, .pc-grid[data-d="xs"] .pc-head > div:first-child { flex-wrap: wrap; row-gap: .25rem; }
+.pc-grid[data-d="s"] .pc-name, .pc-grid[data-d="xs"] .pc-name { flex-basis: 100%; }
+/* Très petites cartes (téléphone, 4 colonnes ou plus) : les 4 chiffres l'un sous l'autre, pas coupés */
+.pc-grid[data-d="xs"] .pc-metrics { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+.pc-grid[data-d="xs"] .pc-metrics > * { display: block; padding: .2rem .3rem; }
+.pc-grid[data-d="xs"] .pc-metrics span { display: block !important; text-overflow: clip !important; overflow: visible !important; }
+.pc-grid[data-d="xs"] .pc-metrics span.uppercase { font-size: 7px !important; }
+.pc-grid[data-d="xs"] .pc-act button { white-space: normal !important; line-height: 1.1; text-align: center; font-size: 7px !important; }
+.pc-grid[data-d="xs"] .pc { padding: .5rem; }

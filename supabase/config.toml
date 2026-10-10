@@ -1,0 +1,7 @@
+# Fonction serveur du projet DF-boosting (projet Supabase "Replay")
+[functions.df-api]
+verify_jwt = false
+
+# Restauration du site (remise à zéro avec code par mail)
+[functions.df-restore]
+verify_jwt = false

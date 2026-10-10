@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page de secours</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#070b11;color:#e2e8f0;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+  .card{max-width:440px;width:100%;background:#0f1722;border:1px solid #334155;padding:22px}
+  h1{font-size:20px;margin:0 0 6px}
+  p{color:#94a3b8;font-size:14px;line-height:1.5;margin:8px 0}
+  button,a.btn{display:block;width:100%;box-sizing:border-box;text-align:center;margin-top:10px;padding:12px;font-size:15px;font-weight:700;border:0;cursor:pointer;text-decoration:none;color:#fff}
+  .green{background:#059669}.grey{background:#334155}
+  small{display:block;color:#64748b;margin-top:14px;font-size:12px}
+  #msg{color:#34d399;font-size:13px;margin-top:10px;min-height:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Page de secours</h1>
+  <p>Si le site ne s'affiche plus ou reste figé, essaie dans l'ordre :</p>
+  <button class="green" id="clear">1. Vider le cache et recharger</button>
+  <a class="btn grey" href="/">2. Retourner au site</a>
+  <p>Si ça ne marche toujours pas, ferme complètement l'application ou le navigateur, rouvre-la, puis contacte ton administrateur en lui disant l'heure et ce que tu faisais.</p>
+  <div id="msg"></div>
+  <small>Tu ne perds pas ta connexion ni tes données : seul le cache de l'appareil est vidé.</small>
+</div>
+<script>
+document.getElementById('clear').onclick = async function () {
+  var m = document.getElementById('msg'); m.textContent = 'Nettoyage…';
+  try {
+    if ('caches' in window) { var k = await caches.keys(); await Promise.all(k.map(function (x) { return caches.delete(x); })); }
+    if ('serviceWorker' in navigator) { var r = await navigator.serviceWorker.getRegistrations(); await Promise.all(r.map(function (x) { return x.unregister(); })); }
+    try { sessionStorage.clear(); } catch (e) {}
+  } catch (e) {}
+  m.textContent = 'Fait. Rechargement…';
+  location.replace('/?r=' + Date.now());
+};
+</script>
+</body>
+</html>
