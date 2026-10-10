@@ -225,17 +225,41 @@ img, video, svg { max-width: 100%; }
 
 
 
-/* ===== Formes carrées (aucun arrondi) ===== */
-[class*="rounded"] { border-radius: 0 !important; }
-/* Seuls restent ronds : les petits points de statut et les icônes de chargement */
-.rounded-full.animate-spin,
-.rounded-full.animate-pulse,
-.rounded-full[class~="w-1"],
-.rounded-full[class~="w-1.5"],
-.rounded-full[class~="w-2"],
-.rounded-full[class~="w-2.5"],
-.rounded-full[class~="w-3"] { border-radius: 9999px !important; }
-input[type="range"], input[type="checkbox"], input[type="radio"] { border-radius: 0; }
+/* ===== Formes douces : grands arrondis partout, boutons et champs en capsule ===== */
+.rounded, .rounded-md { border-radius: 10px; }
+.rounded-lg { border-radius: 14px; }
+.rounded-xl { border-radius: 18px; }
+.rounded-2xl { border-radius: 24px; }
+.rounded-3xl { border-radius: 30px; }
+.rounded-t-xl, .rounded-t-2xl { border-top-left-radius: 22px; border-top-right-radius: 22px; }
+.rounded-b-xl, .rounded-b-2xl { border-bottom-left-radius: 22px; border-bottom-right-radius: 22px; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+select, textarea { border-radius: 14px; }
+input[type="checkbox"] { border-radius: 6px; }
+input[type="radio"] { border-radius: 9999px; }
+
+/* Cartes : ombre douce, relief léger */
+[class*="rounded-xl"][class*="border"],
+[class*="rounded-2xl"][class*="border"] { box-shadow: 0 10px 30px -18px rgba(2, 6, 23, 0.55); }
+html.theme-light [class*="rounded-xl"][class*="border"],
+html.theme-light [class*="rounded-2xl"][class*="border"] { box-shadow: 0 10px 28px -20px rgba(30, 58, 138, 0.35); }
+
+/* Boutons : capsule pour les petits, retour tactile doux */
+button { transition: transform .12s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+button:active:not(:disabled) { transform: scale(.97); }
+button[class*="rounded-lg"][class*="px-"]:not([class*="w-full"]):not([class*="flex-col"]) { border-radius: 9999px; }
+
+/* Fond : halos bleus doux, sans motif */
+html.theme-dark .df-bg-app,
+html.theme-dark .df-bg-login {
+  background-image: radial-gradient(60% 45% at 100% 0%, rgba(59, 130, 246, 0.22), transparent 70%), radial-gradient(50% 40% at 0% 100%, rgba(37, 99, 235, 0.16), transparent 70%);
+  background-attachment: fixed;
+}
+html.theme-light .df-bg-app,
+html.theme-light .df-bg-login {
+  background-image: radial-gradient(60% 45% at 100% 0%, rgba(96, 165, 250, 0.22), transparent 70%), radial-gradient(50% 40% at 0% 100%, rgba(147, 197, 253, 0.28), transparent 70%);
+  background-attachment: fixed;
+}
 
 /* ===== Mots jamais coupés ===== */
 .truncate {
@@ -352,7 +376,6 @@ main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !imp
 
 /* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
 html.theme-light { background: #cdd6e1; }
-html.theme-light .df-bg-app { background-image: none; }
 html.theme-light .bg-white { background-color:#dde4ec }
 html.theme-light .bg-slate-50 { background-color:#d6dee8 }
 html.theme-light [class^="bg-[#0"],
