@@ -15,6 +15,7 @@ create table if not exists public.df_messages         (id text primary key, data
 create table if not exists public.df_groups           (id text primary key, data jsonb not null default '{}'::jsonb, updated_at timestamptz not null default now());
 create table if not exists public.df_security_logs    (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.df_settings         (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
+create table if not exists public.df_news             (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.df_payroll          (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.df_signups          (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
 create table if not exists public.df_resets           (id text primary key, data jsonb not null, updated_at timestamptz not null default now());
@@ -90,7 +91,7 @@ begin
   for t in select unnest(array[
     'df_users','df_posts','df_contracts','df_advances','df_messages','df_groups','df_security_logs','df_settings',
     'df_payroll','df_signups','df_resets','df_profile_requests','df_restore','df_credentials','df_presence',
-    'df_attendance','df_chat_reads','df_errors'])
+    'df_attendance','df_chat_reads','df_errors','df_news'])
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);

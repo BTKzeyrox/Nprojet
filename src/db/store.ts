@@ -15,6 +15,7 @@ import {
   QueueInfo,
   ChatGroup,
   ChatRead,
+  NewsPost,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -23,7 +24,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -74,6 +75,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   contracts: (a, b) => (a.post_number || 0) - (b.post_number || 0),
   securityLogs: (a, b) => String(b.id).localeCompare(String(a.id)),
   advances: (a, b) => String(b.id).localeCompare(String(a.id)),
+  news: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -88,6 +90,7 @@ class DeltaForceStore {
   private groups: ChatGroup[] = [];
   private reads: ChatRead[] = [];
   private settings: AppSettings[] = [];
+  private news: NewsPost[] = [];
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
@@ -124,7 +127,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(),
     };
   }
 
@@ -138,6 +141,7 @@ class DeltaForceStore {
       case 'messages': return this.messages;
       case 'groups': return this.groups;
       case 'settings': return this.settings;
+      case 'news': return this.news;
     }
   }
 
@@ -151,6 +155,7 @@ class DeltaForceStore {
       case 'messages': this.messages = value; break;
       case 'groups': this.groups = value; break;
       case 'settings': this.settings = value; break;
+      case 'news': this.news = value; break;
     }
   }
 
@@ -395,6 +400,61 @@ class DeltaForceStore {
     if (changedAny) this.emit();
     return true;
   }
+
+  // --- Fil d'actualité ---
+  public getNews(): NewsPost[] {
+    return [...this.news];
+  }
+
+  // Le responsable publie (envoyé au serveur avec la synchro habituelle)
+  public publishNews(p: { title: string; text: string; pinned?: boolean }): { success: boolean; error?: string } {
+    const me = this.currentUser;
+    if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const text = p.text.trim();
+    if (!text) return { success: false, error: 'Écris le texte de la publication.' };
+    const rec: NewsPost = {
+      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', title: p.title.trim().slice(0, 120),
+      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, loves: [], comments: [], shares: 0,
+    };
+    this.news = [rec, ...this.news].sort(SORTERS.news!);
+    this.notify();
+    return { success: true };
+  }
+
+  public togglePinNews(id: string) {
+    const n = this.news.find(x => x.id === id);
+    if (!n || this.currentUser?.role !== 'admin') return;
+    this.news = this.news.map(x => (x.id === id ? { ...x, pinned: !x.pinned } : x)).sort(SORTERS.news!);
+    this.notify();
+  }
+
+  public deleteNews(id: string) {
+    if (this.currentUser?.role !== 'admin') return;
+    this.news = this.news.filter(x => x.id !== id);
+    this.notify();
+  }
+
+  // Actions des lecteurs : le serveur renvoie la publication à jour, on la remplace tout de suite
+  private applyNews(doc: NewsPost) {
+    const list = this.news.filter(x => x.id !== doc.id);
+    list.push(doc);
+    list.sort(SORTERS.news!);
+    this.news = list;
+    this.synced.news.set(doc.id, JSON.stringify(doc));
+    this.emit();
+  }
+
+  private async newsCall(path: string, body: object): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api(path, { method: 'POST', body: JSON.stringify(body) });
+    if (!r.ok || !r.data?.news) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
+    this.applyNews(r.data.news as NewsPost);
+    return { success: true };
+  }
+
+  public toggleLoveNews(id: string) { return this.newsCall('news-react', { id }); }
+  public commentNews(id: string, text: string) { return this.newsCall('news-comment', { id, text }); }
+  public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
+  public shareNews(id: string) { return this.newsCall('news-share', { id }); }
 
   public subscribe(listener: () => void) {
     this.listeners.add(listener);

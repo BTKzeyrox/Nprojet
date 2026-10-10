@@ -281,3 +281,26 @@ export interface QueueInfo {
   position: number;
   total: number;
 }
+
+// Fil d'actualité : publications du responsable, avec « J'adore », commentaires et partages
+export interface NewsComment {
+  id: string;
+  user_id: string;
+  user_name: string;
+  role: UserRole;
+  text: string;
+  created_at: string;
+}
+
+export interface NewsPost {
+  id: string;
+  author_id: string;
+  author_name: string;
+  title: string;
+  text: string;
+  created_at: string;
+  pinned: boolean;
+  loves: string[]; // ids des personnes qui ont mis « J'adore »
+  comments: NewsComment[];
+  shares: number;
+}

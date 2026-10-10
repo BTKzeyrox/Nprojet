@@ -11,6 +11,7 @@ const T = {
   messages: "df_messages",
   groups: "df_groups",
   settings: "df_settings",
+  news: "df_news",
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
@@ -480,6 +481,17 @@ async function sync(req: any, res: any, me: any) {
           ok = !existing && rec.employee_id === me.id;
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
+      }
+      if (col === 'news') {
+        // Réservé au responsable (les autres sont déjà refusés plus haut). On ne perd jamais les réactions reçues.
+        toSave = {
+          id: rec.id, author_id: existing?.author_id || me.id, author_name: String(rec.author_name || existing?.author_name || me.name || '').slice(0, 80),
+          title: String(rec.title || '').slice(0, 120), text: String(rec.text || '').slice(0, NEWS_MAX_TEXT),
+          created_at: existing?.created_at || rec.created_at || now, pinned: !!rec.pinned,
+          loves: Array.isArray(existing?.loves) ? existing.loves : [], comments: Array.isArray(existing?.comments) ? existing.comments : [],
+          shares: Number(existing?.shares) || 0,
+        };
+        if (!toSave.text.trim()) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
@@ -1293,6 +1305,40 @@ async function errorUpdate(req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+// ---------- fil d'actualité : « J'adore », commentaires, partages (actions atomiques) ----------
+const NEWS_MAX_TEXT = 2000;
+const NEWS_MAX_COMMENT = 500;
+const NEWS_MAX_COMMENTS = 200;
+async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'share', req: any, res: any, me: any) {
+  const { id, text, commentId } = req.body || {};
+  if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  const d: any = {
+    ...row.data,
+    loves: Array.isArray(row.data.loves) ? [...row.data.loves] : [],
+    comments: Array.isArray(row.data.comments) ? [...row.data.comments] : [],
+    shares: Number(row.data.shares) || 0,
+  };
+  if (kind === 'react') {
+    d.loves = d.loves.includes(me.id) ? d.loves.filter((x: string) => x !== me.id) : [...d.loves, me.id];
+  } else if (kind === 'comment') {
+    const clean = String(text || '').trim().slice(0, NEWS_MAX_COMMENT);
+    if (!clean) return res.status(400).json({ error: 'Écris un commentaire.' });
+    if (d.comments.length >= NEWS_MAX_COMMENTS) return res.status(400).json({ error: 'Trop de commentaires sur cette publication.' });
+    d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, created_at: new Date().toISOString() });
+  } else if (kind === 'comment-delete') {
+    const c = d.comments.find((x: any) => x.id === commentId);
+    if (!c) return res.status(404).json({ error: 'Commentaire introuvable.' });
+    if (me.role !== 'admin' && c.user_id !== me.id) return res.status(403).json({ error: 'Tu ne peux pas supprimer ce commentaire.' });
+    d.comments = d.comments.filter((x: any) => x.id !== commentId);
+  } else {
+    d.shares += 1;
+  }
+  await sb.from(T.news).upsert({ id, data: d, updated_at: new Date().toISOString() });
+  return res.json({ ok: true, news: d });
+}
+
 // ---------- routeur ----------
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -1337,6 +1383,10 @@ Deno.serve(async (request: Request) => {
     if (action === "errors" && req.method === "GET") return await errorsList(req, res, me);
     if (action === "error-update" && req.method === "POST") return await errorUpdate(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
+    if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);
+    if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);
+    if (action === "news-comment-delete" && req.method === "POST") return await newsAction('comment-delete', req, res, me);
+    if (action === "news-share" && req.method === "POST") return await newsAction('share', req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);

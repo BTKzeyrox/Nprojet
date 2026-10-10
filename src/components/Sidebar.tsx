@@ -3,6 +3,7 @@ import { db } from '../db/store';
 import React from 'react';
 import {
   Layers,
+  Newspaper,
   ClipboardList,
   Users,
   DollarSign,
@@ -73,11 +74,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Bilingual Navigation Items
   const navItems = [
+    { id: 'feed', label: 'Actualités', sublabel: 'Annonces et publications', icon: Newspaper },
     ...(isAdmin
       ? [
           {
             id: 'dashboard',
-            label: 'Accueil',
+            label: 'Tableau de bord',
             sublabel: 'Vue générale',
             icon: Home,
           },

@@ -25,6 +25,7 @@ import { LogoutTransition } from './components/LogoutTransition';
 let zhLoaded = false; // le module chinois a déjà été chargé (pour pouvoir revenir au français)
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
+const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
@@ -55,7 +56,7 @@ export default function App() {
     return () => { off = true; };
   }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
-  const [activeView, setActiveView] = useState<string>('grid');
+  const [activeView, setActiveView] = useState<string>('feed');
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
@@ -184,7 +185,7 @@ export default function App() {
     setCurrentUser(user);
     setIsWelcomeAnimating(true);
     // Accueil d'abord : admin = vue générale, booster = grille des postes. Menu fermé.
-    setActiveView(user.role === 'admin' ? 'dashboard' : 'grid');
+    setActiveView('feed');
     setIsMobileSidebarOpen(false);
   };
 
@@ -296,7 +297,7 @@ export default function App() {
   const viewUser: User = realIsAdmin && boosterMode ? { ...currentUser, role: 'employee' } : currentUser;
   const toggleBoosterMode = () => {
     setBoosterMode(v => !v);
-    setActiveView(boosterMode ? 'dashboard' : 'grid');
+    setActiveView('feed');
   };
 
   // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
@@ -350,7 +351,9 @@ export default function App() {
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
-          {viewUser.role === 'admin' ? (
+          {activeView === 'feed' ? (
+            <FeedView currentUser={viewUser} />
+          ) : viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
               {activeView === 'settings' ? (
