@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Gamepad2,
+  ClipboardList,
   Clock,
   ShieldCheck,
   AlertTriangle,
@@ -203,7 +203,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         employee_id: currentUser.id,
         employee_name: currentUser.name,
         violation_type: 'multi_post_attempt',
-        description: `Anti-Multi-Poste: Tentative de sélection du compte "${contract.client_name}" alors que "${activePost.client_name}" est en cours.`,
+        description: `Anti-Multi-Mission: Tentative de sélection du compte "${contract.client_name}" alors que "${activePost.client_name}" est en cours.`,
         details: {
           active_post_id: activePost.id,
           client_name: contract.client_name,
@@ -219,7 +219,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       p => p.client_name === contract.client_name && (p.status === 'active' || p.status === 'pending_start') && p.employee_id !== currentUser.id
     );
     if (takenBy) {
-      setOccupiedPostNotice(`Le poste #${contract.post_number} (${contract.client_name}) est actuellement pris par ${takenBy.employee_name}.`);
+      setOccupiedPostNotice(`La mission #${contract.post_number} (${contract.client_name}) est actuellement pris par ${takenBy.employee_name}.`);
       setTimeout(() => setOccupiedPostNotice(null), 5000);
       return;
     }
@@ -293,7 +293,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
     const availableSlots = 5 - startProofPhotos.length;
     if (availableSlots <= 0) {
-      setStartFormError('Vous pouvez envoyer au maximum 5 photos pour ce poste.');
+      setStartFormError('Vous pouvez envoyer au maximum 5 photos pour cette mission.');
       return;
     }
 
@@ -319,7 +319,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     if (initialScore <= 0) {
-      setStartFormError('Veuillez entrer le score réel vu sur la capture.');
+      setStartFormError('Veuillez entrer le volume réel vu sur la capture.');
       return;
     }
     if (startProofPhotos.length === 0) {
@@ -355,7 +355,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     });
 
     if (!res.success) {
-      setStartFormError(res.error || 'Erreur lors de l\'enregistrement du poste.');
+      setStartFormError(res.error || 'Erreur lors de l\'enregistrement de la mission.');
       return;
     }
 
@@ -384,7 +384,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     if (!confirmed) {
       askConfirm({
         title: 'Terminer la session ?',
-        message: "Votre score final et votre capture seront envoyés à l'administrateur. Vous ne pourrez plus les modifier.",
+        message: "Votre volume final et votre capture seront envoyés à l'administrateur. Vous ne pourrez plus les modifier.",
         confirmLabel: 'Terminer',
         onConfirm: () => handleSubmitEndForm(e, true),
       });
@@ -393,7 +393,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
     // Front-end & Back-end Score Consistency Enforcement
     if (finalScoreInput < activePost.initial_score) {
-      const err = 'Le score final ne peut pas être inférieur au score de départ.';
+      const err = 'Le volume final ne peut pas être inférieur au volume de départ.';
       setEndFormError(err);
       db.submitEndPost({
         postId: activePost.id,
@@ -423,9 +423,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleCancelPendingStart = () => {
     if (!activePost) return;
     askConfirm({
-      title: 'Annuler ce poste ?',
-      message: "Le poste redeviendra libre. Votre demande de début sera supprimée.",
-      confirmLabel: 'Annuler le poste',
+      title: 'Annuler cette mission ?',
+      message: "La mission redeviendra libre. Votre demande de début sera supprimée.",
+      confirmLabel: 'Annuler la mission',
       cancelLabel: 'Garder',
       danger: true,
       onConfirm: () => {
@@ -448,7 +448,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleSaveEditPending = () => {
     if (!activePost) return;
     if (editScore <= 0) {
-      alert('Score invalide');
+      alert('Volume invalide');
       return;
     }
     const res = db.updatePendingStartPost(activePost.id, editScore, editProofPreview || undefined);
@@ -537,14 +537,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-white font-tactical font-bold text-base">
-                TERMINAL BOOSTER: {currentUser.name.toUpperCase()}
+                TERMINAL OPÉRATEUR: {currentUser.name.toUpperCase()}
               </h2>
               <span className="text-[10px] font-mono uppercase bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
                 {currentUser.performance_badge}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mt-0.5">
-              <span>Poste Opérateur</span>
+              <span>Mission Opérateur</span>
               <span>·</span>
               <span className={isInsideAssignedShift ? 'text-emerald-400' : 'text-amber-400 font-semibold'}>
                 {isInsideAssignedShift ? (
@@ -574,7 +574,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>Grille des Postes Clients ({AVAILABLE_CLIENT_CONTRACTS.length})</span>
+                <span>Grille des Missions Clients ({AVAILABLE_CLIENT_CONTRACTS.length})</span>
               </button>
 
               <button
@@ -585,9 +585,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     : 'bg-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                <Gamepad2 className="w-4 h-4" />
+                <ClipboardList className="w-4 h-4" />
                 <span>
-                  {activePost ? `Poste en Cours (${activePost.client_name})` : 'Détails du Poste Sélectionné'}
+                  {activePost ? `Mission en Cours (${activePost.client_name})` : 'Détails du Mission Sélectionnée'}
                 </span>
                 {activePost && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
               </button>
@@ -625,7 +625,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Retour à la Grille des Postes</span>
+                  <span>Retour à la Grille des Missions</span>
                 </button>
 
                 {activePost && (
@@ -660,7 +660,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       {activePost.status === 'pending_start' && (
                         <div className="flex items-center gap-2 bg-amber-950/60 border border-amber-600/50 p-2 rounded-lg text-xs font-mono w-full sm:w-auto justify-between">
-                          <span className="text-amber-300 font-semibold">En attente validation Admin</span>
+                          <span className="text-amber-300 font-semibold">En attente validation Responsable</span>
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={handleOpenEditPending}
@@ -693,7 +693,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow flex items-center justify-center gap-2 transition-all"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Terminer le Poste (End Form)</span>
+                          <span>Terminer le Mission (End Form)</span>
                         </button>
                       )}
                     </div>
@@ -702,7 +702,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   {/* Score Readouts (Initial, Current, Target, Remaining) */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-6">
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Score Initial Relevé</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Initial Relevé</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-white mt-1 truncate">
                         {formatScoreM(activePost.initial_score)}
                       </div>
@@ -712,7 +712,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Score Actuel</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Actuel</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-cyan-400 mt-1 truncate">
                         {formatScoreM(activePost.current_score)}
                       </div>
@@ -733,7 +733,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Score Restant</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Restant</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-emerald-400 mt-1 truncate">
                         {formatScoreM(Math.max(0, activePost.target_score - activePost.current_score))}
                       </div>
@@ -776,7 +776,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <Camera className="w-3.5 h-3.5 text-cyan-400" />
                         <span>
                           {activePost.start_proof_urls && activePost.start_proof_urls.length > 1
-                            ? `Preuves Début Soumises (${activePost.start_proof_urls.length} photos)`
+                            ? `Justificatifs Début Soumises (${activePost.start_proof_urls.length} photos)`
                             : 'Capture de départ soumise'}
                         </span>
                       </div>
@@ -791,7 +791,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: url,
                                 gallery: proofsOf(activePost),
-                                title: `Photo ${idx + 1} - Preuve Début - ${activePost.client_name}`,
+                                title: `Photo ${idx + 1} - Justificatif Début - ${activePost.client_name}`,
                                 score: activePost.initial_score,
                                 clientTag: activePost.client_name,
                                 operatorName: activePost.employee_name,
@@ -802,7 +802,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           >
                             <img
                               src={url}
-                              alt={`Preuve ${idx + 1}`}
+                              alt={`Justificatif ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
@@ -834,7 +834,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               ) : (
                 /* No active post yet, prompt to pick from grid */
                 <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-8 text-center space-y-3">
-                  <Gamepad2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                  <ClipboardList className="w-10 h-10 text-emerald-400 mx-auto" />
                   <h4 className="text-base font-bold text-white font-tactical">
                     Aucune Session Active sur ce Compte
                   </h4>
@@ -845,7 +845,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     onClick={() => setHomeViewMode('grid')}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition-colors"
                   >
-                    Voir la Grille des Postes
+                    Voir la Grille des Missions
                   </button>
                 </div>
               )}
@@ -884,7 +884,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 uppercase block">Score Boosté</span>
+                          <span className="text-[10px] text-slate-500 uppercase block">Volume Traité</span>
                           <span className="text-emerald-400 font-bold">+{formatScoreM(gained)} pts</span>
                         </div>
 
@@ -898,7 +898,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                             onOpenProofLightbox({
                               imageUrl: post.end_proof_url || post.start_proof_url,
                               gallery: proofsOf(post),
-                              title: `Preuve - ${post.client_name}`,
+                              title: `Justificatif - ${post.client_name}`,
                               score: post.final_score,
                               clientTag: post.client_name,
                               operatorName: post.employee_name,
@@ -992,7 +992,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               Suivi de Vos Demandes d'Avances
             </h3>
             <p className="text-xs text-slate-400 font-mono mb-4">
-              Historique et validation par le superviseur Delta Force.
+              Historique et validation par le superviseur Gestion Pro.
             </p>
 
             <AdvanceHistory advances={userAdvances} />
@@ -1012,7 +1012,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-xs sm:text-sm font-tactical font-bold text-white uppercase tracking-wider">
-                    Canal Direct · Superviseur Admin
+                    Canal Direct · Superviseur Responsable
                   </h4>
                   <span className="text-[9px] font-mono uppercase bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
                     Chat Illimité &amp; Local
@@ -1034,10 +1034,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           <div className="px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[
-              "Objectif de score client atteint !",
+              "Objectif de volume client atteint !",
               "Début de session de boost sur le compte",
               "Capture d'écran téléversée dans le système",
-              "Question sur la validation du shift"
+              "Question sur la validation de la vacation"
             ].map((chip, idx) => (
               <button
                 key={idx}
@@ -1125,21 +1125,21 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
               <div>
                 <h3 className="font-tactical font-black text-white text-base">
-                  Poste Actif Déjà en Cours
+                  Mission Active Déjà en Cours
                 </h3>
                 <p className="text-xs text-slate-400 font-mono">
-                  Vous avez déjà le poste <strong>{activePost.client_name}</strong> en cours.
+                  Vous avez déjà la mission <strong>{activePost.client_name}</strong> en cours.
                 </p>
               </div>
             </div>
 
             <div className="bg-[#141e2a] p-3.5 rounded-xl border border-slate-800 text-xs font-mono space-y-2">
               <p className="text-slate-300">
-                La charte Delta Force autorise <strong>1 seul poste actif par opérateur</strong> pour éviter les fraudes et pénalités.
+                La charte Gestion Pro autorise <strong>1 seul mission active par opérateur</strong> pour éviter les fraudes et pénalités.
               </p>
               <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800 text-slate-400">
-                <span>Poste en cours : <strong className="text-emerald-400">{activePost.client_name}</strong></span>
-                <span>Nouveau poste : <strong className="text-cyan-400">{multiPostTargetContract.client_name}</strong></span>
+                <span>Mission en cours : <strong className="text-emerald-400">{activePost.client_name}</strong></span>
+                <span>Nouvelle mission : <strong className="text-cyan-400">{multiPostTargetContract.client_name}</strong></span>
               </div>
             </div>
 
@@ -1153,15 +1153,15 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 }}
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
               >
-                <Gamepad2 className="w-4 h-4" />
-                <span>Continuer Mon Poste Actuel ({activePost.client_name})</span>
+                <ClipboardList className="w-4 h-4" />
+                <span>Continuer Ma Mission Actuelle ({activePost.client_name})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   // Release the old post cleanly and start the new one
-                  db.forceReleasePost(activePost.id, 'Changement de poste par le booster');
+                  db.forceReleasePost(activePost.id, 'Changement de mission par l’opérateur');
                   setShowMultiPostDialog(false);
                   openStartModalForContract(multiPostTargetContract);
                 }}
@@ -1205,7 +1205,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <Upload className="w-5 h-5 text-emerald-400" />
                   <h3 className="font-tactical font-bold text-white text-sm sm:text-base">
-                    POSTE #{String(selectedContract?.post_number || 1).padStart(2, '0')} · {clientName}
+                    MISSION #{String(selectedContract?.post_number || 1).padStart(2, '0')} · {clientName}
                   </h3>
                 </div>
               </div>
@@ -1272,7 +1272,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-amber-300 uppercase font-bold flex items-center gap-1.5">
                       <Eye className="w-4 h-4" />
-                      <span>Preuves du compte client</span>
+                      <span>Justificatifs du compte client</span>
                     </span>
                     <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                       {selectedContract.account_proof_urls.length} / 5
@@ -1287,14 +1287,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           onOpenProofLightbox({
                             imageUrl: url,
                             gallery: selectedContract.account_proof_urls,
-                            title: `Preuve du compte - ${selectedContract.client_name}`,
+                            title: `Justificatif du compte - ${selectedContract.client_name}`,
                             clientTag: selectedContract.client_name,
                           })
                         }
                         className="relative aspect-square rounded-lg overflow-hidden border border-amber-700/50 cursor-pointer"
                         title="Agrandir la photo"
                       >
-                        <img src={url} alt={`Preuve du compte ${i + 1}`} className="w-full h-full object-cover" />
+                        <img src={url} alt={`Justificatif du compte ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -1356,7 +1356,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       >
                         <img
                           src={photoUrl}
-                          alt={`Preuve ${idx + 1}`}
+                          alt={`Justificatif ${idx + 1}`}
                           className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform"
                           onClick={() =>
                             onOpenProofLightbox({
@@ -1421,7 +1421,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <Camera className="w-6 h-6 text-slate-500 mx-auto" />
                     <p className="text-xs font-bold text-slate-300">Aucune photo ajoutée pour l'instant</p>
                     <p className="text-[11px] text-slate-500">
-                      Vous devez importer ou prendre entre 1 et 5 photos de preuve avant d'envoyer pour validation.
+                      Vous devez importer ou prendre entre 1 et 5 photos de justificatif avant d'envoyer pour validation.
                     </p>
                   </div>
                 )}
@@ -1430,7 +1430,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               {/* VÉRIFICATION DU SCORE SUR LA CAPTURE */}
               <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-3">
                 <label className="block text-emerald-400 uppercase font-bold">
-                  2. Le score sur la capture est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
+                  2. Le volume sur la capture est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1463,7 +1463,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 {!scoreMatches && (
                   <div className="space-y-1.5">
                     <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between gap-2">
-                      <span>Score réel sur la capture</span>
+                      <span>Volume réel sur la capture</span>
                       <span className="text-cyan-400 font-bold text-sm">{formatScoreM(initialScore)}</span>
                     </label>
                     <ScoreInput
@@ -1484,7 +1484,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     maxLength={300}
                     value={startNotes}
                     onChange={e => setStartNotes(e.target.value)}
-                    placeholder="Un mot pour l'admin (facultatif)"
+                    placeholder="Un mot pour le responsable (facultatif)"
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
@@ -1496,7 +1496,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   {startProofPhotos.length > 0 ? (
                     <span className="text-emerald-400 flex items-center gap-1 font-bold">
                       <Check className="w-3.5 h-3.5" />
-                      <span>{startProofPhotos.length} photo(s) prête(s) pour validation Admin</span>
+                      <span>{startProofPhotos.length} photo(s) prête(s) pour validation Responsable</span>
                     </span>
                   ) : (
                     <span className="text-amber-400">Au moins 1 photo requise</span>
@@ -1521,7 +1521,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     }`}
                   >
                     <Upload className="w-4 h-4" />
-                    <span>Envoyer en Attente de Validation Admin</span>
+                    <span>Envoyer en Attente de Validation Responsable</span>
                   </button>
                 </div>
               </div>
@@ -1540,14 +1540,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         >
           <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-6 space-y-4 text-xs font-mono">
             <h3 className="font-tactical font-bold text-white text-base">
-              Modifier Poste en Attente
+              Modifier Mission en Attente
             </h3>
             <p className="text-slate-400">
               Autorisé uniquement avant la validation de l'administrateur.
             </p>
 
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Score de départ (sur la capture)</label>
+              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la capture)</label>
               <ScoreInput
                 value={editScore}
                 onChange={setEditScore}
@@ -1633,7 +1633,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   </div>
                   <div className="mt-0.5 font-bold">{endFormError}</div>
                   <div className="text-[11px] text-red-400/90 mt-1">
-                    Score initial vérifié: {formatScoreM(activePost.initial_score)} pts. Cette anomalie est journalisée dans la console de sécurité ("Petit Malin").
+                    Volume initial vérifié: {formatScoreM(activePost.initial_score)} pts. Cette anomalie est journalisée dans la console de sécurité ("Petit Malin").
                   </div>
                 </div>
               </div>
@@ -1642,7 +1642,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             <form onSubmit={handleSubmitEndForm} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
               <div className="bg-[#121922] p-3 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">Score de départ</span>
+                  <span className="text-[10px] text-slate-500 uppercase block">Volume de départ</span>
                   <span className="text-white font-bold text-xs sm:text-sm">
                     {formatScoreM(activePost.initial_score)}
                   </span>
@@ -1657,7 +1657,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
               <div>
                 <label className="block text-slate-300 uppercase mb-1">
-                  Score Final Atteint (Obligatoire)
+                  Volume Final Atteint (Obligatoire)
                 </label>
                 <ScoreInput
                   value={finalScoreInput}
@@ -1666,7 +1666,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-emerald-400 font-bold text-base focus:border-emerald-500 focus:outline-none"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Le score final doit être impérativement supérieur ou égal au score de départ ({formatScoreM(activePost.initial_score)} pts).
+                  Le volume final doit être impérativement supérieur ou égal au volume de départ ({formatScoreM(activePost.initial_score)} pts).
                 </span>
               </div>
 
@@ -1677,7 +1677,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <Camera className="w-4 h-4" />
                     <span>Capture d'écran / Photo de Fin (Obligatoire)</span>
                   </span>
-                  <span className="text-[10px] text-slate-400">Preuve pour calcul & validation Admin</span>
+                  <span className="text-[10px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
                 </label>
 
                 {!endProofPreview ? (
@@ -1689,7 +1689,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       Importer votre Capture de Fin de Session
                     </span>
                     <span className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                      Capture d'écran de l'écran de fin de match affichant le score final
+                      Capture d'écran de l'écran de fin de match affichant le volume final
                     </span>
                     <span className="mt-2.5 px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow">
                       <Camera className="w-3.5 h-3.5" />
@@ -1709,7 +1709,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       onClick={() =>
                         onOpenProofLightbox({
                           imageUrl: endProofPreview,
-                          title: `Preuve Capture Fin - ${activePost.client_name}`,
+                          title: `Justificatif Capture Fin - ${activePost.client_name}`,
                           score: finalScoreInput,
                           clientTag: activePost.client_name,
                           operatorName: currentUser.name,
@@ -1720,7 +1720,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     >
                       <img
                         src={endProofPreview}
-                        alt="Preuve Fin"
+                        alt="Justificatif Fin"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 text-white text-xs font-mono transition-opacity">

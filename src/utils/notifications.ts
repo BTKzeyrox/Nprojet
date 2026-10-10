@@ -41,7 +41,7 @@ export const buildNotifications = (user: User): Notif[] => {
     const a2 = Math.max(a1 + 1, Math.round(cfg.alert_idle_2_min || 30));
     getQueue(db.getUsers(), db.getPosts(), db.getPresence()).forEach(w => {
       const lvl = w.minutes >= a2 ? a2 : w.minutes >= a1 ? a1 : 0;
-      if (lvl) out.push({ id: `wait-${w.user.id}-${lvl}-${w.waitingSince}`, title: w.user.name, sub: `Sans poste depuis ${lvl} min`, view: 'active-post', at: w.waitingSince as string, tone: lvl === a2 ? 'urgent' : 'info' });
+      if (lvl) out.push({ id: `wait-${w.user.id}-${lvl}-${w.waitingSince}`, title: w.user.name, sub: `Sans mission depuis ${lvl} min`, view: 'active-post', at: w.waitingSince as string, tone: lvl === a2 ? 'urgent' : 'info' });
     });
     db.getSecurityLogs().filter(l => !l.resolved).forEach(l =>
       out.push({ id: `sec-${l.id}`, title: l.employee_name, sub: 'Alerte de sécurité', view: 'security', nav: `sec-${l.id}`, at: l.timestamp, tone: 'urgent' }));
@@ -50,7 +50,7 @@ export const buildNotifications = (user: User): Notif[] => {
     const q = db.getMyQueue();
     const free = q && q.position === 1 ? getFreePosts(db.getContracts(), db.getPosts()) : [];
     if (q && free.length > 0)
-      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Un poste est libre', sub: `${free[0].client_name} (poste ${free[0].post_number}) : à toi en premier`, view: 'grid', nav: `poste-${free[0].post_number}`, at: new Date().toISOString(), tone: 'ok' });
+      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Une mission est libre', sub: `${free[0].client_name} (mission ${free[0].post_number}) : à toi en premier`, view: 'grid', nav: `poste-${free[0].post_number}`, at: new Date().toISOString(), tone: 'ok' });
     db.getPosts().filter(p => p.employee_id === user.id && p.status === 'rejected').forEach(p =>
       out.push({ id: `rej-${p.id}-${p.updated_at}`, title: `${p.client_name} refusé`, sub: p.rejection_reason ? `Motif : ${p.rejection_reason}` : 'Soumission refusée', view: 'active-post', at: p.updated_at || p.date, tone: 'bad' }));
     db.getAdvanceRequests().filter(a => a.employee_id === user.id && a.status !== 'pending').forEach(a =>

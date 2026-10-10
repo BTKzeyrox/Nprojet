@@ -41,7 +41,7 @@ import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../uti
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
 import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
-import { generateDeltaForceScreenshot, compressProofImage } from '../../utils/imageUtils';
+import { generateProofPlaceholder, compressProofImage } from '../../utils/imageUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
 
@@ -136,7 +136,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const slots = 5 - editAccountProofs.length;
     if (files.length === 0) return;
     if (slots <= 0) {
-      setAssignErrorMsg('Maximum 5 photos de preuve du compte client.');
+      setAssignErrorMsg('Maximum 5 photos de justificatif du compte client.');
       return;
     }
     setAccountProofBusy(true);
@@ -257,8 +257,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     if (contractRes.success) {
-      setAssignSuccessMsg('Toutes les modifications du poste ont été enregistrées avec succès !');
-      showToast('Poste mis à jour avec succès !', 'success');
+      setAssignSuccessMsg('Toutes les modifications de la mission ont été enregistrées avec succès !');
+      showToast('Mission mise à jour avec succès !', 'success');
       setTimeout(() => setAssignSuccessMsg(null), 3000);
     } else {
       setAssignErrorMsg(contractRes.error || 'Erreur lors de l\'enregistrement des modifications.');
@@ -297,7 +297,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!res.success) {
       showToast(res.error || 'Erreur de déblocage', 'error');
     } else {
-      showToast('Poste débloqué et réinitialisé avec succès.', 'success');
+      showToast('Mission débloquée et réinitialisé avec succès.', 'success');
     }
     setForceReleasePostId(null);
   };
@@ -354,14 +354,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <button type="button" onClick={() => onNavigateToEmployees && onNavigateToEmployees()} className={cardCls}>
               <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Boosters en ligne</span>
+                <span>Opérateurs en ligne</span>
                 <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
               </div>
               <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
                 {onlineEmployees.length}{' '}
                 <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
               </div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les boosters</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les opérateurs</div>
             </button>
 
             <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className={cardCls}>
@@ -379,7 +379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
               <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Score du jour</span>
+                <span>Volume du jour</span>
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
@@ -390,7 +390,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
               <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Shifts complets</span>
+                <span>Vacations complets</span>
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
@@ -444,7 +444,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 font-tactical font-black text-sm border border-emerald-500/40">
-                    POSTE #{String(selectedAdminContract.post_number).padStart(2, '0')}
+                    MISSION #{String(selectedAdminContract.post_number).padStart(2, '0')}
                   </div>
                   <div>
                     <h3 className="font-tactical font-black text-white text-base">
@@ -520,15 +520,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Booster</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Opérateur</span>
                           <strong className="text-white text-xs truncate block">{activeSessionForModal.employee_name}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Score Début</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Volume Début</span>
                           <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Score Actuel / Fin</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Volume Actuel / Fin</span>
                           <strong className="text-cyan-400 text-xs block">
                             {formatScoreM(activeSessionForModal.final_score ?? activeSessionForModal.current_score)}
                           </strong>
@@ -544,7 +544,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-[10px] text-amber-300 uppercase font-bold block mb-1.5 flex items-center gap-1">
                           <Camera className="w-3.5 h-3.5" />
                           <span>
-                            Preuves photographiques fournies (
+                            Justificatifs photographiques fournies (
                             {activeSessionForModal.start_proof_urls?.length || 1} photo(s) - Cliquer pour inspecter) :
                           </span>
                         </span>
@@ -560,7 +560,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 onOpenProofLightbox({
                                   imageUrl: photoUrl,
                                   gallery: proofsOf(activeSessionForModal),
-                                  title: `Photo ${pIdx + 1} - Preuve Début - ${activeSessionForModal.client_name}`,
+                                  title: `Photo ${pIdx + 1} - Justificatif Début - ${activeSessionForModal.client_name}`,
                                   score: activeSessionForModal.initial_score,
                                   clientTag: activeSessionForModal.client_name,
                                   operatorName: activeSessionForModal.employee_name,
@@ -609,7 +609,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-cyan-400" />
                       <h4 className="font-tactical font-black text-white text-xs sm:text-sm uppercase tracking-wide">
-                        Modifier Tout Dans ce Poste (Superviseur Admin)
+                        Modifier Tout Dans ce Mission (Superviseur Responsable)
                       </h4>
                     </div>
                     <span className="text-[10px] text-cyan-400 font-mono">Contrôle Total Administrateur</span>
@@ -647,7 +647,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editObjective)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Cible (score final)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Cible (volume final)</label>
                       <ScoreInput
                         value={editTargetScore}
                         onChange={setEditTargetScore}
@@ -656,7 +656,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editTargetScore)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Actuel (score du compte)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Actuel (volume du compte)</label>
                       <ScoreInput
                         value={editCurrentScore}
                         onChange={setEditCurrentScore}
@@ -679,7 +679,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Booster Assigné</label>
+                      <label className="block text-slate-300 uppercase mb-1">Opérateur Assigné</label>
                       <select
                         value={assignedBoosterId}
                         onChange={e => setAssignedBoosterId(e.target.value)}
@@ -700,7 +700,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-300 uppercase font-bold flex items-center gap-1.5">
                         <Camera className="w-4 h-4 text-amber-400" />
-                        <span>Preuves du compte client</span>
+                        <span>Justificatifs du compte client</span>
                       </span>
                       <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                         {editAccountProofs.length} / 5 photos
@@ -715,14 +715,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: url,
                                 gallery: editAccountProofs,
-                                title: `Preuve du compte - ${editClientName}`,
+                                title: `Justificatif du compte - ${editClientName}`,
                                 clientTag: editClientName,
                               })
                             }
                             className="w-full h-full cursor-pointer"
                             title="Agrandir la photo"
                           >
-                            <img src={url} alt={`Preuve du compte ${i + 1}`} className="w-full h-full object-cover" />
+                            <img src={url} alt={`Justificatif du compte ${i + 1}`} className="w-full h-full object-cover" />
                           </button>
                           <button
                             type="button"
@@ -743,12 +743,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       )}
                     </div>
                     <span className="text-[10px] text-slate-500 block">
-                      Le lien des photos est public : évitez les mots de passe sur les captures. Enregistrez le poste pour valider les changements.
+                      Le lien des photos est public : évitez les mots de passe sur les captures. Enregistrez la mission pour valider les changements.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 uppercase mb-1">Description du poste</label>
+                    <label className="block text-slate-300 uppercase mb-1">Description de la mission</label>
                     <textarea
                       value={editDescription}
                       onChange={e => setEditDescription(e.target.value)}
@@ -776,7 +776,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow cursor-pointer"
                     >
                       <Check className="w-4 h-4" />
-                      <span>Enregistrer les Modifications du Poste</span>
+                      <span>Enregistrer les Modifications du Mission</span>
                     </button>
                   </div>
 
@@ -787,19 +787,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         const c = selectedAdminContract;
                         const label = `P${String(c.post_number).padStart(2, '0')}`;
                         askConfirm({
-                          title: `Supprimer le poste ${label} ?`,
+                          title: `Supprimer la mission ${label} ?`,
                           message: activeSessionForModal
-                            ? 'Une session est en cours sur ce poste : impossible de le supprimer.'
-                            : 'Le poste sera supprimé de la grille. Cette action est définitive.',
+                            ? 'Une session est en cours sur cette mission : impossible de le supprimer.'
+                            : 'La mission sera supprimé de la grille. Cette action est définitive.',
                           confirmLabel: 'Supprimer',
                           danger: true,
                           onConfirm: () => {
                             const r = db.removeContract(c.id);
                             if (!r.success) {
-                              setAssignErrorMsg(r.error || 'Impossible de supprimer ce poste.');
+                              setAssignErrorMsg(r.error || 'Impossible de supprimer cette mission.');
                               return;
                             }
-                            showToast('Poste supprimé.', 'success');
+                            showToast('Mission supprimée.', 'success');
                             setSelectedAdminContract(null);
                           },
                         });
@@ -807,7 +807,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-full min-h-[46px] flex items-center justify-center gap-2 bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-300 font-tactical font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
                     >
                       <Trash2 className="w-5 h-5" />
-                      <span>Supprimer ce poste</span>
+                      <span>Supprimer cette mission</span>
                     </button>
                   </div>
                 </div>
@@ -825,7 +825,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           setAssignErrorMsg(null);
                           const booster = users.find(u => u.id === assignedBoosterId) || availableBoosters[0];
                           if (!booster) {
-                            setAssignErrorMsg('Veuillez sélectionner un booster.');
+                            setAssignErrorMsg('Veuillez sélectionner un opérateur.');
                             return;
                           }
                           const res = db.startPost({
@@ -834,7 +834,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             accountTag: editAccountTag,
                             targetScore: editTargetScore,
                             initialScore: editInitialScore,
-                            proofUrl: generateDeltaForceScreenshot({
+                            proofUrl: generateProofPlaceholder({
                               operatorName: booster.name,
                               score: editInitialScore,
                               clientTag: `${editClientName} #${editAccountTag}`,
@@ -845,7 +845,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             autoReplaceExisting: true,
                           });
                           if (res.success) {
-                            setAssignSuccessMsg(`Poste activé avec succès pour ${booster.name} !`);
+                            setAssignSuccessMsg(`Mission activée avec succès pour ${booster.name} !`);
                             setTimeout(() => setSelectedAdminContract(null), 1200);
                           } else {
                             setAssignErrorMsg(res.error || 'Erreur lors de l\'activation.');
@@ -854,7 +854,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
                       >
                         <UserCheck className="w-4 h-4" />
-                        <span>Confirmer l'Assignation au Booster</span>
+                        <span>Confirmer l'Assignation à l’opérateur</span>
                       </button>
 
                       <button
@@ -867,7 +867,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             accountTag: editAccountTag,
                             targetScore: editTargetScore,
                             initialScore: editInitialScore,
-                            proofUrl: generateDeltaForceScreenshot({
+                            proofUrl: generateProofPlaceholder({
                               operatorName: adminUser.name,
                               score: editInitialScore,
                               clientTag: `${editClientName} #${editAccountTag}`,
@@ -886,7 +886,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         }}
                         className="py-2.5 px-4 bg-[#142333] hover:bg-[#1a2d42] border border-cyan-800/60 text-cyan-300 font-mono text-xs rounded-xl transition-colors cursor-pointer text-center"
                       >
-                        <Zap className="w-4 h-4 inline mr-1.5 -mt-0.5" />Ouvrir en Test Admin
+                        <Zap className="w-4 h-4 inline mr-1.5 -mt-0.5" />Ouvrir en Test Responsable
                       </button>
                     </div>
                   </div>
@@ -898,7 +898,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div>
                       <span className="font-bold text-amber-300 block">Session En Cours Active</span>
                       <span className="text-[11px] text-slate-400">
-                        Opérateur: {activeSessionForModal.employee_name} · Score actuel: {formatScoreM(activeSessionForModal.current_score)} pts
+                        Opérateur: {activeSessionForModal.employee_name} · Volume actuel: {formatScoreM(activeSessionForModal.current_score)} pts
                       </span>
                     </div>
                     <button
@@ -983,7 +983,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
-                <div className="text-slate-300">Shift souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>
+                <div className="text-slate-300">Vacation souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>
                 {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
                 <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
               </div>
@@ -1203,7 +1203,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-red-200/80 font-mono">
-                Surveillance automatique des inversions de score, tentatives multi-poste et anomalies.
+                Surveillance automatique des inversions de volume, tentatives multi-mission et anomalies.
               </p>
             </div>
           </div>
@@ -1250,10 +1250,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {log.details && (
                         <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-400 flex flex-wrap gap-2.5 sm:gap-3">
                           {log.details.initial_score !== undefined && (
-                            <span>Score Initial: <strong className="text-white">{formatScoreM(log.details.initial_score)} pts</strong></span>
+                            <span>Volume Initial: <strong className="text-white">{formatScoreM(log.details.initial_score)} pts</strong></span>
                           )}
                           {log.details.attempted_score !== undefined && (
-                            <span>Score Tenté: <strong className="text-red-400">{formatScoreM(log.details.attempted_score)} pts</strong></span>
+                            <span>Volume Tenté: <strong className="text-red-400">{formatScoreM(log.details.attempted_score)} pts</strong></span>
                           )}
                           {log.details.client_name && (
                             <span>Client: <strong className="text-cyan-400">{log.details.client_name}</strong></span>
@@ -1309,7 +1309,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Panneau de Validation des Soumissions (Start &amp; End Forms)
             </h3>
             <p className="text-xs text-slate-400 font-mono">
-              Vérification des preuves de captures de jeu et calcul automatisé du payroll (prix du 1M dans Réglages).
+              Vérification des justificatifs et suivi du rendement (prix du 1M dans Réglages).
             </p>
           </div>
 
@@ -1381,14 +1381,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {isStart ? 'Demande de Début (pending_start)' : 'Demande de Clôture (pending_end)'}
                           </span>
                           <span className="text-xs font-mono text-slate-400">
-                            Shift {post.shift_type.toUpperCase()} · Reçu à {post.start_time}
+                            Vacation {post.shift_type.toUpperCase()} · Reçu à {post.start_time}
                           </span>
                         </div>
                         <h4 className="text-base font-bold text-white mt-1">
                           Client: {post.client_name} ({post.account_tag})
                         </h4>
                         <p className="text-xs text-slate-300 font-mono">
-                          Opérateur Booster: <strong className="text-emerald-400">{post.employee_name}</strong>
+                          Opérateur Opérateur: <strong className="text-emerald-400">{post.employee_name}</strong>
                         </p>
                       </div>
 
@@ -1409,11 +1409,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* Scores Comparison */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Score Départ</span>
+                        <span className="text-slate-500 text-[10px] block uppercase">Volume Départ</span>
                         <span className="text-white font-bold">{formatScoreM(post.initial_score)} pts</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Score Soumis</span>
+                        <span className="text-slate-500 text-[10px] block uppercase">Volume Soumis</span>
                         <span className="text-cyan-400 font-bold">{formatScoreM(finalScore)} pts</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
@@ -1431,7 +1431,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* Clickable Thumbnail Previews for Lightbox */}
                     <div className="pt-2">
                       <span className="text-xs uppercase font-mono font-semibold text-slate-400 block mb-2">
-                        Preuves Captures d'Écran (Cliquez pour agrandir dans la Lightbox)
+                        Justificatifs Captures d'Écran (Cliquez pour agrandir dans la Lightbox)
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         
@@ -1441,7 +1441,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             onOpenProofLightbox({
                               imageUrl: post.start_proof_url,
                               gallery: proofsOf(post),
-                              title: `Preuve de Début - ${post.client_name}`,
+                              title: `Justificatif de Début - ${post.client_name}`,
                               score: post.initial_score,
                               clientTag: post.client_name,
                               operatorName: post.employee_name,
@@ -1457,7 +1457,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                             <img
                               src={post.start_proof_url}
-                              alt="Preuve Début"
+                              alt="Justificatif Début"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-mono">
@@ -1474,7 +1474,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: post.end_proof_url!,
                                 gallery: proofsOf(post),
-                                title: `Preuve de Fin - ${post.client_name}`,
+                                title: `Justificatif de Fin - ${post.client_name}`,
                                 score: finalScore,
                                 clientTag: post.client_name,
                                 operatorName: post.employee_name,
@@ -1490,7 +1490,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                               <img
                                 src={post.end_proof_url}
-                                alt="Preuve Fin"
+                                alt="Justificatif Fin"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-mono">
@@ -1565,7 +1565,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-6 shadow-xl lg:col-span-1">
           {waitingQueue.length > 0 && (
             <div className="mb-4 bg-[#1a150a] border-2 border-amber-500 p-3 space-y-2">
-              <h3 className="font-tactical font-black text-white text-sm">File d'attente « sans poste » ({waitingQueue.length})</h3>
+              <h3 className="font-tactical font-black text-white text-sm">File d'attente « sans mission » ({waitingQueue.length})</h3>
               {waitingQueue.map(w => (
                 <div key={w.user.id} className="flex items-center justify-between gap-2 text-xs font-mono">
                   <span className="text-white break-words min-w-0">#{w.position} · {w.user.name}</span>
@@ -1615,7 +1615,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          Shift {emp.shift.toUpperCase()} · {active ? `En jeu: ${active.client_name}` : STATUS_LABEL[ps.status]}
+                          Vacation {emp.shift.toUpperCase()} · {active ? `En cours : ${active.client_name}` : STATUS_LABEL[ps.status]}
                         </div>
                       </div>
                     </div>
@@ -1656,7 +1656,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="text-xs font-mono text-emerald-400">→</span>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-1">
-                  Tri par Shift Jour/Nuit, badges de performance, blocages et suppression de profils.
+                  Tri par Vacation Jour/Nuit, badges de performance, blocages et suppression de profils.
                 </p>
               </button>
 
@@ -1676,7 +1676,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-500 flex items-center justify-between">
-            <span>Terminal d'administration Delta Force - Version Opérationnelle 1.0</span>
+            <span>Terminal d'administration Gestion Pro - Version Opérationnelle 1.0</span>
             <span className="text-emerald-400">BDD Locale Active</span>
           </div>
         </div>
@@ -1694,7 +1694,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Motif de Rejet de la Soumission
             </h3>
             <p className="text-slate-400">
-              Veuillez préciser la raison du rejet qui sera notifiée à l'opérateur booster.
+              Veuillez préciser la raison du rejet qui sera notifiée à l'opérateur opérateur.
             </p>
 
             <form onSubmit={handleConfirmReject} className="space-y-4">
@@ -1705,7 +1705,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   required
-                  placeholder="ex: Capture illisible, score ne correspondant pas aux métadonnées..."
+                  placeholder="ex: Capture illisible, volume ne correspondant pas aux métadonnées..."
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                 />
               </div>
@@ -1739,7 +1739,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Force Release Post (Libération d'Urgence)
             </h3>
             <p className="text-slate-400">
-              Cette action déverrouille immédiatement la session et libère l'employé bloqué par la contrainte Anti-Multi-Poste.
+              Cette action déverrouille immédiatement la session et libère l'employé bloqué par la contrainte Anti-Multi-Mission.
             </p>
 
             <form onSubmit={handleConfirmForceRelease} className="space-y-4">

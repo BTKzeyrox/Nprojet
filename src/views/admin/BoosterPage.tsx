@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, IdCard, Calendar, MessageSquare, DollarSign, ShieldAlert, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, IdCard, Calendar, MessageSquare, DollarSign, ShieldAlert, ClipboardList } from 'lucide-react';
 import { db } from '../../db/store';
 import { User } from '../../types';
 import { Avatar } from '../../components/Avatar';
@@ -31,7 +31,7 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
     return (
       <div className="max-w-3xl mx-auto p-3 space-y-3">
         <button onClick={onBack} className="text-sm text-emerald-400 flex items-center gap-1.5 cursor-pointer"><ArrowLeft className="w-4 h-4" />Retour</button>
-        <div className="text-slate-300 text-sm">Booster introuvable.</div>
+        <div className="text-slate-300 text-sm">Opérateur introuvable.</div>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
         {[
           ['Gains', formatCurrencyAr(u.total_earnings_ar)],
-          ['Score boosté', formatScoreM(u.total_score_boosted)],
+          ['Volume traité', formatScoreM(u.total_score_boosted)],
           ['Sessions finies', String(doneCount)],
           ['Avance en cours', formatCurrencyAr(u.pending_advance_ar || 0)],
         ].map(([k, v]) => (
@@ -87,14 +87,14 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
           <button className={link} onClick={() => onGo('calendar')}><Calendar className="w-4 h-4 text-emerald-400 shrink-0" />Son calendrier</button>
           <button className={link} onClick={() => onGo('chat')}><MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />Messagerie privée</button>
           <button className={link} onClick={() => onGo('history')}><DollarSign className="w-4 h-4 text-amber-400 shrink-0" />Son historique (avances, demandes){pendingAdv.length > 0 ? ` (${pendingAdv.length} en attente)` : ''}</button>
-          <button className={link} onClick={() => onGo(current.some(p => p.status !== 'active') ? 'validations' : 'dashboard')}><Gamepad2 className="w-4 h-4 text-emerald-400 shrink-0" />Postes{current.length > 0 ? ` (${current.length} en cours)` : ''}</button>
+          <button className={link} onClick={() => onGo(current.some(p => p.status !== 'active') ? 'validations' : 'dashboard')}><ClipboardList className="w-4 h-4 text-emerald-400 shrink-0" />Missions{current.length > 0 ? ` (${current.length} en cours)` : ''}</button>
           <button className={link} onClick={() => onGo('security')}><ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />Sécurité{alerts.length > 0 ? ` (${alerts.length} alerte${alerts.length > 1 ? 's' : ''})` : ''}</button>
         </div>
       </div>
 
       <div className={card}>
-        <h3 className={h}>Poste en cours</h3>
-        {current.length === 0 ? <div className="text-xs text-slate-400">Aucun poste en cours.</div> : current.map(p => (
+        <h3 className={h}>Mission en cours</h3>
+        {current.length === 0 ? <div className="text-xs text-slate-400">Aucune mission en cours.</div> : current.map(p => (
           <div key={p.id} className="flex items-center justify-between gap-2 text-xs font-mono border-t border-slate-800 pt-2">
             <span className="text-white break-words min-w-0">{p.client_name}</span>
             <span className="text-slate-300 shrink-0">{formatScoreM(p.initial_score)} → {formatScoreM(p.current_score)} / {formatScoreM(p.target_score)}</span>

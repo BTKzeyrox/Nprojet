@@ -132,7 +132,7 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }
   const to = shift === 'night' ? st.night_shift_end || '06:00' : st.day_shift_end || '18:00';
   const startMin = toMin(shift === 'night' ? st.night_shift_start : st.day_shift_start, shift === 'night' ? 20 * 60 : 8 * 60);
   const opens = fmtMin(startMin - accessMargins(st).before);
-  return { ok: false, message: `Ton shift ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Tu peux te connecter à partir de ${opens}.` };
+  return { ok: false, message: `Ta vacation ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Tu peux te connecter à partir de ${opens}.` };
 }
 
 // Mode maintenance (Réglages) : les boosters sont refusés avec le message de l'admin ; l'admin entre toujours.
@@ -198,11 +198,11 @@ const queueOf = (rows: any[], meId: string) => {
   return i < 0 ? null : { waiting_since: waiting[i].waiting_since, position: i + 1, total: waiting.length };
 };
 async function queueRoute(req: any, res: any, me: any) {
-  if (me.role !== 'employee') return res.status(403).json({ error: 'Réservé aux boosters.' });
+  if (me.role !== 'employee') return res.status(403).json({ error: 'Réservé aux opérateurs.' });
   const join = req.body?.join === true;
   if (join) {
     const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', me.id).in('data->>status', OPEN_STATUS).limit(1);
-    if (open && open.length) return res.status(409).json({ error: 'Tu as déjà un poste en cours.' });
+    if (open && open.length) return res.status(409).json({ error: 'Tu as déjà une mission en cours.' });
   }
   await touchPresence(me);
   const { data: row } = await sb.from(PRESENCE).select('waiting_since').eq('user_id', me.id).maybeSingle();
@@ -565,7 +565,7 @@ const isBucketUrl = (u: unknown) =>
 const noteOf = (body: any): string => String(body?.note || '').trim().slice(0, 300);
 
 async function profileRequest(req: any, res: any, me: any) {
-  if (me.role === 'admin') return res.status(403).json({ error: 'Réservé aux boosters.' });
+  if (me.role === 'admin') return res.status(403).json({ error: 'Réservé aux opérateurs.' });
   const { name, username, phone, avatar_url } = req.body || {};
   const nm = String(name || '').trim();
   const un = String(username || '').trim().toLowerCase();
@@ -818,15 +818,15 @@ async function autoPenalties(info: { start: string; end: string }, cfg: PayCfg, 
       const base = first1.shift_type === 'night' ? cfg.nightStart : cfg.dayStart;
       const diff = hmMin(first1.start_time) - hmMin(base);
       if (diff < 0 || diff >= 12 * 60) continue;
-      if (diff >= cfg.auto.late2Min) addM(u.id, `auto-late-${date}`, cfg.auto.late2M, `Retard de ${diff} min le ${date} (−${cfg.auto.late2M}M de score)`, date);
-      else if (diff >= cfg.auto.late1Min) addM(u.id, `auto-late-${date}`, cfg.auto.late1M, `Retard de ${diff} min le ${date} (−${cfg.auto.late1M}M de score)`, date);
+      if (diff >= cfg.auto.late2Min) addM(u.id, `auto-late-${date}`, cfg.auto.late2M, `Retard de ${diff} min le ${date} (−${cfg.auto.late2M}M de volume)`, date);
+      else if (diff >= cfg.auto.late1Min) addM(u.id, `auto-late-${date}`, cfg.auto.late1M, `Retard de ${diff} min le ${date} (−${cfg.auto.late1M}M de volume)`, date);
     }
     const f = first.get(u.id);
     if (!f) continue;
     for (let d = info.start; d <= lastAbs; d = new Date(new Date(d + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10)) {
       if (d < f || days.has(d)) continue;
       if (new Date(d + 'T00:00:00Z').getUTCDay() === 0) continue; // dimanche = repos
-      addM(u.id, `auto-abs-${d}`, cfg.auto.absentM, `Absence non annoncée le ${d} (−${cfg.auto.absentM}M de score)`, d);
+      addM(u.id, `auto-abs-${d}`, cfg.auto.absentM, `Absence non annoncée le ${d} (−${cfg.auto.absentM}M de volume)`, d);
     }
   }
   return out;
@@ -1078,7 +1078,7 @@ async function payrollBonus(req: any, res: any, me: any) {
   const { data: pd } = await sb.from(PAYROLL).select('id').eq('id', `period-${info.pid}`).maybeSingle();
   if (pd) return res.status(409).json({ error: 'Cette période est clôturée. Rouvre-la pour la modifier.' });
   const u = await getUserRow(uid);
-  if (!u || u.role === 'admin') return res.status(404).json({ error: 'Booster introuvable.' });
+  if (!u || u.role === 'admin') return res.status(404).json({ error: 'Opérateur introuvable.' });
   const now = new Date().toISOString();
   const id = `bonus-${info.pid}-${uid}-${Date.now()}`;
   await sb.from(PAYROLL).upsert({ id, data: { kind: 'bonus', type, id, pid: info.pid, user_id: uid, user_name: u.name, amount, reason, by: me.id, by_name: me.name || '', at: now }, updated_at: now });

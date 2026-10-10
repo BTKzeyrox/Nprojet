@@ -30,10 +30,10 @@ export const QueueButton: React.FC<{ userId: string }> = ({ userId }) => {
           {q ? (
             <>
               <div className="text-amber-300 font-bold">File d'attente : tu es n°{q.position} sur {q.total}</div>
-              <div className="text-slate-400">En attente depuis {minutes} min. On te prévient quand un poste se libère.</div>
+              <div className="text-slate-400">En attente depuis {minutes} min. On te prévient quand une mission se libère.</div>
             </>
           ) : (
-            <div className="text-slate-300">Pas de poste libre ? Prévenez l'admin.</div>
+            <div className="text-slate-300">Pas de mission libre ? Prévenez le responsable.</div>
           )}
           {err && <div className="text-red-400 mt-0.5">{err}</div>}
         </div>
@@ -44,7 +44,7 @@ export const QueueButton: React.FC<{ userId: string }> = ({ userId }) => {
         onClick={toggle}
         className={`shrink-0 px-3 py-2 text-xs font-bold border cursor-pointer disabled:opacity-50 ${q ? 'bg-[#141e2a] border-slate-600 text-slate-200' : 'bg-amber-600 hover:bg-amber-500 border-amber-500 text-white'}`}
       >
-        {q ? 'Quitter la file' : "Je n'ai pas de poste"}
+        {q ? 'Quitter la file' : "Je n'ai pas de mission"}
       </button>
     </div>
   );

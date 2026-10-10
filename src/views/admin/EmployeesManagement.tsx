@@ -276,10 +276,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-bold font-tactical text-white">
-              Gestion de l'Équipe &amp; Opérateurs Boosters
+              Gestion de l'Équipe &amp; Opérateurs Opérateurs
             </h2>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Affectation des shifts, consultation des profils, badges de performance et surveillance des accès.
+              Affectation des vacations, consultation des profils, badges de performance et surveillance des accès.
             </p>
           </div>
         </div>
@@ -289,7 +289,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Ajouter un Booster</span>
+          <span>Ajouter un Opérateur</span>
         </button>
       </div>
 
@@ -315,7 +315,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Sun className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Day Shift ({users.filter(u => u.role === 'employee' && u.shift === 'day' && u.status !== 'blocked').length})
+            <Sun className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Day Vacation ({users.filter(u => u.role === 'employee' && u.shift === 'day' && u.status !== 'blocked').length})
           </button>
           <button
             onClick={() => setShiftFilter('night')}
@@ -325,7 +325,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Moon className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Night Shift ({users.filter(u => u.role === 'employee' && u.shift === 'night' && u.status !== 'blocked').length})
+            <Moon className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Night Vacation ({users.filter(u => u.role === 'employee' && u.shift === 'night' && u.status !== 'blocked').length})
           </button>
           <button
             onClick={() => setShiftFilter('blocked')}
@@ -392,7 +392,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                     onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
                     className="w-full min-h-[46px] px-3 text-sm font-mono rounded border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer"
                   >
-                    <option value="auto">Accès : shift</option>
+                    <option value="auto">Accès : vacation</option>
                     <option value="allow">Accès : toute heure</option>
                     <option value="block">Accès : bloqué</option>
                   </select>
@@ -432,10 +432,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           <table className="w-full min-w-[780px] text-left text-xs font-mono text-slate-300">
             <thead className="bg-[#121c27] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-3 pl-4 sm:pl-6">Opérateur Booster</th>
-                <th className="p-3">Shift Assigné</th>
+                <th className="p-3 pl-4 sm:pl-6">Opérateur Opérateur</th>
+                <th className="p-3">Vacation Assigné</th>
                 <th className="p-3">Badge Performance</th>
-                <th className="p-3">Score Total</th>
+                <th className="p-3">Volume Total</th>
                 <th className="p-3">Payroll Cumulé</th>
                 <th className="p-3">Statut Système</th>
                 {cfg.show_activity_column && <th className="p-3">Activité</th>}
@@ -493,9 +493,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                           }`}
                         >
                           {emp.shift === 'day' ? (
-                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Shift Jour ({shiftHoursLabel('day', cfg)})</span>
+                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Vacation Jour ({shiftHoursLabel('day', cfg)})</span>
                           ) : (
-                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Shift Nuit ({shiftHoursLabel('night', cfg)})</span>
+                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Vacation Nuit ({shiftHoursLabel('night', cfg)})</span>
                           )}
                         </span>
                       </td>
@@ -590,9 +590,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                                 ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
                                 : 'bg-slate-800 text-slate-200 border-slate-600'
                             }`}
-                            title="Accès selon l'heure du shift"
+                            title="Accès selon l'heure de la vacation"
                           >
-                            <option value="auto">Accès : shift</option>
+                            <option value="auto">Accès : vacation</option>
                             <option value="allow">Accès : toute heure</option>
                             <option value="block">Accès : bloqué</option>
                           </select>
@@ -672,7 +672,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           Demandes d'Avances sur Salaire en Attente ({pendingAdvances.length})
         </h3>
         <p className="text-xs text-slate-400 font-mono mb-4">
-          Validation des avances demandées par les boosters ("DMD d'avance").
+          Validation des avances demandées par les opérateurs ("DMD d'avance").
         </p>
 
         {pendingAdvances.length === 0 ? (
@@ -779,14 +779,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Shift Assigné</label>
+                <label className="block text-slate-300 uppercase mb-1">Vacation Assigné</label>
                 <select
                   value={editShift}
                   onChange={e => setEditShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day"> Shift Jour (08h00 - 18h00)</option>
-                  <option value="night"> Shift Nuit (20h00 - 06h00)</option>
+                  <option value="day"> Vacation Jour (08h00 - 18h00)</option>
+                  <option value="night"> Vacation Nuit (20h00 - 06h00)</option>
                 </select>
               </div>
 
@@ -797,7 +797,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setEditBadge(e.target.value as any)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="Top Booster">Top Booster</option>
+                  <option value="Top Opérateur">Top Opérateur</option>
                   <option value="Elite">Elite</option>
                   <option value="Standard">Standard</option>
                   <option value="Under Watch">Under Watch</option>
@@ -829,7 +829,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
             <h3 className="font-tactical font-bold text-white text-base">
-              Enregistrer un Nouvel Opérateur Booster
+              Enregistrer un Nouvel Opérateur Opérateur
             </h3>
 
             {addUserError && (
@@ -891,14 +891,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Shift Initial</label>
+                <label className="block text-slate-300 uppercase mb-1">Vacation Initial</label>
                 <select
                   value={newShift}
                   onChange={e => setNewShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day"> Day Shift (08h00 - 18h00)</option>
-                  <option value="night"> Night Shift (20h00 - 06h00)</option>
+                  <option value="day"> Day Vacation (08h00 - 18h00)</option>
+                  <option value="night"> Night Vacation (20h00 - 06h00)</option>
                 </select>
               </div>
 

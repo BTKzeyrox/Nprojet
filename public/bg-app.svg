@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
 <defs>
-<radialGradient id="a" cx="95%" cy="0%" r="55%"><stop offset="0" stop-color="#14b8a6" stop-opacity=".75"/><stop offset="1" stop-color="#14b8a6" stop-opacity="0"/></radialGradient>
-<radialGradient id="c" cx="55%" cy="45%" r="40%"><stop offset="0" stop-color="#10b981" stop-opacity=".22"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/></radialGradient>
+<radialGradient id="a" cx="95%" cy="0%" r="55%"><stop offset="0" stop-color="#3b82f6" stop-opacity=".75"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
+<radialGradient id="c" cx="55%" cy="45%" r="40%"><stop offset="0" stop-color="#3b82f6" stop-opacity=".22"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
 <radialGradient id="b" cx="0%" cy="100%" r="55%"><stop offset="0" stop-color="#3b82f6" stop-opacity=".65"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
 <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#94a3b8" fill-opacity=".16"/></pattern>
 </defs>

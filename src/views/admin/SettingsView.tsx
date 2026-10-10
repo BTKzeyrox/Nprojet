@@ -50,7 +50,7 @@ export const SettingsView: React.FC = () => {
     setError(null);
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     for (const k of ['auto_pen_late1_min', 'auto_pen_late2_min'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 1)) return setError('Pénalités automatiques : les minutes de retard doivent être 1 ou plus.');
-    for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de score ne peut pas être négatif.');
+    for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de volume ne peut pas être négatif.');
     if (s.retention_days < 1) return setError('Conservation des photos : 1 jour minimum.');
     if ((s.advance_cap_pct ?? 0) < 0 || (s.advance_cap_pct ?? 0) > 100) return setError('Plafond des avances : entre 0 et 100 %.');
     if ((s.advance_repay_pct ?? 100) < 0 || (s.advance_repay_pct ?? 100) > 100) return setError('Remboursement des avances : entre 0 et 100 %.');
@@ -94,14 +94,14 @@ export const SettingsView: React.FC = () => {
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Paie</h3>
         <div>
-          <label className={labelCls}>Prix du 1M de score (en Ar)</label>
+          <label className={labelCls}>Prix du 1M de volume (en Ar)</label>
           <ScoreInput value={s.price_per_million} onChange={n => set('price_per_million', n)} className={inputCls} placeholder="ex: 800" />
           <p className="text-[11px] text-slate-500 mt-1">S'applique aux sessions validées à partir de maintenant. Les paies déjà calculées ne changent pas.</p>
         </div>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
-        <h3 className="font-tactical font-bold text-white">Shifts</h3>
+        <h3 className="font-tactical font-bold text-white">Vacations</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Jour : début</label>
@@ -127,26 +127,26 @@ export const SettingsView: React.FC = () => {
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
-        <h3 className="font-tactical font-bold text-white">Accès et suivi des boosters</h3>
+        <h3 className="font-tactical font-bold text-white">Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Connexion permise avant le shift (min)</label>
+            <label className={labelCls}>Connexion permise avant la vacation (min)</label>
             <input type="number" min={0} value={s.access_before_min} onChange={e => set('access_before_min', Number(e.target.value))} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Connexion permise après le shift (min)</label>
+            <label className={labelCls}>Connexion permise après la vacation (min)</label>
             <input type="number" min={0} value={s.access_after_min} onChange={e => set('access_after_min', Number(e.target.value))} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>1re alerte « sans poste » (min)</label>
+            <label className={labelCls}>1re alerte « sans mission » (min)</label>
             <input type="number" min={1} value={s.alert_idle_1_min} onChange={e => set('alert_idle_1_min', Number(e.target.value))} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>2e alerte « sans poste » (min)</label>
+            <label className={labelCls}>2e alerte « sans mission » (min)</label>
             <input type="number" min={2} value={s.alert_idle_2_min} onChange={e => set('alert_idle_2_min', Number(e.target.value))} className={inputCls} />
           </div>
         </div>
-        <p className="text-[11px] text-slate-500">Un booster hors de son shift est refusé à la connexion et déconnecté, sauf s'il a une session en cours. Chaque booster peut aussi avoir « toute heure » ou « bloqué » sur la page Employés. Ces durées sont appliquées par le serveur en environ 1 minute.</p>
+        <p className="text-[11px] text-slate-500">Un opérateur hors de sa vacation est refusé à la connexion et déconnecté, sauf s'il a une session en cours. Chaque opérateur peut aussi avoir « toute heure » ou « bloqué » sur la page Employés. Ces durées sont appliquées par le serveur en environ 1 minute.</p>
 
         <div className="pt-1 space-y-2">
           <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
@@ -180,10 +180,10 @@ export const SettingsView: React.FC = () => {
         <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
           <input type="checkbox" checked={s.maintenance_on} onChange={e => set('maintenance_on', e.target.checked)} className="w-4 h-4 accent-amber-500" />
-          Site en maintenance (les boosters sont déconnectés et refusés, toi tu entres toujours)
+          Site en maintenance (les opérateurs sont déconnectés et refusés, toi tu entres toujours)
         </label>
         <div>
-          <label className={labelCls}>Message affiché aux boosters</label>
+          <label className={labelCls}>Message affiché aux opérateurs</label>
           <textarea rows={2} maxLength={300} value={s.maintenance_message} onChange={e => set('maintenance_message', e.target.value)} className={inputCls} />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -203,7 +203,7 @@ export const SettingsView: React.FC = () => {
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
             <input type="checkbox" checked={s.err_hide_details} onChange={e => set('err_hide_details', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
-            Cacher le détail technique aux boosters (ils ne voient que le numéro d'incident)
+            Cacher le détail technique aux opérateurs (ils ne voient que le numéro d'incident)
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
             <input type="checkbox" checked={s.err_report_button} onChange={e => set('err_report_button', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
@@ -214,7 +214,7 @@ export const SettingsView: React.FC = () => {
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
-        <h3 className="font-tactical font-bold text-white">Types de poste</h3>
+        <h3 className="font-tactical font-bold text-white">Types de mission</h3>
         <div className="flex flex-wrap gap-2">
           {s.post_types.map(t => (
             <span key={t} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
@@ -236,7 +236,7 @@ export const SettingsView: React.FC = () => {
             <Plus className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les postes qui l'utilisent déjà.</p>
+        <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les missions qui l'utilisent déjà.</p>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
@@ -253,7 +253,7 @@ export const SettingsView: React.FC = () => {
           <div>
             <label className={labelCls}>Plafond des avances (%)</label>
             <input type="number" min={0} max={100} value={s.advance_cap_pct ?? 0} onChange={e => set('advance_cap_pct', Number(e.target.value))} className={inputCls} />
-            <p className="text-[11px] text-slate-500 mt-1">% de ce que le booster a gagné dans la période. 0 = pas de plafond.</p>
+            <p className="text-[11px] text-slate-500 mt-1">% de ce que l’opérateur a gagné dans la période. 0 = pas de plafond.</p>
           </div>
           <div>
             <label className={labelCls}>Remboursement des avances (%)</label>
@@ -273,15 +273,15 @@ export const SettingsView: React.FC = () => {
         <div className="pt-3 mt-1 border-t border-slate-700 space-y-2">
           <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
             <input type="checkbox" checked={s.auto_pen_enabled !== false} onChange={e => set('auto_pen_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
-            Pénalités automatiques en score (retards et absences), calculées dans la paie de chaque employé
+            Pénalités automatiques en volume (retards et absences), calculées dans la paie de chaque employé
           </label>
-          <p className="text-[11px] text-slate-400">Chaque 1M de score retiré = le prix du 1M réglé plus haut. Calculé à chaque fiche de paie, avec les mêmes règles que le calendrier (dimanche = repos). Un employé qui n'a rien gagné n'aura pas de net négatif.</p>
+          <p className="text-[11px] text-slate-400">Chaque 1M de volume retiré = le prix du 1M réglé plus haut. Calculé à chaque fiche de paie, avec les mêmes règles que le calendrier (dimanche = repos). Un employé qui n'a rien gagné n'aura pas de net négatif.</p>
           <div className="grid grid-cols-2 gap-2">
             <div><label className={labelCls}>Retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late1_min ?? 15} onChange={e => set('auto_pen_late1_min', Number(e.target.value))} className={inputCls} /></div>
-            <div><label className={labelCls}>Retard : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late1_m ?? 1} onChange={e => set('auto_pen_late1_m', Number(e.target.value))} className={inputCls} /></div>
+            <div><label className={labelCls}>Retard : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late1_m ?? 1} onChange={e => set('auto_pen_late1_m', Number(e.target.value))} className={inputCls} /></div>
             <div><label className={labelCls}>Gros retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late2_min ?? 30} onChange={e => set('auto_pen_late2_min', Number(e.target.value))} className={inputCls} /></div>
-            <div><label className={labelCls}>Gros retard : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late2_m ?? 2} onChange={e => set('auto_pen_late2_m', Number(e.target.value))} className={inputCls} /></div>
-            <div className="col-span-2"><label className={labelCls}>Absence non annoncée : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_absent_m ?? 5} onChange={e => set('auto_pen_absent_m', Number(e.target.value))} className={inputCls} /></div>
+            <div><label className={labelCls}>Gros retard : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late2_m ?? 2} onChange={e => set('auto_pen_late2_m', Number(e.target.value))} className={inputCls} /></div>
+            <div className="col-span-2"><label className={labelCls}>Absence non annoncée : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_absent_m ?? 5} onChange={e => set('auto_pen_absent_m', Number(e.target.value))} className={inputCls} /></div>
           </div>
         </div>
       </section>
@@ -289,16 +289,16 @@ export const SettingsView: React.FC = () => {
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Règles et options</h3>
         <div>
-          <label className={labelCls}>Règles pour les boosters (affichées sur leur grille)</label>
+          <label className={labelCls}>Règles pour les opérateurs (affichées sur leur grille)</label>
           <textarea value={s.rules} onChange={e => set('rules', e.target.value)} rows={5} className={inputCls + ' font-sans'} placeholder="ex: pas de lecture de messages, photo de début obligatoire..." />
         </div>
         <div>
-          <label className={labelCls}>Conserver les photos de preuve (jours)</label>
+          <label className={labelCls}>Conserver les photos de justificatif (jours)</label>
           <input type="number" min={1} value={s.retention_days} onChange={e => set('retention_days', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
         </div>
         <div>
-          <label className={labelCls}>Grille des postes : nombre de colonnes</label>
+          <label className={labelCls}>Grille des missions : nombre de colonnes</label>
           <select value={s.grid_columns || 2} onChange={e => set('grid_columns', Number(e.target.value))} className={inputCls}>
             {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
               <option key={n} value={n}>{n} colonnes (grille {n}x)</option>
@@ -335,7 +335,7 @@ export const SettingsView: React.FC = () => {
       <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Données de démonstration</h3>
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          Les sessions et les demandes d'avance de démonstration comptent dans la paie et les totaux. Les comptes des boosters ne sont pas supprimés.
+          Les sessions et les demandes d'avance de démonstration comptent dans la paie et les totaux. Les comptes des opérateurs ne sont pas supprimés.
         </p>
         <button
           type="button"

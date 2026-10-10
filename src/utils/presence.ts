@@ -8,9 +8,9 @@ const OPEN = ['pending_start', 'active', 'pending_end'];
 export type PresenceStatus = 'working' | 'connected' | 'waiting' | 'offline';
 
 export const STATUS_LABEL: Record<PresenceStatus, string> = {
-  working: 'En poste',
-  connected: 'Connecté sans poste',
-  waiting: 'Sans poste (en attente)',
+  working: 'En mission',
+  connected: 'Connecté sans mission',
+  waiting: 'Sans mission (en attente)',
   offline: 'Hors ligne',
 };
 export const STATUS_DOT: Record<PresenceStatus, string> = {

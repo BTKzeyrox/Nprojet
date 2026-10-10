@@ -10,7 +10,7 @@ interface WelcomeAnimationProps {
 
 export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComplete }) => {
   const [progress, setProgress] = useState(15);
-  const [stepText, setStepText] = useState('DÉCRYPTAGE DU PROTOCOLE HAWK OPS...');
+  const [stepText, setStepText] = useState('CHARGEMENT DE VOTRE ESPACE...');
   const [glitchActive, setGlitchActive] = useState(false);
 
   useEffect(() => {
@@ -21,13 +21,13 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
 
     const t2 = setTimeout(() => {
       setProgress(75);
-      setStepText(`DÉPLOIEMENT DE LA MATRICE DES ${db.getContracts().length || 20} POSTES CLIENTS...`);
+      setStepText(`CHARGEMENT DES ${db.getContracts().length || 20} MISSIONS...`);
       setGlitchActive(true);
     }, 700);
 
     const t3 = setTimeout(() => {
       setProgress(100);
-      setStepText('SYSTÈME OPÉRATIONNEL · BIENVENUE AU QG !');
+      setStepText('ESPACE PRÊT · BIENVENUE !');
       setGlitchActive(false);
     }, 1100);
 
@@ -48,7 +48,7 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
       {/* Background Matrix/Radar Grid */}
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px]" />
       
-      <div className="relative w-full max-w-md p-8 bg-[#0b121c]/90 border border-emerald-500/40 rounded-2xl shadow-[0_0_50px_rgba(16,185,129,0.25)] text-center overflow-hidden">
+      <div className="relative w-full max-w-md p-8 bg-[#0b121c]/90 border border-emerald-500/40 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.25)] text-center overflow-hidden">
         {/* Ambient Top Light */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
         
@@ -65,14 +65,14 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
         <div className="space-y-1 mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 uppercase tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>SESSION {user.role === 'admin' ? 'SUPERVISEUR ADMIN' : `BOOSTER SHIFT ${user.shift.toUpperCase()}`}</span>
+            <span>SESSION {user.role === 'admin' ? 'SUPERVISEUR RESPONSABLE' : `OPÉRATEUR VACATION ${user.shift.toUpperCase()}`}</span>
           </div>
 
           <h2 className="text-2xl font-tactical font-black text-white tracking-wider mt-2">
             BIENVENUE, {user.name.toUpperCase()}
           </h2>
           <p className="text-xs text-slate-400 font-mono">
-            Delta Force : Hawk Ops · Centre de Boosting Sécurisé
+            Gestion Pro · Espace de travail sécurisé
           </p>
         </div>
 
@@ -88,13 +88,13 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
 
           <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(16,185,129,0.8)]"
+              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(59,130,246,0.8)]"
               style={{ width: `${progress}%` }}
             />
           </div>
 
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1">
-            <span>GRILLE {db.getContracts().length || 20} POSTES</span>
+            <span>GRILLE {db.getContracts().length || 20} MISSIONS</span>
             <span className="text-emerald-500">SYNCHRONISÉ</span>
           </div>
         </div>

@@ -64,7 +64,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   retention_days: 7,
   grid_columns: 2,
   rules: '',
-  post_types: ['NO R/C', 'YES R/C', 'RED 9CASE'],
+  post_types: ['Saisie de fiches', 'Contrôle qualité', 'Tâche administrative', 'Demande d’aide', 'Tâche web'],
 };
 type Col = (typeof COLS)[number];
 
@@ -738,13 +738,13 @@ class DeltaForceStore {
   // Admin : retire un poste (refusé si une session est en cours dessus)
   public removeContract(id: string): { success: boolean; error?: string } {
     const c = this.contracts.find(x => x.id === id);
-    if (!c) return { success: false, error: 'Poste introuvable.' };
+    if (!c) return { success: false, error: 'Mission introuvable.' };
     const busy = this.posts.some(
       p =>
         (p.post_number === c.post_number || (!!c.client_name && p.client_name === c.client_name)) &&
         (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
     );
-    if (busy) return { success: false, error: 'Ce poste a une session en cours : impossible de le retirer.' };
+    if (busy) return { success: false, error: 'Cette mission a une session en cours : impossible de le retirer.' };
     this.contracts = this.contracts.filter(x => x.id !== id);
     this.notify();
     return { success: true };
@@ -811,7 +811,7 @@ class DeltaForceStore {
     updates: Partial<PostSession>
   ): { success: boolean; error?: string; post?: PostSession } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
 
     // If employee reassigned, verify user
     if (updates.employee_id && updates.employee_id !== post.employee_id) {
@@ -907,14 +907,14 @@ class DeltaForceStore {
     if (existingActive) {
       if (params.autoReplaceExisting) {
         // Gracefully release the previous session to allow immediate switch
-        this.forceReleasePost(existingActive.id, `Remplacement par le poste ${params.clientName}`);
+        this.forceReleasePost(existingActive.id, `Remplacement par la mission ${params.clientName}`);
       } else {
         // Log security violation into "Petit Malin"
         this.logViolation({
           employee_id: employee.id,
           employee_name: employee.name,
           violation_type: 'multi_post_attempt',
-          description: `Anti-Multi-Poste Block: Tentative d'ouverture de nouveau shift sur client "${params.clientName}" alors que le poste "${existingActive.client_name}" (${existingActive.status}) est déjà en cours.`,
+          description: `Anti-Multi-Mission Block: Tentative d'ouverture de nouveau vacation sur client "${params.clientName}" alors que la mission "${existingActive.client_name}" (${existingActive.status}) est déjà en cours.`,
           details: {
             client_name: params.clientName,
             active_post_id: existingActive.id,
@@ -923,7 +923,7 @@ class DeltaForceStore {
 
         return {
           success: false,
-          error: `Anti-Multi-Poste: Vous avez déjà un poste en cours (${existingActive.client_name} - ${existingActive.status}). Vous ne pouvez pas ouvrir un second poste.`
+          error: `Anti-Multi-Mission: Vous avez déjà une mission en cours (${existingActive.client_name} - ${existingActive.status}). Vous ne pouvez pas ouvrir un second mission.`
         };
       }
     }
@@ -971,9 +971,9 @@ class DeltaForceStore {
     newProofUrls?: string[]
   ): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
     if (post.status !== 'pending_start') {
-      return { success: false, error: 'Modification impossible: le poste a déjà été validé par un administrateur.' };
+      return { success: false, error: 'Modification impossible: la mission a déjà été validé par un administrateur.' };
     }
 
     post.initial_score = newInitialScore;
@@ -996,9 +996,9 @@ class DeltaForceStore {
   // Cancel pending start post before admin validation
   public cancelPendingStartPost(postId: string): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
     if (post.status !== 'pending_start') {
-      return { success: false, error: 'Annulation impossible: le poste est déjà validé ou en cours.' };
+      return { success: false, error: 'Annulation impossible: la mission est déjà validé ou en cours.' };
     }
 
     this.posts = this.posts.filter(p => p.id !== postId);
@@ -1009,7 +1009,7 @@ class DeltaForceStore {
   // Cancel the end request before admin validation: the session goes back to « en cours »
   public cancelPendingEndPost(postId: string): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
     if (post.status !== 'pending_end') {
       return { success: false, error: 'Annulation impossible: la fin est déjà validée ou la session n\'est pas en attente de fin.' };
     }
@@ -1026,7 +1026,7 @@ class DeltaForceStore {
   // Update current score during active post
   public updateCurrentScore(postId: string, newScore: number): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
 
     post.current_score = newScore;
     post.remaining_score = Math.max(0, post.target_score - newScore);
@@ -1044,7 +1044,7 @@ class DeltaForceStore {
     notes?: string;
   }): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === params.postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
 
     // Built-in Score Consistency Constraint:
     if (params.finalScore < post.initial_score) {
@@ -1053,7 +1053,7 @@ class DeltaForceStore {
         employee_id: post.employee_id,
         employee_name: post.employee_name,
         violation_type: 'score_inversion',
-        description: `Score Consistency Failure: Le score final soumis (${params.finalScore.toLocaleString()}) est inférieur au score initial vérifié (${post.initial_score.toLocaleString()}) pour le client ${post.client_name}.`,
+        description: `Volume Consistency Failure: Le volume final soumis (${params.finalScore.toLocaleString()}) est inférieur au volume initial vérifié (${post.initial_score.toLocaleString()}) pour le client ${post.client_name}.`,
         details: {
           initial_score: post.initial_score,
           attempted_score: params.finalScore,
@@ -1064,7 +1064,7 @@ class DeltaForceStore {
 
       return {
         success: false,
-        error: 'Final score cannot be lower than initial score.'
+        error: 'Final volume cannot be lower than initial volume.'
       };
     }
 
@@ -1092,7 +1092,7 @@ class DeltaForceStore {
   // --- ADMIN ACTIONS ---
   public validatePost(postId: string, note?: string): { success: boolean; error?: string; payrollAr?: number } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
     if (note && note.trim()) post.admin_notes = note.trim();
 
     const employee = this.users.find(u => u.id === post.employee_id);
@@ -1129,12 +1129,12 @@ class DeltaForceStore {
       return { success: true, payrollAr: calculatedAr };
     }
 
-    return { success: false, error: 'Statut du poste non éligible pour validation' };
+    return { success: false, error: 'Statut de la mission non éligible pour validation' };
   }
 
   public rejectPost(postId: string, reason: string): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
     if (!reason.trim()) return { success: false, error: 'Un motif de rejet est obligatoire' };
 
     post.status = 'rejected';
@@ -1147,7 +1147,7 @@ class DeltaForceStore {
   // Emergency Force Release Post to unstick bugged shifts
   public forceReleasePost(postId: string, reason = 'Force release by administrator'): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (!post) return { success: false, error: 'Mission introuvable' };
 
     post.status = 'force_released';
     post.notes = post.notes ? `${post.notes} [FORCE RELEASED: ${reason}]` : `[FORCE RELEASED: ${reason}]`;
@@ -1452,7 +1452,7 @@ class DeltaForceStore {
 
   public exportDatabaseSql(): string {
     const sqlStatements = [
-      '-- DELTA FORCE BOOSTING MANAGEMENT SYSTEM',
+      '-- GESTION PRO',
       '-- STANDALONE PORTABLE SQLITE / MYSQL SCHEMA & DUMP',
       '-- Generated: ' + new Date().toISOString(),
       '',
@@ -1462,7 +1462,7 @@ class DeltaForceStore {
       '    name VARCHAR(100) NOT NULL,',
       '    role VARCHAR(20) NOT NULL DEFAULT "employee",',
       '    status VARCHAR(20) NOT NULL DEFAULT "active",',
-      '    shift VARCHAR(20) NOT NULL DEFAULT "day",',
+      '    vacation VARCHAR(20) NOT NULL DEFAULT "day",',
       '    is_online INTEGER NOT NULL DEFAULT 0,',
       '    phone VARCHAR(30),',
       '    performance_badge VARCHAR(50) DEFAULT "Standard",',
@@ -1534,7 +1534,7 @@ class DeltaForceStore {
     return JSON.stringify(
       {
         meta: {
-          app: 'Delta Force Boosting Management System',
+          app: 'Gestion Pro Gestion Management System',
           version: '1.0.0',
           exported_at: new Date().toISOString(),
         },

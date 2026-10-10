@@ -49,7 +49,7 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
             maxLength={MAX}
             autoFocus
             onChange={e => setText(e.target.value)}
-            placeholder={optional ? "Un mot pour le booster (facultatif)" : "Écris la raison du refus"}
+            placeholder={optional ? "Un mot pour l’opérateur (facultatif)" : "Écris la raison du refus"}
             className={`w-full bg-[#141e2a] border border-slate-600 p-2.5 text-sm text-white focus:outline-none ${optional ? 'focus:border-emerald-500' : 'focus:border-red-500'}`}
           />
         </div>

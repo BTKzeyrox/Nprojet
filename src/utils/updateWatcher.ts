@@ -34,7 +34,7 @@ function showBanner(text: string) {
     banner.setAttribute('aria-live', 'polite');
     banner.style.cssText =
       'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:10000;' +
-      'max-width:calc(100% - 24px);padding:10px 14px;background:#0f1722;color:#e2e8f0;border:1px solid #10b981;' +
+      'max-width:calc(100% - 24px);padding:10px 14px;background:#0f1722;color:#e2e8f0;border:1px solid #3b82f6;' +
       'font:600 12px/1.3 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);text-align:center;';
     document.body.appendChild(banner);
   }

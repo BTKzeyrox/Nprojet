@@ -55,12 +55,12 @@ export const ErrorsLog: React.FC = () => {
   // Texte à me donner (Claude) pour corriger : tout le contexte au même endroit
   const forClaude = (r: Row) =>
     [
-      `[Journal DF-boosting] ${KIND_LABEL[r.kind]} — ${r.message}`,
+      `[Journal Gestion Pro] ${KIND_LABEL[r.kind]} — ${r.message}`,
       `Vu ${r.count} fois · première : ${when(r.first_seen)} · dernière : ${when(r.last_seen)} (heure de Madagascar)`,
       `Page : ${r.page || '—'} · Rôle : ${r.role || '—'} · Version du site : ${r.version || '—'}`,
       `Appareil : ${r.device || '—'}`,
       r.users?.length ? `Comptes touchés : ${names(r.users)}` : '',
-      r.detail ? `Description du booster : ${r.detail}` : '',
+      r.detail ? `Description de l’opérateur : ${r.detail}` : '',
       r.screenshot_url ? `Capture : ${r.screenshot_url}` : '',
       r.stack ? `\nPile :\n${r.stack}` : '',
       '\nDemande : trouve la cause et propose un correctif (recap court puis j\'attends mon « GO » avant de coder).',
@@ -90,7 +90,7 @@ export const ErrorsLog: React.FC = () => {
         <Bug className="w-6 h-6 text-emerald-500 shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 className="font-tactical font-bold text-xl text-white">Journal des erreurs</h2>
-          <p className="text-xs text-slate-400">Plantages, erreurs du serveur et signalements des boosters. Les erreurs identiques sont regroupées.</p>
+          <p className="text-xs text-slate-400">Plantages, erreurs du serveur et signalements des opérateurs. Les erreurs identiques sont regroupées.</p>
         </div>
         <button type="button" onClick={() => void load()} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualiser

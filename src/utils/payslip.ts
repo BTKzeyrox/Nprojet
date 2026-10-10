@@ -35,12 +35,12 @@ h1{font-size:18px;margin:0 0 4px} h2{font-size:14px;margin:18px 0 6px}
 th{background:#eee} td.r,th.r{text-align:right} .tot td{font-weight:bold;background:#f6f6f6}
 .net{font-size:16px;margin-top:12px} .note{margin-top:18px;font-size:11px;color:#666}
 </style></head><body>
-<h1>Fiche de paie — Delta Force Boosting</h1>
+<h1>Fiche de paie — Gestion Pro Gestion</h1>
 <div class="m">Période : ${esc(pidLabel(s.pid))} (${esc(fmtDay(s.period_start))} au ${esc(fmtDay(s.period_end))})</div>
 <div><b>${esc(s.name)}</b> (@${esc(s.username)})${s.phone ? ' · ' + esc(s.phone) : ''}</div>
 <h2>Sessions validées</h2>
-<table><tr><th>Date</th><th>Poste</th><th class="r">Points</th><th class="r">Taux (Ar / 1M)</th><th class="r">Montant</th></tr>
-${s.lines.map(l => `<tr><td>${esc(fmtDay(l.date))}</td><td>${l.post_number ? 'Poste ' + l.post_number + ' · ' : ''}${esc(l.client)}</td><td class="r">${esc(fmtScore(l.score))}</td><td class="r">${esc(l.rate.toLocaleString('fr-FR'))}</td><td class="r">${esc(formatCurrencyAr(l.amount))}</td></tr>`).join('') || '<tr><td colspan="5">Aucune session.</td></tr>'}
+<table><tr><th>Date</th><th>Mission</th><th class="r">Points</th><th class="r">Taux (Ar / 1M)</th><th class="r">Montant</th></tr>
+${s.lines.map(l => `<tr><td>${esc(fmtDay(l.date))}</td><td>${l.post_number ? 'Mission ' + l.post_number + ' · ' : ''}${esc(l.client)}</td><td class="r">${esc(fmtScore(l.score))}</td><td class="r">${esc(l.rate.toLocaleString('fr-FR'))}</td><td class="r">${esc(formatCurrencyAr(l.amount))}</td></tr>`).join('') || '<tr><td colspan="5">Aucune session.</td></tr>'}
 <tr class="tot"><td colspan="4">Total gagné</td><td class="r">${esc(formatCurrencyAr(s.gross))}</td></tr></table>
 <h2>Primes, retenues et avances</h2>
 <table>

@@ -100,7 +100,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                 Rapport du Jour: {formattedDate}
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 font-mono">
-                {shifts.length} mission(s) · {formatScoreM(totalScoreGained)} pts boostés {isAdmin ? `· +${totalPayrollAr.toLocaleString()} Ar` : ''}
+                {shifts.length} mission(s) · {formatScoreM(totalScoreGained)} unités traitées {isAdmin ? `· +${totalPayrollAr.toLocaleString()} Ar` : ''}
               </p>
             </div>
           </div>
@@ -136,9 +136,9 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           {shifts.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
               <Clock className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-300">Aucun shift de boost enregistré pour cette date</p>
+              <p className="text-sm font-medium text-slate-300">Aucun vacation de boost enregistré pour cette date</p>
               <p className="text-xs text-slate-500 font-mono mt-1">
-                Journée sans mission active ou absence signalée (Pas de Poste).
+                Journée sans mission active ou absence signalée (Pas de Mission).
               </p>
             </div>
           ) : (
@@ -163,7 +163,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                           <div className="font-semibold text-white text-sm flex items-center gap-2">
                             <span>{shift.employee_name}</span>
                             <span className="text-xs font-mono uppercase bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">
-                              Shift {shift.shift_type.toUpperCase()}
+                              Vacation {shift.shift_type.toUpperCase()}
                             </span>
                             <span
                               className={`text-[11px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
@@ -200,13 +200,13 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {/* Scores & Objectives Grid with formatScoreM (1M abbreviations) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Score Départ</span>
+                        <span className="text-slate-500 text-[10px] uppercase block">Volume Départ</span>
                         <span className="text-slate-200 font-bold text-sm font-mono-numbers">
                           {formatScoreM(shift.initial_score)} pts
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Score Final</span>
+                        <span className="text-slate-500 text-[10px] uppercase block">Volume Final</span>
                         <span className="text-emerald-400 font-bold text-sm font-mono-numbers">
                           {formatScoreM(finalScore)} pts
                         </span>
@@ -219,7 +219,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
                         <span className="text-slate-500 text-[10px] uppercase block">
-                          {isAdmin ? 'Progression / Paie' : 'Progression Score'}
+                          {isAdmin ? 'Progression / Paie' : 'Progression Volume'}
                         </span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-amber-400 font-bold text-sm font-mono-numbers">
@@ -237,7 +237,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {/* Proof Photo Thumbnails with Click to Expand */}
                     <div className="pt-2">
                       <span className="text-xs uppercase font-mono font-semibold text-slate-400 block mb-2">
-                        Preuves Captures d'écran (Cliquez pour agrandir en plein écran)
+                        Justificatifs Captures d'écran (Cliquez pour agrandir en plein écran)
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {/* Start Proof */}
@@ -246,8 +246,8 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             onOpenProofLightbox({
                               imageUrl: shift.start_proof_url,
                               gallery: proofsOf(shift),
-                              title: `Preuve de Début - ${shift.client_name}`,
-                              subtitle: `Booster: ${shift.employee_name} · Score initial: ${formatScoreM(shift.initial_score)} pts`,
+                              title: `Justificatif de Début - ${shift.client_name}`,
+                              subtitle: `Opérateur: ${shift.employee_name} · Volume initial: ${formatScoreM(shift.initial_score)} pts`,
                               score: shift.initial_score,
                               clientTag: shift.client_name,
                               operatorName: shift.employee_name,
@@ -279,8 +279,8 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             onClick={() =>
                               onOpenProofLightbox({
                                 imageUrl: shift.end_proof_url!,
-                                title: `Preuve de Fin - ${shift.client_name}`,
-                                subtitle: `Booster: ${shift.employee_name} · Score final: ${formatScoreM(finalScore)} pts`,
+                                title: `Justificatif de Fin - ${shift.client_name}`,
+                                subtitle: `Opérateur: ${shift.employee_name} · Volume final: ${formatScoreM(finalScore)} pts`,
                                 score: finalScore,
                                 clientTag: shift.client_name,
                                 operatorName: shift.employee_name,
@@ -327,7 +327,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     )}
                     {shift.admin_notes && (
                       <div className="text-xs text-emerald-200 font-mono bg-emerald-950/40 p-2.5 rounded border border-emerald-800/60">
-                        <strong className="uppercase">Note de l'admin: </strong>
+                        <strong className="uppercase">Note du responsable: </strong>
                         {shift.admin_notes}
                       </div>
                     )}
@@ -350,7 +350,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         {/* Footer */}
         <div className="bg-[#131d2b] px-6 py-3 border-t border-slate-700/80 flex items-center justify-between">
           <span className="text-xs text-slate-400 font-mono">
-            Rapport certifié Delta Force Tactical Operations
+            Rapport généré par Gestion Pro
           </span>
           <div className="flex items-center gap-2">
             {onBack && (

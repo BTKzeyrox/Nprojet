@@ -49,7 +49,7 @@ const STATUS_META: Record<DayStatus, { label: string; color: string }> = {
   in_progress: { label: 'En cours', color: 'text-cyan-400' },
   test: { label: 'Test / QA', color: 'text-purple-400' },
   absent: { label: 'Absent', color: 'text-red-400' },
-  no_post: { label: 'Pas de poste', color: 'text-slate-400' },
+  no_post: { label: 'Pas de mission', color: 'text-slate-400' },
 };
 
 const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ status, className = 'w-4 h-4' }) => {
@@ -262,7 +262,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
         {isAdmin && (
           <aside className="bg-[#0f1722] border border-slate-800 p-3 space-y-3 lg:self-start lg:sticky lg:top-2">
             <div className="flex items-center gap-2 font-bold text-sm text-white">
-              <Users className="w-4 h-4 text-emerald-400" /> Boosters
+              <Users className="w-4 h-4 text-emerald-400" /> Opérateurs
               <span className="ml-auto text-xs text-slate-400 font-semibold">{list.length}/{boosters.length}</span>
             </div>
 
@@ -272,7 +272,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher un booster…"
+                placeholder="Rechercher un opérateur…"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -287,7 +287,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
 
             <div className="space-y-2">
               <div>
-                <div className="text-[10px] uppercase text-slate-400 font-semibold mb-1">Shift</div>
+                <div className="text-[10px] uppercase text-slate-400 font-semibold mb-1">Vacation</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setShiftFilter('all')} className={pill(shiftFilter === 'all')}>Tous</button>
                   <button onClick={() => setShiftFilter('day')} className={`${pill(shiftFilter === 'day')} inline-flex items-center gap-1`}>
@@ -341,7 +341,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
             </div>
 
             <div className="max-h-64 lg:max-h-[55vh] overflow-y-auto divide-y divide-slate-800 border border-slate-800">
-              {list.length === 0 && <div className="p-3 text-sm text-slate-400">Aucun booster trouvé.</div>}
+              {list.length === 0 && <div className="p-3 text-sm text-slate-400">Aucun opérateur trouvé.</div>}
               {list.map(u => (
                 <button
                   key={u.id}
@@ -407,7 +407,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 <Stat icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />} label="Jours travaillés" value={`${summary.workedDays} / ${summary.expectedDays}`} />
                 <Stat icon={<ListChecks className="w-3.5 h-3.5 text-cyan-400" />} label="Sessions" value={`${summary.sessions} (${summary.validated} validées${summary.inProgress ? `, ${summary.inProgress} en cours` : ''})`} />
                 <Stat icon={<Target className="w-3.5 h-3.5 text-emerald-400" />} label="Objectifs atteints" value={`${summary.reached}`} tone="text-emerald-300" />
-                <Stat icon={<TrendingUp className="w-3.5 h-3.5 text-cyan-400" />} label="Score gagné" value={formatScoreM(summary.gained)} tone="text-cyan-300" />
+                <Stat icon={<TrendingUp className="w-3.5 h-3.5 text-cyan-400" />} label="Volume gagné" value={formatScoreM(summary.gained)} tone="text-cyan-300" />
                 <Stat icon={<Wallet className="w-3.5 h-3.5 text-emerald-400" />} label="Paie totale" value={ar(summary.pay)} tone="text-emerald-300" />
                 <Stat icon={<HandCoins className="w-3.5 h-3.5 text-amber-400" />} label="Avances validées" value={ar(summary.advApproved)} tone="text-amber-300" />
                 <Stat icon={<HandCoins className="w-3.5 h-3.5 text-slate-400" />} label="Avances en attente" value={ar(summary.advPending)} />
@@ -428,7 +428,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           {/* Grille du mois */}
           {!activeUser ? (
             <div className="bg-[#0f1722] border border-slate-800 p-6 text-center text-slate-400 text-sm">
-              Choisissez un booster dans la liste pour afficher son calendrier.
+              Choisissez un opérateur dans la liste pour afficher son calendrier.
             </div>
           ) : (
             <div className="bg-[#0f1722] border border-slate-800 overflow-hidden">

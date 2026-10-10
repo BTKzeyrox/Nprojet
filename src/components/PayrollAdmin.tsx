@@ -103,7 +103,7 @@ export const PayrollAdmin: React.FC = () => {
     onSubmit: reason => void act('payroll-reopen', { reason }),
   });
   const exportCsv = () => downloadCsv(`paie-${pid}${isClosed ? '' : '-apercu'}.csv`, [
-    ['Booster', 'Pseudo', 'Téléphone', 'Gagné (Ar)', 'Primes (Ar)', 'Retenues (Ar)', 'Avances retenues (Ar)', 'Net à payer (Ar)', 'Payé le', 'Mode', 'Référence'],
+    ['Opérateur', 'Pseudo', 'Téléphone', 'Gagné (Ar)', 'Primes (Ar)', 'Retenues (Ar)', 'Avances retenues (Ar)', 'Net à payer (Ar)', 'Payé le', 'Mode', 'Référence'],
     ...slips.map(s => [s.name, s.username, s.phone, s.gross, sum(s.bonuses), s.penalty_applied, s.advance_deducted, s.net, s.paid?.at || '', s.paid?.method || '', s.paid?.ref || '']),
   ]);
 
@@ -190,11 +190,11 @@ export const PayrollAdmin: React.FC = () => {
             </div>
             <div className="overflow-x-auto border border-slate-700">
               <table className="w-full text-[11px] font-mono">
-                <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Poste</th><th className="p-2 text-right">Points</th><th className="p-2 text-right">Taux / 1M</th><th className="p-2 text-right">Montant</th></tr></thead>
+                <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Mission</th><th className="p-2 text-right">Points</th><th className="p-2 text-right">Taux / 1M</th><th className="p-2 text-right">Montant</th></tr></thead>
                 <tbody>
                   {open.lines.length === 0 && <tr><td colSpan={5} className="p-2 text-slate-400">Aucune session validée.</td></tr>}
                   {open.lines.map(l => (
-                    <tr key={l.post_id} className="border-t border-slate-800"><td className="p-2">{fmtDay(l.date)}</td><td className="p-2">{l.post_number ? `Poste ${l.post_number} · ` : ''}{l.client}</td><td className="p-2 text-right">{fmtScore(l.score)}</td><td className="p-2 text-right">{l.rate.toLocaleString('fr-FR')}</td><td className="p-2 text-right">{formatCurrencyAr(l.amount)}</td></tr>
+                    <tr key={l.post_id} className="border-t border-slate-800"><td className="p-2">{fmtDay(l.date)}</td><td className="p-2">{l.post_number ? `Mission ${l.post_number} · ` : ''}{l.client}</td><td className="p-2 text-right">{fmtScore(l.score)}</td><td className="p-2 text-right">{l.rate.toLocaleString('fr-FR')}</td><td className="p-2 text-right">{formatCurrencyAr(l.amount)}</td></tr>
                   ))}
                 </tbody>
               </table>

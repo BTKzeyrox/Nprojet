@@ -6,7 +6,7 @@ import {
   Search,
   AlertCircle,
   ArrowRight,
-  Gamepad2,
+  ClipboardList,
   Eye,
   CheckCircle2,
   Sun,
@@ -222,7 +222,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Rechercher client, tag, poste #..."
+              placeholder="Rechercher client, tag, mission #..."
               className={`w-full border rounded-xl pl-9 pr-3.5 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-colors ${
                 isLight
                   ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
@@ -239,7 +239,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#090f18] border-slate-800'
               }`}
             >
-              <div className="text-[9px] font-mono text-slate-400 uppercase leading-none">Postes</div>
+              <div className="text-[9px] font-mono text-slate-400 uppercase leading-none">Missions</div>
               <div className="text-sm font-tactical font-black text-emerald-500 mt-0.5">{contractsList.length}</div>
             </div>
             {currentUser.role === 'admin' && (
@@ -249,7 +249,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 disabled={contractsList.length >= 100}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shrink-0"
               >
-                <Plus className="w-4 h-4" /> Ajouter un poste
+                <Plus className="w-4 h-4" /> Ajouter une mission
               </button>
             )}
           </div>
@@ -318,7 +318,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-[#121c28] text-slate-200 border-slate-700'
               }`}
             >
-              <option value="number">Numéro du poste</option>
+              <option value="number">Numéro de la mission</option>
               <option value="rest_desc">Reste : plus → moins</option>
               <option value="obj_asc">Objectif : petit → grand</option>
               <option value="obj_desc">Objectif : grand → petit</option>
@@ -327,7 +327,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
           {/* Shift Filter */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-slate-400 uppercase mr-1">Shift:</span>
+            <span className="text-[10px] text-slate-400 uppercase mr-1">Vacation:</span>
             {[
               { id: 'all', label: 'Tous', icon: null as any },
               { id: 'day', label: 'Jour', icon: Sun },
@@ -430,7 +430,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         isLight ? 'bg-slate-100 text-emerald-700 border-slate-300' : 'bg-[#0a1017] text-emerald-300 border-emerald-500/40'
                       }`}
                     >
-                      <option value="">Type de poste : aucun</option>
+                      <option value="">Type de mission : aucun</option>
                       {contract.post_type && !settings.post_types.includes(contract.post_type) && (
                         <option value={contract.post_type}>{contract.post_type}</option>
                       )}
@@ -471,7 +471,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                               isLight ? 'text-slate-900' : 'text-white'
                             }`}
                           >
-                            {contract.client_name || 'Poste sans compte'}
+                            {contract.client_name || 'Mission sans compte'}
                           </h3>
                           <span
                             className={`pc-tag hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
@@ -496,7 +496,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       {isPending ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/60 animate-pulse">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          <span>En attente Admin</span>
+                          <span>En attente Responsable</span>
                         </span>
                       ) : isMyActive ? (
                         <span
@@ -644,7 +644,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       }}
                       className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
-                      <Gamepad2 className="w-4 h-4" />
+                      <ClipboardList className="w-4 h-4" />
                       <span>Ma session</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -690,7 +690,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       className="disabled:opacity-50 disabled:cursor-not-allowed w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
                       <Target className="w-4 h-4" />
-                      <span>{currentUser.role === 'admin' ? (noAccount ? 'Remplir le poste' : 'Modifier le poste') : noAccount ? 'En attente du compte' : 'Prendre ce poste'}</span>
+                      <span>{currentUser.role === 'admin' ? (noAccount ? 'Remplir la mission' : 'Modifier la mission') : noAccount ? 'En attente du compte' : 'Prendre cette mission'}</span>
                     </button>
                   )}
                 </div>
@@ -702,8 +702,8 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       {showAdd && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 overflow-y-auto" onClick={() => setShowAdd(false)}>
           <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-3 text-slate-100 text-xs font-mono">
-            <h3 className="font-tactical font-bold text-base text-white">Ajouter un poste</h3>
-            <p className="text-slate-400 leading-relaxed">Laisse le nom vide pour créer un poste « sans compte » : il reste grisé jusqu'à l'arrivée du compte client.</p>
+            <h3 className="font-tactical font-bold text-base text-white">Ajouter une mission</h3>
+            <p className="text-slate-400 leading-relaxed">Laisse le nom vide pour créer une mission « sans compte » : il reste grisé jusqu'à l'arrivée du compte client.</p>
             {addError && <div className="p-2 border border-red-500/60 bg-red-950/60 text-red-200 font-semibold">{addError}</div>}
             <div>
               <label className="block text-slate-300 uppercase mb-1">Nom du compte client (facultatif)</label>
@@ -711,7 +711,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             </div>
             <>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Score de début</label>
+                  <label className="block text-slate-300 uppercase mb-1">Volume de début</label>
                   <ScoreInput value={addInitial} onChange={setAddInitial} />
                 </div>
                 <div>
@@ -723,7 +723,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               </p>
             </>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Type de poste</label>
+              <label className="block text-slate-300 uppercase mb-1">Type de mission</label>
               <select value={addType} onChange={e => setAddType(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white">
                 <option value="">Aucun</option>
                 {postTypes.map(t2 => (<option key={t2} value={t2}>{t2}</option>))}

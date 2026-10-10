@@ -54,7 +54,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<bool
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${k.data}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: "Delta Force <onboarding@resend.dev>", to: [to], subject, html }),
+      body: JSON.stringify({ from: "Gestion Pro <onboarding@resend.dev>", to: [to], subject, html }),
     });
     if (!r.ok) { console.error("resend error:", r.status, await r.text().catch(() => "")); return false; }
     return true;

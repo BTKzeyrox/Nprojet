@@ -72,8 +72,8 @@ export const RestoreSection: React.FC = () => {
         <RotateCcw className="w-4 h-4 text-red-400" /> Restauration du site
       </h3>
       <p className="text-[11px] text-slate-400 leading-relaxed">
-        La restauration est une <b className="text-red-300">remise à zéro définitive</b> : elle efface tous les boosters, sessions, historiques,
-        avances, paies et messages. Elle garde votre compte admin, les Réglages et les postes (scores remis au début).
+        La restauration est une <b className="text-red-300">remise à zéro définitive</b> : elle efface tous les opérateurs, sessions, historiques,
+        avances, paies et messages. Elle garde votre compte responsable, les Réglages et les missions (volumes remis au début).
         Téléchargez d'abord une sauvegarde.
       </p>
 
@@ -125,7 +125,7 @@ export const RestoreSection: React.FC = () => {
                 onClick={() =>
                   askConfirm({
                     title: 'Dernière chance',
-                    message: 'Confirmation 2 sur 2 : tous les boosters, sessions, historiques, avances, paies et messages seront effacés pour toujours. Un code va être envoyé sur votre Gmail.',
+                    message: 'Confirmation 2 sur 2 : tous les opérateurs, sessions, historiques, avances, paies et messages seront effacés pour toujours. Un code va être envoyé sur votre Gmail.',
                     confirmLabel: 'Oui, envoyer le code',
                     danger: true,
                     onConfirm: askResetCode,

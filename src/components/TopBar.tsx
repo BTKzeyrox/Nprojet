@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, Shield, Users, Gamepad2, Calendar, FileText } from 'lucide-react';
+import { Bell, Menu, Search, Shield, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -23,7 +23,7 @@ interface Hit {
   go: () => void;
 }
 
-const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Poste', booster: 'Booster', compte: 'Compte', date: 'Date' };
+const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Mission', booster: 'Opérateur', compte: 'Compte', date: 'Date' };
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -59,11 +59,11 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     () =>
       isAdmin
         ? [
-            ['dashboard', 'Accueil'], ['validations', 'Validations'], ['history', 'Historique'], ['security', 'Surveillance'], ['employees', 'Boosters'],
+            ['dashboard', 'Accueil'], ['validations', 'Validations'], ['history', 'Historique'], ['security', 'Surveillance'], ['employees', 'Opérateurs'],
             ['advances', 'Avances sur salaire'], ['active-post', 'Suivi des sessions'], ['chat', 'Messagerie'],
             ['calendar', 'Calendrier'], ['settings', 'Réglages'],
           ]
-        : [['grid', 'Postes'], ['active-post', 'Mon poste'], ['advances', 'Avances'], ['chat', 'Messagerie'], ['calendar', 'Calendrier']],
+        : [['grid', 'Missions'], ['active-post', 'Ma mission'], ['advances', 'Avances'], ['chat', 'Messagerie'], ['calendar', 'Calendrier']],
     [isAdmin]
   );
 
@@ -88,7 +88,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     db.getContracts().forEach(c => {
       const byNumber = exactNum !== null ? c.post_number === exactNum : norm(`poste ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s);
       if (norm(c.client_name).includes(s) || byNumber) {
-        const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Poste ${c.post_number}`, kind: 'poste', go: goPoste(c.post_number) };
+        const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Mission ${c.post_number}`, kind: 'poste', go: goPoste(c.post_number) };
         if (exactNum !== null && c.post_number === exactNum) out.unshift(hit);
         else out.push(hit);
       }
@@ -127,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     }
     wasOpen.current = bellOpen;
   }, [bellOpen]);
-  const icon = (k: Hit['kind']) => (k === 'booster' ? Users : k === 'poste' || k === 'compte' ? Gamepad2 : k === 'date' ? Calendar : FileText);
+  const icon = (k: Hit['kind']) => (k === 'booster' ? Users : k === 'poste' || k === 'compte' ? ClipboardList : k === 'date' ? Calendar : FileText);
 
   return (
     <>
@@ -140,7 +140,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         </button>
         <div className="flex items-center gap-1.5 shrink-0 md:hidden">
           <Shield className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
-          <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>DELTA FORCE</span>
+          <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>GESTION PRO</span>
         </div>
 
         <div ref={box} className="relative flex-1 min-w-0">
@@ -150,7 +150,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onChange={e => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
-            placeholder={isAdmin ? 'Rechercher un poste, booster, compte, page…' : 'Rechercher un poste, une page…'}
+            placeholder={isAdmin ? 'Rechercher une mission, opérateur, compte, page…' : 'Rechercher une mission, une page…'}
             className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
           />
           {open && q.trim() && (

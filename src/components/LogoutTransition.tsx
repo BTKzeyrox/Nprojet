@@ -25,7 +25,7 @@ export const LogoutTransition: React.FC = () => {
           {t('logging_out')}
         </h3>
         <p className="text-xs font-mono opacity-60">
-          DELTA FORCE // HAWK OPS
+          GESTION PRO
         </p>
 
         <div className="mt-4 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">

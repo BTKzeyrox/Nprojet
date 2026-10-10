@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, DollarSign, Gamepad2, IdCard, UserPlus, KeyRound } from 'lucide-react';
+import { Search, DollarSign, ClipboardList, IdCard, UserPlus, KeyRound } from 'lucide-react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 
@@ -10,7 +10,7 @@ interface Row { id: string; kind: Kind; who: string; whoId?: string; title: stri
 const KIND: Record<Kind, string> = { advance: 'Avance', session: 'Session', profile: 'Profil', signup: 'Inscription', reset: 'Mot de passe' };
 const ST_LABEL: Record<St, string> = { pending: 'En attente', accepted: 'Accepté', refused: 'Refusé' };
 const ST_CLS: Record<St, string> = { pending: 'border-amber-500/60 text-amber-300', accepted: 'border-emerald-500/50 text-emerald-300', refused: 'border-red-500/60 text-red-300' };
-const ICON: Record<Kind, React.ComponentType<{ className?: string }>> = { advance: DollarSign, session: Gamepad2, profile: IdCard, signup: UserPlus, reset: KeyRound };
+const ICON: Record<Kind, React.ComponentType<{ className?: string }>> = { advance: DollarSign, session: ClipboardList, profile: IdCard, signup: UserPlus, reset: KeyRound };
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const fmtDate = (d: string) => { const t = new Date(d); return isNaN(t.getTime()) ? d : t.toLocaleDateString('fr-FR'); };
@@ -23,7 +23,7 @@ export const buildHistory = (): Row[] => {
     const st: St | null = p.status === 'pending_start' || p.status === 'pending_end' ? 'pending' : p.status === 'completed' ? 'accepted' : p.status === 'rejected' ? 'refused' : null;
     if (!st) return;
     const label = p.status === 'pending_start' ? 'Début' : p.status === 'pending_end' ? 'Fin' : p.status === 'completed' ? 'Session terminée' : 'Session refusée';
-    rows.push({ id: `post-${p.id}`, kind: 'session', who: p.employee_name, whoId: p.employee_id, title: `${label} · ${p.client_name}`, detail: `Poste ${p.post_number ?? ''}${p.admin_notes ? ` · ${p.admin_notes}` : ''}`.trim(), motif: st === 'refused' ? p.rejection_reason || '' : '', status: st, date: p.updated_at || p.date, blob: `${p.client_name} ${p.rejection_reason || ''} ${p.admin_notes || ''}` });
+    rows.push({ id: `post-${p.id}`, kind: 'session', who: p.employee_name, whoId: p.employee_id, title: `${label} · ${p.client_name}`, detail: `Mission ${p.post_number ?? ''}${p.admin_notes ? ` · ${p.admin_notes}` : ''}`.trim(), motif: st === 'refused' ? p.rejection_reason || '' : '', status: st, date: p.updated_at || p.date, blob: `${p.client_name} ${p.rejection_reason || ''} ${p.admin_notes || ''}` });
   });
   db.getProfileRequests().forEach(r => {
     const u = db.getUsers().find(x => x.id === r.user_id);
@@ -86,8 +86,8 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
           <select aria-label="Statut" className={sel} value={status} onChange={e => { setStatus(e.target.value as any); setLimit(50); }}>
             <option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="accepted">Accepté</option><option value="refused">Refusé</option>
           </select>
-          <select aria-label="Booster" className={sel} value={booster} onChange={e => { setBooster(e.target.value); setLimit(50); }}>
-            <option value="all">Tous les boosters</option>
+          <select aria-label="Opérateur" className={sel} value={booster} onChange={e => { setBooster(e.target.value); setLimit(50); }}>
+            <option value="all">Tous les opérateurs</option>
             {boosters.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           <select aria-label="Période" className={sel} value={period} onChange={e => { setPeriod(e.target.value as any); setLimit(50); }}>

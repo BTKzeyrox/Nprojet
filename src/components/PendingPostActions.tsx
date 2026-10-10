@@ -20,11 +20,11 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
 
   const cancel = () =>
     askConfirm({
-      title: isStart ? 'Annuler ce poste ?' : 'Annuler la fin de session ?',
+      title: isStart ? 'Annuler cette mission ?' : 'Annuler la fin de session ?',
       message: isStart
-        ? 'Le poste redeviendra libre. Ta demande de début sera supprimée.'
+        ? 'La mission redeviendra libre. Ta demande de début sera supprimée.'
         : 'La session reprend. Tu pourras renvoyer la fin plus tard.',
-      confirmLabel: isStart ? 'Annuler le poste' : 'Annuler la fin',
+      confirmLabel: isStart ? 'Annuler la mission' : 'Annuler la fin',
       cancelLabel: 'Garder',
       danger: true,
       onConfirm: () => {
@@ -64,7 +64,7 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
   };
 
   const save = () => {
-    if (score <= 0) { setErr('Score invalide.'); return; }
+    if (score <= 0) { setErr('Volume invalide.'); return; }
     const r = db.updatePendingStartPost(post.id, score, photo || undefined);
     if (!r.success) { setErr(r.error || 'Modification impossible.'); return; }
     setEditing(false);
@@ -86,10 +86,10 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
       {editing && createPortal(
         <div onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) setEditing(false); }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain">
           <div onClick={e => e.stopPropagation()} className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 space-y-4 text-xs font-mono my-auto">
-            <h3 className="font-tactical font-bold text-white text-base">Modifier le poste en attente</h3>
-            <p className="text-slate-400">Possible seulement avant la validation de l'admin.</p>
+            <h3 className="font-tactical font-bold text-white text-base">Modifier la mission en attente</h3>
+            <p className="text-slate-400">Possible seulement avant la validation du responsable.</p>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Score de départ (sur la capture)</label>
+              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la capture)</label>
               <ScoreInput value={score} onChange={setScore} className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white font-bold" />
             </div>
             <div>

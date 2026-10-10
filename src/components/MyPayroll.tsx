@@ -83,8 +83,8 @@ export const MyPayroll: React.FC = () => {
                 <div className="border-t border-slate-800 p-3 space-y-2 text-[11px] font-mono">
                   <div className="overflow-x-auto border border-slate-700">
                     <table className="w-full">
-                      <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Poste</th><th className="p-2 text-right">Points</th><th className="p-2 text-right">Montant</th></tr></thead>
-                      <tbody>{s.lines.map(l => <tr key={l.post_id} className="border-t border-slate-800"><td className="p-2">{fmtDay(l.date)}</td><td className="p-2">{l.post_number ? `Poste ${l.post_number} · ` : ''}{l.client}</td><td className="p-2 text-right">{fmtScore(l.score)}</td><td className="p-2 text-right">{formatCurrencyAr(l.amount)}</td></tr>)}</tbody>
+                      <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Mission</th><th className="p-2 text-right">Points</th><th className="p-2 text-right">Montant</th></tr></thead>
+                      <tbody>{s.lines.map(l => <tr key={l.post_id} className="border-t border-slate-800"><td className="p-2">{fmtDay(l.date)}</td><td className="p-2">{l.post_number ? `Mission ${l.post_number} · ` : ''}{l.client}</td><td className="p-2 text-right">{fmtScore(l.score)}</td><td className="p-2 text-right">{formatCurrencyAr(l.amount)}</td></tr>)}</tbody>
                     </table>
                   </div>
                   {s.bonuses.map(b => <div key={b.id} className="flex justify-between text-emerald-300"><span className="break-words">Prime : {b.reason}</span><span>+ {formatCurrencyAr(b.amount)}</span></div>)}

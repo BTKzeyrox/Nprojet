@@ -17,7 +17,7 @@ insert into public.df_settings (id, data) values ('general', $json$
   "maintenance_on": false,
   "maintenance_message": "Le site est en maintenance. Réessaie un peu plus tard.",
   "retention_days": 7, "grid_columns": 2, "rules": "",
-  "post_types": ["NO R/C", "YES R/C", "RED 9CASE"]
+  "post_types": ["Saisie de fiches", "Contrôle qualité", "Tâche administrative", "Demande d’aide", "Tâche web"]
 }
 $json$::jsonb)
 on conflict (id) do nothing;

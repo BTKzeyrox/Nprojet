@@ -336,7 +336,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <footer className={`py-3 border-t flex items-center justify-center text-xs font-mono opacity-60 relative z-10 ${
         isLight ? 'border-slate-200' : 'border-slate-800/80'
       }`}>
-        <div className="text-center">Delta Force : Hawk Ops · 2026</div>
+        <div className="text-center">Gestion Pro · 2026</div>
       </footer>
 
       {forgotOpen && (
@@ -394,7 +394,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     maxLength={300}
                     value={fgNote}
                     onChange={e => setFgNote(e.target.value)}
-                    placeholder="Un mot pour l'admin (facultatif)"
+                    placeholder="Un mot pour le responsable (facultatif)"
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
@@ -416,7 +416,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-y-auto" onClick={closeSignup}>
           <div className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-4 text-slate-100 text-xs font-mono" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-tactical font-bold text-base text-white">Créer un compte booster</h3>
+              <h3 className="font-tactical font-bold text-base text-white">Créer un compte opérateur</h3>
               <button type="button" onClick={closeSignup} className="p-1 text-slate-400 hover:text-white" aria-label="Fermer">✕</button>
             </div>
             {sgDone ? (
@@ -449,7 +449,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Shift souhaité</label>
+                  <label className="block text-slate-300 uppercase mb-1">Vacation souhaité</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button type="button" onClick={() => setSgShift('day')}
                       className={`flex items-center justify-center gap-1.5 py-2.5 border font-bold ${sgShift === 'day' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>
@@ -485,7 +485,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     maxLength={300}
                     value={sgNote}
                     onChange={e => setSgNote(e.target.value)}
-                    placeholder="Un mot pour l'admin (facultatif)"
+                    placeholder="Un mot pour le responsable (facultatif)"
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>

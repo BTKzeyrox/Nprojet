@@ -118,7 +118,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
           {live.role === 'employee' && (
             <div className="flex items-center gap-2 text-slate-300">
               {live.shift === 'day' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-300" />}
-              {live.shift === 'day' ? `Shift Jour (${shiftHoursLabel('day', db.getSettings())})` : `Shift Nuit (${shiftHoursLabel('night', db.getSettings())})`}
+              {live.shift === 'day' ? `Vacation Jour (${shiftHoursLabel('day', db.getSettings())})` : `Vacation Nuit (${shiftHoursLabel('night', db.getSettings())})`}
             </div>
           )}
           {live.phone && (
@@ -208,7 +208,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                     maxLength={300}
                     value={fNote}
                     onChange={e => setFNote(e.target.value)}
-                    placeholder="Un mot pour l'admin (facultatif)"
+                    placeholder="Un mot pour le responsable (facultatif)"
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>

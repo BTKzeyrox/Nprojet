@@ -115,7 +115,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   };
 
   const threads: Thread[] = useMemo(() => {
-    const list: Thread[] = [{ id: 'all', kind: 'all', title: 'Groupe général', subtitle: 'Tous les boosters + admin' }];
+    const list: Thread[] = [{ id: 'all', kind: 'all', title: 'Groupe général', subtitle: 'Tous les opérateurs + responsable' }];
     groups.forEach(g => list.push({ id: g.id, kind: 'group', title: g.name, subtitle: `${g.members.length} membres`, group: g }));
     const withMsgs = new Set<string>();
     messages.forEach(m => {
@@ -140,7 +140,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
         const [a, b] = [m.sender_id, rid].sort();
         pairs.set(`pair:${a}:${b}`, `${nameOf(a)} ↔ ${nameOf(b)}`);
       });
-      pairs.forEach((title, id) => list.push({ id, kind: 'pair', title, subtitle: 'Entre boosters (lecture seule)', readOnly: true }));
+      pairs.forEach((title, id) => list.push({ id, kind: 'pair', title, subtitle: 'Entre opérateurs (lecture seule)', readOnly: true }));
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,7 +421,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
                       {!gone && !isMe && showNames && (
                         <div className="text-[11px] font-bold text-cyan-300 mb-0.5">
                           {msg.sender_name}
-                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px]">ADMIN</span>}
+                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px]">RESPONSABLE</span>}
                         </div>
                       )}
                       {gone ? (
@@ -521,7 +521,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           </form>
         ) : (
           <div className="p-3 bg-[#131d2a] border-t border-slate-800 text-center text-[11px] text-slate-400 shrink-0">
-            Lecture seule : tu consultes une discussion entre deux boosters.
+            Lecture seule : tu consultes une discussion entre deux opérateurs.
           </div>
         )}
       </div>

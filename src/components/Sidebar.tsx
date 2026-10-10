@@ -3,7 +3,7 @@ import { db } from '../db/store';
 import React from 'react';
 import {
   Layers,
-  Gamepad2,
+  ClipboardList,
   Users,
   DollarSign,
   MessageSquare,
@@ -107,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label: t('nav_grid'),
             sublabel: '',
             icon: Layers,
-            badge: `${db.getContracts().length} Postes`,
+            badge: `${db.getContracts().length} Missions`,
             badgeColor: isLight
               ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
               : 'bg-emerald-950 text-emerald-300 border-emerald-500/40',
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'active-post',
       label: isAdmin ? t('nav_active_post_admin') : t('nav_active_post_user'),
       sublabel: isAdmin ? t('nav_active_post_admin_sub') : t('nav_active_post_user_sub'),
-      icon: Gamepad2,
+      icon: ClipboardList,
     },
     ...(isAdmin
       ? [
@@ -175,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {
             id: 'settings',
             label: 'Réglages',
-            sublabel: 'Prix, shifts, règles',
+            sublabel: 'Prix, vacations, règles',
             icon: Settings,
           },
         ]
@@ -234,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="df-sb-text">
               <div className="flex items-center gap-1.5">
                 <span className="font-tactical font-black text-base tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                  DELTA FORCE
+                  GESTION PRO
                 </span>
               </div>
             </div>
@@ -284,7 +284,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ) : (
                   <span className="inline-flex items-center gap-1">
                     {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-                    {currentUser.shift === 'day' ? 'SHIFT JOUR' : 'SHIFT NUIT'}
+                    {currentUser.shift === 'day' ? 'VACATION JOUR' : 'VACATION NUIT'}
                   </span>
                 )}
                 </span>
@@ -432,7 +432,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <Swords className="w-3.5 h-3.5" />
-              <span className="df-sb-text">{boosterMode ? 'Retour admin' : 'Mode booster'}</span>
+              <span className="df-sb-text">{boosterMode ? 'Retour responsable' : 'Mode opérateur'}</span>
             </button>
           )}
 

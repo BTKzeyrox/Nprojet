@@ -83,7 +83,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
           type="text"
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder={showBooster ? 'Rechercher un booster, un motif…' : 'Rechercher un motif…'}
+          placeholder={showBooster ? 'Rechercher un opérateur, un motif…' : 'Rechercher un motif…'}
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
@@ -114,7 +114,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
         </select>
         {showBooster && (
           <select value={booster} onChange={e => setBooster(e.target.value)} className={field}>
-            <option value="all">Tous les boosters</option>
+            <option value="all">Tous les opérateurs</option>
             {boosters.map(b => (<option key={b} value={b}>{b}</option>))}
           </select>
         )}
@@ -156,7 +156,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
                 </div>
                 <p className="text-slate-300 text-sm break-words">{a.reason}</p>
                 {a.admin_notes && (
-                  <p className="text-[11px] text-cyan-300 bg-cyan-950/40 p-1.5 border border-cyan-800/60 break-words">Note Admin : {a.admin_notes}</p>
+                  <p className="text-[11px] text-cyan-300 bg-cyan-950/40 p-1.5 border border-cyan-800/60 break-words">Note Responsable : {a.admin_notes}</p>
                 )}
               </div>
               <div className="text-slate-400 text-[11px] sm:text-right shrink-0">{a.request_date}</div>

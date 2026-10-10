@@ -1,5 +1,43 @@
 @import "tailwindcss";
 
+/* Palette Gestion Pro : bleu marine (remplace émeraude, teal et cyan partout) */
+@theme {
+  --color-emerald-50: #eff6ff;
+  --color-emerald-100: #dbeafe;
+  --color-emerald-200: #bfdbfe;
+  --color-emerald-300: #93c5fd;
+  --color-emerald-400: #60a5fa;
+  --color-emerald-500: #3b82f6;
+  --color-emerald-600: #2563eb;
+  --color-emerald-700: #1d4ed8;
+  --color-emerald-800: #1e40af;
+  --color-emerald-900: #1e3a8a;
+  --color-emerald-950: #172554;
+  --color-teal-50: #eff6ff;
+  --color-teal-100: #dbeafe;
+  --color-teal-200: #bfdbfe;
+  --color-teal-300: #93c5fd;
+  --color-teal-400: #60a5fa;
+  --color-teal-500: #3b82f6;
+  --color-teal-600: #2563eb;
+  --color-teal-700: #1d4ed8;
+  --color-teal-800: #1e40af;
+  --color-teal-900: #1e3a8a;
+  --color-teal-950: #172554;
+  --color-cyan-50: #eff6ff;
+  --color-cyan-100: #dbeafe;
+  --color-cyan-200: #bfdbfe;
+  --color-cyan-300: #93c5fd;
+  --color-cyan-400: #60a5fa;
+  --color-cyan-500: #3b82f6;
+  --color-cyan-600: #2563eb;
+  --color-cyan-700: #1d4ed8;
+  --color-cyan-800: #1e40af;
+  --color-cyan-900: #1e3a8a;
+  --color-cyan-950: #172554;
+}
+
+
 @layer base {
   html, body {
     overflow-x: hidden;
@@ -15,7 +53,7 @@
 
 /* ===== Polices modernes ===== */
 .font-tactical {
-  font-family: 'Sora', 'Inter', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   letter-spacing: 0.005em;
 }
 .font-mono,
@@ -25,8 +63,8 @@
 }
 
 /* ===== Double fond : image + dégradé ===== */
-html.theme-dark { background: #050b16; }
-html.theme-light { background: #eef4f8; }
+html.theme-dark { background: #0b1220; }
+html.theme-light { background: #f1f5f9; }
 
 .df-bg-login,
 .df-bg-app {
@@ -35,24 +73,20 @@ html.theme-light { background: #eef4f8; }
   background-repeat: no-repeat;
 }
 html.theme-dark .df-bg-login {
-  background-image:
-    linear-gradient(135deg, rgba(4, 12, 24, 0.80) 0%, rgba(5, 40, 46, 0.55) 55%, rgba(4, 16, 36, 0.82) 100%),
-    url('/bg-login.svg');
+  background-color: #0b1220;
+  background-image: none;
 }
 html.theme-dark .df-bg-app {
-  background-image:
-    linear-gradient(180deg, rgba(5, 12, 24, 0.30) 0%, rgba(6, 18, 32, 0.58) 100%),
-    url('/bg-app.svg');
+  background-color: #0b1220;
+  background-image: none;
 }
 html.theme-light .df-bg-login {
-  background-image:
-    linear-gradient(135deg, rgba(240, 249, 255, 0.90) 0%, rgba(220, 252, 241, 0.80) 55%, rgba(224, 242, 254, 0.90) 100%),
-    url('/bg-login.svg');
+  background-color: #f1f5f9;
+  background-image: none;
 }
 html.theme-light .df-bg-app {
-  background-image:
-    linear-gradient(180deg, rgba(244, 249, 252, 0.72) 0%, rgba(232, 244, 248, 0.86) 100%),
-    url('/bg-app.svg');
+  background-color: #f1f5f9;
+  background-image: none;
 }
 
 /* ===== Cartes en verre (thème sombre) ===== */
@@ -62,10 +96,10 @@ html.theme-dark [class*="bg-[#"] {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 html.theme-dark aside {
-  background-image: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.06) 60%, rgba(59, 130, 246, 0.10) 100%) !important;
+  background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(30, 58, 138, 0.06) 60%, rgba(59, 130, 246, 0.10) 100%) !important;
 }
 html.theme-dark header {
-  background-image: linear-gradient(90deg, rgba(16, 185, 129, 0.10), rgba(6, 182, 212, 0.05)) !important;
+  background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.10), rgba(30, 58, 138, 0.05)) !important;
 }
 /* Le flou (backdrop-filter) est très lourd : plus aucun flou sur le menu, les cartes et la barre du haut.
    Le menu de gauche a un fond PLEIN (on ne voit plus la page passer derrière). */
@@ -97,10 +131,10 @@ html.theme-dark [class*="rounded-2xl"][class*="border"] {
 /* ===== Thème clair adouci (moins lumineux) ===== */
 html.theme-light { background: #d3dbe5; color-scheme: light; }
 html.theme-light .df-bg-login {
-  background-image: linear-gradient(135deg, #dbe3ec 0%, #d2dbe6 55%, #cbd5e1 100%);
+  background-image: none;
 }
 html.theme-light .df-bg-app {
-  background-image: linear-gradient(180deg, #dde4ec 0%, #d1d9e3 100%);
+  background-image: none;
 }
 html.theme-light .bg-white { background-color: #e8ecf1; }
 html.theme-light .bg-slate-50 { background-color: #e1e7ee; }
@@ -131,7 +165,7 @@ html.theme-light [class*="rounded-xl"][class*="border"] {
 
 /* ===== Boutons et champs ===== */
 .bg-emerald-600 {
-  background-image: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
+  background-image: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 button, a {
   transition: background-color .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease;
@@ -139,8 +173,8 @@ button, a {
 button:active:not(:disabled) { transform: scale(0.98); }
 input:focus, textarea:focus, select:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
-  border-color: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28);
+  border-color: rgba(59, 130, 246, 0.7);
 }
 
 /* ===== Lisibilité : plus de textes minuscules ===== */
@@ -167,7 +201,7 @@ img, video, svg { max-width: 100%; }
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.55);
+  background: rgba(59, 130, 246, 0.55);
 }
 
 @keyframes pulse-subtle {
@@ -254,12 +288,12 @@ header.df-topbar {
   backdrop-filter: none !important;
 }
 html.theme-dark header.df-topbar {
-  background-color: #0c2f29 !important;
+  background-color: #0f1e3a !important;
   border-color: #17594e !important;
 }
 html.theme-light header.df-topbar {
-  background-color: #d1fae5 !important;
-  border-color: #6ee7b7 !important;
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
 }
 
 /* ===== iPhone : plus de zoom dans les champs, défilement qui reste dans les fenêtres ===== */
@@ -285,13 +319,13 @@ html.theme-light header.df-topbar {
 
 /* Barre de chargement sous l'en-tête */
 @keyframes df-loadbar-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
-.df-loadbar { background: rgba(16, 185, 129, 0.18); }
+.df-loadbar { background: rgba(59, 130, 246, 0.18); }
 .df-loadbar-run { animation: df-loadbar-run 1s ease-in-out infinite; }
 
 /* Appui visible sur les boutons + pas de délai du toucher sur téléphone */
 button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
 button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); transition: transform 0.06s ease-out; }
-html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
+html { -webkit-tap-highlight-color: rgba(59, 130, 246, 0.22); }
 
 @media (prefers-reduced-motion: reduce) {
   .df-fade-a, .df-fade-b, .df-loadbar-run { animation: none; }
@@ -318,7 +352,7 @@ main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !imp
 
 /* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
 html.theme-light { background: #cdd6e1; }
-html.theme-light .df-bg-app { background-image: linear-gradient(180deg, #d5dce6 0%, #c8d1dd 100%); }
+html.theme-light .df-bg-app { background-image: none; }
 html.theme-light .bg-white { background-color:#dde4ec }
 html.theme-light .bg-slate-50 { background-color:#d6dee8 }
 html.theme-light [class^="bg-[#0"],
@@ -438,7 +472,7 @@ html.theme-light .text-slate-300 { color:#334155 }
 html.theme-light .text-slate-400 { color:#475569 }
 html.theme-light .text-slate-500 { color:#566274 }
 html.theme-light .text-emerald-300,
-html.theme-light .text-emerald-400 { color:#047857 }
+html.theme-light .text-emerald-400 { color:#1d4ed8 }
 html.theme-light .text-teal-300,
 html.theme-light .text-teal-400 { color:#0f766e }
 html.theme-light .text-cyan-300,
