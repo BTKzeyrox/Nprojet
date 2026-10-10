@@ -354,350 +354,141 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
         </div>
       </div>
 
-      {/* Cartes des postes (2 colonnes) */}
-        <div ref={gridRef} data-d={density} className="pc-grid grid gap-1.5 sm:gap-2.5" style={{ gridTemplateColumns: `repeat(${Math.min(gridCols, effCols)}, minmax(0, 1fr))` }}>
-          {sortedContracts.map(contract => {
-            const isMyActive = activePost?.client_name === contract.client_name;
-            const activeSessionOnThis = liveBy.get(contract.client_name);
-            const isTakenByOther = activeSessionOnThis && activeSessionOnThis.employee_id !== currentUser.id;
-            const isPending =
-              activeSessionOnThis?.status === 'pending_start' || activeSessionOnThis?.status === 'pending_end';
-
-            // Début = fixé par l'admin ; Actuel = score réel du compte
-            const initialScore = contract.initial_score;
-            // Objectif = nombre de points à gagner (cible - départ du poste)
-            const objectiveScore = Math.max(1, contract.target_score - contract.initial_score);
-            const currentScore = Number(
-              activeSessionOnThis
-                ? activeSessionOnThis.final_score ?? activeSessionOnThis.current_score
-                : contract.current_score ?? contract.initial_score
-            ) || 0;
-            const boostedDiff = Math.max(0, currentScore - initialScore);
-            const remainingScore = Math.max(0, objectiveScore - boostedDiff);
-            const progressPercent = Math.min(100, Math.max(0, Math.round((boostedDiff / objectiveScore) * 100)));
-
-            const postLabel = `P${String(contract.post_number).padStart(2, '0')}`;
-            const noAccount = !!contract.no_account || !contract.client_name;
-            // Couleur selon le Reste : moins de 20M rouge, moins de 50M orange, au-dessus aucune couleur
-            const band = getRemainingBand(remainingScore, noAccount);
-            // Bordure fine et douce (rouge ou orange) + fond en léger dégradé de la même couleur
-            const bandStyle: React.CSSProperties | undefined =
-              isPending || isMyActive || isTakenByOther || band === 'normal'
-                ? undefined
-                : band === 'red'
-                ? { borderColor: 'rgba(248,113,113,.7)', borderWidth: 2, backgroundImage: 'linear-gradient(135deg, rgba(248,113,113,.14) 0%, rgba(248,113,113,.04) 55%, transparent 100%)' }
-                : { borderColor: 'rgba(251,191,36,.7)', borderWidth: 2, backgroundImage: 'linear-gradient(135deg, rgba(251,191,36,.13) 0%, rgba(251,191,36,.04) 55%, transparent 100%)' };
-            const photoCount =
-              activeSessionOnThis?.start_proof_urls?.length || (activeSessionOnThis?.start_proof_url ? 1 : 0);
-
-            return (
-              <div
-                key={contract.id}
-                data-nav={`poste-${contract.post_number}`}
-                style={bandStyle}
-                className={`pc ${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
-                  isPending
-                    ? isLight
-                      ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'
-                      : 'border-amber-500 ring-1 ring-amber-500/50 shadow-amber-950/40 bg-gradient-to-br from-[#241709] to-[#120c04]'
-                    : isMyActive
-                    ? isLight
-                      ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40'
-                      : 'border-emerald-500 ring-1 ring-emerald-500/50 shadow-emerald-950/40 bg-gradient-to-br from-[#0e1d2c] to-[#0c1622]'
-                    : isTakenByOther
-                    ? isLight
-                      ? 'border-slate-200 opacity-80 bg-slate-100'
-                      : 'border-slate-800/80 opacity-85 bg-[#090e16]'
-                    : isLight
-                    ? 'border-slate-200 hover:border-slate-300 bg-white'
-                    : 'border-slate-800 hover:border-slate-600 bg-[#0c1420]'
-                }`}
-              >
-                {/* Card Header: Post Number & Status */}
-                <div>
-                  {noAccount && (
-                    <div className="mb-2 px-2 py-1 text-[11px] font-bold border border-slate-500/60 bg-slate-500/15 text-slate-300">
-                      Sans compte : en attente du compte client
-                    </div>
+      {/* Tableau Kanban : À faire / En cours / À valider */}
+      {(() => {
+        const cols: { id: 'free' | 'active' | 'pending'; label: string; tone: string }[] = [
+          { id: 'free', label: 'À faire', tone: 'border-t-slate-400' },
+          { id: 'active', label: 'En cours', tone: 'border-t-cyan-500' },
+          { id: 'pending', label: 'À valider', tone: 'border-t-amber-500' },
+        ];
+        const colOf = (c: ClientContract): 'free' | 'active' | 'pending' => {
+          const sess = liveBy.get(c.client_name);
+          if (!sess) return 'free';
+          return sess.status === 'active' ? 'active' : 'pending';
+        };
+        return (
+          <div className="grid gap-3 lg:grid-cols-3 items-start">
+            {cols.map(col => {
+              const items = sortedContracts.filter(c => colOf(c) === col.id);
+              return (
+                <section
+                  key={col.id}
+                  className={`rounded-2xl border border-t-4 ${col.tone} p-2.5 space-y-2.5 ${
+                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800'
+                  }`}
+                >
+                  <header className="flex items-center justify-between px-1">
+                    <h3 className={`text-sm font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{col.label}</h3>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-300'}`}>{items.length}</span>
+                  </header>
+                  {items.length === 0 && (
+                    <p className="text-xs text-slate-400 px-1 py-4 text-center">Aucune mission</p>
                   )}
-                  {/* Type de poste : l'admin le change ici, le booster le voit */}
-                  {isAdminView ? (
-                    <select
-                      value={contract.post_type || ''}
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => db.updateContract(contract.id, { post_type: e.target.value })}
-                      className={`mb-2 w-full px-2 py-1 text-[11px] font-mono font-bold border cursor-pointer focus:outline-none focus:border-emerald-500 ${
-                        isLight ? 'bg-slate-100 text-emerald-700 border-slate-300' : 'bg-[#0a1017] text-emerald-300 border-emerald-500/40'
-                      }`}
-                    >
-                      <option value="">Type de mission : aucun</option>
-                      {contract.post_type && !settings.post_types.includes(contract.post_type) && (
-                        <option value={contract.post_type}>{contract.post_type}</option>
-                      )}
-                      {settings.post_types.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    contract.post_type && (
-                      <span className="inline-block mb-2 px-2 py-0.5 text-[11px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                        {contract.post_type}
-                      </span>
-                    )
-                  )}
-                  <div
-                    className={`pc-head flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b ${
-                      isLight ? 'border-slate-100' : 'border-slate-800/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-                      {/* Post Number Badge */}
-                      <div
-                        className={`pc-badge px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-tactical font-black text-xl sm:text-3xl leading-none tracking-wider shadow-sm shrink-0 ${
-                          isPending
-                            ? 'bg-amber-500 text-black'
-                            : isLight
-                            ? 'bg-slate-100 border border-slate-300 text-emerald-700'
-                            : 'bg-slate-900 border border-emerald-500/40 text-emerald-400'
-                        }`}
+                  {items.map(contract => {
+                    const sess = liveBy.get(contract.client_name);
+                    const isMine = activePost?.client_name === contract.client_name;
+                    const takenByOther = !!sess && sess.employee_id !== currentUser.id;
+                    const objective = Math.max(1, contract.target_score - contract.initial_score);
+                    const current = Number(sess ? sess.final_score ?? sess.current_score : contract.current_score ?? contract.initial_score) || 0;
+                    const done = Math.max(0, current - contract.initial_score);
+                    const pct = Math.min(100, Math.round((done / objective) * 100));
+                    const noAccount = !!contract.no_account || !contract.client_name;
+                    const photos = sess?.start_proof_urls?.length || (sess?.start_proof_url ? 1 : 0);
+                    const label = isAdminView ? (noAccount ? 'Remplir' : 'Modifier') : noAccount ? 'En attente' : 'Prendre';
+                    return (
+                      <article
+                        key={contract.id}
+                        data-nav={`poste-${contract.post_number}`}
+                        className={`rounded-xl border p-3 space-y-2 shadow-sm ${noAccount ? 'opacity-60 ' : ''}${
+                          isLight ? 'bg-white border-slate-200' : 'bg-[#101b2b] border-slate-700/70'
+                        } ${isMine ? 'ring-2 ring-emerald-500/50' : ''}`}
                       >
-                        {postLabel}
-                      </div>
-
-                      <div className="pc-name min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <h3
-                            className={`font-tactical font-bold text-xs sm:text-base tracking-wide break-words leading-tight ${
-                              isLight ? 'text-slate-900' : 'text-white'
-                            }`}
-                          >
-                            {contract.client_name || 'Mission sans compte'}
-                          </h3>
-                          <span
-                            className={`pc-tag hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
-                              isLight
-                                ? 'bg-slate-100 text-slate-600 border-slate-200'
-                                : 'bg-slate-800/80 text-slate-400 border-slate-700/60'
-                            }`}
-                          >
-                            {contract.account_tag}
-                          </span>
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className={`text-sm font-bold leading-snug break-words ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                            {contract.client_name || 'Mission sans titre'}
+                          </h4>
+                          {contract.account_tag && (
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">{contract.account_tag}</span>
+                          )}
                         </div>
-                        {activeSessionOnThis && (
-                          <div className={`text-[11px] sm:text-sm font-bold truncate ${isLight ? 'text-cyan-700' : 'text-cyan-300'}`}>
-                            {activeSessionOnThis.employee_name}
+                        {isAdminView ? (
+                          <select
+                            value={contract.post_type || ''}
+                            onChange={e => db.updateContract(contract.id, { post_type: e.target.value })}
+                            className={`w-full px-2 py-1 text-[11px] rounded-lg border cursor-pointer ${isLight ? 'bg-slate-50 border-slate-300 text-slate-700' : 'bg-[#0a1017] border-slate-700 text-slate-200'}`}
+                          >
+                            <option value="">Type de mission : aucun</option>
+                            {contract.post_type && !settings.post_types.includes(contract.post_type) && (
+                              <option value={contract.post_type}>{contract.post_type}</option>
+                            )}
+                            {settings.post_types.map(t2 => (<option key={t2} value={t2}>{t2}</option>))}
+                          </select>
+                        ) : (
+                          contract.post_type && (
+                            <span className={`inline-block px-2 py-0.5 text-[11px] rounded-full font-semibold ${isLight ? 'bg-blue-50 text-blue-800' : 'bg-blue-950 text-blue-200'}`}>{contract.post_type}</span>
+                          )
+                        )}
+                        {contract.description && (
+                          <p className="text-[11px] leading-snug text-slate-400 whitespace-pre-line break-words line-clamp-3">{contract.description}</p>
+                        )}
+                        <div>
+                          <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>Volume {formatScoreM(done)} / {formatScoreM(objective)}</span>
+                            <span>{pct}%</span>
+                          </div>
+                          <div className={`h-1.5 rounded-full overflow-hidden ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                            <div className="h-full bg-blue-500" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                        {sess && (
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span className="font-semibold">{sess.employee_name}</span>
+                            {col.id === 'pending' && (
+                              <span className="inline-flex items-center gap-1 text-amber-400"><Camera className="w-3 h-3" />{photos}</span>
+                            )}
                           </div>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Status Indicator */}
-                    <div className="pc-status shrink-0">
-                      {isPending ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/60 animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          <span>En attente Responsable</span>
-                        </span>
-                      ) : isMyActive ? (
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono font-bold animate-pulse ${
-                            isLight
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                              : 'bg-emerald-950 text-emerald-300 border border-emerald-500/60'
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span>Session</span>
-                        </span>
-                      ) : isTakenByOther ? (
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono font-bold ${
-                            isLight
-                              ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
-                              : 'bg-slate-900 text-cyan-300 border border-cyan-800/40'
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                          <span className="break-words text-left leading-tight">{activeSessionOnThis.employee_name}</span>
-                        </span>
-                      ) : (
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono ${
-                            isLight
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span>Libre</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pending Alert in Cards View */}
-                  {isPending && (
-                    <div className="mt-2 p-2 rounded-lg bg-amber-950/80 border border-amber-500/50 text-xs font-mono text-amber-200 flex flex-wrap items-center justify-between gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>
-                          Validation requise : <strong>{activeSessionOnThis.employee_name}</strong>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>{photoCount} photo{photoCount > 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {contract.description && (
-                    <p className="mb-2 px-2 py-1.5 border-l-2 border-amber-500/70 bg-amber-500/10 text-[11px] leading-snug text-slate-200 whitespace-pre-line break-words">
-                      {contract.description}
-                    </p>
-                  )}
-                  {/* 4 métriques : Départ, Actuel, Reste, Objectif */}
-                  <div className="pc-metrics grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-3.5 text-xs font-mono">
-                    {/* 1. Score Départ */}
-                    <div
-                      className={`p-2.5 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080d14] border-slate-800/80'
-                      }`}
-                    >
-                      <span className="text-[10px] text-slate-400 uppercase block">Départ</span>
-                      <span
-                        className={`font-mono-numbers font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}
-                      >
-                        {formatScoreM(initialScore)}
-                      </span>
-                    </div>
-
-                    {/* 2. Score Actuel */}
-                    <div
-                      className={`p-2.5 rounded-xl border ${
-                        isLight ? 'bg-cyan-50/60 border-cyan-200' : 'bg-[#07111a] border-cyan-900/50'
-                      }`}
-                    >
-                      <span className="text-[10px] text-cyan-400 uppercase block font-semibold">Actuel</span>
-                      <span className="font-mono-numbers font-bold text-xs text-cyan-400">
-                        {formatScoreM(currentScore)}
-                      </span>
-                    </div>
-
-                    {/* 3. Score Restant */}
-                    <div
-                      className={`p-2.5 rounded-xl border ${
-                        isLight ? 'bg-amber-50/60 border-amber-200' : 'bg-[#120f09] border-amber-900/50'
-                      }`}
-                    >
-                      <span className="text-[10px] text-amber-400 uppercase block font-semibold">À faire</span>
-                      <span className="font-mono-numbers font-bold text-xs text-amber-400">
-                        {formatScoreM(remainingScore)}
-                      </span>
-                    </div>
-
-                    {/* 4. Cible = objectif + début */}
-                    <div
-                      className={`p-2.5 rounded-xl border ${
-                        isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#06140f] border-emerald-900/50'
-                      }`}
-                    >
-                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Cible</span>
-                      <span className="font-mono-numbers font-bold text-xs text-emerald-400">
-                        {formatScoreM(initialScore + objectiveScore)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pc-act pt-2">
-                  {isPending ? (
-                    currentUser.role === 'admin' ? (
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          onSelectContract(contract);
-                        }}
-                        className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-amber-600 hover:bg-amber-500 text-black font-tactical font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer animate-pulse"
-                      >
-                        <Clock className="w-4 h-4" />
-                        <span>Valider ({activeSessionOnThis?.employee_name})</span>
-                      </button>
-                    ) : (
-                      <>
-                      <div className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs font-mono rounded-xl text-center">
-                        <span className="inline-flex items-center gap-1.5"><Hourglass className="w-3.5 h-3.5 shrink-0" />En attente de validation</span>
-                      </div>
-                      {activeSessionOnThis && activeSessionOnThis.employee_id === currentUser.id && (
-                        <PendingPostActions post={activeSessionOnThis} onGoToPost={onNavigateToActivePost} />
-                      )}
-                      </>
-                    )
-                  ) : isMyActive ? (
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onNavigateToActivePost();
-                      }}
-                      className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                    >
-                      <ClipboardList className="w-4 h-4" />
-                      <span>Ma session</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  ) : isTakenByOther ? (
-                    currentUser.role === 'admin' ? (
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          onSelectContract(contract);
-                        }}
-                        className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-[#142333] hover:bg-[#1b2f44] border border-cyan-700/60 text-cyan-300 font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow cursor-pointer"
-                      >
-                        <Eye className="w-4 h-4 text-cyan-400" />
-                        <span>Gérer ({activeSessionOnThis?.employee_name})</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          onSelectContract(contract);
-                        }}
-                        className={`w-full py-2.5 px-2 sm:px-4 text-center leading-tight font-mono text-xs rounded-xl border flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                          isLight
-                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
-                            : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-amber-800/40'
-                        }`}
-                      >
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>Occupé ({activeSessionOnThis?.employee_name})</span>
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={noAccount && !isAdminView}
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (noAccount && !isAdminView) return;
-                        onSelectContract(contract);
-                      }}
-                      className="disabled:opacity-50 disabled:cursor-not-allowed w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                    >
-                      <Target className="w-4 h-4" />
-                      <span>{currentUser.role === 'admin' ? (noAccount ? 'Remplir la mission' : 'Modifier la mission') : noAccount ? 'En attente du compte' : 'Prendre cette mission'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                        {col.id === 'pending' ? (
+                          isAdminView ? (
+                            <button type="button" onClick={() => onSelectContract(contract)} className="w-full py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-black inline-flex items-center justify-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5" />Valider
+                            </button>
+                          ) : (
+                            <>
+                              <div className="w-full py-2 text-center text-xs rounded-xl border border-amber-600/50 text-amber-300 inline-flex items-center justify-center gap-1.5"><Hourglass className="w-3.5 h-3.5" />En attente de validation</div>
+                              {sess && sess.employee_id === currentUser.id && (
+                                <PendingPostActions post={sess} onGoToPost={onNavigateToActivePost} />
+                              )}
+                            </>
+                          )
+                        ) : isMine ? (
+                          <button type="button" onClick={onNavigateToActivePost} className="w-full py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center justify-center gap-1.5">
+                            <ClipboardList className="w-3.5 h-3.5" />Ma mission<ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        ) : takenByOther ? (
+                          <button type="button" onClick={() => onSelectContract(contract)} className="w-full py-2 text-xs font-semibold rounded-xl border border-slate-600 text-slate-300 inline-flex items-center justify-center gap-1.5">
+                            {isAdminView ? <Eye className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                            {isAdminView ? 'Gérer' : 'Occupée'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={noAccount && !isAdminView}
+                            onClick={() => { if (noAccount && !isAdminView) return; onSelectContract(contract); }}
+                            className="w-full py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white inline-flex items-center justify-center gap-1.5"
+                          >
+                            <Target className="w-3.5 h-3.5" />{label}
+                          </button>
+                        )}
+                      </article>
+                    );
+                  })}
+                </section>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {showAdd && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 overflow-y-auto" onClick={() => setShowAdd(false)}>
