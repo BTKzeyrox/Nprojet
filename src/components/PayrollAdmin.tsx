@@ -128,7 +128,7 @@ export const PayrollAdmin: React.FC = () => {
             <div key={l as string} className="bg-[#141e2a] border border-slate-700 p-2"><div className="text-slate-400">{l as string}</div><div className={`font-bold ${c as string}`}>{formatCurrencyAr(v as number)}</div></div>
           ))}
         </div>
-        {isClosed && <div className="text-xs font-mono text-slate-300">Déjà payé : <b className="text-emerald-300">{formatCurrencyAr(tot.paid)}</b> · Reste : <b className="text-amber-300">{formatCurrencyAr(tot.net - tot.paid)}</b></div>}
+        {isClosed && <div className="text-xs font-mono text-slate-300">Déjà payé : <b className="text-emerald-300">{formatCurrencyAr(tot.paid)}</b> · À faire : <b className="text-amber-300">{formatCurrencyAr(tot.net - tot.paid)}</b></div>}
         <div className="flex flex-wrap gap-2">
           {status === 'to_check' && (
             <button type="button" disabled={busy || (data?.pending_validation || 0) > 0} onClick={closePeriod} className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"><Lock className="w-4 h-4" />Clôturer la période</button>
@@ -190,7 +190,7 @@ export const PayrollAdmin: React.FC = () => {
             </div>
             <div className="overflow-x-auto border border-slate-700">
               <table className="w-full text-[11px] font-mono">
-                <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Mission</th><th className="p-2 text-right">Points</th><th className="p-2 text-right">Taux / 1M</th><th className="p-2 text-right">Montant</th></tr></thead>
+                <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Mission</th><th className="p-2 text-right">Volume</th><th className="p-2 text-right">Taux / 1M</th><th className="p-2 text-right">Montant</th></tr></thead>
                 <tbody>
                   {open.lines.length === 0 && <tr><td colSpan={5} className="p-2 text-slate-400">Aucune session validée.</td></tr>}
                   {open.lines.map(l => (

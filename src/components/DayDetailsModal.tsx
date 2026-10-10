@@ -136,7 +136,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           {shifts.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
               <Clock className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-300">Aucun vacation de boost enregistré pour cette date</p>
+              <p className="text-sm font-medium text-slate-300">Aucune vacation enregistrée pour cette date</p>
               <p className="text-xs text-slate-500 font-mono mt-1">
                 Journée sans mission active ou absence signalée (Pas de Mission).
               </p>
@@ -246,7 +246,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             onOpenProofLightbox({
                               imageUrl: shift.start_proof_url,
                               gallery: proofsOf(shift),
-                              title: `Justificatif de Début - ${shift.client_name}`,
+                              title: `Justificatif de départ - ${shift.client_name}`,
                               subtitle: `Opérateur: ${shift.employee_name} · Volume initial: ${formatScoreM(shift.initial_score)} pts`,
                               score: shift.initial_score,
                               clientTag: shift.client_name,
@@ -257,13 +257,13 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                           className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                         >
                           <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
-                            <span className="text-emerald-400 font-bold">1. CAPTURE DÉBUT</span>
+                            <span className="text-emerald-400 font-bold">1. PHOTO DÉPART</span>
                             <span className="text-slate-500">{shift.start_time}</span>
                           </div>
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                             <img
                               src={shift.start_proof_url}
-                              alt="Capture Début"
+                              alt="Photo de départ"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-mono">
@@ -290,13 +290,13 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                           >
                             <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
-                              <span className="text-cyan-400 font-bold">2. CAPTURE FIN</span>
+                              <span className="text-cyan-400 font-bold">2. PHOTO FIN</span>
                               <span className="text-slate-500">{shift.end_time || 'Terminé'}</span>
                             </div>
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                               <img
                                 src={shift.end_proof_url}
-                                alt="Capture Fin"
+                                alt="Photo de fin"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-mono">

@@ -86,7 +86,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     const exactNum = pm ? Number(pm[1]) : null;
     const goPoste = (n: number) => () => { setNavTarget(`poste-${n}`); onNavigate(home); };
     db.getContracts().forEach(c => {
-      const byNumber = exactNum !== null ? c.post_number === exactNum : norm(`poste ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s);
+      const byNumber = exactNum !== null ? c.post_number === exactNum : norm(`mission ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s);
       if (norm(c.client_name).includes(s) || byNumber) {
         const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Mission ${c.post_number}`, kind: 'poste', go: goPoste(c.post_number) };
         if (exactNum !== null && c.post_number === exactNum) out.unshift(hit);

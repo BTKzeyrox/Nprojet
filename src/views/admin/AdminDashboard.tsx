@@ -217,15 +217,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
     if (editTargetScore <= editInitialScore) {
-      setAssignErrorMsg('La cible doit être supérieure au début.');
+      setAssignErrorMsg('La cible doit être supérieure au départ.');
       return;
     }
     if (editCurrentScore < editInitialScore) {
-      setAssignErrorMsg('L\'actuel ne peut pas être inférieur au début.');
+      setAssignErrorMsg('L\'actuel ne peut pas être inférieur au départ.');
       return;
     }
     if (editCurrentScore > editTargetScore) {
-      setAssignErrorMsg('Le reste ne peut pas être négatif : l\'actuel dépasse la cible.');
+      setAssignErrorMsg('Le volume à faire ne peut pas être négatif : l\'actuel dépasse la cible.');
       return;
     }
 
@@ -267,7 +267,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleOpenReject = (postId: string) => {
     setRejectingPostId(postId);
-    setRejectReason('Capture illisible / Incohérence constatée');
+    setRejectReason('Photo illisible / Incohérence constatée');
   };
 
   const handleConfirmReject = (e: React.FormEvent) => {
@@ -471,7 +471,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <CircleDot className="w-3.5 h-3.5 shrink-0" />
                         )}
                         {activeSessionForModal.status === 'pending_start'
-                          ? 'En attente validation (Début)'
+                          ? 'En attente validation (Départ)'
                           : activeSessionForModal.status === 'pending_end'
                           ? 'En attente validation (Fin)'
                           : 'En cours'}
@@ -524,7 +524,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <strong className="text-white text-xs truncate block">{activeSessionForModal.employee_name}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Volume Début</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Volume de départ</span>
                           <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
@@ -560,7 +560,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 onOpenProofLightbox({
                                   imageUrl: photoUrl,
                                   gallery: proofsOf(activeSessionForModal),
-                                  title: `Photo ${pIdx + 1} - Justificatif Début - ${activeSessionForModal.client_name}`,
+                                  title: `Photo ${pIdx + 1} - Justificatif de départ - ${activeSessionForModal.client_name}`,
                                   score: activeSessionForModal.initial_score,
                                   clientTag: activeSessionForModal.client_name,
                                   operatorName: activeSessionForModal.employee_name,
@@ -629,7 +629,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Début (Départ Relevé)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Départ relevé</label>
                       <ScoreInput
                         value={editInitialScore}
                         onChange={changeInitial}
@@ -638,7 +638,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editInitialScore)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Objectif (volume à faire)</label>
                       <ScoreInput
                         value={editObjective}
                         onChange={changeObjective}
@@ -665,7 +665,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editCurrentScore)}</span>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-slate-300 uppercase mb-1">Reste (Cible − Actuel)</label>
+                      <label className="block text-slate-300 uppercase mb-1">À faire (cible − actuel)</label>
                       <ScoreInput
                         value={editReste}
                         onChange={changeReste}
@@ -1378,7 +1378,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 : 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                             }`}
                           >
-                            {isStart ? 'Demande de Début (pending_start)' : 'Demande de Clôture (pending_end)'}
+                            {isStart ? 'Demande de départ' : 'Demande de Clôture (pending_end)'}
                           </span>
                           <span className="text-xs font-mono text-slate-400">
                             Vacation {post.shift_type.toUpperCase()} · Reçu à {post.start_time}
@@ -1441,7 +1441,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             onOpenProofLightbox({
                               imageUrl: post.start_proof_url,
                               gallery: proofsOf(post),
-                              title: `Justificatif de Début - ${post.client_name}`,
+                              title: `Justificatif de départ - ${post.client_name}`,
                               score: post.initial_score,
                               clientTag: post.client_name,
                               operatorName: post.employee_name,
@@ -1451,13 +1451,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                         >
                           <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
-                            <span className="text-emerald-400 font-bold">CAPTURE DÉPART</span>
+                            <span className="text-emerald-400 font-bold">PHOTO DÉPART</span>
                             <span className="text-slate-500">{post.start_time}</span>
                           </div>
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                             <img
                               src={post.start_proof_url}
-                              alt="Justificatif Début"
+                              alt="Justificatif de départ"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-mono">
@@ -1484,7 +1484,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                           >
                             <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
-                              <span className="text-cyan-400 font-bold">CAPTURE FIN</span>
+                              <span className="text-cyan-400 font-bold">PHOTO FIN</span>
                               <span className="text-slate-500">{post.end_time || 'Clôture'}</span>
                             </div>
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
@@ -1705,7 +1705,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   required
-                  placeholder="ex: Capture illisible, volume ne correspondant pas aux métadonnées..."
+                  placeholder="ex: Photo illisible, volume ne correspondant pas aux métadonnées..."
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                 />
               </div>

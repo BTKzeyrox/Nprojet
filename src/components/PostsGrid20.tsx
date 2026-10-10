@@ -135,7 +135,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       contract.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contract.account_tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contract.game_mode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `poste ${contract.post_number}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `mission ${contract.post_number}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       `#${contract.post_number}`.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
@@ -319,7 +319,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               }`}
             >
               <option value="number">Numéro de la mission</option>
-              <option value="rest_desc">Reste : plus → moins</option>
+              <option value="rest_desc">À faire : plus → moins</option>
               <option value="obj_asc">Objectif : petit → grand</option>
               <option value="obj_desc">Objectif : grand → petit</option>
             </select>
@@ -590,7 +590,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         isLight ? 'bg-amber-50/60 border-amber-200' : 'bg-[#120f09] border-amber-900/50'
                       }`}
                     >
-                      <span className="text-[10px] text-amber-400 uppercase block font-semibold">Reste</span>
+                      <span className="text-[10px] text-amber-400 uppercase block font-semibold">À faire</span>
                       <span className="font-mono-numbers font-bold text-xs text-amber-400">
                         {formatScoreM(remainingScore)}
                       </span>
@@ -711,11 +711,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             </div>
             <>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Volume de début</label>
+                  <label className="block text-slate-300 uppercase mb-1">Volume de départ</label>
                   <ScoreInput value={addInitial} onChange={setAddInitial} />
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
+                  <label className="block text-slate-300 uppercase mb-1">Objectif (volume à faire)</label>
                   <ScoreInput value={addObjective} onChange={setAddObjective} />
                 </div>
               <p className="text-[11px] text-slate-400 font-mono">

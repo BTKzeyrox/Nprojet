@@ -9,13 +9,13 @@ export async function downloadBackupExcel(): Promise<void> {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, sheet(users.map(u => ({
     Nom: u.name, Pseudo: u.username, Rôle: u.role, Statut: u.status, Shift: u.shift, Téléphone: u.phone,
-    Badge: u.performance_badge, 'Score total': u.total_score_boosted, 'Gains (Ar)': u.total_earnings_ar,
+    Badge: u.performance_badge, 'Volume total': u.total_score_boosted, 'Gains (Ar)': u.total_earnings_ar,
     'Avance en attente (Ar)': u.pending_advance_ar,
   }))), 'Opérateurs');
   XLSX.utils.book_append_sheet(wb, sheet(db.getPosts().map(p => ({
-    Date: p.date, Début: p.start_time, Fin: p.end_time || '', Poste: p.post_number ?? '', Client: p.client_name, Compte: p.account_tag,
-    Opérateur: p.employee_name, Shift: p.shift_type, Statut: p.status, 'Score début': p.initial_score,
-    'Score actuel': p.current_score, 'Score final': p.final_score ?? '', Cible: p.target_score,
+    Date: p.date, Début: p.start_time, Fin: p.end_time || '', Mission: p.post_number ?? '', Client: p.client_name, Compte: p.account_tag,
+    Opérateur: p.employee_name, Shift: p.shift_type, Statut: p.status, 'Volume départ': p.initial_score,
+    'Volume actuel': p.current_score, 'Score final': p.final_score ?? '', Cible: p.target_score,
     'Montant (Ar)': p.calculated_ar ?? '', Notes: p.notes || '', 'Motif de rejet': p.rejection_reason || '',
   }))), 'Sessions');
   XLSX.utils.book_append_sheet(wb, sheet(db.getContracts().map(c => ({

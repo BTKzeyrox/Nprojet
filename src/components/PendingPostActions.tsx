@@ -22,7 +22,7 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
     askConfirm({
       title: isStart ? 'Annuler cette mission ?' : 'Annuler la fin de session ?',
       message: isStart
-        ? 'La mission redeviendra libre. Ta demande de début sera supprimée.'
+        ? 'La mission redeviendra libre. Ta demande de départ sera supprimée.'
         : 'La session reprend. Tu pourras renvoyer la fin plus tard.',
       confirmLabel: isStart ? 'Annuler la mission' : 'Annuler la fin',
       cancelLabel: 'Garder',
@@ -89,11 +89,11 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
             <h3 className="font-tactical font-bold text-white text-base">Modifier la mission en attente</h3>
             <p className="text-slate-400">Possible seulement avant la validation du responsable.</p>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la capture)</label>
+              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la photo)</label>
               <ScoreInput value={score} onChange={setScore} className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white font-bold" />
             </div>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Remplacer la capture (facultatif)</label>
+              <label className="block text-slate-300 uppercase mb-1">Remplacer la photo (facultatif)</label>
               <input type="file" accept="image/*" onChange={onFile} className="text-slate-400" />
               {busy && <div className="text-cyan-300 mt-1">Photo en cours d'envoi…</div>}
               {photo && !busy && <div className="text-emerald-300 mt-1">Nouvelle photo prête.</div>}

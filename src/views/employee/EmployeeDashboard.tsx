@@ -319,16 +319,16 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     if (initialScore <= 0) {
-      setStartFormError('Veuillez entrer le volume réel vu sur la capture.');
+      setStartFormError('Veuillez entrer le volume réel vu sur la photo.');
       return;
     }
     if (startProofPhotos.length === 0) {
-      setStartFormError('Veuillez ajouter au moins 1 capture ou photo de début (1 à 5 photos autorisées).');
+      setStartFormError('Veuillez ajouter au moins 1 photo de départ (1 à 5 photos autorisées).');
       return;
     }
     if (!confirmed) {
       askConfirm({
-        title: 'Envoyer la demande de début ?',
+        title: 'Envoyer la demande de départ ?',
         message: "Votre capture sera envoyée à l'administrateur pour validation.",
         confirmLabel: 'Envoyer',
         onConfirm: () => handleSubmitStartForm(e, true),
@@ -351,7 +351,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       postNumber: contract?.post_number,
       shiftType: contract?.recommended_shift === 'night' ? 'night' : 'day',
       status: 'pending_start',
-      notes: `Demande de début soumise par ${currentUser.name} avec ${startProofPhotos.length} photo(s)${startNotes.trim() ? ` | ${startNotes.trim()}` : ''}`
+      notes: `Demande de départ soumise par ${currentUser.name} avec ${startProofPhotos.length} photo(s)${startNotes.trim() ? ` | ${startNotes.trim()}` : ''}`
     });
 
     if (!res.success) {
@@ -378,7 +378,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     if (!endProofPreview) {
-      setEndFormError('La capture d\'écran ou photo de fin de session est obligatoire.');
+      setEndFormError('La photo d\'écran ou photo de fin de session est obligatoire.');
       return;
     }
     if (!confirmed) {
@@ -424,7 +424,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     if (!activePost) return;
     askConfirm({
       title: 'Annuler cette mission ?',
-      message: "La mission redeviendra libre. Votre demande de début sera supprimée.",
+      message: "La mission redeviendra libre. Votre demande de départ sera supprimée.",
       confirmLabel: 'Annuler la mission',
       cancelLabel: 'Garder',
       danger: true,
@@ -776,8 +776,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <Camera className="w-3.5 h-3.5 text-cyan-400" />
                         <span>
                           {activePost.start_proof_urls && activePost.start_proof_urls.length > 1
-                            ? `Justificatifs Début Soumises (${activePost.start_proof_urls.length} photos)`
-                            : 'Capture de départ soumise'}
+                            ? `Justificatifs de départ soumis (${activePost.start_proof_urls.length} photos)`
+                            : 'Photo de départ soumise'}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -791,7 +791,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: url,
                                 gallery: proofsOf(activePost),
-                                title: `Photo ${idx + 1} - Justificatif Début - ${activePost.client_name}`,
+                                title: `Photo ${idx + 1} - Justificatif de départ - ${activePost.client_name}`,
                                 score: activePost.initial_score,
                                 clientTag: activePost.client_name,
                                 operatorName: activePost.employee_name,
@@ -905,7 +905,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                             })
                           }
                           className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors"
-                          title="Voir la capture"
+                          title="Voir la photo"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
@@ -1035,7 +1035,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[
               "Objectif de volume client atteint !",
-              "Début de session de boost sur le compte",
+              "Début de session sur la mission",
               "Capture d'écran téléversée dans le système",
               "Question sur la validation de la vacation"
             ].map((chip, idx) => (
@@ -1306,7 +1306,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-slate-300 uppercase font-bold flex items-center gap-1.5 text-emerald-400">
                     <Camera className="w-4 h-4" />
-                    <span>1. Capture d'écran (1 à 5 photos) *</span>
+                    <span>1. Photo (1 à 5 photos) *</span>
                   </label>
                   <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                     {startProofPhotos.length} / 5 photos
@@ -1332,7 +1332,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     {/* Gallery / Screenshot Button */}
                     <label className="cursor-pointer bg-[#16271c] hover:bg-[#1f3727] border border-emerald-500/50 hover:border-emerald-400 p-2.5 rounded-xl flex items-center justify-center gap-2 text-emerald-300 text-xs font-mono font-bold transition-all shadow cursor-pointer">
                       <Upload className="w-4 h-4 text-emerald-400" />
-                      <span>Importer Capture / Fichier</span>
+                      <span>Importer Photo / Fichier</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -1430,7 +1430,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               {/* VÉRIFICATION DU SCORE SUR LA CAPTURE */}
               <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-3">
                 <label className="block text-emerald-400 uppercase font-bold">
-                  2. Le volume sur la capture est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
+                  2. Le volume sur la photo est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1463,7 +1463,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 {!scoreMatches && (
                   <div className="space-y-1.5">
                     <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between gap-2">
-                      <span>Volume réel sur la capture</span>
+                      <span>Volume réel sur la photo</span>
                       <span className="text-cyan-400 font-bold text-sm">{formatScoreM(initialScore)}</span>
                     </label>
                     <ScoreInput
@@ -1547,7 +1547,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             </p>
 
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la capture)</label>
+              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la photo)</label>
               <ScoreInput
                 value={editScore}
                 onChange={setEditScore}
@@ -1556,7 +1556,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Remplacer Capture (Optionnel)</label>
+              <label className="block text-slate-300 uppercase mb-1">Remplacer la photo (Optionnel)</label>
               <input
                 type="file"
                 accept="image/*"
@@ -1675,7 +1675,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <label className="block text-slate-300 uppercase mb-1 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
                     <Camera className="w-4 h-4" />
-                    <span>Capture d'écran / Photo de Fin (Obligatoire)</span>
+                    <span>Photo de fin (Obligatoire)</span>
                   </span>
                   <span className="text-[10px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
                 </label>
@@ -1709,14 +1709,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       onClick={() =>
                         onOpenProofLightbox({
                           imageUrl: endProofPreview,
-                          title: `Justificatif Capture Fin - ${activePost.client_name}`,
+                          title: `Justificatif Photo de fin - ${activePost.client_name}`,
                           score: finalScoreInput,
                           clientTag: activePost.client_name,
                           operatorName: currentUser.name,
                         })
                       }
                       className="mt-3 relative aspect-video rounded-xl overflow-hidden border-2 border-cyan-500 cursor-pointer group shadow-lg"
-                      title="Cliquer pour afficher la capture en plein écran"
+                      title="Cliquer pour afficher la photo en plein écran"
                     >
                       <img
                         src={endProofPreview}
@@ -1728,7 +1728,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <span>Inspecter en Plein Écran</span>
                       </div>
                       <div className="absolute bottom-2 right-2 bg-black/80 border border-cyan-500/50 px-2 py-0.5 rounded text-[10px] text-cyan-400 font-mono font-bold">
-                        <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Capture de fin prête (Cliquer pour zoomer)
+                        <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Photo de fin prête (Cliquer pour zoomer)
                       </div>
                     </div>
 
