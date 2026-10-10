@@ -1,6 +1,6 @@
-# Delta Force Operations — Gestion de Boosting
+# Gestion Pro
 
-Application de gestion d'équipe de boosting Delta Force : 20 postes (grille 2x10), shifts Jour/Nuit, preuves photo, validation admin, paie (1M score = 1 000 Ar), avances, calendrier, messagerie.
+Application de gestion du travail à la tâche : 20 missions (grille 2x10), vacations Jour/Nuit, justificatifs photo, validation par le responsable, paie (1M de volume = 1 000 Ar), avances, calendrier, messagerie.
 
 **Stack :** React + Vite + Tailwind (hébergé sur Vercel) · API = Supabase Edge Function `df-api` (code dans `supabase/functions/df-api/`) · base Supabase (tables `df_*`).
 

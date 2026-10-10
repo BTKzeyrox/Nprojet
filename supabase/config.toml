@@ -1,4 +1,4 @@
-# Fonction serveur du projet DF-boosting (projet Supabase "Replay")
+# Fonction serveur du projet Gestion Pro (projet Supabase "nprojet")
 [functions.df-api]
 verify_jwt = false
 

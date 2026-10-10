@@ -1184,7 +1184,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {isSecurity && (
         <>
-      {/* SECTION 1: ADMIN ALERT BOX ("Petit Malin" Security Log) */}
+      {/* SECTION 1: ADMIN ALERT BOX (journal de sécurité) */}
       <div className={`rounded-xl border shadow-2xl overflow-hidden transition-all duration-300 ${
         activeViolations.length > 0
           ? 'bg-[#180a0d] border-red-500/80 animate-radar-alert'
@@ -1197,7 +1197,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <div>
               <h3 className="font-tactical font-black text-white text-base tracking-wide flex items-center gap-2">
-                <span>RADAR SÉCURITÉ ("PETIT MALIN")</span>
+                <span>CONTRÔLE ET SÉCURITÉ</span>
                 <span className="text-xs font-mono bg-red-600 text-white px-2 py-0.5 rounded font-bold">
                   {activeViolations.length} ALERTE(S) ACTIVE(S)
                 </span>

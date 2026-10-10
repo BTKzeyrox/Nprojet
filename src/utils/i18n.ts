@@ -66,7 +66,7 @@ export const TRANSLATIONS = {
 
     // Login
     login_operator: 'CONNEXION OPÉRATEUR',
-    login_title: 'ACCÉDER AU TERMINAL DE JEU',
+    login_title: "ACCÉDER À L'ESPACE DE TRAVAIL",
     login_desc: 'Authentifiez-vous pour ouvrir votre session et accéder à la grille.',
     username_label: 'IDENTIFIANT OPÉRATEUR',
     username_placeholder: 'Ex: responsable, tojo, rado',
@@ -87,20 +87,20 @@ export const TRANSLATIONS = {
   },
   zh: {
     // Brand
-    brand_title: 'GESTION PRO // 三角洲行动',
-    brand_sub: '战术代练与监控作战指挥部',
-    brand_version: '作战指挥QG',
+    brand_title: 'GESTION PRO',
+    brand_sub: '按任务计酬的工作管理',
+    brand_version: '专业空间',
 
     // Sidebar Menus
-    menu_operational: '作战操作菜单',
+    menu_operational: '操作菜单',
     nav_grid: '岗位总览',
     nav_grid_sub: '2x10 矩阵全景',
     nav_active_post_user: '当前进行中工位',
     nav_active_post_user_sub: '倒计时、得分与结算截图',
-    nav_active_post_admin: '代练会话监控',
-    nav_active_post_admin_sub: '在线代练',
-    nav_employees: '代练员团队管理',
-    nav_employees_sub: '人员状态与游戏履历',
+    nav_active_post_admin: '会话监控',
+    nav_active_post_admin_sub: '在线操作员',
+    nav_employees: '操作员团队管理',
+    nav_employees_sub: '人员状态与履历',
     nav_profile: '个人档案与履历',
     nav_profile_sub: '操作员技术特长',
     nav_advances: '薪资预支申请',
@@ -121,8 +121,8 @@ export const TRANSLATIONS = {
     matrix_badge: '官方矩阵 · 20工位 (2x10)',
     view_cards: '卡片视图',
     rate_rule: '1M分 = 1000阿里',
-    grid_title: '20个代练工位矩阵 (2x10)',
-    grid_desc: '在20个客户账号中选择工位，开始代练并提交凭据。',
+    grid_title: '20个任务矩阵 (2x10)',
+    grid_desc: '在20个任务中选择，开始工作并提交凭证。',
     total_posts: '总工位数',
     pay_scale: '薪酬兑换规则',
     filter_all: '全部',
@@ -150,8 +150,8 @@ export const TRANSLATIONS = {
 
     // Login
     login_operator: '操作员认证接入',
-    login_title: '登录战术指挥终端',
-    login_desc: '请输入凭据登录以接入20工位代练矩阵。',
+    login_title: '进入工作空间',
+    login_desc: '请输入凭据登录以进入任务矩阵。',
     username_label: '操作员账号',
     username_placeholder: '例如: responsable, tojo, rado',
     password_label: '安全验证密码',

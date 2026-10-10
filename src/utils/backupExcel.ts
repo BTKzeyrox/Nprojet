@@ -14,7 +14,7 @@ export async function downloadBackupExcel(): Promise<void> {
   }))), 'Opérateurs');
   XLSX.utils.book_append_sheet(wb, sheet(db.getPosts().map(p => ({
     Date: p.date, Début: p.start_time, Fin: p.end_time || '', Poste: p.post_number ?? '', Client: p.client_name, Compte: p.account_tag,
-    Booster: p.employee_name, Shift: p.shift_type, Statut: p.status, 'Score début': p.initial_score,
+    Opérateur: p.employee_name, Shift: p.shift_type, Statut: p.status, 'Score début': p.initial_score,
     'Score actuel': p.current_score, 'Score final': p.final_score ?? '', Cible: p.target_score,
     'Montant (Ar)': p.calculated_ar ?? '', Notes: p.notes || '', 'Motif de rejet': p.rejection_reason || '',
   }))), 'Sessions');
@@ -24,12 +24,12 @@ export async function downloadBackupExcel(): Promise<void> {
     Reste: Math.max(0, c.target_score - (c.current_score ?? c.initial_score)), Priorité: c.priority,
   }))), 'Missions');
   XLSX.utils.book_append_sheet(wb, sheet(db.getAdvanceRequests().map(a => ({
-    Date: a.request_date, Booster: a.employee_name, 'Montant (Ar)': a.amount_ar, Motif: a.reason, Statut: a.status, Notes: a.admin_notes || '',
+    Date: a.request_date, Opérateur: a.employee_name, 'Montant (Ar)': a.amount_ar, Motif: a.reason, Statut: a.status, Notes: a.admin_notes || '',
   }))), 'Avances');
   XLSX.utils.book_append_sheet(wb, sheet(db.getMessages().map(m => ({
     Date: m.timestamp, De: m.sender_name, Rôle: m.sender_role, Pour: m.recipient_id || '', Message: m.message, Fichier: m.attachment_name || '',
   }))), 'Messages');
 
   const day = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `sauvegarde-delta-force-${day}.xlsx`);
+  XLSX.writeFile(wb, `sauvegarde-gestion-pro-${day}.xlsx`);
 }
