@@ -1633,7 +1633,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   </div>
                   <div className="mt-0.5 font-bold">{endFormError}</div>
                   <div className="text-[11px] text-red-400/90 mt-1">
-                    Volume initial vérifié: {formatScoreM(activePost.initial_score)} pts. Cette anomalie est journalisée dans la console de sécurité ("Petit Malin").
+                    Volume initial vérifié: {formatScoreM(activePost.initial_score)} pts. Cette anomalie est journalisée dans la console de contrôle et sécurité.
                   </div>
                 </div>
               </div>
