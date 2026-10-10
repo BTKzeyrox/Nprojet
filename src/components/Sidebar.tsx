@@ -139,12 +139,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           },
         ]),
     {
-      id: 'advances',
-      label: t('nav_advances'),
-      sublabel: t('nav_advances_sub'),
-      icon: DollarSign,
-    },
-    {
       id: 'chat',
       label: t('nav_chat'),
       sublabel: t('nav_chat_sub'),
@@ -159,16 +153,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ...(isAdmin
       ? [
           {
-            id: 'security',
-            label: t('nav_security'),
-            sublabel: t('nav_security_sub'),
-            icon: ShieldAlert,
-            badge: t('badge_anticheat'),
-            badgeColor: isLight
-              ? 'bg-red-100 text-red-800 border-red-300'
-              : 'bg-red-950 text-red-300 border-red-500/40',
-          },
-          {
             id: 'errors',
             label: 'Journal des erreurs',
             sublabel: 'Bugs et signalements',
@@ -177,11 +161,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {
             id: 'settings',
             label: 'Réglages',
-            sublabel: 'Prix, vacations, règles',
+            sublabel: 'Équipe, apparence, langue',
             icon: Settings,
           },
         ]
-      : []),
+      : [
+          {
+            id: 'settings',
+            label: 'Réglages',
+            sublabel: 'Apparence, langue, son',
+            icon: Settings,
+          },
+        ]),
   ];
 
   const handleItemClick = (id: string) => {
@@ -367,59 +358,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${
           isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800/80'
         }`}>
-          {/* Theme & Language Controls Row */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer ${
-                isLight
-                  ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
-                  : 'bg-[#101b27] hover:bg-[#142333] border-slate-700 text-slate-300'
-              }`}
-              title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}
-            >
-              {isLight ? (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="df-sb-text">Sombre</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="df-sb-text">Clair</span>
-                </>
-              )}
-            </button>
-
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer ${
-                isLight
-                  ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
-                  : 'bg-[#101b27] hover:bg-[#142333] border-slate-700 text-slate-300'
-              }`}
-              title="Changer de langue / 切换语言"
-            >
-              <Globe className="w-3.5 h-3.5 text-teal-400" />
-              <span className="df-sb-text">{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
-            </button>
-          </div>
-
-          {!isAdmin && (
-            <button
-              type="button"
-              onClick={() => setSound({ ...sound, on: !sound.on })}
-              className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer ${
-                isLight ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700' : 'bg-[#101b27] hover:bg-[#142333] border-slate-700 text-slate-300'
-              }`}
-              title="Son des notifications"
-            >
-              <span>{compact ? (sound.on ? '🔔' : '🔕') : sound.on ? '🔔 Son activé' : '🔕 Son coupé'}</span>
-            </button>
-          )}
-
           {canSwitchMode && onToggleBoosterMode && (
             <button
               type="button"

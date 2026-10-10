@@ -5,12 +5,14 @@ import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
 import { askConfirm } from '../../components/ConfirmModal';
+import { useApp } from '../../context/AppContext';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
 
-export const SettingsView: React.FC = () => {
+export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnly = false }) => {
+  const { theme, toggleTheme, lang, setLang } = useApp();
   const [sound, setSound] = useSoundPrefs();
   const [soundMsg, setSoundMsg] = useState('');
   const [s, setS] = useState<AppSettings>(db.getSettings());
@@ -78,25 +80,73 @@ export const SettingsView: React.FC = () => {
     setSaved(true);
   };
 
+  if (personalOnly) {
+    return (
+      <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-4">
+        <div className="flex items-center gap-2.5">
+          <Settings className="w-6 h-6 text-emerald-500 shrink-0" />
+          <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
+        </div>
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
+          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
+          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
+          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
+        </div>
+      </section>
+
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
+        <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
+          <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
+          Son activé
+        </label>
+        <div className={sound.on ? '' : 'opacity-40 pointer-events-none'}>
+          <label className={labelCls}>Volume</label>
+          <input type="range" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            unlockSound();
+            setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
+          }}
+          className="px-3 py-2 border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+        >
+          Tester le son
+        </button>
+        {soundMsg && <p className="text-[11px] text-amber-300">{soundMsg}</p>}
+      </section>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-4">
       <div className="flex items-center gap-2.5">
         <Settings className="w-6 h-6 text-emerald-500 shrink-0" />
         <div>
           <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
-          <p className="text-xs font-mono text-slate-400">Valable pour toute l'équipe, dès l'enregistrement.</p>
+          <p className="text-xs font-mono text-slate-400">Équipe, vacations, règles et apparence.</p>
         </div>
       </div>
 
       {error && <div className="p-3 bg-red-950 border border-red-500/60 text-red-200 text-sm font-semibold">{error}</div>}
       {saved && <div className="p-3 bg-emerald-950 border border-emerald-500/60 text-emerald-200 text-sm font-semibold">Réglages enregistrés.</div>}
 
+
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
-        <h3 className="font-tactical font-bold text-white">Paie</h3>
-        <div>
-          <label className={labelCls}>Prix du 1M de volume (en Ar)</label>
-          <ScoreInput value={s.price_per_million} onChange={n => set('price_per_million', n)} className={inputCls} placeholder="ex: 800" />
-          <p className="text-[11px] text-slate-500 mt-1">S'applique aux sessions validées à partir de maintenant. Les paies déjà calculées ne changent pas.</p>
+        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
+          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
+          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
+          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
       </section>
 
@@ -239,52 +289,6 @@ export const SettingsView: React.FC = () => {
         <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les missions qui l'utilisent déjà.</p>
       </section>
 
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
-        <h3 className="font-tactical font-bold text-white">Paie et avances</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Période de paie</label>
-            <select value={s.pay_period || 'month'} onChange={e => set('pay_period', e.target.value === 'half' ? 'half' : 'month')} className={inputCls}>
-              <option value="month">Mensuelle</option>
-              <option value="half">Par quinzaine (1-15 et 16-fin)</option>
-            </select>
-            <p className="text-[11px] text-slate-500 mt-1">Les périodes déjà clôturées gardent leur format.</p>
-          </div>
-          <div>
-            <label className={labelCls}>Plafond des avances (%)</label>
-            <input type="number" min={0} max={100} value={s.advance_cap_pct ?? 0} onChange={e => set('advance_cap_pct', Number(e.target.value))} className={inputCls} />
-            <p className="text-[11px] text-slate-500 mt-1">% de ce que l’opérateur a gagné dans la période. 0 = pas de plafond.</p>
-          </div>
-          <div>
-            <label className={labelCls}>Remboursement des avances (%)</label>
-            <input type="number" min={0} max={100} value={s.advance_repay_pct ?? 100} onChange={e => set('advance_repay_pct', Number(e.target.value))} className={inputCls} />
-            <p className="text-[11px] text-slate-500 mt-1">Part maximale de la paie retenue à la clôture. Le net n'est jamais négatif, le reste est reporté.</p>
-          </div>
-          <div>
-            <label className={labelCls}>Modes de paiement (séparés par une virgule)</label>
-            <input type="text" value={(s.pay_methods || []).join(', ')} onChange={e => set('pay_methods', e.target.value.split(',').map(x => x.trim()).filter(Boolean))} className={inputCls} />
-          </div>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
-          <input type="checkbox" checked={s.penalties_enabled === true} onChange={e => set('penalties_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
-          Activer les retenues / pénalités (désactivé par défaut)
-        </label>
-        <p className="text-[11px] text-amber-300">Les règles de Madagascar sur les retenues de salaire n'ont pas été vérifiées. Demande à un comptable ou à l'Inspection du travail avant de les activer. Chaque retenue est saisie à la main avec un motif.</p>
-        <div className="pt-3 mt-1 border-t border-slate-700 space-y-2">
-          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
-            <input type="checkbox" checked={s.auto_pen_enabled !== false} onChange={e => set('auto_pen_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
-            Pénalités automatiques en volume (retards et absences), calculées dans la paie de chaque employé
-          </label>
-          <p className="text-[11px] text-slate-400">Chaque 1M de volume retiré = le prix du 1M réglé plus haut. Calculé à chaque fiche de paie, avec les mêmes règles que le calendrier (dimanche = repos). Un employé qui n'a rien gagné n'aura pas de net négatif.</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className={labelCls}>Retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late1_min ?? 15} onChange={e => set('auto_pen_late1_min', Number(e.target.value))} className={inputCls} /></div>
-            <div><label className={labelCls}>Retard : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late1_m ?? 1} onChange={e => set('auto_pen_late1_m', Number(e.target.value))} className={inputCls} /></div>
-            <div><label className={labelCls}>Gros retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late2_min ?? 30} onChange={e => set('auto_pen_late2_min', Number(e.target.value))} className={inputCls} /></div>
-            <div><label className={labelCls}>Gros retard : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late2_m ?? 2} onChange={e => set('auto_pen_late2_m', Number(e.target.value))} className={inputCls} /></div>
-            <div className="col-span-2"><label className={labelCls}>Absence non annoncée : pénalité (M de volume)</label><input type="number" min={0} step="0.5" value={s.auto_pen_absent_m ?? 5} onChange={e => set('auto_pen_absent_m', Number(e.target.value))} className={inputCls} /></div>
-          </div>
-        </div>
-      </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Règles et options</h3>
@@ -296,15 +300,6 @@ export const SettingsView: React.FC = () => {
           <label className={labelCls}>Conserver les photos de justificatif (jours)</label>
           <input type="number" min={1} value={s.retention_days} onChange={e => set('retention_days', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
-        </div>
-        <div>
-          <label className={labelCls}>Grille des missions : nombre de colonnes</label>
-          <select value={s.grid_columns || 2} onChange={e => set('grid_columns', Number(e.target.value))} className={inputCls}>
-            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-              <option key={n} value={n}>{n} colonnes (grille {n}x)</option>
-            ))}
-          </select>
-          <p className="text-[11px] text-slate-500 mt-1">Plus il y a de colonnes, plus les cartes sont petites. Sur téléphone, 2 ou 3 reste le plus lisible.</p>
         </div>
       </section>
 

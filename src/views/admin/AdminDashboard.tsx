@@ -188,7 +188,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirmed) {
       askReason({
         title: 'Valider cette session ?',
-        message: "La paie sera créditée à l'employé. Cette action ne peut pas être annulée.",
+        message: "La mission sera validée. Cette action ne peut pas être annulée.",
         confirmLabel: 'Valider',
         optional: true,
         onSubmit: note => handleValidate(postId, true, note),
@@ -199,7 +199,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!res.success) {
       showToast(res.error || 'Erreur lors de la validation', 'error');
     } else {
-      showToast('Session validée et paie créditée avec succès !', 'success');
+      showToast('Mission validée avec succès !', 'success');
       // If modal was open for this post, refresh or close
       if (activeSessionForModal && activeSessionForModal.id === postId) {
         setAssignSuccessMsg('Session validée avec succès !');
@@ -373,8 +373,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {pend.total}
               </div>
               <div className="text-[10px] text-slate-400 font-mono mt-1">
-                {plural(pend.starts, 'début')} · {plural(pend.ends, 'fin')} · {plural(pend.advances, 'avance')}
+                {plural(pend.starts, 'début')} · {plural(pend.ends, 'fin')}
               </div>
+            </button>
+
+            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Missions validées</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Terminées aujourd'hui</div>
             </button>
 
             <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
@@ -383,18 +392,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">
-                {formatCurrencyAr(Math.round((scoreToday / 1000000) * price))} · 1M = {price.toLocaleString('fr-FR')} Ar
-              </div>
-            </button>
-
-            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Vacations complets</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Sessions finies aujourd'hui</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Total produit aujourd'hui</div>
             </button>
           </div>
         );
@@ -1541,7 +1539,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="w-full sm:w-auto px-5 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-tactical font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/60"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Valider &amp; Calculer Paie</span>
+                          <span>Valider la mission</span>
                         </button>
                       </div>
                     </div>

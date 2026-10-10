@@ -382,7 +382,7 @@ export default function App() {
               ) : activeView === 'chat' ? (
                 <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} />
               ) : (
-                /* Default Admin Views: 'grid' (20 postes 2x10), 'active-post' (sessions), 'dashboard', 'security' */
+                /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
                   currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
@@ -414,8 +414,10 @@ export default function App() {
                 />
               ) : activeView === 'chat' ? (
                 <ChatView currentUser={viewUser} />
+              ) : activeView === 'settings' ? (
+                <SettingsView personalOnly />
               ) : (
-                /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat' */
+                /* Employee Dashboard managing sub-pages: 'grid' (missions), 'active-post', 'advances', 'chat' */
                 <EmployeeDashboard
                   currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}

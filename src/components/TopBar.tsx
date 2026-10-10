@@ -60,10 +60,10 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       isAdmin
         ? [
             ['dashboard', 'Accueil'], ['validations', 'Validations'], ['history', 'Historique'], ['security', 'Surveillance'], ['employees', 'Opérateurs'],
-            ['advances', 'Avances sur salaire'], ['active-post', 'Suivi des sessions'], ['chat', 'Messagerie'],
+            ['active-post', 'Suivi des sessions'], ['chat', 'Messagerie'],
             ['calendar', 'Calendrier'], ['settings', 'Réglages'],
           ]
-        : [['grid', 'Missions'], ['active-post', 'Ma mission'], ['advances', 'Avances'], ['chat', 'Messagerie'], ['calendar', 'Calendrier']],
+        : [['grid', 'Missions'], ['active-post', 'Ma mission'], ['chat', 'Messagerie'], ['calendar', 'Calendrier']],
     [isAdmin]
   );
 
