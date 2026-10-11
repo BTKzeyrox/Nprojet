@@ -603,3 +603,84 @@ html.theme-light [class~="bg-gradient-to-tl"] .text-white { color:#fff }
 .pc-grid[data-d="xs"] .pc-metrics span.uppercase { font-size: 7px !important; }
 .pc-grid[data-d="xs"] .pc-act button { white-space: normal !important; line-height: 1.1; text-align: center; font-size: 7px !important; }
 .pc-grid[data-d="xs"] .pc { padding: .5rem; }
+
+/* =====================================================================
+   DESIGN GESTION PRO v2 : sobre, net, bleu marine (remplace le style « jeu »)
+   Ce bloc est en dernier : il l'emporte sur les anciennes règles ci-dessus.
+   ===================================================================== */
+:root { --gp-navy: #0b2a4a; --gp-blue: #1d4ed8; --gp-line: #e2e8f0; --gp-card: #ffffff; --gp-page: #f4f6fa; }
+
+/* Texte : plus de police « jeu », plus de capitales espacées */
+.font-tactical { font-family: inherit; letter-spacing: 0; }
+.font-mono, .font-mono-numbers { font-family: inherit; }
+.uppercase { text-transform: none !important; }
+[class*="tracking-wider"], [class*="tracking-widest"], [class*="tracking-wide"] { letter-spacing: 0 !important; }
+.font-black { font-weight: 700; }
+
+/* Formes : arrondis modérés, boutons rectangles arrondis (plus de capsules) */
+.rounded, .rounded-md { border-radius: 8px; }
+.rounded-lg { border-radius: 10px; }
+.rounded-xl { border-radius: 12px; }
+.rounded-2xl { border-radius: 16px; }
+.rounded-3xl { border-radius: 20px; }
+.rounded-t-xl, .rounded-t-2xl { border-top-left-radius: 16px; border-top-right-radius: 16px; }
+.rounded-b-xl, .rounded-b-2xl { border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea { border-radius: 10px; }
+button[class*="rounded-lg"][class*="px-"]:not([class*="w-full"]):not([class*="flex-col"]) { border-radius: 10px; }
+.bg-emerald-600 { background-image: none; }
+
+/* ---------- THÈME CLAIR : fond gris très clair, cartes blanches ---------- */
+html.theme-light, html.theme-light body { background: var(--gp-page); }
+html.theme-light .df-bg-app, html.theme-light .df-bg-login { background-color: var(--gp-page); background-image: none; }
+html.theme-light .bg-white,
+html.theme-light [class^="bg-[#0"], html.theme-light [class*=" bg-[#0"],
+html.theme-light [class^="bg-[#10"], html.theme-light [class*=" bg-[#10"],
+html.theme-light [class^="bg-[#11"], html.theme-light [class*=" bg-[#11"],
+html.theme-light [class^="bg-[#12"], html.theme-light [class*=" bg-[#12"],
+html.theme-light [class^="bg-[#13"], html.theme-light [class*=" bg-[#13"] { background-color: var(--gp-card); }
+html.theme-light [class^="bg-[#14"], html.theme-light [class*=" bg-[#14"],
+html.theme-light [class^="bg-[#15"], html.theme-light [class*=" bg-[#15"],
+html.theme-light [class^="bg-[#16"], html.theme-light [class*=" bg-[#16"],
+html.theme-light [class^="bg-[#17"], html.theme-light [class*=" bg-[#17"],
+html.theme-light [class^="bg-[#18"], html.theme-light [class*=" bg-[#18"],
+html.theme-light [class^="bg-[#19"], html.theme-light [class*=" bg-[#19"],
+html.theme-light [class^="bg-[#1a"], html.theme-light [class*=" bg-[#1a"],
+html.theme-light [class^="bg-[#1b"], html.theme-light [class*=" bg-[#1b"],
+html.theme-light [class^="bg-[#1c"], html.theme-light [class*=" bg-[#1c"],
+html.theme-light [class^="bg-[#1d"], html.theme-light [class*=" bg-[#1d"],
+html.theme-light [class^="bg-[#1e"], html.theme-light [class*=" bg-[#1e"],
+html.theme-light [class^="bg-[#1f"], html.theme-light [class*=" bg-[#1f"] { background-color: #f1f5f9; }
+html.theme-light .bg-slate-50 { background-color: #f8fafc; }
+html.theme-light .bg-slate-100 { background-color: #f1f5f9; }
+html.theme-light .bg-slate-200 { background-color: #e2e8f0; }
+html.theme-light .border-slate-100, html.theme-light .border-slate-200, html.theme-light .border-slate-300,
+html.theme-light [class*="border-slate-6"], html.theme-light [class*="border-slate-7"],
+html.theme-light [class*="border-slate-8"], html.theme-light [class*="border-slate-9"] { border-color: var(--gp-line); }
+html.theme-light .text-white, html.theme-light .text-slate-100, html.theme-light .text-slate-200 { color: #0f172a; }
+html.theme-light .text-slate-300 { color: #1e293b; }
+html.theme-light .text-slate-400 { color: #475569; }
+html.theme-light .text-slate-500 { color: #64748b; }
+html.theme-light [class*="rounded-xl"][class*="border"], html.theme-light [class*="rounded-2xl"][class*="border"] {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 4px 12px -6px rgba(15, 23, 42, .10);
+}
+html.theme-light header.df-topbar { background-color: #ffffff !important; border-color: var(--gp-line) !important; }
+html.theme-light .df-popover { background-color: #ffffff !important; }
+
+/* ---------- THÈME SOMBRE : cartes pleines bleu nuit, sans verre ni halo ---------- */
+html.theme-dark, html.theme-dark body { background: #0b1626; }
+html.theme-dark .df-bg-app, html.theme-dark .df-bg-login { background-color: #0b1626; background-image: none; }
+html.theme-dark [class*="bg-[#"] {
+  background-color: #12213a !important;
+  border-color: #213352;
+  box-shadow: none;
+}
+html.theme-dark [class*="border-slate-"] { border-color: #213352; }
+html.theme-dark [class*="rounded-2xl"][class*="border"], html.theme-dark [class*="rounded-xl"][class*="border"] { box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+html.theme-dark aside { background-image: none !important; background-color: #0a1220 !important; }
+html.theme-dark header, html.theme-dark header.df-topbar { background-image: none !important; background-color: #0f1b2d !important; border-color: #213352 !important; }
+@media (hover: hover) {
+  html.theme-dark button[class*="bg-[#"]:hover, html.theme-dark a[class*="bg-[#"]:hover { background-color: #1a2d4d !important; }
+}
+
+/* Cartes : plus d'ombre « enfoncée » ancienne */
+[class*="rounded-xl"][class*="border"], [class*="rounded-2xl"][class*="border"] { box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
