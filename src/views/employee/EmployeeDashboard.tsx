@@ -43,6 +43,8 @@ import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
+import { MissionGuideButton } from '../../components/MissionGuide';
+import { getGuide, stepOfStatus } from '../../utils/missionGuides';
 import { ScoreInput } from '../../components/ScoreInput';
 import { QueueButton } from '../../components/QueueButton';
 
@@ -135,6 +137,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [finalScoreInput, setFinalScoreInput] = useState<number>(0);
   const [endProofPreview, setEndProofPreview] = useState<string | null>(null);
   const [endNotes, setEndNotes] = useState('');
+  const [progressInput, setProgressInput] = useState<number | null>(null);
+  const typeOf = (name?: string) => db.getContracts().find(c => c.client_name === name)?.post_type;
   const [endFormError, setEndFormError] = useState<string | null>(null);
 
   // Salary Advance states
@@ -318,12 +322,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       return;
     }
 
-    if (initialScore <= 0) {
-      setStartFormError('Veuillez entrer la quantité réellement déjà faite.');
-      return;
-    }
-    if (startProofPhotos.length === 0) {
-      setStartFormError('Veuillez ajouter au moins 1 photo de départ (1 à 5 photos autorisées).');
+    if (initialScore < 0) {
+      setStartFormError('La quantité déjà faite ne peut pas être négative.');
       return;
     }
     if (!confirmed) {
@@ -377,8 +377,13 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       return;
     }
 
-    if (!endProofPreview) {
-      setEndFormError('La photo d\'écran ou photo de fin de session est obligatoire.');
+    const guide = getGuide(typeOf(activePost.client_name));
+    if (guide.endPhotoRequired && !endProofPreview) {
+      setEndFormError('Le justificatif (photo ou capture) est obligatoire pour ce type de mission.');
+      return;
+    }
+    if (guide.endNoteRequired && !endNotes.trim()) {
+      setEndFormError(guide.endNoteLabel.replace(' (obligatoire)', '') + ' : ce champ est obligatoire.');
       return;
     }
     if (!confirmed) {
@@ -398,7 +403,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       db.submitEndPost({
         postId: activePost.id,
         finalScore: finalScoreInput,
-        endProofUrl: endProofPreview,
+        endProofUrl: endProofPreview || undefined,
         notes: endNotes,
       });
       return;
@@ -407,7 +412,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     const res = db.submitEndPost({
       postId: activePost.id,
       finalScore: finalScoreInput,
-      endProofUrl: endProofPreview,
+      endProofUrl: endProofPreview || undefined,
       notes: endNotes,
     });
 
@@ -447,7 +452,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
   const handleSaveEditPending = () => {
     if (!activePost) return;
-    if (editScore <= 0) {
+    if (editScore < 0) {
       alert('Quantité invalide');
       return;
     }
@@ -658,6 +663,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                     {/* Status & Actions */}
                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <MissionGuideButton type={typeOf(activePost.client_name)} currentStep={stepOfStatus(activePost.status)} />
                       {activePost.status === 'pending_start' && (
                         <div className="flex items-center gap-2 bg-amber-950/60 border border-amber-600/50 p-2 rounded-lg text-xs font-mono w-full sm:w-auto justify-between">
                           <span className="text-amber-300 font-semibold">En attente validation Responsable</span>
@@ -693,7 +699,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow flex items-center justify-center gap-2 transition-all"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Terminer le Mission (End Form)</span>
+                          <span>Terminer la mission</span>
                         </button>
                       )}
                     </div>
@@ -817,15 +823,22 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     </div>
 
                     {activePost.status === 'active' && (
-                      <div className="flex items-center gap-2 text-xs font-mono bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                        <span className="text-slate-400 text-[11px]">Simuler extraction :</span>
+                      <div className="flex flex-wrap items-center gap-2 text-xs bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                        <span className="text-slate-400 text-[11px]">Quantité faite :</span>
+                        <ScoreInput
+                          value={progressInput ?? activePost.current_score}
+                          onChange={n => setProgressInput(Math.max(activePost.initial_score, n))}
+                          className="w-28 bg-[#141e2a] border border-slate-700 rounded-lg p-1.5 text-emerald-400 font-bold"
+                        />
                         <button
+                          type="button"
                           onClick={() => {
-                            db.updateCurrentScore(activePost.id, activePost.current_score + 1500000);
+                            if (progressInput !== null) db.updateCurrentScore(activePost.id, progressInput);
+                            setProgressInput(null);
                           }}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded font-bold transition-colors"
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded font-bold transition-colors cursor-pointer"
                         >
-                          + 1.5M pts
+                          Mettre à jour
                         </button>
                       </div>
                     )}
@@ -1207,6 +1220,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   <h3 className="font-tactical font-bold text-white text-sm sm:text-base">
                     MISSION #{String(selectedContract?.post_number || 1).padStart(2, '0')} · {clientName}
                   </h3>
+                  <MissionGuideButton type={selectedContract?.post_type} currentStep={1} />
                 </div>
               </div>
               <button
@@ -1306,7 +1320,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-slate-300 uppercase font-bold flex items-center gap-1.5 text-emerald-400">
                     <Camera className="w-4 h-4" />
-                    <span>1. Photo (1 à 5 photos) *</span>
+                    <span>1. Photo de départ (facultatif, 5 max)</span>
                   </label>
                   <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                     {startProofPhotos.length} / 5 photos
@@ -1430,7 +1444,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               {/* VÉRIFICATION DU SCORE SUR LA CAPTURE */}
               <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-3">
                 <label className="block text-emerald-400 uppercase font-bold">
-                  2. Le volume sur la photo est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
+                  2. La quantité déjà faite est-elle la même que l'actuelle ({formatScoreM(accountCurrent)}) ? *
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1445,7 +1459,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         : 'bg-[#141e2a] border-slate-600 text-slate-300'
                     }`}
                   >
-                    <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Oui, identique
+                    <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Oui, exacte
                   </button>
                   <button
                     type="button"
@@ -1456,7 +1470,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         : 'bg-[#141e2a] border-slate-600 text-slate-300'
                     }`}
                   >
-                    <X className="w-4 h-4 inline mr-1 -mt-0.5" />Non, différent
+                    <X className="w-4 h-4 inline mr-1 -mt-0.5" />Non, différente
                   </button>
                 </div>
 
@@ -1657,7 +1671,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
               <div>
                 <label className="block text-slate-300 uppercase mb-1">
-                  Quantité finale Atteint (Obligatoire)
+                  Quantité faite au total (obligatoire)
                 </label>
                 <ScoreInput
                   value={finalScoreInput}
@@ -1675,7 +1689,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <label className="block text-slate-300 uppercase mb-1 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
                     <Camera className="w-4 h-4" />
-                    <span>Photo de fin (Obligatoire)</span>
+                    <span>Justificatif de fin ({getGuide(typeOf(activePost.client_name)).endPhotoRequired ? 'obligatoire' : 'facultatif'})</span>
                   </span>
                   <span className="text-[10px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
                 </label>
@@ -1686,10 +1700,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       <Upload className="w-6 h-6" />
                     </div>
                     <span className="text-white font-tactical font-bold text-sm">
-                      Importer votre Capture de Fin de Session
+                      Ajouter le justificatif
                     </span>
                     <span className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                      Photo ou fichier prouvant le travail terminé
+                      {getGuide(typeOf(activePost.client_name)).endPhotoLabel}
                     </span>
                     <span className="mt-2.5 px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow">
                       <Camera className="w-3.5 h-3.5" />
@@ -1759,12 +1773,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Notes de session (Optionnel)</label>
+                <label className="block text-slate-300 uppercase mb-1">{getGuide(typeOf(activePost.client_name)).endNoteLabel}</label>
                 <textarea
                   rows={2}
                   value={endNotes}
                   onChange={e => setEndNotes(e.target.value)}
-                  placeholder="ex: Mandelbricks extraits avec succès, loot sécurisé..."
+                  placeholder={getGuide(typeOf(activePost.client_name)).endNotePlaceholder}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>
@@ -1781,7 +1795,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded"
                 >
-                  Soumettre pour Validation (pending_end)
+                  Envoyer pour validation
                 </button>
               </div>
             </form>

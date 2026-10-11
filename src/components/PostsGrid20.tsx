@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { MissionGuideButton } from './MissionGuide';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import {
@@ -428,12 +429,13 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             <span className={`inline-block px-2 py-0.5 text-[11px] rounded-full font-semibold ${isLight ? 'bg-blue-50 text-blue-800' : 'bg-blue-950 text-blue-200'}`}>{contract.post_type}</span>
                           )
                         )}
+                        <div><MissionGuideButton type={contract.post_type} /></div>
                         {contract.description && (
                           <p className="text-[11px] leading-snug text-slate-400 whitespace-pre-line break-words line-clamp-3">{contract.description}</p>
                         )}
                         <div>
                           <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                            <span>Volume {formatScoreM(done)} / {formatScoreM(objective)}</span>
+                            <span>Quantité {formatScoreM(done)} / {formatScoreM(objective)}</span>
                             <span>{pct}%</span>
                           </div>
                           <div className={`h-1.5 rounded-full overflow-hidden ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`}>

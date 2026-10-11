@@ -44,6 +44,7 @@ import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
 import { generateProofPlaceholder, compressProofImage } from '../../utils/imageUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
+import { AdminChecklist } from '../../components/MissionGuide';
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -1397,6 +1398,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {!isStart && <AdminChecklist type={db.getContracts().find(c => c.client_name === post.client_name)?.post_type} />}
 
                     {/* Scores Comparison */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
