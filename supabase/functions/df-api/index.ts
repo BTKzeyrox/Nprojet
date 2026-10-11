@@ -334,10 +334,34 @@ async function checkGroup(rec: any, existing: any, me: any, admin: boolean, now:
     if (rec.owner_id !== me.id || !members.includes(me.id) || !(await allExist())) return { ok: false };
     return { ok: true, save: { id: rec.id, name, owner_id: me.id, members, created_at: now } };
   }
-  if (existing.owner_id === me.id || admin) {
+  const gAdmins: string[] = Array.isArray(existing.admins) ? existing.admins : [];
+  const isOwner = existing.owner_id === me.id || admin;
+  if (isOwner || gAdmins.includes(me.id)) {
     if (name.length < 1 || name.length > 40 || !(await allExist())) return { ok: false };
-    const save = { ...existing, name, members };
+    // Un administrateur du groupe ne peut retirer ni le responsable ni un autre administrateur
+    if (!isOwner) {
+      const keep = [existing.owner_id, ...gAdmins].filter((x: string) => x !== me.id);
+      if (!keep.every((x: string) => members.includes(x))) return { ok: false };
+    }
+    const save: any = { ...existing, name, members };
     if (!members.includes(existing.owner_id)) save.owner_id = members[0]; // le créateur est parti : le premier membre devient responsable
+    // Photo du groupe : seulement un lien de notre stockage (chaîne vide = retirer la photo)
+    if (typeof rec.avatar_url === 'string') {
+      if (rec.avatar_url === '') delete save.avatar_url;
+      else if (isBucketUrl(rec.avatar_url)) save.avatar_url = rec.avatar_url;
+      else return { ok: false };
+    }
+    // Description (200 caractères max)
+    if (typeof rec.description === 'string') {
+      const d = rec.description.trim().slice(0, 200);
+      if (d) save.description = d; else delete save.description;
+    }
+    // Administrateurs du groupe : seul le responsable (ou l'administrateur du site) les choisit
+    if (isOwner && Array.isArray(rec.admins)) {
+      save.admins = [...new Set<string>(rec.admins.filter((x: any) => typeof x === 'string' && members.includes(x) && x !== save.owner_id))].slice(0, 20);
+    } else if (gAdmins.length) {
+      save.admins = gAdmins.filter((x: string) => members.includes(x));
+    }
     return { ok: true, save };
   }
   // Simple membre : il peut seulement quitter le groupe
