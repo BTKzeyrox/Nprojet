@@ -4,7 +4,7 @@
 
 ## 1. Page d'accueil (Actualités)
 
-### A. Serveur et store (fait le 2026-10-11, commit d888eb4, serveur PAS encore redéployé)
+### A. Serveur et store (fait le 2026-10-11, commit d888eb4, serveur déployé en v3)
 - [x] Fichiers (photos, PDF, texte) dans les publications et les commentaires, sans limite de nombre
 - [x] Statut « en attente » pour les publications des employés, cachées aux autres
 - [x] Routes : l'employé envoie, l'admin valide ou refuse (motif obligatoire)
@@ -31,7 +31,7 @@
 
 ### F. Contrôle final
 - [ ] `npm run build` sans erreur à chaque étape
-- [ ] Redéploiement de `df-api` sur Supabase (projet `nprojet`), après accord de BTK
+- [x] Redéploiement de `df-api` sur Supabase (projet `nprojet`) : v3 = commit `d888eb4e17facee6bdfbbc6e9d0ca84abe8206dc` (2026-10-11, accord de BTK). Retour en arrière : redéployer le petit fichier avec le commit `2b0dcb7d57992ac05ec8a91c96d45b4d802ed220` (v2)
 - [ ] Dire ce qui n'est pas testé à l'écran
 
 ## 2. Après la page d'accueil (pas commencé)
@@ -44,4 +44,5 @@
 
 ## Historique des mises à jour
 - 2026-10-11 : liste créée, aucune étape commencée.
-- 2026-10-11 : étapes A (d888eb4) et B (7f5cce7) faites, `npm run build` et `tsc --noEmit` sans erreur. `df-api` pas encore redéployé : en attendant, les nouveautés (fichiers, validation) ne marchent pas en ligne.
+- 2026-10-11 : étapes A (d888eb4) et B (7f5cce7) faites, `npm run build` et `tsc --noEmit` sans erreur. `df-api` pas encore redéployé à ce moment-là.
+- 2026-10-11 : `df-api` redéployé en v3 (commit `d888eb4`), empreinte du fichier GitHub vérifiée identique. Aucun appel réel testé (réseau de Claude bloqué vers supabase.co) : à tester par BTK (publier avec photo en admin, puis en employé).
