@@ -695,3 +695,38 @@ html.theme-dark header, html.theme-dark header.df-topbar { background-image: non
     font-size: 16px !important;
   }
 }
+
+
+/* ===== Menu de gauche : couleurs propres (clair et sombre), plus fortes que les anciennes règles globales ===== */
+aside.df-sb {
+  --sb-bg: #ffffff; --sb-line: #cbd5e1; --sb-text: #0b2a4a; --sb-sub: #64748b; --sb-item: #334155;
+  --sb-hover: #e2e8f0; --sb-active: #0b2a4a; --sb-prof: #f1f5f9; --sb-btn: #f1f5f9; --sb-btn-h: #e2e8f0; --sb-btn-t: #334155;
+  --sb-badge: #e2e8f0; --sb-badge-t: #334155;
+}
+html.theme-dark aside.df-sb {
+  --sb-bg: #0c1a33; --sb-line: #22365a; --sb-text: #f8fafc; --sb-sub: #94a3b8; --sb-item: #cbd5e1;
+  --sb-hover: rgba(255,255,255,.07); --sb-active: #2563eb; --sb-prof: rgba(255,255,255,.04); --sb-btn: rgba(255,255,255,.06); --sb-btn-h: rgba(255,255,255,.12); --sb-btn-t: #e2e8f0;
+  --sb-badge: rgba(255,255,255,.12); --sb-badge-t: #e2e8f0;
+}
+aside.df-sb, html.theme-dark aside.df-sb, html.theme-light aside.df-sb {
+  background-color: var(--sb-bg) !important; background-image: none !important; border-color: var(--sb-line) !important; color: var(--sb-text) !important;
+}
+aside.df-sb div { border-color: var(--sb-line) !important; }
+aside.df-sb .df-sb-profile { background-color: var(--sb-prof) !important; }
+aside.df-sb .df-sb-title { color: var(--sb-text) !important; }
+aside.df-sb .df-sb-sub { color: var(--sb-sub) !important; }
+aside.df-sb .df-sb-icon { color: var(--sb-sub) !important; background: transparent !important; }
+aside.df-sb .df-sb-icon:hover { color: var(--sb-text) !important; background-color: var(--sb-hover) !important; }
+aside.df-sb .df-sb-item { color: var(--sb-item) !important; background-color: transparent !important; }
+aside.df-sb .df-sb-item:hover { background-color: var(--sb-hover) !important; color: var(--sb-text) !important; }
+aside.df-sb .df-sb-item[aria-current="page"] { background-color: var(--sb-active) !important; color: #ffffff !important; }
+aside.df-sb .df-sb-item svg, aside.df-sb .df-sb-item span { color: inherit !important; }
+aside.df-sb .df-sb-badge { background-color: var(--sb-badge) !important; color: var(--sb-badge-t) !important; }
+aside.df-sb .df-sb-item[aria-current="page"] .df-sb-badge { background-color: rgba(255,255,255,.22) !important; color: #fff !important; }
+aside.df-sb .df-sb-badge.df-sb-alert { background-color: #f59e0b !important; color: #fff !important; }
+aside.df-sb .df-sb-btn { background-color: var(--sb-btn) !important; color: var(--sb-btn-t) !important; border-color: var(--sb-line) !important; }
+aside.df-sb .df-sb-btn:hover { background-color: var(--sb-btn-h) !important; }
+aside.df-sb .df-sb-warn { background-color: #f59e0b !important; color: #fff !important; border-color: #f59e0b !important; }
+aside.df-sb .df-sb-danger { background-color: rgba(220,38,38,.10) !important; color: #dc2626 !important; border-color: rgba(220,38,38,.35) !important; }
+html.theme-dark aside.df-sb .df-sb-danger { color: #fca5a5 !important; }
+aside.df-sb .df-sb-danger:hover { background-color: rgba(220,38,38,.18) !important; }
