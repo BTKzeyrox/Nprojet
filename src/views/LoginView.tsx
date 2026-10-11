@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Shield,
   Lock,
@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
+import { isKeyboardOpen } from '../utils/keyboard';
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
@@ -116,6 +117,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const isLight = theme === 'light';
 
+  // Clavier ouvert : on ajoute de l'espace sous le formulaire pour pouvoir le faire défiler au-dessus du clavier
+  const [kb, setKb] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const on = () => setKb(isKeyboardOpen(vv));
+    const onFocus = () => { on(); setTimeout(on, 150); setTimeout(on, 450); };
+    on();
+    vv?.addEventListener('resize', on);
+    document.addEventListener('focusin', onFocus);
+    document.addEventListener('focusout', onFocus);
+    return () => {
+      vv?.removeEventListener('resize', on);
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('focusout', onFocus);
+    };
+  }, []);
+
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -142,9 +160,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const C = isLight
     ? { card: '#ffffff', text: '#0f172a', sub: '#64748b', field: '#f1f5f9', line: '#cbd5e1', ico: '#94a3b8', errBg: '#fef2f2', errLine: '#fecaca', errText: '#b91c1c', okBg: '#ecfdf5', okLine: '#a7f3d0', okText: '#047857' }
     : { card: '#0f1e3a', text: '#f1f5f9', sub: '#94a3b8', field: '#0a1424', line: '#2a3d63', ico: '#64748b', errBg: '#2a1215', errLine: '#7f1d1d', errText: '#fca5a5', okBg: '#0b2a22', okLine: '#065f46', okText: '#6ee7b7' };
+  // Fond : formes douces en dégradés radiaux (aucun flou calculé : l'écran reste fluide)
   const bgPage = isLight
-    ? 'linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)'
-    : 'linear-gradient(160deg, #050b18 0%, #0b1a38 55%, #12306b 100%)';
+    ? 'radial-gradient(circle at 0% 0%, rgba(96,165,250,0.40) 0, transparent 38%), radial-gradient(circle at 100% 40%, rgba(147,197,253,0.25) 0, transparent 40%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.35) 0, transparent 45%), linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)'
+    : 'radial-gradient(circle at 0% 0%, rgba(59,130,246,0.22) 0, transparent 38%), radial-gradient(circle at 100% 40%, rgba(96,165,250,0.12) 0, transparent 40%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.22) 0, transparent 45%), linear-gradient(160deg, #050b18 0%, #0b1a38 55%, #12306b 100%)';
   const btnGrad = 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
   const fieldCls = 'w-full h-12 rounded-2xl border pl-11 pr-4 text-[15px] outline-none transition-shadow focus:ring-2 focus:ring-blue-500/50';
   const fieldStyle: React.CSSProperties = { backgroundColor: C.field, borderColor: C.line, color: C.text, borderRadius: 16 };
@@ -167,30 +186,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /><div className="flex-1">{msg}</div>
     </div>
   );
-  const circleBtn = 'w-10 h-10 rounded-full flex items-center justify-center cursor-pointer backdrop-blur';
+  const circleBtn = 'w-10 h-10 rounded-full flex items-center justify-center cursor-pointer';
   const mode: 'login' | 'signup' | 'forgot' = signupOpen ? 'signup' : forgotOpen ? 'forgot' : 'login';
   const heading = mode === 'signup' ? 'Créer un compte' : mode === 'forgot' ? 'Mot de passe oublié' : t('login_title');
   const subheading = mode === 'signup' ? "L'administrateur doit valider ta demande" : mode === 'forgot' ? 'Choisis un nouveau mot de passe' : t('brand_sub');
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto overflow-x-hidden" style={{ background: bgPage, touchAction: 'pan-y', overscrollBehaviorX: 'none' }}>
-      {/* Formes douces en arrière-plan */}
-      <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'rgba(96,165,250,0.35)' }} />
-      <div className="absolute top-1/3 -right-28 w-80 h-80 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'rgba(147,197,253,0.22)' }} />
-      <div className="absolute -bottom-28 left-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'rgba(37,99,235,0.30)' }} />
-
+    <div className="df-login fixed inset-0 z-40 overflow-y-auto overflow-x-hidden" style={{ background: bgPage, touchAction: 'pan-y', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
       {/* Thème et langue */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
         <button onClick={toggleTheme} className={circleBtn} style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}>
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
-        <button onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer backdrop-blur" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Changer de langue / 切换语言">
+        <button onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Changer de langue / 切换语言">
           <Globe className="w-3.5 h-3.5" /><span>{lang === 'fr' ? '中文' : 'FR'}</span>
         </button>
       </div>
 
-      <div className="relative min-h-full flex flex-col items-center justify-center px-4 pt-20 pb-8">
-        <div className="relative w-full max-w-md rounded-[28px] px-5 sm:px-8 pt-14 pb-6 shadow-2xl" style={{ backgroundColor: C.card, color: C.text }}>
+      <div className="relative min-h-full flex flex-col items-center justify-center px-4 pt-20 pb-8" style={{ paddingBottom: kb ? '60vh' : undefined }}>
+        <div className="relative w-full max-w-md rounded-[28px] px-5 sm:px-8 pt-14 pb-6 shadow-xl" style={{ backgroundColor: C.card, color: C.text }}>
           {/* Logo qui dépasse en haut de la carte */}
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full flex items-center justify-center shadow-xl" style={{ backgroundColor: C.card, border: `4px solid ${isLight ? '#dbeafe' : '#1e3a8a'}` }}>
             <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: btnGrad }}>

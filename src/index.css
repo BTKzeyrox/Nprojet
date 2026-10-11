@@ -774,3 +774,8 @@ html.theme-light .text-purple-100, html.theme-light .text-purple-200 { color: #6
 html.theme-light [class~="bg-red-600"] .text-red-100, html.theme-light [class~="bg-red-600"].text-red-100,
 html.theme-light [class~="bg-emerald-600"] .text-emerald-100, html.theme-light [class~="bg-emerald-600"].text-emerald-100,
 html.theme-light [class~="bg-blue-600"] .text-blue-100, html.theme-light [class~="bg-blue-600"].text-blue-100 { color: #ffffff; }
+
+
+/* Connexion / inscription : fluidité (pas de transitions ni d'effets coûteux pendant la saisie) */
+.df-login input, .df-login textarea, .df-login select { transition: none !important; }
+.df-login { contain: layout paint; transform: translateZ(0); }
