@@ -341,61 +341,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const totalScoreBoosted = users.reduce((acc, u) => acc + (u.total_score_boosted || 0), 0);
 
   const homeCards = (() => {
-        const today = new Date().toISOString().split('T')[0];
-        const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
-        const scoreToday = doneToday.reduce(
-          (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
-          0
-        );
-        const cardCls =
-          'text-left bg-[#0f1722] border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 shadow-xl transition-colors cursor-pointer w-full';
-        return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <button type="button" onClick={() => onNavigateToEmployees && onNavigateToEmployees()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Opérateurs en ligne</span>
-                <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
-              </div>
-              <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
-                {onlineEmployees.length}{' '}
-                <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
-              </div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les opérateurs</div>
-            </button>
+    const today = new Date().toISOString().split('T')[0];
+    const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
+    const scoreToday = doneToday.reduce(
+      (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
+      0
+    );
+    const running = posts.filter(p => p.status === 'active');
+    const waiting = pendingSubmissions.slice(0, 5);
+    const nbEmployees = users.filter(u => u.role === 'employee').length;
+    const tile = (label: string, value: React.ReactNode, hint: string, Icon: React.ElementType, tone: string, onClick?: () => void) => (
+      <button type="button" onClick={onClick} className="text-left bg-[#0f1722] border border-slate-800 hover:border-blue-500/60 rounded-2xl p-4 transition-colors cursor-pointer w-full">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${tone}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="text-3xl font-extrabold text-white leading-none">{value}</div>
+        <div className="text-sm font-semibold text-slate-300 mt-2">{label}</div>
+        <div className="text-xs text-slate-500 mt-0.5">{hint}</div>
+      </button>
+    );
+    const panel = 'bg-[#0f1722] border border-slate-800 rounded-2xl p-4';
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-extrabold text-white">Tableau de bord</h2>
+          <p className="text-sm text-slate-400">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        </div>
 
-            <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Validations en attente</span>
-                <Clock className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className={`text-2xl font-black font-mono mt-1 ${pend.total > 0 ? 'text-amber-400' : 'text-white'}`}>
-                {pend.total}
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono mt-1">
-                {plural(pend.starts, 'début')} · {plural(pend.ends, 'fin')}
-              </div>
-            </button>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {tile('Opérateurs en ligne', <>{onlineEmployees.length}<span className="text-base font-medium text-slate-400"> / {nbEmployees}</span></>, 'Voir les opérateurs', Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
+          {tile('À valider', pend.total, `${plural(pend.starts, 'départ')} · ${plural(pend.ends, 'fin')}`, Clock, pend.total > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600', () => onNavigateTab && onNavigateTab('validations'))}
+          {tile('Missions terminées', doneToday.length, "Aujourd'hui", CheckCircle2, 'bg-emerald-100 text-emerald-700', () => onNavigateToCalendar && onNavigateToCalendar())}
+          {tile('Quantité du jour', formatScoreM(scoreToday), 'Total produit', TrendingUp, 'bg-indigo-100 text-indigo-700', () => onNavigateToCalendar && onNavigateToCalendar())}
+        </div>
 
-            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Missions validées</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Terminées aujourd'hui</div>
-            </button>
+        <div className="grid lg:grid-cols-2 gap-3">
+          <section className={panel}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-white">À valider</h3>
+              <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className="text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
+            </div>
+            {waiting.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4 text-center">Rien à valider pour le moment.</p>
+            ) : (
+              <ul className="divide-y divide-slate-800">
+                {waiting.map(p => (
+                  <li key={p.id} className="py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{p.client_name}</p>
+                      <p className="text-xs text-slate-400">{p.employee_name}</p>
+                    </div>
+                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${p.status === 'pending_start' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {p.status === 'pending_start' ? 'Départ' : 'Fin'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Quantité du jour</span>
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Total produit aujourd'hui</div>
-            </button>
-          </div>
-        );
-      })();
+          <section className={panel}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-white">Missions en cours</h3>
+              <button type="button" onClick={() => onNavigateTab && onNavigateTab('sessions')} className="text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
+            </div>
+            {running.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4 text-center">Aucune mission en cours.</p>
+            ) : (
+              <ul className="space-y-3">
+                {running.slice(0, 5).map(p => {
+                  const total = Math.max(1, (p.target_score || 0) - (p.initial_score || 0));
+                  const pct = Math.min(100, Math.round((((p.current_score || 0) - (p.initial_score || 0)) / total) * 100));
+                  return (
+                    <li key={p.id}>
+                      <div className="flex justify-between gap-2 text-sm">
+                        <span className="font-semibold text-white">{p.client_name}</span>
+                        <span className="text-xs text-slate-400 shrink-0">{p.employee_name} · {pct}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-800 mt-1.5 overflow-hidden">
+                        <div className="h-full bg-blue-600 rounded-full" style={{ width: `${Math.max(0, pct)}%` }} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <h3 className="font-bold text-white pt-1">Toutes les missions</h3>
+      </div>
+    );
+  })();
 
   if (activeSubTab === 'grid' || activeSubTab === 'dashboard') {
     const adminUser = currentUser || users.find(u => u.role === 'admin') || users[0];
