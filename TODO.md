@@ -40,9 +40,21 @@
 - [ ] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente
 
 ## 2. Après la page d'accueil (pas commencé)
-- [ ] Nouveau design : formes arrondies, fond clair, bleu marine (lot 1, pas commencé)
+- [x] Nouveau design : formes arrondies, fond clair, bleu marine (lot 1 : commits a73ca7f, 5a41913, 2b0dcb7) — non testé à l'écran
 - [x] Lot 2 : barre du haut arrondie et barre du bas (téléphone : Actualités, Messages, Calendrier, Validations ou Mon poste, Menu) — fait le 2026-10-11, non testé à l'écran. La barre du bas est masquée dans la messagerie (champ de saisie).
-- [ ] Pages de menu : Messagerie, Historique, Validation, Équipe, Calendrier, Avances et paie, Réglages, Erreurs, Profil, Connexion
+- [x] Messagerie (8f133db) ; Réglages en onglets (b6b3739)
+- [ ] Pages de menu restantes : Historique, Validation, Équipe, Calendrier, Erreurs, Profil, Connexion
+- [ ] « Avances et paie » : retiré du menu (85d8e16), à décider : supprimer du code ou garder
+
+## 2 bis. Nettoyage Delta (fait le 2026-10-11, non testé à l'écran)
+- [x] Missions : tableau Kanban À faire / En cours / À valider à la place de la grille P01-P50 (1a42c72)
+- [x] Menu : « Avances sur salaire » et « Contrôle et sécurité » retirés ; Réglages aussi pour les opérateurs (85d8e16)
+- [x] Réglages : blocs Paie et Paie et avances retirés, choix du nombre de colonnes retiré ; thème, langue et son ajoutés (85d8e16)
+- [x] Tableau de bord : plus de prix en Ar, textes « paie créditée » remplacés (85d8e16)
+- [x] Base `nprojet` vérifiée : 10 missions Gestion Pro, aucun poste Delta
+- [ ] Pas fait : pages Avances et Paie et montants en Ar du calendrier toujours dans le code (inaccessibles par le menu)
+- [ ] Pas fait : tableau de performance avec export, fiche d'explication pour le CV (plan HANDOVER §7, points 5 et 6)
+- [ ] Pas fait : `LIRE_EN_PREMIER.md`, `README.md` (citent l'ancien projet), `AI_STUDIO.md`, `PROJET.md` (décrivent le site Delta)
 
 ## 3. Questions ouvertes (défaut si pas de réponse)
 1. Les commentaires des employés partent-ils aussi en validation ? Défaut : non.
@@ -58,3 +70,4 @@
 - 2026-10-11 : lot 2 fait (BottomNav.tsx, App.tsx, TopBar.tsx). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : Messagerie redessinée (ChatView.tsx) : liste avec avatars, heure, non lus et recherche ; bulles arrondies bleu marine / blanches ; détails (heure, modifié, Pas encore vu / Vu / Vu par N) sous la bulle ; menu d'actions collé sous le message (appui long ou clic droit) ; bouton « nouveaux messages » et défilement automatique ; ligne « épinglé » de 10 px. Actualités : punaise colorée avec mini texte « Épinglée ». Nom et photo cliquables vers le profil (messagerie et Actualités). Le téléphone n'apparaît plus sur le profil d'un autre booster (admin et soi-même seulement). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - Limites connues : pas de « reçu » (le serveur ne garde que « lu ») ni de « en train d'écrire ». Les non lus se comptent à partir de la première ouverture de la nouvelle messagerie, sur cet appareil. Les fenêtres « Nouvelle discussion » et « Infos du groupe » (ChatDialogs.tsx) gardent l'ancien style.
+- 2026-10-11 : nettoyage Delta (1a42c72, 85d8e16) : Kanban, menu, Réglages, tableau de bord. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran. Base vérifiée : 10 missions, aucun poste Delta.

@@ -83,14 +83,16 @@ Sobre et professionnel : fond clair, bleu marine (comme l'en-tête du CV de BTK)
 - 3 clés dans le coffre-fort Supabase (Cloudinary clé, Cloudinary secret, Resend). Cloud name Cloudinary : `dirnrsy5v`.
 - Site sur Vercel : https://nprojet-beta.vercel.app avec `VITE_SUPABASE_URL = https://fvkusbdhetxleimtdzqm.supabase.co`.
 
-**Pas encore fait**
-1. **Test de connexion `admin`** : jamais testé (l'environnement de la session précédente ne joignait pas supabase.co).
-2. **Étape 5** : mots, nom, design, missions libres, 5 types, fil d'actualité (voir §2 à §4). Rien n'est encore codé au 2026-10-10.
-3. **Supprimer les 50 postes d'exemple** (confirmation précise de BTK avant d'effacer).
-4. **Étape 6** : contrôle final.
-5. Réécrire `LIRE_EN_PREMIER.md` et `README.md` (ils citent encore l'ancien projet : dépôt, site, Supabase). `AI_STUDIO.md` et `PROJET.md` décrivent l'ancien site : à retirer ou réécrire après accord de BTK.
+**Pas encore fait (mis à jour le 2026-10-11, voir aussi `TODO.md`)**
+1. **Test de connexion `admin`** : jamais confirmé (le réseau de Claude n'atteint pas `supabase.co`). À tester par BTK.
+2. **Fait depuis** : mots, nom, design, missions libres, 5 types, fil d'actualité, Kanban, nettoyage du menu et des Réglages (voir `git log`). Tout est non testé à l'écran.
+3. **Postes d'exemple** : la base `nprojet` ne contient que 10 missions Gestion Pro, aucun poste Delta. Rien à supprimer sauf si BTK veut vider ces 10 (confirmation précise avant).
+4. **Étape 6** : contrôle final avec BTK.
+5. Réécrire `LIRE_EN_PREMIER.md` et `README.md` (ils citent encore l'ancien projet). `AI_STUDIO.md` et `PROJET.md` décrivent l'ancien site : à retirer ou réécrire après accord de BTK.
+6. Plan §7, points 5 et 6 (tableau de performance et export, fiche CV) : non trouvés dans le code.
+7. Pages Avances et Paie : retirées du menu mais encore dans le code ; décision de BTK attendue.
 
-**Effort du code** : non mesuré. Claude n'a pas encore lu `src/` ni `store.ts`. Le plus gros changement : passer de 20 « postes » fixes à des missions libres avec types. À estimer après lecture, avant de coder.
+**Effort du code** : le passage aux missions libres avec types et au Kanban est fait.
 
 ## 7. Plan d'envoi (commits séparés, chacun après « GO »)
 1. Nom et mots.
