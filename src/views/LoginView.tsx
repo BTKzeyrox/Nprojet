@@ -173,7 +173,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const subheading = mode === 'signup' ? "L'administrateur doit valider ta demande" : mode === 'forgot' ? 'Choisis un nouveau mot de passe' : t('brand_sub');
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto" style={{ background: bgPage }}>
+    <div className="fixed inset-0 z-40 overflow-y-auto overflow-x-hidden" style={{ background: bgPage, touchAction: 'pan-y', overscrollBehaviorX: 'none' }}>
       {/* Formes douces en arrière-plan */}
       <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'rgba(96,165,250,0.35)' }} />
       <div className="absolute top-1/3 -right-28 w-80 h-80 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'rgba(147,197,253,0.22)' }} />

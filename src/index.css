@@ -276,11 +276,14 @@ form .whitespace-nowrap,
 label, button, h1, h2, h3, h4, p, span { overflow-wrap: anywhere; }
 select { text-overflow: clip; }
 
-/* Fenêtres (formulaires) : fond sombre et flou pour que le texte derrière ne se mélange pas */
+/* Fenêtres (formulaires) : voile léger et flou fort, la page derrière reste visible mais floutée */
 .fixed.inset-0[class*="bg-black/"] {
-  background-color: rgba(2, 6, 12, 0.88) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  backdrop-filter: blur(10px) !important;
+  background-color: rgba(15, 23, 42, 0.32) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.1) !important;
+  backdrop-filter: blur(14px) saturate(1.1) !important;
+}
+html.theme-light .fixed.inset-0[class*="bg-black/"] {
+  background-color: rgba(148, 163, 184, 0.30) !important;
 }
 
 /* Petites fenêtres déroulantes (notifications, suggestions de recherche) : fond PLEIN, rien ne se voit à travers */
