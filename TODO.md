@@ -4,16 +4,16 @@
 
 ## 1. Page d'accueil (Actualités)
 
-### A. Serveur et store
-- [ ] Fichiers (photos, PDF, texte) dans les publications et les commentaires, sans limite de nombre
-- [ ] Statut « en attente » pour les publications des employés, cachées aux autres
-- [ ] Routes : l'employé envoie, l'admin valide ou refuse (motif obligatoire)
-- [ ] Nettoyage des fichiers d'une publication refusée ou supprimée
+### A. Serveur et store (fait le 2026-10-11, commit d888eb4, serveur PAS encore redéployé)
+- [x] Fichiers (photos, PDF, texte) dans les publications et les commentaires, sans limite de nombre
+- [x] Statut « en attente » pour les publications des employés, cachées aux autres
+- [x] Routes : l'employé envoie, l'admin valide ou refuse (motif obligatoire)
+- [x] Nettoyage des fichiers d'une publication refusée ou supprimée
 
-### B. Compression et publication
-- [ ] Compression des images avant l'envoi (1600 px, environ 300 Ko), poids avant et après affiché
-- [ ] Publier avec photos et fichiers (admin et employé)
-- [ ] Barre de progression et erreurs claires (10 Mo max par fichier)
+### B. Compression et publication (fait le 2026-10-11, commit 7f5cce7, non testé à l'écran)
+- [x] Compression des images avant l'envoi (1600 px, environ 300 Ko), poids avant et après affiché
+- [x] Publier avec photos et fichiers (admin et employé)
+- [x] Barre de progression et erreurs claires (10 Mo max par fichier)
 
 ### C. Validation par l'admin
 - [ ] File « À valider » en haut du fil, avec aperçu complet
@@ -44,3 +44,4 @@
 
 ## Historique des mises à jour
 - 2026-10-11 : liste créée, aucune étape commencée.
+- 2026-10-11 : étapes A (d888eb4) et B (7f5cce7) faites, `npm run build` et `tsc --noEmit` sans erreur. `df-api` pas encore redéployé : en attendant, les nouveautés (fichiers, validation) ne marchent pas en ligne.
