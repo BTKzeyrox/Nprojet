@@ -528,8 +528,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
       {/* Conversation */}
       <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0 min-h-0`}>
-        <div className={`px-2 py-2 ${P.head} border-b flex items-center gap-2 shrink-0`}>
-          <button type="button" onClick={() => setShowList(true)} className={`md:hidden w-10 h-10 rounded-full flex items-center justify-center ${P.title} cursor-pointer`} title="Retour">
+        <div className="px-2.5 py-2.5 bg-[#0b2a4a] text-white flex items-center gap-2 shrink-0 shadow-md relative z-10">
+          <button type="button" onClick={() => setShowList(true)} className="md:hidden w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Retour">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <button
@@ -539,49 +539,36 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
           >
             {current.kind === 'user' ? (
-              <Avatar src={current.user?.avatar_url} name={current.title} className="w-10 h-10 rounded-full" />
+              <Avatar src={current.user?.avatar_url} name={current.title} className="w-11 h-11 rounded-full ring-2 ring-white/40" />
             ) : current.kind === 'group' && current.group?.avatar_url ? (
-              <img src={current.group.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+              <img src={current.group.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-white/40" />
             ) : (
-              <span className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
+              <span className="w-11 h-11 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0">
                 {current.kind === 'pair' ? <EyeOff className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}
               </span>
             )}
             <span className="min-w-0 flex-1">
-              <span className={`block font-bold text-[15px] truncate leading-tight ${P.title}`}>{current.title}</span>
-              <span className={`block text-[11px] truncate ${P.sub}`}>{current.subtitle}</span>
+              <span className="block font-bold text-base leading-tight text-white" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{current.title}</span>
+              <span className="block text-xs text-blue-200" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{current.subtitle}</span>
             </span>
           </button>
-          <button type="button" onClick={() => setThreadMenu(true)} className={`w-10 h-10 rounded-full flex items-center justify-center ${P.title} cursor-pointer`} title="Options de la conversation">
+          <button type="button" onClick={() => setThreadMenu(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Options de la conversation">
             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
 
         {pinShown && (
-          <div className={`px-2.5 py-2 border-b ${P.div} ${L ? 'bg-slate-50' : 'bg-white/[0.03]'} shrink-0`}>
-            <button
-              type="button"
-              onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
-              className={`w-full flex items-center gap-3 text-left cursor-pointer rounded-2xl border border-l-4 border-l-blue-600 px-3 py-2 shadow-sm ${L ? 'bg-white border-slate-200' : 'bg-[#12213a] border-white/10'}`}
-              title="Aller au message épinglé"
-            >
-              <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-                <Pin className="w-4 h-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-blue-600">Message épinglé</span>
-                  {pinned.length > 1 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{(pinIdx % pinned.length) + 1}/{pinned.length}</span>
-                  )}
-                </span>
-                <span className={`block text-[13px] ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  <b>{pinShown.sender_name.split(' ')[0]}</b> · {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
-                </span>
-              </span>
-              <ChevronDown className="w-4 h-4 text-blue-600 shrink-0" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
+            className={`w-full px-3 py-1 flex items-center gap-2 text-left cursor-pointer shrink-0 border-b ${P.div} ${L ? 'bg-blue-50' : 'bg-blue-500/10'}`}
+            title="Aller au message épinglé"
+          >
+            <Pin className="w-3 h-3 text-blue-600 shrink-0" />
+            <span className={`flex-1 min-w-0 text-[11px] ${P.sub}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}<b className="text-blue-600">{pinShown.sender_name.split(' ')[0]}</b> : {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
+            </span>
+          </button>
         )}
 
         <div className="relative flex-1 min-h-0">
@@ -723,29 +710,31 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
 
         {canWrite ? (
-          <form onSubmit={e => { e.preventDefault(); send(); }} className={`p-2.5 ${P.head} border-t flex items-center gap-2 shrink-0`}>
-            <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
-            <button
-              type="button"
-              disabled={busy || !!editingId}
-              onClick={() => fileRef.current?.click()}
-              className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${P.sub}`}
-              title="Joindre une photo ou un fichier (10 Mo max)"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
-            <input
-              type="text"
-              value={text}
-              onChange={e => setText(e.target.value)}
-              enterKeyHint="send"
-              placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
-              className={`flex-1 min-w-0 h-10 rounded-full border px-4 text-sm focus:outline-none focus:border-emerald-500 ${P.input}`}
-              style={{ borderRadius: 9999 }}
-            />
-            <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
-              <Send className="w-4 h-4" />
-            </button>
+          <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-3 pb-3 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
+            <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
+              <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
+              <button
+                type="button"
+                disabled={busy || !!editingId}
+                onClick={() => fileRef.current?.click()}
+                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`}
+                title="Joindre une photo ou un fichier (10 Mo max)"
+              >
+                <Paperclip className="w-6 h-6" />
+              </button>
+              <input
+                type="text"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                enterKeyHint="send"
+                placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
+                className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
+                style={{ boxShadow: 'none', border: 'none' }}
+              />
+              <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md" title="Envoyer">
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
           </form>
         ) : (
           <div className={`p-3 ${P.head} border-t text-center text-[11px] shrink-0 ${P.sub}`}>
