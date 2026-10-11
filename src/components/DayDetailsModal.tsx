@@ -50,8 +50,6 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
     return acc + Math.max(0, final - s.initial_score);
   }, 0);
 
-  const totalPayrollAr = shifts.reduce((acc, s) => acc + (s.calculated_ar || 0), 0);
-
   // Présence du jour : arrivée = première connexion ; départ = fin de la dernière session ; connecté = temps cumulé
   const hm = (iso: string) => new Date(new Date(iso).getTime() + 3 * 3600 * 1000).toISOString().slice(11, 16); // heure de Madagascar
   const presenceIds = Array.from(new Set([...attendance.map(a => a.user_id), ...shifts.map(s => s.employee_id)]));
@@ -97,10 +95,10 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
             </div>
             <div>
               <h3 className="font-tactical font-bold text-white text-sm sm:text-base tracking-wide flex items-center gap-2">
-                Rapport du Jour: {formattedDate}
+                Rapport du jour : {formattedDate}
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 font-mono">
-                {shifts.length} mission(s) · {formatScoreM(totalScoreGained)} unités traitées {isAdmin ? `· +${totalPayrollAr.toLocaleString()} Ar` : ''}
+                {shifts.length} mission(s) · {formatScoreM(totalScoreGained)} unités traitées
               </p>
             </div>
           </div>
@@ -180,7 +178,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             </span>
                           </div>
                           <div className="text-xs text-slate-400 font-mono mt-0.5">
-                            Client: <span className="text-cyan-300 font-semibold">{shift.client_name}</span> ({shift.account_tag})
+                            Mission : <span className="text-cyan-300 font-semibold">{shift.client_name}</span> ({shift.account_tag})
                           </div>
                         </div>
                       </div>
@@ -200,15 +198,15 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {/* Scores & Objectives Grid with formatScoreM (1M abbreviations) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Volume Départ</span>
+                        <span className="text-slate-500 text-[10px] uppercase block">Quantité de départ</span>
                         <span className="text-slate-200 font-bold text-sm font-mono-numbers">
-                          {formatScoreM(shift.initial_score)} pts
+                          {formatScoreM(shift.initial_score)}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Volume Final</span>
+                        <span className="text-slate-500 text-[10px] uppercase block">Quantité finale</span>
                         <span className="text-emerald-400 font-bold text-sm font-mono-numbers">
-                          {formatScoreM(finalScore)} pts
+                          {formatScoreM(finalScore)}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
@@ -219,17 +217,12 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
                         <span className="text-slate-500 text-[10px] uppercase block">
-                          {isAdmin ? 'Progression / Paie' : 'Progression Volume'}
+                          Progression
                         </span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-amber-400 font-bold text-sm font-mono-numbers">
-                            +{formatScoreM(scoreDiff)} pts
+                            +{formatScoreM(scoreDiff)}
                           </span>
-                          {isAdmin && shift.calculated_ar ? (
-                            <span className="text-[11px] text-emerald-400 font-semibold bg-emerald-950/60 px-1 rounded">
-                              +{shift.calculated_ar.toLocaleString()} Ar
-                            </span>
-                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -237,7 +230,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {/* Proof Photo Thumbnails with Click to Expand */}
                     <div className="pt-2">
                       <span className="text-xs uppercase font-mono font-semibold text-slate-400 block mb-2">
-                        Justificatifs Captures d'écran (Cliquez pour agrandir en plein écran)
+                        Justificatifs (touchez une photo pour l'agrandir)
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {/* Start Proof */}
@@ -247,7 +240,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                               imageUrl: shift.start_proof_url,
                               gallery: proofsOf(shift),
                               title: `Justificatif de départ - ${shift.client_name}`,
-                              subtitle: `Opérateur: ${shift.employee_name} · Volume initial: ${formatScoreM(shift.initial_score)} pts`,
+                              subtitle: `Opérateur: ${shift.employee_name} · Quantité initiale : ${formatScoreM(shift.initial_score)}`,
                               score: shift.initial_score,
                               clientTag: shift.client_name,
                               operatorName: shift.employee_name,
@@ -280,7 +273,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: shift.end_proof_url!,
                                 title: `Justificatif de Fin - ${shift.client_name}`,
-                                subtitle: `Opérateur: ${shift.employee_name} · Volume final: ${formatScoreM(finalScore)} pts`,
+                                subtitle: `Opérateur: ${shift.employee_name} · Quantité finale : ${formatScoreM(finalScore)}`,
                                 score: finalScore,
                                 clientTag: shift.client_name,
                                 operatorName: shift.employee_name,
@@ -308,7 +301,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         ) : (
                           <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center text-center">
                             <span className="text-xs font-mono text-slate-500">
-                              Capture de fin en attente de soumission
+                              Justificatif de fin en attente d'envoi
                             </span>
                             <span className="text-[10px] text-slate-600 mt-1">
                               Session en cours ou en attente d'achèvement

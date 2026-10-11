@@ -27,7 +27,7 @@ import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
-import { formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
+import { badgeLabel, formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../../utils/presence';
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 import { PayrollAdmin } from '../../components/PayrollAdmin';
@@ -383,9 +383,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                     <span className={`px-2 py-1 rounded font-bold border ${emp.shift === 'day' ? 'bg-amber-950/70 border-amber-600/40 text-amber-300' : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'}`}>
                       {emp.shift === 'day' ? `Jour (${shiftHoursLabel('day', cfg)})` : `Nuit (${shiftHoursLabel('night', cfg)})`}
                     </span>
-                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{emp.performance_badge}</span>
-                    <span className="text-emerald-400 font-bold">{formatScoreM(emp.total_score_boosted)} pts</span>
-                    <span className="text-amber-400 font-bold">{emp.total_earnings_ar.toLocaleString()} Ar</span>
+                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{badgeLabel(emp.performance_badge)}</span>
+                    <span className="text-emerald-400 font-bold">{formatScoreM(emp.total_score_boosted)} unités</span>
                   </div>
                   <select
                     value={emp.access_mode || 'auto'}
@@ -432,14 +431,13 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           <table className="w-full min-w-[780px] text-left text-xs font-mono text-slate-300">
             <thead className="bg-[#121c27] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-3 pl-4 sm:pl-6">Opérateur Opérateur</th>
-                <th className="p-3">Vacation Assigné</th>
-                <th className="p-3">Badge Performance</th>
-                <th className="p-3">Volume Total</th>
-                <th className="p-3">Payroll Cumulé</th>
-                <th className="p-3">Statut Système</th>
+                <th className="p-3 pl-4 sm:pl-6">Opérateur</th>
+                <th className="p-3">Vacation</th>
+                <th className="p-3">Niveau</th>
+                <th className="p-3">Quantité totale</th>
+                <th className="p-3">Statut</th>
                 {cfg.show_activity_column && <th className="p-3">Activité</th>}
-                <th className="p-3 pr-4 sm:pr-6 text-right">Actions Opérationnelles</th>
+                <th className="p-3 pr-4 sm:pr-6 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
@@ -513,18 +511,13 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                               : 'bg-slate-800 border-slate-700 text-slate-300'
                           }`}
                         >
-                          {emp.performance_badge}
+                          {badgeLabel(emp.performance_badge)}
                         </span>
                       </td>
 
                       {/* Total Boosted Score */}
                       <td className="p-3 text-emerald-400 font-bold whitespace-nowrap">
-                        {formatScoreM(emp.total_score_boosted)} pts
-                      </td>
-
-                      {/* Total Earnings Ar */}
-                      <td className="p-3 text-amber-400 font-bold whitespace-nowrap">
-                        {emp.total_earnings_ar.toLocaleString()} Ar
+                        {formatScoreM(emp.total_score_boosted)} unités
                       </td>
 
                       {/* Status */}
@@ -536,7 +529,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                               : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                           }`}
                         >
-                          {isBlocked ? 'Compte Bloqué' : 'Actif'}
+                          {isBlocked ? 'Bloqué' : 'Actif'}
                         </span>
                       </td>
 
@@ -779,7 +772,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Vacation Assigné</label>
+                <label className="block text-slate-300 uppercase mb-1">Vacation</label>
                 <select
                   value={editShift}
                   onChange={e => setEditShift(e.target.value as ShiftType)}
@@ -791,16 +784,16 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Badge de Performance</label>
+                <label className="block text-slate-300 uppercase mb-1">Niveau</label>
                 <select
                   value={editBadge}
                   onChange={e => setEditBadge(e.target.value as any)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="Top Opérateur">Top Opérateur</option>
-                  <option value="Elite">Elite</option>
-                  <option value="Standard">Standard</option>
-                  <option value="Under Watch">Under Watch</option>
+                  <option value="Top Booster">{badgeLabel('Top Booster')}</option>
+                  <option value="Elite">{badgeLabel('Elite')}</option>
+                  <option value="Standard">{badgeLabel('Standard')}</option>
+                  <option value="Under Watch">{badgeLabel('Under Watch')}</option>
                 </select>
               </div>
 
@@ -829,7 +822,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
           <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
             <h3 className="font-tactical font-bold text-white text-base">
-              Enregistrer un Nouvel Opérateur Opérateur
+              Enregistrer un Nouvel Opérateur
             </h3>
 
             {addUserError && (

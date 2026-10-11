@@ -16,7 +16,7 @@ export function generateProofPlaceholder(params: {
   <text x="60" y="280" font-family="Arial,Helvetica,sans-serif" font-size="44" font-weight="700" fill="#0f172a">${esc(operatorName)}</text>
   <text x="60" y="380" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#475569">Mission</text>
   <text x="60" y="430" font-family="Arial,Helvetica,sans-serif" font-size="40" font-weight="700" fill="#0f172a">${esc(clientTag)}</text>
-  <text x="60" y="530" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#475569">Volume</text>
+  <text x="60" y="530" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#475569">Quantité</text>
   <text x="60" y="590" font-family="Arial,Helvetica,sans-serif" font-size="56" font-weight="700" fill="#1d4ed8">${Number(score).toLocaleString('fr-FR')}</text>
   <text x="60" y="680" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#64748b">${esc(timestamp)}</text>
 </svg>`;

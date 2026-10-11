@@ -312,13 +312,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               </div>
 
               <div>
-                <div className="text-[10px] uppercase text-slate-400 font-semibold mb-1">Compte client</div>
+                <div className="text-[10px] uppercase text-slate-400 font-semibold mb-1">Mission</div>
                 <select
                   value={clientFilter}
                   onChange={e => setClientFilter(e.target.value)}
                   className="w-full bg-[#141e2a] border border-slate-700 px-2 py-2 text-sm text-white"
                 >
-                  <option value="all">Tous les comptes</option>
+                  <option value="all">Toutes les missions</option>
                   {clientNames.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
@@ -405,13 +405,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 <Stat icon={<CalendarX className="w-3.5 h-3.5 text-red-400" />} label="Jours d'absence" value={`${summary.absences}`} tone={summary.absences > 0 ? 'text-red-300' : 'text-white'} />
                 <Stat icon={<Clock className="w-3.5 h-3.5 text-amber-400" />} label="Retards" value={`${summary.lateDays}`} tone={summary.lateDays > 0 ? 'text-amber-300' : 'text-white'} />
                 <Stat icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />} label="Jours travaillés" value={`${summary.workedDays} / ${summary.expectedDays}`} />
-                <Stat icon={<ListChecks className="w-3.5 h-3.5 text-cyan-400" />} label="Sessions" value={`${summary.sessions} (${summary.validated} validées${summary.inProgress ? `, ${summary.inProgress} en cours` : ''})`} />
+                <Stat icon={<ListChecks className="w-3.5 h-3.5 text-cyan-400" />} label="Missions" value={`${summary.sessions} (${summary.validated} validées${summary.inProgress ? `, ${summary.inProgress} en cours` : ''})`} />
                 <Stat icon={<Target className="w-3.5 h-3.5 text-emerald-400" />} label="Objectifs atteints" value={`${summary.reached}`} tone="text-emerald-300" />
-                <Stat icon={<TrendingUp className="w-3.5 h-3.5 text-cyan-400" />} label="Volume gagné" value={formatScoreM(summary.gained)} tone="text-cyan-300" />
-                <Stat icon={<Wallet className="w-3.5 h-3.5 text-emerald-400" />} label="Paie totale" value={ar(summary.pay)} tone="text-emerald-300" />
-                <Stat icon={<HandCoins className="w-3.5 h-3.5 text-amber-400" />} label="Avances validées" value={ar(summary.advApproved)} tone="text-amber-300" />
-                <Stat icon={<HandCoins className="w-3.5 h-3.5 text-slate-400" />} label="Avances en attente" value={ar(summary.advPending)} />
-                <Stat icon={<Wallet className="w-3.5 h-3.5 text-white" />} label="Net à payer" value={ar(summary.net)} tone={summary.net < 0 ? 'text-red-300' : 'text-white'} />
+                <Stat icon={<TrendingUp className="w-3.5 h-3.5 text-cyan-400" />} label="Quantité traitée" value={formatScoreM(summary.gained)} tone="text-cyan-300" />
               </div>
             </div>
           )}

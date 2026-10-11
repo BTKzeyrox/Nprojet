@@ -69,7 +69,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
             </div>
             <div className="flex items-center gap-2">
               <label className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center gap-2 cursor-pointer">
-                <Camera className="w-4 h-4" /> {shot ? 'Changer la capture' : 'Ajouter une capture (facultatif)'}
+                <Camera className="w-4 h-4" /> {shot ? 'Changer la photo' : 'Ajouter une photo (facultatif)'}
                 <input type="file" accept="image/*" onChange={pick} className="hidden" />
               </label>
               {shot && <img src={shot} alt="capture" className="h-10 w-auto border border-slate-600" />}

@@ -222,7 +222,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Rechercher client, tag, mission #..."
+              placeholder="Rechercher une mission, un type, un numéro..."
               className={`w-full border rounded-xl pl-9 pr-3.5 py-2 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-colors ${
                 isLight
                   ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
@@ -494,19 +494,19 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 overflow-y-auto" onClick={() => setShowAdd(false)}>
           <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-3 text-slate-100 text-xs font-mono">
             <h3 className="font-tactical font-bold text-base text-white">Ajouter une mission</h3>
-            <p className="text-slate-400 leading-relaxed">Laisse le nom vide pour créer une mission « sans compte » : il reste grisé jusqu'à l'arrivée du compte client.</p>
+            <p className="text-slate-400 leading-relaxed">Laisse le titre vide pour créer une mission « en préparation » : elle reste grisée et personne ne peut la prendre tant que tu ne l'as pas remplie.</p>
             {addError && <div className="p-2 border border-red-500/60 bg-red-950/60 text-red-200 font-semibold">{addError}</div>}
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Nom du compte client (facultatif)</label>
+              <label className="block text-slate-300 uppercase mb-1">Titre de la mission (facultatif)</label>
               <input type="text" value={addName} onChange={e => setAddName(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
             </div>
             <>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Volume de départ</label>
+                  <label className="block text-slate-300 uppercase mb-1">Quantité de départ</label>
                   <ScoreInput value={addInitial} onChange={setAddInitial} />
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Objectif (volume à faire)</label>
+                  <label className="block text-slate-300 uppercase mb-1">Objectif (quantité à faire)</label>
                   <ScoreInput value={addObjective} onChange={setAddObjective} />
                 </div>
               <p className="text-[11px] text-slate-400 font-mono">

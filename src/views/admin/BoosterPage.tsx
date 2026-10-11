@@ -3,7 +3,7 @@ import { ArrowLeft, IdCard, Calendar, MessageSquare, DollarSign, ShieldAlert, Cl
 import { db } from '../../db/store';
 import { User } from '../../types';
 import { Avatar } from '../../components/Avatar';
-import { formatCurrencyAr, formatScoreM } from '../../utils/formatUtils';
+import { badgeLabel, formatScoreM } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, formatDuration } from '../../utils/presence';
 
 interface Props {
@@ -61,17 +61,15 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
             <span className={`px-1.5 py-0.5 border ${u.status === 'blocked' ? 'border-red-500/60 text-red-300' : 'border-emerald-500/50 text-emerald-300'}`}>{u.status === 'blocked' ? 'Bloqué' : 'Actif'}</span>
             <span className={`px-1.5 py-0.5 border ${ps.status === 'offline' ? 'border-slate-600 text-slate-400' : ps.status === 'waiting' ? 'border-amber-500/60 text-amber-300' : 'border-cyan-500/50 text-cyan-300'}`}>{STATUS_LABEL[ps.status]}</span>
             {ps.onlineSec > 0 && <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">Connecté aujourd'hui : {formatDuration(ps.onlineSec)}</span>}
-            <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">{u.performance_badge}</span>
+            <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">{badgeLabel(u.performance_badge)}</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+      <div className="grid grid-cols-2 gap-2 text-xs font-mono">
         {[
-          ['Gains', formatCurrencyAr(u.total_earnings_ar)],
-          ['Volume traité', formatScoreM(u.total_score_boosted)],
+          ['Quantité traitée', formatScoreM(u.total_score_boosted)],
           ['Sessions finies', String(doneCount)],
-          ['Avance en cours', formatCurrencyAr(u.pending_advance_ar || 0)],
         ].map(([k, v]) => (
           <div key={k} className="bg-[#0f1722] border border-slate-700 p-2.5">
             <div className="text-slate-400">{k}</div>
@@ -99,17 +97,6 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
             <span className="text-white break-words min-w-0">{p.client_name}</span>
             <span className="text-slate-300 shrink-0">{formatScoreM(p.initial_score)} → {formatScoreM(p.current_score)} / {formatScoreM(p.target_score)}</span>
             <span className="text-amber-300 shrink-0">{STATUS[p.status] || p.status}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className={card}>
-        <h3 className={h}>Avances</h3>
-        {advances.length === 0 ? <div className="text-xs text-slate-400">Aucune avance.</div> : advances.slice(0, 5).map(a => (
-          <div key={a.id} className="flex items-center justify-between gap-2 text-xs font-mono border-t border-slate-800 pt-2">
-            <span className="text-slate-300 shrink-0">{a.request_date}</span>
-            <span className="text-white">{formatCurrencyAr(a.amount_ar)}</span>
-            <span className={a.status === 'approved' ? 'text-emerald-300' : a.status === 'rejected' ? 'text-red-300' : 'text-amber-300'}>{ADV[a.status]}</span>
           </div>
         ))}
       </div>

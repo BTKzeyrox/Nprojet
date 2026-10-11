@@ -64,7 +64,7 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
   };
 
   const save = () => {
-    if (score <= 0) { setErr('Volume invalide.'); return; }
+    if (score <= 0) { setErr('Quantité invalide.'); return; }
     const r = db.updatePendingStartPost(post.id, score, photo || undefined);
     if (!r.success) { setErr(r.error || 'Modification impossible.'); return; }
     setEditing(false);
@@ -89,7 +89,7 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
             <h3 className="font-tactical font-bold text-white text-base">Modifier la mission en attente</h3>
             <p className="text-slate-400">Possible seulement avant la validation du responsable.</p>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la photo)</label>
+              <label className="block text-slate-300 uppercase mb-1">Quantité déjà faite (sur le justificatif)</label>
               <ScoreInput value={score} onChange={setScore} className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white font-bold" />
             </div>
             <div>

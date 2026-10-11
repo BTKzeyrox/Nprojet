@@ -213,7 +213,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!selectedAdminContract) return;
 
     if (!editClientName.trim()) {
-      setAssignErrorMsg('Le nom du compte client ne peut pas être vide.');
+      setAssignErrorMsg('Le titre de la mission ne peut pas être vide.');
       return;
     }
     if (editTargetScore <= editInitialScore) {
@@ -225,7 +225,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
     if (editCurrentScore > editTargetScore) {
-      setAssignErrorMsg('Le volume à faire ne peut pas être négatif : l\'actuel dépasse la cible.');
+      setAssignErrorMsg('La quantité à faire ne peut pas être négative : le fait dépasse la cible.');
       return;
     }
 
@@ -338,7 +338,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const activeViolations = securityLogs.filter(l => !l.resolved);
 
   const totalScoreBoosted = users.reduce((acc, u) => acc + (u.total_score_boosted || 0), 0);
-  const totalPayrollDistributedAr = users.reduce((acc, u) => acc + (u.total_earnings_ar || 0), 0);
 
   const homeCards = (() => {
         const today = new Date().toISOString().split('T')[0];
@@ -347,7 +346,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
           0
         );
-        const price = db.getSettings().price_per_million;
         const cardCls =
           'text-left bg-[#0f1722] border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 shadow-xl transition-colors cursor-pointer w-full';
         return (
@@ -388,7 +386,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
               <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Volume du jour</span>
+                <span>Quantité du jour</span>
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
@@ -469,9 +467,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <CircleDot className="w-3.5 h-3.5 shrink-0" />
                         )}
                         {activeSessionForModal.status === 'pending_start'
-                          ? 'En attente validation (Départ)'
+                          ? 'Départ à valider'
                           : activeSessionForModal.status === 'pending_end'
-                          ? 'En attente validation (Fin)'
+                          ? 'Fin à valider'
                           : 'En cours'}
                       </span>
                     </span>
@@ -508,11 +506,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
                           <span className="font-tactical font-black text-amber-300 text-xs sm:text-sm uppercase tracking-wide">
-                            Demande de Validation Soumise par l'Opérateur
+                            Demande envoyée par l'opérateur
                           </span>
                         </div>
                         <span className="text-[10px] text-amber-400 font-bold bg-amber-950 px-2 py-0.5 rounded border border-amber-600/40">
-                          {activeSessionForModal.status === 'pending_start' ? 'DÉBUT DE SESSION' : 'CLÔTURE / FIN'}
+                          {activeSessionForModal.status === 'pending_start' ? 'DÉBUT DE MISSION' : 'FIN DE MISSION'}
                         </span>
                       </div>
 
@@ -522,11 +520,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <strong className="text-white text-xs truncate block">{activeSessionForModal.employee_name}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Volume de départ</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Quantité de départ</span>
                           <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Volume Actuel / Fin</span>
+                          <span className="text-slate-400 text-[10px] block uppercase">Quantité actuelle / finale</span>
                           <strong className="text-cyan-400 text-xs block">
                             {formatScoreM(activeSessionForModal.final_score ?? activeSessionForModal.current_score)}
                           </strong>
@@ -542,8 +540,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-[10px] text-amber-300 uppercase font-bold block mb-1.5 flex items-center gap-1">
                           <Camera className="w-3.5 h-3.5" />
                           <span>
-                            Justificatifs photographiques fournies (
-                            {activeSessionForModal.start_proof_urls?.length || 1} photo(s) - Cliquer pour inspecter) :
+                            Justificatifs envoyés (
+                            {proofsOf(activeSessionForModal).length} photo(s), touche pour agrandir) :
                           </span>
                         </span>
 
@@ -587,7 +585,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="px-3.5 py-2 bg-red-950/80 hover:bg-red-900 border border-red-600/60 text-red-300 font-mono text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-4 h-4" />
-                          <span>Rejeter la Soumission</span>
+                          <span>Refuser</span>
                         </button>
                         <button
                           type="button"
@@ -595,7 +593,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/60 cursor-pointer"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Valider la Session &amp; Démarrer</span>
+                          <span>{activeSessionForModal.status === 'pending_start' ? 'Valider le départ' : 'Valider la fin'}</span>
                         </button>
                       </div>
                     </div>
@@ -607,15 +605,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-cyan-400" />
                       <h4 className="font-tactical font-black text-white text-xs sm:text-sm uppercase tracking-wide">
-                        Modifier Tout Dans ce Mission (Superviseur Responsable)
+                        Modifier la mission
                       </h4>
                     </div>
-                    <span className="text-[10px] text-cyan-400 font-mono">Contrôle Total Administrateur</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">Réservé au responsable</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Nom Compte Client</label>
+                      <label className="block text-slate-300 uppercase mb-1">Titre de la mission</label>
                       <input
                         type="text"
                         value={editClientName}
@@ -627,7 +625,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Départ relevé</label>
+                      <label className="block text-slate-300 uppercase mb-1">Quantité de départ</label>
                       <ScoreInput
                         value={editInitialScore}
                         onChange={changeInitial}
@@ -636,7 +634,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editInitialScore)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Objectif (volume à faire)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Objectif (quantité à faire)</label>
                       <ScoreInput
                         value={editObjective}
                         onChange={changeObjective}
@@ -645,7 +643,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editObjective)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Cible (volume final)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Cible (total visé)</label>
                       <ScoreInput
                         value={editTargetScore}
                         onChange={setEditTargetScore}
@@ -654,7 +652,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editTargetScore)}</span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Actuel (volume du compte)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Fait jusqu'ici</label>
                       <ScoreInput
                         value={editCurrentScore}
                         onChange={setEditCurrentScore}
@@ -698,7 +696,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-300 uppercase font-bold flex items-center gap-1.5">
                         <Camera className="w-4 h-4 text-amber-400" />
-                        <span>Justificatifs du compte client</span>
+                        <span>Pièces jointes de la mission</span>
                       </span>
                       <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                         {editAccountProofs.length} / 5 photos
@@ -713,14 +711,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onOpenProofLightbox({
                                 imageUrl: url,
                                 gallery: editAccountProofs,
-                                title: `Justificatif du compte - ${editClientName}`,
+                                title: `Pièce jointe - ${editClientName}`,
                                 clientTag: editClientName,
                               })
                             }
                             className="w-full h-full cursor-pointer"
                             title="Agrandir la photo"
                           >
-                            <img src={url} alt={`Justificatif du compte ${i + 1}`} className="w-full h-full object-cover" />
+                            <img src={url} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
                           </button>
                           <button
                             type="button"
@@ -741,7 +739,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       )}
                     </div>
                     <span className="text-[10px] text-slate-500 block">
-                      Le lien des photos est public : évitez les mots de passe sur les captures. Enregistrez la mission pour valider les changements.
+                      Les liens des photos sont publics : n'y mets aucune donnée personnelle ou secrète. Enregistre la mission pour valider les changements.
                     </span>
                   </div>
 
@@ -751,18 +749,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={editDescription}
                       onChange={e => setEditDescription(e.target.value)}
                       rows={3}
-                      placeholder="ex: no read, no card, pas de mode normal ni difficile"
+                      placeholder="ex : à finir avant vendredi, fichier Excel du client en pièce jointe"
                       className="w-full bg-[#0d1622] border border-slate-600 p-2 text-white resize-y"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 uppercase mb-1">Notes Administrateur</label>
+                    <label className="block text-slate-300 uppercase mb-1">Note du responsable</label>
                     <input
                       type="text"
                       value={editNotes}
                       onChange={e => setEditNotes(e.target.value)}
-                      placeholder="Notes de mission, directives spéciales..."
+                      placeholder="Consignes particulières pour cette mission..."
                       className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white"
                     />
                   </div>
@@ -774,7 +772,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow cursor-pointer"
                     >
                       <Check className="w-4 h-4" />
-                      <span>Enregistrer les Modifications du Mission</span>
+                      <span>Enregistrer la mission</span>
                     </button>
                   </div>
 
@@ -787,8 +785,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         askConfirm({
                           title: `Supprimer la mission ${label} ?`,
                           message: activeSessionForModal
-                            ? 'Une session est en cours sur cette mission : impossible de le supprimer.'
-                            : 'La mission sera supprimé de la grille. Cette action est définitive.',
+                            ? 'Une mission est en cours sur ce poste : impossible de la supprimer.'
+                            : 'La mission sera supprimée. Cette action est définitive.',
                           confirmLabel: 'Supprimer',
                           danger: true,
                           onConfirm: () => {
@@ -814,7 +812,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {!activeSessionForModal && (
                   <div className="bg-[#121c27] border border-slate-700 rounded-xl p-4 space-y-3">
                     <span className="font-tactical font-black text-white text-xs uppercase block">
-                      Assignation Directe &amp; Lancement
+                      Donner la mission à un opérateur
                     </span>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <button
@@ -838,7 +836,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               clientTag: `${editClientName} #${editAccountTag}`,
                             }),
                             shiftType: editShift === 'night' ? 'night' : 'day',
-                            notes: `Assigné directement par l'administrateur à ${booster.name}`,
+                            notes: `Mission donnée directement par le responsable à ${booster.name}`,
                             status: 'active',
                             autoReplaceExisting: true,
                           });
@@ -852,7 +850,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
                       >
                         <UserCheck className="w-4 h-4" />
-                        <span>Confirmer l'Assignation à l’opérateur</span>
+                        <span>Confirmer</span>
                       </button>
 
                       <button
@@ -871,12 +869,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               clientTag: `${editClientName} #${editAccountTag}`,
                             }),
                             shiftType: 'day',
-                            notes: `Session de test ouverte par ${adminUser.name}`,
+                            notes: `Mission ouverte par ${adminUser.name}`,
                             status: 'active',
                             autoReplaceExisting: true,
                           });
                           if (res.success) {
-                            setAssignSuccessMsg(`Session de test ouverte et activée !`);
+                            setAssignSuccessMsg(`Mission ouverte !`);
                             setTimeout(() => setSelectedAdminContract(null), 1200);
                           } else {
                             setAssignErrorMsg(res.error || 'Erreur d\'ouverture.');
@@ -884,7 +882,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         }}
                         className="py-2.5 px-4 bg-[#142333] hover:bg-[#1a2d42] border border-cyan-800/60 text-cyan-300 font-mono text-xs rounded-xl transition-colors cursor-pointer text-center"
                       >
-                        <Zap className="w-4 h-4 inline mr-1.5 -mt-0.5" />Ouvrir en Test Responsable
+                        <Zap className="w-4 h-4 inline mr-1.5 -mt-0.5" />Essayer moi-même
                       </button>
                     </div>
                   </div>
@@ -894,9 +892,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeSessionForModal && activeSessionForModal.status === 'active' && (
                   <div className="bg-[#19100d] border border-amber-800/50 rounded-xl p-3 flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-amber-300 block">Session En Cours Active</span>
+                      <span className="font-bold text-amber-300 block">Mission en cours</span>
                       <span className="text-[11px] text-slate-400">
-                        Opérateur: {activeSessionForModal.employee_name} · Volume actuel: {formatScoreM(activeSessionForModal.current_score)} pts
+                        Opérateur: {activeSessionForModal.employee_name} · Quantité faite : {formatScoreM(activeSessionForModal.current_score)}
                       </span>
                     </div>
                     <button
@@ -905,7 +903,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="px-3 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 rounded-lg text-xs font-mono transition-colors"
                     >
                       <Zap className="w-3.5 h-3.5 inline mr-1" />
-                      Force Release
+                      Libérer la mission
                     </button>
                   </div>
                 )}
@@ -1248,13 +1246,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {log.details && (
                         <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-400 flex flex-wrap gap-2.5 sm:gap-3">
                           {log.details.initial_score !== undefined && (
-                            <span>Volume Initial: <strong className="text-white">{formatScoreM(log.details.initial_score)} pts</strong></span>
+                            <span>Quantité initiale: <strong className="text-white">{formatScoreM(log.details.initial_score)} unités</strong></span>
                           )}
                           {log.details.attempted_score !== undefined && (
-                            <span>Volume Tenté: <strong className="text-red-400">{formatScoreM(log.details.attempted_score)} pts</strong></span>
+                            <span>Quantité tentée: <strong className="text-red-400">{formatScoreM(log.details.attempted_score)} unités</strong></span>
                           )}
                           {log.details.client_name && (
-                            <span>Client: <strong className="text-cyan-400">{log.details.client_name}</strong></span>
+                            <span>Mission : <strong className="text-cyan-400">{log.details.client_name}</strong></span>
                           )}
                         </div>
                       )}
@@ -1304,10 +1302,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div>
             <h3 className="font-tactical font-bold text-white text-base tracking-wide flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              Panneau de Validation des Soumissions (Start &amp; End Forms)
+              Validation des missions
             </h3>
             <p className="text-xs text-slate-400 font-mono">
-              Vérification des justificatifs et suivi du rendement (prix du 1M dans Réglages).
+              Vérifie le travail et les justificatifs, puis valide ou refuse avec un motif.
             </p>
           </div>
 
@@ -1357,7 +1355,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 const isStart = post.status === 'pending_start';
                 const finalScore = post.final_score ?? post.current_score;
                 const scoreDiff = isStart ? 0 : Math.max(0, finalScore - post.initial_score);
-                const estimatedAr = Math.round((scoreDiff / 1000000) * db.getSettings().price_per_million);
 
                 return (
                   <div
@@ -1376,29 +1373,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 : 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                             }`}
                           >
-                            {isStart ? 'Demande de départ' : 'Demande de Clôture (pending_end)'}
+                            {isStart ? 'Demande de départ' : 'Travail terminé à vérifier'}
                           </span>
                           <span className="text-xs font-mono text-slate-400">
                             Vacation {post.shift_type.toUpperCase()} · Reçu à {post.start_time}
                           </span>
                         </div>
                         <h4 className="text-base font-bold text-white mt-1">
-                          Client: {post.client_name} ({post.account_tag})
+                          Mission : {post.client_name} ({post.account_tag})
                         </h4>
                         <p className="text-xs text-slate-300 font-mono">
-                          Opérateur Opérateur: <strong className="text-emerald-400">{post.employee_name}</strong>
+                          Opérateur : <strong className="text-emerald-400">{post.employee_name}</strong>
                         </p>
                       </div>
 
-                      {/* Estimated Payroll readout */}
+                      {/* Quantité faite */}
                       {!isStart && (
-                        <div className="bg-emerald-950/60 border border-emerald-500/40 p-3 rounded-lg text-right font-mono">
-                          <div className="text-[10px] uppercase text-emerald-400">Payroll Automatisé Calculé</div>
-                          <div className="text-lg font-bold text-emerald-300">
-                            +{estimatedAr.toLocaleString()} Ar
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            (+{formatScoreM(scoreDiff)} pts de gain)
+                        <div className="bg-blue-950/50 border border-blue-500/40 p-3 rounded-lg text-right font-mono">
+                          <div className="text-[10px] uppercase text-blue-300">Quantité faite</div>
+                          <div className="text-lg font-bold text-blue-200">
+                            +{formatScoreM(scoreDiff)}
                           </div>
                         </div>
                       )}
@@ -1407,12 +1401,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* Scores Comparison */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Volume Départ</span>
-                        <span className="text-white font-bold">{formatScoreM(post.initial_score)} pts</span>
+                        <span className="text-slate-500 text-[10px] block uppercase">Quantité de départ</span>
+                        <span className="text-white font-bold">{formatScoreM(post.initial_score)} unités</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Volume Soumis</span>
-                        <span className="text-cyan-400 font-bold">{formatScoreM(finalScore)} pts</span>
+                        <span className="text-slate-500 text-[10px] block uppercase">Quantité envoyée</span>
+                        <span className="text-cyan-400 font-bold">{formatScoreM(finalScore)} unités</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
                         <span className="text-slate-500 text-[10px] block uppercase">Objectif</span>
@@ -1674,7 +1668,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-500 flex items-center justify-between">
-            <span>Terminal d'administration Gestion Pro - Version Opérationnelle 1.0</span>
+            <span>Gestion Pro · espace du responsable</span>
             <span className="text-emerald-400">BDD Locale Active</span>
           </div>
         </div>
@@ -1703,7 +1697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
                   required
-                  placeholder="ex: Photo illisible, volume ne correspondant pas aux métadonnées..."
+                  placeholder="ex : justificatif illisible, quantité qui ne correspond pas au travail..."
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                 />
               </div>
@@ -1763,7 +1757,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="submit"
                   className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded"
                 >
-                  Exécuter Force Release
+                  Exécuter Libérer la mission
                 </button>
               </div>
             </form>

@@ -204,8 +204,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       {(score !== undefined || clientTag || operatorName || timestamp) && (
         <footer className="w-full shrink-0 px-4 py-2.5 bg-[#0a111a]/95 border-t border-slate-800 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs font-mono">
           {operatorName && (<div><span className="text-slate-500 uppercase text-[10px] block">Opérateur</span><span className="text-white font-semibold">{operatorName}</span></div>)}
-          {clientTag && (<div><span className="text-slate-500 uppercase text-[10px] block">Compte Client</span><span className="text-cyan-400 font-semibold">{clientTag}</span></div>)}
-          {score !== undefined && (<div><span className="text-slate-500 uppercase text-[10px] block">Volume Vérifié</span><span className="text-emerald-400 font-bold">{formatScoreM(score)}</span></div>)}
+          {clientTag && (<div><span className="text-slate-500 uppercase text-[10px] block">Mission</span><span className="text-cyan-400 font-semibold">{clientTag}</span></div>)}
+          {score !== undefined && (<div><span className="text-slate-500 uppercase text-[10px] block">Quantité vérifiée</span><span className="text-emerald-400 font-bold">{formatScoreM(score)}</span></div>)}
           {timestamp && (<div><span className="text-slate-500 uppercase text-[10px] block">Horodatage</span><span className="text-slate-400">{timestamp}</span></div>)}
         </footer>
       )}

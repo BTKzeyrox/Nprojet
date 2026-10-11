@@ -18,6 +18,10 @@ export function formatScoreM(value: number | undefined | null): string {
   return trimNum(num, 2);
 }
 
+// Niveau d'un opérateur : la valeur enregistrée reste la même, seul le mot affiché change
+export const badgeLabel = (b?: string): string =>
+  b === 'Top Booster' ? 'Top opérateur' : b === 'Elite' ? 'Excellent' : b === 'Under Watch' ? 'À suivre' : 'Standard';
+
 export function formatPoints(value: number | undefined | null): string {
   return `${formatScoreM(value)} pts`;
 }

@@ -94,7 +94,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       }
       if (c.account_tag && norm(c.account_tag).includes(s) && !seenAcc.has(c.account_tag)) {
         seenAcc.add(c.account_tag);
-        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Compte de ${c.client_name}`, kind: 'compte', go: goPoste(c.post_number) });
+        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Mission de ${c.client_name}`, kind: 'compte', go: goPoste(c.post_number) });
       }
     });
     const dates = Array.from(new Set(db.getPosts().map(p => p.date)));
@@ -150,7 +150,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onChange={e => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
-            placeholder={isAdmin ? 'Rechercher une mission, opérateur, compte, page…' : 'Rechercher une mission, une page…'}
+            placeholder={isAdmin ? 'Rechercher une mission, un opérateur, une page…' : 'Rechercher une mission, une page…'}
             className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
           />
           {open && q.trim() && (

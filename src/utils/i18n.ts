@@ -12,7 +12,7 @@ export const TRANSLATIONS = {
     nav_grid: 'Grille des Missions',
     nav_grid_sub: '',
     nav_active_post_user: 'Ma Mission en Cours',
-    nav_active_post_user_sub: 'Chrono, volume & justificatifs',
+    nav_active_post_user_sub: 'Chrono, quantité et justificatifs',
     nav_active_post_admin: 'Suivi des Sessions',
     nav_active_post_admin_sub: 'Opérateurs en ligne',
     nav_employees: 'Gestion des Opérateurs',
@@ -45,7 +45,7 @@ export const TRANSLATIONS = {
     filter_day: ' Jour',
     filter_night: ' Nuit',
     filter_urgent: ' Urgents',
-    search_placeholder: 'Rechercher mission (#01..#20, client, tag)...',
+    search_placeholder: 'Rechercher une mission (numéro, titre)...',
 
     // Card Details
     score_start: 'Départ',

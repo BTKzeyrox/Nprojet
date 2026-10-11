@@ -203,7 +203,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         employee_id: currentUser.id,
         employee_name: currentUser.name,
         violation_type: 'multi_post_attempt',
-        description: `Anti-Multi-Mission: Tentative de sélection du compte "${contract.client_name}" alors que "${activePost.client_name}" est en cours.`,
+        description: `Anti-Multi-Mission: Tentative de sélection de la mission "${contract.client_name}" alors que "${activePost.client_name}" est en cours.`,
         details: {
           active_post_id: activePost.id,
           client_name: contract.client_name,
@@ -219,7 +219,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       p => p.client_name === contract.client_name && (p.status === 'active' || p.status === 'pending_start') && p.employee_id !== currentUser.id
     );
     if (takenBy) {
-      setOccupiedPostNotice(`La mission #${contract.post_number} (${contract.client_name}) est actuellement pris par ${takenBy.employee_name}.`);
+      setOccupiedPostNotice(`La mission #${contract.post_number} (${contract.client_name}) est déjà prise par ${takenBy.employee_name}.`);
       setTimeout(() => setOccupiedPostNotice(null), 5000);
       return;
     }
@@ -319,7 +319,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     if (initialScore <= 0) {
-      setStartFormError('Veuillez entrer le volume réel vu sur la photo.');
+      setStartFormError('Veuillez entrer la quantité réellement déjà faite.');
       return;
     }
     if (startProofPhotos.length === 0) {
@@ -329,7 +329,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     if (!confirmed) {
       askConfirm({
         title: 'Envoyer la demande de départ ?',
-        message: "Votre capture sera envoyée à l'administrateur pour validation.",
+        message: "Votre demande sera envoyée au responsable pour validation.",
         confirmLabel: 'Envoyer',
         onConfirm: () => handleSubmitStartForm(e, true),
       });
@@ -384,7 +384,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     if (!confirmed) {
       askConfirm({
         title: 'Terminer la session ?',
-        message: "Votre volume final et votre capture seront envoyés à l'administrateur. Vous ne pourrez plus les modifier.",
+        message: "Votre travail et vos justificatifs seront envoyés au responsable. Vous ne pourrez plus les modifier.",
         confirmLabel: 'Terminer',
         onConfirm: () => handleSubmitEndForm(e, true),
       });
@@ -393,7 +393,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
     // Front-end & Back-end Score Consistency Enforcement
     if (finalScoreInput < activePost.initial_score) {
-      const err = 'Le volume final ne peut pas être inférieur au volume de départ.';
+      const err = 'La quantité finale ne peut pas être inférieure à la quantité de départ.';
       setEndFormError(err);
       db.submitEndPost({
         postId: activePost.id,
@@ -448,7 +448,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleSaveEditPending = () => {
     if (!activePost) return;
     if (editScore <= 0) {
-      alert('Volume invalide');
+      alert('Quantité invalide');
       return;
     }
     const res = db.updatePendingStartPost(activePost.id, editScore, editProofPreview || undefined);
@@ -574,7 +574,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>Grille des Missions Clients ({AVAILABLE_CLIENT_CONTRACTS.length})</span>
+                <span>Missions disponibles ({AVAILABLE_CLIENT_CONTRACTS.length})</span>
               </button>
 
               <button
@@ -587,7 +587,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               >
                 <ClipboardList className="w-4 h-4" />
                 <span>
-                  {activePost ? `Mission en Cours (${activePost.client_name})` : 'Détails du Mission Sélectionnée'}
+                  {activePost ? `Mission en cours (${activePost.client_name})` : 'Détails de la mission sélectionnée'}
                 </span>
                 {activePost && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
               </button>
@@ -596,7 +596,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             {activePost && (
               <div className="text-[11px] text-emerald-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>Session active: <strong>{activePost.client_name}</strong></span>
+                <span>Mission en cours : <strong>{activePost.client_name}</strong></span>
               </div>
             )}
           </div>
@@ -645,11 +645,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                         <span className="text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">
-                          SESSION DE BOOST ACTIVE · STATUT: {activePost.status.toUpperCase()}
+                          MISSION EN COURS
                         </span>
                       </div>
                       <h3 className="text-xl sm:text-2xl font-bold font-tactical text-white mt-1">
-                        Client: {activePost.client_name}
+                        Mission : {activePost.client_name}
                       </h3>
                       <p className="text-xs text-slate-400 font-mono">
                         Tag: <span className="text-cyan-400 font-semibold">{activePost.account_tag}</span> · Date: {activePost.date} · Début: {activePost.start_time}
@@ -702,23 +702,23 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   {/* Score Readouts (Initial, Current, Target, Remaining) */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-6">
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Initial Relevé</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité au départ</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-white mt-1 truncate">
                         {formatScoreM(activePost.initial_score)}
                       </div>
                       <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5">
-                        Départ ({formatScoreM(activePost.initial_score)} pts)
+                        Départ ({formatScoreM(activePost.initial_score)} unités)
                       </div>
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Actuel</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité faite</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-cyan-400 mt-1 truncate">
                         {formatScoreM(activePost.current_score)}
                       </div>
                       <div className="text-[9px] sm:text-[10px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
                         <TrendingUp className="w-3 h-3" />
-                        <span>+{formatScoreM(Math.max(0, activePost.current_score - activePost.initial_score))} pts</span>
+                        <span>+{formatScoreM(Math.max(0, activePost.current_score - activePost.initial_score))} unités</span>
                       </div>
                     </div>
 
@@ -733,7 +733,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Volume Restant</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Reste à faire</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-emerald-400 mt-1 truncate">
                         {formatScoreM(Math.max(0, activePost.target_score - activePost.current_score))}
                       </div>
@@ -754,7 +754,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <div>
                           <div className="flex items-center justify-between text-xs font-mono mb-2">
                             <span className="text-slate-400 uppercase font-semibold">
-                              Progression de l'Objectif de Boost
+                              Progression de la mission
                             </span>
                             <span className="text-emerald-400 font-bold">{progressPct}% ACCOMPLI</span>
                           </div>
@@ -836,16 +836,16 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-8 text-center space-y-3">
                   <ClipboardList className="w-10 h-10 text-emerald-400 mx-auto" />
                   <h4 className="text-base font-bold text-white font-tactical">
-                    Aucune Session Active sur ce Compte
+                    Aucune mission en cours
                   </h4>
                   <p className="text-xs text-slate-400 font-mono max-w-md mx-auto">
-                    Consultez la grille des comptes clients disponibles et cliquez sur "Choisir ce Compte Client" pour démarrer votre session.
+                    Consultez la grille des missions disponibles et cliquez sur « Prendre cette mission » pour commencer.
                   </p>
                   <button
                     onClick={() => setHomeViewMode('grid')}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition-colors"
                   >
-                    Voir la Grille des Missions
+                    Voir les missions
                   </button>
                 </div>
               )}
@@ -884,8 +884,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 uppercase block">Volume Traité</span>
-                          <span className="text-emerald-400 font-bold">+{formatScoreM(gained)} pts</span>
+                          <span className="text-[10px] text-slate-500 uppercase block">Quantité traitée</span>
+                          <span className="text-emerald-400 font-bold">+{formatScoreM(gained)} unités</span>
                         </div>
 
                         <div className="text-right">
@@ -1034,9 +1034,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           <div className="px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[
-              "Objectif de volume client atteint !",
+              "Objectif de la mission atteint !",
               "Début de session sur la mission",
-              "Capture d'écran téléversée dans le système",
+              "Justificatif envoyé dans le système",
               "Question sur la validation de la vacation"
             ].map((chip, idx) => (
               <button
@@ -1154,7 +1154,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>Continuer Ma Mission Actuelle ({activePost.client_name})</span>
+                <span>Continuer ma mission en cours ({activePost.client_name})</span>
               </button>
 
               <button
@@ -1167,7 +1167,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 }}
                 className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
               >
-                <span>Libérer l'Ancien &amp; Commencer {multiPostTargetContract.client_name}</span>
+                <span>Abandonner l'ancienne et commencer {multiPostTargetContract.client_name}</span>
               </button>
 
               <button
@@ -1233,13 +1233,13 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-slate-300 font-bold uppercase text-[11px]">
                     <Shield className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Informations Compte Client</span>
+                    <span>Informations de la mission</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Nom Client</span>
+                    <span className="text-[10px] text-slate-500 uppercase block">Titre</span>
                     <span className="text-white font-bold truncate block">{clientName}</span>
                   </div>
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
@@ -1272,7 +1272,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-amber-300 uppercase font-bold flex items-center gap-1.5">
                       <Eye className="w-4 h-4" />
-                      <span>Justificatifs du compte client</span>
+                      <span>Pièces jointes de la mission</span>
                     </span>
                     <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                       {selectedContract.account_proof_urls.length} / 5
@@ -1287,14 +1287,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           onOpenProofLightbox({
                             imageUrl: url,
                             gallery: selectedContract.account_proof_urls,
-                            title: `Justificatif du compte - ${selectedContract.client_name}`,
+                            title: `Pièce jointe - ${selectedContract.client_name}`,
                             clientTag: selectedContract.client_name,
                           })
                         }
                         className="relative aspect-square rounded-lg overflow-hidden border border-amber-700/50 cursor-pointer"
                         title="Agrandir la photo"
                       >
-                        <img src={url} alt={`Justificatif du compte ${i + 1}`} className="w-full h-full object-cover" />
+                        <img src={url} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -1463,7 +1463,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 {!scoreMatches && (
                   <div className="space-y-1.5">
                     <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between gap-2">
-                      <span>Volume réel sur la photo</span>
+                      <span>Quantité réelle sur le justificatif</span>
                       <span className="text-cyan-400 font-bold text-sm">{formatScoreM(initialScore)}</span>
                     </label>
                     <ScoreInput
@@ -1547,7 +1547,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             </p>
 
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Volume de départ (sur la photo)</label>
+              <label className="block text-slate-300 uppercase mb-1">Quantité déjà faite (sur le justificatif)</label>
               <ScoreInput
                 value={editScore}
                 onChange={setEditScore}
@@ -1629,11 +1629,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <AlertOctagon className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold uppercase tracking-wider text-red-300">
-                    Violation de Cohérence Détectée
+                    Vérifie ta quantité
                   </div>
                   <div className="mt-0.5 font-bold">{endFormError}</div>
                   <div className="text-[11px] text-red-400/90 mt-1">
-                    Volume initial vérifié: {formatScoreM(activePost.initial_score)} pts. Cette anomalie est journalisée dans la console de contrôle et sécurité.
+                    Quantité de départ : {formatScoreM(activePost.initial_score)}.
                   </div>
                 </div>
               </div>
@@ -1642,7 +1642,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             <form onSubmit={handleSubmitEndForm} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
               <div className="bg-[#121922] p-3 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">Volume de départ</span>
+                  <span className="text-[10px] text-slate-500 uppercase block">Quantité de départ</span>
                   <span className="text-white font-bold text-xs sm:text-sm">
                     {formatScoreM(activePost.initial_score)}
                   </span>
@@ -1657,7 +1657,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
               <div>
                 <label className="block text-slate-300 uppercase mb-1">
-                  Volume Final Atteint (Obligatoire)
+                  Quantité finale Atteint (Obligatoire)
                 </label>
                 <ScoreInput
                   value={finalScoreInput}
@@ -1666,7 +1666,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-emerald-400 font-bold text-base focus:border-emerald-500 focus:outline-none"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Le volume final doit être impérativement supérieur ou égal au volume de départ ({formatScoreM(activePost.initial_score)} pts).
+                  Le volume final doit être impérativement supérieur ou égal au volume de départ ({formatScoreM(activePost.initial_score)} unités).
                 </span>
               </div>
 
@@ -1689,7 +1689,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       Importer votre Capture de Fin de Session
                     </span>
                     <span className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                      Capture d'écran de l'écran de fin de match affichant le volume final
+                      Photo ou fichier prouvant le travail terminé
                     </span>
                     <span className="mt-2.5 px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow">
                       <Camera className="w-3.5 h-3.5" />

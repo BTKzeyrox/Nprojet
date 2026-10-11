@@ -6,32 +6,25 @@ import {
   Newspaper,
   ClipboardList,
   Users,
-  DollarSign,
   MessageSquare,
   Calendar,
-  ShieldAlert,
-  Image,
-  LogOut,
   Home,
   ClipboardCheck,
   History,
   Settings,
-  Swords,
+  Eye,
   UserCheck,
-  Shield,
   X,
   Sun,
   Moon,
-  Globe,
-  Download,
   Bug,
   LifeBuoy,
+  LogOut,
   PanelLeftOpen,
   PanelLeftClose,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
-import { useSoundPrefs } from '../utils/notifSound';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 
@@ -43,7 +36,7 @@ interface SidebarProps {
   onOpenEmployeeCV?: (employee: User) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
-  canSwitchMode?: boolean; // vrai pour l'admin : peut passer en mode booster
+  canSwitchMode?: boolean; // vrai pour le responsable : peut passer en vue opérateur
   boosterMode?: boolean;
   onToggleBoosterMode?: () => void;
   onReportProblem?: () => void; // ouvre « Signaler un problème »
@@ -51,6 +44,8 @@ interface SidebarProps {
   onToggleCompact?: () => void; // ouvrir / fermer la bande
 }
 
+// Menu de gauche : sobre, bleu marine, sans sous-titres.
+// La structure (4 blocs : en-tête, profil, navigation, bas) est utilisée par les règles .df-sb-compact de index.css.
 export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   activeView,
@@ -66,113 +61,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   compact = false,
   onToggleCompact,
 }) => {
-  const { theme, toggleTheme, lang, setLang, t, startLogoutAnimation } = useApp();
-  const [sound, setSound] = useSoundPrefs();
+  const { theme, t } = useApp();
   useLockBodyScroll(!!isOpenMobile); // menu ouvert : la page derrière ne défile plus
   const isAdmin = currentUser.role === 'admin';
   const isLight = theme === 'light';
+  const pending = countPending().total;
 
-  // Bilingual Navigation Items
-  const navItems = [
-    { id: 'feed', label: 'Actualités', sublabel: 'Annonces et publications', icon: Newspaper },
+  const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
+    { id: 'feed', label: 'Actualités', icon: Newspaper },
     ...(isAdmin
       ? [
-          {
-            id: 'dashboard',
-            label: 'Tableau de bord',
-            sublabel: 'Vue générale',
-            icon: Home,
-          },
-          {
-            id: 'validations',
-            label: 'Validations',
-            sublabel: 'Tout ce qui attend',
-            icon: ClipboardCheck,
-            badge: countPending().total > 0 ? String(countPending().total) : undefined,
-            badgeColor: isLight
-              ? 'bg-amber-100 text-amber-800 border-amber-300'
-              : 'bg-amber-950 text-amber-300 border-amber-500/40',
-          },
-          {
-            id: 'history',
-            label: 'Historique',
-            sublabel: 'Avances et demandes',
-            icon: History,
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? []
-      : [
-          {
-            id: 'grid',
-            label: t('nav_grid'),
-            sublabel: '',
-            icon: Layers,
-            badge: `${db.getContracts().length} Missions`,
-            badgeColor: isLight
-              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-              : 'bg-emerald-950 text-emerald-300 border-emerald-500/40',
-          },
-        ]),
-    {
-      id: 'active-post',
-      label: isAdmin ? t('nav_active_post_admin') : t('nav_active_post_user'),
-      sublabel: isAdmin ? t('nav_active_post_admin_sub') : t('nav_active_post_user_sub'),
-      icon: ClipboardList,
-    },
-    ...(isAdmin
-      ? [
-          {
-            id: 'employees',
-            label: t('nav_employees'),
-            sublabel: t('nav_employees_sub'),
-            icon: Users,
-          },
+          { id: 'dashboard', label: 'Tableau de bord', icon: Home },
+          { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
+          { id: 'history', label: 'Historique', icon: History },
         ]
       : [
-          {
-            id: 'profile',
-            label: t('nav_profile'),
-            sublabel: t('nav_profile_sub'),
-            icon: UserCheck,
-          },
+          { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },
         ]),
-    {
-      id: 'chat',
-      label: t('nav_chat'),
-      sublabel: t('nav_chat_sub'),
-      icon: MessageSquare,
-    },
-    {
-      id: 'calendar',
-      label: t('nav_calendar'),
-      sublabel: t('nav_calendar_sub'),
-      icon: Calendar,
-    },
-    ...(isAdmin
-      ? [
-          {
-            id: 'errors',
-            label: 'Journal des erreurs',
-            sublabel: 'Bugs et signalements',
-            icon: Bug,
-          },
-          {
-            id: 'settings',
-            label: 'Réglages',
-            sublabel: 'Équipe, apparence, langue',
-            icon: Settings,
-          },
-        ]
-      : [
-          {
-            id: 'settings',
-            label: 'Réglages',
-            sublabel: 'Apparence, langue, son',
-            icon: Settings,
-          },
-        ]),
+    { id: 'active-post', label: isAdmin ? t('nav_active_post_admin') : t('nav_active_post_user'), icon: ClipboardList },
+    isAdmin
+      ? { id: 'employees', label: t('nav_employees'), icon: Users }
+      : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
+    { id: 'chat', label: t('nav_chat'), icon: MessageSquare },
+    { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
+    ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
+    { id: 'settings', label: 'Réglages', icon: Settings },
   ];
 
   const handleItemClick = (id: string) => {
@@ -185,71 +98,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (onCloseMobile) onCloseMobile();
   };
 
-  const handleLogoutClick = () => {
-    // La confirmation et l'animation sont gérées par App
-    onLogout();
-  };
+  const navy = '#0b2a4a';
+  const secondaryBtn = isLight
+    ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+    : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200';
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Fond sombre derrière le menu sur téléphone */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden transition-opacity"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar Container */}
       <aside
         onClick={e => { if (compact && onToggleCompact && !(e.target as HTMLElement).closest('button')) onToggleCompact(); }}
         className={`${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-0 bottom-0 left-0 z-40 h-[100dvh] max-h-[100dvh] overflow-y-auto border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
-          isLight
-            ? 'bg-white border-slate-200 text-slate-800 shadow-xl'
-            : 'bg-[#090f17] border-slate-800/80 text-slate-100'
-        } ${
-          isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+          isLight ? 'bg-white border-slate-200 text-slate-800 shadow-sm' : 'bg-[#0a1628] border-slate-800 text-slate-100'
+        } ${isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
-        {/* 1. TOP HEADER: Brand & Identity (Fixed / shrink-0) */}
-        <div className={`shrink-0 p-4 sm:p-5 border-b flex items-center justify-between ${
-          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800/80'
-        }`}>
+        {/* 1. En-tête : logo et nom */}
+        <div className={`shrink-0 p-4 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-0.5 shadow-lg flex items-center justify-center">
-              <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-                isLight ? 'bg-white' : 'bg-[#080d14]'
-              }`}>
-                <Shield className="w-5 h-5 text-emerald-500" />
-              </div>
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-sm"
+              style={{ background: navy }}
+              aria-hidden="true"
+            >
+              G
             </div>
             <div className="df-sb-text">
-              <div className="flex items-center gap-1.5">
-                <span className="font-tactical font-black text-base tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                  GESTION PRO
-                </span>
-              </div>
+              <span className={`block text-base font-extrabold leading-tight ${isLight ? 'text-[#0b2a4a]' : 'text-white'}`}>Gestion Pro</span>
+              <span className={`block text-[11px] leading-tight ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Suivi des missions</span>
             </div>
           </div>
 
-          {/* Bande d'icônes : ouvrir (ou refermer) le menu complet — tablette et grands écrans */}
           {onToggleCompact && (
             <button
               type="button"
               onClick={onToggleCompact}
               title={compact ? 'Ouvrir le menu' : 'Réduire le menu'}
-              className="hidden md:inline-flex df-sb-toggle p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer"
+              className={`hidden md:inline-flex df-sb-toggle p-1.5 rounded-lg transition-colors cursor-pointer ${isLight ? 'text-slate-500 hover:text-[#0b2a4a] hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
             >
               {compact ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
             </button>
           )}
 
-          {/* Close button on mobile */}
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className={`md:hidden p-1.5 rounded-lg transition-colors ${isLight ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
               title="Fermer le menu"
             >
               <X className="w-5 h-5" />
@@ -257,92 +158,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* 2. USER MINI CARD (Fixed / shrink-0) */}
-        <div className={`shrink-0 px-4 py-3 border-b flex items-center justify-between ${
-          isLight ? 'bg-slate-50/60 border-slate-200' : 'bg-[#0d1624] border-slate-800/80'
-        }`}>
+        {/* 2. Profil */}
+        <div className={`shrink-0 px-4 py-3 border-b flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.03] border-slate-800'}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative shrink-0">
-              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0d1624]" />
+              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-9 h-9" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
             </div>
             <div className="min-w-0 df-sb-text">
-              <p className={`text-xs font-bold truncate font-tactical ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {currentUser.name}
-              </p>
-              <div className="flex items-center gap-1 text-[10px] font-mono">
-                <span className={isAdmin ? 'text-amber-500 font-semibold' : 'text-emerald-500'}>
-                  {isAdmin ? (
-                  'ADMINISTRATEUR'
+              <p className={`text-sm font-semibold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{currentUser.name}</p>
+              <p className={`text-xs inline-flex items-center gap-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {isAdmin ? (
+                  'Responsable'
                 ) : (
-                  <span className="inline-flex items-center gap-1">
+                  <>
                     {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-                    {currentUser.shift === 'day' ? 'VACATION JOUR' : 'VACATION NUIT'}
-                  </span>
+                    {currentUser.shift === 'day' ? 'Vacation jour' : 'Vacation nuit'}
+                  </>
                 )}
-                </span>
-              </div>
+              </p>
             </div>
           </div>
-
-          <span className={`df-sb-text text-[9px] font-mono px-2 py-0.5 rounded border uppercase ${
-            isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-slate-800/80 text-slate-300 border-slate-700/60'
-          }`}>
-            {currentUser.performance_badge || 'Actif'}
-          </span>
         </div>
 
-        {/* 3. SCROLLABLE NAVIGATION AREA (flex-1 min-h-0 overflow-y-auto overscroll-contain) */}
-        <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3 space-y-1">
-
+        {/* 3. Navigation */}
+        <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3">
           <nav className="space-y-1">
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
-
               return (
                 <button
                   key={item.id}
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all group cursor-pointer ${
+                  style={isActive && isLight ? { background: navy } : undefined}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
                     isActive
                       ? isLight
-                        ? 'bg-emerald-50 text-emerald-950 border border-emerald-300 shadow-sm'
-                        : 'bg-gradient-to-r from-emerald-950/90 to-[#12222d] text-white border border-emerald-500/50 shadow-md shadow-emerald-950/40'
+                        ? 'text-white shadow-sm'
+                        : 'bg-blue-600 text-white shadow-sm'
                       : isLight
-                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
-                      : 'text-slate-300 hover:text-white hover:bg-[#121c27] border border-transparent'
+                      ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                          : isLight
-                          ? 'bg-slate-100 text-slate-500 group-hover:text-emerald-600 group-hover:bg-slate-200'
-                          : 'bg-slate-800/60 text-slate-400 group-hover:text-emerald-400 group-hover:bg-slate-800'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                    </div>
-                    <div className="min-w-0 df-sb-text">
-                      <div className="text-xs font-tactical font-bold tracking-wide truncate">
-                        {item.label}
-                      </div>
-                      {item.sublabel && (
-                        <div className="text-[10px] opacity-60 font-mono truncate">
-                          {item.sublabel}
-                        </div>
-                      )}
-                    </div>
+                    <Icon className="w-[18px] h-[18px] shrink-0" />
+                    <span className="df-sb-text text-sm font-semibold truncate">{item.label}</span>
                   </div>
-
                   {item.badge && (
                     <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 font-bold ml-1.5 ${
-                        item.badgeColor || (isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-slate-800 text-slate-300 border-slate-700')
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                        item.tone === 'alert'
+                          ? 'bg-amber-500 text-white'
+                          : isActive
+                          ? 'bg-white/20 text-white'
+                          : isLight
+                          ? 'bg-slate-200 text-slate-700'
+                          : 'bg-white/10 text-slate-200'
                       }`}
                     >
                       {item.badge}
@@ -354,10 +228,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* 4. BOTTOM SECTION: Theme Toggle, Language Switcher & Logout */}
-        <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${
-          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800/80'
-        }`}>
+        {/* 4. Bas : vue opérateur, signaler un problème, déconnexion */}
+        <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
           {canSwitchMode && onToggleBoosterMode && (
             <button
               type="button"
@@ -365,14 +237,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onToggleBoosterMode();
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-tactical font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                boosterMode
-                  ? 'bg-amber-600 hover:bg-amber-500 border-amber-400 text-white'
-                  : 'bg-[#101b27] hover:bg-[#142333] border-emerald-700/60 text-emerald-300'
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${
+                boosterMode ? 'bg-amber-500 hover:bg-amber-400 border-amber-400 text-white' : secondaryBtn
               }`}
             >
-              <Swords className="w-3.5 h-3.5" />
-              <span className="df-sb-text">{boosterMode ? 'Retour responsable' : 'Mode opérateur'}</span>
+              <Eye className="w-4 h-4" />
+              <span className="df-sb-text">{boosterMode ? 'Retour responsable' : 'Vue opérateur'}</span>
             </button>
           )}
 
@@ -380,19 +250,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/70 border border-slate-600/60 text-slate-300 hover:text-white text-xs font-tactical font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${secondaryBtn}`}
             >
-              <LifeBuoy className="w-3.5 h-3.5" />
+              <LifeBuoy className="w-4 h-4" />
               <span className="df-sb-text">Signaler un problème</span>
             </button>
           )}
 
-          {/* Déconnexion Button with smooth animated exit */}
           <button
-            onClick={handleLogoutClick}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 hover:text-white text-xs font-tactical font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-98"
+            onClick={onLogout}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${
+              isLight ? 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700' : 'bg-red-950/40 hover:bg-red-900/50 border-red-800/50 text-red-300'
+            }`}
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
             <span className="df-sb-text">{t('btn_logout')}</span>
           </button>
         </div>

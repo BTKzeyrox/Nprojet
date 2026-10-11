@@ -145,7 +145,7 @@ export const ErrorsLog: React.FC = () => {
             </div>
             {r.screenshot_url && (
               <a href={r.screenshot_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-cyan-300 underline">
-                <ImageIcon className="w-3.5 h-3.5" /> Voir la capture
+                <ImageIcon className="w-3.5 h-3.5" /> Voir la photo
               </a>
             )}
             {r.stack && (

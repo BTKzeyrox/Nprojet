@@ -75,7 +75,7 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
         </div>
         <div className="relative">
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input value={q} onChange={e => { setQ(e.target.value); setLimit(50); }} placeholder="Rechercher : nom, client, montant, motif…" className="w-full h-9 pl-9 pr-3 bg-[#141e2a] border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500" />
+          <input value={q} onChange={e => { setQ(e.target.value); setLimit(50); }} placeholder="Rechercher : nom, mission, motif…" className="w-full h-9 pl-9 pr-3 bg-[#141e2a] border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500" />
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs font-mono">
           {([['all', 'Tout'], ['advance', 'Avances'], ['session', 'Sessions'], ['profile', 'Profils'], ['signup', 'Inscriptions'], ['reset', 'Mots de passe']] as const).map(([k, label]) => (
