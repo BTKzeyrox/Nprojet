@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
@@ -17,8 +17,31 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNav
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
-  // La messagerie a son champ de saisie en bas : on masque la barre pour ne pas le cacher
-  if (activeView === 'chat') return null;
+  // Clavier ouvert : on masque la barre (elle resterait cachée derrière le clavier ou gênerait la saisie)
+  const [kb, setKb] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const on = () => setKb(window.innerHeight - vv.height > 100);
+    on();
+    vv.addEventListener('resize', on);
+    return () => vv.removeEventListener('resize', on);
+  }, []);
+
+  // La hauteur réelle de la barre est publiée (--bnh) : la messagerie s'arrête juste au-dessus
+  const navRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const el = navRef.current;
+    if (!el || kb) { root.style.removeProperty('--bnh'); return; }
+    const set = () => root.style.setProperty('--bnh', `${el.offsetHeight}px`);
+    set();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
+    ro?.observe(el);
+    return () => { ro?.disconnect(); root.style.removeProperty('--bnh'); };
+  }, [kb]);
+
+  if (kb) return null;
 
   const pending = isAdmin ? countPending().total : 0;
   const items: { id: string; label: string; icon: React.ElementType; badge?: number }[] = [
@@ -37,7 +60,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNav
     }`;
 
   return (
-    <nav className={base} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Navigation principale">
+    <nav ref={navRef} className={base} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Navigation principale">
       <div className="flex items-stretch gap-1 px-2 pt-1.5 pb-1.5">
         {items.map(it => {
           const I = it.icon;

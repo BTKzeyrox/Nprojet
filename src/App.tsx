@@ -348,7 +348,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
+        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px - var(--bnh, 0px))', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
