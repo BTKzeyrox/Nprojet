@@ -219,11 +219,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     prevThreadRef.current = current.id;
     prevLenRef.current = visible.length;
   }, [visible.length, current.id]);
-  // Sur téléphone, la conversation est cachée tant que la liste est affichée : on descend quand elle apparaît
+  // Sur téléphone, la conversation est cachée tant que la liste est affichée : on descend quand elle apparaît.
+  // On le refait plusieurs fois : les photos et la mise en page changent la hauteur juste après l'ouverture.
   useEffect(() => {
     if (!convVisible) return;
-    const t = requestAnimationFrame(() => { const el = scrollRef.current; if (el) { el.scrollTop = el.scrollHeight; atBottomRef.current = true; } });
-    return () => cancelAnimationFrame(t);
+    const down = () => { const el = scrollRef.current; if (el) { el.scrollTop = el.scrollHeight; atBottomRef.current = true; } };
+    const raf = requestAnimationFrame(down);
+    const timers = [60, 200, 450, 900, 1600].map(ms => setTimeout(() => { if (atBottomRef.current) down(); }, ms));
+    return () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
   }, [convVisible, current.id]);
   const [farFromBottom, setFarFromBottom] = useState(false);
   const onScrollArea = () => {
@@ -555,21 +558,34 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         </div>
 
         {pinShown && (
-          <button
-            type="button"
-            onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
-            className={`w-full h-7 px-3 border-b ${P.div} ${L ? 'bg-amber-50' : 'bg-amber-950/30'} flex items-center gap-1.5 text-left cursor-pointer shrink-0`}
-            title="Voir le message épinglé"
-          >
-            <Pin className="w-3 h-3 text-amber-500 shrink-0" />
-            <span className={`flex-1 min-w-0 truncate text-[10px] ${P.sub}`}>
-              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}{pinShown.sender_name} : {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
-            </span>
-          </button>
+          <div className={`px-2.5 py-2 border-b ${P.div} ${L ? 'bg-slate-50' : 'bg-white/[0.03]'} shrink-0`}>
+            <button
+              type="button"
+              onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
+              className={`w-full flex items-center gap-3 text-left cursor-pointer rounded-2xl border border-l-4 border-l-blue-600 px-3 py-2 shadow-sm ${L ? 'bg-white border-slate-200' : 'bg-[#12213a] border-white/10'}`}
+              title="Aller au message épinglé"
+            >
+              <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <Pin className="w-4 h-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-blue-600">Message épinglé</span>
+                  {pinned.length > 1 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{(pinIdx % pinned.length) + 1}/{pinned.length}</span>
+                  )}
+                </span>
+                <span className={`block text-[13px] ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <b>{pinShown.sender_name.split(' ')[0]}</b> · {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
+                </span>
+              </span>
+              <ChevronDown className="w-4 h-4 text-blue-600 shrink-0" />
+            </button>
+          </div>
         )}
 
         <div className="relative flex-1 min-h-0">
-        <div ref={scrollRef} onScroll={onScrollArea} className={`h-full p-3 overflow-y-auto overscroll-contain space-y-1.5 ${P.area}`}>
+        <div ref={scrollRef} onScroll={onScrollArea} onLoadCapture={() => { const el = scrollRef.current; if (el && atBottomRef.current) el.scrollTop = el.scrollHeight; }} className={`h-full p-3 overflow-y-auto overscroll-contain space-y-1.5 ${P.area}`}>
           {visible.length === 0 && <div className={`text-center text-xs pt-8 ${P.sub}`}>Aucun message. Écris le premier.</div>}
           {visible.map((msg, i) => {
             const isMe = msg.sender_id === currentUser.id;
