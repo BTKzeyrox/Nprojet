@@ -88,6 +88,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Réglages', icon: Settings },
   ];
 
+  // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
+  const inBottomBar = ['feed', 'chat', 'calendar', isAdmin ? 'validations' : 'active-post'];
+
   const handleItemClick = (id: string) => {
     if (id === 'profile' && onOpenEmployeeCV) {
       onOpenEmployeeCV(currentUser);
@@ -113,15 +116,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         onClick={e => { if (compact && onToggleCompact && !(e.target as HTMLElement).closest('button')) onToggleCompact(); }}
-        className={`df-sb ${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-0 bottom-0 left-0 z-40 h-[100dvh] max-h-[100dvh] overflow-y-auto border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
+        className={`df-sb ${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-3 bottom-3 left-3 z-40 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
           isLight ? 'bg-white border-slate-200 text-slate-800 shadow-sm' : 'bg-[#0a1628] border-slate-800 text-slate-100'
-        } ${isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+        } ${isOpenMobile ? 'translate-x-0' : '-translate-x-[110%] md:translate-x-0'}`}
       >
         {/* 1. En-tête : logo et nom */}
-        <div className={`shrink-0 p-4 border-b flex items-center justify-between ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+        <div className="shrink-0 p-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-sm"
+              className="w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-black shadow-sm"
               style={{ background: navy }}
               aria-hidden="true"
             >
@@ -138,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               onClick={onToggleCompact}
               title={compact ? 'Ouvrir le menu' : 'Réduire le menu'}
-              className="hidden md:inline-flex df-sb-toggle p-1.5 rounded-lg transition-colors cursor-pointer df-sb-icon"
+              className="hidden md:inline-flex df-sb-toggle p-1.5 rounded-full transition-colors cursor-pointer df-sb-icon"
             >
               {compact ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
             </button>
@@ -147,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="md:hidden p-1.5 rounded-lg transition-colors df-sb-icon"
+              className="md:hidden p-1.5 rounded-full transition-colors df-sb-icon"
               title="Fermer le menu"
             >
               <X className="w-5 h-5" />
@@ -156,10 +159,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* 2. Profil */}
-        <div className="df-sb-profile shrink-0 px-4 py-3 border-b flex items-center justify-between">
+        <div className="df-sb-profile shrink-0 mx-3 mb-1 px-3 py-2.5 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative shrink-0">
-              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-9 h-9" />
+              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-9 h-9 rounded-full" />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
             </div>
             <div className="min-w-0 df-sb-text">
@@ -180,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 3. Navigation */}
         <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3">
-          <nav className="space-y-1">
+          <nav className="space-y-1.5">
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
@@ -190,10 +193,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                  className="df-sb-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer"
+                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-full text-left transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Icon className="w-[18px] h-[18px] shrink-0" />
+                    <span className="df-sb-tile w-9 h-9 rounded-full flex items-center justify-center shrink-0">
+                      <Icon className="w-[18px] h-[18px]" />
+                    </span>
                     <span className="df-sb-text text-sm font-semibold truncate">{item.label}</span>
                   </div>
                   {item.badge && (
@@ -218,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onToggleBoosterMode();
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
                 boosterMode ? 'df-sb-warn' : 'df-sb-btn'
               }`}
             >
@@ -231,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
             >
               <LifeBuoy className="w-4 h-4" />
               <span className="df-sb-text">Signaler un problème</span>
@@ -240,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onLogout}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
               'df-sb-danger'
             }`}
           >

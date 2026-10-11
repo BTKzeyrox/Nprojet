@@ -701,12 +701,12 @@ html.theme-dark header, html.theme-dark header.df-topbar { background-image: non
 aside.df-sb {
   --sb-bg: #dbeafe; --sb-line: #93c5fd; --sb-text: #0b2a4a; --sb-sub: #3b5a85; --sb-item: #1e3a5f;
   --sb-hover: rgba(255,255,255,.65); --sb-active: #1d4ed8; --sb-prof: rgba(255,255,255,.55); --sb-btn: rgba(255,255,255,.7); --sb-btn-h: #ffffff; --sb-btn-t: #1e3a5f;
-  --sb-badge: rgba(255,255,255,.85); --sb-badge-t: #1e3a5f;
+  --sb-badge: rgba(255,255,255,.85); --sb-badge-t: #1e3a5f; --sb-tile: rgba(255,255,255,.75);
 }
 html.theme-dark aside.df-sb {
   --sb-bg: #0f1e3a; --sb-line: #1e3a6e; --sb-text: #f8fafc; --sb-sub: #93b4e6; --sb-item: #cfdcf3;
   --sb-hover: rgba(255,255,255,.08); --sb-active: #2563eb; --sb-prof: rgba(255,255,255,.05); --sb-btn: rgba(255,255,255,.07); --sb-btn-h: rgba(255,255,255,.14); --sb-btn-t: #e2e8f0;
-  --sb-badge: rgba(255,255,255,.14); --sb-badge-t: #e2e8f0;
+  --sb-badge: rgba(255,255,255,.14); --sb-badge-t: #e2e8f0; --sb-tile: rgba(255,255,255,.08);
 }
 aside.df-sb, html.theme-dark aside.df-sb, html.theme-light aside.df-sb {
   background-color: var(--sb-bg) !important; background-image: none !important; border-color: var(--sb-line) !important; color: var(--sb-text) !important;
@@ -739,3 +739,15 @@ html { scroll-padding-top: 4.75rem; }
 
 /* Formulaire ou fenêtre ouverte : la barre du bas disparaît (elle passait par-dessus le bas du formulaire et cachait les boutons) */
 body:has(.fixed.inset-0.flex) .df-bottomnav { display: none !important; }
+
+/* ===== Menu de gauche en carte flottante : tuiles rondes pour les icônes, profil en petite carte ===== */
+aside.df-sb .df-sb-tile { background-color: var(--sb-tile) !important; }
+aside.df-sb .df-sb-item[aria-current="page"] .df-sb-tile { background-color: rgba(255,255,255,.22) !important; }
+.df-sb-compact > div:nth-child(2) { margin-left: .35rem; margin-right: .35rem; }
+.df-sb-compact nav button { padding-left: 0; padding-right: 0; }
+
+/* ===== Boutons : plus de coins carrés. Tout bouton avec fond ou bord et sans arrondi prévu est arrondi.
+   Les lignes de liste (border-b / border-t) restent pleine largeur. ===== */
+button[class*="bg-"]:not([class*="rounded"]):not([class*="border-b"]):not([class*="border-t"]),
+button[class*="border"]:not([class*="rounded"]):not([class*="border-b"]):not([class*="border-t"]),
+a[class*="bg-"]:not([class*="rounded"]) { border-radius: 12px; }

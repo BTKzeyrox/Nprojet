@@ -119,7 +119,7 @@ export default function App() {
   const sbPhone = wide < 768;
   const sbTablet = wide >= 768 && wide < 1024;
   const sbCompact = sbTablet ? !isMobileSidebarOpen : !sbPhone && sbCollapsed;
-  const sbWidth = sbPhone ? '0px' : sbTablet || sbCollapsed ? '4.5rem' : '18rem';
+  const sbWidth = sbPhone ? '0px' : sbTablet || sbCollapsed ? '5.5rem' : '19rem'; // largeur du menu + marge autour
   useEffect(() => {
     document.documentElement.style.setProperty('--sbw', sbWidth);
   }, [sbWidth]);
