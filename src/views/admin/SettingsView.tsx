@@ -6,6 +6,7 @@ import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
 import { askConfirm } from '../../components/ConfirmModal';
 import { useApp } from '../../context/AppContext';
+import { FontSizePicker } from '../../components/FontSizePicker';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
@@ -97,6 +98,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
           <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
+        <FontSizePicker />
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
@@ -156,6 +158,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
           <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
+        <FontSizePicker />
       </section>
       )}
 

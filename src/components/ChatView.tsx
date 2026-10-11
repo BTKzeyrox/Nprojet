@@ -271,6 +271,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     return false;
   };
 
+  const lastSent = useRef<{ key: string; at: number }>({ key: '', at: 0 });
   const send = (extra?: { url: string; name: string; kind: 'image' | 'file' }) => {
     if (current.readOnly) return;
     if (editingId) {
@@ -282,6 +283,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       return;
     }
     if (!text.trim() && !extra) return;
+    // Même message dans la même conversation en moins de 3 s : on ignore (double appui)
+    const key = `${current.id}|${text.trim()}|${extra?.url || ''}`;
+    if (lastSent.current.key === key && Date.now() - lastSent.current.at < 3000) { setText(''); return; }
+    lastSent.current = { key, at: Date.now() };
     db.sendMessage({
       senderId: currentUser.id,
       message: text,
@@ -442,12 +447,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className={`flex-1 min-w-0 truncate text-[15px] font-bold ${P.title}`}>{t.title}</span>
+            <span className={`flex-1 min-w-0 truncate text-[13px] font-semibold ${P.title}`}>{t.title}</span>
             {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
           <span className="flex items-center gap-2 mt-0.5">
-            <span className={`flex-1 min-w-0 truncate text-[13px] ${P.sub}`}>{preview}</span>
+            <span className={`flex-1 min-w-0 truncate text-[12px] ${P.sub}`}>{preview}</span>
             {unread > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white shadow text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
           </span>
         </span>
@@ -709,11 +714,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               type="text"
               value={text}
               onChange={e => setText(e.target.value)}
+              enterKeyHint="send"
               placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
               className={`flex-1 min-w-0 h-10 rounded-full border px-4 text-sm focus:outline-none focus:border-emerald-500 ${P.input}`}
               style={{ borderRadius: 9999 }}
             />
-            <button type="submit" disabled={busy} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
+            <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
               <Send className="w-4 h-4" />
             </button>
           </form>
