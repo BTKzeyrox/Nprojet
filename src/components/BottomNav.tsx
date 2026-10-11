@@ -61,7 +61,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNav
       : { id: 'active-post', label: 'Mon poste', icon: ClipboardList },
   ];
 
-  const base = `fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
+  const base = `df-bottomnav fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
   const btn = (active: boolean) =>
     `relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold cursor-pointer transition-colors ${
       active ? (L ? 'bg-white/70 text-emerald-700' : 'bg-white/10 text-emerald-400') : L ? 'text-slate-600' : 'text-slate-300'

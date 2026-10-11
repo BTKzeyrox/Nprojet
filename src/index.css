@@ -735,3 +735,7 @@ aside.df-sb .df-sb-danger:hover { background-color: rgba(220,38,38,.18) !importa
 /* La barre du haut est fixe : les défilements automatiques (recherche, notification, ancre) s'arrêtent SOUS elle, jamais derrière */
 html { scroll-padding-top: 4.75rem; }
 [data-nav], [data-msg-id] { scroll-margin-top: 4.75rem; }
+
+
+/* Formulaire ou fenêtre ouverte : la barre du bas disparaît (elle passait par-dessus le bas du formulaire et cachait les boutons) */
+body:has(.fixed.inset-0.flex) .df-bottomnav { display: none !important; }
