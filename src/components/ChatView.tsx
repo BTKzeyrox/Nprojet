@@ -488,7 +488,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         <div className="px-3 py-2">
           <div className="relative">
             <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${P.sub}`} />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une discussion" className={`w-full h-10 pl-9 pr-3 rounded-full border text-sm focus:outline-none focus:border-emerald-500 ${P.input}`} />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une discussion" className={`w-full h-10 pl-9 pr-3 rounded-full border text-sm focus:outline-none focus:border-emerald-500 ${P.input}`} style={{ borderRadius: 9999 }} />
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -699,6 +699,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               onChange={e => setText(e.target.value)}
               placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
               className={`flex-1 min-w-0 h-10 rounded-full border px-4 text-sm focus:outline-none focus:border-emerald-500 ${P.input}`}
+              style={{ borderRadius: 9999 }}
             />
             <button type="submit" disabled={busy} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
               <Send className="w-4 h-4" />
