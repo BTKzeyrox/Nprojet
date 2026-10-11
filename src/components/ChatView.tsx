@@ -584,8 +584,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={{ WebkitTouchCallout: 'none' }}
-                      className={`min-w-0 px-3.5 py-2 text-sm leading-relaxed break-words select-none md:select-text rounded-2xl shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${
-                        gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub
+                      className={`min-w-0 text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                        !gone && !msg.message && !msg.reply_to && msg.attachment_url
+                          ? `${L ? 'text-slate-800' : 'text-slate-100'}`
+                          : `px-3.5 py-2 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
                       {!gone && !isMe && showNames && !sameSender && (
@@ -607,12 +609,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                             </button>
                           )}
                           {msg.attachment_url && msg.attachment_kind === 'image' && (
-                            <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className="block mb-1 cursor-zoom-in" title="Agrandir">
+                            <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className={`block cursor-zoom-in ${msg.message || msg.reply_to ? 'mb-1' : ''}`} title="Agrandir">
                               <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full rounded-xl" loading="lazy" />
                             </button>
                           )}
                           {msg.attachment_url && msg.attachment_kind !== 'image' && (
-                            <button type="button" onClick={() => setFileViewer(msg)} className="flex items-center gap-1.5 mb-1 min-h-[40px] underline font-semibold text-left cursor-pointer">
+                            <button type="button" onClick={() => setFileViewer(msg)} className={`flex items-center gap-1.5 min-h-[40px] font-semibold text-left cursor-pointer ${!msg.message && !msg.reply_to ? `px-3 py-2 rounded-2xl border ${L ? 'border-slate-300' : 'border-slate-600'}` : 'mb-1 underline'}`}>
                               <FileText className="w-4 h-4 shrink-0" />
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
