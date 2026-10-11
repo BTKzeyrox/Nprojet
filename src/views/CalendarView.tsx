@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings } from '../types';
 import { db } from '../db/store';
-import { formatScoreM } from '../utils/formatUtils';
+import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { Avatar } from '../components/Avatar';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { useApp } from '../context/AppContext';
@@ -369,6 +369,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
             </div>
           )}
 
+          {/* Paie du mois (responsable) */}
+          {isAdmin && summary && (
+            <div className={`${card} p-4`}>
+              <div className={`flex items-center gap-2 font-bold text-sm mb-3 ${txt}`}>
+                <Wallet className="w-4 h-4 text-emerald-500" /> Paie du mois
+                <span className={`ml-auto text-xs font-semibold ${sub}`}>{monthNames[month]} {year}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className={`rounded-2xl p-3 ${L ? 'bg-slate-50' : 'bg-white/5'}`}>
+                  <div className={`text-[11px] ${sub}`}>Gagné</div>
+                  <div className={`font-bold text-lg ${txt}`}>{formatCurrencyAr(summary.pay)}</div>
+                </div>
+                <div className={`rounded-2xl p-3 ${L ? 'bg-slate-50' : 'bg-white/5'}`}>
+                  <div className={`text-[11px] ${sub}`}>Avances accordées</div>
+                  <div className="font-bold text-lg text-amber-500">− {formatCurrencyAr(summary.advApproved)}</div>
+                  {summary.advPending > 0 && <div className={`text-[11px] ${sub}`}>{formatCurrencyAr(summary.advPending)} en attente</div>}
+                </div>
+                <div className={`rounded-2xl p-3 ${L ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-500/10 border border-emerald-500/25'}`}>
+                  <div className={`text-[11px] ${sub}`}>Net à payer</div>
+                  <div className="font-bold text-lg text-emerald-600">{formatCurrencyAr(summary.net)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Légende */}
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(STATUS_META) as DayStatus[]).map(st => (
@@ -410,6 +435,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                             {d.shifts.length} mission{d.shifts.length > 1 ? 's' : ''}
                           </div>
                           {d.gained > 0 && <div className="hidden sm:block text-[11px] text-cyan-600 font-bold">+{formatScoreM(d.gained)}</div>}
+                          {isAdmin && (() => { const ar = d.shifts.filter(x => x.status === 'completed').reduce((a, x) => a + (x.calculated_ar || 0), 0); return ar > 0 ? <div className="text-[10px] sm:text-[11px] text-emerald-600 font-bold">{formatCurrencyAr(ar)}</div> : null; })()}
                         </>
                       )}
                     </div>
