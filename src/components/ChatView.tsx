@@ -306,26 +306,39 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     setReplyTo(null);
   };
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fichier choisi : on l'affiche d'abord avec l'option « Compresser » (activée par défaut), puis on l'envoie
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [compress, setCompress] = useState(true);
+  const pendingUrl = useMemo(() => (pendingFile && pendingFile.type.startsWith('image/') ? URL.createObjectURL(pendingFile) : ''), [pendingFile]);
+  useEffect(() => () => { if (pendingUrl) URL.revokeObjectURL(pendingUrl); }, [pendingUrl]);
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     setError(null);
     if (file.size > MAX_BYTES) return setError('Fichier trop gros (10 Mo maximum).');
     if (!OK_TYPES.includes(file.type)) return setError('Type non accepté : photo, PDF ou texte seulement.');
+    setCompress(true);
+    setPendingFile(file);
+  };
+  const sendPendingFile = async () => {
+    const file = pendingFile;
+    if (!file) return;
+    setError(null);
     setBusy(true);
     try {
       const isImage = file.type.startsWith('image/') && file.type !== 'image/gif';
-      const dataUrl = isImage ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+      const dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
       const url = await db.uploadFile(dataUrl);
       if (!url) setError('Envoi impossible. Réessaie.');
-      else send({ url, name: file.name, kind: file.type.startsWith('image/') ? 'image' : 'file' });
+      else { send({ url, name: file.name, kind: file.type.startsWith('image/') ? 'image' : 'file' }); setPendingFile(null); }
     } catch {
       setError('Envoi impossible. Réessaie.');
     } finally {
       setBusy(false);
     }
   };
+  const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
 
   const openMenu = (m: ChatMessage, el: HTMLElement) => {
     setMenuRect(el.getBoundingClientRect());
@@ -710,6 +723,32 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
 
         {canWrite ? (
+          <>
+          {pendingFile && (
+            <div className={`px-3 pt-3 ${L ? 'bg-white' : 'bg-[#0f1b2d]'} border-t ${P.div}`}>
+              <div className={`rounded-2xl border p-3 flex items-center gap-3 ${L ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/15'}`}>
+                {pendingFile.type.startsWith('image/') ? (
+                  <img src={pendingUrl || undefined} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                ) : (
+                  <span className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"><Paperclip className="w-6 h-6" /></span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFile.name}</p>
+                  <p className={`text-xs ${P.sub}`}>{sizeLabel(pendingFile.size)}</p>
+                  {pendingFile.type.startsWith('image/') && pendingFile.type !== 'image/gif' && (
+                    <label className="mt-1 flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" checked={compress} onChange={e => setCompress(e.target.checked)} className="w-4 h-4 accent-blue-600" />
+                      <span className={P.title}>Compresser la photo <span className={P.sub}>{compress ? '(plus léger, recommandé)' : '(taille originale)'}</span></span>
+                    </label>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
+                  <button type="button" disabled={busy} onClick={() => setPendingFile(null)} className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                </div>
+              </div>
+            </div>
+          )}
           <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-3 pb-3 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
@@ -736,6 +775,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </button>
             </div>
           </form>
+          </>
         ) : (
           <div className={`p-3 ${P.head} border-t text-center text-[11px] shrink-0 ${P.sub}`}>
             Lecture seule : tu consultes une discussion entre deux opérateurs.
