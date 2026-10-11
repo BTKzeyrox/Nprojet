@@ -120,9 +120,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   // Ce qui attend la décision de l'admin pour un booster
   const pendingOf = (empId: string) => {
     const items: { key: string; label: string; filter: ValFilter; n: number }[] = [];
-    if (cfg.badge_start) items.push({ key: 'start', label: 'Début à valider', filter: 'starts', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_start').length });
-    if (cfg.badge_end) items.push({ key: 'end', label: 'Fin à valider', filter: 'ends', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_end').length });
-    if (cfg.badge_advance) items.push({ key: 'adv', label: 'Avance à valider', filter: 'advances', n: advances.filter(a => a.employee_id === empId && a.status === 'pending').length });
+    if (cfg.badge_start) items.push({ key: 'start', label: 'Début de mission à valider', filter: 'starts', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_start').length });
+    if (cfg.badge_end) items.push({ key: 'end', label: 'Fin de mission à valider', filter: 'ends', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_end').length });
+    // Les avances n'existent plus dans Gestion Pro : plus de pastille « Avance »
     if (cfg.badge_profile) items.push({ key: 'prf', label: 'Profil à valider', filter: 'profiles', n: profileReqs.filter(r => r.user_id === empId && r.status === 'pending').length });
     return items.filter(i => i.n > 0);
   };

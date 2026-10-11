@@ -213,15 +213,14 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <div className="pt-1 space-y-2">
           <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
             <input type="checkbox" checked={s.show_activity_column} onChange={e => set('show_activity_column', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
-            Afficher la colonne « Activité » sur la page Employés
+            Afficher la colonne « Activité » sur la page Équipe
           </label>
           <div className="pl-6 space-y-2">
             <div className="text-xs font-mono text-slate-400 uppercase">Pastilles « à valider » à afficher</div>
             <div className="grid grid-cols-2 gap-2">
               {([
-                ['badge_start', 'Début de session'],
-                ['badge_end', 'Fin de session'],
-                ['badge_advance', 'Avance'],
+                ['badge_start', 'Début de mission'],
+                ['badge_end', 'Fin de mission'],
                 ['badge_profile', 'Profil'],
               ] as const).map(([k, label]) => (
                 <label key={k} className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
