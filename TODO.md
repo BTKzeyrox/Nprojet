@@ -26,14 +26,18 @@
 - [x] Visionneuse : Retour, zoom, précédent/suivant (existaient), Télécharger avec le vrai nom du fichier
 - [x] Aperçu des fichiers : Retour (existait) et Télécharger (ajouté)
 
-### E. Barre d'actions et dynamique
-- [ ] J'adore / Commenter / Partager sur une ligne, police réduite
-- [ ] Mise à jour automatique, pastille « Nouvelles publications », réaction immédiate
+### E. Barre d'actions et dynamique (fait le 2026-10-11, non testé à l'écran)
+- [x] J'adore / Commenter / Partager sur une ligne, police réduite
+- [x] Rechargement toutes les 8 s sur la page Actualités (compteur partagé avec la messagerie)
+- [x] Pastille « ↑ N nouvelles publications » : les publications des autres sont retenues si on a défilé vers le bas
+- [x] « J'adore » immédiat à l'écran, retour en arrière si le serveur refuse
 
-### F. Contrôle final
-- [ ] `npm run build` sans erreur à chaque étape
+### F. Contrôle final (fait le 2026-10-11)
+- [x] `npm run build` et `tsc --noEmit` sans erreur à chaque étape
 - [x] Redéploiement de `df-api` sur Supabase (projet `nprojet`) : v3 = commit `d888eb4e17facee6bdfbbc6e9d0ca84abe8206dc` (2026-10-11, accord de BTK). Retour en arrière : redéployer le petit fichier avec le commit `2b0dcb7d57992ac05ec8a91c96d45b4d802ed220` (v2)
-- [ ] Dire ce qui n'est pas testé à l'écran
+- [x] Diff de A à E relu : pas de console.log, pas de token ni de mot de passe dans le code
+- [ ] **Non testé à l'écran (à tester par BTK)** : publier avec photo (admin puis employé), valider / refuser, commenter avec photo et PDF, Télécharger, pastille « nouvelles publications », J'adore immédiat, barre d'actions sur petit téléphone
+- [ ] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente
 
 ## 2. Après la page d'accueil (pas commencé)
 - [ ] Nouveau design : formes arrondies, barre du haut et barre du bas, fond clair, bleu marine
@@ -49,3 +53,4 @@
 - 2026-10-11 : `df-api` redéployé en v3 (commit `d888eb4`), empreinte du fichier GitHub vérifiée identique. Aucun appel réel testé (réseau de Claude bloqué vers supabase.co) : à tester par BTK (publier avec photo en admin, puis en employé).
 - 2026-10-11 : étape C faite (FeedView.tsx : file « À valider », boutons Valider / Refuser avec motif). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : étape D faite (FeedView, LightboxModal, FileViewerModal, attachments.ts). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran. Télécharger : si le navigateur refuse, le fichier s'ouvre dans un nouvel onglet.
+- 2026-10-11 : étapes E et F faites (FeedView.tsx, store.ts). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.

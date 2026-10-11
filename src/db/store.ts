@@ -260,8 +260,11 @@ class DeltaForceStore {
 
   // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
   private pollMs = 20000;
+  // Plusieurs écrans peuvent demander le mode rapide (messagerie, actualités) : on compte, 8 s tant qu'un écran l'utilise
+  private fastCount = 0;
   public setFastPoll(on: boolean) {
-    const ms = on ? 8000 : 20000;
+    this.fastCount = Math.max(0, this.fastCount + (on ? 1 : -1));
+    const ms = this.fastCount > 0 ? 8000 : 20000;
     if (ms === this.pollMs) return;
     this.pollMs = ms;
     if (this.token && this.pollTimer) this.startPolling();
@@ -474,7 +477,22 @@ class DeltaForceStore {
     return { success: true };
   }
 
-  public toggleLoveNews(id: string) { return this.newsCall('news-react', { id }); }
+  // « J'adore » : l'écran change tout de suite, puis le serveur confirme. En cas d'erreur, on revient en arrière.
+  public async toggleLoveNews(id: string): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const n = this.news.find(x => x.id === id);
+    if (!me || !n) return this.newsCall('news-react', { id });
+    const before = n.loves;
+    const after = before.includes(me.id) ? before.filter(x => x !== me.id) : [...before, me.id];
+    this.news = this.news.map(x => (x.id === id ? { ...x, loves: after } : x));
+    this.emit();
+    const r = await this.newsCall('news-react', { id });
+    if (!r.success) {
+      this.news = this.news.map(x => (x.id === id ? { ...x, loves: before } : x));
+      this.emit();
+    }
+    return r;
+  }
   public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }

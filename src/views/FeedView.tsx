@@ -91,7 +91,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     setBusy(false);
   };
 
-  const btn = `flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`;
+  const btn = `flex-1 min-w-0 flex items-center justify-center gap-1 px-1.5 py-2 text-xs font-semibold whitespace-nowrap rounded-lg transition-colors disabled:opacity-50 ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`;
 
   return (
     <article className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
@@ -182,12 +182,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
         <span>{[post.comments.length ? `${post.comments.length} commentaire${post.comments.length > 1 ? 's' : ''}` : '', post.shares ? `${post.shares} partage${post.shares > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')}</span>
       </div>
 
-      <div className={`flex items-center gap-1 border-t pt-2 ${light ? 'border-slate-200' : 'border-slate-700'}`}>
+      <div className={`flex flex-nowrap items-center gap-0.5 border-t pt-2 ${light ? 'border-slate-200' : 'border-slate-700'}`}>
         <button type="button" disabled={busy} onClick={() => void run(() => db.toggleLoveNews(post.id))} className={`${btn} ${loved ? 'text-red-500' : ''}`} aria-pressed={loved}>
-          <Heart className="w-4 h-4" fill={loved ? 'currentColor' : 'none'} />J’adore
+          <Heart className="w-3.5 h-3.5 shrink-0" fill={loved ? 'currentColor' : 'none'} />J’adore
         </button>
-        <button type="button" onClick={() => setOpen(v => !v)} className={btn}><MessageCircle className="w-4 h-4" />Commenter</button>
-        <button type="button" onClick={() => void share()} className={btn}><Share2 className="w-4 h-4" />Partager</button>
+        <button type="button" onClick={() => setOpen(v => !v)} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
+        <button type="button" onClick={() => void share()} className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
       </div>
       </>)}
 
@@ -381,15 +381,59 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
   const light = theme === 'light';
   const [, force] = useState(0);
   const { ask, node } = useConfirm();
-  useEffect(() => db.subscribe(() => force(n => n + 1)), []);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const knownRef = useRef<Set<string> | null>(null);
 
   const isAdmin = currentUser.role === 'admin';
+  const listOf = () => {
+    const a = db.getNews();
+    return isAdmin ? a.filter(p => p.status !== 'pending') : a;
+  };
+  if (knownRef.current === null) knownRef.current = new Set(listOf().map(p => p.id));
+
+  // Le fil défile dans un conteneur de la page : on le retrouve pour savoir si on est tout en haut
+  const getScroller = (): HTMLElement | null => {
+    let el = rootRef.current?.parentElement || null;
+    while (el) {
+      const o = getComputedStyle(el).overflowY;
+      if ((o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  };
+  const atTop = () => { const sc = getScroller(); return (sc ? sc.scrollTop : window.scrollY) < 120; };
+
+  // Actualités ouvertes : rechargement toutes les 8 s
+  useEffect(() => {
+    db.setFastPoll(true);
+    return () => db.setFastPoll(false);
+  }, []);
+
+  // Nouvelles publications des autres : affichées tout de suite si on est en haut, sinon retenues derrière la pastille
+  useEffect(() => db.subscribe(() => {
+    const k = knownRef.current!;
+    const top = atTop();
+    for (const p of listOf()) if (!k.has(p.id) && (top || p.author_id === currentUser.id)) k.add(p.id);
+    force(n => n + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isAdmin, currentUser.id]);
+
+  const known = knownRef.current;
   const all = db.getNews();
   const queue = isAdmin ? all.filter(p => p.status === 'pending').sort((a, b) => String(a.submitted_at || a.created_at).localeCompare(String(b.submitted_at || b.created_at))) : [];
-  const posts = isAdmin ? all.filter(p => p.status !== 'pending') : all;
+  const visible = listOf();
+  const posts = visible.filter(p => known.has(p.id));
+  const held = visible.length - posts.length;
+
+  const showHeld = () => {
+    visible.forEach(p => known.add(p.id));
+    const sc = getScroller();
+    if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' });
+    force(n => n + 1);
+  };
 
   return (
-    <div className="max-w-2xl mx-auto w-full p-3 sm:p-6 space-y-4">
+    <div ref={rootRef} className="max-w-2xl mx-auto w-full p-3 sm:p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Newspaper className="w-6 h-6 text-emerald-600" />
         <div>
@@ -397,6 +441,14 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
           <p className={`text-xs ${light ? 'text-slate-500' : 'text-slate-400'}`}>Annonces et publications de l’équipe</p>
         </div>
       </div>
+
+      {held > 0 && (
+        <div className="sticky top-2 z-20 flex justify-center">
+          <button type="button" onClick={showHeld} className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg">
+            ↑ {held} nouvelle{held > 1 ? 's' : ''} publication{held > 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
 
       <Composer isAdmin={isAdmin} light={light} />
 
@@ -409,7 +461,7 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         </section>
       )}
 
-      {posts.length === 0 && queue.length === 0 && (
+      {posts.length === 0 && queue.length === 0 && held === 0 && (
         <div className={`text-center text-sm py-10 ${light ? 'text-slate-500' : 'text-slate-400'}`}>Aucune publication pour le moment.</div>
       )}
       {posts.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} />)}
