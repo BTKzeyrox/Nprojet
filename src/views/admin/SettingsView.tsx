@@ -88,18 +88,18 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <Settings className="w-6 h-6 text-emerald-500 shrink-0" />
           <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
         </div>
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
+          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
+          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
+          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
+          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
       </section>
 
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
@@ -116,7 +116,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-3 py-2 border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -136,8 +136,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </div>
       </div>
 
-      {error && <div className="p-3 bg-red-950 border border-red-500/60 text-red-200 text-sm font-semibold">{error}</div>}
-      {saved && <div className="p-3 bg-emerald-950 border border-emerald-500/60 text-emerald-200 text-sm font-semibold">Réglages enregistrés.</div>}
+      {error && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-red-950 border-red-500/60 text-red-200'}`}>{error}</div>}
+      {saved && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-950 border-emerald-500/60 text-emerald-200'}`}>Réglages enregistrés.</div>}
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-700/60">
         {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['data', 'Données']] as const).map(([id, label]) => (
@@ -147,20 +147,20 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
 
       {tab === 'general' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
+          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
+          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
+          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
+          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
       </section>
       )}
 
       {tab === 'team' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Vacations</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -188,7 +188,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'team' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -240,7 +240,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'data' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
           <input type="checkbox" checked={s.maintenance_on} onChange={e => set('maintenance_on', e.target.checked)} className="w-4 h-4 accent-amber-500" />
@@ -279,11 +279,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'missions' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Types de mission</h3>
         <div className="flex flex-wrap gap-2">
           {s.post_types.map(t => (
-            <span key={t} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
+            <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
               {t}
               <button type="button" onClick={() => set('post_types', s.post_types.filter(x => x !== t))} className="text-slate-400 hover:text-red-400 cursor-pointer" title="Retirer">
                 <X className="w-3.5 h-3.5" />
@@ -298,7 +298,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addType(); } }}
             placeholder="Nouveau type, ex: NO READ" className={inputCls}
           />
-          <button type="button" onClick={addType} className="px-3 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
+          <button type="button" onClick={addType} className="px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
             <Plus className="w-5 h-5" />
           </button>
         </div>
@@ -308,7 +308,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
 
       {tab === 'missions' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Règles et options</h3>
         <div>
           <label className={labelCls}>Règles pour les opérateurs (affichées sur leur grille)</label>
@@ -323,7 +323,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'general' && (
-      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
@@ -340,7 +340,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-3 py-2 border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -349,7 +349,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'data' && (
-      <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3">
+      <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Données de démonstration</h3>
         <p className="text-[11px] text-slate-400 leading-relaxed">
           Les sessions et les demandes d'avance de démonstration comptent dans la paie et les totaux. Les comptes des opérateurs ne sont pas supprimés.
@@ -368,7 +368,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
               },
             })
           }
-          className="w-full px-4 py-2.5 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 font-semibold text-sm"
+          className="w-full px-4 py-2.5 rounded-full bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 font-semibold text-sm"
         >
           Supprimer les données de démonstration
         </button>
@@ -378,7 +378,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       <RestoreSection />
 
-      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
+      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer
       </button>
     </div>
