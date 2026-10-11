@@ -16,6 +16,7 @@ import {
   ChatGroup,
   ChatRead,
   NewsPost,
+  NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -407,17 +408,39 @@ class DeltaForceStore {
   }
 
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[] }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
-    if (!text) return { success: false, error: 'Écris le texte de la publication.' };
+    const files = p.files || [];
+    if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou joins un fichier.' };
     const rec: NewsPost = {
-      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', title: p.title.trim().slice(0, 120),
-      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, loves: [], comments: [], shares: 0,
+      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
+      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
+      loves: [], comments: [], shares: 0,
     };
     this.news = [rec, ...this.news].sort(SORTERS.news!);
     this.notify();
+    return { success: true };
+  }
+
+  // L'employé propose une publication : le serveur la garde « en attente » jusqu'à la décision du responsable
+  public submitNews(p: { title: string; text: string; files?: NewsAttachment[] }) {
+    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [] });
+  }
+
+  // Le responsable valide ou refuse une publication en attente (motif obligatoire au refus)
+  public decideNews(id: string, decision: 'approve' | 'reject', reason?: string) {
+    return this.newsCall('news-decision', { id, decision, reason: reason || '' });
+  }
+
+  // L'auteur retire sa publication tant qu'elle n'est pas validée
+  public async withdrawNews(id: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('news-withdraw', { method: 'POST', body: JSON.stringify({ id }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
+    this.news = this.news.filter(x => x.id !== id);
+    this.synced.news.delete(id);
+    this.emit();
     return { success: true };
   }
 
@@ -452,7 +475,7 @@ class DeltaForceStore {
   }
 
   public toggleLoveNews(id: string) { return this.newsCall('news-react', { id }); }
-  public commentNews(id: string, text: string) { return this.newsCall('news-comment', { id, text }); }
+  public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }
 

@@ -289,8 +289,19 @@ export interface NewsComment {
   user_name: string;
   role: UserRole;
   text: string;
+  files?: NewsAttachment[];
   created_at: string;
 }
+
+// Pièce jointe d'une publication ou d'un commentaire (photo compressée, PDF, texte)
+export interface NewsAttachment {
+  url: string;
+  name: string;
+  kind: 'image' | 'file';
+  size?: number; // octets
+}
+
+export type NewsStatus = 'published' | 'pending' | 'rejected';
 
 export interface NewsPost {
   id: string;
@@ -303,4 +314,10 @@ export interface NewsPost {
   loves: string[]; // ids des personnes qui ont mis « J'adore »
   comments: NewsComment[];
   shares: number;
+  files?: NewsAttachment[];
+  author_role?: UserRole;
+  status?: NewsStatus; // absent = publiée (anciennes publications)
+  reject_reason?: string;
+  submitted_at?: string;
+  files_removed?: number; // fichiers supprimés au refus
 }

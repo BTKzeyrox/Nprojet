@@ -391,6 +391,12 @@ async function state(req: any, res: any, me: any) {
     const scope = (q: any) => {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
+      if (col === 'news') {
+        // Publications validées (ou anciennes, sans statut) + les siennes (en attente ou refusées)
+        return /^[A-Za-z0-9_-]+$/.test(String(me.id))
+          ? q.or(`data->>status.is.null,data->>status.eq.published,data->>author_id.eq.${me.id}`)
+          : q.or('data->>status.is.null,data->>status.eq.published');
+      }
       if (col === 'messages') {
         const grp = myGroupIds.length ? `,data->>recipient_id.in.(${myGroupIds.join(',')})` : '';
         return q.or(`data->>recipient_id.eq.all,data->>recipient_id.eq.${me.id},data->>sender_id.eq.${me.id}${grp}`);
@@ -484,14 +490,21 @@ async function sync(req: any, res: any, me: any) {
       }
       if (col === 'news') {
         // Réservé au responsable (les autres sont déjà refusés plus haut). On ne perd jamais les réactions reçues.
+        // Le statut, le motif de refus et les fichiers d'une publication existante ne changent jamais par ici.
         toSave = {
           id: rec.id, author_id: existing?.author_id || me.id, author_name: String(rec.author_name || existing?.author_name || me.name || '').slice(0, 80),
+          author_role: existing?.author_role || 'admin',
           title: String(rec.title || '').slice(0, 120), text: String(rec.text || '').slice(0, NEWS_MAX_TEXT),
           created_at: existing?.created_at || rec.created_at || now, pinned: !!rec.pinned,
+          status: existing?.status || 'published',
+          files: existing ? (Array.isArray(existing.files) ? existing.files : []) : cleanFiles(rec.files, me.id),
           loves: Array.isArray(existing?.loves) ? existing.loves : [], comments: Array.isArray(existing?.comments) ? existing.comments : [],
           shares: Number(existing?.shares) || 0,
+          ...(existing?.reject_reason ? { reject_reason: existing.reject_reason } : {}),
+          ...(existing?.submitted_at ? { submitted_at: existing.submitted_at } : {}),
+          ...(existing?.files_removed ? { files_removed: existing.files_removed } : {}),
         };
-        if (!toSave.text.trim()) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
+        if (!toSave.text.trim() && !toSave.files.length) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
@@ -517,6 +530,10 @@ async function sync(req: any, res: any, me: any) {
         if (u?.role === 'admin') { rejected.push({ col, id, reason: 'admin' }); continue; }
         await sb.from('df_credentials').delete().eq('user_id', id);
         await sb.from(PRESENCE).delete().eq('user_id', id);
+      }
+      if (col === 'news') {
+        const { data: nrow } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+        if (nrow) await dropFiles(newsFilesOf(nrow.data));
       }
       await sb.from(T[col]).delete().eq('id', id);
       if (col === 'groups') {
@@ -1309,8 +1326,37 @@ async function errorUpdate(req: any, res: any, me: any) {
 const NEWS_MAX_TEXT = 2000;
 const NEWS_MAX_COMMENT = 500;
 const NEWS_MAX_COMMENTS = 200;
+const NEWS_MAX_FILES = 200; // plafond technique de sécurité (pas de limite pratique pour les utilisateurs)
+const NEWS_MAX_PENDING = 10; // publications en attente par employé
+
+// Pièces jointes : seulement des fichiers envoyés par la personne elle-même (stockage Supabase ou Cloudinary)
+const ownsFile = (u: string, uid: string) => pathOf(u).startsWith(`${uid}/`) || cldIdOf(u).startsWith(`df-proofs/${uid}-`);
+const cleanFiles = (v: unknown, uid: string): { url: string; name: string; kind: 'image' | 'file'; size?: number }[] => {
+  if (!Array.isArray(v)) return [];
+  const out: { url: string; name: string; kind: 'image' | 'file'; size?: number }[] = [];
+  for (const f of v as any[]) {
+    if (!f || !isBucketUrl(f.url) || !ownsFile(String(f.url), uid)) continue;
+    const size = Number(f.size);
+    out.push({
+      url: String(f.url).slice(0, 600), name: String(f.name || 'fichier').slice(0, 120), kind: f.kind === 'image' ? 'image' : 'file',
+      ...(Number.isFinite(size) && size > 0 ? { size: Math.round(size) } : {}),
+    });
+    if (out.length >= NEWS_MAX_FILES) break;
+  }
+  return out;
+};
+const newsFilesOf = (d: any): { url?: string }[] => [...(Array.isArray(d?.files) ? d.files : []), ...(Array.isArray(d?.comments) ? d.comments : []).flatMap((c: any) => (Array.isArray(c?.files) ? c.files : []))];
+async function dropFiles(files: { url?: string }[]) {
+  const urls = files.map(f => f?.url).filter((u): u is string => typeof u === 'string' && !!u);
+  try {
+    const paths = urls.map(pathOf).filter(Boolean);
+    if (paths.length) await sb.storage.from(BUCKET).remove(paths);
+    await Promise.all(urls.map(cldIdOf).filter(Boolean).map(cldDestroy));
+  } catch (e) { console.error('news files cleanup:', e); }
+}
+
 async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'share', req: any, res: any, me: any) {
-  const { id, text, commentId } = req.body || {};
+  const { id, text, commentId, files } = req.body || {};
   if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
   const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
   if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
@@ -1320,23 +1366,89 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'share'
     comments: Array.isArray(row.data.comments) ? [...row.data.comments] : [],
     shares: Number(row.data.shares) || 0,
   };
+  if (d.status && d.status !== 'published') return res.status(400).json({ error: 'Cette publication n’est pas encore validée.' });
   if (kind === 'react') {
     d.loves = d.loves.includes(me.id) ? d.loves.filter((x: string) => x !== me.id) : [...d.loves, me.id];
   } else if (kind === 'comment') {
     const clean = String(text || '').trim().slice(0, NEWS_MAX_COMMENT);
-    if (!clean) return res.status(400).json({ error: 'Écris un commentaire.' });
+    const cf = cleanFiles(files, me.id);
+    if (!clean && !cf.length) return res.status(400).json({ error: 'Écris un commentaire ou joins un fichier.' });
     if (d.comments.length >= NEWS_MAX_COMMENTS) return res.status(400).json({ error: 'Trop de commentaires sur cette publication.' });
-    d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, created_at: new Date().toISOString() });
+    d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, ...(cf.length ? { files: cf } : {}), created_at: new Date().toISOString() });
   } else if (kind === 'comment-delete') {
     const c = d.comments.find((x: any) => x.id === commentId);
     if (!c) return res.status(404).json({ error: 'Commentaire introuvable.' });
     if (me.role !== 'admin' && c.user_id !== me.id) return res.status(403).json({ error: 'Tu ne peux pas supprimer ce commentaire.' });
+    await dropFiles(Array.isArray(c.files) ? c.files : []);
     d.comments = d.comments.filter((x: any) => x.id !== commentId);
   } else {
     d.shares += 1;
   }
   await sb.from(T.news).upsert({ id, data: d, updated_at: new Date().toISOString() });
   return res.json({ ok: true, news: d });
+}
+
+// L'employé propose une publication : elle reste « en attente » jusqu'à la décision du responsable
+async function newsSubmit(req: any, res: any, me: any) {
+  if (me.role === 'admin') return res.status(403).json({ error: 'Le responsable publie directement.' });
+  const b = req.body || {};
+  const text = String(b.text || '').trim().slice(0, NEWS_MAX_TEXT);
+  const files = cleanFiles(b.files, me.id);
+  if (!text && !files.length) return res.status(400).json({ error: 'Écris un texte ou joins un fichier.' });
+  const { count } = await sb.from(T.news).select('id', { count: 'exact', head: true }).eq('data->>author_id', me.id).eq('data->>status', 'pending');
+  if ((count || 0) >= NEWS_MAX_PENDING) return res.status(400).json({ error: `Tu as déjà ${NEWS_MAX_PENDING} publications en attente. Attends la décision du responsable.` });
+  const now = new Date().toISOString();
+  const id = `news-${Date.now()}-${randomBytes(3).toString('hex')}`;
+  const d = {
+    id, author_id: me.id, author_name: String(me.name || '').slice(0, 80), author_role: 'employee',
+    title: String(b.title || '').trim().slice(0, 120), text, created_at: now, submitted_at: now, pinned: false, status: 'pending',
+    files, loves: [], comments: [], shares: 0,
+  };
+  await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  return res.json({ ok: true, news: d });
+}
+
+// Le responsable valide ou refuse (motif obligatoire au refus ; les fichiers d'une publication refusée sont supprimés)
+async function newsDecision(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  const { id, decision, reason } = req.body || {};
+  if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  const d: any = { ...row.data };
+  if (d.status !== 'pending') return res.status(400).json({ error: 'Cette publication n’est plus en attente.' });
+  const now = new Date().toISOString();
+  if (decision === 'approve') {
+    d.status = 'published';
+    d.created_at = now; // elle remonte en haut du fil à la validation
+    delete d.reject_reason;
+  } else if (decision === 'reject') {
+    const r = String(reason || '').trim().slice(0, 300);
+    if (r.length < 3) return res.status(400).json({ error: REASON_ERR });
+    d.status = 'rejected';
+    d.reject_reason = r;
+    d.pinned = false;
+    d.files_removed = Array.isArray(d.files) ? d.files.length : 0;
+    await dropFiles(Array.isArray(d.files) ? d.files : []);
+    d.files = [];
+  } else {
+    return res.status(400).json({ error: 'Décision invalide.' });
+  }
+  await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  return res.json({ ok: true, news: d });
+}
+
+// L'auteur retire sa publication tant qu'elle n'est pas validée (en attente ou refusée)
+async function newsWithdraw(req: any, res: any, me: any) {
+  const { id } = req.body || {};
+  if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  if (row.data.author_id !== me.id) return res.status(403).json({ error: 'Ce n’est pas ta publication.' });
+  if (row.data.status !== 'pending' && row.data.status !== 'rejected') return res.status(400).json({ error: 'Cette publication est déjà publiée.' });
+  await dropFiles(newsFilesOf(row.data));
+  await sb.from(T.news).delete().eq('id', id);
+  return res.json({ ok: true, deleted: id });
 }
 
 // ---------- routeur ----------
@@ -1387,6 +1499,9 @@ Deno.serve(async (request: Request) => {
     if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);
     if (action === "news-comment-delete" && req.method === "POST") return await newsAction('comment-delete', req, res, me);
     if (action === "news-share" && req.method === "POST") return await newsAction('share', req, res, me);
+    if (action === "news-submit" && req.method === "POST") return await newsSubmit(req, res, me);
+    if (action === "news-decision" && req.method === "POST") return await newsDecision(req, res, me);
+    if (action === "news-withdraw" && req.method === "POST") return await newsWithdraw(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
