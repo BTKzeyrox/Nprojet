@@ -101,14 +101,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (onCloseMobile) onCloseMobile();
   };
 
-  const navy = '#0b2a4a';
+  const navy = 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
 
   return (
     <>
       {/* Fond sombre derrière le menu sur téléphone */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 lg:hidden transition-opacity"
+          style={{ backgroundColor: isLight ? 'rgba(241,245,249,0.35)' : 'rgba(8,16,32,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={onCloseMobile}
           aria-hidden="true"
         />
@@ -125,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-3">
             <div
               className="w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-black shadow-sm"
-              style={{ background: navy }}
+              style={{ background: navy, color: '#ffffff' }}
               aria-hidden="true"
             >
               <ClipboardCheck className="w-5 h-5" />
