@@ -35,7 +35,7 @@
 ### F. Contrôle final (fait le 2026-10-11)
 - [x] `npm run build` et `tsc --noEmit` sans erreur à chaque étape
 - [x] Redéploiement de `df-api` sur Supabase (projet `nprojet`) : v3 = commit `d888eb4e17facee6bdfbbc6e9d0ca84abe8206dc` (2026-10-11, accord de BTK). Retour en arrière : redéployer le petit fichier avec le commit `2b0dcb7d57992ac05ec8a91c96d45b4d802ed220` (v2)
-- [x] Diff de A à E relu : pas de console.log, pas de token ni de mot de passe dans le code
+- [x] Recherche automatique dans le code (A à E) : aucun `console.log`, aucun token GitHub, aucun fichier `.env`. Le diff n'a pas été relu ligne par ligne.
 - [ ] **Non testé à l'écran (à tester par BTK)** : publier avec photo (admin puis employé), valider / refuser, commenter avec photo et PDF, Télécharger, pastille « nouvelles publications », J'adore immédiat, barre d'actions sur petit téléphone
 - [ ] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente
 
