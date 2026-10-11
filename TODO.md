@@ -40,7 +40,8 @@
 - [ ] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente
 
 ## 2. Après la page d'accueil (pas commencé)
-- [ ] Nouveau design : formes arrondies, barre du haut et barre du bas, fond clair, bleu marine
+- [ ] Nouveau design : formes arrondies, fond clair, bleu marine (lot 1, pas commencé)
+- [x] Lot 2 : barre du haut arrondie et barre du bas (téléphone : Actualités, Messages, Calendrier, Validations ou Mon poste, Menu) — fait le 2026-10-11, non testé à l'écran. La barre du bas est masquée dans la messagerie (champ de saisie).
 - [ ] Pages de menu : Messagerie, Historique, Validation, Équipe, Calendrier, Avances et paie, Réglages, Erreurs, Profil, Connexion
 
 ## 3. Questions ouvertes (défaut si pas de réponse)
@@ -54,3 +55,4 @@
 - 2026-10-11 : étape C faite (FeedView.tsx : file « À valider », boutons Valider / Refuser avec motif). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : étape D faite (FeedView, LightboxModal, FileViewerModal, attachments.ts). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran. Télécharger : si le navigateur refuse, le fichier s'ouvre dans un nouvel onglet.
 - 2026-10-11 : étapes E et F faites (FeedView.tsx, store.ts). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
+- 2026-10-11 : lot 2 fait (BottomNav.tsx, App.tsx, TopBar.tsx). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.

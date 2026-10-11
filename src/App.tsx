@@ -3,6 +3,7 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { BottomNav } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ReportProblemModal } from './components/ReportProblemModal';
@@ -435,6 +436,14 @@ export default function App() {
           </ErrorBoundary>
           </Suspense>
         </main>
+
+        {/* Barre du bas (téléphone) */}
+        <BottomNav
+          isAdmin={viewUser.role === 'admin'}
+          activeView={activeView}
+          onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
+          onOpenMenu={() => setIsMobileSidebarOpen(true)}
+        />
       </div>
 
       {/* PHOTO DE PROFIL OBLIGATOIRE POUR LES EMPLOYÉS */}
