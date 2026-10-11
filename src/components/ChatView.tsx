@@ -225,10 +225,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const t = requestAnimationFrame(() => { const el = scrollRef.current; if (el) { el.scrollTop = el.scrollHeight; atBottomRef.current = true; } });
     return () => cancelAnimationFrame(t);
   }, [convVisible, current.id]);
+  const [farFromBottom, setFarFromBottom] = useState(false);
   const onScrollArea = () => {
     const el = scrollRef.current;
     if (!el) return;
-    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+    atBottomRef.current = gap < 120;
+    setFarFromBottom(gap > 300);
     if (atBottomRef.current) setNewBelow(0);
     if (menuMsg) setMenuMsg(null);
   };
@@ -667,6 +670,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             );
           })}
         </div>
+        {farFromBottom && newBelow === 0 && (
+          <button type="button" aria-label="Aller au dernier message" title="Dernier message" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }} className="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center cursor-pointer">
+            <ChevronDown className="w-6 h-6" />
+          </button>
+        )}
         {newBelow > 0 && (
           <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
             <ChevronDown className="w-4 h-4" />{newBelow} nouveau{newBelow > 1 ? 'x' : ''} message{newBelow > 1 ? 's' : ''}
