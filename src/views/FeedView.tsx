@@ -10,6 +10,41 @@ import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsPost, User } from '../types';
 
+// Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
+const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [cur, setCur] = useState(0);
+  if (images.length === 1) {
+    const f = images[0];
+    return (
+      <button type="button" onClick={() => onOpen(f.url)} className="block w-full overflow-hidden rounded-2xl" title={f.name}>
+        <img src={f.url} alt={f.name} loading="lazy" className={`w-full object-cover ${compact ? 'max-h-48' : 'max-h-[28rem]'}`} />
+      </button>
+    );
+  }
+  const onScroll = () => {
+    const el = ref.current;
+    if (el && el.clientWidth) setCur(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const goTo = (i: number) => ref.current?.scrollTo({ left: i * (ref.current?.clientWidth || 0), behavior: 'smooth' });
+  return (
+    <div>
+      <div ref={ref} onScroll={onScroll} className="df-noscroll flex overflow-x-auto snap-x snap-mandatory rounded-2xl" style={{ touchAction: 'pan-x pan-y' }}>
+        {images.map(f => (
+          <button key={f.url} type="button" onClick={() => onOpen(f.url)} className="snap-center shrink-0 w-full block" title={f.name}>
+            <img src={f.url} alt={f.name} loading="lazy" className={`w-full object-cover ${compact ? 'h-48' : 'aspect-[4/3]'}`} />
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-1.5 pt-2" aria-label={`${images.length} images`}>
+        {images.map((f, i) => (
+          <button key={f.url} type="button" onClick={() => goTo(i)} aria-label={`Image ${i + 1}`} className={`h-2 rounded-full transition-all ${i === cur ? 'w-5 bg-blue-600' : 'w-2 bg-slate-400/60'}`} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const timeAgo = (iso: string) => {
   const t = new Date(iso).getTime();
   if (isNaN(t)) return '';
@@ -159,13 +194,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {post.text && <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">{post.text}</p>}
 
       {images.length > 0 && (
-        <div className={images.length === 1 ? '' : 'grid grid-cols-2 sm:grid-cols-3 gap-1.5'}>
-          {images.map(f => (
-            <button key={f.url} type="button" onClick={() => setLb({ url: f.url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} className="block w-full overflow-hidden rounded-lg" title={f.name}>
-              <img src={f.url} alt={f.name} loading="lazy" className={images.length === 1 ? 'w-full max-h-96 object-cover' : 'w-full aspect-square object-cover'} />
-            </button>
-          ))}
-        </div>
+        <ImageCarousel images={images} onOpen={url => setLb({ url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} />
       )}
       {others.length > 0 && (
         <div className="space-y-1.5">
@@ -222,13 +251,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     return (
                       <div className="mt-1.5 space-y-1.5">
                         {cImgs.length > 0 && (
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {cImgs.map(f => (
-                              <button key={f.url} type="button" onClick={() => setLb({ url: f.url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} className="block w-full overflow-hidden rounded-lg" title={f.name}>
-                                <img src={f.url} alt={f.name} loading="lazy" className="w-full aspect-square object-cover" />
-                              </button>
-                            ))}
-                          </div>
+                          <ImageCarousel compact images={cImgs} onOpen={url => setLb({ url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} />
                         )}
                         {cOthers.map(f => (
                           <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${light ? 'bg-white hover:bg-slate-50' : 'bg-white/5 hover:bg-white/10'}`}>

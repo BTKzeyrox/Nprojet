@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
@@ -139,7 +140,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     timestamp && { k: 'Horodatage', v: timestamp },
   ].filter(Boolean) as { k: string; v: string }[];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9999] bg-black" role="dialog" aria-modal="true">
       {/* Image plein écran : pincement, molette, double-tap, déplacement */}
       <div
@@ -202,6 +203,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         </div>
       </footer>
       <div className="hidden"><ShieldCheck /><X /></div>
-    </div>
+    </div>,
+    document.body
   );
 };
