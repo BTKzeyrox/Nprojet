@@ -289,6 +289,11 @@ class DeltaForceStore {
 
   // Récupère les changements du serveur. Retourne true si la session est valide.
   private pulling = false;
+  // Actualisation demandée à la main (tirer la page vers le bas)
+  public async refreshNow(): Promise<boolean> {
+    return this.pull(true);
+  }
+
   private async pull(force = false): Promise<boolean> {
     if (!this.token) return false;
     // Un seul rechargement à la fois (évite les requêtes qui s'empilent sur réseau lent)

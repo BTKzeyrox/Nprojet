@@ -684,3 +684,8 @@ html.theme-dark header, html.theme-dark header.df-topbar { background-image: non
 
 /* Cartes : plus d'ombre « enfoncée » ancienne */
 [class*="rounded-xl"][class*="border"], [class*="rounded-2xl"][class*="border"] { box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
+
+/* Tirer pour actualiser : plus de rebond noir en haut de page (l'indicateur le remplace) */
+html, body { overscroll-behavior-y: none; }
+html.theme-light body { background-color: var(--gp-page); }
+html.theme-dark body { background-color: #0b1626; }

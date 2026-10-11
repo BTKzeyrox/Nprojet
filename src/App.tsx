@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { PullToRefresh } from './components/PullToRefresh';
 import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
@@ -338,6 +339,7 @@ export default function App() {
         <LoadingBar />
         <ConnectionBanner />
 
+        <PullToRefresh disabled={activeView === 'chat'} />
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
           currentUser={viewUser}

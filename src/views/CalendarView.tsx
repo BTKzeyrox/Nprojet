@@ -260,7 +260,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       <div className={`grid gap-3 ${isAdmin ? 'lg:grid-cols-[18rem_1fr]' : ''}`}>
         {/* ===== Liste des boosters + recherche + filtres (admin) ===== */}
         {isAdmin && (
-          <aside className="bg-[#0f1722] border border-slate-800 p-3 space-y-3 lg:self-start lg:sticky lg:top-2">
+          <aside className="bg-[#0f1722] border border-slate-800 rounded-2xl p-3 space-y-3 lg:self-start lg:sticky lg:top-2">
             <div className="flex items-center gap-2 font-bold text-sm text-white">
               <Users className="w-4 h-4 text-emerald-400" /> Opérateurs
               <span className="ml-auto text-xs text-slate-400 font-semibold">{list.length}/{boosters.length}</span>
@@ -366,12 +366,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
 
         {/* ===== Calendrier + résumé ===== */}
         <div className="space-y-3 min-w-0">
-          <div className="bg-[#0f1722] border border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-[#0f1722] border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-emerald-400 shrink-0" />
                 <h2 className="text-base sm:text-lg font-bold font-tactical text-white break-words">
-                  {isAdmin ? 'Calendrier mensuel' : 'Mon calendrier de missions'}
+                  {isAdmin ? 'Calendrier' : 'Mon calendrier de missions'}
                 </h2>
               </div>
               {activeUser && (
@@ -413,7 +413,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           )}
 
           {/* Légende */}
-          <div className="bg-[#121a24] border border-slate-800 p-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+          <div className="px-1 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
             {(Object.keys(STATUS_META) as DayStatus[]).map(s => (
               <div key={s} className={`flex items-center gap-1.5 ${STATUS_META[s].color}`}>
                 <StatusIcon status={s} /> <span>{STATUS_META[s].label}</span>
@@ -427,15 +427,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               Choisissez un opérateur dans la liste pour afficher son calendrier.
             </div>
           ) : (
-            <div className="bg-[#0f1722] border border-slate-800 overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-slate-800 bg-[#121c27] text-center text-[11px] sm:text-xs uppercase text-slate-400 py-1.5">
+            <div className="bg-[#0f1722] border border-slate-800 rounded-2xl overflow-hidden p-2 sm:p-3">
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-[11px] sm:text-xs font-semibold text-slate-400 pb-2">
                 {daysShort.map(d => (
                   <div key={d}>{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 divide-x divide-y divide-slate-800/80 bg-[#0d141d]">
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                 {Array.from({ length: startDow }).map((_, i) => (
-                  <div key={`e${i}`} className="min-h-[60px] sm:min-h-[96px] bg-slate-950/40 opacity-30" />
+                  <div key={`e${i}`} className="min-h-[60px] sm:min-h-[96px]" />
                 ))}
                 {days.map(d => {
                   const isToday = d.dateStr === today;
@@ -445,20 +445,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                       key={d.dateStr}
                       data-nav={`day-${d.dateStr}`}
                       onClick={() => onSelectDay(d.dateStr, d.shifts)}
-                      className={`min-h-[60px] sm:min-h-[96px] p-1 sm:p-2 cursor-pointer hover:bg-[#15202d] flex flex-col gap-1 transition-opacity ${
-                        isToday ? 'ring-1 ring-emerald-500/70 bg-[#121c27]' : ''
-                      } ${dim ? 'opacity-30' : ''}`}
+                      className={`min-h-[60px] sm:min-h-[96px] p-1 sm:p-2 cursor-pointer rounded-xl border flex flex-col gap-1 transition-all hover:shadow-md hover:-translate-y-px ${
+                        d.status === 'objective_reached' ? 'border-emerald-300 bg-emerald-50/10' : d.status === 'absent' ? 'border-red-300 bg-red-50/10' : d.status === 'late' ? 'border-amber-300 bg-amber-50/10' : 'border-slate-800'
+                      } ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className={`text-[11px] sm:text-xs font-bold px-1 ${isToday ? 'bg-emerald-500 text-black' : 'text-slate-300'}`}>{d.day}</span>
+                        <span className={`text-[11px] sm:text-xs font-bold px-1 ${isToday ? 'bg-blue-600 text-white rounded-full min-w-[22px] text-center' : 'text-slate-300'}`}>{d.day}</span>
                         <span className={`${STATUS_META[d.status].color} ${d.status === 'in_progress' ? 'animate-pulse' : ''} ${d.status === 'no_post' ? 'opacity-30' : ''}`} title={STATUS_META[d.status].label}>
                           <StatusIcon status={d.status} className="w-3.5 h-3.5" />
                         </span>
                       </div>
                       {d.shifts.length > 0 && (
                         <>
-                          <div className="text-[10px] sm:text-[11px] px-1 py-0.5 bg-emerald-950/70 text-emerald-300 border border-emerald-800/60 break-words">
-                            {d.shifts.length} shift{d.shifts.length > 1 ? 's' : ''}
+                          <div className="text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold w-fit">
+                            {d.shifts.length} mission{d.shifts.length > 1 ? 's' : ''}
                           </div>
                           {d.gained > 0 && <div className="text-[10px] sm:text-[11px] text-cyan-300 font-bold">+{formatScoreM(d.gained)}</div>}
                         </>
