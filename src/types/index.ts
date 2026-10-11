@@ -197,6 +197,9 @@ export interface ChatGroup {
   name: string;
   owner_id: string;
   members: string[];
+  admins?: string[]; // administrateurs du groupe (en plus du responsable)
+  avatar_url?: string; // photo du groupe
+  description?: string; // description (200 caractères max)
   created_at?: string;
 }
 

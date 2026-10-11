@@ -422,7 +422,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
         className={`w-full text-left px-3 py-2.5 flex items-center gap-3 border-b ${P.div} cursor-pointer ${t.id === current.id ? P.rowActive : P.rowHover} ${archivedRow ? 'opacity-70' : ''}`}
       >
-        {t.kind === 'all' || t.kind === 'group' ? (
+        {t.kind === 'group' && t.group?.avatar_url ? (
+          <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+        ) : t.kind === 'all' || t.kind === 'group' ? (
           <span className="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5 text-white" />
           </span>
@@ -519,6 +521,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           >
             {current.kind === 'user' ? (
               <Avatar src={current.user?.avatar_url} name={current.title} className="w-10 h-10 rounded-full" />
+            ) : current.kind === 'group' && current.group?.avatar_url ? (
+              <img src={current.group.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
             ) : (
               <span className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
                 {current.kind === 'pair' ? <EyeOff className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}

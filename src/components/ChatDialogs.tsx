@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LogOut, Pencil, Search, Trash2, UserMinus, UserPlus, Users, X, Check } from 'lucide-react';
+import { Camera, LogOut, Pencil, Search, ShieldCheck, ShieldOff, Trash2, UserMinus, UserPlus, Users, X, Check } from 'lucide-react';
 import { db } from '../db/store';
 import { ChatGroup, User } from '../types';
 import { Avatar } from './Avatar';
 import { askConfirm } from './ConfirmModal';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
+import { compressImageToDataUrl } from '../utils/imageUtils';
 
 const useL = () => useApp().theme === 'light';
 
@@ -119,13 +120,18 @@ export const GroupInfoModal: React.FC<{
 }> = ({ group, users, currentUser, onClose, onGone }) => {
   const L = useL();
   const isAdmin = currentUser.role === 'admin';
-  const canManage = isAdmin || group.owner_id === currentUser.id;
+  const isOwnerLike = isAdmin || group.owner_id === currentUser.id;
+  const isGroupAdmin = (group.admins || []).includes(currentUser.id);
+  const canManage = isOwnerLike || isGroupAdmin;
   const isMember = group.members.includes(currentUser.id);
   const [name, setName] = useState(group.name);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState('');
+  const [desc, setDesc] = useState(group.description || '');
+  const [editDesc, setEditDesc] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const byId = (id: string) => users.find(u => u.id === id);
   const sub = L ? 'text-slate-500' : 'text-slate-400';
   const match = (u: User) => `${u.name} ${u.username}`.toLowerCase().includes(q.trim().toLowerCase());
@@ -136,6 +142,36 @@ export const GroupInfoModal: React.FC<{
     const r = db.updateGroup(group.id, currentUser.id, { name });
     setMsg(r.success ? 'Nom enregistré.' : r.error || 'Erreur.');
     if (r.success) setEditing(false);
+  };
+  const pickPhoto = async (file?: File | null) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    setPhotoBusy(true);
+    setMsg('');
+    try {
+      const data = await compressImageToDataUrl(file, 480);
+      const url = await db.uploadFile(data);
+      if (!url) setMsg('Envoi de la photo impossible. Réessaie.');
+      else {
+        const r = db.updateGroup(group.id, currentUser.id, { avatar_url: url });
+        setMsg(r.success ? 'Photo enregistrée.' : r.error || 'Erreur.');
+      }
+    } catch { setMsg('Photo illisible. Choisis une autre image.'); }
+    setPhotoBusy(false);
+  };
+  const removePhoto = () => {
+    const r = db.updateGroup(group.id, currentUser.id, { avatar_url: '' });
+    setMsg(r.success ? 'Photo retirée.' : r.error || 'Erreur.');
+  };
+  const saveDesc = () => {
+    const r = db.updateGroup(group.id, currentUser.id, { description: desc });
+    setMsg(r.success ? 'Description enregistrée.' : r.error || 'Erreur.');
+    if (r.success) setEditDesc(false);
+  };
+  const toggleAdmin = (id: string) => {
+    const cur = group.admins || [];
+    const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    const r = db.updateGroup(group.id, currentUser.id, { admins: next });
+    if (!r.success) setMsg(r.error || 'Erreur.');
   };
   const setMembers = (list: string[]) => {
     const r = db.updateGroup(group.id, currentUser.id, { members: list });
@@ -162,9 +198,24 @@ export const GroupInfoModal: React.FC<{
     <Shell title="Infos du groupe" onClose={onClose}>
       {/* En-tête : grand rond du groupe + nom */}
       <div className="flex flex-col items-center text-center gap-2 pt-1">
-        <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-extrabold text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
-          {(group.name.trim()[0] || 'G').toUpperCase()}
+        <div className="relative">
+          {group.avatar_url ? (
+            <img src={group.avatar_url} alt="" className="w-24 h-24 rounded-full object-cover shadow-lg" />
+          ) : (
+            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-extrabold text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
+              {(group.name.trim()[0] || 'G').toUpperCase()}
+            </div>
+          )}
+          {canManage && (
+            <label className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center cursor-pointer shadow-md border-2 border-white" title="Changer la photo">
+              {photoBusy ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Camera className="w-4 h-4" />}
+              <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={e => { void pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+          )}
         </div>
+        {canManage && group.avatar_url && (
+          <button type="button" onClick={removePhoto} className="text-xs font-semibold text-red-500 cursor-pointer">Retirer la photo</button>
+        )}
         {editing && canManage ? (
           <div className="flex gap-2 w-full">
             <input autoFocus value={name} onChange={e => setName(e.target.value)} maxLength={40} className={fieldCls(L)} />
@@ -180,6 +231,29 @@ export const GroupInfoModal: React.FC<{
         )}
         <p className={`text-xs ${sub}`}>Groupe · {group.members.length} membres · responsable : {byId(group.owner_id)?.name || '—'}</p>
       </div>
+
+      {/* Description */}
+      {(group.description || canManage) && (
+        <div className={`rounded-2xl p-3 ${L ? 'bg-slate-50 border border-slate-200' : 'bg-white/5'}`}>
+          <div className="flex items-center justify-between mb-1">
+            <span className={`text-xs font-semibold ${sub}`}>Description</span>
+            {canManage && !editDesc && (
+              <button type="button" onClick={() => { setDesc(group.description || ''); setEditDesc(true); }} className="text-xs font-bold text-blue-600 cursor-pointer">{group.description ? 'Modifier' : 'Ajouter'}</button>
+            )}
+          </div>
+          {editDesc && canManage ? (
+            <div className="space-y-2">
+              <textarea autoFocus value={desc} onChange={e => setDesc(e.target.value)} maxLength={200} rows={3} placeholder="À quoi sert ce groupe ?" className={`w-full rounded-2xl border px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-500 ${L ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditDesc(false)} className={`flex-1 py-2 rounded-full text-xs font-bold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                <button type="button" onClick={saveDesc} className="flex-1 py-2 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Enregistrer</button>
+              </div>
+            </div>
+          ) : (
+            <p className={`text-sm whitespace-pre-wrap break-words ${group.description ? '' : sub}`}>{group.description || 'Aucune description.'}</p>
+          )}
+        </div>
+      )}
 
       {msg && <p className="text-sm text-emerald-600 text-center">{msg}</p>}
 
@@ -207,11 +281,23 @@ export const GroupInfoModal: React.FC<{
             right={
               u.id === group.owner_id ? (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600/15 text-blue-600 border border-blue-500/30">Responsable</span>
-              ) : canManage && u.id !== currentUser.id ? (
-                <button type="button" onClick={() => setMembers(group.members.filter(m => m !== u.id))} className="w-10 h-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
-                  <UserMinus className="w-5 h-5" />
-                </button>
-              ) : undefined
+              ) : (
+                <span className="flex items-center gap-1">
+                  {(group.admins || []).includes(u.id) && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">Admin</span>
+                  )}
+                  {isOwnerLike && u.id !== currentUser.id && (
+                    <button type="button" onClick={() => toggleAdmin(u.id)} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>
+                      {(group.admins || []).includes(u.id) ? <ShieldOff className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+                    </button>
+                  )}
+                  {canManage && u.id !== currentUser.id && (isOwnerLike || !(group.admins || []).includes(u.id)) && (
+                    <button type="button" onClick={() => setMembers(group.members.filter(m => m !== u.id))} className="w-9 h-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
+                      <UserMinus className="w-5 h-5" />
+                    </button>
+                  )}
+                </span>
+              )
             }
           />
         ))}
@@ -222,7 +308,7 @@ export const GroupInfoModal: React.FC<{
           <LogOut className="w-4 h-4" /> Quitter le groupe
         </button>
       )}
-      {canManage && (
+      {isOwnerLike && (
         <button type="button" onClick={remove} className={`${btnCls} border ${L ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'}`}>
           <Trash2 className="w-4 h-4" /> Supprimer le groupe
         </button>

@@ -1496,10 +1496,12 @@ class DeltaForceStore {
     this.notify();
     return { success: true, id };
   }
-  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[] }): { success: boolean; error?: string } {
+  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[]; avatar_url?: string; description?: string; admins?: string[] }): { success: boolean; error?: string } {
     const g = this.groups.find(x => x.id === id);
     const u = this.users.find(x => x.id === userId);
-    if (!g || !u || (g.owner_id !== userId && u.role !== 'admin')) return { success: false, error: 'Seul le responsable du groupe peut le modifier.' };
+    const isOwner = !!g && !!u && (g.owner_id === userId || u.role === 'admin');
+    const isGroupAdmin = !!g && (g.admins || []).includes(userId);
+    if (!g || !u || (!isOwner && !isGroupAdmin)) return { success: false, error: 'Seul un administrateur du groupe peut le modifier.' };
     if (patch.name !== undefined) {
       const clean = patch.name.trim();
       if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
@@ -1508,9 +1510,16 @@ class DeltaForceStore {
     if (patch.members) {
       const members = [...new Set(patch.members)];
       if (members.length < 1) return { success: false, error: 'Un groupe doit garder au moins un membre.' };
+      if (!isOwner && ![g.owner_id, ...(g.admins || [])].filter(x => x !== userId).every(x => members.includes(x))) {
+        return { success: false, error: 'Tu ne peux pas retirer le responsable ni un autre administrateur.' };
+      }
       g.members = members;
       if (!members.includes(g.owner_id)) g.owner_id = members[0];
+      if (g.admins) g.admins = g.admins.filter(x => members.includes(x));
     }
+    if (patch.avatar_url !== undefined) g.avatar_url = patch.avatar_url || undefined;
+    if (patch.description !== undefined) g.description = patch.description.trim().slice(0, 200) || undefined;
+    if (patch.admins && isOwner) g.admins = [...new Set(patch.admins)].filter(x => g.members.includes(x) && x !== g.owner_id);
     this.notify();
     return { success: true };
   }
@@ -1520,6 +1529,7 @@ class DeltaForceStore {
     const rest = g.members.filter(m => m !== userId);
     if (rest.length === 0) return this.deleteGroup(id, userId);
     g.members = rest;
+    if (g.admins) g.admins = g.admins.filter(x => x !== userId);
     if (g.owner_id === userId) g.owner_id = rest[0];
     this.notify();
     return { success: true };
