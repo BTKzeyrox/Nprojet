@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Shield,
   Lock,
@@ -10,8 +10,11 @@ import {
   Sun,
   Moon,
   Globe,
-  Download
+  Phone,
+  ArrowLeft,
+  CheckCircle2,
 } from 'lucide-react';
+import { isKeyboardOpen } from '../utils/keyboard';
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
@@ -114,6 +117,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const isLight = theme === 'light';
 
+  // Clavier ouvert : on ajoute de l'espace sous le formulaire pour pouvoir le faire défiler au-dessus du clavier
+  const [kb, setKb] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const on = () => setKb(isKeyboardOpen(vv));
+    const onFocus = () => { on(); setTimeout(on, 150); setTimeout(on, 450); };
+    on();
+    vv?.addEventListener('resize', on);
+    document.addEventListener('focusin', onFocus);
+    document.addEventListener('focusout', onFocus);
+    return () => {
+      vv?.removeEventListener('resize', on);
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('focusout', onFocus);
+    };
+  }, []);
+
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -135,373 +155,246 @@ export const LoginView: React.FC<LoginViewProps> = ({
     onLoginSuccess(result.user);
   };
 
+  // ---------- Aspect : carte flottante sur fond bleu ----------
+  // Couleurs en « style » direct : elles ne dépendent pas des règles de thème du site
+  const C = isLight
+    ? { card: '#ffffff', text: '#0f172a', sub: '#64748b', field: '#f1f5f9', line: '#cbd5e1', ico: '#94a3b8', errBg: '#fef2f2', errLine: '#fecaca', errText: '#b91c1c', okBg: '#ecfdf5', okLine: '#a7f3d0', okText: '#047857' }
+    : { card: '#0f1e3a', text: '#f1f5f9', sub: '#94a3b8', field: '#0a1424', line: '#2a3d63', ico: '#64748b', errBg: '#2a1215', errLine: '#7f1d1d', errText: '#fca5a5', okBg: '#0b2a22', okLine: '#065f46', okText: '#6ee7b7' };
+  // Fond : formes douces en dégradés radiaux (aucun flou calculé : l'écran reste fluide)
+  const bgPage = isLight
+    ? 'radial-gradient(circle at 0% 0%, rgba(96,165,250,0.40) 0, transparent 38%), radial-gradient(circle at 100% 40%, rgba(147,197,253,0.25) 0, transparent 40%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.35) 0, transparent 45%), linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)'
+    : 'radial-gradient(circle at 0% 0%, rgba(59,130,246,0.22) 0, transparent 38%), radial-gradient(circle at 100% 40%, rgba(96,165,250,0.12) 0, transparent 40%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.22) 0, transparent 45%), linear-gradient(160deg, #050b18 0%, #0b1a38 55%, #12306b 100%)';
+  const btnGrad = 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
+  const fieldCls = 'w-full h-12 rounded-2xl border pl-11 pr-4 text-[15px] outline-none transition-shadow focus:ring-2 focus:ring-blue-500/50';
+  const fieldStyle: React.CSSProperties = { backgroundColor: C.field, borderColor: C.line, color: C.text, borderRadius: 16 };
+  const labelCls = 'block text-[13px] font-semibold mb-1.5';
+  const iconCls = 'w-[18px] h-[18px] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none';
+  const eyeBtn = (shown: boolean, toggle: () => void) => (
+    <button type="button" onClick={toggle} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer" style={{ color: C.ico }} aria-label={shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
+      {shown ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+    </button>
+  );
+  const primaryBtn = 'w-full h-12 rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shadow-lg transition-transform active:scale-[0.99]';
+  const ghostBtn = 'w-full h-12 rounded-2xl font-semibold text-[15px] border cursor-pointer';
+  const errBox = (msg: string) => (
+    <div className="mb-4 p-3 rounded-2xl border text-[13px] font-semibold flex items-start gap-2.5" style={{ backgroundColor: C.errBg, borderColor: C.errLine, color: C.errText }}>
+      <AlertOctagon className="w-4 h-4 shrink-0 mt-0.5" /><div className="flex-1">{msg}</div>
+    </div>
+  );
+  const okBox = (msg: string) => (
+    <div className="p-4 rounded-2xl border text-[14px] leading-relaxed flex items-start gap-2.5" style={{ backgroundColor: C.okBg, borderColor: C.okLine, color: C.okText }}>
+      <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /><div className="flex-1">{msg}</div>
+    </div>
+  );
+  const circleBtn = 'w-10 h-10 rounded-full flex items-center justify-center cursor-pointer';
+  const mode: 'login' | 'signup' | 'forgot' = signupOpen ? 'signup' : forgotOpen ? 'forgot' : 'login';
+  const heading = mode === 'signup' ? 'Créer un compte' : mode === 'forgot' ? 'Mot de passe oublié' : t('login_title');
+  const subheading = mode === 'signup' ? "L'administrateur doit valider ta demande" : mode === 'forgot' ? 'Choisis un nouveau mot de passe' : t('brand_sub');
+
   return (
-    <div className={`min-h-screen flex flex-col justify-between py-6 px-4 sm:px-8 max-w-6xl mx-auto w-full relative transition-colors ${
-      isLight ? 'text-slate-900' : 'text-slate-100'
-    }`}>
-      {/* Background Ambience */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Top Header */}
-      <header className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-3 border-b relative z-10 ${
-        isLight ? 'border-slate-200' : 'border-slate-800/80'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-0.5 shadow-lg flex items-center justify-center">
-            <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-              isLight ? 'bg-white' : 'bg-[#080d14]'
-            }`}>
-              <Shield className="w-5 h-5 text-emerald-500" />
-            </div>
-          </div>
-          <div>
-            <h1 className="font-tactical font-black text-lg sm:text-xl tracking-wider flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-              {t('brand_title')}
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                isLight
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
-              }`}>
-                {t('brand_version')}
-              </span>
-            </h1>
-            <p className="text-xs opacity-60 font-mono">
-              {t('brand_sub')}
-            </p>
-          </div>
-        </div>
-
-        {/* Controls: Theme Toggle + Language Switcher */}
-        <div className="flex items-center gap-2.5">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isLight
-                ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                : 'bg-[#0e1724] border-slate-700 text-slate-300 hover:bg-[#132032]'
-            }`}
-            title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}
-          >
-            {isLight ? <Moon className="w-4 h-4 text-indigo-500" /> : <Sun className="w-4 h-4 text-amber-400" />}
-          </button>
-
-          {/* Language Toggle */}
-          <button
-            onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono font-semibold transition-colors cursor-pointer ${
-              isLight
-                ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                : 'bg-[#0e1724] border-slate-700 text-slate-300 hover:bg-[#132032]'
-            }`}
-            title="Changer de langue / 切换语言"
-          >
-            <Globe className="w-3.5 h-3.5 text-teal-400" />
-            <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Zone centrale : formulaire de connexion */}
-      <div className="my-auto py-8 flex justify-center relative z-10">
-        
-        {/* Left Column: Modern Login Card */}
-        <div className="w-full max-w-md space-y-6">
-          <div className={`border rounded-2xl p-6 sm:p-8 shadow-2xl transition-all relative overflow-hidden ${
-            isLight
-              ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-              : 'bg-[#0b131e]/90 backdrop-blur-xl border-slate-700/80 text-white shadow-emerald-950/20'
-          }`}>
-            {/* Top Tactical Light Line */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
-
-            <div className="mb-6">
-              <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border font-bold ${
-                isLight
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-emerald-950 text-emerald-400 border-emerald-500/30'
-              }`}>
-                {t('login_operator')}
-              </span>
-              <h2 className="text-2xl font-tactical font-black tracking-wide mt-2 bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                {t('login_title')}
-              </h2>
-            </div>
-
-            {/* Error Message Alert */}
-            {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-red-950/80 border border-red-500/60 text-red-200 text-xs font-mono flex items-start gap-2.5 animate-in fade-in">
-                <AlertOctagon className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <div className="flex-1 font-semibold">{errorMsg}</div>
-              </div>
-            )}
-
-            {/* Modern Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono opacity-80 font-semibold mb-1.5 uppercase">
-                  {t('username_label')}
-                </label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    autoComplete="username"
-                    placeholder={t('username_placeholder')}
-                    className={`w-full border rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-all ${
-                      isLight
-                        ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                        : 'bg-[#070c13] border-slate-700 text-white placeholder-slate-500'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono opacity-80 font-semibold mb-1.5 uppercase">
-                  {t('password_label')}
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    autoComplete="current-password"
-                    placeholder="••••••••••••"
-                    className={`w-full border rounded-xl pl-10 pr-10 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-all ${
-                      isLight
-                        ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                        : 'bg-[#070c13] border-slate-700 text-white placeholder-slate-500'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-tactical font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
-              >
-                {isLoading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>{t('auth_in_progress')}</span>
-                  </span>
-                ) : (
-                  <>
-                    <span>{t('btn_connect')}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <button
-              type="button"
-              onClick={() => setForgotOpen(true)}
-              className="w-full mt-3 text-center text-xs font-mono text-emerald-500 hover:text-emerald-400 underline underline-offset-2 cursor-pointer"
-            >
-              Mot de passe oublié ?
-            </button>
-
-            <div className="mt-4 pt-4 border-t border-slate-700/60 text-center text-xs font-mono">
-              <span className="opacity-70">Pas encore de compte ?</span>{' '}
-              <button
-                type="button"
-                onClick={() => setSignupOpen(true)}
-                className="text-emerald-500 hover:text-emerald-400 font-bold underline underline-offset-2 cursor-pointer"
-              >
-                Créer un compte
-              </button>
-            </div>
-
-          </div>
-        </div>
-
+    <div className="df-login fixed inset-0 z-40 overflow-y-auto overflow-x-hidden" style={{ background: bgPage, touchAction: 'pan-y', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      {/* Thème et langue */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+        <button onClick={toggleTheme} className={circleBtn} style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}>
+          {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        </button>
+        <button onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Changer de langue / 切换语言">
+          <Globe className="w-3.5 h-3.5" /><span>{lang === 'fr' ? '中文' : 'FR'}</span>
+        </button>
       </div>
 
-      {/* Bottom Footer */}
-      <footer className={`py-3 border-t flex items-center justify-center text-xs font-mono opacity-60 relative z-10 ${
-        isLight ? 'border-slate-200' : 'border-slate-800/80'
-      }`}>
-        <div className="text-center">Gestion Pro · 2026</div>
-      </footer>
+      <div className="relative min-h-full flex flex-col items-center justify-center px-4 pt-20 pb-8" style={{ paddingBottom: kb ? '60vh' : undefined }}>
+        <div className="relative w-full max-w-md rounded-[28px] px-5 sm:px-8 pt-14 pb-6 shadow-xl" style={{ backgroundColor: C.card, color: C.text }}>
+          {/* Logo qui dépasse en haut de la carte */}
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full flex items-center justify-center shadow-xl" style={{ backgroundColor: C.card, border: `4px solid ${isLight ? '#dbeafe' : '#1e3a8a'}` }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: btnGrad }}>
+              <Shield className="w-7 h-7" style={{ color: '#ffffff' }} />
+            </div>
+          </div>
 
-      {forgotOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80" onClick={closeForgot} role="dialog" aria-modal="true">
-          <div className="w-full max-w-sm bg-[#0d1624] border border-slate-600 p-5 space-y-4 text-slate-100" onClick={e => e.stopPropagation()}>
-            <h3 className="font-tactical font-bold text-base">Mot de passe oublié</h3>
-            {fgDone ? (
-              <>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  Demande envoyée. Si ce pseudo existe, l'administrateur va la voir. Après sa validation, connecte-toi avec ton nouveau mot de passe.
-                </p>
-                <button type="button" onClick={closeForgot} className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">
-                  Fermer
-                </button>
-              </>
-            ) : (
-              <form onSubmit={submitForgot} className="space-y-3 text-xs font-mono">
-                <p className="text-sm text-slate-300 leading-relaxed font-sans">
-                  Entre ton pseudo et le nouveau mot de passe que tu veux. Il sera actif quand l'administrateur aura validé.
-                </p>
-                {fgError && <div className="p-2.5 bg-red-950 border border-red-500/60 text-red-200 font-semibold">{fgError}</div>}
+          <div className="text-center mb-6">
+            <div className="text-[11px] font-bold tracking-[0.18em] uppercase" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>{t('brand_title')}</div>
+            <h1 className="text-2xl font-extrabold mt-1">{heading}</h1>
+            <p className="text-[13px] mt-1" style={{ color: C.sub }}>{subheading}</p>
+          </div>
+
+          {/* ---------- Connexion ---------- */}
+          {mode === 'login' && (
+            <>
+              {errorMsg && errBox(errorMsg)}
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
-                  <input
-                    type="text" value={fgUser} onChange={e => setFgUser(e.target.value)}
-                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe</label>
+                  <label className={labelCls}>{t('username_label')}</label>
                   <div className="relative">
-                    <input
-                      type={fgShow ? 'text' : 'password'} value={fgPass} onChange={e => setFgPass(e.target.value)}
-                      autoComplete="new-password"
-                      className="w-full bg-[#141e2a] border border-slate-600 p-2.5 pr-10 text-white focus:border-emerald-500 focus:outline-none"
-                    />
-                    <button type="button" onClick={() => setFgShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer">
-                      {fgShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <UserIcon className={iconCls} style={{ color: C.ico }} />
+                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="username" placeholder={t('username_placeholder')} className={fieldCls} style={fieldStyle} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Répète le mot de passe</label>
-                  <input
-                    type={fgShow ? 'text' : 'password'} value={fgPass2} onChange={e => setFgPass2(e.target.value)}
-                    autoComplete="new-password"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
-                  />
+                  <label className={labelCls}>{t('password_label')}</label>
+                  <div className="relative">
+                    <Lock className={iconCls} style={{ color: C.ico }} />
+                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="current-password" placeholder="••••••••" className={`${fieldCls} pr-12`} style={fieldStyle} />
+                    {eyeBtn(showPassword, () => setShowPassword(!showPassword))}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setForgotOpen(true)} className="block ml-auto text-[13px] font-semibold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                  Mot de passe oublié ?
+                </button>
+                <button type="submit" disabled={isLoading} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>
+                  {isLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>{t('auth_in_progress')}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span>{t('btn_connect')}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+              <div className="mt-5 pt-4 border-t text-center text-[14px]" style={{ borderColor: C.line }}>
+                <span style={{ color: C.sub }}>Pas encore de compte ?</span>{' '}
+                <button type="button" onClick={() => setSignupOpen(true)} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                  Créer un compte
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ---------- Mot de passe oublié ---------- */}
+          {mode === 'forgot' && (
+            fgDone ? (
+              <div className="space-y-4">
+                {okBox("Demande envoyée. Si ce pseudo existe, l'administrateur va la voir. Après sa validation, connecte-toi avec ton nouveau mot de passe.")}
+                <button type="button" onClick={closeForgot} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>Retour à la connexion</button>
+              </div>
+            ) : (
+              <form onSubmit={submitForgot} className="space-y-4">
+                <p className="text-[13px] leading-relaxed" style={{ color: C.sub }}>
+                  Entre ton pseudo et le nouveau mot de passe que tu veux. Il sera actif quand l'administrateur aura validé.
+                </p>
+                {fgError && errBox(fgError)}
+                <div>
+                  <label className={labelCls}>Pseudo</label>
+                  <div className="relative">
+                    <UserIcon className={iconCls} style={{ color: C.ico }} />
+                    <input type="text" value={fgUser} onChange={e => setFgUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} className={fieldCls} style={fieldStyle} />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
-                  <textarea
-                    rows={2}
-                    maxLength={300}
-                    value={fgNote}
-                    onChange={e => setFgNote(e.target.value)}
-                    placeholder="Un mot pour le responsable (facultatif)"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
-                  />
+                  <label className={labelCls}>Nouveau mot de passe</label>
+                  <div className="relative">
+                    <Lock className={iconCls} style={{ color: C.ico }} />
+                    <input type={fgShow ? 'text' : 'password'} value={fgPass} onChange={e => setFgPass(e.target.value)} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
+                    {eyeBtn(fgShow, () => setFgShow(v => !v))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" onClick={closeForgot} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
-                    Annuler
+                <div>
+                  <label className={labelCls}>Répète le mot de passe</label>
+                  <div className="relative">
+                    <Lock className={iconCls} style={{ color: C.ico }} />
+                    <input type={fgShow ? 'text' : 'password'} value={fgPass2} onChange={e => setFgPass2(e.target.value)} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
+                    {eyeBtn(fgShow, () => setFgShow(v => !v))}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Description (facultatif)</label>
+                  <textarea rows={2} maxLength={300} value={fgNote} onChange={e => setFgNote(e.target.value)} placeholder="Un mot pour le responsable (facultatif)" className="w-full rounded-2xl border px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500/50" style={fieldStyle} />
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <button type="button" onClick={closeForgot} className={ghostBtn} style={{ borderColor: C.line, color: C.text, backgroundColor: 'transparent' }}>
+                    <span className="inline-flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" />Retour</span>
                   </button>
-                  <button type="submit" disabled={fgBusy} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
+                  <button type="submit" disabled={fgBusy} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>
                     {fgBusy ? 'Envoi…' : 'Envoyer'}
                   </button>
                 </div>
               </form>
-            )}
-          </div>
-        </div>
-      )}
+            )
+          )}
 
-      {signupOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-y-auto" onClick={closeSignup}>
-          <div className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-4 text-slate-100 text-xs font-mono" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-tactical font-bold text-base text-white">Créer un compte opérateur</h3>
-              <button type="button" onClick={closeSignup} className="p-1 text-slate-400 hover:text-white" aria-label="Fermer">✕</button>
-            </div>
-            {sgDone ? (
+          {/* ---------- Inscription ---------- */}
+          {mode === 'signup' && (
+            sgDone ? (
               <div className="space-y-4">
-                <div className="p-3 border border-emerald-600/60 bg-emerald-950/40 text-emerald-200 text-sm leading-relaxed">
-                  Demande envoyée. L'administrateur doit la valider avant que vous puissiez vous connecter.
-                </div>
-                <button type="button" onClick={closeSignup} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
-                  Fermer
-                </button>
+                {okBox("Demande envoyée. L'administrateur doit la valider avant que vous puissiez vous connecter.")}
+                <button type="button" onClick={closeSignup} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>Retour à la connexion</button>
               </div>
             ) : (
-              <form onSubmit={submitSignup} className="space-y-3">
-                {sgError && <div className="p-2.5 border border-red-500/60 bg-red-950/60 text-red-200 text-xs font-semibold">{sgError}</div>}
+              <form onSubmit={submitSignup} className="space-y-4">
+                {sgError && errBox(sgError)}
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Nom complet</label>
-                  <input type="text" value={sgName} onChange={e => setSgName(e.target.value)} autoComplete="name"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
-                  <input type="text" value={sgUser} onChange={e => setSgUser(e.target.value)}
-                    autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="username"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
-                  <input type="tel" inputMode="numeric" maxLength={16} placeholder="261 34 12 345 67"
-                    value={sgPhone} onChange={e => setSgPhone(formatPhone(e.target.value))}
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Vacation souhaité</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => setSgShift('day')}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 border font-bold ${sgShift === 'day' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>
-                      <Sun className="w-4 h-4" /> Jour
-                    </button>
-                    <button type="button" onClick={() => setSgShift('night')}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 border font-bold ${sgShift === 'night' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>
-                      <Moon className="w-4 h-4" /> Nuit
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
+                  <label className={labelCls}>Nom complet</label>
                   <div className="relative">
-                    <input type={sgShow ? 'text' : 'password'} value={sgPass} onChange={e => setSgPass(e.target.value)}
-                      autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password"
-                      className="w-full bg-[#141e2a] border border-slate-600 p-2.5 pr-10 text-white focus:border-emerald-500" />
-                    <button type="button" onClick={() => setSgShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500" aria-label="Afficher le mot de passe">
-                      {sgShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <UserIcon className={iconCls} style={{ color: C.ico }} />
+                    <input type="text" value={sgName} onChange={e => setSgName(e.target.value)} autoComplete="name" className={fieldCls} style={fieldStyle} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Répète le mot de passe</label>
-                  <input type={sgShow ? 'text' : 'password'} value={sgPass2} onChange={e => setSgPass2(e.target.value)}
-                    autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                  <label className={labelCls}>Pseudo</label>
+                  <div className="relative">
+                    <UserIcon className={iconCls} style={{ color: C.ico }} />
+                    <input type="text" value={sgUser} onChange={e => setSgUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="username" className={fieldCls} style={fieldStyle} />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
-                  <textarea
-                    rows={2}
-                    maxLength={300}
-                    value={sgNote}
-                    onChange={e => setSgNote(e.target.value)}
-                    placeholder="Un mot pour le responsable (facultatif)"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
-                  />
+                  <label className={labelCls}>Téléphone</label>
+                  <div className="relative">
+                    <Phone className={iconCls} style={{ color: C.ico }} />
+                    <input type="tel" inputMode="numeric" maxLength={16} placeholder="261 34 12 345 67" value={sgPhone} onChange={e => setSgPhone(formatPhone(e.target.value))} className={fieldCls} style={fieldStyle} />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" onClick={closeSignup} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold text-sm">
-                    Annuler
+                <div>
+                  <label className={labelCls}>Vacation souhaitée</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([['day', 'Jour', Sun], ['night', 'Nuit', Moon]] as const).map(([val, lab, Ico]) => {
+                      const on = sgShift === val;
+                      return (
+                        <button key={val} type="button" onClick={() => setSgShift(val)} className="h-14 rounded-2xl border font-bold text-[15px] flex items-center justify-center gap-2 cursor-pointer transition-colors" style={on ? { background: btnGrad, color: '#ffffff', borderColor: 'transparent' } : { backgroundColor: C.field, color: C.text, borderColor: C.line }}>
+                          <Ico className="w-5 h-5" />{lab}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Mot de passe (6 caractères min.)</label>
+                  <div className="relative">
+                    <Lock className={iconCls} style={{ color: C.ico }} />
+                    <input type={sgShow ? 'text' : 'password'} value={sgPass} onChange={e => setSgPass(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
+                    {eyeBtn(sgShow, () => setSgShow(v => !v))}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Répète le mot de passe</label>
+                  <div className="relative">
+                    <Lock className={iconCls} style={{ color: C.ico }} />
+                    <input type={sgShow ? 'text' : 'password'} value={sgPass2} onChange={e => setSgPass2(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
+                    {eyeBtn(sgShow, () => setSgShow(v => !v))}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Description (facultatif)</label>
+                  <textarea rows={2} maxLength={300} value={sgNote} onChange={e => setSgNote(e.target.value)} placeholder="Un mot pour le responsable (facultatif)" className="w-full rounded-2xl border px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500/50" style={fieldStyle} />
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <button type="button" onClick={closeSignup} className={ghostBtn} style={{ borderColor: C.line, color: C.text, backgroundColor: 'transparent' }}>
+                    <span className="inline-flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" />Retour</span>
                   </button>
-                  <button type="submit" disabled={sgBusy} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm disabled:opacity-60">
+                  <button type="submit" disabled={sgBusy} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>
                     {sgBusy ? 'Envoi…' : 'Envoyer la demande'}
                   </button>
                 </div>
               </form>
-            )}
-          </div>
+            )
+          )}
         </div>
-      )}
+
+        <div className="mt-6 text-center text-xs" style={{ color: 'rgba(255,255,255,0.75)' }}>Gestion Pro · 2026</div>
+      </div>
     </div>
   );
 };

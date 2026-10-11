@@ -4,6 +4,8 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { BottomNav } from './components/BottomNav';
+import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ReportProblemModal } from './components/ReportProblemModal';
@@ -61,6 +63,8 @@ export default function App() {
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
+  // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
+  useEffect(() => { if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
@@ -71,7 +75,7 @@ export default function App() {
     const sync = () => {
       // On suit la vue visible seulement si le clavier est ouvert (la vue rétrécit de plus de 100 px).
       // Sans clavier (ou en zoom), la barre reste fixe en haut : l'effet élastique de l'iPhone ne la déplace plus.
-      const keyboardOpen = window.innerHeight - vv.height > 100;
+      const keyboardOpen = isKeyboardOpen(vv);
       if (vv.scale > 1.01 || !keyboardOpen) {
         root.style.removeProperty('--vvh');
         root.style.removeProperty('--vvt');
@@ -81,11 +85,17 @@ export default function App() {
       root.style.setProperty('--vvt', `${vv.offsetTop}px`);
     };
     sync();
+    // Le clavier met un instant à s'ouvrir ou se fermer : on resynchronise après le focus
+    const onFocus = () => { sync(); setTimeout(sync, 120); setTimeout(sync, 400); };
     vv.addEventListener('resize', sync);
     vv.addEventListener('scroll', sync);
+    document.addEventListener('focusin', onFocus);
+    document.addEventListener('focusout', onFocus);
     return () => {
       vv.removeEventListener('resize', sync);
       vv.removeEventListener('scroll', sync);
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('focusout', onFocus);
       root.style.removeProperty('--vvh');
       root.style.removeProperty('--vvt');
     };
@@ -110,7 +120,7 @@ export default function App() {
   const sbPhone = wide < 768;
   const sbTablet = wide >= 768 && wide < 1024;
   const sbCompact = sbTablet ? !isMobileSidebarOpen : !sbPhone && sbCollapsed;
-  const sbWidth = sbPhone ? '0px' : sbTablet || sbCollapsed ? '4.5rem' : '18rem';
+  const sbWidth = sbPhone ? '0px' : sbTablet || sbCollapsed ? '5.5rem' : '19rem'; // largeur du menu + marge autour
   useEffect(() => {
     document.documentElement.style.setProperty('--sbw', sbWidth);
   }, [sbWidth]);
@@ -349,12 +359,12 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
+        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px - var(--bnh, 0px))', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
-            <FeedView currentUser={viewUser} />
+            <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
@@ -382,7 +392,7 @@ export default function App() {
                   initialUserId={focusBoosterId || undefined}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} />
+                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} onOpenProfile={handleOpenEmployeeCV} />
               ) : (
                 /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
@@ -415,7 +425,7 @@ export default function App() {
                   onSelectDay={handleSelectDay}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} />
+                <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               ) : activeView === 'settings' ? (
                 <SettingsView personalOnly />
               ) : (
@@ -437,6 +447,14 @@ export default function App() {
           </ErrorBoundary>
           </Suspense>
         </main>
+
+        {/* Barre du bas (téléphone) */}
+        <BottomNav
+          isAdmin={viewUser.role === 'admin'}
+          activeView={activeView}
+          onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
+          onOpenMenu={() => setIsMobileSidebarOpen(true)}
+        />
       </div>
 
       {/* PHOTO DE PROFIL OBLIGATOIRE POUR LES EMPLOYÉS */}

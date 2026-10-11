@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
+import { downloadFile } from '../utils/attachments';
 
 interface LightboxModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
   gallery?: string[]; // toutes les preuves de la session (précédent / suivant)
+  names?: string[]; // noms de fichier, dans le même ordre que gallery (pour Télécharger)
   title?: string;
   subtitle?: string;
   score?: number;
@@ -27,6 +30,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   onClose,
   imageUrl,
   gallery,
+  names,
   title = "Justificatif - Gestion Pro",
   subtitle,
   score,
@@ -128,46 +132,19 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     if (pts.current.size === 0) setDragging(false);
   };
 
-  const iconBtn = 'p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white cursor-pointer';
+  const round = 'w-11 h-11 rounded-full flex items-center justify-center bg-white/12 hover:bg-white/25 backdrop-blur text-white cursor-pointer transition-colors shrink-0';
+  const info = [
+    operatorName && { k: 'Opérateur', v: operatorName },
+    clientTag && { k: 'Mission', v: clientTag },
+    score !== undefined && { k: 'Quantité vérifiée', v: formatScoreM(score) },
+    timestamp && { k: 'Horodatage', v: timestamp },
+  ].filter(Boolean) as { k: string; v: string }[];
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-md" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }} role="dialog" aria-modal="true">
-      {/* Barre du haut */}
-      <header className="w-full shrink-0 px-2 sm:px-4 py-2.5 bg-[#0a111a]/95 border-b border-slate-800 flex items-center justify-between gap-2">
-        <button type="button" onClick={onClose} className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white text-xs font-bold shrink-0" title="Retour (ESC)">
-          <ArrowLeft className="w-4 h-4 text-emerald-400" /> Retour
-        </button>
-
-        <div className="min-w-0 flex-1 text-center">
-          <h3 className="font-tactical text-xs sm:text-sm font-bold text-white break-words leading-tight">{title}</h3>
-          {subtitle && <p className="text-[10px] text-slate-400 font-mono break-words leading-tight">{subtitle}</p>}
-          {imgs.length > 1 && <p className="text-[11px] text-emerald-300 font-bold mt-0.5">{idx + 1} / {imgs.length}</p>}
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <div className="hidden sm:flex items-center bg-[#101b28] border border-slate-700">
-            <button type="button" onClick={() => zoomBy(1 / 1.3)} className={iconBtn} title="Zoom arrière"><ZoomOut className="w-4 h-4" /></button>
-            <span className="text-[11px] font-mono px-1.5 text-slate-300 min-w-11 text-center">{Math.round(view.s * 100)}%</span>
-            <button type="button" onClick={() => zoomBy(1.3)} className={iconBtn} title="Zoom avant"><ZoomIn className="w-4 h-4" /></button>
-            <button type="button" onClick={resetView} className={`${iconBtn} border-l border-slate-700`} title="100 %"><RotateCcw className="w-4 h-4" /></button>
-          </div>
-          {onDelete && (!canDelete || canDelete(current)) && (
-            <button type="button" onClick={() => onDelete(current)} className="flex items-center gap-1.5 px-3 min-h-[40px] bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold cursor-pointer" title="Supprimer">
-              <Trash2 className="w-4 h-4" /> <span>Supprimer</span>
-            </button>
-          )}
-          <a href={current} download="preuve.png" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Télécharger l'image">
-            <Download className="w-4 h-4" />
-          </a>
-          <button type="button" onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Fermer" aria-label="Fermer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Image : pincement, molette, double-tap, déplacement */}
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black" role="dialog" aria-modal="true">
+      {/* Image plein écran : pincement, molette, double-tap, déplacement */}
       <div
-        className="relative flex-1 min-h-0 w-full overflow-hidden flex items-center justify-center select-none"
+        className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
         style={{ touchAction: 'none', cursor: view.s > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -185,31 +162,48 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             transition: dragging ? 'none' : 'transform 120ms ease-out',
           }}
         />
-
         {imgs.length > 1 && (
           <>
-            <button type="button" onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2.5 bg-black/60 hover:bg-black/80 border border-slate-600 text-white" aria-label="Précédent">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button type="button" onClick={e => { e.stopPropagation(); go(1); }} onPointerDown={e => e.stopPropagation()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-black/60 hover:bg-black/80 border border-slate-600 text-white" aria-label="Suivant">
-              <ChevronRight className="w-6 h-6" />
-            </button>
+            <button type="button" onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute left-3 top-1/2 -translate-y-1/2`} aria-label="Précédent"><ChevronLeft className="w-6 h-6" /></button>
+            <button type="button" onClick={e => { e.stopPropagation(); go(1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute right-3 top-1/2 -translate-y-1/2`} aria-label="Suivant"><ChevronRight className="w-6 h-6" /></button>
           </>
         )}
       </div>
 
-      {/* Infos */}
-      {(score !== undefined || clientTag || operatorName || timestamp) && (
-        <footer className="w-full shrink-0 px-4 py-2.5 bg-[#0a111a]/95 border-t border-slate-800 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs font-mono">
-          {operatorName && (<div><span className="text-slate-500 uppercase text-[10px] block">Opérateur</span><span className="text-white font-semibold">{operatorName}</span></div>)}
-          {clientTag && (<div><span className="text-slate-500 uppercase text-[10px] block">Mission</span><span className="text-cyan-400 font-semibold">{clientTag}</span></div>)}
-          {score !== undefined && (<div><span className="text-slate-500 uppercase text-[10px] block">Quantité vérifiée</span><span className="text-emerald-400 font-bold">{formatScoreM(score)}</span></div>)}
-          {timestamp && (<div><span className="text-slate-500 uppercase text-[10px] block">Horodatage</span><span className="text-slate-400">{timestamp}</span></div>)}
-        </footer>
-      )}
-      <div className="hidden"><ShieldCheck /></div>
-    </div>
+      {/* Haut : fermer, titre, actions (flottants sur l'image) */}
+      <header className="absolute top-0 inset-x-0 flex items-center gap-3 px-3 pb-6 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+        <button type="button" onClick={onClose} className={`${round} pointer-events-auto`} title="Fermer (ESC)" aria-label="Fermer"><ArrowLeft className="w-5 h-5" /></button>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-white truncate leading-tight">{title}</h3>
+          {subtitle && <p className="text-xs text-white/70 truncate leading-tight">{subtitle}</p>}
+        </div>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {onDelete && (!canDelete || canDelete(current)) && (
+            <button type="button" onClick={() => onDelete(current)} className={`${round} !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
+          )}
+          <a href={current} download={names?.[idx] || 'photo.png'} onClick={e => { if (names?.[idx]) { e.preventDefault(); void downloadFile(current, names[idx]); } }} className={round} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /></a>
+        </div>
+      </header>
+
+      {/* Bas : compteur, zoom (ordinateur) et infos */}
+      <footer className="absolute bottom-0 inset-x-0 flex flex-col items-center gap-2 px-3 pt-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
+        {info.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 px-4 py-2 rounded-2xl bg-white/12 backdrop-blur text-xs text-white">
+            {info.map(i => (<span key={i.k}><span className="text-white/60">{i.k} : </span><span className="font-semibold">{i.v}</span></span>))}
+          </div>
+        )}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {imgs.length > 1 && <span className="px-3 py-1.5 rounded-full bg-white/12 backdrop-blur text-xs font-semibold text-white">{idx + 1} / {imgs.length}</span>}
+          <div className="hidden sm:flex items-center rounded-full bg-white/12 backdrop-blur text-white">
+            <button type="button" onClick={() => zoomBy(1 / 1.3)} className="p-2.5 rounded-full hover:bg-white/20 cursor-pointer" title="Zoom arrière"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-[11px] font-mono px-1 min-w-11 text-center">{Math.round(view.s * 100)}%</span>
+            <button type="button" onClick={() => zoomBy(1.3)} className="p-2.5 rounded-full hover:bg-white/20 cursor-pointer" title="Zoom avant"><ZoomIn className="w-4 h-4" /></button>
+            <button type="button" onClick={resetView} className="p-2.5 rounded-full hover:bg-white/20 cursor-pointer" title="100 %"><RotateCcw className="w-4 h-4" /></button>
+          </div>
+        </div>
+      </footer>
+      <div className="hidden"><ShieldCheck /><X /></div>
+    </div>,
+    document.body
   );
 };

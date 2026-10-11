@@ -16,6 +16,7 @@ import {
   ChatGroup,
   ChatRead,
   NewsPost,
+  NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -259,8 +260,11 @@ class DeltaForceStore {
 
   // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
   private pollMs = 20000;
+  // Plusieurs écrans peuvent demander le mode rapide (messagerie, actualités) : on compte, 8 s tant qu'un écran l'utilise
+  private fastCount = 0;
   public setFastPoll(on: boolean) {
-    const ms = on ? 8000 : 20000;
+    this.fastCount = Math.max(0, this.fastCount + (on ? 1 : -1));
+    const ms = this.fastCount > 0 ? 8000 : 20000;
     if (ms === this.pollMs) return;
     this.pollMs = ms;
     if (this.token && this.pollTimer) this.startPolling();
@@ -412,17 +416,39 @@ class DeltaForceStore {
   }
 
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[] }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
-    if (!text) return { success: false, error: 'Écris le texte de la publication.' };
+    const files = p.files || [];
+    if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou joins un fichier.' };
     const rec: NewsPost = {
-      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', title: p.title.trim().slice(0, 120),
-      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, loves: [], comments: [], shares: 0,
+      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
+      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
+      loves: [], comments: [], shares: 0,
     };
     this.news = [rec, ...this.news].sort(SORTERS.news!);
     this.notify();
+    return { success: true };
+  }
+
+  // L'employé propose une publication : le serveur la garde « en attente » jusqu'à la décision du responsable
+  public submitNews(p: { title: string; text: string; files?: NewsAttachment[] }) {
+    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [] });
+  }
+
+  // Le responsable valide ou refuse une publication en attente (motif obligatoire au refus)
+  public decideNews(id: string, decision: 'approve' | 'reject', reason?: string) {
+    return this.newsCall('news-decision', { id, decision, reason: reason || '' });
+  }
+
+  // L'auteur retire sa publication tant qu'elle n'est pas validée
+  public async withdrawNews(id: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('news-withdraw', { method: 'POST', body: JSON.stringify({ id }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
+    this.news = this.news.filter(x => x.id !== id);
+    this.synced.news.delete(id);
+    this.emit();
     return { success: true };
   }
 
@@ -456,8 +482,23 @@ class DeltaForceStore {
     return { success: true };
   }
 
-  public toggleLoveNews(id: string) { return this.newsCall('news-react', { id }); }
-  public commentNews(id: string, text: string) { return this.newsCall('news-comment', { id, text }); }
+  // « J'adore » : l'écran change tout de suite, puis le serveur confirme. En cas d'erreur, on revient en arrière.
+  public async toggleLoveNews(id: string): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const n = this.news.find(x => x.id === id);
+    if (!me || !n) return this.newsCall('news-react', { id });
+    const before = n.loves;
+    const after = before.includes(me.id) ? before.filter(x => x !== me.id) : [...before, me.id];
+    this.news = this.news.map(x => (x.id === id ? { ...x, loves: after } : x));
+    this.emit();
+    const r = await this.newsCall('news-react', { id });
+    if (!r.success) {
+      this.news = this.news.map(x => (x.id === id ? { ...x, loves: before } : x));
+      this.emit();
+    }
+    return r;
+  }
+  public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }
 
@@ -766,9 +807,9 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode'] }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
-      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} postes.` };
+      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
     const name = p.client_name.trim();
     const used = new Set(this.contracts.map(c => c.post_number));
@@ -776,7 +817,6 @@ class DeltaForceStore {
     while (used.has(n)) n++;
     const initial = Math.max(0, p.initial_score || 0);
     const objective = Math.max(0, p.objective || 0);
-    if (name && objective <= 0) return { success: false, error: "L'objectif doit être supérieur à 0." };
     this.contracts.push({
       id: `contract-${Date.now()}`,
       post_number: n,
@@ -785,6 +825,7 @@ class DeltaForceStore {
       game_mode: '',
       description: (p.description || '').trim(),
       post_type: p.post_type || '',
+      proof_mode: p.proof_mode || 'type',
       current_rank: '—',
       target_rank: '—',
       initial_score: name ? initial : 0,
@@ -1460,10 +1501,12 @@ class DeltaForceStore {
     this.notify();
     return { success: true, id };
   }
-  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[] }): { success: boolean; error?: string } {
+  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[]; avatar_url?: string; description?: string; admins?: string[] }): { success: boolean; error?: string } {
     const g = this.groups.find(x => x.id === id);
     const u = this.users.find(x => x.id === userId);
-    if (!g || !u || (g.owner_id !== userId && u.role !== 'admin')) return { success: false, error: 'Seul le responsable du groupe peut le modifier.' };
+    const isOwner = !!g && !!u && (g.owner_id === userId || u.role === 'admin');
+    const isGroupAdmin = !!g && (g.admins || []).includes(userId);
+    if (!g || !u || (!isOwner && !isGroupAdmin)) return { success: false, error: 'Seul un administrateur du groupe peut le modifier.' };
     if (patch.name !== undefined) {
       const clean = patch.name.trim();
       if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
@@ -1472,9 +1515,16 @@ class DeltaForceStore {
     if (patch.members) {
       const members = [...new Set(patch.members)];
       if (members.length < 1) return { success: false, error: 'Un groupe doit garder au moins un membre.' };
+      if (!isOwner && ![g.owner_id, ...(g.admins || [])].filter(x => x !== userId).every(x => members.includes(x))) {
+        return { success: false, error: 'Tu ne peux pas retirer le responsable ni un autre administrateur.' };
+      }
       g.members = members;
       if (!members.includes(g.owner_id)) g.owner_id = members[0];
+      if (g.admins) g.admins = g.admins.filter(x => members.includes(x));
     }
+    if (patch.avatar_url !== undefined) g.avatar_url = patch.avatar_url || undefined;
+    if (patch.description !== undefined) g.description = patch.description.trim().slice(0, 200) || undefined;
+    if (patch.admins && isOwner) g.admins = [...new Set(patch.admins)].filter(x => g.members.includes(x) && x !== g.owner_id);
     this.notify();
     return { success: true };
   }
@@ -1484,6 +1534,7 @@ class DeltaForceStore {
     const rest = g.members.filter(m => m !== userId);
     if (rest.length === 0) return this.deleteGroup(id, userId);
     g.members = rest;
+    if (g.admins) g.admins = g.admins.filter(x => x !== userId);
     if (g.owner_id === userId) g.owner_id = rest[0];
     this.notify();
     return { success: true };

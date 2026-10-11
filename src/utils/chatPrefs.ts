@@ -29,3 +29,18 @@ export const setThreadArchived = (uid: string, thread: string, archived: boolean
   else delete m[thread];
   writeJson(key('archived', uid), m);
 };
+
+// Non lus : jusqu'à quelle heure on a vu chaque conversation (gardé sur cet appareil)
+export const hasThreadSeen = (uid: string): boolean => {
+  try { return localStorage.getItem(key('seen', uid)) !== null; } catch { return true; }
+};
+export const getThreadSeen = (uid: string): Record<string, number> => readJson<Record<string, number>>(key('seen', uid), {});
+export const setThreadSeen = (uid: string, thread: string, ms: number): Record<string, number> => {
+  const m = getThreadSeen(uid);
+  if ((m[thread] || 0) < ms) { m[thread] = ms; writeJson(key('seen', uid), m); }
+  return m;
+};
+export const initThreadSeen = (uid: string, map: Record<string, number>): Record<string, number> => {
+  writeJson(key('seen', uid), map);
+  return map;
+};

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Send, Paperclip, FileText, Users, MessageSquare, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
-  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info,
+  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown,
 } from 'lucide-react';
 import { db } from '../db/store';
 import { ChatGroup, ChatMessage, User } from '../types';
@@ -14,7 +14,8 @@ import { createPortal } from 'react-dom';
 import { askConfirm } from './ConfirmModal';
 import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
-import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived } from '../utils/chatPrefs';
+import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
+import { useApp } from '../context/AppContext';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -48,8 +49,27 @@ const dayLabel = (day: string) => {
   return day.split('-').reverse().join('/');
 };
 
-export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }> = ({ currentUser, initialThreadId }) => {
+export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; onOpenProfile?: (u: User) => void }> = ({ currentUser, initialThreadId, onOpenProfile }) => {
   const isAdmin = currentUser.role === 'admin';
+  const L = useApp().theme === 'light';
+  // Couleurs de la messagerie (clair par défaut, sombre en option)
+  const P = {
+    root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',
+    side: L ? 'bg-white border-slate-200' : 'bg-[#0c131c] border-slate-800',
+    head: L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#131d2a] border-slate-800',
+    area: L ? 'bg-[#e9eff8]' : 'bg-[#0a0f16]',
+    title: L ? 'text-slate-900' : 'text-white',
+    sub: L ? 'text-slate-500' : 'text-slate-400',
+    inBub: L ? 'bg-white text-slate-800 border border-slate-200' : 'bg-[#16212e] text-slate-200 border border-slate-700/80',
+    outBub: 'bg-emerald-700 text-white',
+    input: L ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400' : 'bg-[#0b1017] border-slate-700 text-white placeholder-slate-500',
+    rowHover: L ? 'hover:bg-slate-100' : 'hover:bg-[#121c28]',
+    rowActive: L ? 'bg-[#dbeafe]' : 'bg-emerald-950/60',
+    pop: L ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1722] border-slate-700 text-white',
+    popHover: L ? 'hover:bg-slate-100' : 'hover:bg-[#162130]',
+    div: L ? 'border-slate-200' : 'border-slate-800',
+    pill: L ? 'bg-white/90 text-slate-600 shadow-sm' : 'bg-slate-800/80 text-slate-300',
+  };
   const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages());
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [groups, setGroups] = useState<ChatGroup[]>(db.getGroups());
@@ -66,6 +86,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const [groupInfo, setGroupInfo] = useState(false);
   const [threadMenu, setThreadMenu] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [q, setQ] = useState('');
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const [seenFor, setSeenFor] = useState<ChatMessage | null>(null);
+  const [newBelow, setNewBelow] = useState(0);
+  const [seenMap, setSeenMap] = useState<Record<string, number>>(() => getThreadSeen(currentUser.id));
   const [pickedUsers, setPickedUsers] = useState<string[]>([]); // discussions ouvertes via « + » avant le premier message
 
   // Arrivée depuis une notification : on ouvre directement la discussion concernée
@@ -75,7 +100,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
     window.addEventListener(CHAT_THREAD_EVENT, open);
     return () => window.removeEventListener(CHAT_THREAD_EVENT, open);
   }, []);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  const prevThreadRef = useRef('');
+  const prevLenRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -167,11 +195,52 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const archivedList = sorted.filter(x => isArchived(x.t, x.ts)).map(x => x.t);
 
   const current = threads.find(t => t.id === threadId) || threads[0];
+  // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
+  const convVisible = !showList || (typeof window !== 'undefined' && window.innerWidth >= 768);
   const visible = messages.filter(m => inThread(m, current) && !hidden.has(m.id));
 
+  // Défilement : vers le bas à l'ouverture et à chaque nouveau message si on est déjà en bas (ou si c'est le mien), sinon bouton « nouveaux messages »
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const last = visible[visible.length - 1];
+    if (prevThreadRef.current !== current.id) {
+      el.scrollTop = el.scrollHeight;
+      atBottomRef.current = true;
+      setNewBelow(0);
+    } else if (visible.length > prevLenRef.current) {
+      if (atBottomRef.current || last?.sender_id === currentUser.id) {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        setNewBelow(0);
+      } else {
+        setNewBelow(n => n + (visible.length - prevLenRef.current));
+      }
+    }
+    prevThreadRef.current = current.id;
+    prevLenRef.current = visible.length;
   }, [visible.length, current.id]);
+  // Sur téléphone, la conversation est cachée tant que la liste est affichée : on descend quand elle apparaît
+  useEffect(() => {
+    if (!convVisible) return;
+    const t = requestAnimationFrame(() => { const el = scrollRef.current; if (el) { el.scrollTop = el.scrollHeight; atBottomRef.current = true; } });
+    return () => cancelAnimationFrame(t);
+  }, [convVisible, current.id]);
+  const onScrollArea = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (atBottomRef.current) setNewBelow(0);
+    if (menuMsg) setMenuMsg(null);
+  };
+
+  // Non lus : au premier lancement tout est considéré comme vu ; ensuite la conversation ouverte est vue au fil de l'eau
+  useEffect(() => {
+    if (hasThreadSeen(currentUser.id)) return;
+    const map: Record<string, number> = {};
+    threads.forEach(t => { map[t.id] = lastTs(t); });
+    setSeenMap(initThreadSeen(currentUser.id, map));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads.length]);
 
   // La messagerie est ouverte : tout est lu (notifications)
   useEffect(() => {
@@ -184,6 +253,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   useEffect(() => {
     if (readKey && lastIncoming) db.markThreadRead(readKey, lastIncoming);
   }, [readKey, lastIncoming]);
+  useEffect(() => {
+    if (!convVisible || !lastIncoming) return;
+    if ((seenMap[current.id] || 0) < lastIncoming) setSeenMap(setThreadSeen(currentUser.id, current.id, lastIncoming));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convVisible, current.id, lastIncoming]);
 
   // Une seule coche = envoyé ; deux coches bleues = lu par tous les destinataires
   const isRead = (m: ChatMessage): boolean => {
@@ -242,9 +316,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
     }
   };
 
-  const startPress = (m: ChatMessage) => {
+  const openMenu = (m: ChatMessage, el: HTMLElement) => {
+    setMenuRect(el.getBoundingClientRect());
+    setMenuMsg(m);
+  };
+  const startPress = (m: ChatMessage, el: HTMLElement) => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => setMenuMsg(m), 450);
+    pressTimer.current = setTimeout(() => openMenu(m, el), 450);
   };
   const stopPress = () => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -307,29 +385,63 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   };
   const gallery = visible.filter(m => m.attachment_url && m.attachment_kind === 'image' && !m.deleted_at);
   const showNames = current.kind !== 'user';
+  const openProfile = (id: string) => {
+    const u = users.find(x => x.id === id);
+    if (u && onOpenProfile) onOpenProfile(u);
+  };
+
+  // Non lus par conversation : messages des autres reçus après la dernière fois qu'on l'a ouverte
+  const unreadOf = (t: Thread): number =>
+    t.readOnly ? 0 : messages.filter(m => inThread(m, t) && m.sender_id !== currentUser.id && !m.deleted_at && !hidden.has(m.id) && sentMs(m) > (seenMap[t.id] || 0)).length;
+  const shortTime = (ms: number): string => {
+    if (!ms) return '';
+    const d = new Date(ms);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const norm = (v: string) => (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const matches = (t: Thread) => !q.trim() || norm(t.title).includes(norm(q));
+
+  const readersOf = (m: ChatMessage): string[] => {
+    if (current.kind !== 'group' || !current.group) return [];
+    const ms = m.sent_ms || 0;
+    if (!ms) return [];
+    return current.group.members.filter(id => id !== currentUser.id && reads.some(r => r.user_id === id && r.thread === current.id && r.ms >= ms));
+  };
 
   const renderThread = (t: Thread, archivedRow = false) => {
     const last = lastOf(t);
-    const preview = last ? (last.deleted_at ? 'Message supprimé' : last.message || (last.attachment_name ? `Fichier : ${last.attachment_name}` : '')) : t.subtitle;
+    const who = last && !last.deleted_at && t.kind !== 'user' && t.kind !== 'pair' ? `${last.sender_id === currentUser.id ? 'Moi' : last.sender_name.split(' ')[0]} : ` : last && last.sender_id === currentUser.id && !last.deleted_at && t.kind === 'user' ? 'Moi : ' : '';
+    const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (last.message || (last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
+    const unread = t.id === current.id && convVisible ? 0 : unreadOf(t);
     return (
       <button
         key={t.id}
         type="button"
         onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 border-b border-slate-800/60 cursor-pointer ${t.id === current.id ? 'bg-emerald-950/60' : 'hover:bg-[#121c28]'} ${archivedRow ? 'opacity-70' : ''}`}
+        className={`w-full text-left px-3 py-2.5 flex items-center gap-3 border-b ${P.div} cursor-pointer ${t.id === current.id ? P.rowActive : P.rowHover} ${archivedRow ? 'opacity-70' : ''}`}
       >
-        {t.kind === 'all' || t.kind === 'group' ? (
-          <span className="w-9 h-9 bg-emerald-900 border border-emerald-500/40 flex items-center justify-center shrink-0">
-            <Users className="w-4 h-4 text-emerald-300" />
+        {t.kind === 'group' && t.group?.avatar_url ? (
+          <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+        ) : t.kind === 'all' || t.kind === 'group' ? (
+          <span className="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 text-white" />
           </span>
         ) : t.kind === 'pair' ? (
-          <span className="w-9 h-9 bg-slate-800 border border-slate-600 flex items-center justify-center shrink-0"><EyeOff className="w-4 h-4 text-slate-300" /></span>
+          <span className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-slate-200' : 'bg-slate-800'}`}><EyeOff className={`w-5 h-5 ${P.sub}`} /></span>
         ) : (
-          <Avatar src={t.user?.avatar_url} name={t.title} className="w-9 h-9" />
+          <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full" />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white break-words leading-tight">{t.title}</span>
-          <span className="block text-[11px] text-slate-400 truncate">{preview}</span>
+          <span className="flex items-baseline gap-2">
+            <span className={`flex-1 min-w-0 truncate text-[15px] font-semibold ${P.title}`}>{t.title}</span>
+            {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-emerald-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
+          </span>
+          <span className="flex items-center gap-2 mt-0.5">
+            <span className={`flex-1 min-w-0 truncate text-[13px] ${P.sub}`}>{preview}</span>
+            {unread > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
+          </span>
         </span>
       </button>
     );
@@ -337,24 +449,59 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
   const canWrite = !current.readOnly;
 
+  // Actions du message (menu sous le message)
+  const menuActions = menuMsg
+    ? [
+        ...(canWrite ? [{ k: 'reply', label: 'Répondre', icon: Reply, color: 'text-emerald-600', run: () => startReply(menuMsg) }] : []),
+        ...(menuMsg.message ? [{ k: 'copy', label: 'Copier', icon: Copy, color: 'text-slate-500', run: () => copyText(menuMsg) }] : []),
+        ...(db.canEditMessage(menuMsg, currentUser.id) && menuMsg.message ? [{ k: 'edit', label: 'Modifier', icon: Pencil, color: 'text-emerald-600', run: () => startEdit(menuMsg) }] : []),
+        ...(menuMsg.sender_id === currentUser.id
+          ? [{ k: 'pin', label: menuMsg.pinned ? 'Désépingler' : 'Épingler', icon: menuMsg.pinned ? PinOff : Pin, color: 'text-amber-500', run: () => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); } }]
+          : []),
+        { k: 'hide', label: 'Supprimer pour moi', icon: EyeOff, color: 'text-slate-500', run: () => deleteForMe(menuMsg) },
+        ...(db.canDeleteForAll(menuMsg, currentUser.id) ? [{ k: 'del', label: 'Supprimer pour tous', icon: Trash2, color: 'text-red-500', run: () => confirmDelete(menuMsg) }] : []),
+      ]
+    : [];
+  const popStyle = (): React.CSSProperties => {
+    if (!menuRect) return { top: 80, left: 8 };
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const W = 232;
+    const H = menuActions.length * 44 + 10;
+    const mine = menuMsg?.sender_id === currentUser.id;
+    let left = mine ? menuRect.right - W : menuRect.left;
+    left = Math.max(8, Math.min(left, vw - W - 8));
+    let top = menuRect.bottom + 6;
+    if (top + H > vh - 8) top = menuRect.top - H - 6;
+    top = Math.max(8, Math.min(top, vh - H - 8));
+    return { top, left, width: W };
+  };
+
   return (
-    <div className="bg-[#0f1722] border border-slate-800 overflow-hidden shadow-xl flex h-full min-h-0 w-full">
+    <div className={`${P.root} border overflow-hidden shadow-xl flex h-full min-h-0 w-full md:rounded-2xl`}>
       {/* Liste des conversations */}
-      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-80 shrink-0 border-r border-slate-800 bg-[#0c131c]`}>
-        <div className="px-3 py-2 border-b border-slate-800 font-tactical font-bold text-white text-sm flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-emerald-400" /> <span className="flex-1">Messagerie</span>
-          <button type="button" onClick={() => setNewChat(true)} className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer" title="Nouvelle discussion ou nouveau groupe">
+      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-80 shrink-0 border-r ${P.side}`}>
+        <div className={`px-3 py-2.5 border-b ${P.div} flex items-center gap-2`}>
+          <span className={`flex-1 text-lg font-bold ${P.title}`}>Messagerie</span>
+          <button type="button" onClick={() => setNewChat(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer" title="Nouvelle discussion ou nouveau groupe">
             <Plus className="w-5 h-5" />
           </button>
         </div>
+        <div className="px-3 py-2">
+          <div className="relative">
+            <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${P.sub}`} />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une discussion" className={`w-full h-10 pl-9 pr-3 rounded-full border text-sm focus:outline-none focus:border-emerald-500 ${P.input}`} style={{ borderRadius: 9999 }} />
+          </div>
+        </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-          {shownList.map(t => renderThread(t))}
+          {shownList.filter(matches).map(t => renderThread(t))}
+          {shownList.filter(matches).length === 0 && <div className={`px-4 py-6 text-center text-sm ${P.sub}`}>Aucune discussion trouvée.</div>}
           {archivedList.length > 0 && (
             <>
-              <button type="button" onClick={() => setShowArchived(v => !v)} className="w-full px-3 py-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white border-b border-slate-800/60 cursor-pointer">
+              <button type="button" onClick={() => setShowArchived(v => !v)} className={`w-full px-3 py-3 flex items-center gap-2 text-xs ${P.sub} border-b ${P.div} cursor-pointer`}>
                 <Archive className="w-4 h-4" /> Conversations cachées ({archivedList.length}) {showArchived ? '▲' : '▼'}
               </button>
-              {showArchived && archivedList.map(t => renderThread(t, true))}
+              {showArchived && archivedList.filter(matches).map(t => renderThread(t, true))}
             </>
           )}
         </div>
@@ -362,15 +509,31 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
       {/* Conversation */}
       <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0 min-h-0`}>
-        <div className="px-3 py-2 bg-[#131d2a] border-b border-slate-800 flex items-center gap-2 shrink-0">
-          <button type="button" onClick={() => setShowList(true)} className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 cursor-pointer" title="Retour">
+        <div className={`px-2 py-2 ${P.head} border-b flex items-center gap-2 shrink-0`}>
+          <button type="button" onClick={() => setShowList(true)} className={`md:hidden w-10 h-10 rounded-full flex items-center justify-center ${P.title} cursor-pointer`} title="Retour">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="min-w-0 flex-1">
-            <div className="font-tactical font-bold text-white text-sm break-words leading-tight">{current.title}</div>
-            <div className="text-[11px] text-slate-400">{current.subtitle}</div>
-          </div>
-          <button type="button" onClick={() => setThreadMenu(true)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 hover:text-white cursor-pointer" title="Options de la conversation">
+          <button
+            type="button"
+            onClick={() => { if (current.kind === 'user' && current.user) openProfile(current.user.id); else if (current.kind === 'group') setGroupInfo(true); }}
+            className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+            title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
+          >
+            {current.kind === 'user' ? (
+              <Avatar src={current.user?.avatar_url} name={current.title} className="w-10 h-10 rounded-full" />
+            ) : current.kind === 'group' && current.group?.avatar_url ? (
+              <img src={current.group.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <span className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
+                {current.kind === 'pair' ? <EyeOff className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className={`block font-bold text-[15px] truncate leading-tight ${P.title}`}>{current.title}</span>
+              <span className={`block text-[11px] truncate ${P.sub}`}>{current.subtitle}</span>
+            </span>
+          </button>
+          <button type="button" onClick={() => setThreadMenu(true)} className={`w-10 h-10 rounded-full flex items-center justify-center ${P.title} cursor-pointer`} title="Options de la conversation">
             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
@@ -379,50 +542,63 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           <button
             type="button"
             onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
-            className="w-full px-3 py-2 bg-amber-950/40 border-b border-amber-500/30 flex items-center gap-2 text-left cursor-pointer"
+            className={`w-full h-7 px-3 border-b ${P.div} ${L ? 'bg-amber-50' : 'bg-amber-950/30'} flex items-center gap-1.5 text-left cursor-pointer shrink-0`}
             title="Voir le message épinglé"
           >
-            <Pin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-mono text-amber-300">
-                Épinglé{pinned.length > 1 ? ` (${(pinIdx % pinned.length) + 1}/${pinned.length})` : ''} · {pinShown.sender_name}
-              </span>
-              <span className="block text-xs text-slate-200 truncate">{pinShown.message || pinShown.attachment_name || 'Pièce jointe'}</span>
+            <Pin className="w-3 h-3 text-amber-500 shrink-0" />
+            <span className={`flex-1 min-w-0 truncate text-[10px] ${P.sub}`}>
+              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}{pinShown.sender_name} : {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
             </span>
           </button>
         )}
 
-        <div className="flex-1 min-h-0 p-3 overflow-y-auto overscroll-contain space-y-2 bg-[#0a0f16]">
-          {visible.length === 0 && <div className="text-center text-xs text-slate-500 font-mono pt-8">Aucun message. Écris le premier.</div>}
+        <div className="relative flex-1 min-h-0">
+        <div ref={scrollRef} onScroll={onScrollArea} className={`h-full p-3 overflow-y-auto overscroll-contain space-y-1.5 ${P.area}`}>
+          {visible.length === 0 && <div className={`text-center text-xs pt-8 ${P.sub}`}>Aucun message. Écris le premier.</div>}
           {visible.map((msg, i) => {
             const isMe = msg.sender_id === currentUser.id;
             const day = String(msg.timestamp).slice(0, 10);
             const newDay = i === 0 || String(visible[i - 1].timestamp).slice(0, 10) !== day;
             const time = String(msg.timestamp).slice(11, 16);
             const gone = !!msg.deleted_at;
+            const sameSender = i > 0 && !newDay && visible[i - 1].sender_id === msg.sender_id && !visible[i - 1].deleted_at;
+            const readers = isMe && !gone ? readersOf(msg) : [];
+            const totalOthers = current.kind === 'group' && current.group ? current.group.members.filter(id => id !== currentUser.id).length : 0;
             return (
               <React.Fragment key={msg.id}>
                 {newDay && (
-                  <div className="flex justify-center py-1">
-                    <span className="px-3 py-1 bg-slate-800/80 text-[11px] text-slate-300 rounded-full">{dayLabel(day)}</span>
+                  <div className="flex justify-center py-2">
+                    <span className={`px-3 py-1 text-[11px] rounded-full ${P.pill}`}>{dayLabel(day)}</span>
                   </div>
                 )}
-                <div data-msg-id={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  <div className={`flex items-start gap-1 max-w-[92%] sm:max-w-md ${isMe ? 'flex-row-reverse' : ''}`}>
+                <div data-msg-id={msg.id} className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'} ${sameSender ? '' : 'pt-1'}`}>
+                  {!isMe && showNames && (
+                    sameSender
+                      ? <span className="w-8 shrink-0" />
+                      : <button type="button" onClick={() => openProfile(msg.sender_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(u => u.id === msg.sender_id)?.avatar_url} name={msg.sender_name} className="w-8 h-8 rounded-full" /></button>
+                  )}
+                  <div className={`flex flex-col min-w-0 max-w-[82%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'}`}>
                     <div
-                      onTouchStart={() => !gone && startPress(msg)}
+                      onTouchStart={e => !gone && startPress(msg, e.currentTarget)}
                       onTouchEnd={stopPress}
                       onTouchMove={stopPress}
-                      onContextMenu={e => { if (!gone) { e.preventDefault(); setMenuMsg(msg); } }}
-                      className={`min-w-0 px-3.5 py-2.5 text-sm leading-relaxed break-words select-text rounded-2xl shadow-sm ${
-                        gone ? 'bg-[#101822] text-slate-500 border border-slate-800' : isMe ? 'bg-emerald-600 text-white' : 'bg-[#16212e] text-slate-200 border border-slate-700/80'
-                      } ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
+                      onTouchCancel={stopPress}
+                      onMouseDown={e => { if (!gone && e.button === 0) startPress(msg, e.currentTarget); }}
+                      onMouseUp={stopPress}
+                      onMouseLeave={stopPress}
+                      onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
+                      style={{ WebkitTouchCallout: 'none' }}
+                      className={`min-w-0 text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                        !gone && !msg.message && !msg.reply_to && msg.attachment_url
+                          ? `${L ? 'text-slate-800' : 'text-slate-100'}`
+                          : `px-3.5 py-2 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
+                      } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
-                      {!gone && !isMe && showNames && (
-                        <div className="text-[11px] font-bold text-cyan-300 mb-0.5">
+                      {!gone && !isMe && showNames && !sameSender && (
+                        <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold text-emerald-600 mb-0.5 cursor-pointer" title="Voir le profil">
                           {msg.sender_name}
-                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px]">RESPONSABLE</span>}
-                        </div>
+                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 rounded bg-amber-500/20 text-amber-600 text-[9px]">RESPONSABLE</span>}
+                        </button>
                       )}
                       {gone ? (
                         <span className="italic flex items-center gap-1.5"><Ban className="w-3.5 h-3.5" />
@@ -431,18 +607,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
                       ) : (
                         <>
                           {msg.reply_to && (
-                            <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className={`block w-full text-left mb-1.5 px-2 py-1 border-l-4 ${isMe ? 'bg-emerald-800/60 border-emerald-300' : 'bg-black/30 border-cyan-400'} cursor-pointer`}>
+                            <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className={`block w-full text-left mb-1.5 px-2 py-1 rounded-lg border-l-4 ${isMe ? 'bg-black/20 border-white/70' : L ? 'bg-slate-100 border-emerald-500' : 'bg-black/30 border-emerald-400'} cursor-pointer`}>
                               <span className="block text-[10px] font-bold opacity-90">{msg.reply_to.sender_name}</span>
                               <span className="block text-[11px] opacity-80 truncate">{msg.reply_to.text || (msg.reply_to.has_attachment ? 'Pièce jointe' : '')}</span>
                             </button>
                           )}
                           {msg.attachment_url && msg.attachment_kind === 'image' && (
-                            <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className="block mb-1.5 cursor-zoom-in" title="Agrandir">
-                              <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full" loading="lazy" />
+                            <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className={`block cursor-zoom-in ${msg.message || msg.reply_to ? 'mb-1' : ''}`} title="Agrandir">
+                              <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full rounded-xl" loading="lazy" />
                             </button>
                           )}
                           {msg.attachment_url && msg.attachment_kind !== 'image' && (
-                            <button type="button" onClick={() => setFileViewer(msg)} className="flex items-center gap-1.5 mb-1.5 min-h-[40px] underline font-semibold text-left cursor-pointer">
+                            <button type="button" onClick={() => setFileViewer(msg)} className={`flex items-center gap-1.5 min-h-[40px] font-semibold text-left cursor-pointer ${!msg.message && !msg.reply_to ? `px-3 py-2 rounded-2xl border ${L ? 'border-slate-300' : 'border-slate-600'}` : 'mb-1 underline'}`}>
                               <FileText className="w-4 h-4 shrink-0" />
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
@@ -450,77 +626,91 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
                           {msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
                         </>
                       )}
-                      <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe && !gone ? 'text-emerald-100/80' : 'text-slate-500'}`}>
-                        {msg.pinned && !gone && <Pin className="w-3 h-3 text-amber-300" />}
-                        {msg.edited_at && !gone && <span className="italic">modifié</span>}
+                    </div>
+                    {/* Petits détails sous la bulle (pas dans la bulle) */}
+                    {!gone && (
+                      <div className={`flex items-center gap-1 mt-0.5 px-1 text-[10px] ${P.sub}`}>
+                        {msg.pinned && <Pin className="w-3 h-3 text-amber-500" />}
+                        {msg.edited_at && <span className="italic">modifié ·</span>}
                         <span>{time}</span>
-                        {isMe && !gone && current.kind !== 'all' && current.kind !== 'pair' && (
-                          isRead(msg) ? <CheckCheck className="w-3.5 h-3.5 text-cyan-300" /> : <Check className="w-3.5 h-3.5" />
+                        {isMe && (current.kind === 'user' || current.kind === 'group') && (
+                          current.kind === 'user' ? (
+                            isRead(msg)
+                              ? <span className="flex items-center gap-0.5 text-sky-500 font-semibold"><CheckCheck className="w-3.5 h-3.5" />Vu</span>
+                              : <span className="flex items-center gap-0.5"><Check className="w-3.5 h-3.5" />Pas encore vu</span>
+                          ) : readers.length === 0 ? (
+                            <button type="button" onClick={() => setSeenFor(msg)} className="flex items-center gap-0.5 cursor-pointer"><Check className="w-3.5 h-3.5" />Pas encore vu</button>
+                          ) : (
+                            <button type="button" onClick={() => setSeenFor(msg)} className={`flex items-center gap-0.5 font-semibold cursor-pointer ${readers.length === totalOthers ? 'text-sky-500' : ''}`}>
+                              <CheckCheck className="w-3.5 h-3.5" />{readers.length === totalOthers ? 'Vu par tous' : `Vu par ${readers.length}/${totalOthers}`}
+                            </button>
+                          )
                         )}
                       </div>
-                    </div>
-                    {!gone && (
-                      <button type="button" onClick={() => setMenuMsg(msg)} className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white cursor-pointer shrink-0" title="Actions">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
                     )}
                   </div>
                 </div>
               </React.Fragment>
             );
           })}
-          <div ref={endRef} />
+        </div>
+        {newBelow > 0 && (
+          <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
+            <ChevronDown className="w-4 h-4" />{newBelow} nouveau{newBelow > 1 ? 'x' : ''} message{newBelow > 1 ? 's' : ''}
+          </button>
+        )}
         </div>
 
-        {error && <div className="px-3 py-2 bg-red-950 border-t border-red-500/60 text-red-200 text-xs font-semibold">{error}</div>}
+        {error && <div className="px-3 py-2 bg-red-100 border-t border-red-300 text-red-700 text-xs font-semibold">{error}</div>}
 
         {editingId && (
-          <div className="px-3 py-2 bg-amber-950/40 border-t border-amber-500/40 flex items-center gap-2 text-xs text-amber-200">
+          <div className={`px-3 py-2 border-t flex items-center gap-2 text-xs ${L ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-amber-950/40 border-amber-500/40 text-amber-200'}`}>
             <Pencil className="w-3.5 h-3.5 shrink-0" />
             <span className="flex-1 font-semibold">Modification du message</span>
-            <button type="button" onClick={cancelEdit} className="min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-white cursor-pointer" title="Annuler la modification">
+            <button type="button" onClick={cancelEdit} className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer" title="Annuler la modification">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
         {replyTo && !editingId && (
-          <div className="px-3 py-2 bg-[#101a26] border-t border-cyan-500/40 flex items-center gap-2 text-xs">
-            <Reply className="w-3.5 h-3.5 shrink-0 text-cyan-300" />
-            <span className="min-w-0 flex-1 border-l-4 border-cyan-400 pl-2">
-              <span className="block text-[10px] font-bold text-cyan-300">Réponse à {replyTo.sender_name}</span>
-              <span className="block text-slate-300 truncate">{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
+          <div className={`px-3 py-2 border-t ${P.div} ${P.head} flex items-center gap-2 text-xs`}>
+            <Reply className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+            <span className="min-w-0 flex-1 border-l-4 border-emerald-500 pl-2">
+              <span className="block text-[10px] font-bold text-emerald-600">Réponse à {replyTo.sender_name}</span>
+              <span className={`block truncate ${P.sub}`}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
             </span>
-            <button type="button" onClick={() => setReplyTo(null)} className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white cursor-pointer" title="Annuler la réponse">
+            <button type="button" onClick={() => setReplyTo(null)} className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${P.sub}`} title="Annuler la réponse">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {canWrite ? (
-          <form onSubmit={e => { e.preventDefault(); send(); }} className="p-2.5 bg-[#131d2a] border-t border-slate-800 flex items-center gap-2 shrink-0">
+          <form onSubmit={e => { e.preventDefault(); send(); }} className={`p-2.5 ${P.head} border-t flex items-center gap-2 shrink-0`}>
             <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
             <button
               type="button"
               disabled={busy || !!editingId}
               onClick={() => fileRef.current?.click()}
-              className="p-2.5 bg-[#0b1017] border border-slate-700 text-slate-300 hover:text-white cursor-pointer disabled:opacity-50 shrink-0"
+              className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${P.sub}`}
               title="Joindre une photo ou un fichier (10 Mo max)"
             >
-              <Paperclip className="w-4 h-4" />
+              <Paperclip className="w-5 h-5" />
             </button>
             <input
               type="text"
               value={text}
               onChange={e => setText(e.target.value)}
               placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
-              className="flex-1 min-w-0 bg-[#0b1017] border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className={`flex-1 min-w-0 h-10 rounded-full border px-4 text-sm focus:outline-none focus:border-emerald-500 ${P.input}`}
+              style={{ borderRadius: 9999 }}
             />
-            <button type="submit" disabled={busy} className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
+            <button type="submit" disabled={busy} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer disabled:opacity-50 shrink-0" title="Envoyer">
               <Send className="w-4 h-4" />
             </button>
           </form>
         ) : (
-          <div className="p-3 bg-[#131d2a] border-t border-slate-800 text-center text-[11px] text-slate-400 shrink-0">
+          <div className={`p-3 ${P.head} border-t text-center text-[11px] shrink-0 ${P.sub}`}>
             Lecture seule : tu consultes une discussion entre deux opérateurs.
           </div>
         )}
@@ -528,24 +718,29 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
       {/* Menu des options de la conversation */}
       {threadMenu && createPortal(
-        <div className="fixed inset-0 z-[80] bg-black/60 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>
-          <div className="w-full max-w-xs bg-[#0f1722] border border-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2.5 border-b border-slate-800 text-[11px] font-mono text-slate-400 truncate">{current.title}</div>
+        <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>
+          <div className={`w-full max-w-xs rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} onClick={e => e.stopPropagation()}>
+            <div className={`px-4 py-2.5 border-b ${P.div} text-xs truncate ${P.sub}`}>{current.title}</div>
+            {current.kind === 'user' && current.user && (
+              <button type="button" onClick={() => { setThreadMenu(false); openProfile(current.user!.id); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+                <Info className="w-4 h-4 text-emerald-600" /> Voir le profil
+              </button>
+            )}
             {current.kind === 'group' && (
-              <button type="button" onClick={() => { setThreadMenu(false); setGroupInfo(true); }} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <Info className="w-4 h-4 text-cyan-400" /> Infos du groupe
+              <button type="button" onClick={() => { setThreadMenu(false); setGroupInfo(true); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+                <Info className="w-4 h-4 text-emerald-600" /> Infos du groupe
               </button>
             )}
             {archived[current.id] && archived[current.id] >= lastTs(current) ? (
-              <button type="button" onClick={() => toggleArchive(current, false)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <ArchiveRestore className="w-4 h-4 text-emerald-400" /> Afficher de nouveau la conversation
+              <button type="button" onClick={() => toggleArchive(current, false)} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+                <ArchiveRestore className="w-4 h-4 text-emerald-600" /> Afficher de nouveau la conversation
               </button>
             ) : (
-              <button type="button" onClick={() => toggleArchive(current, true)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <Archive className="w-4 h-4 text-amber-400" /> Cacher la conversation
+              <button type="button" onClick={() => toggleArchive(current, true)} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+                <Archive className="w-4 h-4 text-amber-500" /> Cacher la conversation
               </button>
             )}
-            <button type="button" onClick={() => setThreadMenu(false)} className="w-full px-3 py-2.5 text-xs text-slate-400 border-t border-slate-800 hover:text-white cursor-pointer">Fermer</button>
+            <button type="button" onClick={() => setThreadMenu(false)} className={`w-full px-4 py-2.5 text-xs border-t cursor-pointer ${P.div} ${P.sub}`}>Fermer</button>
           </div>
         </div>,
         document.body
@@ -563,43 +758,41 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
         <GroupInfoModal group={current.group} users={users} currentUser={currentUser} onClose={() => setGroupInfo(false)} onGone={() => { setThreadId('all'); setShowList(true); }} />
       )}
 
-      {/* Menu d'actions du message */}
+      {/* Menu d'actions : petit menu juste sous le message (appui long ou clic droit) */}
       {menuMsg && createPortal(
-        <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3" onClick={() => setMenuMsg(null)}>
-          <div className="w-full max-w-xs bg-[#0f1722] border border-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2.5 border-b border-slate-800 text-[11px] font-mono text-slate-400 truncate">
-              {menuMsg.sender_name} · {menuMsg.message || menuMsg.attachment_name || 'Pièce jointe'}
+        <div className="fixed inset-0 z-[80] bg-black/15" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
+          <div className={`fixed rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} style={popStyle()} onClick={e => e.stopPropagation()}>
+            {menuActions.map(a => {
+              const I = a.icon;
+              return (
+                <button key={a.k} type="button" onClick={a.run} className={`w-full h-11 px-4 flex items-center gap-3 text-sm cursor-pointer ${P.popHover} ${a.k === 'del' ? 'text-red-500' : ''}`}>
+                  <I className={`w-4 h-4 shrink-0 ${a.color}`} />{a.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Qui a vu le message (groupes) */}
+      {seenFor && current.group && createPortal(
+        <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setSeenFor(null)}>
+          <div className={`w-full max-w-xs rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} onClick={e => e.stopPropagation()}>
+            <div className={`px-4 py-2.5 border-b ${P.div} text-sm font-bold`}>Vu par</div>
+            <div className="max-h-72 overflow-y-auto">
+              {current.group.members.filter(id => id !== currentUser.id).map(id => {
+                const seen = readersOf(seenFor).includes(id);
+                return (
+                  <div key={id} className="px-4 py-2.5 flex items-center gap-2.5 text-sm">
+                    <Avatar src={users.find(u => u.id === id)?.avatar_url} name={nameOf(id)} className="w-8 h-8 rounded-full" />
+                    <span className="flex-1 min-w-0 truncate">{nameOf(id)}</span>
+                    {seen ? <span className="flex items-center gap-1 text-xs font-semibold text-sky-500"><CheckCheck className="w-3.5 h-3.5" />Vu</span> : <span className={`text-xs ${P.sub}`}>Pas encore vu</span>}
+                  </div>
+                );
+              })}
             </div>
-            {canWrite && (
-              <button type="button" onClick={() => startReply(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <Reply className="w-4 h-4 text-cyan-400" /> Répondre
-              </button>
-            )}
-            {menuMsg.sender_id === currentUser.id && (
-              <button type="button" onClick={() => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); }} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                {menuMsg.pinned ? <PinOff className="w-4 h-4 text-amber-400" /> : <Pin className="w-4 h-4 text-amber-400" />}
-                {menuMsg.pinned ? 'Désépingler' : 'Épingler'}
-              </button>
-            )}
-            {db.canEditMessage(menuMsg, currentUser.id) && menuMsg.message && (
-              <button type="button" onClick={() => startEdit(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <Pencil className="w-4 h-4 text-cyan-400" /> Modifier
-              </button>
-            )}
-            {menuMsg.message && (
-              <button type="button" onClick={() => copyText(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#162130] cursor-pointer">
-                <Copy className="w-4 h-4 text-slate-400" /> Copier le texte
-              </button>
-            )}
-            <button type="button" onClick={() => deleteForMe(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-slate-200 hover:bg-[#162130] cursor-pointer">
-              <EyeOff className="w-4 h-4 text-slate-400" /> Supprimer pour moi
-            </button>
-            {db.canDeleteForAll(menuMsg, currentUser.id) && (
-              <button type="button" onClick={() => confirmDelete(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-red-300 hover:bg-red-950/40 cursor-pointer">
-                <Trash2 className="w-4 h-4" /> Supprimer pour tous
-              </button>
-            )}
-            <button type="button" onClick={() => setMenuMsg(null)} className="w-full px-3 py-2.5 text-xs text-slate-400 border-t border-slate-800 hover:text-white cursor-pointer">Fermer</button>
+            <button type="button" onClick={() => setSeenFor(null)} className={`w-full px-4 py-2.5 text-xs border-t cursor-pointer ${P.div} ${P.sub}`}>Fermer</button>
           </div>
         </div>,
         document.body
@@ -612,6 +805,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           onClose={() => setViewer(null)}
           imageUrl={viewer.url}
           gallery={gallery.map(m => m.attachment_url!)}
+          names={gallery.map(m => m.attachment_name || 'photo.png')}
           title={viewer.msg.attachment_name || 'Photo'}
           subtitle={viewer.msg.sender_name}
           timestamp={viewer.msg.timestamp}

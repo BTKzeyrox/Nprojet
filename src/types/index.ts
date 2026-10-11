@@ -197,6 +197,9 @@ export interface ChatGroup {
   name: string;
   owner_id: string;
   members: string[];
+  admins?: string[]; // administrateurs du groupe (en plus du responsable)
+  avatar_url?: string; // photo du groupe
+  description?: string; // description (200 caractères max)
   created_at?: string;
 }
 
@@ -215,6 +218,7 @@ export interface ClientContract {
   game_mode: string;
   description?: string; // Description du poste (ex: no read, no card...)
   post_type?: string; // Type de poste (ex: NO R/C, YES R/C, RED 9CASE)
+  proof_mode?: 'type' | 'none' | 'photo' | 'note' | 'both'; // Justificatif demandé à la fin (avancé) : « type » = selon le type de mission
   no_account?: boolean; // Poste sans compte : grisé, non réservable, rempli par l'admin
   current_rank: string;
   target_rank: string;
@@ -289,8 +293,19 @@ export interface NewsComment {
   user_name: string;
   role: UserRole;
   text: string;
+  files?: NewsAttachment[];
   created_at: string;
 }
+
+// Pièce jointe d'une publication ou d'un commentaire (photo compressée, PDF, texte)
+export interface NewsAttachment {
+  url: string;
+  name: string;
+  kind: 'image' | 'file';
+  size?: number; // octets
+}
+
+export type NewsStatus = 'published' | 'pending' | 'rejected';
 
 export interface NewsPost {
   id: string;
@@ -303,4 +318,10 @@ export interface NewsPost {
   loves: string[]; // ids des personnes qui ont mis « J'adore »
   comments: NewsComment[];
   shares: number;
+  files?: NewsAttachment[];
+  author_role?: UserRole;
+  status?: NewsStatus; // absent = publiée (anciennes publications)
+  reject_reason?: string;
+  submitted_at?: string;
+  files_removed?: number; // fichiers supprimés au refus
 }

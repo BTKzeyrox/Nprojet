@@ -157,6 +157,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editShift, setEditShift] = useState<ShiftType | 'any'>('any');
   const [editNotes, setEditNotes] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editProofMode, setEditProofMode] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
 
   // In-app Toast Notice (no window.alert in iframe)
   const [toastNotice, setToastNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -240,6 +241,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       account_proof_urls: editAccountProofs,
       game_mode: editGameMode.trim(),
       description: editDescription.trim(),
+      proof_mode: editProofMode,
       no_account: false,
       recommended_shift: editShift,
     });
@@ -463,6 +465,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setAssignedBoosterId(session ? session.employee_id : (availableBoosters[0]?.id || ''));
             setEditNotes(session?.notes || '');
             setEditDescription(contract.description || '');
+            setEditProofMode(contract.proof_mode || 'type');
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
           }}
@@ -661,6 +664,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
 
+                  <details className="rounded-xl border border-slate-700 bg-black/10 px-3 py-2.5">
+                    <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1">Justificatif demandé à la fin</label>
+                        <select value={editProofMode} onChange={e => setEditProofMode(e.target.value as typeof editProofMode)} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white">
+                          <option value="type">Selon le type de mission</option>
+                          <option value="none">Aucun justificatif</option>
+                          <option value="photo">Photo ou capture obligatoire</option>
+                          <option value="note">Note obligatoire</option>
+                          <option value="both">Photo et note obligatoires</option>
+                        </select>
+                      </div>
+                      <p className="text-[11px] text-slate-400">Quantités (facultatives, aucun calcul n'est imposé) :</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Quantité de départ</label>
@@ -710,6 +727,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </span>
                     </div>
                   </div>
+
+                    </div>
+                  </details>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div>

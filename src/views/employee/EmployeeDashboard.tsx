@@ -64,6 +64,16 @@ interface EmployeeDashboardProps {
   onNavigateTab?: (tab: 'grid' | 'active-post' | 'advances' | 'chat' | 'calendar') => void;
 }
 
+// Justificatif demandé : celui choisi pour la mission (options avancées), sinon celui du type de mission
+function proofNeeds(clientName: string, guide: { endPhotoRequired: boolean; endNoteRequired: boolean }): { photo: boolean; note: boolean } {
+  const mode = db.getContracts().find(c => c.client_name === clientName)?.proof_mode || 'type';
+  if (mode === 'none') return { photo: false, note: false };
+  if (mode === 'photo') return { photo: true, note: false };
+  if (mode === 'note') return { photo: false, note: true };
+  if (mode === 'both') return { photo: true, note: true };
+  return { photo: guide.endPhotoRequired, note: guide.endNoteRequired };
+}
+
 export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   currentUser,
   onOpenProofLightbox,
@@ -378,11 +388,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     const guide = getGuide(typeOf(activePost.client_name));
-    if (guide.endPhotoRequired && !endProofPreview) {
+    const need = proofNeeds(activePost.client_name, guide);
+    if (need.photo && !endProofPreview) {
       setEndFormError('Le justificatif (photo ou capture) est obligatoire pour ce type de mission.');
       return;
     }
-    if (guide.endNoteRequired && !endNotes.trim()) {
+    if (need.note && !endNotes.trim()) {
       setEndFormError(guide.endNoteLabel.replace(' (obligatoire)', '') + ' : ce champ est obligatoire.');
       return;
     }
@@ -1689,7 +1700,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <label className="block text-slate-300 uppercase mb-1 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
                     <Camera className="w-4 h-4" />
-                    <span>Justificatif de fin ({getGuide(typeOf(activePost.client_name)).endPhotoRequired ? 'obligatoire' : 'facultatif'})</span>
+                    <span>Justificatif de fin ({proofNeeds(activePost.client_name, getGuide(typeOf(activePost.client_name))).photo ? 'obligatoire' : 'facultatif'})</span>
                   </span>
                   <span className="text-[10px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
                 </label>
