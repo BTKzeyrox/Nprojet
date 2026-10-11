@@ -4,6 +4,7 @@ import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
+import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ReportProblemModal } from './components/ReportProblemModal';
@@ -71,7 +72,7 @@ export default function App() {
     const sync = () => {
       // On suit la vue visible seulement si le clavier est ouvert (la vue rétrécit de plus de 100 px).
       // Sans clavier (ou en zoom), la barre reste fixe en haut : l'effet élastique de l'iPhone ne la déplace plus.
-      const keyboardOpen = window.innerHeight - vv.height > 100;
+      const keyboardOpen = isKeyboardOpen(vv);
       if (vv.scale > 1.01 || !keyboardOpen) {
         root.style.removeProperty('--vvh');
         root.style.removeProperty('--vvt');
@@ -81,11 +82,17 @@ export default function App() {
       root.style.setProperty('--vvt', `${vv.offsetTop}px`);
     };
     sync();
+    // Le clavier met un instant à s'ouvrir ou se fermer : on resynchronise après le focus
+    const onFocus = () => { sync(); setTimeout(sync, 120); setTimeout(sync, 400); };
     vv.addEventListener('resize', sync);
     vv.addEventListener('scroll', sync);
+    document.addEventListener('focusin', onFocus);
+    document.addEventListener('focusout', onFocus);
     return () => {
       vv.removeEventListener('resize', sync);
       vv.removeEventListener('scroll', sync);
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('focusout', onFocus);
       root.style.removeProperty('--vvh');
       root.style.removeProperty('--vvt');
     };

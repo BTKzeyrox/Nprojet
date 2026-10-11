@@ -3,6 +3,7 @@ import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
+import { isKeyboardOpen } from '../utils/keyboard';
 
 interface BottomNavProps {
   isAdmin: boolean;
@@ -22,10 +23,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNav
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const on = () => setKb(window.innerHeight - vv.height > 100);
+    const on = () => setKb(isKeyboardOpen(vv));
+    const onFocus = () => { on(); setTimeout(on, 120); setTimeout(on, 400); };
     on();
     vv.addEventListener('resize', on);
-    return () => vv.removeEventListener('resize', on);
+    document.addEventListener('focusin', onFocus);
+    document.addEventListener('focusout', onFocus);
+    return () => {
+      vv.removeEventListener('resize', on);
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('focusout', onFocus);
+    };
   }, []);
 
   // La hauteur réelle de la barre est publiée (--bnh) : la messagerie s'arrête juste au-dessus
