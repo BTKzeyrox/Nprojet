@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowLeft, ExternalLink, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, FileText, Trash2 } from 'lucide-react';
+import { downloadFile } from '../utils/attachments';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 
 interface FileViewerModalProps {
@@ -26,6 +27,9 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name, sub
           {subtitle && <p className="text-[10px] text-slate-400 font-mono break-words leading-tight">{subtitle}</p>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <button type="button" onClick={() => void downloadFile(url, name)} className="flex items-center gap-1.5 px-3 min-h-[44px] bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold cursor-pointer" title="Télécharger">
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Télécharger</span>
+          </button>
           <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold" title="Ouvrir à part">
             <ExternalLink className="w-4 h-4" /> <span className="hidden sm:inline">Ouvrir</span>
           </a>

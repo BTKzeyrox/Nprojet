@@ -84,3 +84,21 @@ export async function uploadAttachments(
   }
   return { ok: true, files: items.map(i => ({ url: i.url as string, name: i.name, kind: i.kind, size: i.after })) };
 }
+
+// Télécharge un fichier distant sous son vrai nom. Si le navigateur refuse (sécurité), on l'ouvre à part.
+export async function downloadFile(url: string, name: string): Promise<void> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('http');
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'fichier';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+}

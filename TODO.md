@@ -21,10 +21,10 @@
 - [x] Pastille « En attente de validation » côté employé (existait déjà)
 - [ ] Pas fait : pastille rouge dans la barre latérale pour les publications en attente (non demandé)
 
-### D. Commentaires et visionneuse
-- [ ] Commentaires avec image ou fichier
-- [ ] Visionneuse : Retour, zoom, précédent/suivant, Télécharger
-- [ ] Aperçu des fichiers avec Retour et Télécharger
+### D. Commentaires et visionneuse (fait le 2026-10-11, non testé à l'écran)
+- [x] Commentaires avec image ou fichier (trombone, compression, liste avant envoi, affichage sous le texte)
+- [x] Visionneuse : Retour, zoom, précédent/suivant (existaient), Télécharger avec le vrai nom du fichier
+- [x] Aperçu des fichiers : Retour (existait) et Télécharger (ajouté)
 
 ### E. Barre d'actions et dynamique
 - [ ] J'adore / Commenter / Partager sur une ligne, police réduite
@@ -48,3 +48,4 @@
 - 2026-10-11 : étapes A (d888eb4) et B (7f5cce7) faites, `npm run build` et `tsc --noEmit` sans erreur. `df-api` pas encore redéployé à ce moment-là.
 - 2026-10-11 : `df-api` redéployé en v3 (commit `d888eb4`), empreinte du fichier GitHub vérifiée identique. Aucun appel réel testé (réseau de Claude bloqué vers supabase.co) : à tester par BTK (publier avec photo en admin, puis en employé).
 - 2026-10-11 : étape C faite (FeedView.tsx : file « À valider », boutons Valider / Refuser avec motif). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
+- 2026-10-11 : étape D faite (FeedView, LightboxModal, FileViewerModal, attachments.ts). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran. Télécharger : si le navigateur refuse, le fichier s'ouvre dans un nouvel onglet.

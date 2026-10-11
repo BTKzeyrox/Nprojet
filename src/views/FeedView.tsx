@@ -26,8 +26,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [lb, setLb] = useState<{ url: string; gallery: string[] } | null>(null);
+  const [lb, setLb] = useState<{ url: string; gallery: string[]; names: string[] } | null>(null);
   const [fv, setFv] = useState<NewsAttachment | null>(null);
+  const [cItems, setCItems] = useState<DraftAttachment[]>([]);
+  const [cPrep, setCPrep] = useState(false);
+  const [cProg, setCProg] = useState<{ d: number; t: number } | null>(null);
+  const cFile = useRef<HTMLInputElement>(null);
   const status = post.status || 'published';
   const published = status === 'published';
   const mine = post.author_id === me.id;
@@ -59,11 +63,32 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     void run(() => db.shareNews(post.id));
   };
 
+  const pickComment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!list.length) return;
+    setMsg(''); setCPrep(true);
+    const ok: DraftAttachment[] = [];
+    const errors: string[] = [];
+    for (const f of list) {
+      try { ok.push(await prepareAttachment(f)); } catch (x) { errors.push((x as Error).message); }
+    }
+    setCItems(prev => [...prev, ...ok]);
+    if (errors.length) setMsg(errors.join(' '));
+    setCPrep(false);
+  };
+
   const send = async () => {
     const v = text.trim();
-    if (!v) return;
-    const r = await run(() => db.commentNews(post.id, v));
-    if (r?.success) setText('');
+    if (busy || cPrep || (!v && cItems.length === 0)) return;
+    setBusy(true); setMsg('');
+    const up = await uploadAttachments(cItems, (d, t) => setCProg({ d, t }));
+    setCProg(null);
+    if (!up.ok) { setMsg(up.error); setBusy(false); return; }
+    const r = await db.commentNews(post.id, v, up.files);
+    if (!r.success) { setMsg(r.error || 'Action impossible.'); setBusy(false); return; }
+    setText(''); setCItems([]);
+    setBusy(false);
   };
 
   const btn = `flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`;
@@ -133,7 +158,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {images.length > 0 && (
         <div className={images.length === 1 ? '' : 'grid grid-cols-2 sm:grid-cols-3 gap-1.5'}>
           {images.map(f => (
-            <button key={f.url} type="button" onClick={() => setLb({ url: f.url, gallery: images.map(i => i.url) })} className="block w-full overflow-hidden rounded-lg" title={f.name}>
+            <button key={f.url} type="button" onClick={() => setLb({ url: f.url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} className="block w-full overflow-hidden rounded-lg" title={f.name}>
               <img src={f.url} alt={f.name} loading="lazy" className={images.length === 1 ? 'w-full max-h-96 object-cover' : 'w-full aspect-square object-cover'} />
             </button>
           ))}
@@ -186,11 +211,55 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     )}
                   </div>
                   <p className="text-sm whitespace-pre-wrap break-words">{c.text}</p>
+                  {(c.files || []).length > 0 && (() => {
+                    const cImgs = (c.files || []).filter(f => f.kind === 'image');
+                    const cOthers = (c.files || []).filter(f => f.kind !== 'image');
+                    return (
+                      <div className="mt-1.5 space-y-1.5">
+                        {cImgs.length > 0 && (
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {cImgs.map(f => (
+                              <button key={f.url} type="button" onClick={() => setLb({ url: f.url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} className="block w-full overflow-hidden rounded-lg" title={f.name}>
+                                <img src={f.url} alt={f.name} loading="lazy" className="w-full aspect-square object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {cOthers.map(f => (
+                          <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${light ? 'bg-white hover:bg-slate-50' : 'bg-white/5 hover:bg-white/10'}`}>
+                            <FileText className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span className="truncate flex-1 min-w-0">{f.name}</span>
+                            {f.size ? <span className={`shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
           })}
+          {cItems.length > 0 && (
+            <ul className="space-y-1.5">
+              {cItems.map(it => (
+                <li key={it.key} className={`flex items-center gap-2.5 rounded-lg p-1.5 pr-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
+                  {it.kind === 'image'
+                    ? <img src={it.dataUrl} alt="" className="w-10 h-10 rounded-md object-cover shrink-0" />
+                    : <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-4 h-4 text-emerald-600" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs truncate">{it.name}</div>
+                    <div className={`text-[11px] ${muted}`}>{it.kind === 'image' && it.after < it.before ? `${fmtBytes(it.before)} → ${fmtBytes(it.after)}` : fmtBytes(it.after)}{it.url ? ' · envoyé' : ''}</div>
+                  </div>
+                  <button type="button" disabled={busy} onClick={() => setCItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="flex gap-2">
+            <input ref={cFile} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void pickComment(e)} />
+            <button type="button" disabled={busy || cPrep} onClick={() => cFile.current?.click()} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} aria-label="Joindre une photo ou un fichier">
+              {cPrep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            </button>
             <input
               value={text}
               maxLength={500}
@@ -199,11 +268,13 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               placeholder="Écrire un commentaire…"
               className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`}
             />
-            <button type="button" disabled={busy || !text.trim()} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50" aria-label="Envoyer"><Send className="w-4 h-4" /></button>
+            <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
+              {cProg ? `${cProg.d}/${cProg.t}` : <Send className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       )}
-      {lb && <LightboxModal isOpen onClose={() => setLb(null)} imageUrl={lb.url} gallery={lb.gallery} title={post.title || 'Publication'} />}
+      {lb && <LightboxModal isOpen onClose={() => setLb(null)} imageUrl={lb.url} gallery={lb.gallery} names={lb.names} title={post.title || 'Publication'} />}
       {fv && <FileViewerModal url={fv.url} name={fv.name} onClose={() => setFv(null)} />}
     </article>
   );

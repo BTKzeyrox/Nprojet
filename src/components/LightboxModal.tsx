@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
+import { downloadFile } from '../utils/attachments';
 
 interface LightboxModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
   gallery?: string[]; // toutes les preuves de la session (précédent / suivant)
+  names?: string[]; // noms de fichier, dans le même ordre que gallery (pour Télécharger)
   title?: string;
   subtitle?: string;
   score?: number;
@@ -27,6 +29,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   onClose,
   imageUrl,
   gallery,
+  names,
   title = "Justificatif - Gestion Pro",
   subtitle,
   score,
@@ -156,7 +159,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               <Trash2 className="w-4 h-4" /> <span>Supprimer</span>
             </button>
           )}
-          <a href={current} download="preuve.png" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Télécharger l'image">
+          <a href={current} download={names?.[idx] || "preuve.png"} onClick={e => { if (names?.[idx]) { e.preventDefault(); void downloadFile(current, names[idx]); } }} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Télécharger l'image">
             <Download className="w-4 h-4" />
           </a>
           <button type="button" onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Fermer" aria-label="Fermer">
