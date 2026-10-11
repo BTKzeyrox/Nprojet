@@ -353,7 +353,7 @@ export default function App() {
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
-            <FeedView currentUser={viewUser} />
+            <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
@@ -381,7 +381,7 @@ export default function App() {
                   initialUserId={focusBoosterId || undefined}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} />
+                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} onOpenProfile={handleOpenEmployeeCV} />
               ) : (
                 /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
@@ -414,7 +414,7 @@ export default function App() {
                   onSelectDay={handleSelectDay}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} />
+                <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               ) : activeView === 'settings' ? (
                 <SettingsView personalOnly />
               ) : (

@@ -121,7 +121,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               {live.shift === 'day' ? `Vacation Jour (${shiftHoursLabel('day', db.getSettings())})` : `Vacation Nuit (${shiftHoursLabel('night', db.getSettings())})`}
             </div>
           )}
-          {live.phone && (
+          {live.phone && !!me && (me.role === 'admin' || me.id === live.id) && (
             <div className="flex items-center gap-2 text-slate-300">
               <Phone className="w-4 h-4 text-cyan-400" />
               {live.phone}

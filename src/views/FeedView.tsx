@@ -21,7 +21,7 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('fr-FR');
 };
 
-const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: boolean; onAsk: ReturnType<typeof useConfirm>['ask'] }> = ({ post, me, isAdmin, light, onAsk }) => {
+const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: boolean; onAsk: ReturnType<typeof useConfirm>['ask']; onOpenProfile?: (u: User) => void }> = ({ post, me, isAdmin, light, onAsk, onOpenProfile }) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -42,6 +42,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const card = light ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100';
   const muted = light ? 'text-slate-500' : 'text-slate-400';
   const users = db.getUsers();
+  const openProfile = (id: string) => { const u = users.find(x => x.id === id); if (u && onOpenProfile) onOpenProfile(u); };
 
   const run = async (fn: () => Promise<{ success: boolean; error?: string }>) => {
     if (busy) return;
@@ -97,16 +98,18 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     <article className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
       <header className="flex items-center gap-3">
         {post.author_role === 'employee'
-          ? <Avatar src={users.find(x => x.id === post.author_id)?.avatar_url} name={post.author_name || '?'} className="w-10 h-10 rounded-full" />
+          ? <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(x => x.id === post.author_id)?.avatar_url} name={post.author_name || '?'} className="w-10 h-10 rounded-full" /></button>
           : <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">GP</div>}
         <div className="min-w-0 flex-1">
-          <div className="font-bold text-sm truncate">{post.author_name || 'Responsable'}</div>
+          {post.author_role === 'employee'
+            ? <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Opérateur'}</button>
+            : <div className="font-bold text-sm truncate">{post.author_name || 'Responsable'}</div>}
           <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}</div>
         </div>
-        {post.pinned && <span className="flex items-center gap-1 text-xs font-bold text-emerald-600"><Pin className="w-3.5 h-3.5" />Épinglée</span>}
+        {!isAdmin && post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
         {isAdmin && (
           <div className="flex items-center gap-1">
-            {published && <button type="button" title={post.pinned ? 'Retirer l’épingle' : 'Épingler'} onClick={() => db.togglePinNews(post.id)} className={`p-2 rounded-lg ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><Pin className="w-4 h-4" /></button>}
+            {published && <button type="button" title={post.pinned ? 'Retirer l’épingle' : 'Épingler'} onClick={() => db.togglePinNews(post.id)} className={`flex flex-col items-center px-2 py-1 rounded-lg ${post.pinned ? 'text-amber-500' : ''} ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><Pin className="w-4 h-4" fill={post.pinned ? 'currentColor' : 'none'} />{post.pinned && <span className="text-[9px] leading-none font-bold">Épinglée</span>}</button>}
             <button type="button" title="Supprimer" onClick={() => onAsk({ title: 'Supprimer cette publication ?', message: 'Les commentaires seront supprimés aussi.', confirmLabel: 'Supprimer', danger: true, onConfirm: () => db.deleteNews(post.id) })} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
           </div>
         )}
@@ -201,10 +204,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             const mine = c.user_id === me.id;
             return (
               <div key={c.id} className="flex gap-2.5">
-                <Avatar src={u?.avatar_url} name={c.user_name || '?'} className="w-8 h-8 rounded-full" />
+                <button type="button" onClick={() => openProfile(c.user_id)} className="shrink-0 cursor-pointer self-start" title="Voir le profil"><Avatar src={u?.avatar_url} name={c.user_name || '?'} className="w-8 h-8 rounded-full" /></button>
                 <div className={`flex-1 min-w-0 rounded-xl px-3 py-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold truncate">{c.role === 'admin' ? 'Responsable' : c.user_name}</span>
+                    {c.role === 'admin'
+                      ? <span className="text-xs font-bold truncate">Responsable</span>
+                      : <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.user_name}</button>}
                     <span className={`text-[11px] ${muted}`}>{timeAgo(c.created_at)}</span>
                     {(isAdmin || mine) && (
                       <button type="button" title="Supprimer" onClick={() => void run(() => db.deleteCommentNews(post.id, c.id))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -376,7 +381,7 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
   );
 };
 
-export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) => void }> = ({ currentUser, onOpenProfile }) => {
   const { theme } = useApp();
   const light = theme === 'light';
   const [, force] = useState(0);
@@ -457,14 +462,14 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
           <div className="flex items-center gap-2 text-sm font-bold text-amber-600">
             <Clock className="w-4 h-4" />À valider ({queue.length})
           </div>
-          {queue.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} />)}
+          {queue.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} onOpenProfile={onOpenProfile} />)}
         </section>
       )}
 
       {posts.length === 0 && queue.length === 0 && held === 0 && (
         <div className={`text-center text-sm py-10 ${light ? 'text-slate-500' : 'text-slate-400'}`}>Aucune publication pour le moment.</div>
       )}
-      {posts.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} />)}
+      {posts.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} onOpenProfile={onOpenProfile} />)}
       {node}
     </div>
   );
