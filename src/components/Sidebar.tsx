@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               style={{ background: navy }}
               aria-hidden="true"
             >
-              G
+              <ClipboardCheck className="w-5 h-5" />
             </div>
             <div className="df-sb-text">
               <span className="df-sb-title block text-base font-extrabold leading-tight">Gestion Pro</span>

@@ -84,15 +84,17 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [addObjective, setAddObjective] = useState(0);
   const [addDesc, setAddDesc] = useState('');
   const [addType, setAddType] = useState('');
+  const [addProof, setAddProof] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [addError, setAddError] = useState<string | null>(null);
   const postTypes = db.getSettings().post_types || [];
 
   const submitAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType });
+    if (!addName.trim()) return setAddError('Écris le titre de la mission.');
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddError(null);
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddError(null);
   };
 
   // Keep contracts synchronized with store
@@ -433,6 +435,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         {contract.description && (
                           <p className="text-[11px] leading-snug text-slate-400 whitespace-pre-line break-words line-clamp-3">{contract.description}</p>
                         )}
+                        {contract.target_score > contract.initial_score && (
                         <div>
                           <div className="flex justify-between text-[10px] text-slate-400 mb-1">
                             <span>Quantité {formatScoreM(done)} / {formatScoreM(objective)}</span>
@@ -442,6 +445,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             <div className="h-full bg-blue-500" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
+                        )}
                         {sess && (
                           <div className="flex items-center justify-between text-[11px] text-slate-400">
                             <span className="font-semibold">{sess.employee_name}</span>
@@ -493,42 +497,51 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       })()}
 
       {showAdd && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 overflow-y-auto" onClick={() => setShowAdd(false)}>
-          <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-3 text-slate-100 text-xs font-mono">
-            <h3 className="font-tactical font-bold text-base text-white">Ajouter une mission</h3>
-            <p className="text-slate-400 leading-relaxed">Laisse le titre vide pour créer une mission « en préparation » : elle reste grisée et personne ne peut la prendre tant que tu ne l'as pas remplie.</p>
-            {addError && <div className="p-2 border border-red-500/60 bg-red-950/60 text-red-200 font-semibold">{addError}</div>}
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/70 overflow-y-auto" onClick={() => setShowAdd(false)}>
+          <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className={`w-full max-w-md my-auto rounded-3xl border p-5 space-y-4 text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
+            <h3 className="font-bold text-lg">Nouvelle mission</h3>
+            {addError && <div className="p-2.5 rounded-xl border border-red-500/60 bg-red-500/10 text-red-500 font-semibold text-xs">{addError}</div>}
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Titre de la mission (facultatif)</label>
-              <input type="text" value={addName} onChange={e => setAddName(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+              <label className="block text-xs font-semibold mb-1.5 opacity-70">Titre</label>
+              <input type="text" autoFocus value={addName} onChange={e => setAddName(e.target.value)} placeholder="Ex. : fiches du lot 12" className={`w-full rounded-2xl border px-4 py-2.5 focus:outline-none focus:border-blue-500 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
             </div>
-            <>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Quantité de départ</label>
-                  <ScoreInput value={addInitial} onChange={setAddInitial} />
-                </div>
-                <div>
-                  <label className="block text-slate-300 uppercase mb-1">Objectif (quantité à faire)</label>
-                  <ScoreInput value={addObjective} onChange={setAddObjective} />
-                </div>
-              <p className="text-[11px] text-slate-400 font-mono">
-                Cible = début + objectif = <strong className="text-emerald-400">{formatScoreM(addInitial + addObjective)}</strong>
-              </p>
-            </>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Type de mission</label>
-              <select value={addType} onChange={e => setAddType(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white">
+              <label className="block text-xs font-semibold mb-1.5 opacity-70">Type</label>
+              <select value={addType} onChange={e => setAddType(e.target.value)} className={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}>
                 <option value="">Aucun</option>
                 {postTypes.map(t2 => (<option key={t2} value={t2}>{t2}</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
-              <textarea value={addDesc} onChange={e => setAddDesc(e.target.value)} rows={2} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white resize-y" />
+              <label className="block text-xs font-semibold mb-1.5 opacity-70">Consigne (facultatif)</label>
+              <textarea value={addDesc} onChange={e => setAddDesc(e.target.value)} rows={3} placeholder="Ce qu'il faut faire, avec quel logiciel…" className={`w-full rounded-2xl border px-4 py-2.5 resize-y ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
             </div>
+
+            <details className={`rounded-2xl border px-4 py-3 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-white/[0.03]'}`}>
+              <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 opacity-70">Justificatif demandé à la fin</label>
+                  <select value={addProof} onChange={e => setAddProof(e.target.value as typeof addProof)} className={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}>
+                    <option value="type">Selon le type de mission</option>
+                    <option value="none">Aucun justificatif</option>
+                    <option value="photo">Photo ou capture obligatoire</option>
+                    <option value="note">Note obligatoire</option>
+                    <option value="both">Photo et note obligatoires</option>
+                  </select>
+                  <p className="text-[11px] opacity-60 mt-1">Tu peux laisser « Selon le type » tant que tu ne sais pas quoi demander.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 opacity-70">Quantité à faire (si tu la connais)</label>
+                  <ScoreInput value={addObjective} onChange={setAddObjective} />
+                  <p className="text-[11px] opacity-60 mt-1">Laisse 0 si tu ne veux pas de quantité : aucun calcul n'est fait.</p>
+                </div>
+              </div>
+            </details>
+
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <button type="button" onClick={() => setShowAdd(false)} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold text-sm">Annuler</button>
-              <button type="submit" className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">Ajouter</button>
+              <button type="button" onClick={() => setShowAdd(false)} className={`px-3 py-2.5 rounded-full border font-semibold cursor-pointer ${isLight ? 'border-slate-300 hover:bg-slate-100' : 'border-slate-600 hover:bg-white/10'}`}>Annuler</button>
+              <button type="submit" className="px-3 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer">Créer la mission</button>
             </div>
           </form>
         </div>

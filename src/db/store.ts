@@ -802,9 +802,9 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode'] }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
-      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} postes.` };
+      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
     const name = p.client_name.trim();
     const used = new Set(this.contracts.map(c => c.post_number));
@@ -812,7 +812,6 @@ class DeltaForceStore {
     while (used.has(n)) n++;
     const initial = Math.max(0, p.initial_score || 0);
     const objective = Math.max(0, p.objective || 0);
-    if (name && objective <= 0) return { success: false, error: "L'objectif doit être supérieur à 0." };
     this.contracts.push({
       id: `contract-${Date.now()}`,
       post_number: n,
@@ -821,6 +820,7 @@ class DeltaForceStore {
       game_mode: '',
       description: (p.description || '').trim(),
       post_type: p.post_type || '',
+      proof_mode: p.proof_mode || 'type',
       current_rank: '—',
       target_rank: '—',
       initial_score: name ? initial : 0,

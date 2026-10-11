@@ -215,6 +215,7 @@ export interface ClientContract {
   game_mode: string;
   description?: string; // Description du poste (ex: no read, no card...)
   post_type?: string; // Type de poste (ex: NO R/C, YES R/C, RED 9CASE)
+  proof_mode?: 'type' | 'none' | 'photo' | 'note' | 'both'; // Justificatif demandé à la fin (avancé) : « type » = selon le type de mission
   no_account?: boolean; // Poste sans compte : grisé, non réservable, rempli par l'admin
   current_rank: string;
   target_rank: string;

@@ -699,13 +699,13 @@ html.theme-dark header, html.theme-dark header.df-topbar { background-image: non
 
 /* ===== Menu de gauche : couleurs propres (clair et sombre), plus fortes que les anciennes règles globales ===== */
 aside.df-sb {
-  --sb-bg: #ffffff; --sb-line: #cbd5e1; --sb-text: #0b2a4a; --sb-sub: #64748b; --sb-item: #334155;
-  --sb-hover: #e2e8f0; --sb-active: #0b2a4a; --sb-prof: #f1f5f9; --sb-btn: #f1f5f9; --sb-btn-h: #e2e8f0; --sb-btn-t: #334155;
+  --sb-bg: #ffffff; --sb-line: #e2e8f0; --sb-text: #0b2a4a; --sb-sub: #64748b; --sb-item: #334155;
+  --sb-hover: #f1f5f9; --sb-active: #0b2a4a; --sb-prof: #f4f6fa; --sb-btn: #f4f6fa; --sb-btn-h: #e2e8f0; --sb-btn-t: #334155;
   --sb-badge: #e2e8f0; --sb-badge-t: #334155;
 }
 html.theme-dark aside.df-sb {
-  --sb-bg: #0c1a33; --sb-line: #22365a; --sb-text: #f8fafc; --sb-sub: #94a3b8; --sb-item: #cbd5e1;
-  --sb-hover: rgba(255,255,255,.07); --sb-active: #2563eb; --sb-prof: rgba(255,255,255,.04); --sb-btn: rgba(255,255,255,.06); --sb-btn-h: rgba(255,255,255,.12); --sb-btn-t: #e2e8f0;
+  --sb-bg: #0f1b2d; --sb-line: #213352; --sb-text: #f8fafc; --sb-sub: #94a3b8; --sb-item: #cbd5e1;
+  --sb-hover: rgba(255,255,255,.07); --sb-active: #2563eb; --sb-prof: #12213a; --sb-btn: rgba(255,255,255,.06); --sb-btn-h: rgba(255,255,255,.12); --sb-btn-t: #e2e8f0;
   --sb-badge: rgba(255,255,255,.12); --sb-badge-t: #e2e8f0;
 }
 aside.df-sb, html.theme-dark aside.df-sb, html.theme-light aside.df-sb {
