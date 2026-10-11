@@ -730,3 +730,8 @@ aside.df-sb .df-sb-warn { background-color: #f59e0b !important; color: #fff !imp
 aside.df-sb .df-sb-danger { background-color: rgba(220,38,38,.10) !important; color: #dc2626 !important; border-color: rgba(220,38,38,.35) !important; }
 html.theme-dark aside.df-sb .df-sb-danger { color: #fca5a5 !important; }
 aside.df-sb .df-sb-danger:hover { background-color: rgba(220,38,38,.18) !important; }
+
+
+/* La barre du haut est fixe : les défilements automatiques (recherche, notification, ancre) s'arrêtent SOUS elle, jamais derrière */
+html { scroll-padding-top: 4.75rem; }
+[data-nav], [data-msg-id] { scroll-margin-top: 4.75rem; }
