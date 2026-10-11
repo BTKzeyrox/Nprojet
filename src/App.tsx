@@ -451,6 +451,7 @@ export default function App() {
         {/* Barre du bas (téléphone) */}
         <BottomNav
           isAdmin={viewUser.role === 'admin'}
+          currentUser={viewUser}
           activeView={activeView}
           onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}

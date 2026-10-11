@@ -4,16 +4,20 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
 import { isKeyboardOpen } from '../utils/keyboard';
+import { User } from '../types';
+import { useChatUnread } from '../utils/useChatUnread';
 
 interface BottomNavProps {
   isAdmin: boolean;
+  currentUser?: User | null;
   activeView: string;
   onNavigate: (view: string) => void;
   onOpenMenu: () => void;
 }
 
 // Barre du bas (téléphone seulement) : accès direct aux 4 pages les plus utilisées + « Menu »
-export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNavigate, onOpenMenu }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, activeView, onNavigate, onOpenMenu }) => {
+  const chatUnread = useChatUnread(currentUser);
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
@@ -54,7 +58,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, activeView, onNav
   const pending = isAdmin ? countPending().total : 0;
   const items: { id: string; label: string; icon: React.ElementType; badge?: number }[] = [
     { id: 'feed', label: 'Actualités', icon: Newspaper },
-    { id: 'chat', label: 'Messages', icon: MessageSquare },
+    { id: 'chat', label: 'Messages', icon: MessageSquare, badge: chatUnread },
     { id: 'calendar', label: 'Calendrier', icon: Calendar },
     isAdmin
       ? { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending }

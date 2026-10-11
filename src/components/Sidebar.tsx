@@ -27,6 +27,7 @@ import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
+import { useChatUnread } from '../utils/useChatUnread';
 
 interface SidebarProps {
   currentUser: User;
@@ -66,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isAdmin = currentUser.role === 'admin';
   const isLight = theme === 'light';
   const pending = countPending().total;
+  const chatUnread = useChatUnread(currentUser);
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
     { id: 'feed', label: 'Actualités', icon: Newspaper },
@@ -82,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     isAdmin
       ? { id: 'employees', label: t('nav_employees'), icon: Users }
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
-    { id: 'chat', label: t('nav_chat'), icon: MessageSquare },
+    { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },

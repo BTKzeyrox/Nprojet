@@ -96,18 +96,18 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/70" onClick={onClose}>
       <div
-        className="w-full max-w-sm bg-[#0d1624] border border-slate-700 p-5 space-y-4 text-slate-100"
+        className="w-full max-w-sm bg-[#0d1624] border border-slate-700 rounded-3xl shadow-2xl p-5 space-y-4 text-slate-100 max-h-[92dvh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-2">
           <h2 className="font-tactical font-bold text-lg">Profil</h2>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white" aria-label="Fermer">
+          <button onClick={onClose} className="rounded-xl p-1 text-slate-400 hover:text-white" aria-label="Fermer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <Avatar src={live.avatar_url} name={live.name} className="w-32 h-32 text-3xl" />
+          <Avatar src={live.avatar_url} name={live.name} className="w-32 h-32 text-3xl rounded-full ring-4 ring-blue-500/30" />
           <div className="text-center">
             <div className="font-bold text-base">{live.name}</div>
             <div className="text-xs text-slate-400">@{live.username}</div>
@@ -135,14 +135,14 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               <button
                 type="button"
                 onClick={() => camRef.current?.click()}
-                className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+                className="rounded-xl flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
               >
                 <Camera className="w-4 h-4 shrink-0" /> Prendre une photo
               </button>
               <button
                 type="button"
                 onClick={() => galRef.current?.click()}
-                className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+                className="rounded-xl flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
               >
                 <ImageIcon className="w-4 h-4 shrink-0" /> Changer la photo
               </button>
@@ -155,12 +155,12 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
         {isSelfBooster && (
           <div className="space-y-2">
             {refused && !pending && (
-              <div className="p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">
+              <div className="rounded-xl p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">
                 Modification refusée : {refused.reason || 'sans motif'}
               </div>
             )}
             {pending && (
-              <div className="p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs leading-relaxed">
+              <div className="rounded-xl p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs leading-relaxed">
                 Modification en attente de validation par l'administrateur : {pending.name} · @{pending.username}
                 {pending.avatar_url !== pending.old.avatar_url ? ' · nouvelle photo' : ''}
               </div>
@@ -169,7 +169,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               <button
                 type="button"
                 onClick={() => { setEditing(true); setInfo(''); }}
-                className="w-full px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer"
+                className="rounded-xl w-full px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer"
               >
                 {pending ? 'Modifier ma demande' : 'Modifier mon profil'}
               </button>
@@ -179,10 +179,10 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <div className="flex items-center gap-3">
                   <Avatar src={fAvatar || live.avatar_url} name={fName || live.name} className="w-14 h-14 text-lg" />
                   <div className="grid grid-cols-2 gap-2 flex-1">
-                    <button type="button" disabled={busy} onClick={() => camRef.current?.click()} className="px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => camRef.current?.click()} className="rounded-xl px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
                       Photo
                     </button>
-                    <button type="button" disabled={busy} onClick={() => galRef.current?.click()} className="px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => galRef.current?.click()} className="rounded-xl px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
                       Galerie
                     </button>
                   </div>
@@ -191,15 +191,15 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={pickForRequest} />
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Nom</label>
-                  <input value={fName} onChange={e => setFName(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fName} onChange={e => setFName(e.target.value)} className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
-                  <input value={fUser} onChange={e => setFUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} className="w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fUser} onChange={e => setFUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
-                  <input value={fPhone} onChange={e => setFPhone(e.target.value)} inputMode="tel" className="w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fPhone} onChange={e => setFPhone(e.target.value)} inputMode="tel" className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
@@ -209,14 +209,14 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                     value={fNote}
                     onChange={e => setFNote(e.target.value)}
                     placeholder="Un mot pour le responsable (facultatif)"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" onClick={() => { setEditing(false); setError(''); }} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
+                  <button type="button" onClick={() => { setEditing(false); setError(''); }} className="rounded-xl px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
                     Annuler
                   </button>
-                  <button type="button" disabled={busy} onClick={sendRequest} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
+                  <button type="button" disabled={busy} onClick={sendRequest} className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
                     {busy ? 'Envoi…' : 'Envoyer'}
                   </button>
                 </div>

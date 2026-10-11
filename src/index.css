@@ -789,3 +789,6 @@ html.theme-light [class~="bg-blue-600"] .text-blue-100, html.theme-light [class~
 /* Défilement de côté sans barre visible (images d'une publication) */
 .df-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
 .df-noscroll::-webkit-scrollbar { display: none; }
+
+/* Pastille Messages du menu : rouge pour se voir */
+aside.df-sb button:has(svg.lucide-message-square) .df-sb-badge { background-color: #dc2626 !important; color: #fff !important; }

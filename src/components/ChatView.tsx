@@ -415,32 +415,40 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const who = last && !last.deleted_at && t.kind !== 'user' && t.kind !== 'pair' ? `${last.sender_id === currentUser.id ? 'Moi' : last.sender_name.split(' ')[0]} : ` : last && last.sender_id === currentUser.id && !last.deleted_at && t.kind === 'user' ? 'Moi : ' : '';
     const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (last.message || (last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
     const unread = t.id === current.id && convVisible ? 0 : unreadOf(t);
+    const palette = ['border-l-rose-500', 'border-l-amber-500', 'border-l-emerald-500', 'border-l-sky-500', 'border-l-violet-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-orange-500'];
+    const hash = Array.from(t.id).reduce((a, c) => a + c.charCodeAt(0), 0);
+    const accent = {
+      bar: t.kind === 'all' ? 'border-l-blue-600' : t.kind === 'group' ? 'border-l-violet-600' : t.kind === 'pair' ? 'border-l-slate-400' : palette[hash % palette.length],
+      label: t.kind === 'all' ? 'Équipe' : t.kind === 'group' ? 'Groupe' : t.kind === 'pair' ? 'Entre opérateurs' : '',
+      labelCls: t.kind === 'all' ? 'bg-blue-100 text-blue-700' : t.kind === 'group' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600',
+    };
     return (
       <button
         key={t.id}
         type="button"
         onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        className={`w-full text-left px-3 py-2.5 flex items-center gap-3 border-b ${P.div} cursor-pointer ${t.id === current.id ? P.rowActive : P.rowHover} ${archivedRow ? 'opacity-70' : ''}`}
+        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors ${accent.bar} ${t.id === current.id ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
         {t.kind === 'group' && t.group?.avatar_url ? (
           <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
         ) : t.kind === 'all' || t.kind === 'group' ? (
-          <span className="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
+          <span className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${t.kind === 'all' ? 'bg-blue-600' : 'bg-violet-600'}`}>
             <Users className="w-5 h-5 text-white" />
           </span>
         ) : t.kind === 'pair' ? (
           <span className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-slate-200' : 'bg-slate-800'}`}><EyeOff className={`w-5 h-5 ${P.sub}`} /></span>
         ) : (
-          <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full" />
+          <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className={`flex-1 min-w-0 truncate text-[15px] font-semibold ${P.title}`}>{t.title}</span>
-            {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-emerald-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
+            <span className={`flex-1 min-w-0 truncate text-[15px] font-bold ${P.title}`}>{t.title}</span>
+            {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
+            {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
           <span className="flex items-center gap-2 mt-0.5">
             <span className={`flex-1 min-w-0 truncate text-[13px] ${P.sub}`}>{preview}</span>
-            {unread > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
+            {unread > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white shadow text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
           </span>
         </span>
       </button>
@@ -493,7 +501,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une discussion" className={`w-full h-10 pl-9 pr-3 rounded-full border text-sm focus:outline-none focus:border-emerald-500 ${P.input}`} style={{ borderRadius: 9999 }} />
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
           {shownList.filter(matches).map(t => renderThread(t))}
           {shownList.filter(matches).length === 0 && <div className={`px-4 py-6 text-center text-sm ${P.sub}`}>Aucune discussion trouvée.</div>}
           {archivedList.length > 0 && (

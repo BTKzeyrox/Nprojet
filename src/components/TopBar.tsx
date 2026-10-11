@@ -191,26 +191,35 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             )}
           </button>
           {bellOpen && (
-            <div className={`absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
-              <div className={`px-3 py-2 border-b ${L ? 'border-slate-100' : 'border-slate-800'} text-sm font-bold ${L ? 'text-slate-800' : 'text-slate-100'}`}>Notifications</div>
-              <div className="max-h-[60vh] overflow-y-auto">
+            <div className={`absolute right-0 top-full mt-2 w-[min(94vw,23rem)] df-notif rounded-2xl overflow-hidden z-50 border-2 ${L ? 'bg-white border-[#0b2a4a]/20' : 'bg-[#0f1e3a] border-blue-400/40'} shadow-[0_18px_50px_-8px_rgba(2,12,40,0.55)]`}>
+              <div className={`px-4 py-3 flex items-center justify-between ${L ? 'bg-[#0b2a4a] text-white' : 'bg-[#1d4ed8] text-white'}`}>
+                <span className="text-sm font-bold flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</span>
+                {count > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">{count > 99 ? '99+' : count}</span>}
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
                 {notifs.length === 0 ? (
-                  <div className={`px-3 py-4 text-sm ${L ? 'text-slate-500' : 'text-slate-400'}`}>Rien de nouveau.</div>
+                  <div className={`px-3 py-6 text-sm text-center ${L ? 'text-slate-500' : 'text-slate-300'}`}>Rien de nouveau.</div>
                 ) : (
-                  notifs.slice(0, 30).map(n => (
-                    <button
-                      key={n.id}
-                      onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
-                      className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} border-b ${L ? 'border-slate-50' : 'border-slate-800'} cursor-pointer`}
-                    >
-                      <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.tone === 'urgent' ? 'bg-red-500' : n.tone === 'bad' ? 'bg-orange-500' : n.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                      <span className="min-w-0 flex-1">
-                        <span className={`block text-sm font-semibold ${L ? 'text-slate-800' : 'text-slate-100'} truncate`}>{n.title}</span>
-                        {n.sub && <span className={`block text-xs ${L ? 'text-slate-500' : 'text-slate-400'} break-words`}>{n.sub}</span>}
-                      </span>
-                      {!isAdmin && !seen.includes(n.id) && <span className="text-[10px] font-bold text-red-600 shrink-0">NEUF</span>}
-                    </button>
-                  ))
+                  notifs.slice(0, 30).map(n => {
+                    const tone = n.tone === 'urgent' ? 'bg-red-100 text-red-700' : n.tone === 'bad' ? 'bg-orange-100 text-orange-700' : n.tone === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
+                    const fresh = !isAdmin && !seen.includes(n.id);
+                    return (
+                      <button
+                        key={n.id}
+                        onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
+                        className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl border cursor-pointer ${fresh ? (L ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/15 border-blue-400/40') : (L ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-white/5 border-white/10 hover:bg-white/10')}`}
+                      >
+                        <span className={`mt-0.5 w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${tone}`}>
+                          <Bell className="w-4 h-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={`block text-sm font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{n.title}</span>
+                          {n.sub && <span className={`block text-xs mt-0.5 ${L ? 'text-slate-600' : 'text-slate-300'} break-words`}>{n.sub}</span>}
+                        </span>
+                        {fresh && <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Nouveau" />}
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>
