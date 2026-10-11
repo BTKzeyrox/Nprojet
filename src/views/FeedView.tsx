@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { useConfirm } from '../components/ConfirmModal';
 import { Avatar } from '../components/Avatar';
+import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
@@ -94,6 +95,30 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           </div>
           {status === 'rejected' && post.reject_reason && <div>Motif : {post.reject_reason}</div>}
           {status === 'rejected' && !!post.files_removed && <div>Les fichiers joints ont été supprimés.</div>}
+          {isAdmin && status === 'pending' && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => db.decideNews(post.id, 'approve'))}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50"
+              >
+                <Check className="w-4 h-4" />Valider
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => askReason({
+                  title: 'Refuser cette publication ?',
+                  message: 'Les fichiers joints seront supprimés. L’auteur verra ton motif.',
+                  onSubmit: reason => { void run(() => db.decideNews(post.id, 'reject', reason)); },
+                })}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />Refuser
+              </button>
+            </div>
+          )}
           {mine && (
             <button type="button" disabled={busy} onClick={() => void run(() => db.withdrawNews(post.id))} className="underline font-semibold disabled:opacity-50">
               Retirer cette publication
@@ -288,7 +313,9 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
   const isAdmin = currentUser.role === 'admin';
-  const posts = db.getNews();
+  const all = db.getNews();
+  const queue = isAdmin ? all.filter(p => p.status === 'pending').sort((a, b) => String(a.submitted_at || a.created_at).localeCompare(String(b.submitted_at || b.created_at))) : [];
+  const posts = isAdmin ? all.filter(p => p.status !== 'pending') : all;
 
   return (
     <div className="max-w-2xl mx-auto w-full p-3 sm:p-6 space-y-4">
@@ -302,7 +329,16 @@ export const FeedView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
 
       <Composer isAdmin={isAdmin} light={light} />
 
-      {posts.length === 0 && (
+      {queue.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-600">
+            <Clock className="w-4 h-4" />À valider ({queue.length})
+          </div>
+          {queue.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} />)}
+        </section>
+      )}
+
+      {posts.length === 0 && queue.length === 0 && (
         <div className={`text-center text-sm py-10 ${light ? 'text-slate-500' : 'text-slate-400'}`}>Aucune publication pour le moment.</div>
       )}
       {posts.map(p => <PostCard key={p.id} post={p} me={currentUser} isAdmin={isAdmin} light={light} onAsk={ask} />)}

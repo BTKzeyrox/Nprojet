@@ -15,10 +15,11 @@
 - [x] Publier avec photos et fichiers (admin et employé)
 - [x] Barre de progression et erreurs claires (10 Mo max par fichier)
 
-### C. Validation par l'admin
-- [ ] File « À valider » en haut du fil, avec aperçu complet
-- [ ] Valider ou Refuser, motif visible par l'employé
-- [ ] Pastille « En attente de validation » côté employé
+### C. Validation par l'admin (fait le 2026-10-11, non testé à l'écran)
+- [x] File « À valider » en haut du fil, avec aperçu complet
+- [x] Valider ou Refuser, motif visible par l'employé
+- [x] Pastille « En attente de validation » côté employé (existait déjà)
+- [ ] Pas fait : pastille rouge dans la barre latérale pour les publications en attente (non demandé)
 
 ### D. Commentaires et visionneuse
 - [ ] Commentaires avec image ou fichier
@@ -46,3 +47,4 @@
 - 2026-10-11 : liste créée, aucune étape commencée.
 - 2026-10-11 : étapes A (d888eb4) et B (7f5cce7) faites, `npm run build` et `tsc --noEmit` sans erreur. `df-api` pas encore redéployé à ce moment-là.
 - 2026-10-11 : `df-api` redéployé en v3 (commit `d888eb4`), empreinte du fichier GitHub vérifiée identique. Aucun appel réel testé (réseau de Claude bloqué vers supabase.co) : à tester par BTK (publier avec photo en admin, puis en employé).
+- 2026-10-11 : étape C faite (FeedView.tsx : file « À valider », boutons Valider / Refuser avec motif). `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
