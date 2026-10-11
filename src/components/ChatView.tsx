@@ -340,7 +340,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   return (
     <div className="bg-[#0f1722] border border-slate-800 overflow-hidden shadow-xl flex h-full min-h-0 w-full">
       {/* Liste des conversations */}
-      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-64 shrink-0 border-r border-slate-800 bg-[#0c131c]`}>
+      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-80 shrink-0 border-r border-slate-800 bg-[#0c131c]`}>
         <div className="px-3 py-2 border-b border-slate-800 font-tactical font-bold text-white text-sm flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-emerald-400" /> <span className="flex-1">Messagerie</span>
           <button type="button" onClick={() => setNewChat(true)} className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer" title="Nouvelle discussion ou nouveau groupe">
@@ -404,7 +404,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
               <React.Fragment key={msg.id}>
                 {newDay && (
                   <div className="flex justify-center py-1">
-                    <span className="px-3 py-1 bg-slate-800/80 text-[10px] font-mono text-slate-300 rounded">{dayLabel(day)}</span>
+                    <span className="px-3 py-1 bg-slate-800/80 text-[11px] text-slate-300 rounded-full">{dayLabel(day)}</span>
                   </div>
                 )}
                 <div data-msg-id={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
@@ -414,7 +414,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
                       onTouchEnd={stopPress}
                       onTouchMove={stopPress}
                       onContextMenu={e => { if (!gone) { e.preventDefault(); setMenuMsg(msg); } }}
-                      className={`min-w-0 p-2.5 text-xs leading-relaxed break-words select-text ${
+                      className={`min-w-0 px-3.5 py-2.5 text-sm leading-relaxed break-words select-text rounded-2xl shadow-sm ${
                         gone ? 'bg-[#101822] text-slate-500 border border-slate-800' : isMe ? 'bg-emerald-600 text-white' : 'bg-[#16212e] text-slate-200 border border-slate-700/80'
                       } ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >

@@ -18,6 +18,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
+  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'data'>('general');
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,7 +139,14 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {error && <div className="p-3 bg-red-950 border border-red-500/60 text-red-200 text-sm font-semibold">{error}</div>}
       {saved && <div className="p-3 bg-emerald-950 border border-emerald-500/60 text-emerald-200 text-sm font-semibold">Réglages enregistrés.</div>}
 
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-700/60">
+        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['data', 'Données']] as const).map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px cursor-pointer whitespace-nowrap ${tab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>{label}</button>
+        ))}
+      </div>
 
+
+      {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
@@ -149,7 +157,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
         </div>
       </section>
+      )}
 
+      {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Vacations</h3>
         <div className="grid grid-cols-2 gap-3">
@@ -175,7 +185,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <input type="number" min={0} value={s.late_tolerance_min} onChange={e => set('late_tolerance_min', Number(e.target.value))} className={inputCls} />
         </div>
       </section>
+      )}
 
+      {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
@@ -225,7 +237,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           </div>
         </div>
       </section>
+      )}
 
+      {tab === 'data' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
@@ -262,7 +276,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </div>
         <p className="text-[11px] text-slate-500">Chaque rapport est un appel au serveur gratuit : garde une limite basse. La maintenance s'applique en environ 1 minute.</p>
       </section>
+      )}
 
+      {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Types de mission</h3>
         <div className="flex flex-wrap gap-2">
@@ -288,8 +304,10 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </div>
         <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les missions qui l'utilisent déjà.</p>
       </section>
+      )}
 
 
+      {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Règles et options</h3>
         <div>
@@ -302,7 +320,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
         </div>
       </section>
+      )}
 
+      {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
@@ -326,7 +346,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </button>
         {soundMsg && <p className="text-[11px] text-amber-300">{soundMsg}</p>}
       </section>
+      )}
 
+      {tab === 'data' && (
       <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3">
         <h3 className="font-tactical font-bold text-white">Données de démonstration</h3>
         <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -352,6 +374,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </button>
         {demoMsg && <div className="text-sm text-emerald-300">{demoMsg}</div>}
       </section>
+      )}
 
       <RestoreSection />
 
