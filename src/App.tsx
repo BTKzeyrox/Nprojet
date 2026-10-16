@@ -16,6 +16,7 @@ import { PageSkeleton } from './components/PageSkeleton';
 import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
+import { ToastHost } from './components/ToastHost';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -273,6 +274,7 @@ export default function App() {
           ? 'text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
           : 'text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
       }`}>
+        <ToastHost />
         <LoginView
           onLoginSuccess={handleLoginSuccess}
         />
@@ -296,10 +298,13 @@ export default function App() {
   // 2. WELCOME ANIMATION (UPON LOGIN)
   if (isWelcomeAnimating) {
     return (
-      <WelcomeAnimation
-        user={currentUser}
-        onComplete={() => setIsWelcomeAnimating(false)}
-      />
+      <>
+        <ToastHost />
+        <WelcomeAnimation
+          user={currentUser}
+          onComplete={() => setIsWelcomeAnimating(false)}
+        />
+      </>
     );
   }
 
@@ -518,6 +523,7 @@ export default function App() {
         timestamp={lightboxParams.timestamp}
       />
 
+      <ToastHost />
       {/* SMOOTH ANIMATED LOGOUT TRANSITION */}
       <LogoutTransition />
     </div>

@@ -348,19 +348,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Vacation souhaitée</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([['day', 'Jour', Sun], ['night', 'Nuit', Moon]] as const).map(([val, lab, Ico]) => {
-                      const on = sgShift === val;
-                      return (
-                        <button key={val} type="button" onClick={() => setSgShift(val)} className="h-14 rounded-2xl border font-bold text-[15px] flex items-center justify-center gap-2 cursor-pointer transition-colors" style={on ? { background: btnGrad, color: '#ffffff', borderColor: 'transparent' } : { backgroundColor: C.field, color: C.text, borderColor: C.line }}>
-                          <Ico className="w-5 h-5" />{lab}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
                   <label className={labelCls}>Mot de passe (6 caractères min.)</label>
                   <div className="relative">
                     <Lock className={iconCls} style={{ color: C.ico }} />

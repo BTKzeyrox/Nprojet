@@ -65,12 +65,12 @@ export const TRANSLATIONS = {
     msg_post_occupied: 'Mission en cours d\'utilisation par un autre opérateur',
 
     // Login
-    login_operator: 'CONNEXION OPÉRATEUR',
+    login_operator: 'CONNEXION',
     login_title: "ACCÉDER À L'ESPACE DE TRAVAIL",
-    login_desc: 'Authentifiez-vous pour ouvrir votre session et accéder à la grille.',
-    username_label: 'IDENTIFIANT OPÉRATEUR',
+    login_desc: 'Connectez-vous pour accéder à vos missions.',
+    username_label: 'PSEUDO',
     username_placeholder: 'Ex: responsable, tojo, rado',
-    password_label: 'MOT DE PASSE DE SÉCURITÉ',
+    password_label: 'MOT DE PASSE',
     btn_connect: 'SE CONNECTER AU SYSTÈME',
     auth_in_progress: 'AUTHENTIFICATION EN COURS...',
     quick_login_label: 'Connexion Rapide (Comptes de Test) :',

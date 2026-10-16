@@ -1,3 +1,4 @@
+import { showToast } from '../../components/ToastHost';
 import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
@@ -161,6 +162,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // In-app Toast Notice (no window.alert in iframe)
   const [toastNotice, setToastNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  useEffect(() => { if (toastNotice) { showToast(toastNotice.message, toastNotice.type); setToastNotice(null); } }, [toastNotice]);
 
   // Prevent background scroll when modals are active
   useLockBodyScroll(!!selectedAdminContract || !!rejectingPostId || !!forceReleasePostId);
@@ -1825,33 +1827,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* IN-APP TOAST NOTICE */}
-      {toastNotice && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
-          <div className={`px-4 py-3 rounded-xl border shadow-2xl flex items-center gap-3 text-xs font-mono backdrop-blur-md ${
-            toastNotice.type === 'success'
-              ? 'bg-emerald-950/95 border-emerald-500 text-emerald-200'
-              : toastNotice.type === 'error'
-              ? 'bg-red-950/95 border-red-500 text-red-200'
-              : 'bg-cyan-950/95 border-cyan-500 text-cyan-200'
-          }`}>
-            {toastNotice.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            ) : toastNotice.type === 'error' ? (
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-            ) : (
-              <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-            )}
-            <span>{toastNotice.message}</span>
-            <button
-              onClick={() => setToastNotice(null)}
-              className="text-slate-400 hover:text-white ml-2 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

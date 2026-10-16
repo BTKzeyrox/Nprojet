@@ -1,101 +1,50 @@
-import { db } from '../db/store';
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Cpu, Terminal, Zap, CheckCircle2, Crosshair } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { User } from '../types';
+import { Avatar } from './Avatar';
+import { useApp } from '../context/AppContext';
 
 interface WelcomeAnimationProps {
   user: User;
   onComplete: () => void;
 }
 
+// Écran de bienvenue après la connexion : carte arrondie sur le même fond bleu que la page de connexion.
 export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComplete }) => {
+  const L = useApp().theme === 'light';
   const [progress, setProgress] = useState(15);
-  const [stepText, setStepText] = useState('CHARGEMENT DE VOTRE ESPACE...');
-  const [glitchActive, setGlitchActive] = useState(false);
+  const [stepText, setStepText] = useState('Chargement de votre espace…');
 
   useEffect(() => {
-    const t1 = setTimeout(() => {
-      setProgress(40);
-      setStepText(`AUTHENTIFICATION VALIDÉE : ${user.name.toUpperCase()}`);
-    }, 300);
-
-    const t2 = setTimeout(() => {
-      setProgress(75);
-      setStepText(`CHARGEMENT DES ${db.getContracts().length || 20} MISSIONS...`);
-      setGlitchActive(true);
-    }, 700);
-
-    const t3 = setTimeout(() => {
-      setProgress(100);
-      setStepText('ESPACE PRÊT · BIENVENUE !');
-      setGlitchActive(false);
-    }, 1100);
-
-    const t4 = setTimeout(() => {
-      onComplete();
-    }, 1500);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
+    const t1 = setTimeout(() => { setProgress(45); setStepText('Connexion validée'); }, 300);
+    const t2 = setTimeout(() => { setProgress(80); setStepText('Préparation de vos missions…'); }, 700);
+    const t3 = setTimeout(() => { setProgress(100); setStepText('Espace prêt'); }, 1100);
+    const t4 = setTimeout(() => { onComplete(); }, 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [user, onComplete]);
 
+  const firstName = (user.name || '').trim().split(/\s+/)[0] || user.name;
+  const bg = L
+    ? 'radial-gradient(circle at 0% 0%, rgba(96,165,250,0.40) 0, transparent 38%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.35) 0, transparent 45%), linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)'
+    : 'radial-gradient(circle at 0% 0%, rgba(59,130,246,0.22) 0, transparent 38%), radial-gradient(circle at 30% 100%, rgba(37,99,235,0.22) 0, transparent 45%), linear-gradient(160deg, #050b18 0%, #0b1a38 55%, #12306b 100%)';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070b10]/95 backdrop-blur-xl animate-in fade-in duration-300">
-      {/* Background Matrix/Radar Grid */}
-      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px]" />
-      
-      <div className="relative w-full max-w-md p-8 bg-[#0b121c]/90 border border-emerald-500/40 rounded-2xl shadow-[0_0_50px_rgba(59,130,246,0.25)] text-center overflow-hidden">
-        {/* Ambient Top Light */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
-        
-        {/* Central Tactical Icon */}
-        <div className="relative mx-auto w-20 h-20 mb-6 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-emerald-500/30 animate-ping opacity-60" />
-          <div className="absolute inset-2 rounded-full border border-dashed border-emerald-400/60 animate-spin" style={{ animationDuration: '8s' }} />
-          <div className="relative w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/50 flex items-center justify-center shadow-lg">
-            <Crosshair className={`w-8 h-8 text-emerald-400 ${glitchActive ? 'scale-110 text-cyan-400' : 'transition-transform'}`} />
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: bg }}>
+      <div className={`w-full max-w-sm rounded-[28px] px-6 py-8 text-center shadow-xl ${L ? 'bg-white text-slate-900' : 'bg-[#0f1b2d] text-white'}`}>
+        <div className="mx-auto w-20 h-20 rounded-full overflow-hidden border-4 border-blue-500/30">
+          <Avatar src={user.avatar_url} name={user.name} className="w-full h-full" />
         </div>
+        <p className={`mt-4 text-xs font-bold tracking-[0.18em] uppercase ${L ? 'text-blue-600' : 'text-blue-400'}`}>Gestion Pro</p>
+        <h2 className="mt-1 text-2xl font-extrabold break-words">Bonjour {firstName}</h2>
+        <p className={`text-sm mt-1 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{user.role === 'admin' ? 'Responsable' : 'Opérateur'}</p>
 
-        {/* User Role & Name Greeting */}
-        <div className="space-y-1 mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>SESSION {user.role === 'admin' ? 'SUPERVISEUR RESPONSABLE' : `OPÉRATEUR VACATION ${user.shift.toUpperCase()}`}</span>
+        <div className="mt-6">
+          <div className={`h-2.5 w-full rounded-full overflow-hidden ${L ? 'bg-slate-200' : 'bg-white/10'}`}>
+            <div className="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
           </div>
-
-          <h2 className="text-2xl font-tactical font-black text-white tracking-wider mt-2">
-            BIENVENUE, {user.name.toUpperCase()}
-          </h2>
-          <p className="text-xs text-slate-400 font-mono">
-            Gestion Pro · Espace de travail sécurisé
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="space-y-2 text-left">
-          <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400">
-            <span className="truncate pr-2 flex items-center gap-1.5">
-              <Terminal className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              {stepText}
-            </span>
-            <span className="font-bold shrink-0">{progress}%</span>
-          </div>
-
-          <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(59,130,246,0.8)]"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1">
-            <span>GRILLE {db.getContracts().length || 20} MISSIONS</span>
-            <span className="text-emerald-500">SYNCHRONISÉ</span>
+          <div className={`mt-2.5 flex items-center justify-center gap-1.5 text-sm font-medium ${progress === 100 ? 'text-emerald-600' : L ? 'text-slate-600' : 'text-slate-300'}`}>
+            {progress === 100 && <CheckCircle2 className="w-4 h-4" />}
+            <span>{stepText}</span>
           </div>
         </div>
       </div>
