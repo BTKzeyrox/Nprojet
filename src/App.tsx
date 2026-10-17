@@ -34,6 +34,7 @@ const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m 
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
+const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
 const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
@@ -381,6 +382,8 @@ export default function App() {
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : activeView === 'advances' ? (
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
+              ) : activeView === 'performance' ? (
+                <PerformancePage />
               ) : activeView === 'history' ? (
                 <HistoryPage initialBoosterId={focusBoosterId || undefined} />
               ) : activeView === 'booster' && focusBoosterId ? (

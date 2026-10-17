@@ -53,7 +53,8 @@
 - [x] Tableau de bord : plus de prix en Ar, textes « paie créditée » remplacés (85d8e16)
 - [x] Base `nprojet` vérifiée : 10 missions Gestion Pro, aucun poste Delta
 - [ ] Pas fait : pages Avances et Paie et montants en Ar du calendrier toujours dans le code (inaccessibles par le menu)
-- [ ] Pas fait : tableau de performance avec export, fiche d'explication pour le CV (plan HANDOVER §7, points 5 et 6)
+- [x] Tableau de performance avec export Excel/CSV (2026-10-17, non testé à l'écran)
+- [ ] Pas fait : fiche d'explication pour le CV (plan HANDOVER §7, point 6)
 - [x] `LIRE_EN_PREMIER.md`, `README.md`, `AI_STUDIO.md`, `PROJET.md`, `CLAUDE.md`/`AGENTS.md`/`GEMINI.md` mis à jour pour Gestion Pro (2026-10-17). `HANDOVER.md` et `NOUVEAU_PROJET.md` gardent volontairement l'histoire de la copie.
 
 ## 2 ter. Fait depuis (autres chats, non testé à l'écran)
@@ -77,7 +78,7 @@
 
 ### 3. Nouvelles fonctions
 - [ ] Date limite d'une mission + rappel
-- [ ] Tableau de performance par opérateur, export Excel / PDF
+- [x] Tableau de performance par opérateur, export Excel et CSV (2026-10-17, page « Performance » admin, non testé à l'écran) — export PDF pas fait
 - [ ] Notifications (téléphone / e-mail) à la validation ou au refus
 - [ ] Envoi de gros fichiers par lien qui expire (option Google Drive à décider)
 - [ ] Rôle supplémentaire (chef d'équipe)
@@ -110,3 +111,4 @@
 - 2026-10-11 : correction de la règle « boutons arrondis » (elle excluait par erreur tout bouton dont la classe contient border-blue, border-transparent, etc. ; maintenant seuls les vrais border-b / border-t sont exclus) ; thème clair : couleurs de texte pâles (-100 et -200) recolorées pour rester lisibles ; Réglages : cartes, boutons, étiquettes et encadrés d'erreur / succès arrondis et lisibles. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : Réglages (Équipe) et page Équipe en vocabulaire Gestion Pro : « Début de session » / « Fin de session » devenus « Début de mission » / « Fin de mission » (aussi dans les pastilles de la colonne Activité), pastille et case « Avance » retirées, « page Employés » devenue « page Équipe ». Les horaires « Vacations » et l'accès par heures ne changent pas. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-17 : documents mis à jour (README, AI_STUDIO, PROJET, LIRE_EN_PREMIER, CLAUDE/AGENTS/GEMINI) et liste d'améliorations ajoutée (section 2 quater). Aucun code changé.
+- 2026-10-17 : page Performance (admin) : missions terminées / refusées / en cours, taux d'acceptation, délai moyen, période 7 j / 30 j / tout, export Excel et CSV (PerformancePage.tsx, utils/performance.ts, menu, App.tsx, enDict.json). Aucun changement serveur. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.

@@ -22,6 +22,7 @@ import {
   LogOut,
   PanelLeftOpen,
   PanelLeftClose,
+  BarChart3,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -76,6 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'dashboard', label: 'Tableau de bord', icon: Home },
           { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
           { id: 'history', label: 'Historique', icon: History },
+          { id: 'performance', label: 'Performance', icon: BarChart3 },
         ]
       : [
           { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },

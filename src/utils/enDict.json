@@ -939,5 +939,14 @@
 "Chrono, quantité et justificatifs": "Timer, quantity and proofs",
 "Connectez-vous pour accéder à vos missions.": "Sign in to access your missions.",
 "CONNEXION": "SIGN IN",
-"Bonjour": "Hello"
+"Bonjour": "Hello",
+"Performance": "Performance",
+"7 jours": "7 days",
+"30 jours": "30 days",
+"Terminées": "Completed",
+"Refusées": "Rejected",
+"Taux d'acceptation": "Acceptance rate",
+"Délai moyen": "Average time",
+"Aucune mission sur cette période.": "No missions in this period.",
+"Taux d'acceptation = terminées ÷ (terminées + refusées). Délai moyen = de début à fin de mission, sur les missions terminées.": "Acceptance rate = completed ÷ (completed + rejected). Average time = from mission start to end, on completed missions."
 }
