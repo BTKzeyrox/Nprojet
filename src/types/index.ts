@@ -190,6 +190,7 @@ export interface ChatMessage {
   deleted_at?: string; // supprimé pour tous : il ne reste qu'une trace
   deleted_by?: 'sender' | 'admin';
   sent_ms?: number; // heure d'envoi côté serveur (fenêtre de modification, coches « lu »)
+  reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
 }
 
 // Groupe de discussion créé par l'admin ou un booster (recipient_id des messages = id du groupe, « grp_… »)
@@ -295,6 +296,7 @@ export interface NewsComment {
   role: UserRole;
   text: string;
   files?: NewsAttachment[];
+  reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
   created_at: string;
 }
 

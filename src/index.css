@@ -792,3 +792,22 @@ html.theme-light [class~="bg-blue-600"] .text-blue-100, html.theme-light [class~
 
 /* Pastille Messages du menu : rouge pour se voir */
 aside.df-sb button:has(svg.lucide-message-square) .df-sb-badge { background-color: #dc2626 !important; color: #fff !important; }
+
+/* ===== Messagerie dynamique : réactions, « écrit… », arrivée des messages ===== */
+@keyframes df-msg-in-left  { from { opacity: 0; transform: translateX(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes df-msg-in-right { from { opacity: 0; transform: translateX(14px) scale(.96); }  to { opacity: 1; transform: none; } }
+@keyframes df-pop-in  { from { opacity: 0; transform: translateY(8px) scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes df-emoji-in { from { opacity: 0; transform: translateY(10px) scale(.4); } to { opacity: 1; transform: none; } }
+@keyframes df-chip-pop { 0% { transform: scale(.4); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes df-dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+@keyframes df-send-pulse { 0% { transform: scale(1); } 40% { transform: scale(.82) rotate(-12deg); } 100% { transform: scale(1); } }
+.df-msg-in-left  { animation: df-msg-in-left .28s cubic-bezier(.2,.8,.3,1) both; }
+.df-msg-in-right { animation: df-msg-in-right .28s cubic-bezier(.2,.8,.3,1) both; }
+.df-pop { transform-origin: 20% 100%; animation: df-pop-in .18s ease-out both; }
+.df-emoji-in { animation: df-emoji-in .26s cubic-bezier(.2,.9,.3,1.3) both; }
+.df-chip-pop { animation: df-chip-pop .28s ease-out both; }
+.df-dot { width: 6px; height: 6px; border-radius: 9999px; background: currentColor; display: inline-block; animation: df-dot-bounce 1.1s infinite ease-in-out; }
+.df-send-pulse { animation: df-send-pulse .3s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .df-msg-in-left, .df-msg-in-right, .df-pop, .df-emoji-in, .df-chip-pop, .df-dot, .df-send-pulse { animation: none !important; }
+}

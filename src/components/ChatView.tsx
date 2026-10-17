@@ -16,6 +16,7 @@ import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
+import { EmojiPicker, ReactionChips, TypingDots } from './Reactions';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -132,6 +133,21 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const adminId = admin?.id || 'user-admin-1';
   const nameOf = (id: string) => users.find(u => u.id === id)?.name || 'Utilisateur';
 
+  // « est en train d'écrire… » : on lit qui écrit toutes les 2,5 s, seulement écran visible
+  const [typingRows, setTypingRows] = useState<{ user_id: string; to: string }[]>([]);
+  const [sendPulse, setSendPulse] = useState(false);
+  useEffect(() => {
+    let off = false;
+    const tick = async () => {
+      if (document.hidden) return;
+      const rows = await db.fetchTyping();
+      if (!off) setTypingRows(prev => (JSON.stringify(prev) === JSON.stringify(rows) ? prev : rows));
+    };
+    void tick();
+    const id = window.setInterval(tick, 2500);
+    return () => { off = true; window.clearInterval(id); };
+  }, []);
+
   // Ce message appartient-il à ce fil ?
   const inThread = (m: ChatMessage, t: Thread): boolean => {
     const rid = m.recipient_id || 'all';
@@ -198,6 +214,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
   const convVisible = !showList || (typeof window !== 'undefined' && window.innerWidth >= 768);
   const visible = messages.filter(m => inThread(m, current) && !hidden.has(m.id));
+  const typingNames = typingRows
+    .filter(r => (current.kind === 'user' ? r.user_id === current.id && r.to === currentUser.id : current.kind === 'group' || current.kind === 'all' ? r.to === current.id : false))
+    .map(r => nameOf(r.user_id).split(' ')[0]);
+  // Seuls les messages arrivés APRÈS l'ouverture de la conversation s'animent
+  const knownRef = useRef<{ thread: string; ids: Set<string> }>({ thread: '', ids: new Set() });
+  if (knownRef.current.thread !== current.id) knownRef.current = { thread: current.id, ids: new Set(visible.map(m => m.id)) };
+  useEffect(() => { visible.forEach(m => knownRef.current.ids.add(m.id)); });
 
   // Défilement : vers le bas à l'ouverture et à chaque nouveau message si on est déjà en bas (ou si c'est le mien), sinon bouton « nouveaux messages »
   useEffect(() => {
@@ -304,6 +327,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     });
     setText('');
     setReplyTo(null);
+    setSendPulse(true);
+    window.setTimeout(() => setSendPulse(false), 320);
   };
 
   // Fichier choisi : on l'affiche d'abord avec l'option « Compresser » (activée par défaut), puis on l'envoie
@@ -498,8 +523,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     if (!menuRect) return { top: 80, left: 8 };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const W = 232;
-    const H = menuActions.length * 44 + 10;
+    const W = 256;
+    const H = menuActions.length * 44 + 10 + 56; // + la rangée d'emoji
     const mine = menuMsg?.sender_id === currentUser.id;
     let left = mine ? menuRect.right - W : menuRect.left;
     left = Math.max(8, Math.min(left, vw - W - 8));
@@ -562,7 +587,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             )}
             <span className="min-w-0 flex-1">
               <span className="block font-bold text-base leading-tight text-white" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{current.title}</span>
-              <span className="block text-xs text-blue-200" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{current.subtitle}</span>
+              <span className="block text-xs text-blue-200" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {typingNames.length > 0
+                  ? <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">{typingNames.slice(0, 2).join(', ')}{typingNames.length > 2 ? ' et d’autres' : ''} écrit… <TypingDots /></span>
+                  : current.subtitle}
+              </span>
             </span>
           </button>
           <button type="button" onClick={() => setThreadMenu(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Options de la conversation">
@@ -603,7 +632,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                     <span className={`px-3 py-1 text-[11px] rounded-full ${P.pill}`}>{dayLabel(day)}</span>
                   </div>
                 )}
-                <div data-msg-id={msg.id} className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'} ${sameSender ? '' : 'pt-1'}`}>
+                <div data-msg-id={msg.id} className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'} ${sameSender ? '' : 'pt-1'} ${!knownRef.current.ids.has(msg.id) ? (isMe ? 'df-msg-in-right' : 'df-msg-in-left') : ''}`}>
                   {!isMe && showNames && (
                     sameSender
                       ? <span className="w-8 shrink-0" />
@@ -659,6 +688,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         </>
                       )}
                     </div>
+                    {!gone && msg.reactions && (
+                      <ReactionChips reactions={msg.reactions} meId={currentUser.id} onToggle={e => db.reactMessage(msg.id, currentUser.id, e)} dark={!L} align={isMe ? 'end' : 'start'} />
+                    )}
                     {/* Petits détails sous la bulle (pas dans la bulle) */}
                     {!gone && (
                       <div className={`flex items-center gap-1 mt-0.5 px-1 text-[10px] ${P.sub}`}>
@@ -685,6 +717,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </React.Fragment>
             );
           })}
+          {typingNames.length > 0 && (
+            <div className="df-msg-in-left flex items-end gap-1.5 pt-1">
+              <div className={`px-4 py-2.5 rounded-2xl rounded-bl-md shadow-sm text-sm flex items-center gap-2 ${L ? 'bg-white text-slate-500 border border-slate-200' : 'bg-[#16243a] text-slate-300'}`}>
+                <TypingDots />
+                <span className="text-[11px]">{typingNames.slice(0, 2).join(', ')} écrit…</span>
+              </div>
+            </div>
+          )}
         </div>
         {farFromBottom && newBelow === 0 && (
           <button type="button" aria-label="Aller au dernier message" title="Dernier message" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }} className="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center cursor-pointer">
@@ -764,13 +804,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <input
                 type="text"
                 value={text}
-                onChange={e => setText(e.target.value)}
+                onChange={e => { setText(e.target.value); if (e.target.value.trim() && !editingId && !current.readOnly) db.pingTyping(current.id); }}
                 enterKeyHint="send"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
                 className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
                 style={{ boxShadow: 'none', border: 'none' }}
               />
-              <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md" title="Envoyer">
+              <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className={`${sendPulse ? 'df-send-pulse ' : ''}w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md`} title="Envoyer">
                 <Send className="w-5 h-5" />
               </button>
             </div>
@@ -828,7 +868,17 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {/* Menu d'actions : petit menu juste sous le message (appui long ou clic droit) */}
       {menuMsg && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/15" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
-          <div className={`fixed rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} style={popStyle()} onClick={e => e.stopPropagation()}>
+          <div className="fixed" style={popStyle()} onClick={e => e.stopPropagation()}>
+          {!menuMsg.deleted_at && (
+            <div className="mb-2 flex" style={{ justifyContent: menuMsg.sender_id === currentUser.id ? 'flex-end' : 'flex-start' }}>
+              <EmojiPicker
+                dark={!L}
+                mine={Object.entries(menuMsg.reactions || {}).find(([, ids]) => ids.includes(currentUser.id))?.[0]}
+                onPick={e => { db.reactMessage(menuMsg.id, currentUser.id, e); setMenuMsg(null); }}
+              />
+            </div>
+          )}
+          <div className={`rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`}>
             {menuActions.map(a => {
               const I = a.icon;
               return (
@@ -837,6 +887,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 </button>
               );
             })}
+          </div>
           </div>
         </div>,
         document.body

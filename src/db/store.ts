@@ -499,6 +499,29 @@ class DeltaForceStore {
     }
     return r;
   }
+  // Réaction emoji sur un commentaire : l'écran change tout de suite, le serveur confirme (retour en arrière si erreur)
+  public async reactCommentNews(id: string, commentId: string, emoji: string): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const n = this.news.find(x => x.id === id);
+    const c = n?.comments.find(x => x.id === commentId);
+    if (!me || !n || !c) return this.newsCall('news-comment-react', { id, commentId, emoji });
+    const before = n.comments;
+    const rx: Record<string, string[]> = {};
+    const had = (c.reactions?.[emoji] || []).includes(me.id);
+    for (const [e, list] of Object.entries(c.reactions || {})) {
+      const rest = list.filter(x => x !== me.id);
+      if (rest.length) rx[e] = rest;
+    }
+    if (!had) rx[emoji] = [...(rx[emoji] || []), me.id];
+    this.news = this.news.map(x => (x.id === id ? { ...x, comments: x.comments.map(k => (k.id === commentId ? { ...k, reactions: Object.keys(rx).length ? rx : undefined } : k)) } : x));
+    this.emit();
+    const r = await this.newsCall('news-comment-react', { id, commentId, emoji });
+    if (!r.success) {
+      this.news = this.news.map(x => (x.id === id ? { ...x, comments: before } : x));
+      this.emit();
+    }
+    return r;
+  }
   public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }
@@ -1450,6 +1473,36 @@ class DeltaForceStore {
     if (!this.isOwnMessage(msg, userId)) return false;
     if (!msg.message && msg.attachment_url && msg.attachment_kind) return !!msg.message; // une photo sans texte : rien à modifier
     return !msg.sent_ms || Date.now() - msg.sent_ms <= DeltaForceStore.EDIT_WINDOW_MS;
+  }
+
+  // Réaction emoji sur un message : une seule par personne ; le même emoji une 2e fois la retire
+  public reactMessage(id: string, userId: string, emoji: string) {
+    const msg = this.messages.find(m => m.id === id);
+    if (!msg || msg.deleted_at) return;
+    const had = (msg.reactions?.[emoji] || []).includes(userId);
+    const next: Record<string, string[]> = {};
+    for (const [e, list] of Object.entries(msg.reactions || {})) {
+      const rest = list.filter(x => x !== userId);
+      if (rest.length) next[e] = rest;
+    }
+    if (!had) next[emoji] = [...(next[emoji] || []), userId];
+    if (Object.keys(next).length) msg.reactions = next; else delete msg.reactions;
+    this.notify();
+  }
+
+  // « est en train d'écrire… » : un signe au plus toutes les 2,5 s ; la liste est lue par la messagerie ouverte
+  private typingSentAt = 0;
+  public pingTyping(to: string) {
+    if (!this.token) return;
+    const now = Date.now();
+    if (now - this.typingSentAt < 2500) return;
+    this.typingSentAt = now;
+    void this.apiRaw('typing', { method: 'POST', body: JSON.stringify({ to }) }); // sans barre de chargement
+  }
+  public async fetchTyping(): Promise<{ user_id: string; to: string }[]> {
+    if (!this.token) return [];
+    const r = await this.apiRaw('typing');
+    return r.ok && Array.isArray(r.data?.typing) ? r.data.typing : [];
   }
 
   public editMessage(id: string, userId: string, text: string): { success: boolean; error?: string } {

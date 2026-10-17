@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, Smile } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { useConfirm } from '../components/ConfirmModal';
@@ -8,7 +8,26 @@ import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
-import type { NewsAttachment, NewsPost, User } from '../types';
+import { EmojiPicker, ReactionChips } from '../components/Reactions';
+import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
+
+// Réagir à un commentaire : bouton « Réagir », choix d'un emoji, pastilles avec le nombre (une réaction par personne)
+const CommentReact: React.FC<{ postId: string; c: NewsComment; meId: string; light: boolean }> = ({ postId, c, meId, light }) => {
+  const [open, setOpen] = useState(false);
+  const mine = Object.entries(c.reactions || {}).find(([, ids]) => ids.includes(meId))?.[0];
+  const react = (e: string) => { setOpen(false); void db.reactCommentNews(postId, c.id, e); };
+  return (
+    <div className="mt-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button type="button" onClick={() => setOpen(o => !o)} className={`h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors ${light ? 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200' : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-slate-700'}`}>
+          <Smile className="w-3.5 h-3.5" />{mine ? mine : 'Réagir'}
+        </button>
+      </div>
+      <ReactionChips reactions={c.reactions} meId={meId} onToggle={react} dark={!light} />
+      {open && <div className="mt-1.5"><EmojiPicker dark={!light} mine={mine} onPick={react} /></div>}
+    </div>
+  );
+};
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -263,6 +282,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                       </div>
                     );
                   })()}
+                  <CommentReact postId={post.id} c={c} meId={me.id} light={light} />
                 </div>
               </div>
             );
