@@ -141,7 +141,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {shifts.map((shift, idx) => {
+              {[...shifts].sort((a, b) => a.start_time.localeCompare(b.start_time) || a.employee_name.localeCompare(b.employee_name)).map((shift, idx) => {
                 const finalScore = shift.final_score ?? shift.current_score;
                 const scoreDiff = Math.max(0, finalScore - shift.initial_score);
                 const objectiveReached = finalScore >= shift.target_score;
