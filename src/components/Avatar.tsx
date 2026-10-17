@@ -9,7 +9,7 @@ interface AvatarProps {
 // Photo de profil, ou initiales si aucune photo
 export const Avatar: React.FC<AvatarProps> = ({ src, name, className = 'w-8 h-8' }) => {
   if (src) {
-    return <img src={src} alt={name} className={`${className} object-cover border border-slate-700 shrink-0`} />;
+    return <img src={src} alt={name} className={`${className} rounded-full object-cover border border-slate-300/60 shrink-0`} />;
   }
   const initials =
     name
@@ -20,7 +20,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, className = 'w-8 h-8'
       .join('') || '?';
   return (
     <div
-      className={`${className} shrink-0 flex items-center justify-center bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 font-bold text-xs`}
+      className={`${className} rounded-full shrink-0 flex items-center justify-center bg-blue-600/15 text-blue-600 border border-blue-500/30 font-bold text-xs`}
       aria-label={name}
     >
       {initials}

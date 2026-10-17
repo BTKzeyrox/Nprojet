@@ -67,7 +67,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
     `px-2.5 py-1 text-xs font-semibold border cursor-pointer ${
       active ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'
     }`;
-  const field = 'w-full bg-[#141e2a] border border-slate-700 px-2 py-2 text-sm text-white focus:border-emerald-500';
+  const field = 'w-full rounded-xl bg-[#141e2a] border border-slate-700 px-2 py-2 text-sm text-white focus:border-emerald-500';
 
   return (
     <div className="space-y-3">
@@ -130,7 +130,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
       {/* Totaux du résultat */}
       <div className="grid grid-cols-3 gap-2">
         {(['pending', 'approved', 'rejected'] as AdvanceStatus[]).map(s => (
-          <div key={s} className="bg-[#0f1722] border border-slate-800 p-2 min-w-0">
+          <div key={s} className="rounded-xl bg-[#0f1722] border border-slate-800 p-2 min-w-0">
             <div className="text-[10px] uppercase text-slate-400 font-semibold leading-tight">{STATUS[s].label}</div>
             <div className="mt-0.5 font-bold text-xs sm:text-sm text-white break-words">{formatCurrencyAr(sum(s))}</div>
           </div>
@@ -139,18 +139,18 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
 
       {/* Liste */}
       {list.length === 0 ? (
-        <div className="text-center py-6 text-slate-500 text-sm border border-dashed border-slate-800">
+        <div className="rounded-2xl text-center py-6 text-slate-500 text-sm border border-dashed border-slate-800">
           {advances.length === 0 ? "Aucune demande d'avance enregistrée." : 'Aucune demande ne correspond aux filtres.'}
         </div>
       ) : (
         <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
           {list.map(a => (
-            <div key={a.id} data-nav={`adv-${a.id}`} className="bg-[#131c28] border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+            <div key={a.id} data-nav={`adv-${a.id}`} className="rounded-2xl bg-[#131c28] border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   {showBooster && <span className="text-white font-semibold text-sm break-words">{a.employee_name}</span>}
                   <span className="text-base font-bold text-amber-400">{formatCurrencyAr(a.amount_ar)}</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 border text-[10px] font-bold uppercase ${STATUS[a.status].cls}`}>
+                  <span className={`rounded-full inline-flex items-center gap-1 px-2 py-0.5 border text-[10px] font-bold uppercase ${STATUS[a.status].cls}`}>
                     <StatusIcon s={a.status} /> {STATUS[a.status].label}
                   </span>
                 </div>

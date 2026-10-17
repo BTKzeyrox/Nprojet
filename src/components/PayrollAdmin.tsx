@@ -37,7 +37,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 const AUDIT_LABEL: Record<string, string> = { close: 'Clôture', reopen: 'Réouverture', pay: 'Paiement', unpay: 'Paiement annulé', bonus: 'Prime', penalty: 'Retenue', 'bonus-delete': 'Suppression' };
 
-const inp = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
+const inp = 'w-full rounded-xl bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const sum = (a: { amount: number }[]) => a.reduce((t, x) => t + (x.amount || 0), 0);
 
 export const PayrollAdmin: React.FC = () => {
@@ -109,23 +109,23 @@ export const PayrollAdmin: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      <div className="bg-[#0f1722] border border-slate-800 p-3 sm:p-4 space-y-3">
+      <div className="rounded-2xl bg-[#0f1722] border border-slate-800 p-3 sm:p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Wallet className="w-5 h-5 text-emerald-400 shrink-0" />
           <h3 className="font-tactical font-bold text-white text-base mr-auto">Paie</h3>
           <select value={pid} onChange={e => setPid(e.target.value)} className="h-9 px-2 bg-[#141e2a] border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500">
             {periods.map(p => <option key={p} value={p}>{pidLabel(p)}</option>)}
           </select>
-          <span className={`px-2 py-1 border text-[11px] font-mono ${(STATUS[status] || STATUS.open).cls}`}>{(STATUS[status] || STATUS.open).label}</span>
+          <span className={`rounded-full px-2 py-1 border text-[11px] font-mono ${(STATUS[status] || STATUS.open).cls}`}>{(STATUS[status] || STATUS.open).label}</span>
         </div>
         {data && <div className="text-xs font-mono text-slate-400">Du {fmtDay(data.start)} au {fmtDay(data.end)}{data.closed_at ? ` · clôturée le ${fmtDay(data.closed_at)}${data.closed_by_name ? ' par ' + data.closed_by_name : ''}` : ' · aperçu, pas encore figé'}</div>}
-        {err && <div className="p-2.5 bg-red-950 border border-red-500/60 text-red-200 text-xs font-semibold">{err}</div>}
+        {err && <div className="rounded-xl p-2.5 bg-red-950 border border-red-500/60 text-red-200 text-xs font-semibold">{err}</div>}
         {data && !isClosed && data.pending_validation > 0 && (
-          <div className="p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs">{data.pending_validation} session(s) de cette période sont encore à valider ou en cours : la clôture est bloquée tant qu'elles ne sont pas traitées.</div>
+          <div className="rounded-xl p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs">{data.pending_validation} session(s) de cette période sont encore à valider ou en cours : la clôture est bloquée tant qu'elles ne sont pas traitées.</div>
         )}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-[11px] font-mono">
           {[['Gagné', tot.gross, 'text-white'], ['Primes', tot.bonus, 'text-emerald-300'], ['Retenues', tot.pen, 'text-red-300'], ['Avances retenues', tot.adv, 'text-amber-300'], ['Net à payer', tot.net, 'text-emerald-200']].map(([l, v, c]) => (
-            <div key={l as string} className="bg-[#141e2a] border border-slate-700 p-2"><div className="text-slate-400">{l as string}</div><div className={`font-bold ${c as string}`}>{formatCurrencyAr(v as number)}</div></div>
+            <div key={l as string} className="rounded-xl bg-[#141e2a] border border-slate-700 p-2"><div className="text-slate-400">{l as string}</div><div className={`font-bold ${c as string}`}>{formatCurrencyAr(v as number)}</div></div>
           ))}
         </div>
         {isClosed && <div className="text-xs font-mono text-slate-300">Déjà payé : <b className="text-emerald-300">{formatCurrencyAr(tot.paid)}</b> · À faire : <b className="text-amber-300">{formatCurrencyAr(tot.net - tot.paid)}</b></div>}
@@ -135,17 +135,17 @@ export const PayrollAdmin: React.FC = () => {
           )}
           {status === 'open' && <span className="text-xs font-mono text-slate-400 self-center">La période se clôture après son dernier jour.</span>}
           {status === 'closed' && (
-            <button type="button" disabled={busy} onClick={reopen} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"><Unlock className="w-4 h-4" />Rouvrir (motif)</button>
+            <button type="button" disabled={busy} onClick={reopen} className="rounded-full inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"><Unlock className="w-4 h-4" />Rouvrir (motif)</button>
           )}
-          <button type="button" disabled={!slips.length} onClick={exportCsv} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
+          <button type="button" disabled={!slips.length} onClick={exportCsv} className="rounded-full inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
         </div>
       </div>
 
       {busy && !data && <div className="p-3 text-xs font-mono text-slate-400">Chargement…</div>}
-      {data && slips.length === 0 && <div className="p-3 bg-[#0f1722] border border-slate-800 text-xs font-mono text-slate-400">Aucune paie sur cette période.</div>}
+      {data && slips.length === 0 && <div className="rounded-2xl p-3 bg-[#0f1722] border border-slate-800 text-xs font-mono text-slate-400">Aucune paie sur cette période.</div>}
 
       {slips.map(s => (
-        <div key={s.id} className="bg-[#0f1722] border border-slate-800 p-3 flex flex-col lg:flex-row lg:items-center gap-3">
+        <div key={s.id} className="rounded-2xl bg-[#0f1722] border border-slate-800 p-3 flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="min-w-0 lg:w-56">
             <div className="text-white font-bold text-sm break-words">{s.name}</div>
             <div className="text-[11px] font-mono text-slate-400">@{s.username} · {s.lines.length} session(s)</div>
@@ -157,7 +157,7 @@ export const PayrollAdmin: React.FC = () => {
             <div><div className="text-slate-400">Net</div><div className="text-emerald-200 font-bold">{formatCurrencyAr(s.net)}</div></div>
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
-            {s.paid && <span className="inline-flex items-center gap-1 px-2 py-1 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono"><BadgeCheck className="w-3.5 h-3.5" />Payé · {s.paid.method}</span>}
+            {s.paid && <span className="rounded-full inline-flex items-center gap-1 px-2 py-1 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono"><BadgeCheck className="w-3.5 h-3.5" />Payé · {s.paid.method}</span>}
             <button type="button" onClick={() => setOpen(s)} className="px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer">Fiche</button>
             {!isClosed && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'bonus' })} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-emerald-500/40 text-xs text-emerald-300 cursor-pointer"><Plus className="w-3.5 h-3.5" />Prime</button>}
             {!isClosed && cfg.penalties && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'penalty' })} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/40 text-xs text-red-300 cursor-pointer"><MinusCircle className="w-3.5 h-3.5" />Retenue</button>}
@@ -180,7 +180,7 @@ export const PayrollAdmin: React.FC = () => {
       {/* Fiche d'un booster */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/75 overflow-y-auto" onClick={() => setOpen(null)} role="dialog" aria-modal="true">
-          <div className="w-full max-w-2xl bg-[#0d1624] border border-slate-600 p-4 space-y-3 text-slate-100 my-auto" onClick={e => e.stopPropagation()}>
+          <div className="rounded-3xl w-full max-w-2xl bg-[#0d1624] border border-slate-600 p-4 space-y-3 text-slate-100 my-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               <div className="min-w-0 mr-auto">
                 <h3 className="font-tactical font-bold text-base break-words">{open.name} · {pidLabel(open.pid)}</h3>
@@ -188,7 +188,7 @@ export const PayrollAdmin: React.FC = () => {
               </div>
               <button type="button" onClick={() => setOpen(null)} className="text-slate-400 cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
-            <div className="overflow-x-auto border border-slate-700">
+            <div className="rounded-2xl overflow-hidden overflow-x-auto border border-slate-700">
               <table className="w-full text-[11px] font-mono">
                 <thead className="bg-[#141e2a] text-slate-300"><tr><th className="p-2 text-left">Date</th><th className="p-2 text-left">Mission</th><th className="p-2 text-right">Volume</th><th className="p-2 text-right">Taux / 1M</th><th className="p-2 text-right">Montant</th></tr></thead>
                 <tbody>
@@ -217,7 +217,7 @@ export const PayrollAdmin: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => printSlip(open)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
               {isClosed && open.paid && (
-                <button type="button" className="px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
+                <button type="button" className="rounded-full px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
               )}
             </div>
             <p className="text-[10px] text-slate-500">Ce document n'est pas un bulletin de paie légal : les cotisations sociales ne sont pas calculées.</p>
@@ -235,7 +235,7 @@ export const PayrollAdmin: React.FC = () => {
 
 const Shell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/75 overflow-y-auto" onClick={onClose} role="dialog" aria-modal="true">
-    <div className="w-full max-w-sm bg-[#0d1624] border border-slate-600 p-4 space-y-3 text-slate-100 my-auto" onClick={e => e.stopPropagation()}>
+    <div className="rounded-3xl w-full max-w-sm bg-[#0d1624] border border-slate-600 p-4 space-y-3 text-slate-100 my-auto" onClick={e => e.stopPropagation()}>
       <div className="flex items-start gap-2"><h3 className="font-tactical font-bold text-base mr-auto">{title}</h3><button type="button" onClick={onClose} className="text-slate-400 cursor-pointer"><X className="w-5 h-5" /></button></div>
       {children}
     </div>
@@ -253,7 +253,7 @@ const AmountModal: React.FC<{ slip: Slip; type: 'bonus' | 'penalty'; onClose: ()
         <div><label className="block text-slate-300 uppercase mb-1">Montant (Ar)</label><input type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} className={inp} autoFocus /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Motif (obligatoire)</label><textarea rows={2} maxLength={200} value={reason} onChange={e => setReason(e.target.value)} className={inp} /></div>
         {type === 'penalty' && <p className="text-[11px] text-amber-300">Vérifie avec un comptable ou l'Inspection du travail que cette retenue est permise.</p>}
-        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" disabled={!ok} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-sm font-bold text-white cursor-pointer">Ajouter</button></div>
+        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-full px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" disabled={!ok} className="rounded-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-sm font-bold text-white cursor-pointer">Ajouter</button></div>
       </form>
     </Shell>
   );
@@ -270,7 +270,7 @@ const PayModal: React.FC<{ slip: Slip; methods: string[]; onClose: () => void; o
         <div><label className="block text-slate-300 uppercase mb-1">Date</label><input type="date" max={dayMada()} value={date} onChange={e => setDate(e.target.value)} className={inp} /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Mode de paiement</label><select value={method} onChange={e => setMethod(e.target.value)} className={inp}>{methods.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
         <div><label className="block text-slate-300 uppercase mb-1">Référence (facultatif)</label><input type="text" maxLength={60} value={ref} onChange={e => setRef(e.target.value)} className={inp} placeholder="n° de transaction" /></div>
-        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">Marquer payé</button></div>
+        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-full px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" className="rounded-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">Marquer payé</button></div>
       </form>
     </Shell>
   );
