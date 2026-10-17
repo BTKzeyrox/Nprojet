@@ -30,7 +30,7 @@ const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messag
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
   price_per_million: 1000,
-  price_per_mission: 3000,
+  price_per_mission: 5000,
   day_shift_start: '08:00',
   day_shift_end: '18:00',
   night_shift_start: '20:00',
