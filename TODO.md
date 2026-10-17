@@ -81,6 +81,7 @@
 - [x] Tableau de performance par opérateur, export Excel et CSV (2026-10-17, page « Performance » admin, non testé à l'écran) — export PDF pas fait
 - [ ] Notifications (téléphone / e-mail) à la validation ou au refus
 - [ ] Envoi de gros fichiers par lien qui expire (option Google Drive à décider)
+- [x] Supprimer un employé efface toute son activité (2026-10-17, commit a7df26d, `df-api` v6) — pas encore testé de bout en bout
 - [ ] Rôle supplémentaire (chef d'équipe)
 - [ ] Recherche et filtres dans l'historique
 - [ ] Pastille rouge dans le menu pour les publications en attente
@@ -112,3 +113,4 @@
 - 2026-10-11 : Réglages (Équipe) et page Équipe en vocabulaire Gestion Pro : « Début de session » / « Fin de session » devenus « Début de mission » / « Fin de mission » (aussi dans les pastilles de la colonne Activité), pastille et case « Avance » retirées, « page Employés » devenue « page Équipe ». Les horaires « Vacations » et l'accès par heures ne changent pas. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-17 : documents mis à jour (README, AI_STUDIO, PROJET, LIRE_EN_PREMIER, CLAUDE/AGENTS/GEMINI) et liste d'améliorations ajoutée (section 2 quater). Aucun code changé.
 - 2026-10-17 : page Performance (admin) : missions terminées / refusées / en cours, taux d'acceptation, délai moyen, période 7 j / 30 j / tout, export Excel et CSV (PerformancePage.tsx, utils/performance.ts, menu, App.tsx, enDict.json). Aucun changement serveur. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
+- 2026-10-17 : le bouton « Supprimer » (Équipe) ne faisait rien (la confirmation n'était jamais affichée) : corrigé. Le serveur (`purgeEmployee` dans `df-api`) efface maintenant, en plus du compte : missions, avances, alertes, messages envoyés et reçus, groupes créés, publications, commentaires et « J'adore », réactions, paie, demandes en attente, présence, lectures de messagerie et fichiers (Cloudinary et `df-files`). `df-api` redéployé en v6 (commit a7df26d ; retour en arrière : 82422ee). Compte démo `toki` (26 missions `demo`) ajouté dans la base `nprojet`. `tsc --noEmit` et `npm run build` sans erreur. Pas testé de bout en bout.
