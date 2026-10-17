@@ -275,6 +275,8 @@ const clipReply = (r: any) =>
     ? { id: r.id.slice(0, 80), sender_name: String(r.sender_name || '').slice(0, 60), text: String(r.text || '').slice(0, 140), has_attachment: !!r.has_attachment }
     : undefined;
 
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
 async function checkMessage(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any; reason?: string }> {
   if (existing) {
     // Supprimer pour tous : l'auteur, ou l'admin (modération). Une trace reste dans la conversation.
@@ -282,8 +284,28 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       if (existing.sender_id !== me.id && !admin) return { ok: false };
       if (existing.deleted_at) return { ok: true, save: existing };
       const save = { ...existing, message: '', deleted_at: now, deleted_by: existing.sender_id === me.id ? 'sender' : 'admin' };
-      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at']) delete save[k];
+      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions']) delete save[k];
       return { ok: true, save };
+    }
+    // Réaction emoji : tout participant à la conversation, mais seulement sa propre réaction
+    if (rec.reactions && typeof rec.reactions === 'object' && !existing.deleted_at && rec.message === existing.message && !!rec.pinned === !!existing.pinned) {
+      const to = existing.recipient_id || 'all';
+      let visible = admin || to === 'all' || existing.sender_id === me.id || to === me.id;
+      if (!visible && to.startsWith(GROUP_PREFIX)) { const g = await getGroup(to); visible = !!g && (g.members || []).includes(me.id); }
+      if (!visible) return { ok: false };
+      const next: any = {};
+      for (const e of REACTION_EMOJIS) {
+        const others: string[] = ((existing.reactions || {})[e] || []).filter((x: string) => x !== me.id);
+        const mine = Array.isArray(rec.reactions[e]) && rec.reactions[e].includes(me.id);
+        const list = mine ? [...others, me.id] : others;
+        if (list.length) next[e] = list.slice(0, 60);
+      }
+      // une seule réaction par personne
+      const mineIn = Object.keys(next).filter(e => next[e].includes(me.id));
+      for (const e of mineIn.slice(0, -1)) { next[e] = next[e].filter((x: string) => x !== me.id); if (!next[e].length) delete next[e]; }
+      const save2: any = { ...existing };
+      if (Object.keys(next).length) save2.reactions = next; else delete save2.reactions;
+      return { ok: true, save: save2 };
     }
     // Modifier ou épingler : seulement l'auteur (même l'admin ne modifie jamais le message d'un autre)
     if (existing.sender_id !== me.id || existing.deleted_at) return { ok: false };
@@ -314,7 +336,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
-  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at']) delete save[k];
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'reactions']) delete save[k];
   const rt = clipReply(rec.reply_to);
   if (rt) save.reply_to = rt; else delete save.reply_to;
   return { ok: true, save };
@@ -450,13 +472,32 @@ async function state(req: any, res: any, me: any) {
   const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
   const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => (admin ? r.status === 'pending' : r.user_id === me.id && (r.status === 'pending' || r.status === 'rejected')));
   const { data: presRows } = await sb.from(PRESENCE).select('*');
-  const pres = presRows || [];
+  const pres = (presRows || []).map(({ typing_to: _tt, typing_at: _ta, ...r }: any) => r); // l'indicateur « écrit… » passe par sa propre route
   // Coches « lu » : jusqu'où les autres ont lu mes conversations (l'admin voit tout)
   let readsQ = sb.from(CHAT_READS).select('user_id, thread, ms');
   if (!admin) readsQ = readsQ.in('thread', [me.id, ...myGroupIds]);
   const { data: readRows } = await readsQ;
   const reads = (readRows || []).map((r: any) => ({ user_id: r.user_id, thread: r.thread, ms: Number(r.ms) }));
   return res.json({ serverTime, me, collections: out, reads, resets, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
+}
+
+// ---------- « est en train d'écrire… » : signe très court (6 s), lu toutes les 2-3 s par la messagerie ouverte ----------
+async function typingPing(req: any, res: any, me: any) {
+  const to = String((req.body || {}).to || '').slice(0, 80);
+  if (!to || !/^[A-Za-z0-9_\-]+$/.test(to)) return res.status(400).json({ error: 'Conversation inconnue.' });
+  await sb.from(PRESENCE).upsert({ user_id: me.id, typing_to: to, typing_at: new Date().toISOString() });
+  return res.json({ ok: true });
+}
+async function typingList(req: any, res: any, me: any) {
+  const since = new Date(Date.now() - 6000).toISOString();
+  const { data: rows } = await sb.from(PRESENCE).select('user_id, typing_to, typing_at').gte('typing_at', since);
+  const admin = me.role === 'admin';
+  const { data: groupRows } = await sb.from(T.groups).select('id, data');
+  const myGroupIds = (groupRows || []).filter((r: any) => admin || (r.data.members || []).includes(me.id)).map((r: any) => r.id);
+  const out = (rows || [])
+    .filter((r: any) => r.user_id !== me.id && r.typing_to && (r.typing_to === 'all' || r.typing_to === me.id || myGroupIds.includes(r.typing_to)))
+    .map((r: any) => ({ user_id: r.user_id, to: r.typing_to }));
+  return res.json({ typing: out });
 }
 
 // ---------- sync (écriture) ----------
@@ -1379,8 +1420,8 @@ async function dropFiles(files: { url?: string }[]) {
   } catch (e) { console.error('news files cleanup:', e); }
 }
 
-async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'share', req: any, res: any, me: any) {
-  const { id, text, commentId, files } = req.body || {};
+async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'comment-react' | 'share', req: any, res: any, me: any) {
+  const { id, text, commentId, files, emoji } = req.body || {};
   if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
   const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
   if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
@@ -1399,6 +1440,20 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'share'
     if (!clean && !cf.length) return res.status(400).json({ error: 'Écris un commentaire ou joins un fichier.' });
     if (d.comments.length >= NEWS_MAX_COMMENTS) return res.status(400).json({ error: 'Trop de commentaires sur cette publication.' });
     d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, ...(cf.length ? { files: cf } : {}), created_at: new Date().toISOString() });
+  } else if (kind === 'comment-react') {
+    if (!REACTION_EMOJIS.includes(String(emoji))) return res.status(400).json({ error: 'Réaction inconnue.' });
+    const idx = d.comments.findIndex((x: any) => x.id === commentId);
+    if (idx < 0) return res.status(404).json({ error: 'Commentaire introuvable.' });
+    const c = { ...d.comments[idx] };
+    const rx: Record<string, string[]> = {};
+    for (const e of REACTION_EMOJIS) {
+      const others = ((c.reactions || {})[e] || []).filter((x: string) => x !== me.id);
+      const had = ((c.reactions || {})[e] || []).includes(me.id);
+      const list = e === emoji ? (had ? others : [...others, me.id]) : others; // même emoji = retirer ; autre emoji = remplacer
+      if (list.length) rx[e] = list.slice(0, 60);
+    }
+    if (Object.keys(rx).length) c.reactions = rx; else delete c.reactions;
+    d.comments = d.comments.map((x: any, i: number) => (i === idx ? c : x));
   } else if (kind === 'comment-delete') {
     const c = d.comments.find((x: any) => x.id === commentId);
     if (!c) return res.status(404).json({ error: 'Commentaire introuvable.' });
@@ -1522,6 +1577,9 @@ Deno.serve(async (request: Request) => {
     if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);
     if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);
     if (action === "news-comment-delete" && req.method === "POST") return await newsAction('comment-delete', req, res, me);
+    if (action === "news-comment-react" && req.method === "POST") return await newsAction('comment-react', req, res, me);
+    if (action === "typing" && req.method === "POST") return await typingPing(req, res, me);
+    if (action === "typing" && req.method === "GET") return await typingList(req, res, me);
     if (action === "news-share" && req.method === "POST") return await newsAction('share', req, res, me);
     if (action === "news-submit" && req.method === "POST") return await newsSubmit(req, res, me);
     if (action === "news-decision" && req.method === "POST") return await newsDecision(req, res, me);
