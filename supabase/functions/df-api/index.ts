@@ -593,6 +593,7 @@ async function sync(req: any, res: any, me: any) {
       if (col === 'users') {
         const u = await getUserRow(id);
         if (u?.role === 'admin') { rejected.push({ col, id, reason: 'admin' }); continue; }
+        await purgeEmployee(id); // efface aussi toutes ses données (missions, messages, publications, fichiers…)
         await sb.from('df_credentials').delete().eq('user_id', id);
         await sb.from(PRESENCE).delete().eq('user_id', id);
       }
@@ -1418,6 +1419,119 @@ async function dropFiles(files: { url?: string }[]) {
     if (paths.length) await sb.storage.from(BUCKET).remove(paths);
     await Promise.all(urls.map(cldIdOf).filter(Boolean).map(cldDestroy));
   } catch (e) { console.error('news files cleanup:', e); }
+}
+
+// ---------- suppression complète d'un employé : toutes ses données, puis ses fichiers ----------
+// Chaque étape est indépendante : une erreur est notée dans les logs mais n'arrête pas les suivantes.
+async function purgeEmployee(uid: string) {
+  const urls: string[] = [];
+  const addUrl = (u: unknown) => { if (typeof u === 'string' && u) urls.push(u); };
+  const step = async (label: string, fn: () => Promise<unknown>) => {
+    try { await fn(); } catch (e) { console.error('purgeEmployee ' + label + ':', e); }
+  };
+  const now = new Date().toISOString();
+  const dropReaction = (rx: any) => {
+    if (!rx || typeof rx !== 'object') return rx;
+    const next: Record<string, string[]> = {};
+    for (const e of Object.keys(rx)) { const l = (Array.isArray(rx[e]) ? rx[e] : []).filter((x: string) => x !== uid); if (l.length) next[e] = l; }
+    return Object.keys(next).length ? next : undefined;
+  };
+
+  // photo de profil
+  await step('avatar', async () => { addUrl((await getUserRow(uid))?.avatar_url); });
+
+  // missions : justificatifs puis lignes
+  await step('posts', async () => {
+    const rows = await fetchAll((a, b) => sb.from(T.posts).select('data').eq('data->>employee_id', uid).order('id').range(a, b));
+    for (const r of rows) {
+      const p = r.data || {};
+      [p.start_proof_url, p.end_proof_url, ...(p.start_proof_urls || []), ...(p.end_proof_urls || [])].forEach(addUrl);
+    }
+    await sb.from(T.posts).delete().eq('data->>employee_id', uid);
+  });
+  await step('advances', async () => { await sb.from(T.advances).delete().eq('data->>employee_id', uid); });
+  await step('securityLogs', async () => { await sb.from(T.securityLogs).delete().eq('data->>employee_id', uid); });
+
+  // groupes créés par lui : on les supprime avec leurs messages ; les autres : on le retire des membres
+  await step('groups', async () => {
+    const groups = await fetchAll((a, b) => sb.from(T.groups).select('id, data').order('id').range(a, b));
+    for (const g of groups) {
+      const d = g.data || {};
+      if (d.owner_id === uid) {
+        addUrl(d.avatar_url);
+        const msgs = await fetchAll((a, b) => sb.from(T.messages).select('data').eq('data->>recipient_id', g.id).order('id').range(a, b));
+        msgs.forEach(m => addUrl(m.data?.attachment_url));
+        await sb.from(T.messages).delete().eq('data->>recipient_id', g.id);
+        await sb.from(CHAT_READS).delete().eq('thread', g.id);
+        await sb.from(T.groups).delete().eq('id', g.id);
+      } else if ((d.members || []).includes(uid) || (d.admins || []).includes(uid)) {
+        await sb.from(T.groups).upsert({ id: g.id, data: { ...d, members: (d.members || []).filter((x: string) => x !== uid), admins: (d.admins || []).filter((x: string) => x !== uid) }, updated_at: now });
+      }
+    }
+  });
+
+  // messages envoyés ou reçus (conversations privées) + ses réactions sur les autres messages
+  await step('messages', async () => {
+    for (const field of ['sender_id', 'recipient_id']) {
+      const rows = await fetchAll((a, b) => sb.from(T.messages).select('data').eq('data->>' + field, uid).order('id').range(a, b));
+      rows.forEach(m => addUrl(m.data?.attachment_url));
+      await sb.from(T.messages).delete().eq('data->>' + field, uid);
+    }
+    const reacted = await fetchAll((a, b) => sb.from(T.messages).select('id, data').like('data->>reactions', '%' + uid + '%').order('id').range(a, b));
+    for (const r of reacted) {
+      const next = { ...r.data }; const rx = dropReaction(r.data.reactions);
+      if (rx) next.reactions = rx; else delete next.reactions;
+      await sb.from(T.messages).upsert({ id: r.id, data: next, updated_at: now });
+    }
+  });
+
+  // publications : les siennes disparaissent ; sur les autres on retire ses commentaires, « J'adore » et réactions
+  await step('news', async () => {
+    const rows = await fetchAll((a, b) => sb.from(T.news).select('id, data').order('id').range(a, b));
+    for (const r of rows) {
+      const d = r.data || {};
+      if (d.author_id === uid) {
+        newsFilesOf(d).forEach(f => addUrl(f?.url));
+        await sb.from(T.news).delete().eq('id', r.id);
+        continue;
+      }
+      const comments: any[] = Array.isArray(d.comments) ? d.comments : [];
+      const mine = comments.filter(c => c?.user_id === uid);
+      const loved = Array.isArray(d.loves) && d.loves.includes(uid);
+      const reacted = comments.some(c => JSON.stringify(c?.reactions || {}).includes(uid));
+      if (!mine.length && !loved && !reacted) continue;
+      mine.forEach(c => (Array.isArray(c.files) ? c.files : []).forEach((f: any) => addUrl(f?.url)));
+      const kept = comments.filter(c => c?.user_id !== uid).map(c => {
+        if (!c?.reactions) return c;
+        const next = { ...c }; const rx = dropReaction(c.reactions);
+        if (rx) next.reactions = rx; else delete next.reactions;
+        return next;
+      });
+      await sb.from(T.news).upsert({ id: r.id, data: { ...d, comments: kept, loves: (Array.isArray(d.loves) ? d.loves : []).filter((x: string) => x !== uid) }, updated_at: now });
+    }
+  });
+
+  // paie, demandes en attente, présence, lectures de messagerie
+  await step('payroll', async () => { await sb.from(PAYROLL).delete().eq('data->>user_id', uid); });
+  await step('profile requests', async () => {
+    const { data: prs } = await sb.from(PROFILE_REQ).select('data').eq('data->>user_id', uid);
+    (prs || []).forEach((r: any) => { addUrl(r.data?.avatar_url); });
+    await sb.from(PROFILE_REQ).delete().eq('data->>user_id', uid);
+  });
+  await step('resets', async () => { await sb.from(RESETS).delete().eq('data->>user_id', uid); });
+  await step('attendance', async () => { await sb.from(ATTENDANCE).delete().eq('user_id', uid); });
+  await step('chat reads', async () => {
+    await sb.from(CHAT_READS).delete().eq('user_id', uid);
+    await sb.from(CHAT_READS).delete().eq('thread', uid);
+  });
+  // journal des erreurs : on garde le rapport, on retire seulement son identifiant
+  await step('errors', async () => {
+    const { data: errs } = await sb.from(ERRORS).select('id, users').filter('users', 'cs', JSON.stringify([uid]));
+    for (const e of errs || []) await sb.from(ERRORS).update({ users: (Array.isArray(e.users) ? e.users : []).filter((x: string) => x !== uid) }).eq('id', e.id);
+  });
+
+  // fichiers (Cloudinary et stockage Supabase) en dernier
+  await dropFiles(urls.map(url => ({ url })));
 }
 
 async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'comment-react' | 'share', req: any, res: any, me: any) {

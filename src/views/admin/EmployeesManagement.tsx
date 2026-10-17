@@ -86,7 +86,6 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [newShift, setNewShift] = useState<ShiftType>('day');
 
   // Delete User Confirmation State
-  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [addUserError, setAddUserError] = useState<string | null>(null);
 
   // Review Advance Modal State (No prompt() for iframe compatibility)
@@ -99,7 +98,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [advanceNotes, setAdvanceNotes] = useState('');
 
   // Lock background scroll during employee modals
-  useLockBodyScroll(showAddModal || !!editingUser || !!deletingUser || !!reviewAdvanceModal);
+  useLockBodyScroll(showAddModal || !!editingUser || !!reviewAdvanceModal);
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -132,13 +131,16 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   };
 
   const handleDeleteUser = (user: User) => {
-    setDeletingUser(user);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!deletingUser) return;
-    db.deleteUser(deletingUser.id);
-    setDeletingUser(null);
+    askConfirm({
+      title: `Supprimer ${user.name} ?`,
+      message: 'Son compte et TOUTES ses données seront effacés définitivement : missions, messages, publications, commentaires, avances et fichiers. Cette action est irréversible.',
+      confirmLabel: 'Tout supprimer',
+      danger: true,
+      onConfirm: () => {
+        const r = db.deleteUser(user.id);
+        if (!r.success) alert(r.error || 'Suppression impossible.');
+      },
+    });
   };
 
   const handleOpenEdit = (user: User) => {

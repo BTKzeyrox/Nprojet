@@ -1301,6 +1301,13 @@ class DeltaForceStore {
     if (user.role === 'admin') return { success: false, error: 'Impossible de supprimer un compte administrateur.' };
 
     this.users = this.users.filter(u => u.id !== userId);
+    // Ses données disparaissent aussi à l'écran tout de suite ; le serveur efface le reste (fichiers, publications…)
+    this.posts = this.posts.filter(p => p.employee_id !== userId);
+    this.advanceRequests = this.advanceRequests.filter(a => a.employee_id !== userId);
+    this.securityLogs = this.securityLogs.filter(v => v.employee_id !== userId);
+    const ownedGroups = new Set(this.groups.filter(g => g.owner_id === userId).map(g => g.id));
+    this.groups = this.groups.filter(g => g.owner_id !== userId);
+    this.messages = this.messages.filter(m => m.sender_id !== userId && m.recipient_id !== userId && !(m.recipient_id && ownedGroups.has(m.recipient_id)));
     this.notify();
     return { success: true };
   }
