@@ -948,5 +948,8 @@
 "Taux d'acceptation": "Acceptance rate",
 "Délai moyen": "Average time",
 "Aucune mission sur cette période.": "No missions in this period.",
-"Taux d'acceptation = terminées ÷ (terminées + refusées). Délai moyen = de début à fin de mission, sur les missions terminées.": "Acceptance rate = completed ÷ (completed + rejected). Average time = from mission start to end, on completed missions."
+"Taux d'acceptation = terminées ÷ (terminées + refusées). Délai moyen = de début à fin de mission, sur les missions terminées.": "Acceptance rate = completed ÷ (completed + rejected). Average time = from mission start to end, on completed missions.",
+"Tarif par mission (Ar)": "Rate per mission (Ar)",
+"Montant versé pour chaque mission validée. Il est figé au moment de la validation : changer le tarif ne modifie pas les missions déjà validées.": "Amount paid for each validated mission. It is fixed at validation time: changing the rate does not change missions already validated.",
+"Le tarif par mission ne peut pas être négatif.": "The rate per mission cannot be negative."
 }

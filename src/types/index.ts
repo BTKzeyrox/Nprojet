@@ -11,7 +11,8 @@ export interface PasswordResetRequest {
 
 export interface AppSettings {
   id: 'general';
-  price_per_million: number; // Ar pour 1M de score
+  price_per_million: number; // Ar pour 1M de score (sert encore aux pénalités automatiques)
+  price_per_mission: number; // Ar versés pour chaque mission validée (tarif fixe, quelle que soit la quantité)
   day_shift_start: string; // HH:MM
   day_shift_end: string;
   night_shift_start: string;

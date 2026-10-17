@@ -23,6 +23,7 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   BarChart3,
+  Wallet,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -88,6 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
+    { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },
   ];

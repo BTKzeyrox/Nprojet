@@ -153,7 +153,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
   // Salary Advance states
   const [advanceAmount, setAdvanceAmount] = useState<number>(10000);
-  const [advTab, setAdvTab] = useState<'advances' | 'payroll'>('advances');
+  const [advTab, setAdvTab] = useState<'advances' | 'payroll'>('payroll');
   const advanceRoom = useAdvanceRoom(activeSubTab === 'advances' && advTab === 'advances');
   const [advanceReason, setAdvanceReason] = useState('');
   const [advanceSuccess, setAdvanceSuccess] = useState(false);

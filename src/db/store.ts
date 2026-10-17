@@ -30,6 +30,7 @@ const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messag
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
   price_per_million: 1000,
+  price_per_mission: 3000,
   day_shift_start: '08:00',
   day_shift_end: '18:00',
   night_shift_start: '20:00',
@@ -831,7 +832,7 @@ class DeltaForceStore {
       initial_score: name ? initial : 0,
       target_score: name ? initial + objective : 0,
       recommended_shift: 'any',
-      estimated_reward_ar: Math.round(objective / 1000),
+      estimated_reward_ar: Math.round(this.getSettings().price_per_mission || 0),
       priority: 'Normale',
       region_server: '—',
       no_account: !name,
@@ -886,8 +887,7 @@ class DeltaForceStore {
 
     // If target score or initial score changed, recalculate reward estimate
     if (updates.target_score !== undefined || updates.initial_score !== undefined) {
-      const diff = Math.max(0, contract.target_score - contract.initial_score);
-      contract.estimated_reward_ar = Math.round((diff / 1000000) * this.getSettings().price_per_million);
+      contract.estimated_reward_ar = Math.round(this.getSettings().price_per_mission || 0);
     }
 
     // Sync any active or pending post on this contract
@@ -1213,8 +1213,8 @@ class DeltaForceStore {
     if (post.status === 'pending_end') {
       const finalScore = post.final_score ?? post.current_score;
       const scoreGained = Math.max(0, finalScore - post.initial_score);
-      // Automated payroll formula: 1M score = 1,000 Ar
-      const calculatedAr = Math.round((scoreGained / 1000000) * this.getSettings().price_per_million);
+      // Paie à tarif fixe : chaque mission validée rapporte le même montant (Réglages → Missions)
+      const calculatedAr = Math.max(0, Math.round(this.getSettings().price_per_mission || 0));
 
       post.status = 'completed';
       post.calculated_ar = calculatedAr;

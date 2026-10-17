@@ -52,6 +52,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
   const save = () => {
     setError(null);
+    if (!(s.price_per_mission >= 0)) return setError('Le tarif par mission ne peut pas être négatif.');
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     for (const k of ['auto_pen_late1_min', 'auto_pen_late2_min'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 1)) return setError('Pénalités automatiques : les minutes de retard doivent être 1 ou plus.');
     for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de volume ne peut pas être négatif.');
@@ -68,6 +69,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     db.updateSettings({
       ...s,
       price_per_million: Math.round(s.price_per_million),
+      price_per_mission: Math.round(s.price_per_mission),
       retention_days: Math.round(s.retention_days),
       late_tolerance_min: Math.round(s.late_tolerance_min),
       access_before_min: Math.round(s.access_before_min),
@@ -277,6 +279,17 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           </label>
         </div>
         <p className="text-[11px] text-slate-500">Chaque rapport est un appel au serveur gratuit : garde une limite basse. La maintenance s'applique en environ 1 minute.</p>
+      </section>
+      )}
+
+      {tab === 'missions' && (
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white">Paie</h3>
+        <div>
+          <label className={labelCls}>Tarif par mission (Ar)</label>
+          <input type="number" min={0} step={100} value={s.price_per_mission} onChange={e => set('price_per_mission', Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">Montant versé pour chaque mission validée. Il est figé au moment de la validation : changer le tarif ne modifie pas les missions déjà validées.</p>
+        </div>
       </section>
       )}
 
