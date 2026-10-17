@@ -54,7 +54,40 @@
 - [x] Base `nprojet` vérifiée : 10 missions Gestion Pro, aucun poste Delta
 - [ ] Pas fait : pages Avances et Paie et montants en Ar du calendrier toujours dans le code (inaccessibles par le menu)
 - [ ] Pas fait : tableau de performance avec export, fiche d'explication pour le CV (plan HANDOVER §7, points 5 et 6)
-- [ ] Pas fait : `LIRE_EN_PREMIER.md`, `README.md` (citent l'ancien projet), `AI_STUDIO.md`, `PROJET.md` (décrivent le site Delta)
+- [x] `LIRE_EN_PREMIER.md`, `README.md`, `AI_STUDIO.md`, `PROJET.md`, `CLAUDE.md`/`AGENTS.md`/`GEMINI.md` mis à jour pour Gestion Pro (2026-10-17). `HANDOVER.md` et `NOUVEAU_PROJET.md` gardent volontairement l'histoire de la copie.
+
+## 2 ter. Fait depuis (autres chats, non testé à l'écran)
+- [x] Missions : 5 types + guides « Comment faire ? » ; nouveau design v2 ; Réglages en onglets ; tableau de bord redessiné
+- [x] Tirer pour actualiser ; cloche et notifications en bulles arrondies ; pastille rouge Messages
+- [x] Messagerie : cartes par discussion, message épinglé réduit, grand champ de saisie, flèche « dernier message », anti double envoi, aperçu de fichier avec option Compresser
+- [x] Taille de police réglable ; anglais à la place du chinois ; formes arrondies sur confirmations, refus, validations, photo de profil, bandeaux d'erreur
+
+## 2 quater. Améliorations prévues (liste du 2026-10-17)
+### 1. Sécurité et propreté (à faire en premier, par BTK)
+- [ ] Changer le mot de passe `admin123`
+- [ ] Régénérer les clés Cloudinary et Resend
+- [ ] Supprimer le token GitHub donné dans le chat : https://github.com/settings/tokens
+- [ ] Décider : supprimer ou garder les pages Avances et Paie (dans le code, pas dans le menu)
+- [x] Mettre à jour README, AI_STUDIO, PROJET (2026-10-17)
+
+### 2. Vérifier
+- [ ] Tester à l'écran : publier avec photo, valider / refuser, commenter avec PDF, envoyer un fichier en messagerie, tirer pour actualiser, passer en EN, connexion admin
+- [ ] Finir les pages : Historique, Équipe, Calendrier, Erreurs, Profil, Connexion (seules les formes arrondies sont faites)
+- [ ] Ajouter des tests automatiques sur les missions et les validations
+
+### 3. Nouvelles fonctions
+- [ ] Date limite d'une mission + rappel
+- [ ] Tableau de performance par opérateur, export Excel / PDF
+- [ ] Notifications (téléphone / e-mail) à la validation ou au refus
+- [ ] Envoi de gros fichiers par lien qui expire (option Google Drive à décider)
+- [ ] Rôle supplémentaire (chef d'équipe)
+- [ ] Recherche et filtres dans l'historique
+- [ ] Pastille rouge dans le menu pour les publications en attente
+
+### 4. Pour le CV
+- [ ] Accueil public ou compte de démonstration
+- [ ] Fiche d'explication courte du site
+- [ ] Captures d'écran dans le README
 
 ## 3. Questions ouvertes (défaut si pas de réponse)
 1. Les commentaires des employés partent-ils aussi en validation ? Défaut : non.
@@ -76,3 +109,4 @@
 - 2026-10-11 : menu ouvert sur téléphone : fond flou clair (au lieu du noir) et logo en bleu vif avec icône blanche forcée. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : correction de la règle « boutons arrondis » (elle excluait par erreur tout bouton dont la classe contient border-blue, border-transparent, etc. ; maintenant seuls les vrais border-b / border-t sont exclus) ; thème clair : couleurs de texte pâles (-100 et -200) recolorées pour rester lisibles ; Réglages : cartes, boutons, étiquettes et encadrés d'erreur / succès arrondis et lisibles. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-11 : Réglages (Équipe) et page Équipe en vocabulaire Gestion Pro : « Début de session » / « Fin de session » devenus « Début de mission » / « Fin de mission » (aussi dans les pastilles de la colonne Activité), pastille et case « Avance » retirées, « page Employés » devenue « page Équipe ». Les horaires « Vacations » et l'accès par heures ne changent pas. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
+- 2026-10-17 : documents mis à jour (README, AI_STUDIO, PROJET, LIRE_EN_PREMIER, CLAUDE/AGENTS/GEMINI) et liste d'améliorations ajoutée (section 2 quater). Aucun code changé.

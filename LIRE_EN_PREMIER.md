@@ -3,7 +3,7 @@
 Ordre de lecture : **1. `LIRE_EN_PREMIER.md`** (ce fichier) → **2. `AI_STUDIO.md`** → **3. `HANDOVER.md`**.
 Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 
-> **Ce dépôt est-il une COPIE du projet DF-boosting (nouveau projet, nouveaux comptes) ?** Si oui, lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Les liens et adresses plus bas sont ceux de l'**ancien** projet : ne les utilise pas pour la copie, et remplace-les par ceux du nouveau projet quand il est en place.
+> **Ce dépôt est-il une COPIE du projet DF-boosting (nouveau projet, nouveaux comptes) ?** Si oui, lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Ce dépôt (`Nprojet`, appli « Gestion Pro ») est cette copie : ses liens sont ci-dessous. N'utilise jamais ceux de l'ancien projet.
 
 ## Les règles de BTK (à respecter tout le temps)
 1. **Pas de code, pas de modification sans le mot « GO ».** Même un petit changement. Un fichier de texte (doc) demandé clairement est permis ; tout le reste attend le GO.
@@ -26,13 +26,13 @@ Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 - **Si le message de BTK ne contient pas de token**, donne-lui le lien ci-dessus et demande-le avant de pousser. Le dépôt est public : la lecture marche sans token.
 
 ## Les liens utiles
-- Dépôt : https://github.com/BTKzeyrox/DF-boosting
-- Site en ligne : https://df-boosting-5u7c.vercel.app/
-- Supabase (projet « Replay ») : https://supabase.com/dashboard/project/ljorjzrxkxqacmmkmqdx
+- Dépôt de travail : https://github.com/BTKzeyrox/Nprojet (branche `main`)
+- Supabase (projet `nprojet`) : https://supabase.com/dashboard/project/fvkusbdhetxleimtdzqm
 - Vercel : https://vercel.com/dashboard
+- Original **en lecture seule** : https://github.com/BTKzeyrox/DF-boosting (ne jamais y écrire)
 
 ## À vérifier au début de chaque nouveau chat
-- Le **connecteur Supabase** doit être activé (projet « Replay »). Sans lui, tu ne peux pas changer la base ni le serveur. Aucune clé à copier.
+- Le **connecteur Supabase** doit être activé (projet `nprojet`). Sans lui, tu ne peux pas changer la base ni le serveur. Aucune clé à copier.
 - Le connecteur Vercel de certains chats est un **autre compte** : il peut ne pas voir le projet du site. Si c'est le cas, dis-le à BTK, il change l'adresse lui-même dans le tableau de bord Vercel.
-- Les **mots de passe des comptes de test** (`admin`, `kiot`, `toki`, `sarah`) : BTK te les donne dans le chat, jamais dans le dépôt.
+- Les **mots de passe des comptes de test** : BTK te les donne dans le chat, jamais dans le dépôt.
 - **Ne jamais écrire un secret** (token, clé d'envoi de mails, mot de passe) dans le dépôt ni dans un fichier. Les clés de service sont dans le coffre-fort Supabase.
