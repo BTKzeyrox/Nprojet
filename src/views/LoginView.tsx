@@ -139,7 +139,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setErrorMsg(null);
 
     if (!username.trim() || !password) {
-      setErrorMsg(lang === 'zh' ? '请输入账号和密码。' : 'Veuillez saisir votre pseudo et votre mot de passe.');
+      setErrorMsg(lang === 'en' ? 'Please enter your username and password.' : 'Veuillez saisir votre pseudo et votre mot de passe.');
       return;
     }
 
@@ -148,7 +148,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLoading(false);
 
     if (!result.success || !result.user) {
-      setErrorMsg(result.error || (lang === 'zh' ? '身份验证失败' : "Erreur d'authentification"));
+      setErrorMsg(result.error || (lang === 'en' ? 'Authentication failed' : "Erreur d'authentification"));
       return;
     }
 
@@ -198,8 +198,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <button onClick={toggleTheme} className={circleBtn} style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}>
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
-        <button onClick={() => setLang(lang === 'fr' ? 'zh' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Changer de langue / 切换语言">
-          <Globe className="w-3.5 h-3.5" /><span>{lang === 'fr' ? '中文' : 'FR'}</span>
+        <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Change language">
+          <Globe className="w-3.5 h-3.5" /><span>{lang === 'fr' ? 'EN' : 'FR'}</span>
         </button>
       </div>
 

@@ -23,7 +23,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [lang, setLangState] = useState<Language>(() => {
     const saved = localStorage.getItem('delta_lang');
-    return saved === 'zh' ? 'zh' : 'fr';
+    return saved === 'en' ? 'en' : 'fr';
   });
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);

@@ -26,7 +26,7 @@ import { NAV_TARGET_EVENT, peekNavTarget, flashNav } from './utils/navTarget';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
-let zhLoaded = false; // le module chinois a déjà été chargé (pour pouvoir revenir au français)
+let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir revenir au français)
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
@@ -48,12 +48,12 @@ export default function App() {
 
   const [isReady, setIsReady] = useState(false);
 
-  // Langue chinoise : traduit tous les textes affichés (aucun mot français ne reste)
-  // Le dictionnaire (34 Ko) n'est téléchargé que si la langue chinoise est choisie
+  // Langue anglaise : traduit les textes affichés
+  // Le dictionnaire n'est téléchargé que si l'anglais est choisi
   useEffect(() => {
     let off = false;
-    if (lang === 'zh' || zhLoaded) {
-      import('./utils/zhTranslate').then(m => { zhLoaded = true; if (!off) m.setChineseMode(lang === 'zh'); });
+    if (lang === 'en' || enLoaded) {
+      import('./utils/enTranslate').then(m => { enLoaded = true; if (!off) m.setEnglishMode(lang === 'en'); });
     } else {
       document.documentElement.lang = 'fr';
     }

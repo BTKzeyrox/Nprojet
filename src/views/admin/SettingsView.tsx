@@ -96,7 +96,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
           <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
           <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
+          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
         </div>
         <FontSizePicker />
       </section>
@@ -156,7 +156,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
           <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
           <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('zh')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'zh' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>中文</button>
+          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
         </div>
         <FontSizePicker />
       </section>

@@ -1,9 +1,10 @@
-import dict from './zhDict.json';
+import dict from './enDict.json';
 
-// Traduction automatique de l'interface en chinois simplifié (français → 中文).
-// Le texte français reste la source ; ce module remplace les textes affichés quand la langue est « 中文 ».
+// Traduction automatique de l'interface en anglais (français → English).
+// Le texte français reste la source ; ce module remplace les textes affichés quand la langue est « English ».
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthNum = (m: string) => MONTHS.indexOf(m.toLowerCase()) + 1;
 
 const entries = Object.entries(dict as Record<string, string>);
@@ -25,13 +26,12 @@ export function translateText(input: string): string {
   const exact = lookup.get(s.toLowerCase());
   if (exact !== undefined) return lead + exact + trail;
 
-  // dates : « 4 octobre 2026 » → 2026年10月4日 ; « Octobre 2026 » → 2026年10月
-  s = s.replace(new RegExp(`(\\d{1,2})\\s+(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, d, mo, y) => `${y}年${monthNum(mo)}月${d}日`);
-  s = s.replace(new RegExp(`(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, mo, y) => `${y}年${monthNum(mo)}月`);
+  // dates : « 4 octobre 2026 » → 4 October 2026
+  s = s.replace(new RegExp(`(\\d{1,2})\\s+(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, d, mo, y) => `${d} ${EN_MONTHS[monthNum(mo) - 1]} ${y}`);
+  s = s.replace(new RegExp(`(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, mo, y) => `${EN_MONTHS[monthNum(mo) - 1]} ${y}`);
   // compteurs
-  s = s.replace(/(\d+)\s+shifts?(\(s\))?/gi, '$1 个班次');
-  s = s.replace(/GRILLE\s+(\d+)\s+POSTES/gi, '$1个岗位总览');
-  s = s.replace(/(\d+)\s+postes?\b/gi, '$1 个岗位');
+  s = s.replace(/(\d+)\s+postes?\b/gi, (_m, n) => `${n} mission${Number(n) > 1 ? 's' : ''}`);
+  s = s.replace(/(\d+)\s+membres\b/gi, '$1 members');
   s = s.replace(PHRASES, (_m, pre: string, w: string) => pre + (lookup.get(w.toLowerCase().replace(/\u2019/g, "'")) ?? w));
   return lead + s + trail;
 }
@@ -45,7 +45,6 @@ const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
 const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'NOSCRIPT']);
 
 let observer: MutationObserver | null = null;
-let nativeAlert: ((msg?: unknown) => void) | null = null;
 
 function doText(n: Text) {
   const v = n.nodeValue || '';
@@ -104,9 +103,9 @@ function restore(node: Node) {
   el.childNodes.forEach(restore);
 }
 
-export function setChineseMode(on: boolean) {
+export function setEnglishMode(on: boolean) {
   if (typeof document === 'undefined') return;
-  document.documentElement.lang = on ? 'zh-CN' : 'fr';
+  document.documentElement.lang = on ? 'en' : 'fr';
   if (on) {
     if (observer) return;
     walk(document.body);
@@ -118,19 +117,11 @@ export function setChineseMode(on: boolean) {
       }
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
-    if (!nativeAlert) {
-      nativeAlert = window.alert.bind(window);
-      window.alert = (msg?: unknown) => nativeAlert!(translateText(String(msg ?? '')));
-    }
   } else {
     if (observer) {
       observer.disconnect();
       observer = null;
     }
     restore(document.body);
-    if (nativeAlert) {
-      window.alert = nativeAlert;
-      nativeAlert = null;
-    }
   }
 }
