@@ -499,29 +499,6 @@ class DeltaForceStore {
     }
     return r;
   }
-  // Réaction emoji sur un commentaire : l'écran change tout de suite, le serveur confirme (retour en arrière si erreur)
-  public async reactCommentNews(id: string, commentId: string, emoji: string): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    const n = this.news.find(x => x.id === id);
-    const c = n?.comments.find(x => x.id === commentId);
-    if (!me || !n || !c) return this.newsCall('news-comment-react', { id, commentId, emoji });
-    const before = n.comments;
-    const rx: Record<string, string[]> = {};
-    const had = (c.reactions?.[emoji] || []).includes(me.id);
-    for (const [e, list] of Object.entries(c.reactions || {})) {
-      const rest = list.filter(x => x !== me.id);
-      if (rest.length) rx[e] = rest;
-    }
-    if (!had) rx[emoji] = [...(rx[emoji] || []), me.id];
-    this.news = this.news.map(x => (x.id === id ? { ...x, comments: x.comments.map(k => (k.id === commentId ? { ...k, reactions: Object.keys(rx).length ? rx : undefined } : k)) } : x));
-    this.emit();
-    const r = await this.newsCall('news-comment-react', { id, commentId, emoji });
-    if (!r.success) {
-      this.news = this.news.map(x => (x.id === id ? { ...x, comments: before } : x));
-      this.emit();
-    }
-    return r;
-  }
   public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }

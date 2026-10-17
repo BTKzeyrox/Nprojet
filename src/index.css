@@ -811,3 +811,19 @@ aside.df-sb button:has(svg.lucide-message-square) .df-sb-badge { background-colo
 @media (prefers-reduced-motion: reduce) {
   .df-msg-in-left, .df-msg-in-right, .df-pop, .df-emoji-in, .df-chip-pop, .df-dot, .df-send-pulse { animation: none !important; }
 }
+
+
+/* Téléphone : un appui long ne sélectionne jamais le texte (comme WhatsApp). Les champs de saisie restent éditables. */
+@media (hover: none) and (pointer: coarse) {
+  html, body, #root {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, select, [contenteditable="true"], .df-selectable, .df-selectable * {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+  img { -webkit-user-drag: none; -webkit-touch-callout: none; }
+}

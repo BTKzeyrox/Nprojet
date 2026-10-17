@@ -366,6 +366,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
 
   const openMenu = (m: ChatMessage, el: HTMLElement) => {
+    window.getSelection()?.removeAllRanges(); // l'appui long ouvre le menu : jamais de sélection de texte
     setMenuRect(el.getBoundingClientRect());
     setMenuMsg(m);
   };
@@ -649,7 +650,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={{ WebkitTouchCallout: 'none' }}
-                      className={`min-w-0 text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && !msg.message && !msg.reply_to && msg.attachment_url
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
                           : `px-3.5 py-2 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
@@ -668,9 +669,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       ) : (
                         <>
                           {msg.reply_to && (
-                            <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className={`block w-full text-left mb-1.5 px-2 py-1 rounded-lg border-l-4 ${isMe ? 'bg-black/20 border-white/70' : L ? 'bg-slate-100 border-emerald-500' : 'bg-black/30 border-emerald-400'} cursor-pointer`}>
-                              <span className="block text-[10px] font-bold opacity-90">{msg.reply_to.sender_name}</span>
-                              <span className="block text-[11px] opacity-80 truncate">{msg.reply_to.text || (msg.reply_to.has_attachment ? 'Pièce jointe' : '')}</span>
+                            <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className={`block w-full text-left mb-1.5 rounded-xl border-l-4 px-3 py-2 cursor-pointer ${isMe ? 'bg-black/20 border-emerald-300' : L ? 'bg-slate-100 border-blue-500' : 'bg-white/10 border-blue-400'}`}>
+                              <span className={`block text-[12px] font-bold leading-tight mb-0.5 ${isMe ? 'text-emerald-200' : 'text-blue-600'}`}>{msg.reply_to.sender_name}</span>
+                              <span className="block text-[13px] leading-snug opacity-90 break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{msg.reply_to.text || (msg.reply_to.has_attachment ? 'Pièce jointe' : '')}</span>
                             </button>
                           )}
                           {msg.attachment_url && msg.attachment_kind === 'image' && (
@@ -750,15 +751,16 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </div>
         )}
         {replyTo && !editingId && (
-          <div className={`px-3 py-2 border-t ${P.div} ${P.head} flex items-center gap-2 text-xs`}>
-            <Reply className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-            <span className="min-w-0 flex-1 border-l-4 border-emerald-500 pl-2">
-              <span className="block text-[10px] font-bold text-emerald-600">Réponse à {replyTo.sender_name}</span>
-              <span className={`block truncate ${P.sub}`}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
-            </span>
-            <button type="button" onClick={() => setReplyTo(null)} className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${P.sub}`} title="Annuler la réponse">
-              <X className="w-4 h-4" />
-            </button>
+          <div className={`px-3 pt-2 border-t ${P.div} ${P.head}`}>
+            <div className={`flex items-center gap-2 rounded-2xl border-l-4 border-blue-500 pl-3 pr-1 py-1.5 ${L ? 'bg-slate-100' : 'bg-white/10'}`}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold text-blue-600">{replyTo.sender_id === currentUser.id ? 'Toi' : replyTo.sender_name}</span>
+                <span className={`block text-[13px] truncate ${P.sub}`}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
+              </span>
+              <button type="button" onClick={() => setReplyTo(null)} className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer ${P.sub}`} title="Annuler la réponse">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 
