@@ -354,7 +354,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {/* EMPLOYEES TABLE WITH HORIZONTAL SCROLL SAFEGUARD */}
       <div className="bg-[#0f1722] border border-slate-800 rounded-xl shadow-xl overflow-hidden">
-        <div className="sm:hidden px-3 py-1.5 bg-[#121c27] border-b border-slate-800 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+        <div className="rounded-xl sm:hidden px-3 py-1.5 bg-[#121c27] border-b border-slate-800 text-[10px] font-mono text-slate-400 flex items-center justify-between">
           <span>Défiler horizontalement →</span>
           <span className="text-emerald-400">{employees.length} opérateur(s)</span>
         </div>
@@ -715,7 +715,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       </div>
 
       {/* HISTORIQUE DES AVANCES : recherche + filtres */}
-      <div className="bg-[#0f1722] border border-slate-800 p-4 sm:p-6 shadow-xl">
+      <div className="bg-[#0f1722] border rounded-2xl border-slate-800 p-4 sm:p-6 shadow-xl">
         <AdvanceHistory advances={advances} showBooster />
       </div>
 

@@ -71,7 +71,7 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
           ['Quantité traitée', formatScoreM(u.total_score_boosted)],
           ['Sessions finies', String(doneCount)],
         ].map(([k, v]) => (
-          <div key={k} className="bg-[#0f1722] border border-slate-700 p-2.5">
+          <div key={k} className="bg-[#0f1722] border rounded-xl border-slate-700 p-2.5">
             <div className="text-slate-400">{k}</div>
             <div className="text-white font-bold text-sm mt-0.5 break-words">{v}</div>
           </div>

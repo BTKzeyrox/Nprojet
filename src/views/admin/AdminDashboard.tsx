@@ -810,7 +810,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       onChange={e => setEditDescription(e.target.value)}
                       rows={3}
                       placeholder="ex : à finir avant vendredi, fichier Excel du client en pièce jointe"
-                      className="w-full bg-[#0d1622] border border-slate-600 p-2 text-white resize-y"
+                      className="w-full bg-[#0d1622] border rounded-xl border-slate-600 p-2 text-white resize-y"
                     />
                   </div>
 
@@ -1035,7 +1035,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
           </div>
           {signups.map(r => (
-            <div key={r.id} data-nav={`val-sig-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={r.id} data-nav={`val-sig-${r.id}`} className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
@@ -1051,7 +1051,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     message: `${r.name} verra ce motif quand il essaiera de se connecter.`,
                     onSubmit: reason => void db.decideSignup(r.id, false, reason),
                   })}
-                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
                 </button>
@@ -1063,7 +1063,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     confirmLabel: 'Accepter',
                     onConfirm: () => void db.decideSignup(r.id, true).then(res => { if (!res.success) alert(res.error); }),
                   })}
-                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                  className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                 >
                   Accepter
                 </button>
@@ -1083,7 +1083,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
           </div>
           {resets.map(r => (
-            <div key={r.id} data-nav={`val-rst-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={r.id} data-nav={`val-rst-${r.id}`} className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-amber-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
@@ -1098,7 +1098,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     message: `Le mot de passe de ${r.name} ne changera pas. Il verra ce motif quand il essaiera de se connecter.`,
                     onSubmit: reason => void db.decidePasswordReset(r.id, false, reason),
                   })}
-                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
                 </button>
@@ -1110,7 +1110,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     confirmLabel: 'Valider',
                     onConfirm: () => void db.decidePasswordReset(r.id, true),
                   })}
-                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                  className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                 >
                   Valider
                 </button>
@@ -1126,7 +1126,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h3 className="font-tactical font-black text-white text-sm sm:text-base">
             {profileReqs.length} modification{profileReqs.length > 1 ? 's' : ''} de profil à valider
           </h3>
-          {profileErr && <div className="p-2 bg-red-950 border border-red-500/60 text-red-200 text-xs font-semibold">{profileErr}</div>}
+          {profileErr && <div className="p-2 bg-red-950 border rounded-xl border-red-500/60 text-red-200 text-xs font-semibold">{profileErr}</div>}
           {profileReqs.map(r => {
             const rows: { label: string; from: string; to: string }[] = [];
             if (r.name !== r.old.name) rows.push({ label: 'Nom', from: r.old.name, to: r.name });
@@ -1134,7 +1134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             if (r.phone !== r.old.phone) rows.push({ label: 'Téléphone', from: r.old.phone || 'vide', to: r.phone || 'vide' });
             const photoChanged = r.avatar_url !== r.old.avatar_url;
             return (
-              <div key={r.id} data-nav={`val-prf-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div key={r.id} data-nav={`val-prf-${r.id}`} className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="min-w-0 flex-1 text-xs font-mono space-y-1">
                   <div className="text-white font-bold text-sm break-words">{r.old.name} <span className="text-slate-400 font-normal">(@{r.old.username})</span></div>
                   {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
@@ -1163,7 +1163,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       message: `Le profil de ${r.old.name} ne changera pas. Il verra ce motif dans son profil.`,
                       onSubmit: reason => { setProfileErr(null); void db.decideProfileRequest(r.id, false, reason); },
                     })}
-                    className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                    className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                   >
                     Refuser
                   </button>
@@ -1179,7 +1179,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         if (!res.success) setProfileErr(res.error || 'Erreur.');
                       },
                     })}
-                    className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                    className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                   >
                     Valider
                   </button>
@@ -1200,7 +1200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {pendingAdvances.length} avance{pendingAdvances.length > 1 ? 's' : ''} en attente
           </h3>
           {pendingAdvances.map(a => (
-            <div key={a.id} data-nav={`val-adv-${a.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={a.id} data-nav={`val-adv-${a.id}`} className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{a.employee_name}</div>
                 <div className="text-amber-300 font-bold">{formatCurrencyAr(a.amount_ar)}</div>
@@ -1215,7 +1215,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     message: `${a.employee_name} verra ce motif.`,
                     onSubmit: reason => { db.reviewAdvanceRequest(a.id, false, reason); },
                   })}
-                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
                 </button>
@@ -1228,7 +1228,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     optional: true,
                     onSubmit: note => { db.reviewAdvanceRequest(a.id, true, note || "Validé par l'administrateur"); },
                   })}
-                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                  className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                 >
                   Accepter
                 </button>
@@ -1246,7 +1246,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           ? 'bg-[#180a0d] border-red-500/80 animate-radar-alert'
           : 'bg-[#0f1722] border-slate-800'
       }`}>
-        <div className="bg-red-950/70 px-6 py-3.5 border-b border-red-900/60 flex items-center justify-between">
+        <div className="rounded-xl bg-red-950/70 px-6 py-3.5 border-b border-red-900/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/50 flex items-center justify-center text-red-400">
               <ShieldAlert className="w-5 h-5 animate-pulse" />
@@ -1358,7 +1358,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <>
       {/* SECTION 2: SUBMISSIONS REVIEW PANEL */}
       <div className="bg-[#0f1722] border border-slate-800 rounded-xl shadow-xl overflow-hidden">
-        <div className="bg-[#121c27] px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div className="rounded-xl bg-[#121c27] px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="font-tactical font-bold text-white text-base tracking-wide flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />

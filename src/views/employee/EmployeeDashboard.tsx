@@ -536,7 +536,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   return (
     <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       {uploadingCount > 0 && (
-        <div role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 px-4 py-2.5 bg-[#0f1722] border border-emerald-500 text-emerald-300 text-xs font-mono shadow-xl">
+        <div role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 px-4 py-2.5 bg-[#0f1722] border rounded-xl border-emerald-500 text-emerald-300 text-xs font-mono shadow-xl">
           <span className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
           Photo en cours d'envoi… ne ferme pas la page
         </div>
@@ -1030,7 +1030,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       {activeSubTab === 'chat' && (
         <div className="bg-[#0f1722] border border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-[580px]">
           {/* Chat Header with clear Unlimited guarantee */}
-          <div className="bg-[#131d2a] px-4 sm:px-6 py-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div className="rounded-xl bg-[#131d2a] px-4 sm:px-6 py-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
               <div>
@@ -1055,7 +1055,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           </div>
 
           {/* Quick Reply Chips for Fast Booster Reporting */}
-          <div className="px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
+          <div className="rounded-xl px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[
               "Objectif de la mission atteint !",
@@ -1215,7 +1215,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
           <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
-            <div className="bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
+            <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
@@ -1510,7 +1510,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     value={startNotes}
                     onChange={e => setStartNotes(e.target.value)}
                     placeholder="Un mot pour le responsable (facultatif)"
-                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    className="w-full bg-[#141e2a] border rounded-xl border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -1619,7 +1619,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
           <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
-            <div className="bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
+            <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"

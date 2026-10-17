@@ -54,7 +54,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     const full = this.props.scope === 'app';
 
     const card = (
-      <div role="alert" className="w-full max-w-lg bg-[#0f1722] border border-red-500/50 p-5 sm:p-6 space-y-4 text-slate-200">
+      <div role="alert" className="w-full max-w-lg bg-[#0f1722] border rounded-2xl border-red-500/50 p-5 sm:p-6 space-y-4 text-slate-200">
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-7 h-7 text-red-400 shrink-0 mt-0.5" />
           <div className="min-w-0">
@@ -66,7 +66,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         </div>
 
         {report && (
-          <div className="bg-[#0a0f16] border border-slate-700 p-3 text-xs font-mono space-y-1">
+          <div className="bg-[#0a0f16] border rounded-xl border-slate-700 p-3 text-xs font-mono space-y-1">
             <div>
               Numéro d'incident : <strong className="text-white select-all">{report.id}</strong>
             </div>
@@ -75,16 +75,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-          <button type="button" onClick={this.retry} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
+          <button type="button" onClick={this.retry} className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
             <RefreshCw className="w-4 h-4" /> Réessayer
           </button>
-          <button type="button" onClick={() => void clearCacheAndReload()} className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">
+          <button type="button" onClick={() => void clearCacheAndReload()} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">
             <RotateCcw className="w-4 h-4" /> Vider le cache et recharger
           </button>
-          <button type="button" onClick={this.copy} disabled={!report} className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40">
+          <button type="button" onClick={this.copy} disabled={!report} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40">
             <Copy className="w-4 h-4" /> {this.state.copied ? 'Rapport copié ✓' : 'Copier le rapport'}
           </button>
-          <button type="button" onClick={this.logout} className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">
+          <button type="button" onClick={this.logout} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">
             <LogOut className="w-4 h-4" /> Se déconnecter
           </button>
         </div>

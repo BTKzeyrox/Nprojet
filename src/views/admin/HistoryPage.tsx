@@ -68,7 +68,7 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
 
   return (
     <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
-      <div className="bg-[#0f1722] border border-slate-700 p-3 sm:p-4 space-y-3">
+      <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-tactical font-black text-white text-base sm:text-lg">Historique</h2>
           <span className="text-xs font-mono text-slate-400">{rows.length} résultat{rows.length > 1 ? 's' : ''}</span>
@@ -104,7 +104,7 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
           {rows.slice(0, limit).map(r => {
             const I = ICON[r.kind];
             return (
-              <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex items-start gap-3">
+              <div key={r.id} className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 flex items-start gap-3">
                 <I className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                   <div className="text-white font-bold text-sm break-words">{r.who ? `${r.who} · ` : ''}{r.title}</div>

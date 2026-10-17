@@ -27,7 +27,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ options, onClose }) 
       aria-modal="true"
     >
       <div
-        className="w-full max-w-sm bg-[#0d1624] border border-slate-600 p-5 space-y-4 text-slate-100"
+        className="w-full max-w-sm bg-[#0d1624] border rounded-2xl border-slate-600 p-5 space-y-4 text-slate-100"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -41,7 +41,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ options, onClose }) 
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold"
+            className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-slate-600 text-sm font-semibold"
           >
             {options.cancelLabel || 'Annuler'}
           </button>
@@ -52,7 +52,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ options, onClose }) 
               onClose();
               fn();
             }}
-            className={`px-3 py-2.5 text-sm font-bold text-white ${
+            className={`rounded-xl px-3 py-2.5 text-sm font-bold text-white ${
               options.danger ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'
             }`}
           >

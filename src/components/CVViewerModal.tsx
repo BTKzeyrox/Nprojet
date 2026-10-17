@@ -222,7 +222,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 </div>
               </div>
             )}
-            {info && <div className="p-2.5 bg-emerald-950 border border-emerald-500/50 text-emerald-200 text-xs leading-relaxed">{info}</div>}
+            {info && <div className="p-2.5 bg-emerald-950 border rounded-xl border-emerald-500/50 text-emerald-200 text-xs leading-relaxed">{info}</div>}
           </div>
         )}
         {error && <div className="text-sm text-red-400">{error}</div>}

@@ -24,7 +24,7 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/70" onClick={onClose} role="dialog" aria-modal="true">
       <form
-        className="w-full max-w-sm bg-[#0d1624] border border-slate-600 p-5 space-y-3 text-slate-100"
+        className="w-full max-w-sm bg-[#0d1624] border rounded-2xl border-slate-600 p-5 space-y-3 text-slate-100"
         onClick={e => e.stopPropagation()}
         onSubmit={e => {
           e.preventDefault();
@@ -50,17 +50,17 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
             autoFocus
             onChange={e => setText(e.target.value)}
             placeholder={optional ? "Un mot pour l’opérateur (facultatif)" : "Écris la raison du refus"}
-            className={`w-full bg-[#141e2a] border border-slate-600 p-2.5 text-sm text-white focus:outline-none ${optional ? 'focus:border-emerald-500' : 'focus:border-red-500'}`}
+            className={`w-full bg-[#141e2a] border rounded-xl border-slate-600 p-2.5 text-sm text-white focus:outline-none ${optional ? 'focus:border-emerald-500' : 'focus:border-red-500'}`}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
+          <button type="button" onClick={onClose} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-slate-600 text-sm font-semibold cursor-pointer">
             Annuler
           </button>
           <button
             type="submit"
             disabled={!ok}
-            className={`px-3 py-2.5 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${optional ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}
+            className={`rounded-xl px-3 py-2.5 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${optional ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}
           >
             {options.confirmLabel || (optional ? 'Valider' : 'Refuser')}
           </button>

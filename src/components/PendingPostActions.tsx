@@ -75,10 +75,10 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
   return (
     <>
       <div className="grid grid-cols-2 gap-2 mt-2">
-        <button type="button" onClick={stop(modify)} className="py-2 px-2 text-xs font-bold bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-100 flex items-center justify-center gap-1.5 cursor-pointer">
+        <button type="button" onClick={stop(modify)} className="py-2 px-2 text-xs font-bold bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-slate-600 text-slate-100 flex items-center justify-center gap-1.5 cursor-pointer">
           <Pencil className="w-3.5 h-3.5" />Modifier
         </button>
-        <button type="button" onClick={stop(cancel)} className="py-2 px-2 text-xs font-bold bg-[#141e2a] hover:bg-red-950/50 border border-red-500/60 text-red-300 flex items-center justify-center gap-1.5 cursor-pointer">
+        <button type="button" onClick={stop(cancel)} className="py-2 px-2 text-xs font-bold bg-[#141e2a] hover:bg-red-950/50 border rounded-xl border-red-500/60 text-red-300 flex items-center justify-center gap-1.5 cursor-pointer">
           <X className="w-3.5 h-3.5" />Annuler
         </button>
       </div>

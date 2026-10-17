@@ -54,7 +54,7 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-[#0d1624] border border-slate-700 p-5 space-y-4 text-slate-100">
+      <div className="w-full max-w-sm bg-[#0d1624] border rounded-2xl border-slate-700 p-5 space-y-4 text-slate-100">
         <div>
           <h2 className="font-tactical font-bold text-lg">Votre photo de profil</h2>
           <p className="text-sm text-slate-400 mt-1">
@@ -70,14 +70,14 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
           <button
             type="button"
             onClick={() => camRef.current?.click()}
-            className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+            className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-slate-600 text-sm font-semibold text-center leading-tight"
           >
             <Camera className="w-4 h-4 shrink-0" /> Prendre une photo
           </button>
           <button
             type="button"
             onClick={() => galRef.current?.click()}
-            className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+            className="flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-slate-600 text-sm font-semibold text-center leading-tight"
           >
             <ImageIcon className="w-4 h-4 shrink-0" /> Choisir une image
           </button>
@@ -85,7 +85,7 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
         <input ref={camRef} type="file" accept="image/*" capture="user" className="hidden" onChange={pick} />
         <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={pick} />
 
-        {error && <div className="text-sm text-red-400 border border-red-500/40 bg-red-950/40 p-2">{error}</div>}
+        {error && <div className="text-sm text-red-400 border rounded-xl border-red-500/40 bg-red-950/40 p-2">{error}</div>}
 
         <button
           type="button"

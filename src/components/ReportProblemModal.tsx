@@ -50,7 +50,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
           <div className="p-6 text-center space-y-3">
             <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
             <p className="text-sm text-slate-200">Merci, ton signalement est envoyé à l'administrateur.</p>
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
+            <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
               Fermer
             </button>
           </div>
@@ -64,11 +64,11 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
                 value={text}
                 onChange={e => setText(e.target.value)}
                 placeholder="Décris ce que tu faisais et ce qui ne marche pas"
-                className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                className="w-full bg-[#141e2a] border rounded-xl border-slate-600 p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center gap-2 cursor-pointer">
+              <label className="rounded-xl px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center gap-2 cursor-pointer">
                 <Camera className="w-4 h-4" /> {shot ? 'Changer la photo' : 'Ajouter une photo (facultatif)'}
                 <input type="file" accept="image/*" onChange={pick} className="hidden" />
               </label>
@@ -76,7 +76,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
             </div>
             <p className="text-[11px] text-slate-500">La page, ton appareil et la version du site sont ajoutés automatiquement. Jamais ton mot de passe.</p>
             {error && <div className="text-red-300">{error}</div>}
-            <button type="button" onClick={send} disabled={busy} className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
+            <button type="button" onClick={send} disabled={busy} className="rounded-xl w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
               <Send className="w-4 h-4" /> {busy ? 'Envoi…' : 'Envoyer'}
             </button>
           </div>
