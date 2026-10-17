@@ -42,7 +42,7 @@ Mis à jour : 2026-10-17. « Non testé à l'écran » = le code compile, mais B
 - Compte bloqué = refusé. Accès opérateur selon l'horaire (auto / toujours / jamais).
 - Anti-spam : limites sur les inscriptions (par adresse, sur 24 h) et sur les rapports d'erreur.
 - Secrets (Cloudinary, etc.) dans le coffre Supabase (Vault), jamais dans le repo.
-- - Alertes de sécurité visibles par l'admin.
+- Alertes de sécurité visibles par l'admin.
 - **Manque connu** : pas de blocage après trop d'essais de mot de passe (seulement 0,5 s d'attente).
 
 ## 7. Secours et pannes
