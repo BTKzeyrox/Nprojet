@@ -17,6 +17,7 @@ import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { EmojiPicker, ReactionChips, TypingDots } from './Reactions';
+import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -132,6 +133,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const admin = users.find(u => u.role === 'admin');
   const adminId = admin?.id || 'user-admin-1';
   const nameOf = (id: string) => users.find(u => u.id === id)?.name || 'Utilisateur';
+  useAccentVersion(); // se redessine quand la couleur d'une photo de profil vient d'être calculée
 
   // « est en train d'écrire… » : on lit qui écrit toutes les 2,5 s, seulement écran visible
   const [typingRows, setTypingRows] = useState<{ user_id: string; to: string }[]>([]);
@@ -649,15 +651,20 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseUp={stopPress}
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
-                      style={{ WebkitTouchCallout: 'none' }}
+                      style={(() => {
+                        if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
+                        const sd = users.find(u => u.id === msg.sender_id);
+                        const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
+                        return { WebkitTouchCallout: 'none', backgroundColor: ac.bubbleBg, borderColor: ac.bubbleBorder } as React.CSSProperties;
+                      })()}
                       className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && !msg.message && !msg.reply_to && msg.attachment_url
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
-                          : `px-3.5 py-2 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
+                          : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
                       {!gone && !isMe && showNames && !sameSender && (
-                        <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold text-emerald-600 mb-0.5 cursor-pointer" title="Voir le profil">
+                        <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold mb-0.5 cursor-pointer" style={{ color: accentStyles(accentOf(users.find(u => u.id === msg.sender_id) || { name: msg.sender_name }), L).name }} title="Voir le profil">
                           {msg.sender_name}
                           {msg.sender_role === 'admin' && <span className="ml-1 px-1 rounded bg-amber-500/20 text-amber-600 text-[9px]">RESPONSABLE</span>}
                         </button>
@@ -668,12 +675,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         </span>
                       ) : (
                         <>
-                          {msg.reply_to && (
-                            <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className={`block w-full text-left mb-1.5 rounded-xl border-l-4 px-3 py-2 cursor-pointer ${isMe ? 'bg-black/20 border-emerald-300' : L ? 'bg-slate-100 border-blue-500' : 'bg-white/10 border-blue-400'}`}>
-                              <span className={`block text-[12px] font-bold leading-tight mb-0.5 ${isMe ? 'text-emerald-200' : 'text-blue-600'}`}>{msg.reply_to.sender_name}</span>
-                              <span className="block text-[13px] leading-snug opacity-90 break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{msg.reply_to.text || (msg.reply_to.has_attachment ? 'Pièce jointe' : '')}</span>
-                            </button>
-                          )}
+                          {msg.reply_to && (() => {
+                            const quoted = messages.find(x => x.id === msg.reply_to!.id);
+                            const qUser = users.find(u => u.id === quoted?.sender_id) || users.find(u => u.name === msg.reply_to!.sender_name);
+                            const ac = accentStyles(accentOf(qUser || { name: msg.reply_to!.sender_name }), L);
+                            return (
+                              <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className="relative block w-full text-left mb-1 rounded-lg overflow-hidden cursor-pointer pl-3 pr-2.5 py-1" style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.92)' : ac.quoteBg, color: L ? '#1e293b' : isMe ? '#1e293b' : '#e2e8f0' }}>
+                                <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: ac.bar }} />
+                                <span className="block text-[12px] font-bold leading-tight" style={{ color: isMe ? ac.name : ac.name }}>{msg.reply_to!.sender_name}</span>
+                                <span className="block text-[13px] leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
+                              </button>
+                            );
+                          })()}
                           {msg.attachment_url && msg.attachment_kind === 'image' && (
                             <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className={`block cursor-zoom-in ${msg.message || msg.reply_to ? 'mb-1' : ''}`} title="Agrandir">
                               <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full rounded-xl" loading="lazy" />
@@ -752,9 +765,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
         {replyTo && !editingId && (
           <div className={`px-3 pt-2 border-t ${P.div} ${P.head}`}>
-            <div className={`flex items-center gap-2 rounded-2xl border-l-4 border-blue-500 pl-3 pr-1 py-1.5 ${L ? 'bg-slate-100' : 'bg-white/10'}`}>
+            <div className="relative flex items-center gap-2 rounded-xl overflow-hidden pl-3 pr-1 py-1" style={{ backgroundColor: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).quoteBg }}>
+              <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).bar }} />
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-bold text-blue-600">{replyTo.sender_id === currentUser.id ? 'Toi' : replyTo.sender_name}</span>
+                <span className="block text-xs font-bold" style={{ color: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).name }}>{replyTo.sender_id === currentUser.id ? 'Toi' : replyTo.sender_name}</span>
                 <span className={`block text-[13px] truncate ${P.sub}`}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
               </span>
               <button type="button" onClick={() => setReplyTo(null)} className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer ${P.sub}`} title="Annuler la réponse">
