@@ -135,19 +135,24 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const nameOf = (id: string) => users.find(u => u.id === id)?.name || 'Utilisateur';
   useAccentVersion(); // se redessine quand la couleur d'une photo de profil vient d'être calculée
 
-  // « est en train d'écrire… » : on lit qui écrit toutes les 2,5 s, seulement écran visible
+  // « est en train d'écrire… » : on lit qui écrit, seulement écran visible.
+  // Économie de quota : 2,5 s si la personne est active, 6 s après 30 s sans action, 20 s après 2 min.
   const [typingRows, setTypingRows] = useState<{ user_id: string; to: string }[]>([]);
   const [sendPulse, setSendPulse] = useState(false);
   useEffect(() => {
     let off = false;
+    let timer: number | undefined;
     const tick = async () => {
-      if (document.hidden) return;
-      const rows = await db.fetchTyping();
-      if (!off) setTypingRows(prev => (JSON.stringify(prev) === JSON.stringify(rows) ? prev : rows));
+      if (!document.hidden) {
+        const rows = await db.fetchTyping();
+        if (!off) setTypingRows(prev => (JSON.stringify(prev) === JSON.stringify(rows) ? prev : rows));
+      }
+      if (off) return;
+      const idle = db.idleMs();
+      timer = window.setTimeout(tick, idle > 120000 ? 20000 : idle > 30000 ? 6000 : 2500);
     };
     void tick();
-    const id = window.setInterval(tick, 2500);
-    return () => { off = true; window.clearInterval(id); };
+    return () => { off = true; if (timer) window.clearTimeout(timer); };
   }, []);
 
   // Ce message appartient-il à ce fil ?

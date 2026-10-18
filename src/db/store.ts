@@ -112,7 +112,9 @@ class DeltaForceStore {
   private mutationSeq = 0; // +1 à chaque modification locale : sert à ignorer une réponse serveur devenue périmée
   private onVisible: (() => void) | null = null;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastActivity = Date.now(); // dernière action de la personne (clic, touche, toucher) : sert à ralentir la synchro
+  private onActivity: (() => void) | null = null;
   private readyPromise: Promise<void>;
 
   constructor() {
@@ -275,24 +277,55 @@ class DeltaForceStore {
     if (on && this.token) void this.pull();
   }
 
+  // Économie de quota : sans action depuis 2 min le délai double, depuis 10 min il triple.
+  // Une seule action (clic, touche, toucher) remet la vitesse normale et recharge tout de suite.
+  // Temps écoulé depuis la dernière action de la personne (pour ralentir aussi les autres rechargements)
+  public idleMs(): number { return Date.now() - this.lastActivity; }
+
+  private idleFactor(): number {
+    const idle = Date.now() - this.lastActivity;
+    if (idle > 10 * 60 * 1000) return 3;
+    if (idle > 2 * 60 * 1000) return 2;
+    return 1;
+  }
+
+  private scheduleNextPull() {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.pollTimer = setTimeout(() => {
+      if (!this.token) return;
+      // Onglet caché : on ne recharge pas, mais on garde le minuteur (le retour sur l'onglet recharge déjà)
+      if (!(typeof document !== 'undefined' && document.hidden)) void this.pull();
+      this.scheduleNextPull();
+    }, this.pollMs * this.idleFactor());
+  }
+
   private startPolling() {
     this.stopPolling();
-    this.pollTimer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      void this.pull();
-    }, this.pollMs);
-    // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre 5 s
+    this.lastActivity = Date.now();
+    this.scheduleNextPull();
     if (typeof document !== 'undefined') {
-      this.onVisible = () => { if (!document.hidden) void this.pull(); };
+      // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre
+      this.onVisible = () => { if (!document.hidden) { this.lastActivity = Date.now(); void this.pull(); } };
       document.addEventListener('visibilitychange', this.onVisible);
+      // Toute action de la personne remet la vitesse normale (si on était au ralenti, on recharge tout de suite)
+      this.onActivity = () => {
+        const wasIdle = this.idleFactor() > 1;
+        this.lastActivity = Date.now();
+        if (wasIdle && this.token) { void this.pull(); this.scheduleNextPull(); }
+      };
+      for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, this.onActivity, { passive: true });
     }
   }
 
   private stopPolling() {
-    if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.pollTimer) clearTimeout(this.pollTimer);
     this.pollTimer = null;
-    if (this.onVisible && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisible);
+    if (typeof document !== 'undefined') {
+      if (this.onVisible) document.removeEventListener('visibilitychange', this.onVisible);
+      if (this.onActivity) for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.removeEventListener(ev, this.onActivity);
+    }
     this.onVisible = null;
+    this.onActivity = null;
   }
 
   // Récupère les changements du serveur. Retourne true si la session est valide.
