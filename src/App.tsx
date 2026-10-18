@@ -18,6 +18,7 @@ import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { ToastHost } from './components/ToastHost';
 import { DemoBanner } from './components/DemoBanner';
+import { useModeSwitchHidden } from './utils/modeSwitch';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -129,6 +130,8 @@ export default function App() {
   }, [sbWidth]);
   // Admin : peut jouer son propre rôle de booster, puis revenir en admin
   const [boosterMode, setBoosterMode] = useState(false);
+  const modeSwitchHidden = useModeSwitchHidden();
+  useEffect(() => { if (modeSwitchHidden) setBoosterMode(false); }, [modeSwitchHidden]);
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -329,7 +332,7 @@ export default function App() {
       {/* Modern Tactical Sidebar */}
       <Sidebar
         currentUser={viewUser}
-        canSwitchMode={realIsAdmin}
+        canSwitchMode={realIsAdmin && !modeSwitchHidden}
         boosterMode={boosterMode}
         onToggleBoosterMode={toggleBoosterMode}
         activeView={activeView}

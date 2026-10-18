@@ -974,5 +974,17 @@
 "La sauvegarde a échoué.": "The backup failed.",
 "Téléchargement impossible.": "Download failed.",
 "Impossible de lire les sauvegardes.": "Could not read the backups.",
-"Une sauvegarde vient d'être faite. Réessayez dans une minute.": "A backup was just made. Try again in a minute."
+"Une sauvegarde vient d'être faite. Réessayez dans une minute.": "A backup was just made. Try again in a minute.",
+"Mode responsable / opérateur": "Manager / operator mode",
+"Masquer le bouton…": "Hide the button…",
+"Afficher le bouton…": "Show the button…",
+"Masquer le bouton « Vue opérateur »": "Hide the “Operator view” button",
+"Afficher le bouton « Vue opérateur »": "Show the “Operator view” button",
+"Masquer le bouton": "Hide the button",
+"Afficher le bouton": "Show the button",
+"Continuer": "Continue",
+"masqué": "hidden",
+"visible": "visible",
+"Pour confirmer, tapez le mot": "To confirm, type the word",
+"ci-dessous.": "below."
 }
