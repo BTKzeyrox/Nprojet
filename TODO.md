@@ -91,9 +91,98 @@
 - [ ] Fiche d'explication courte du site
 - [ ] Captures d'écran dans le README
 
+## 2 quinquies. Plan détaillé des améliorations (liste du 2026-10-18, rien de codé)
+
+Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». Taille : S = moins d'une heure, M = une demi-journée, L = une journée ou plus. Rien n'est testé à l'écran tant que BTK ne l'a pas fait.
+
+### P1. Que ça tienne et soit utilisable (à faire en premier)
+
+**P1-1. Notifications même application fermée** (L)
+- But : recevoir un message, une validation, un refus ou une nouvelle mission sans ouvrir le site.
+- Étapes : (1) service worker + `manifest` déjà présents à compléter ; (2) clés VAPID (une paire, secret côté serveur) ; (3) table `df_push_subs` (user_id, endpoint, clés, appareil) ; (4) routes `df-api` : `push-subscribe`, `push-unsubscribe` ; (5) envoi sur les événements : nouveau message (DM, groupe, mention), mission assignée, mission validée / refusée, publication validée ; (6) réglage « Notifications » dans Réglages (activer, par type, ne pas déranger la nuit) ; (7) clic sur la notification ouvre la bonne page.
+- Limites à écrire dans l'application : sur iPhone, seulement si le site est installé sur l'écran d'accueil (iOS 16.4 ou plus) ; sur Android, ça marche dans Chrome.
+- Variante simple en attendant : e-mail via Resend à la validation / au refus (clé déjà prévue).
+- Réussite : message envoyé à un opérateur dont l'écran est verrouillé = notification en moins de 10 s ; un clic ouvre la conversation.
+- Dépend de : décision sur le fournisseur (push web direct ou service tiers). **[BTK]** crée les clés / secrets Supabase ; **[Claude]** code et déploie après accord.
+
+**P1-2. Quota gratuit et sauvegarde** (M)
+- But : ne pas dépasser l'offre gratuite de Supabase et ne jamais perdre de données.
+- Étapes : (1) mesurer : appels par jour dans le tableau de bord Supabase ; (2) mettre en pause la synchro quand l'onglet est caché (`visibilitychange`) et ralentir après 2 min sans action (4 s → 8 s → 20 s) ; (3) ne renvoyer que ce qui a changé (`since`, déjà là) et grouper les lectures de la messagerie ; (4) sauvegarde automatique chaque nuit (export des tables en JSON dans un stockage, garder 14 jours) ; (5) page « Sauvegardes » dans Réglages : date de la dernière, bouton « Télécharger », bouton « Restaurer » (existe : `df-restore`, avec double confirmation).
+- Réussite : moins de 50 % du quota après une semaine d'utilisation normale ; une sauvegarde de moins de 24 h toujours disponible.
+
+**P1-3. Tableau de performance : ce qui reste** (M)
+- Déjà fait : page Performance (missions terminées / refusées / en cours, taux d'acceptation, délai moyen, période, export Excel et CSV).
+- Reste : export **PDF** ; graphique par semaine (missions finies) ; classement des opérateurs ; comparaison avec la période précédente ; filtre par type de mission.
+- Réussite : un PDF d'une page propre, avec le logo et la période, à joindre à un CV ou à un rapport.
+
+### P2. Missions
+
+**P2-1. Date limite, priorité, rappel** (M)
+- Champs : `due_date` (date + heure facultative), `priority` (normale / urgente). Dans « Options avancées » du formulaire : rien d'obligatoire.
+- Affichage : pastille « Urgent » rouge, « Échéance dans 2 j » ou « En retard » sur la carte Kanban ; tri possible par échéance ; l'échéance apparaît dans le calendrier.
+- Rappels : notification 24 h et 1 h avant, et au dépassement (voir P1-1) ; badge dans le tableau de bord « Missions en retard ».
+- Réussite : une mission en retard est visible en 2 secondes par le responsable.
+
+**P2-2. Modèles de mission** (S–M)
+- Enregistrer une mission comme modèle (titre, type, consigne, justificatif demandé) ; bouton « Créer depuis un modèle » dans le formulaire ; gestion des modèles dans Réglages → Missions.
+
+**P2-3. Liste de tâches dans une mission** (M)
+- Le responsable ajoute des lignes à cocher ; l'opérateur coche ; la barre « 3/5 » s'affiche sur la carte ; option « tout doit être coché avant d'envoyer ».
+
+**P2-4. Fil de discussion par mission** (M)
+- Commentaires et pièces jointes attachés à la mission, visibles par le responsable et l'opérateur assigné ; notification à chaque commentaire.
+
+### P3. Messagerie (déjà fait : réponses, épinglés, groupes avec photo / description / admins, réactions emoji, « écrit… », animations)
+
+**P3-1. Messages vocaux** (M) : enregistrement dans le champ de saisie, durée max 2 min, lecture avec vitesse x1 / x1,5 / x2, envoi comme pièce jointe audio.
+
+**P3-2. Mentions @nom** (S–M) : liste des membres en tapant `@`, nom coloré dans le message, notification dédiée.
+
+**P3-3. Recherche dans les messages** (M) : champ dans la conversation, résultats avec date, clic = saut au message (le saut existe déjà).
+
+**P3-4. Annonces importantes** (S) : message épinglé avec bouton « J'ai lu » ; le responsable voit qui a lu et qui manque.
+
+### P4. Équipe
+
+**P4-1. Absences et congés** (M) : l'opérateur demande (dates, motif) ; le responsable valide ou refuse ; l'absence validée apparaît dans le calendrier et n'est plus comptée comme jour manqué.
+
+**P4-2. Chef d'équipe** (M) : rôle intermédiaire qui valide les missions de son équipe, sans accès à la paie ni aux réglages.
+
+**P4-3. Recherche et filtres dans l'historique** (S) : par opérateur, période, type de mission, statut ; export du résultat filtré.
+
+### P5. Pour le CV
+
+**P5-1. Bouton « Voir la démo » avec données fictives** (M) — décision de BTK attendue (A ou B ci-dessous)
+- Où : page de connexion, sous le bouton « Se connecter » (« Voir la démo, sans compte »). Aussi dans le README (lien direct `?demo=1`).
+- **Option A (simple) : connexion automatique à un compte de démonstration** déjà prévu (`toki` avec 205 missions fictives). Avantage : peu de code. Défaut : écrit dans la vraie base, risque de modifications par les visiteurs ; il faut un compte protégé en lecture seule côté serveur.
+- **Option B (conseillée pour un CV public) : démo entièrement dans le navigateur, sans serveur.** Un store en mémoire avec les mêmes écrans, rempli de données inventées ; les actions (créer une mission, valider, écrire un message) marchent dans la page puis disparaissent à la fermeture ; aucun appel à Supabase ; aucun risque pour les vraies données.
+- Contenu fictif (dans les deux cas) : 1 responsable « Responsable démo » et 6 opérateurs avec des prénoms inventés et des photos neutres (initiales colorées, aucune vraie photo) ; 40 à 60 missions sur 60 jours, tous les statuts, 5 types ; 3 conversations (1 groupe) avec réactions ; 6 publications ; calendrier avec absences et retards ; paie à 5 000 Ar par mission avec des chiffres plausibles.
+- Règles : bandeau permanent « Mode démo : données fictives » avec bouton « Quitter la démo » ; aucune vraie donnée (noms, téléphones, e-mails, Ar réels) ; les envois de fichiers sont désactivés (message clair) ; bouton « Réinitialiser la démo » ; choix du profil au démarrage (« Voir en responsable » / « Voir en opérateur ») ; FR et EN.
+- Fichiers probables : `src/demo/demoData.ts`, `src/demo/demoStore.ts` (même interface que `db`), `LoginView.tsx` (bouton), `App.tsx` (mode démo + bandeau), `store.ts` (un interrupteur qui remplace les appels réseau).
+- Réussite : un recruteur ouvre le lien, clique « Voir la démo » et visite toutes les pages en moins de 10 s, sans compte, sans rien casser.
+- **[BTK]** choisit A ou B (défaut proposé : B). **[Claude]** code après « GO ».
+
+**P5-2. Fiche d'explication courte du site** (S) : une page « À propos » (problème, solution, fonctions, technologies : React, TypeScript, Supabase, Vercel ; ce qui est fait et ce qui reste), en français et en anglais.
+
+**P5-3. README avec captures** (S) : 6 captures (accueil, Kanban, messagerie, calendrier, performance, démo) en téléphone et ordinateur, en français et en anglais, lien vers le site en ligne.
+
+**P5-4. Tests automatiques** (M) : tests des règles de mission (prendre, envoyer, valider, refuser), de la paie et des droits (opérateur, chef d'équipe, responsable) ; lancés à chaque envoi.
+
+### P6. Sécurité et propreté [BTK]
+- [ ] Révoquer **tous** les tokens GitHub donnés dans le chat (il y en a eu plusieurs) : https://github.com/settings/tokens ; en créer un nouveau seulement au besoin, avec accès au seul dépôt `Nprojet`, durée courte.
+- [ ] Changer le mot de passe `admin123` ; régénérer les clés Cloudinary et Resend.
+- [ ] Activer la protection des pages sensibles côté serveur pour le compte de démonstration (voir P5-1, option A).
+- [ ] Décider : supprimer ou garder les pages Avances (la paie à tarif fixe existe maintenant).
+
+### Ordre conseillé
+1. P6 (BTK, 15 min) → 2. P1-2 (quota, protège le site) → 3. P1-1 (notifications) → 4. P5-1 (démo) → 5. P1-3 (PDF) → 6. P2-1 (échéances) → 7. P4-1 (absences) → 8. le reste.
+
 ## 3. Questions ouvertes (défaut si pas de réponse)
 1. Les commentaires des employés partent-ils aussi en validation ? Défaut : non.
 2. Compression `gzip` des fichiers texte ? Défaut : non.
+3. Démo (P5-1) : option A (compte de démonstration dans la vraie base) ou B (démo entièrement dans le navigateur) ? Défaut : B.
+4. Notifications (P1-1) : push du navigateur seul, ou aussi e-mail ? Défaut : push du navigateur, e-mail seulement pour validation / refus.
+5. Chef d'équipe (P4-2) : peut-il voir la paie de son équipe ? Défaut : non.
 
 ## Historique des mises à jour
 - 2026-10-11 : liste créée, aucune étape commencée.
@@ -115,3 +204,4 @@
 - 2026-10-17 : page Performance (admin) : missions terminées / refusées / en cours, taux d'acceptation, délai moyen, période 7 j / 30 j / tout, export Excel et CSV (PerformancePage.tsx, utils/performance.ts, menu, App.tsx, enDict.json). Aucun changement serveur. `tsc --noEmit` et `npm run build` sans erreur. Pas testé à l'écran.
 - 2026-10-17 : le bouton « Supprimer » (Équipe) ne faisait rien (la confirmation n'était jamais affichée) : corrigé. Le serveur (`purgeEmployee` dans `df-api`) efface maintenant, en plus du compte : missions, avances, alertes, messages envoyés et reçus, groupes créés, publications, commentaires et « J'adore », réactions, paie, demandes en attente, présence, lectures de messagerie et fichiers (Cloudinary et `df-files`). `df-api` redéployé en v6 (commit a7df26d ; retour en arrière : 82422ee). Compte démo `toki` (26 missions `demo`) ajouté dans la base `nprojet`. `tsc --noEmit` et `npm run build` sans erreur. Pas testé de bout en bout.
 - 2026-10-17 : paie à tarif fixe par mission (5 000 Ar, réglable dans Réglages → Missions), menus « Paie » (admin) et « Ma paie » (opérateur). Compte démo `toki` : 205 missions démo du 17/08 au 16/10 (3 à 5 missions par jour ouvré, horaires variables, 35 min minimum) ; septembre : 101 validées = 505 000 Ar. Code commité en local, pas encore poussé (token GitHub invalide). Pas testé à l'écran.
+- 2026-10-18 : plan détaillé des améliorations ajouté (section 2 quinquies : notifications, quota et sauvegarde, performance PDF, échéances, modèles, tâches, vocaux, mentions, absences, chef d'équipe, bouton démo avec données fictives, fiche CV, README, tests). Aucun code changé.
