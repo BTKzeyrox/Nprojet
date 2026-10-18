@@ -78,7 +78,7 @@ Chaque table `df_*` contient : `id` (texte), `data` (JSON), `updated_at`.
 5. Ne pousse rien sans le « GO » de BTK. Dis honnêtement ce que tu n'as pas pu vérifier (tu ne vois pas son écran).
 
 ## 9. Le serveur `df-api` (Supabase)
-Code : `supabase/functions/df-api/index.ts` (Deno, une seule fonction ; v6 au 2026-10-17, commit a7df26d ; retour en arrière : commit 82422ee (v5) ; vérifie la version réelle avant de redéployer). Routes publiques : `login`, `forgot`, `signup`. Routes avec session : `state`, `sync` (la suppression d'un employé y efface aussi toutes ses données : `purgeEmployee`), `create-user`, `set-password`, `logout`, `reset-decision`, `signup-decision`, `upload`, `profile-request`, `profile-decision`.
+Code : `supabase/functions/df-api/index.ts` (Deno, une seule fonction ; v7 au 2026-10-18, commit 5466b76 ; retour en arrière : commit a7df26d (v6) ; vérifie la version réelle avant de redéployer). Routes publiques : `login`, `forgot`, `signup`. Routes avec session : `state`, `sync` (la suppression d'un employé y efface aussi toutes ses données : `purgeEmployee`), `create-user`, `set-password`, `logout`, `reset-decision`, `signup-decision`, `upload`, `profile-request`, `profile-decision`, `backups`, `backup-get`, `backup-now` (admin, sauvegardes de nuit).
 - Il n'a besoin d'aucun secret dans le code : Supabase lui fournit `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` automatiquement. La clé de session est calculée à partir de la clé de service.
 - **Modifier le fichier dans GitHub ne change PAS le serveur en ligne.** Il faut le redéployer :
   - Soit dans le tableau de bord Supabase : projet `nprojet` → Edge Functions → `df-api` → coller le nouveau code → Deploy.
