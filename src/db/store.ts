@@ -221,7 +221,7 @@ class DeltaForceStore {
   }
 
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
-    if (this.demo) return { ok: false, status: 0, data: { error: 'Mode démo : cette action n\'est pas disponible (données fictives).' } };
+    if (this.demo) return this.demoApi(path, init); // mode démo : un « faux serveur » local, rien ne part sur internet
     try {
       const res = await fetch(`${API_BASE}/${path}`, {
         ...init,
@@ -631,6 +631,70 @@ class DeltaForceStore {
     this.startPolling();
     this.emit();
     return { success: true, user: this.currentUser as User };
+  }
+
+  // Faux serveur du mode démo : répond comme le vrai, mais ne modifie que les données fictives en mémoire.
+  private demoApi(path: string, init?: RequestInit): { ok: boolean; status: number; data: any } {
+    const route = path.split('?')[0];
+    let body: any = {};
+    try { body = JSON.parse(String(init?.body || '{}')); } catch { body = {}; }
+    const me = this.currentUser;
+    const ok = (data: any = { ok: true }) => ({ ok: true, status: 200, data });
+    const fail = (error: string) => ({ ok: false, status: 400, data: { error } });
+    const nowIso = new Date().toISOString();
+    const post = (id: string) => this.news.find(n => n.id === id);
+    const keep = (n: NewsPost) => ok({ news: JSON.parse(JSON.stringify(n)) });
+    switch (route) {
+      case 'news-react': {
+        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
+        n.loves = n.loves.includes(me.id) ? n.loves.filter(x => x !== me.id) : [...n.loves, me.id];
+        return keep(n);
+      }
+      case 'news-comment': {
+        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
+        const text = String(body.text || '').trim().slice(0, 1000);
+        if (!text && !(body.files || []).length) return fail('Écris un commentaire.');
+        n.comments = [...n.comments, { id: `demo_nc${Date.now()}`, user_id: me.id, user_name: me.name, role: me.role, text, files: body.files || [], created_at: nowIso }];
+        return keep(n);
+      }
+      case 'news-comment-delete': {
+        const n = post(body.id); if (!n) return fail('Publication introuvable.');
+        n.comments = n.comments.filter(c => c.id !== body.commentId);
+        return keep(n);
+      }
+      case 'news-share': {
+        const n = post(body.id); if (!n) return fail('Publication introuvable.');
+        n.shares = (n.shares || 0) + 1;
+        return keep(n);
+      }
+      case 'news-submit': {
+        if (!me) return fail('Connexion perdue.');
+        const n: NewsPost = {
+          id: `demo_n${Date.now()}`, author_id: me.id, author_name: me.name, author_role: me.role, title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 4000),
+          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: me.role === 'admin' ? 'published' : 'pending',
+        };
+        this.news = [n, ...this.news];
+        return keep(n);
+      }
+      case 'news-decision': {
+        const n = post(body.id); if (!n) return fail('Publication introuvable.');
+        if (body.decision === 'approve') { n.status = 'published'; n.created_at = nowIso; } else { n.status = 'rejected'; n.reject_reason = String(body.reason || ''); }
+        return keep(n);
+      }
+      case 'news-withdraw': return ok();
+      case 'upload': return ok({ url: String(body.dataUrl || '') }); // le fichier reste dans la page (aucun envoi)
+      case 'create-user': {
+        const u = { ...(body.user || {}), id: body.user?.id || `demo_u${Date.now()}` } as User;
+        return ok({ user: u });
+      }
+      case 'attendance': return ok({ rows: [] });
+      case 'backups': return ok({ rows: [] });
+      case 'backup-now': return fail('Mode démo : la sauvegarde n\'est pas disponible.');
+      case 'backup-get': return fail('Mode démo : la sauvegarde n\'est pas disponible.');
+      case 'errors': return ok({ rows: [] });
+      case 'typing': return ok({ typing: [] });
+      default: return ok(); // chat-read, report-error, queue, set-password, décisions… : accepté, sans rien envoyer
+    }
   }
 
   // ----- Mode démo : tout se passe dans le navigateur, avec des données inventées (rien n'est envoyé au serveur) -----
