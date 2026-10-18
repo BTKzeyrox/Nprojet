@@ -1,4 +1,4 @@
-import type { ChatGroup, ChatMessage, ClientContract, NewsPost, PostSession, SalaryAdvanceRequest, User } from '../types';
+import type { ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -44,6 +44,11 @@ export interface DemoData {
   messages: ChatMessage[];
   groups: ChatGroup[];
   news: NewsPost[];
+  signups: SignupRequest[];
+  resets: PasswordResetRequest[];
+  profileRequests: ProfileChangeRequest[];
+  presence: PresenceRow[];
+  errors: Record<string, unknown>[];
 }
 
 export function buildDemoData(): DemoData {
@@ -153,5 +158,23 @@ export function buildDemoData(): DemoData {
     { id: 'demo_n4', author_id: DEMO_ADMIN_ID, author_name: 'Responsable Démo', author_role: 'admin', title: 'Objectif du mois atteint', text: 'Bravo à toute l\'équipe : le volume de missions validées a dépassé l\'objectif du mois.', created_at: t(14, 16, 45), pinned: false, loves: PEOPLE.map(p => p.id), comments: [], shares: 3 },
   ];
 
-  return { users, contracts, posts, advances, messages, groups, news };
+  // ----- Demandes en attente (pour tester les décisions du responsable) -----
+  const signups: SignupRequest[] = [
+    { id: 'demo_s1', name: 'Tom Garnier', username: 'tom', phone: '', shift: 'day', status: 'pending', created_at: iso(daysAgo(0), 7, 40), note: 'Disponible le matin.' },
+    { id: 'demo_s2', name: 'Alice Perret', username: 'alice', phone: '', shift: 'night', status: 'pending', created_at: iso(daysAgo(1), 18, 5) },
+  ];
+  const resets: PasswordResetRequest[] = [
+    { id: 'demo_r1', user_id: 'demo_u4', username: 'hugo', name: 'Hugo Petit', phone: '', status: 'pending', created_at: iso(daysAgo(0), 8, 15), note: 'J\'ai oublié mon mot de passe.' },
+  ];
+  const profileRequests: ProfileChangeRequest[] = [
+    { id: 'demo_p1', user_id: 'demo_u5', status: 'pending', created_at: iso(daysAgo(0), 9, 5), old: { name: 'Léa Roux', username: 'lea', phone: '', avatar_url: '' }, name: 'Léa Roux-Martin', username: 'lea', phone: '', avatar_url: '', note: 'Mon nom a changé.' },
+  ];
+  const dayKey = ymd(new Date());
+  const presence: PresenceRow[] = ['demo_u1', 'demo_u2', 'demo_u3'].map((id, i) => ({ user_id: id, last_seen: new Date().toISOString(), day: dayKey, online_sec: 5400 + i * 1500, waiting_since: null }));
+  const errors: Record<string, unknown>[] = [
+    { id: 'demo_e1', kind: 'error', message: 'Exemple d\'erreur (démo) : image introuvable', stack: '', page: 'news', role: 'employee', version: 'démo', count: 3, first_seen: iso(daysAgo(2), 10, 0), last_seen: iso(daysAgo(0), 8, 30), status: 'open' },
+    { id: 'demo_e2', kind: 'report', message: 'Signalement d\'exemple (démo) : le bouton est trop petit', stack: '', page: 'chat', role: 'employee', version: 'démo', count: 1, first_seen: iso(daysAgo(1), 14, 0), last_seen: iso(daysAgo(1), 14, 0), status: 'open' },
+  ];
+
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors };
 }

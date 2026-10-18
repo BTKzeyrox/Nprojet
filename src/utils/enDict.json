@@ -986,5 +986,6 @@
 "masqué": "hidden",
 "visible": "visible",
 "Pour confirmer, tapez le mot": "To confirm, type the word",
-"ci-dessous.": "below."
+"ci-dessous.": "below.",
+"Mode démo : remise à zéro simulée, les données fictives sont remises au début.": "Demo mode: reset simulated, the fictional data is put back to the start."
 }

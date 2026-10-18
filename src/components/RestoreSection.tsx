@@ -62,6 +62,7 @@ export const RestoreSection: React.FC = () => {
     const r = await db.restoreExecute(resetCode);
     setBusy(false);
     if (!r.ok) return say(r.error || 'Erreur.');
+    if (db.isDemo()) { setStep('idle'); setWord(''); setResetCode(''); say('Mode démo : remise à zéro simulée, les données fictives sont remises au début.', true); return; }
     say('Remise à zéro terminée. Rechargement…', true);
     setTimeout(() => window.location.reload(), 1200);
   };

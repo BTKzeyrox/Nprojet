@@ -101,6 +101,8 @@ class DeltaForceStore {
   private myQueue: QueueInfo | null = null; // booster : sa place dans la file « sans poste »
   private currentUser: User | null = null;
   private demo = false; // mode démo : données inventées, aucun appel au serveur
+  private demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
+  private demoBackups: { id: number; taken_at: string; tables: number; bytes: number }[] = []; // mode démo : sauvegardes inventées
   private listeners: Set<() => void> = new Set();
 
   // --- Synchronisation avec le serveur (Supabase via /api) ---
@@ -687,11 +689,71 @@ class DeltaForceStore {
         const u = { ...(body.user || {}), id: body.user?.id || `demo_u${Date.now()}` } as User;
         return ok({ user: u });
       }
-      case 'attendance': return ok({ rows: [] });
-      case 'backups': return ok({ rows: [] });
-      case 'backup-now': return fail('Mode démo : la sauvegarde n\'est pas disponible.');
-      case 'backup-get': return fail('Mode démo : la sauvegarde n\'est pas disponible.');
-      case 'errors': return ok({ rows: [] });
+      case 'attendance': {
+        const day = decodeURIComponent((path.split('day=')[1] || '').split('&')[0]) || nowIso.slice(0, 10);
+        const emps = this.users.filter(u => u.role === 'employee');
+        const mine = me?.role === 'admin' ? emps : emps.filter(u => u.id === me?.id);
+        return ok({ rows: mine.map((u, i) => ({ user_id: u.id, day, first_seen: `${day}T0${7 + (i % 3)}:${10 + i * 7}:00.000Z`, last_seen: `${day}T1${i % 4}:30:00.000Z`, online_sec: 3600 * (3 + (i % 4)) + i * 420 })) });
+      }
+      case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
+      case 'backup-now': {
+        const id = Math.max(0, ...this.demoBackups.map(b => b.id)) + 1;
+        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 16, bytes: 180224 + id * 512 }];
+        return ok({ ok: true, id });
+      }
+      case 'backup-get': {
+        const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
+        if (!row) return fail('Sauvegarde introuvable.');
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news } } });
+      }
+      case 'errors': {
+        const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
+        return ok({ rows: this.demoErrors.filter(e => st === 'all' || e.status === st) });
+      }
+      case 'error-update': {
+        const e = this.demoErrors.find(x => x.id === body.id); if (!e) return fail('Introuvable.');
+        if (body.remove) this.demoErrors = this.demoErrors.filter(x => x.id !== body.id); else if (body.status) e.status = body.status;
+        return ok();
+      }
+      case 'profile-request': {
+        if (!me) return fail('Connexion perdue.');
+        this.profileRequests = [...this.profileRequests.filter(x => x.user_id !== me.id), {
+          id: `demo_p${Date.now()}`, user_id: me.id, status: 'pending', created_at: nowIso,
+          old: { name: me.name, username: me.username, phone: me.phone || '', avatar_url: me.avatar_url || '' },
+          name: String(body.name || me.name), username: String(body.username || me.username), phone: String(body.phone || ''), avatar_url: String(body.avatar_url || ''), note: String(body.note || ''),
+        }];
+        this.emit();
+        return ok();
+      }
+      case 'profile-decision': {
+        const pr = this.profileRequests.find(x => x.id === body.id); if (!pr) return fail('Demande introuvable.');
+        if (body.approve) {
+          this.users = this.users.map(u => (u.id === pr.user_id ? { ...u, name: pr.name, username: pr.username, phone: pr.phone, avatar_url: pr.avatar_url || u.avatar_url } : u));
+          if (me && me.id === pr.user_id) this.currentUser = this.users.find(u => u.id === me.id) || me;
+        }
+        return ok();
+      }
+      case 'signup-decision': {
+        const sg = this.signups.find(x => x.id === body.id); if (!sg) return fail('Demande introuvable.');
+        if (body.approve) {
+          const u: User = { id: `demo_u${Date.now()}`, username: sg.username, name: sg.name, role: 'employee', status: 'active', shift: sg.shift, is_online: false, avatar_url: '', phone: sg.phone, performance_badge: 'Standard', total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0 };
+          this.users = [...this.users, u];
+        }
+        return ok();
+      }
+      case 'queue': {
+        if (!me) return fail('Connexion perdue.');
+        const others = this.presence.filter(x => x.waiting_since && x.user_id !== me.id);
+        if (body.join) {
+          this.myQueue = { waiting_since: nowIso, position: others.length + 1, total: others.length + 1 };
+          this.presence = [...this.presence.filter(x => x.user_id !== me.id), { user_id: me.id, last_seen: nowIso, day: nowIso.slice(0, 10), online_sec: 600, waiting_since: nowIso }];
+        } else {
+          this.myQueue = null;
+          this.presence = this.presence.map(x => (x.user_id === me.id ? { ...x, waiting_since: null } : x));
+        }
+        this.emit();
+        return ok();
+      }
       case 'typing': return ok({ typing: [] });
       default: return ok(); // chat-read, report-error, queue, set-password, décisions… : accepté, sans rien envoyer
     }
@@ -707,6 +769,9 @@ class DeltaForceStore {
     const d = buildDemoData();
     this.users = d.users; this.contracts = d.contracts; this.posts = d.posts; this.advanceRequests = d.advances;
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
+    this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
+    this.demoErrors = d.errors;
+    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 16, bytes: 180224 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
     return this.currentUser;
@@ -775,6 +840,12 @@ class DeltaForceStore {
 
   // --- Restauration du site (remise à zéro) : Gmail admin + code par mail ---
   private async restoreCall(path: string, body: Record<string, unknown> = {}): Promise<{ ok: boolean; error?: string; data?: any }> {
+    if (this.demo) {
+      // Mode démo : la remise à zéro est simulée dans le navigateur (n'importe quel code est accepté), rien ne part au serveur
+      if (path === 'restore-status') return { ok: true, data: { email: 'demo@gmail.com', verified: true } };
+      if (path === 'restore-execute') this.enterDemo(this.currentUser?.role === 'admin' ? 'admin' : 'employee');
+      return { ok: true, data: { ok: true } };
+    }
     this.netTick(1);
     try {
       const res = await fetch(`${RESTORE_BASE}/${path}`, {
@@ -799,6 +870,14 @@ class DeltaForceStore {
 
   // --- Journal des erreurs et signalements ---
   public async sendErrorReport(report: Record<string, unknown>): Promise<void> {
+    if (this.demo) {
+      // Mode démo : rien ne part au serveur ; un signalement apparaît seulement dans le journal fictif
+      if (report.kind === 'report') {
+        const now = new Date().toISOString();
+        this.demoErrors = [{ id: `demo_e${Date.now()}`, kind: 'report', message: String(report.message || 'Signalement').slice(0, 300), stack: '', page: String(report.page || ''), role: this.currentUser?.role || '', version: 'démo', count: 1, first_seen: now, last_seen: now, status: 'open' }, ...this.demoErrors];
+      }
+      return;
+    }
     try {
       await fetch(`${API_BASE}/report-error`, {
         method: 'POST',
