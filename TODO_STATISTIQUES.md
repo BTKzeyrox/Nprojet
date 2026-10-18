@@ -31,7 +31,7 @@ Une page **Statistiques** pour l'admin, comme dans une vraie entreprise : suivre
 - **Chaque écran doit aussi marcher en mode démo** (faux serveur local, rien d'envoyé au vrai serveur) avec des chiffres inventés.
 - **Anglais** : tout texte visible nouveau doit avoir sa version dans `src/utils/enDict.json`.
 - Téléphone d'abord (écran étroit), mode clair et sombre, pas de nouvelle grosse bibliothèque (il n'y a pas de bibliothèque de graphiques dans le projet : on dessine en SVG léger).
-- Noter chaque étape finie dans `TODO.md` (journal) avec le commit, et dire « non testé à l'écran » tant que BTK n'a pas vérifié.
+- **À chaque étape finie, mettre à jour les listes dans le même commit** (demande de BTK, 2026-10-18) : (1) cocher la case `[x]` de l'étape dans ce fichier, avec la date et le numéro du commit ; (2) ajouter une ligne au journal de `TODO.md` ; (3) écrire « non testé à l'écran » tant que BTK n'a pas vérifié. Pas d'étape cochée si `tsc` et `build` ne passent pas.
 
 ---
 
