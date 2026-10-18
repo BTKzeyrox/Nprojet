@@ -152,7 +152,7 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 
 ### P5. Pour le CV
 
-**P5-1. Bouton « Voir la démo » avec données fictives** (M) — décision de BTK attendue (A ou B ci-dessous)
+**P5-1. Bouton « Voir la démo » avec données fictives** (M) — **FAIT le 2026-10-18 en option B** (non testé à l'écran) : bouton sur la page de connexion (choix Responsable ou Opérateur), lien direct `/?demo=admin` ou `/?demo=employee`, bandeau « Mode démo : données fictives » avec Réinitialiser et Quitter, aucun appel au serveur (`store.ts` : `enterDemo`, `isDemo`, `apiRaw` bloqué ; `src/demo/demoData.ts` ; `DemoBanner.tsx`). Données : 1 responsable + 6 opérateurs inventés, 12 missions, environ 180 missions sur 60 jours (terminées, refusées, 1 en cours, 2 à valider, 1 démarrage à valider), 2 avances, 7 messages (groupe, réponses, réactions, épinglé), 4 publications. Limites connues : les actions qui passent par le serveur (J'adore, commentaires et partages des Actualités, clôture d'une période de paie, envoi de fichiers) répondent « Mode démo : action non disponible » ; la démo repart de zéro au rechargement.
 - Où : page de connexion, sous le bouton « Se connecter » (« Voir la démo, sans compte »). Aussi dans le README (lien direct `?demo=1`).
 - **Option A (simple) : connexion automatique à un compte de démonstration** déjà prévu (`toki` avec 205 missions fictives). Avantage : peu de code. Défaut : écrit dans la vraie base, risque de modifications par les visiteurs ; il faut un compte protégé en lecture seule côté serveur.
 - **Option B (conseillée pour un CV public) : démo entièrement dans le navigateur, sans serveur.** Un store en mémoire avec les mêmes écrans, rempli de données inventées ; les actions (créer une mission, valider, écrire un message) marchent dans la page puis disparaissent à la fermeture ; aucun appel à Supabase ; aucun risque pour les vraies données.
@@ -180,7 +180,7 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 ## 3. Questions ouvertes (défaut si pas de réponse)
 1. Les commentaires des employés partent-ils aussi en validation ? Défaut : non.
 2. Compression `gzip` des fichiers texte ? Défaut : non.
-3. Démo (P5-1) : option A (compte de démonstration dans la vraie base) ou B (démo entièrement dans le navigateur) ? Défaut : B.
+3. Démo (P5-1) : option B choisie par défaut et faite (démo entièrement dans le navigateur). L'option A (compte de démonstration dans la vraie base) n'est pas faite.
 4. Notifications (P1-1) : push du navigateur seul, ou aussi e-mail ? Défaut : push du navigateur, e-mail seulement pour validation / refus.
 5. Chef d'équipe (P4-2) : peut-il voir la paie de son équipe ? Défaut : non.
 
@@ -205,3 +205,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-17 : le bouton « Supprimer » (Équipe) ne faisait rien (la confirmation n'était jamais affichée) : corrigé. Le serveur (`purgeEmployee` dans `df-api`) efface maintenant, en plus du compte : missions, avances, alertes, messages envoyés et reçus, groupes créés, publications, commentaires et « J'adore », réactions, paie, demandes en attente, présence, lectures de messagerie et fichiers (Cloudinary et `df-files`). `df-api` redéployé en v6 (commit a7df26d ; retour en arrière : 82422ee). Compte démo `toki` (26 missions `demo`) ajouté dans la base `nprojet`. `tsc --noEmit` et `npm run build` sans erreur. Pas testé de bout en bout.
 - 2026-10-17 : paie à tarif fixe par mission (5 000 Ar, réglable dans Réglages → Missions), menus « Paie » (admin) et « Ma paie » (opérateur). Compte démo `toki` : 205 missions démo du 17/08 au 16/10 (3 à 5 missions par jour ouvré, horaires variables, 35 min minimum) ; septembre : 101 validées = 505 000 Ar. Code commité en local, pas encore poussé (token GitHub invalide). Pas testé à l'écran.
 - 2026-10-18 : plan détaillé des améliorations ajouté (section 2 quinquies : notifications, quota et sauvegarde, performance PDF, échéances, modèles, tâches, vocaux, mentions, absences, chef d'équipe, bouton démo avec données fictives, fiche CV, README, tests). Aucun code changé.
+- 2026-10-18 : bouton démo (option B) fait : `src/demo/demoData.ts`, `store.ts` (enterDemo / isDemo), `LoginView.tsx`, `DemoBanner.tsx`, `App.tsx`. `tsc --noEmit` et `npm run build` sans erreur ; le store en démo a été exécuté sous Node (7 comptes, 12 missions, environ 200 missions d'historique). Pas testé à l'écran.

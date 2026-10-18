@@ -17,6 +17,7 @@ import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { ToastHost } from './components/ToastHost';
+import { DemoBanner } from './components/DemoBanner';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -527,6 +528,7 @@ export default function App() {
       />
 
       <ToastHost />
+      <DemoBanner />
       {/* SMOOTH ANIMATED LOGOUT TRANSITION */}
       <LogoutTransition />
     </div>

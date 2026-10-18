@@ -1,3 +1,4 @@
+import { buildDemoData, DEMO_ADMIN_ID } from '../demo/demoData';
 import {
   User,
   PostSession,
@@ -99,6 +100,7 @@ class DeltaForceStore {
   private presence: PresenceRow[] = []; // admin : tous les boosters
   private myQueue: QueueInfo | null = null; // booster : sa place dans la file « sans poste »
   private currentUser: User | null = null;
+  private demo = false; // mode démo : données inventées, aucun appel au serveur
   private listeners: Set<() => void> = new Set();
 
   // --- Synchronisation avec le serveur (Supabase via /api) ---
@@ -217,6 +219,7 @@ class DeltaForceStore {
   }
 
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+    if (this.demo) return { ok: false, status: 0, data: { error: 'Mode démo : cette action n\'est pas disponible (données fictives).' } };
     try {
       const res = await fetch(`${API_BASE}/${path}`, {
         ...init,
@@ -597,7 +600,23 @@ class DeltaForceStore {
     return { success: true, user: this.currentUser as User };
   }
 
+  // ----- Mode démo : tout se passe dans le navigateur, avec des données inventées (rien n'est envoyé au serveur) -----
+  public isDemo(): boolean { return this.demo; }
+  public enterDemo(role: 'admin' | 'employee'): User {
+    this.stopPolling();
+    this.resetLocal();
+    this.token = null;
+    this.demo = true;
+    const d = buildDemoData();
+    this.users = d.users; this.contracts = d.contracts; this.posts = d.posts; this.advanceRequests = d.advances;
+    this.messages = d.messages; this.groups = d.groups; this.news = d.news;
+    this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
+    this.emit();
+    return this.currentUser;
+  }
+
   public logout(): void {
+    this.demo = false;
     if (this.token) {
       fetch(`${API_BASE}/logout`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
     }
