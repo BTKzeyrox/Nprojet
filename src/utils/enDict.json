@@ -961,5 +961,18 @@
 "Mode démo : données fictives": "Demo mode: fictional data",
 "Réinitialiser la démo": "Reset the demo",
 "Quitter la démo": "Leave the demo",
-"Mode démo : cette action n'est pas disponible (données fictives).": "Demo mode: this action is not available (fictional data)."
+"Mode démo : cette action n'est pas disponible (données fictives).": "Demo mode: this action is not available (fictional data).",
+"Sauvegardes automatiques": "Automatic backups",
+"Une sauvegarde est faite chaque nuit. Les 14 derniers jours sont gardés. Les photos et les fichiers n'y sont pas : ils restent sur Cloudinary.": "A backup is made every night. The last 14 days are kept. Photos and files are not included: they stay on Cloudinary.",
+"Le fichier contient les mots de passe chiffrés des comptes. Ne le partagez pas.": "The file contains the encrypted account passwords. Do not share it.",
+"Aucune sauvegarde pour le moment.": "No backup yet.",
+"Dernière sauvegarde :": "Last backup:",
+"Attention : elle a plus de 24 h.": "Warning: it is more than 24 hours old.",
+"Sauvegarder maintenant": "Back up now",
+"La restauration depuis une sauvegarde n'est pas encore disponible.": "Restoring from a backup is not available yet.",
+"Sauvegarde faite.": "Backup done.",
+"La sauvegarde a échoué.": "The backup failed.",
+"Téléchargement impossible.": "Download failed.",
+"Impossible de lire les sauvegardes.": "Could not read the backups.",
+"Une sauvegarde vient d'être faite. Réessayez dans une minute.": "A backup was just made. Try again in a minute."
 }

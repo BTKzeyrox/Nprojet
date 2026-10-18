@@ -1378,6 +1378,31 @@ async function errorsList(req: any, res: any, me: any) {
   const { data } = await q;
   return res.json({ rows: data || [] });
 }
+// ---------- Sauvegardes de nuit (table df_backups, remplie chaque nuit par la fonction SQL df_take_backup()) ----------
+async function backupsList(_req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { data, error } = await sb.from('df_backups').select('id, taken_at, tables, bytes').order('taken_at', { ascending: false }).limit(30);
+  if (error) return res.status(500).json({ error: 'Impossible de lire les sauvegardes.' });
+  return res.json({ rows: data || [] });
+}
+async function backupGet(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const id = Number(req.query.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Sauvegarde invalide.' });
+  const { data, error } = await sb.from('df_backups').select('id, taken_at, tables, bytes, data').eq('id', id).maybeSingle();
+  if (error) return res.status(500).json({ error: 'Impossible de lire cette sauvegarde.' });
+  if (!data) return res.status(404).json({ error: 'Sauvegarde introuvable.' });
+  return res.json({ backup: data });
+}
+async function backupNow(_req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  // Une seule sauvegarde manuelle par minute (évite de remplir la base par erreur)
+  const { data: last } = await sb.from('df_backups').select('taken_at').order('taken_at', { ascending: false }).limit(1).maybeSingle();
+  if (last && Date.now() - new Date(last.taken_at).getTime() < 60_000) return res.status(429).json({ error: 'Une sauvegarde vient d\'être faite. Réessayez dans une minute.' });
+  const { data, error } = await sb.rpc('df_take_backup');
+  if (error) return res.status(500).json({ error: 'La sauvegarde a échoué.' });
+  return res.json({ ok: true, id: data });
+}
 async function errorUpdate(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   const { id, status, remove } = req.body || {};
@@ -1687,6 +1712,9 @@ Deno.serve(async (request: Request) => {
     if (action === "attendance" && req.method === "GET") return await attendanceRoute(req, res, me);
     if (action === "errors" && req.method === "GET") return await errorsList(req, res, me);
     if (action === "error-update" && req.method === "POST") return await errorUpdate(req, res, me);
+    if (action === "backups" && req.method === "GET") return await backupsList(req, res, me);
+    if (action === "backup-get" && req.method === "GET") return await backupGet(req, res, me);
+    if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);
     if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);

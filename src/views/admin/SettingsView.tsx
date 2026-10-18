@@ -4,6 +4,7 @@ import { db } from '../../db/store';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
+import { BackupsSection } from '../../components/BackupsSection';
 import { askConfirm } from '../../components/ConfirmModal';
 import { useApp } from '../../context/AppContext';
 import { FontSizePicker } from '../../components/FontSizePicker';
@@ -390,6 +391,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         {demoMsg && <div className="text-sm text-emerald-300">{demoMsg}</div>}
       </section>
       )}
+
+      {tab === 'data' && <BackupsSection />}
 
       <RestoreSection />
 

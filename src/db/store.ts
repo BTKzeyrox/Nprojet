@@ -1528,6 +1528,22 @@ class DeltaForceStore {
     this.typingSentAt = now;
     void this.apiRaw('typing', { method: 'POST', body: JSON.stringify({ to }) }); // sans barre de chargement
   }
+  // --- Sauvegardes de nuit (admin) ---
+  public async listBackups(): Promise<{ ok: boolean; error?: string; rows: { id: number; taken_at: string; tables: number; bytes: number }[] }> {
+    const r = await this.api('backups');
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
+    return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
+  }
+  public async getBackup(id: number): Promise<{ ok: boolean; error?: string; backup?: { id: number; taken_at: string; data: unknown } }> {
+    const r = await this.api(`backup-get?id=${encodeURIComponent(String(id))}`);
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
+    return { ok: true, backup: r.data?.backup };
+  }
+  public async backupNow(): Promise<{ ok: boolean; error?: string }> {
+    const r = await this.api('backup-now', { method: 'POST', body: '{}' });
+    return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };
+  }
+
   public async fetchTyping(): Promise<{ user_id: string; to: string }[]> {
     if (!this.token) return [];
     const r = await this.apiRaw('typing');
