@@ -994,5 +994,9 @@
 "Année": "Year",
 "Période à venir": "Upcoming period",
 "Période précédente": "Previous period",
-"Période suivante": "Next period"
+"Période suivante": "Next period",
+"Aucune donnée sur cette période": "No data for this period",
+"Touchez une barre pour voir la valeur": "Tap a bar to see its value",
+"Période d'avant": "Previous period",
+"Autres": "Others"
 }

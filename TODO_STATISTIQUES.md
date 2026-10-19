@@ -53,10 +53,11 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Réussite : on change de période sans recharger la page, le choix reste quand on revient sur la page.
   - **Fait :** menu admin « Statistiques », `StatsPage.tsx` (chargée en `lazy`), filtre Jour / Semaine / Mois / Année, flèches, « Aujourd'hui » (flèche « suivant » bloquée sur la période en cours), réservée à l'admin. Le type de période est gardé d'une visite à l'autre ; la date est gardée quand on change de page. Pour l'instant la page affiche seulement le nombre de missions faites (le reste = S1.3 à S1.7).
 
-- [ ] **S1.3 — Composants de graphiques en SVG** (M)
+- [x] **S1.3 — Composants de graphiques en SVG** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.2 = commit `6b1576e`*
   - Fichier : `src/components/charts/` : barres, courbe, anneau, mini-courbe dans les cartes.
   - Lisible sur téléphone, couleurs du thème, texte alternatif pour l'accessibilité, aucun chiffre qui déborde.
   - Réussite : aucun graphique ne casse avec 0 donnée, 1 donnée ou 365 données.
+  - **Fait :** `src/components/charts/Charts.tsx` (`BarChart` avec traits de la période d'avant et valeur au toucher, `DonutChart` avec légende et « Autres » au-delà de 6 parts, `Sparkline`, `compactNumber`) ; `scripts/check-charts.tsx` (`npm run check:charts`, **20 contrôles réussis** : 0, 1, 7, 24, 31 et 365 données, NaN, anneau vide). Pas de couleur seule : chaque part a son texte et son pourcentage.
 
 - [ ] **S1.4 — Cartes de chiffres du haut** (S)
   - Missions faites, taux de validation, salaires gagnés, avances en cours, employés actifs, missions en retard.

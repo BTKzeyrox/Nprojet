@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check:charts": "npx --yes tsx scripts/check-charts.tsx",
     "check:stats": "npx --yes tsx scripts/check-stats.ts",
     "build": "vite build",
     "preview": "vite preview",
