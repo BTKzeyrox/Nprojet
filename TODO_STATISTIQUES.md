@@ -64,9 +64,10 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Chaque carte : chiffre, petite flèche ▲▼ et « +12 % depuis la période d'avant ».
   - **Fait :** `src/components/StatCard.tsx` + 6 cartes dans `StatsPage.tsx` : Missions faites, Taux de validation (écart en points), Salaires gagnés, Avances accordées (une hausse est en orange : c'est une charge), Employés actifs (jour / nuit), À valider (+ à faire / en cours). Mini-courbes sur Missions et Salaires. Écart avec le plan : la carte « Missions en retard » est remplacée par « À valider », car les missions n'ont pas de date limite.
 
-- [ ] **S1.5 — Section « Missions »** (M)
+- [x] **S1.5 — Section « Missions »** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.4 = commit `e678f48`*
   - Missions faites par jour (barres), par type (anneau), refusées, durée moyenne, taux de validation.
   - Missions à venir : à faire, en cours, à valider, en retard (liste cliquable vers le tableau Kanban).
+  - **Fait :** barres « Missions faites par heure / jour / mois » avec traits de la période d'avant, validées / refusées / durée moyenne, anneau par type de mission, bloc « Missions à venir » (à faire, en cours, à valider, urgentes) avec boutons « Voir le tableau » et « Valider ». **Pas fait : « en retard »** (les missions n'ont pas de date limite ; une phrase l'explique sur la page). À reprendre si une date limite est ajoutée aux missions (voir P1-1 du `TODO.md`).
 
 - [ ] **S1.6 — Section « Équipe »** (M)
   - Employés actifs (jour / nuit), présence moyenne (heures connectées), classement des meilleurs, missions par employé et par heure, employés sans activité.

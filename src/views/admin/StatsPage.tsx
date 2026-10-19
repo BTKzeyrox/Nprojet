@@ -4,6 +4,8 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
 import { StatCard } from '../../components/StatCard';
+import { BarChart, DonutChart } from '../../components/charts/Charts';
+import { fmtDuration } from '../../utils/performance';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 
 const GRANS: [StatsGranularity, string][] = [['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois'], ['year', 'Année']];
@@ -16,7 +18,18 @@ const loadGran = (): StatsGranularity => {
   return 'month';
 };
 
-export const StatsPage: React.FC = () => {
+const Section: React.FC<{ title: string; children: React.ReactNode; right?: React.ReactNode }> = ({ title, children, right }) => (
+  <section className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
+    <div className="flex items-center justify-between gap-2"><h2 className="text-sm sm:text-base font-bold text-white">{title}</h2>{right}</div>
+    {children}
+  </section>
+);
+
+const BY: Record<StatsGranularity, { fr: string; en: string }> = {
+  day: { fr: 'par heure', en: 'by hour' }, week: { fr: 'par jour', en: 'by day' }, month: { fr: 'par jour', en: 'by day' }, year: { fr: 'par mois', en: 'by month' },
+};
+
+export const StatsPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
   const { lang } = useApp();
   const l = lang === 'en' ? 'en' : 'fr';
   const [, force] = useState(0);
@@ -87,6 +100,36 @@ export const StatsPage: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Missions : faites sur la période, par type, et ce qui reste à faire */}
+      <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`}>
+        <BarChart values={stats.series.done} labels={stats.labels} compare={ranges.isFuture ? undefined : stats.series.prevDone} unit={l === 'en' ? 'missions' : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} />
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.done}</div><div className="text-[11px] text-slate-400">Validées</div></div>
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.rejected}</div><div className="text-[11px] text-slate-400">Refusées</div></div>
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{fmtDuration(stats.cur.avgMin)}</div><div className="text-[11px] text-slate-400">Durée moyenne</div></div>
+        </div>
+      </Section>
+
+      <Section title="Missions par type">
+        <DonutChart items={stats.byType.map(t => ({ label: t.label, value: t.count }))} ariaLabel="Missions par type" centerLabel={l === 'en' ? 'missions' : 'missions'} />
+      </Section>
+
+      <Section title="Missions à venir" right={<span className="text-[11px] text-slate-400">{l === 'en' ? `${stats.upcoming.total} on the board` : `${stats.upcoming.total} sur le tableau`}</span>}>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.upcoming.todo}</div><div className="text-[11px] text-slate-400">À faire</div></div>
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-sky-300">{stats.upcoming.active}</div><div className="text-[11px] text-slate-400">En cours</div></div>
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-amber-300">{stats.upcoming.toValidate}</div><div className="text-[11px] text-slate-400">À valider</div></div>
+        </div>
+        {stats.upcoming.urgent > 0 && <div className="text-xs text-amber-300">{l === 'en' ? `${stats.upcoming.urgent} urgent mission${stats.upcoming.urgent > 1 ? 's' : ''} to do` : `${stats.upcoming.urgent} mission${stats.upcoming.urgent > 1 ? 's' : ''} urgente${stats.upcoming.urgent > 1 ? 's' : ''} à faire`}</div>}
+        {onNavigate && (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => onNavigate('dashboard')} className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-100 text-sm font-semibold">Voir le tableau</button>
+            <button type="button" onClick={() => onNavigate('validations')} className="min-h-[44px] rounded-lg border border-amber-600/60 bg-amber-900/20 hover:bg-amber-900/40 text-amber-200 text-sm font-semibold">Valider</button>
+          </div>
+        )}
+        <p className="text-[11px] text-slate-500">Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.</p>
+      </Section>
     </div>
   );
 };

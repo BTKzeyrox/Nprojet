@@ -390,7 +390,7 @@ export default function App() {
               ) : activeView === 'performance' ? (
                 <PerformancePage />
               ) : activeView === 'stats' ? (
-                <StatsPage />
+                <StatsPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'history' ? (
                 <HistoryPage initialBoosterId={focusBoosterId || undefined} />
               ) : activeView === 'booster' && focusBoosterId ? (

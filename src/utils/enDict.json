@@ -1010,5 +1010,11 @@
 "Stable": "Stable",
 "En baisse": "Down",
 "jour": "day",
-"nuit": "night"
+"nuit": "night",
+"Validées": "Approved",
+"Durée moyenne": "Average duration",
+"Missions par type": "Missions by type",
+"Missions à venir": "Upcoming missions",
+"Voir le tableau": "View the board",
+"Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.": "Missions do not have a deadline yet: delays cannot be shown for now."
 }
