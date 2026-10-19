@@ -987,5 +987,12 @@
 "visible": "visible",
 "Pour confirmer, tapez le mot": "To confirm, type the word",
 "ci-dessous.": "below.",
-"Mode démo : remise à zéro simulée, les données fictives sont remises au début.": "Demo mode: reset simulated, the fictional data is put back to the start."
+"Mode démo : remise à zéro simulée, les données fictives sont remises au début.": "Demo mode: reset simulated, the fictional data is put back to the start.",
+"Statistiques": "Statistics",
+"Semaine": "Week",
+"Mois": "Month",
+"Année": "Year",
+"Période à venir": "Upcoming period",
+"Période précédente": "Previous period",
+"Période suivante": "Next period"
 }

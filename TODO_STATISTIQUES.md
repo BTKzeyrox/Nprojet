@@ -47,10 +47,11 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - **Fait :** `src/utils/stats.ts` + `scripts/check-stats.ts` (`npm run check:stats`, **41 contrôles réussis**). Les périodes en cours sont comparées au même nombre de jours de la période d'avant (ex. 18 octobre contre 1 à 18 septembre). Le montant gagné = `calculated_ar` des missions validées (même base que la paie du serveur).
   - **Écart avec le plan :** il n'existe pas de date limite sur les missions, donc « en retard » n'est pas calculable pour l'instant (voir S1.5). « Présence » = temps passé sur les missions (pas les heures connectées, trop d'appels serveur).
 
-- [ ] **S1.2 — Page « Statistiques » et menu** (M)
+- [x] **S1.2 — Page « Statistiques » et menu** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.1 = commit `e4c2c98`*
   - Fichiers : `src/views/admin/StatsPage.tsx` (nouveau, chargé en `lazy`), `src/App.tsx`, `src/components/Sidebar.tsx`, `src/components/BottomNav.tsx`.
   - Barre de filtre : **Jour / Semaine / Mois / Année**, flèches « avant / après », bouton « Aujourd'hui », titre de la période (« Octobre 2026 »).
   - Réussite : on change de période sans recharger la page, le choix reste quand on revient sur la page.
+  - **Fait :** menu admin « Statistiques », `StatsPage.tsx` (chargée en `lazy`), filtre Jour / Semaine / Mois / Année, flèches, « Aujourd'hui » (flèche « suivant » bloquée sur la période en cours), réservée à l'admin. Le type de période est gardé d'une visite à l'autre ; la date est gardée quand on change de page. Pour l'instant la page affiche seulement le nombre de missions faites (le reste = S1.3 à S1.7).
 
 - [ ] **S1.3 — Composants de graphiques en SVG** (M)
   - Fichier : `src/components/charts/` : barres, courbe, anneau, mini-courbe dans les cartes.

@@ -23,6 +23,7 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   BarChart3,
+  TrendingUp,
   Wallet,
 } from 'lucide-react';
 import { User } from '../types';
@@ -79,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
           { id: 'history', label: 'Historique', icon: History },
           { id: 'performance', label: 'Performance', icon: BarChart3 },
+          { id: 'stats', label: 'Statistiques', icon: TrendingUp },
         ]
       : [
           { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },
