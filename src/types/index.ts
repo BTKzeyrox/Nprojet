@@ -332,3 +332,19 @@ export interface NewsPost {
   submitted_at?: string;
   files_removed?: number; // fichiers supprimés au refus
 }
+
+/** Une ligne d'argent (finances) : entrée (paiement d'un client…) ou sortie (dépense). Visible par l'admin seulement. */
+export type CashKind = 'in' | 'out';
+export interface CashEntry {
+  id: string;
+  kind: CashKind;
+  category: string;
+  amount_ar: number;
+  date: string; // AAAA-MM-JJ
+  note: string;
+  client_name?: string;
+  mission_id?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}

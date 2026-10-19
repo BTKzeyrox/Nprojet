@@ -120,13 +120,18 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Procédure de retour en arrière écrite.
   - **Fait :** sauvegarde n° 4 (16 tables) juste avant ; table créée (migration `supabase/migrations/20261019_create_df_cash.sql`) : RLS activée, aucune règle, **aucun droit pour `anon` ni `authenticated`** (comme `df_news`), propriétaire `postgres`, 0 ligne. Sauvegarde n° 5 : **17 tables, `df_cash` incluse**. À savoir : la sauvegarde de nuit a bien tourné toute seule le 2026-10-18 à 23 h UTC (n° 3). La remise à zéro (`df-restore`) efface une liste de tables écrite à la main qui ne contient pas `df_cash` : **les finances ne sont pas effacées** (décision n° 5).
 
-- [ ] **S2.3 — Serveur `df-api`** (M)
+- [x] **S2.3 — Serveur `df-api`** (M) — *fait le 2026-10-19 (commit « stats S2.3 et S2.4 »)*
   - Ajouter la collection `cash` à `COLS` côté serveur et côté client (`src/db/store.ts`), aux routes `state` et `sync`.
   - Redéployer `df-api` avec le petit fichier d'import au commit exact (voir `AI_STUDIO.md`) ; retour en arrière = commit précédent.
 
-- [ ] **S2.4 — Sécurité : admin seulement** (M) — **obligatoire**
+- [x] **S2.4 — Sécurité : admin seulement** (M) — **obligatoire** — *fait le 2026-10-19 (même commit que S2.3)*
   - `state` ne doit **jamais** envoyer `cash` à un employé ; `sync` doit **refuser** toute écriture d'un employé sur `cash`.
   - Test : avec un compte employé, la collection n'apparaît nulle part (réponse du serveur et écran).
+
+  - **S2.3 fait :** `cash: "df_cash"` ajouté à la liste des collections de `df-api` (donc lue par `state` et écrite par `sync` comme les autres) ; côté site : `src/types/index.ts` (`CashEntry`), `src/db/store.ts` (`COLS`, `getCash()`, tri par date). Le site tolère un serveur qui n'envoie pas encore `cash` (ordre de mise en ligne sans risque). Chaque ligne envoyée par l'admin passe par `cleanCash` (type in/out, montant > 0 et raisonnable, date réelle, catégorie obligatoire, textes coupés, créateur et date de création posés par le serveur, champs inconnus jetés).
+  - **S2.4 fait :** (1) lecture : `state` n'envoie **jamais** `cash` à un employé (liste `ADMIN_ONLY_READ`) ; (2) écriture : `sync` refuse **toute** modification ou suppression de `cash` par un employé, **avant** toute autre règle (liste `ADMIN_ONLY_WRITE`, qui ne contient pas le journal de sécurité car un employé y écrit ses propres lignes) ; (3) aucune autre route du serveur ne touche `df_cash`. Contrôle automatique : `npm run check:cash` (**28/28**) teste la vraie fonction `cleanCash` du serveur et lit le code ; **il échoue si on retire une protection** (essayé).
+  - **Pas encore fait : l'essai réel avec un compte employé** (le réseau de Claude n'atteint pas Supabase). À faire par BTK quand l'écran Finances existera (S2.5) : se connecter en employé et vérifier qu'aucun chiffre d'argent n'apparaît.
+
 
 - [ ] **S2.5 — Écran « Finances »** (L)
   - Onglet dans la page Statistiques (ou page à part).

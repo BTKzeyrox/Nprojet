@@ -17,6 +17,7 @@ import {
   ChatGroup,
   ChatRead,
   NewsPost,
+  CashEntry,
   NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
@@ -27,7 +28,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -82,6 +83,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   securityLogs: (a, b) => String(b.id).localeCompare(String(a.id)),
   advances: (a, b) => String(b.id).localeCompare(String(a.id)),
   news: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
+  cash: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -97,6 +99,7 @@ class DeltaForceStore {
   private reads: ChatRead[] = [];
   private settings: AppSettings[] = [];
   private news: NewsPost[] = [];
+  private cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
@@ -138,7 +141,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(),
     };
   }
 
@@ -153,6 +156,7 @@ class DeltaForceStore {
       case 'groups': return this.groups;
       case 'settings': return this.settings;
       case 'news': return this.news;
+      case 'cash': return this.cash;
     }
   }
 
@@ -167,6 +171,7 @@ class DeltaForceStore {
       case 'groups': this.groups = value; break;
       case 'settings': this.settings = value; break;
       case 'news': this.news = value; break;
+      case 'cash': this.cash = value; break;
     }
   }
 
@@ -453,6 +458,9 @@ class DeltaForceStore {
   }
 
   // --- Fil d'actualité ---
+  /** Lignes d'argent (entrées et sorties). Toujours vide pour un employé : le serveur ne lui envoie rien. */
+  public getCash(): CashEntry[] { return [...this.cash]; }
+
   public getNews(): NewsPost[] {
     return [...this.news];
   }

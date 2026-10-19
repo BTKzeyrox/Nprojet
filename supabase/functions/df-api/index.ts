@@ -12,9 +12,39 @@ const T = {
   groups: "df_groups",
   settings: "df_settings",
   news: "df_news",
+  cash: "df_cash",
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
+
+// ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
+// Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash"];
+// Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
+const ADMIN_ONLY_WRITE: string[] = ["cash"];
+
+/** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
+function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  const kind = rec && (rec.kind === "in" || rec.kind === "out") ? rec.kind : null;
+  if (!kind) return { ok: false, reason: "kind" };
+  const amount = Number(rec.amount_ar);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000) return { ok: false, reason: "amount" };
+  const date = String(rec.date || "");
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + "T00:00:00Z") : null;
+  if (!parsed || isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return { ok: false, reason: "date" };
+  const category = String(rec.category || "").trim().slice(0, 40);
+  if (!category) return { ok: false, reason: "category" };
+  return {
+    ok: true,
+    save: {
+      id: rec.id, kind, category, amount_ar: Math.round(amount), date,
+      note: String(rec.note || "").slice(0, 300), client_name: String(rec.client_name || "").slice(0, 80),
+      ...(rec.mission_id ? { mission_id: String(rec.mission_id).slice(0, 80) } : {}),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+// ===== END CASH =====
 
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -428,7 +458,7 @@ async function state(req: any, res: any, me: any) {
   const myGroupIds = myGroups.map((r: any) => r.id).filter((id: string) => /^[A-Za-z0-9_]+$/.test(id));
 
   for (const col of COLS) {
-    if (col === 'securityLogs' && !admin) { out[col] = { changed: [], ids: [] }; continue; }
+    if (!admin && ADMIN_ONLY_READ.includes(col)) { out[col] = { changed: [], ids: [] }; continue; } // journal de sécurité et finances : jamais envoyés à un employé
     if (col === 'groups') {
       const sinceMs = new Date(since).getTime();
       out[col] = { changed: myGroups.filter((r: any) => new Date(r.updated_at).getTime() >= sinceMs).map((r: any) => r.data), ids: myGroups.map((r: any) => r.id) };
@@ -514,6 +544,13 @@ async function sync(req: any, res: any, me: any) {
     const upserts: any[] = Array.isArray(ch.upserts) ? ch.upserts : [];
     const deletes: string[] = Array.isArray(ch.deletes) ? ch.deletes : [];
 
+    if (!admin && ADMIN_ONLY_WRITE.includes(col)) {
+      // Finances : un employé ne peut rien écrire ni supprimer, quoi qu'il envoie
+      for (const r of upserts) rejected.push({ col, id: String((r && r.id) || ''), reason: 'forbidden' });
+      for (const id of deletes) rejected.push({ col, id: String(id), reason: 'forbidden' });
+      continue;
+    }
+
     for (const rec of upserts) {
       if (!rec || typeof rec.id !== 'string') continue;
       const { data: row } = await sb.from(T[col]).select('data').eq('id', rec.id).maybeSingle();
@@ -552,6 +589,11 @@ async function sync(req: any, res: any, me: any) {
           ok = !existing && rec.employee_id === me.id;
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
+      }
+      if (col === 'cash') {
+        const v = cleanCash(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        toSave = v.save;
       }
       if (col === 'news') {
         // Réservé au responsable (les autres sont déjà refusés plus haut). On ne perd jamais les réactions reçues.

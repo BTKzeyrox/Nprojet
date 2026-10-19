@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:page": "esbuild scripts/check-stats-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-stats-page.mjs && node node_modules/.cache/check-stats-page.mjs",
     "check:charts": "npx --yes tsx scripts/check-charts.tsx",
     "check:stats": "npx --yes tsx scripts/check-stats.ts",
