@@ -112,12 +112,13 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - **Fait** : `AppSettings.client_price_default_ar` et `client_prices_by_type` ; `ClientContract.client_price_ar` (prix propre à la mission) ; `PostSession.client_price_ar` (prix **figé à la validation**, comme la paie) ; règle dans `src/utils/clientPrice.ts` : prix de la mission, sinon prix du type, sinon prix par défaut (0 est un vrai prix). Réglages > Missions > « Prix client » ; champ « Prix client de cette mission » dans les options avancées (création et modification). Anciennes missions : prix recalculé par la règle (rien n'est cassé). Démo : prix inventés (8 000 / 9 000 / 12 000 Ar). Anglais ajouté. Contrôle : `npm run check:client-price` (29/29), `tsc` et `build` OK.
   - **⚠ À ne pas faire avant S2.4** : ne pas saisir de vrais prix client dans la vraie base. Aujourd'hui le serveur envoie `settings`, `contracts` et `posts` en entier aux opérateurs : ils verraient les prix client. S2.4 doit retirer `client_price_default_ar`, `client_prices_by_type` et `client_price_ar` pour les non-admins (lecture) et refuser leur écriture (sync). Le prix par défaut vaut 0 tant que BTK n'a rien réglé.
 
-- [ ] **S2.2 — Nouvelle table `df_cash`** (M) — **accord de BTK + sauvegarde avant**
+- [x] **S2.2 — Nouvelle table `df_cash`** (M) — **accord de BTK + sauvegarde avant** — *fait le 2026-10-19 (commit « stats S2.2 »)*
   - Même modèle que les autres tables : `id`, `data` (JSON), `updated_at`, sécurité RLS activée, aucun accès public.
   - Une ligne = une entrée ou une sortie : `kind` (in/out), `category`, `amount_ar`, `date`, `note`, `client_name?`, `mission_id?`, `created_by`.
   - Migration SQL écrite dans le dépôt (`supabase/migrations/…`) et notée dans `AI_STUDIO.md`.
-  - **Ajouter `df_cash` à la liste des tables de la fonction `df_take_backup()`** (sinon elle n'est pas sauvegardée la nuit).
+  - ~~Ajouter `df_cash` à la liste de `df_take_backup()`~~ : **inutile**, la fonction prend toutes les tables `df_*` (sauf `df_backups`, `df_presence`, `df_restore`, `df_errors`).
   - Procédure de retour en arrière écrite.
+  - **Fait :** sauvegarde n° 4 (16 tables) juste avant ; table créée (migration `supabase/migrations/20261019_create_df_cash.sql`) : RLS activée, aucune règle, **aucun droit pour `anon` ni `authenticated`** (comme `df_news`), propriétaire `postgres`, 0 ligne. Sauvegarde n° 5 : **17 tables, `df_cash` incluse**. À savoir : la sauvegarde de nuit a bien tourné toute seule le 2026-10-18 à 23 h UTC (n° 3). La remise à zéro (`df-restore`) efface une liste de tables écrite à la main qui ne contient pas `df_cash` : **les finances ne sont pas effacées** (décision n° 5).
 
 - [ ] **S2.3 — Serveur `df-api`** (M)
   - Ajouter la collection `cash` à `COLS` côté serveur et côté client (`src/db/store.ts`), aux routes `state` et `sync`.
