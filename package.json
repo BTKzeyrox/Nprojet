@@ -7,6 +7,7 @@
     "dev": "vite",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:finance": "npx --yes tsx scripts/check-finance.ts",
+    "check:finance-stats": "npx --yes tsx scripts/check-finance-stats.ts",
     "check:finance-page": "esbuild scripts/check-finance-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-finance-page.mjs && node node_modules/.cache/check-finance-page.mjs",
     "check:page": "esbuild scripts/check-stats-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-stats-page.mjs && node node_modules/.cache/check-stats-page.mjs",
     "check:charts": "npx --yes tsx scripts/check-charts.tsx",

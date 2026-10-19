@@ -7,6 +7,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { categoriesFor, filterCash, periodMoney } from '../../utils/finance';
 import type { CashEntry, CashKind } from '../../types';
+import { FinanceInsights } from './FinanceInsights';
 
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
 // Les salaires viennent des missions validées (calculés, jamais saisis) ; les avances sont des salaires versés d'avance : elles ne s'ajoutent pas.
@@ -86,6 +87,8 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
           <button type="button" onClick={() => open('out')} className="min-h-[44px] rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Dépense', 'Expense')}</button>
         </div>
       </div>
+
+      <FinanceInsights range={range} lang={lang} />
 
       <div className={card}>
         <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={t('Type', 'Type')}>

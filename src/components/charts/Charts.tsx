@@ -35,9 +35,10 @@ export interface BarChartProps {
   emptyText?: string;
   height?: number;
   lang?: ChartLang;
+  compareLabel?: string; // nom du petit trait (par défaut : « Période d'avant »)
 }
 
-export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, format, unit, ariaLabel, emptyText, height = 150, lang = 'fr' }) => {
+export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, format, unit, ariaLabel, emptyText, height = 150, lang = 'fr', compareLabel }) => {
   const tx = TXT[lang];
   const empty = emptyText ?? tx.empty;
   const [sel, setSel] = useState<number | null>(null);
@@ -83,9 +84,9 @@ export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, for
       </svg>
       <div className="min-h-[20px] mt-1 text-xs text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1" aria-live="polite">
         {idx !== null
-          ? <span><b className="text-white">{labels[idx]}</b> : {fmt(vals[idx])}{unit ? ` ${unit}` : ''}{cmp[idx] !== undefined ? ` (${tx.before}: ${fmt(cmp[idx])})` : ''}</span>
+          ? <span><b className="text-white">{labels[idx]}</b> : {fmt(vals[idx])}{unit ? ` ${unit}` : ''}{cmp[idx] !== undefined ? ` (${compareLabel ?? tx.before}: ${fmt(cmp[idx])})` : ''}</span>
           : <span className="text-slate-500">{tx.tap}</span>}
-        {compare && <span className="inline-flex items-center gap-1 text-slate-400"><span className="inline-block w-3 h-0.5 bg-amber-500 rounded" />{tx.prev}</span>}
+        {compare && <span className="inline-flex items-center gap-1 text-slate-400"><span className="inline-block w-3 h-0.5 bg-amber-500 rounded" />{compareLabel ?? tx.prev}</span>}
       </div>
     </div>
   );
@@ -142,4 +143,43 @@ export const Sparkline: React.FC<{ values: number[]; color?: string; width?: num
   const min = Math.min(...v), max = Math.max(...v), span = max - min || 1;
   const pts = v.map((x, i) => `${(i / (v.length - 1)) * (width - 4) + 2},${height - 3 - ((x - min) / span) * (height - 6)}`).join(' ');
   return <svg width={width} height={height} aria-hidden="true"><polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+};
+
+// ---------- Courbe (peut descendre sous zéro : bénéfice cumulé) ----------
+
+export const LineChart: React.FC<{ values: number[]; labels: string[]; format?: (v: number) => string; ariaLabel: string; emptyText?: string; height?: number; lang?: ChartLang }> = ({ values, labels, format, ariaLabel, emptyText, height = 150, lang = 'fr' }) => {
+  const tx = TXT[lang];
+  const empty = emptyText ?? tx.empty;
+  const [sel, setSel] = useState<number | null>(null);
+  const v = values.map(safe);
+  const fmt = format || ((x: number) => String(Math.round(x)));
+  if (v.length === 0 || v.every(x => x === 0)) return <div data-notranslate="" role="img" aria-label={`${ariaLabel}. ${empty}`} className="h-[96px] flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg">{empty}</div>;
+  const W = 320, padL = 4, padR = 4, padT = 10, padB = 22;
+  const innerW = W - padL - padR, innerH = height - padT - padB;
+  const min = Math.min(0, ...v), max = Math.max(0, ...v), span = max - min || 1;
+  const n = v.length;
+  const x = (i: number) => padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+  const y = (val: number) => padT + innerH - ((val - min) / span) * innerH;
+  const every = n <= 12 ? 1 : n <= 24 ? 3 : n <= 31 ? 5 : Math.ceil(n / 7);
+  const idx = sel !== null && sel < n ? sel : null;
+  const pts = v.map((val, i) => `${x(i)},${y(val)}`).join(' ');
+  return (
+    <div data-notranslate="">
+      <svg viewBox={`0 0 ${W} ${height}`} className="w-full h-auto select-none" role="img" aria-label={`${ariaLabel}. ${tx.total}: ${fmt(v[n - 1])}`}>
+        <line x1={padL} x2={W - padR} y1={y(0)} y2={y(0)} stroke="currentColor" className="text-slate-600" strokeWidth="1" />
+        <polyline points={pts} fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {v.map((val, i) => (
+          <g key={i} onClick={() => setSel(idx === i ? null : i)} style={{ cursor: 'pointer' }}>
+            <rect x={x(i) - Math.max(4, innerW / n / 2)} y={padT} width={Math.max(8, innerW / n)} height={innerH + padB} fill="transparent" />
+            {(n <= 31 || idx === i) && <circle cx={x(i)} cy={y(val)} r={idx === i ? 4 : 2} fill={val < 0 ? '#fb7185' : '#38bdf8'} />}
+            {i % every === 0 && <text x={x(i)} y={height - 6} textAnchor="middle" fontSize="9" fill="currentColor" className="text-slate-400">{labels[i] ?? ''}</text>}
+          </g>
+        ))}
+        <text x={W - padR} y={padT - 1} textAnchor="end" fontSize="9" fill="currentColor" className="text-slate-400">{fmt(max)}</text>
+      </svg>
+      <div className="min-h-[20px] mt-1 text-xs text-slate-300" aria-live="polite">
+        {idx !== null ? <span><b className="text-white">{labels[idx]}</b> : {fmt(v[idx])}</span> : <span className="text-slate-500">{tx.tap}</span>}
+      </div>
+    </div>
+  );
 };
