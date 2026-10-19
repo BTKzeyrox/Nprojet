@@ -13,13 +13,15 @@ Une page **Statistiques** pour l'admin, comme dans une vraie entreprise : suivre
 - Les graphiques et les chiffres sont comme dans les « films » : bénéfices et dépenses faciles à lire, avec des conseils comme une vraie entreprise.
 - Devise : **Ar** (Ariary), comme le reste du site.
 
-## Décisions à prendre avec BTK (à poser avant la phase concernée)
+## Décisions à prendre avec BTK (état au 2026-10-19)
 
-1. **Prix client** : le client paie combien par mission ? Un prix pour toutes les missions, un prix par type de mission (Saisie, Contrôle, Administratif, Aide, Web), ou un prix par client ? (conseil : un prix par défaut + un prix par type, modifiable mission par mission)
-2. **Encaissement** : le client paie à la mission, à la semaine ou au mois ? Faut-il suivre « facturé » et « encaissé » (conseil : oui, pour voir ce qui reste à encaisser) ?
-3. **Catégories de dépenses** : salaires, avances, achats, loyer, internet, matériel, autres (modifiable).
-4. **Stock** : que veut-on suivre exactement (objets vendus, matériel du bureau) ? À demander avant la phase 3.
-5. **Remise à zéro** : doit-elle effacer les finances et le stock ? (conseil : non, garder les finances)
+1. **Prix client** — **PRISE par BTK (2026-10-19)** : un prix par défaut, avec des exceptions par type ou par mission (option recommandée). Fait dans S2.1.
+2. **Encaissement** — **PRISE par BTK (2026-10-19)** : chaque paiement reçu est noté quand il arrive (pas de rythme fixe imposé). Fait dans S2.5 (« + Paiement reçu »). « Facturé » (missions validées × prix client) et « à encaisser » (facturé − encaissé) se calculent à partir de ces lignes : à afficher dans S2.6.
+3. **Catégories de dépenses** — proposition appliquée dans S2.5 (Achats, Loyer, Internet, Matériel, Transport, Autres ; entrées « Paiement client » et « Autre entrée » ; on peut en écrire une autre). **À confirmer par BTK** (BTK n'a pas encore répondu à cette question précise).
+4. **Stock** — **en attente** (phase 3 seulement). Recommandation : ne pas le faire si le site gère seulement des missions.
+5. **Remise à zéro** — **PRISE par BTK (2026-10-19)** : non, garder les finances. Déjà vrai dans le code (S2.2 : `df-restore` n'efface pas `df_cash`) ; à vérifier et à écrire dans l'écran de remise à zéro (S2.8).
+
+**Choix à valider par BTK (laissé par S2.5)** : les salaires sont calculés (non modifiables) et les avances ne sont **pas** ajoutées aux dépenses (ce serait les compter deux fois). Recommandation : garder ainsi.
 
 ## Règles communes (valables pour toutes les étapes)
 
