@@ -1,7 +1,7 @@
 # TODO — Statistiques, finances et stock (Gestion Pro)
 
 Créé le 2026-10-18 à la demande de BTK. À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md` et `TODO.md`.
-La **phase 1 est faite** (2026-10-19, non testée à l'écran) ; les phases 2 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
+Les **phases 1 et 2 sont faites côté code** (2026-10-19 ; non testées à l'écran) ; **`df-api` v8 (finances réservées à l'admin) n'est pas encore déployé** (voir S2.9) ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
 
 ## But
 
@@ -19,7 +19,7 @@ Une page **Statistiques** pour l'admin, comme dans une vraie entreprise : suivre
 2. **Encaissement** — **PRISE par BTK (2026-10-19)** : chaque paiement reçu est noté quand il arrive (pas de rythme fixe imposé). Fait dans S2.5 (« + Paiement reçu »). « Facturé » (missions validées × prix client) et « à encaisser » (facturé − encaissé) se calculent à partir de ces lignes : à afficher dans S2.6.
 3. **Catégories de dépenses** — proposition appliquée dans S2.5 (Achats, Loyer, Internet, Matériel, Transport, Autres ; entrées « Paiement client » et « Autre entrée » ; on peut en écrire une autre). **À confirmer par BTK** (BTK n'a pas encore répondu à cette question précise).
 4. **Stock** — **en attente** (phase 3 seulement). Recommandation : ne pas le faire si le site gère seulement des missions.
-5. **Remise à zéro** — **PRISE par BTK (2026-10-19)** : non, garder les finances. Déjà vrai dans le code (S2.2 : `df-restore` n'efface pas `df_cash`) ; à vérifier et à écrire dans l'écran de remise à zéro (S2.8).
+5. **Remise à zéro** — **PRISE par BTK (2026-10-19)** : non, garder les finances. Déjà vrai dans le code (S2.2 : `df-restore` n'efface pas `df_cash`) ; vérifié et écrit dans l'écran de remise à zéro (fait dans S2.8).
 
 **Choix à valider par BTK (laissé par S2.5)** : les salaires sont calculés (non modifiables) et les avances ne sont **pas** ajoutées aux dépenses (ce serait les compter deux fois). Recommandation : garder ainsi.
 
@@ -154,15 +154,21 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - **Contrôles :** `npm run check:finance-stats` (**26/26**, chiffres vérifiés à la main sur un cas), `check:finance-page` 28/28, `check:finance` 27/27, `check:cash`, `check:stats`, `check:page`, `check:charts`, `check:demo-stats`, `check:client-price`, `tsc` et `build` sans erreur.
   - **Pas vérifié :** rendu sur téléphone, mode clair. Tant que le prix client vaut 0, « à encaisser » et les marges restent à 0 (un message le dit).
 
-- [ ] **S2.7 — Démo et anglais** (S)
+- [x] **S2.7 — Démo et anglais** (S) — *fait le 2026-10-20 (commit « stats S2.7 à S2.9 »), non testé à l'écran*
   - Entrées et sorties inventées dans la démo ; ajout / modification / suppression marchent en local.
   - Textes anglais.
+  - **Fait :** `buildDemoCash` dans `src/demo/demoData.ts` : environ 100 lignes inventées sur 2 ans, calculées à partir des missions validées de la démo (les mois passés, les clients ont payé environ 92 % du facturé ; ce mois-ci environ 70 %, il reste donc de l'argent « à encaisser »). Dépenses : Loyer, Internet, Achats, Transport, Matériel (tous les 4 mois) + une dépense aujourd'hui (la vue « Jour » n'est pas vide). 4 clients inventés (« meilleur client »). Chiffres de démo : bénéfice positif sur l'année, marge entre 6 et 31 % selon les mois. Générateur à part (graine propre) : **les autres données de la démo ne changent pas**. Les prix client de la démo vont dans `DEMO_CLIENT_PRICES` et sont maintenant au nom des **vrais types de la démo** (« CONTRÔLE QUALITÉ » 9 000, « WEB » 12 000, sinon 8 000) : avant, les noms de types ne correspondaient pas et tout valait 8 000. Un opérateur en démo ne voit **aucune** ligne d'argent. La démo annonce 17 tables dans Sauvegardes. Ajout / modification / suppression marchent en local (testé).
+  - **Anglais :** les écrans Finances prennent leur texte anglais directement dans le code (`t(fr, en)`), donc rien à ajouter au dictionnaire pour eux ; `check:finance-page` vérifie le rendu FR et EN. Une phrase nouvelle (écran de remise à zéro) est ajoutée à `enDict.json`.
 
-- [ ] **S2.8 — Remise à zéro et sauvegarde** (S)
+- [x] **S2.8 — Remise à zéro et sauvegarde** (S) — *fait le 2026-10-20, non testé à l'écran*
   - Selon la décision n° 5. Vérifier que la page Sauvegardes contient bien `df_cash` (nombre de tables passe de 16 à 17).
+  - **Fait :** (1) `df-restore` ne touche pas à `df_cash` (vérifié dans le code, contrôlé par `check:phase2`) : **la remise à zéro garde les finances**. (2) L'écran « Restauration du site » le dit en toutes lettres (nouvelle phrase, FR et EN), avec un avertissement : **les salaires calculés repartent à 0**, car la remise à zéro efface les missions faites. Conséquence à connaître : après une remise à zéro, les paiements reçus restent mais les salaires de l'ancienne période ne sont plus comptés (les bénéfices passés seraient trop beaux) ; garder l'export Excel avant de remettre à zéro. (3) La sauvegarde Excel a une nouvelle feuille « Finances » (date, sens, catégorie, montant, client, note ; vide pour un opérateur). (4) **Vérifié sur la vraie base `nprojet` (lecture seule, 2026-10-20)** : `df_take_backup()` prend toutes les tables `df_*` sauf `df_backups`, `df_presence`, `df_restore`, `df_errors` ; la sauvegarde n° 4 (avant la création de `df_cash`) a **16** tables, la n° 5 en a **17** ; `df_cash` existe et contient 0 ligne (aucun vrai chiffre saisi).
 
-- [ ] **S2.9 — Contrôle de la phase 2** (S)
+- [x] **S2.9 — Contrôle de la phase 2** (S) — *fait côté code le 2026-10-20 ; **reste à faire : déployer `df-api` v8 et faire l'essai avec un compte employé (voir ci-dessous)***
   - `tsc`, `build`, script de contrôle (bénéfice = encaissé − dépenses sur 10 cas), test employé (S2.4), note dans `TODO.md`.
+  - **Fait :** nouveau contrôle `npm run check:phase2` (`scripts/check-phase2.ts`, **65/65**) : bénéfice = encaissé − dépenses sur **10 périodes** de la démo (7 mois passés, mois en cours, année, une semaine), barres et courbe cumulée = mêmes totaux, anneau des dépenses = total, « à encaisser » jamais négatif, marge cohérente, trésorerie, démo cohérente (aucune date dans le futur, chaque ligne passe les règles du serveur), ajout / modification / suppression en démo, 17 tables, opérateur sans accès, remise à zéro qui garde `df_cash`, migration avec RLS. `tsc` et `build` sans erreur ; `check:finance-stats` 26/26, `check:finance` 27/27, `check:finance-page` 29/29, `check:cash` 28/28, `check:charts` 22/22, `check:stats` 41/41, `check:page` 18/18, `check:client-price` 29/29.
+  - **⚠ `df-api` en ligne = v7 = commit `5466b76` (vérifié le 2026-10-20 avec Supabase) : il ne contient AUCUN code `cash`.** Les étapes S2.3 et S2.4 (collection `cash`, lecture et écriture réservées à l'admin) sont dans le dépôt (commit `26e4abe`) mais **ne sont pas déployées** ; la « v8 » annoncée dans `TODO.md` n'a pas été faite. Conséquences : (1) tant que ce n'est pas déployé, les paiements et dépenses saisis dans l'onglet Finances **ne sont pas enregistrés par le serveur** ; (2) **ne saisir aucun vrai prix client** avant ce déploiement (le serveur v7 envoie `settings`, `contracts` et `posts` en entier aux opérateurs : ils verraient les prix). À faire avec « GO » de BTK : redéployer `df-api` avec le code actuel (retour en arrière : redéployer le commit `5466b76`), puis essai réel avec un compte employé (il ne doit voir aucune ligne `cash` ni aucun prix client, et son écriture doit être refusée).
+  - **Pas vérifié :** rendu sur un vrai téléphone ; essai avec un compte employé sur le vrai serveur. **Note :** `check:demo-stats` échoue entre 00 h et 03 h à Madagascar si la machine est en UTC (6 contrôles « day », la démo « aujourd'hui » et les statistiques ne coupent pas le jour à la même heure) ; ce n'est pas lié à la phase 2 et existait déjà.
 
 ---
 

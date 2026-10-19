@@ -21,8 +21,9 @@ const range = { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-31`
 const view = (lang: 'fr' | 'en', salariesAr = 0, advancesAr = 0, r = range) => renderToString(<FinanceTab range={r} lang={lang} salariesAr={salariesAr} advancesAr={advancesAr} />);
 
 db.enterDemo('admin');
-const before = db.getCash().length;
-ok(before === 0, 'départ : aucune ligne d\'argent');
+ok(db.getCash().length > 20, 'démo : des lignes d\'argent inventées sont déjà là (S2.7)');
+for (const x of db.getCash()) db.deleteCash(x.id); // on repart d'une liste vide pour les essais ci-dessous
+ok(db.getCash().length === 0, 'démo vidée : on repart de zéro');
 const empty = view('fr');
 ok(!bad(empty) && empty.includes('Aucune ligne sur cette période.'), 'liste vide : message clair, sans erreur');
 

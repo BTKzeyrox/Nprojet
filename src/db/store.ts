@@ -1,5 +1,5 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
-import { buildDemoData, DEMO_ADMIN_ID } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES } from '../demo/demoData';
 import {
   User,
   PostSession,
@@ -762,13 +762,13 @@ class DeltaForceStore {
       case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
       case 'backup-now': {
         const id = Math.max(0, ...this.demoBackups.map(b => b.id)) + 1;
-        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 16, bytes: 180224 + id * 512 }];
+        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 17, bytes: 190464 + id * 512 }];
         return ok({ ok: true, id });
       }
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -835,9 +835,9 @@ class DeltaForceStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions)
-    this.settings = [{ ...DEFAULT_SETTINGS, client_price_default_ar: 8000, client_prices_by_type: { 'Contrôle qualité': 9000, 'Tâche web': 12000 } }];
-    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 16, bytes: 180224 }];
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES }]; // prix client inventés
+    this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
+    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 17, bytes: 190464 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
     return this.currentUser;

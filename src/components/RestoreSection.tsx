@@ -77,6 +77,9 @@ export const RestoreSection: React.FC = () => {
         avances, paies et messages. Elle garde votre compte responsable, les Réglages et les missions (volumes remis au début).
         Téléchargez d'abord une sauvegarde.
       </p>
+      <p className="text-[11px] text-emerald-300/90 leading-relaxed">
+        Vos finances (paiements reçus et dépenses) sont gardées : la remise à zéro ne les efface pas. Les salaires calculés repartent à 0, car les missions sont effacées.
+      </p>
 
       <button type="button" onClick={backup} className={`${btn} bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200`}>
         <Download className="w-4 h-4" /> Sauvegarder (Excel)

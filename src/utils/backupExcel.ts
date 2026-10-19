@@ -29,6 +29,10 @@ export async function downloadBackupExcel(): Promise<void> {
   XLSX.utils.book_append_sheet(wb, sheet(db.getMessages().map(m => ({
     Date: m.timestamp, De: m.sender_name, Rôle: m.sender_role, Pour: m.recipient_id || '', Message: m.message, Fichier: m.attachment_name || '',
   }))), 'Messages');
+  XLSX.utils.book_append_sheet(wb, sheet(db.getCash().map(c => ({
+    Date: c.date, Sens: c.kind === 'in' ? 'Entrée' : 'Sortie', Catégorie: c.category, 'Montant (Ar)': c.amount_ar,
+    Client: c.client_name || '', Note: c.note || '',
+  }))), 'Finances'); // vide pour un opérateur : le serveur n'envoie les finances qu'au responsable
 
   const day = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `sauvegarde-gestion-pro-${day}.xlsx`);

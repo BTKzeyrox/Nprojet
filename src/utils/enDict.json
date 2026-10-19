@@ -1053,5 +1053,6 @@
 "Le prix client doit être un nombre positif ou vide.": "The client price must be a positive number or empty.",
 "Prix client de cette mission (Ar, facultatif)": "Client price of this mission (Ar, optional)",
 "Laisse vide pour utiliser le prix du type, ou le prix par défaut (Réglages, Missions).": "Leave empty to use the type price, or the default price (Settings, Missions).",
-"Prix du type :": "Type price:"
+"Prix du type :": "Type price:",
+"Vos finances (paiements reçus et dépenses) sont gardées : la remise à zéro ne les efface pas. Les salaires calculés repartent à 0, car les missions sont effacées.": "Your finances (payments received and expenses) are kept: the reset does not erase them. Calculated salaries go back to 0, because the missions are erased."
 }

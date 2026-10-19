@@ -1,9 +1,13 @@
-import type { ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
 
+import { clientPriceForPost } from '../utils/clientPrice';
+
 export const DEMO_ADMIN_ID = 'demo_admin';
+// Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions). Les types sont ceux des missions de la démo.
+export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 const PRICE = 5000; // Ar par mission validée (tarif fixe de la démo)
 
 const rng = (seed: number) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
@@ -49,6 +53,60 @@ export interface DemoData {
   profileRequests: ProfileChangeRequest[];
   presence: PresenceRow[];
   errors: Record<string, unknown>[];
+  cash: CashEntry[];
+}
+
+// ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
+// Règle : les mois passés, les clients ont payé environ 92 % de ce qui a été facturé ; ce mois-ci, environ 70 % (il reste donc « à encaisser »).
+// Générateur à part (graine propre) : les autres données de la démo ne changent pas.
+export function buildDemoCash(posts: PostSession[], contracts: ClientContract[]): CashEntry[] {
+  const r = rng(20261019);
+  const today = new Date();
+  const todayKey = ymd(today);
+  const mk = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
+  const billed: Record<string, number> = {};
+  let first = '9999-99-99';
+  for (const p of posts) {
+    if (p.status !== 'completed' || !p.date) continue;
+    const k = p.date.slice(0, 7);
+    billed[k] = (billed[k] || 0) + clientPriceForPost(p, contracts, DEMO_CLIENT_PRICES);
+    if (p.date < first) first = p.date;
+  }
+  const clients = ['Atelier Rivage', 'Société Delta Services', 'Maison Lumière', 'Cabinet Horizon'];
+  const out: CashEntry[] = [];
+  let n = 0;
+  const add = (kind: 'in' | 'out', category: string, amount: number, date: string, note: string, client?: string) => {
+    if (date > todayKey || date < first || amount < 1) return; // pas de date dans le futur, rien avant le début de la démo
+    n++;
+    const at = new Date(`${date}T09:00:00`).toISOString();
+    out.push({ id: `demo_c${n}`, kind, category, amount_ar: Math.round(amount), date, note, ...(client ? { client_name: client } : {}), created_by: DEMO_ADMIN_ID, created_at: at, updated_at: at });
+  };
+  const round1000 = (v: number) => Math.round(v / 1000) * 1000;
+  const months: [number, number][] = [];
+  for (let i = 23; i >= 0; i--) { const d = new Date(today.getFullYear(), today.getMonth() - i, 1); months.push([d.getFullYear(), d.getMonth()]); }
+  months.forEach(([y, m], idx) => {
+    const key = `${y}-${pad(m + 1)}`;
+    const isNow = y === today.getFullYear() && m === today.getMonth();
+    const b = billed[key] || 0;
+    if (b > 0) {
+      const c1 = clients[(idx * 3) % clients.length], c2 = clients[(idx * 3 + 1) % clients.length];
+      if (isNow) {
+        const day = Math.max(1, today.getDate() - 1);
+        add('in', 'Paiement client', round1000(b * 0.7), mk(y, m, day), 'Acompte du mois', c1);
+      } else {
+        const paid = round1000(b * 0.92);
+        add('in', 'Paiement client', round1000(paid * 0.6), mk(y, m, 12), 'Virement', c1);
+        add('in', 'Paiement client', paid - round1000(paid * 0.6), mk(y, m, 26), 'Virement', c2);
+      }
+    }
+    add('out', 'Loyer', 20000, mk(y, m, 5), 'Local du mois');
+    add('out', 'Internet', 10000, mk(y, m, 8), 'Abonnement du mois');
+    add('out', 'Achats', round1000(4000 + r() * 6000), mk(y, m, 10 + Math.floor(r() * 8)), 'Fournitures de bureau');
+    add('out', 'Transport', round1000(3000 + r() * 5000), mk(y, m, 15 + Math.floor(r() * 10)), 'Déplacements');
+    if (idx % 4 === 1) add('out', 'Matériel', round1000(25000 + r() * 25000), mk(y, m, 18), 'Casque et souris');
+  });
+  add('out', 'Transport', 6000, todayKey, 'Course du jour (démo)'); // la vue « Jour » n'est pas vide
+  return out.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function buildDemoData(): DemoData {
@@ -206,5 +264,6 @@ export function buildDemoData(): DemoData {
     { id: 'demo_e2', kind: 'report', message: 'Signalement d\'exemple (démo) : le bouton est trop petit', stack: '', page: 'chat', role: 'employee', version: 'démo', count: 1, first_seen: iso(daysAgo(1), 14, 0), last_seen: iso(daysAgo(1), 14, 0), status: 'open' },
   ];
 
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors };
+  const cash = buildDemoCash(posts, contracts);
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash };
 }
