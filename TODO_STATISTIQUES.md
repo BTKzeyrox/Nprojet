@@ -1,7 +1,7 @@
 # TODO — Statistiques, finances et stock (Gestion Pro)
 
 Créé le 2026-10-18 à la demande de BTK. À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md` et `TODO.md`.
-Tout est **à faire** (aucune case cochée). Taille : S = petite, M = moyenne, L = grosse.
+La **phase 1 est faite** (2026-10-19, non testée à l'écran) ; les phases 2 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
 
 ## But
 
@@ -80,12 +80,15 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Réussite : le total de la page = le total de la page Paie pour la même période.
   - **Fait :** section « Salaires » : barres des salaires gagnés, gagné / avances accordées / avances en attente, et pour un **mois** (si la paie est mensuelle) « Net à payer / Déjà payé / Reste à payer » lus avec la route existante `payroll-period` (lecture seule, 1 appel par mois affiché, gardé 2 minutes). Même base que la paie (`calculated_ar` des missions validées). Contrôlé en démo : total Paie = total Statistiques (septembre 430 000, octobre 210 000). **Pas encore vérifié sur la vraie base.** La paie de démo (`payroll-period`) est ajoutée au faux serveur, en lecture seule.
 
-- [ ] **S1.8 — Démo, anglais, téléphone** (S)
+- [x] **S1.8 — Démo, anglais, téléphone** (S) — *fait le 2026-10-19 (commit : voir le journal de `TODO.md`) ; S1.7 = commit `45b2a2d`*
   - Données de démo déjà sur 60 jours : vérifier que les graphiques sont pleins et jolis.
   - Textes anglais dans `enDict.json`.
+  - **Fait :** (1) démo étendue à **2 ans** (771 missions : dense sur les 60 derniers jours, plus légère avant) pour que les vues Mois et Année soient pleines **et comparées à la période d'avant** ; 3 missions terminées aujourd'hui (la vue Jour n'est pas vide) ; 6 avances réparties sur l'année ; durées variées (1 h à 3 h 30). Construction en 36 ms, 406 Ko. (2) Nouveau contrôle `npm run check:demo-stats` (`scripts/check-demo-stats.ts`, **35 contrôles réussis**) : barres remplies, comparaison, taux, durée, types, classement, à venir, avances ; tient compte du jour de la semaine (une semaine qui vient de commencer n'a pas 7 barres). (3) Anglais : les textes de la page étaient déjà presque tous couverts ; ajout de 20 entrées dans `enDict.json` pour les phrases mal rendues (Voir tout, Aucune donnée, Classement, Sans activité, Autre, « Les missions n'ont pas encore de date limite… », par heure / jour / mois…). (4) Téléphone : la « Durée moyenne » (ex. « 1 h 52 min ») passe en `text-base` avec retour à la ligne pour ne plus déborder d'une case de 3 colonnes. **Non testé sur un vrai téléphone** (pas de navigateur disponible) : revue du code seulement.
 
-- [ ] **S1.9 — Contrôle de la phase 1** (S)
+- [x] **S1.9 — Contrôle de la phase 1** (S) — *fait le 2026-10-19 (même commit que S1.8)*
   - `tsc`, `build`, script de contrôle des chiffres, tout noté dans `TODO.md`.
+  - **Résultat :** `tsc --noEmit` sans erreur ; `npm run build` sans erreur ; `npm run check:stats` **41/41** ; `npm run check:charts` **20/20** ; `npm run check:demo-stats` **35/35** ; démo exécutée sous Node avec le réseau bloqué : **0 appel** au serveur. **Reste à faire par BTK : ouvrir la page Statistiques sur le téléphone** (admin et démo) et dire ce qui déborde ou semble faux.
+  - **La phase 1 est terminée. La phase 2 (finances) attend les 5 décisions de BTK** (prix client, encaissement, catégories de dépenses, stock, remise à zéro).
 
 ---
 

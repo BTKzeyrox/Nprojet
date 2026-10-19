@@ -132,7 +132,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.done}</div><div className="text-[11px] text-slate-400">Validées</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.rejected}</div><div className="text-[11px] text-slate-400">Refusées</div></div>
-          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{fmtDuration(stats.cur.avgMin)}</div><div className="text-[11px] text-slate-400">Durée moyenne</div></div>
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-base sm:text-lg font-bold text-white break-words px-1">{fmtDuration(stats.cur.avgMin)}</div><div className="text-[11px] text-slate-400">Durée moyenne</div></div>
         </div>
       </Section>
 

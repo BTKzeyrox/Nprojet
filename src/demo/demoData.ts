@@ -75,15 +75,16 @@ export function buildDemoData(): DemoData {
     recommended_shift: 'any', estimated_reward_ar: PRICE, priority: i % 5 === 0 ? 'Urgente' : 'Normale', region_server: '',
   }));
 
-  // ----- Historique : missions des 60 derniers jours -----
+  // ----- Historique : missions des 2 dernières années (dense sur les 60 derniers jours) -----
   const posts: PostSession[] = [];
   let n = 0;
-  for (let back = 60; back >= 1; back--) {
+  for (let back = 700; back >= 1; back--) {
     const d = daysAgo(back);
     if (d.getDay() === 0) continue; // pas de dimanche
-    const workers = PEOPLE.filter(() => r() > 0.25); // quelques absents
+    const dense = back <= 60; // 60 derniers jours : activité forte ; avant : activité plus légère
+    const workers = PEOPLE.filter(() => r() > (dense ? 0.25 : back <= 365 ? 0.62 : 0.72)); // quelques absents
     for (const p of workers) {
-      const count = r() < 0.45 ? 1 : r() < 0.25 ? 2 : 0;
+      const count = dense ? (r() < 0.45 ? 1 : r() < 0.25 ? 2 : 0) : (r() < 0.55 ? 1 : 0);
       for (let k = 0; k < count; k++) {
         const m = pick(MISSIONS);
         const startH = p.shift === 'day' ? 8 + k * 3 : 20 + k;
@@ -93,7 +94,7 @@ export function buildDemoData(): DemoData {
         posts.push({
           id: `demo_p${n}`, employee_id: p.id, employee_name: p.name, client_name: m.title, account_tag: '', target_score: qty, initial_score: 0,
           current_score: qty, final_score: qty, remaining_score: 0, status: rejected ? 'rejected' : 'completed', shift_type: p.shift, date: ymd(d),
-          start_time: `${pad(startH % 24)}:${pad(Math.floor(r() * 50))}:00`, end_time: `${pad((startH + 2) % 24)}:${pad(Math.floor(r() * 50))}:00`,
+          start_time: `${pad(startH % 24)}:${pad(Math.floor(r() * 50))}:00`, end_time: `${pad((startH + 1 + Math.floor(r() * 3)) % 24)}:${pad(Math.floor(r() * 50))}:00`,
           start_proof_url: '', end_proof_url: '', calculated_ar: rejected ? 0 : PRICE, rejection_reason: rejected ? 'Capture illisible, merci de renvoyer.' : undefined,
           notes: `${qty} fiches traitées`, demo: true, created_at: iso(d, startH), updated_at: iso(d, startH + 2),
         });
@@ -102,6 +103,14 @@ export function buildDemoData(): DemoData {
   }
   // Aujourd'hui : une mission en cours, deux à valider
   const today = new Date();
+  [[3, 9, 8], [5, 4, 9], [2, 11, 10]].forEach(([who, m, h], i) => {
+    const p = PEOPLE[who]; n++;
+    posts.push({
+      id: `demo_p${n}`, employee_id: p.id, employee_name: p.name, client_name: MISSIONS[m].title, account_tag: '', target_score: 30, initial_score: 0,
+      current_score: 30, final_score: 30, remaining_score: 0, status: 'completed', shift_type: p.shift, date: ymd(today), start_time: `${pad(h)}:05:00`, end_time: `${pad(h + 1 + (i % 2))}:20:00`,
+      start_proof_url: '', end_proof_url: '', calculated_ar: PRICE, notes: '30 fiches traitées', demo: true, created_at: iso(today, h), updated_at: iso(today, h + 1),
+    });
+  });
   const live: { who: number; m: number; status: 'active' | 'pending_end' | 'pending_start' }[] = [
     { who: 0, m: 0, status: 'active' }, { who: 1, m: 2, status: 'pending_end' }, { who: 2, m: 7, status: 'pending_end' }, { who: 4, m: 4, status: 'pending_start' },
   ];
@@ -126,6 +135,10 @@ export function buildDemoData(): DemoData {
   // ----- Avances -----
   const advances: SalaryAdvanceRequest[] = [
     { id: 'demo_a1', employee_id: 'demo_u3', employee_name: 'Inès Moreau', amount_ar: 40000, reason: 'Frais de transport du mois', request_date: ymd(daysAgo(12)), status: 'approved', demo: true },
+    { id: 'demo_a3', employee_id: 'demo_u1', employee_name: 'Camille Durand', amount_ar: 30000, reason: 'Frais de santé', request_date: ymd(daysAgo(45)), status: 'approved', demo: true },
+    { id: 'demo_a4', employee_id: 'demo_u5', employee_name: 'Léa Roux', amount_ar: 20000, reason: 'Transport', request_date: ymd(daysAgo(80)), status: 'approved', demo: true },
+    { id: 'demo_a5', employee_id: 'demo_u4', employee_name: 'Hugo Petit', amount_ar: 35000, reason: 'Loyer', request_date: ymd(daysAgo(130)), status: 'approved', demo: true },
+    { id: 'demo_a6', employee_id: 'demo_u6', employee_name: 'Sam Fontaine', amount_ar: 15000, reason: 'Connexion internet', request_date: ymd(daysAgo(200)), status: 'approved', demo: true },
     { id: 'demo_a2', employee_id: 'demo_u2', employee_name: 'Noé Lambert', amount_ar: 25000, reason: 'Facture d\'internet', request_date: ymd(daysAgo(2)), status: 'pending', demo: true },
   ];
 

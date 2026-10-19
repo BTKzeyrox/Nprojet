@@ -9,7 +9,8 @@
     "check:stats": "npx --yes tsx scripts/check-stats.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
