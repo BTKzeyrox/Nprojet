@@ -39,11 +39,13 @@ Une page **Statistiques** pour l'admin, comme dans une vraie entreprise : suivre
 
 Données déjà disponibles : missions (`posts`, `contracts`), employés (`users`, présence), avances (`advances`), paie à tarif fixe (`settings.price_per_mission`).
 
-- [ ] **S1.1 — Calcul des périodes et des chiffres** (M)
+- [x] **S1.1 — Calcul des périodes et des chiffres** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`)*
   - Fichier : `src/utils/stats.ts` (fonctions pures, sans écran).
   - Fonctions : début et fin d'un jour / semaine (lundi) / mois / année ; période d'avant ; regrouper les données par jour ou par mois ; variation en % (gérer le cas « période d'avant = 0 »).
   - Heure de Madagascar (UTC+3) pour couper les jours.
   - Réussite : un petit script Node de contrôle (comme pour la démo) vérifie 15 cas, dont fin de mois, année bissextile, semaine qui change de mois.
+  - **Fait :** `src/utils/stats.ts` + `scripts/check-stats.ts` (`npm run check:stats`, **41 contrôles réussis**). Les périodes en cours sont comparées au même nombre de jours de la période d'avant (ex. 18 octobre contre 1 à 18 septembre). Le montant gagné = `calculated_ar` des missions validées (même base que la paie du serveur).
+  - **Écart avec le plan :** il n'existe pas de date limite sur les missions, donc « en retard » n'est pas calculable pour l'instant (voir S1.5). « Présence » = temps passé sur les missions (pas les heures connectées, trop d'appels serveur).
 
 - [ ] **S1.2 — Page « Statistiques » et menu** (M)
   - Fichiers : `src/views/admin/StatsPage.tsx` (nouveau, chargé en `lazy`), `src/App.tsx`, `src/components/Sidebar.tsx`, `src/components/BottomNav.tsx`.
