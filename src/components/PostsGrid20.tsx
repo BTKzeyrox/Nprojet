@@ -28,6 +28,7 @@ import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { useApp } from '../context/AppContext';
 import { askConfirm } from './ConfirmModal';
 import { ScoreInput } from './ScoreInput';
+import { clientPriceForType, parsePriceInput } from '../utils/clientPrice';
 import { getRemainingBand } from '../utils/postBand';
 import { PendingPostActions } from './PendingPostActions';
 
@@ -85,16 +86,19 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [addDesc, setAddDesc] = useState('');
   const [addType, setAddType] = useState('');
   const [addProof, setAddProof] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
+  const [addPrice, setAddPrice] = useState('');
   const [addError, setAddError] = useState<string | null>(null);
   const postTypes = db.getSettings().post_types || [];
 
   const submitAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName.trim()) return setAddError('Écris le titre de la mission.');
-    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof });
+    const price = parsePriceInput(addPrice);
+    if (price === null) return setAddError('Le prix client doit être un nombre positif ou vide.');
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddError(null);
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddError(null);
   };
 
   // Keep contracts synchronized with store
@@ -530,6 +534,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     <option value="both">Photo et note obligatoires</option>
                   </select>
                   <p className="text-[11px] opacity-60 mt-1">Tu peux laisser « Selon le type » tant que tu ne sais pas quoi demander.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 opacity-70">Prix client de cette mission (Ar, facultatif)</label>
+                  <input type="number" min={0} step={100} value={addPrice} onChange={e => setAddPrice(e.target.value)} placeholder={`Prix du type : ${clientPriceForType(addType, db.getSettings())} Ar`} className={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
+                  <p className="text-[11px] opacity-60 mt-1">Laisse vide pour utiliser le prix du type, ou le prix par défaut (Réglages, Missions).</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 opacity-70">Quantité à faire (si tu la connais)</label>

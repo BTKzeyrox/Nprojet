@@ -92,6 +92,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const save = () => {
     setError(null);
     if (!(s.price_per_mission >= 0)) return setError('Le tarif par mission ne peut pas être négatif.');
+    if (!((s.client_price_default_ar ?? 0) >= 0)) return setError('Le prix client par défaut ne peut pas être négatif.');
+    for (const v of Object.values(s.client_prices_by_type || {})) if (!(Number(v) >= 0)) return setError('Un prix client par type ne peut pas être négatif.');
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     for (const k of ['auto_pen_late1_min', 'auto_pen_late2_min'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 1)) return setError('Pénalités automatiques : les minutes de retard doivent être 1 ou plus.');
     for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de volume ne peut pas être négatif.');
@@ -109,6 +111,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       ...s,
       price_per_million: Math.round(s.price_per_million),
       price_per_mission: Math.round(s.price_per_mission),
+      client_price_default_ar: Math.round(s.client_price_default_ar ?? 0),
+      client_prices_by_type: Object.fromEntries(Object.entries(s.client_prices_by_type || {}).filter(([, v]) => isFinite(Number(v))).map(([k, v]) => [k, Math.round(Number(v))])),
       retention_days: Math.round(s.retention_days),
       late_tolerance_min: Math.round(s.late_tolerance_min),
       access_before_min: Math.round(s.access_before_min),
@@ -331,6 +335,38 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <input type="number" min={0} step={100} value={s.price_per_mission} onChange={e => set('price_per_mission', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-400 mt-1">Montant versé pour chaque mission validée. Il est figé au moment de la validation : changer le tarif ne modifie pas les missions déjà validées.</p>
         </div>
+      </section>
+      )}
+
+      {tab === 'missions' && (
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white">Prix client</h3>
+        <div>
+          <label className={labelCls}>Prix par défaut d'une mission (Ar)</label>
+          <input type="number" min={0} step={100} value={s.client_price_default_ar ?? 0} onChange={e => set('client_price_default_ar', Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">Ce que le client paie pour une mission validée. 0 = pas encore réglé. Il est figé au moment de la validation : changer un prix ne modifie pas les missions déjà validées.</p>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-300">Exceptions par type de mission</p>
+          {s.post_types.length === 0 && <p className="text-xs text-slate-500">Aucun type : ajoute-en un plus bas.</p>}
+          {s.post_types.map(t => (
+            <div key={t} className="flex items-center gap-2">
+              <span className="flex-1 min-w-0 truncate text-xs font-mono font-bold text-emerald-300" title={t}>{t}</span>
+              <input
+                type="number" min={0} step={100}
+                value={s.client_prices_by_type?.[t] ?? ''}
+                placeholder={String(s.client_price_default_ar ?? 0)}
+                onChange={e => {
+                  const next = { ...(s.client_prices_by_type || {}) };
+                  if (e.target.value === '') delete next[t]; else next[t] = Number(e.target.value);
+                  set('client_prices_by_type', next);
+                }}
+                className={`${inputCls} !w-32 shrink-0`}
+              />
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">Laisse vide pour utiliser le prix par défaut. Tu peux aussi fixer un prix pour une seule mission, dans ses options avancées.</p>
       </section>
       )}
 

@@ -20,6 +20,7 @@ import {
   NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
+import { clientPriceForContract } from '../utils/clientPrice';
 
 const TOKEN_KEY = 'df_session_token_v2';
 // Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
@@ -32,6 +33,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
   price_per_million: 1000,
   price_per_mission: 5000,
+  client_price_default_ar: 0, // à régler dans Réglages > Missions (0 = pas encore réglé)
+  client_prices_by_type: {},
   day_shift_start: '08:00',
   day_shift_end: '18:00',
   night_shift_start: '20:00',
@@ -791,6 +794,8 @@ class DeltaForceStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
+    // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions)
+    this.settings = [{ ...DEFAULT_SETTINGS, client_price_default_ar: 8000, client_prices_by_type: { 'Contrôle qualité': 9000, 'Tâche web': 12000 } }];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 16, bytes: 180224 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
@@ -1023,7 +1028,7 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode'] }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
       return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
@@ -1048,6 +1053,8 @@ class DeltaForceStore {
       target_score: name ? initial + objective : 0,
       recommended_shift: 'any',
       estimated_reward_ar: Math.round(this.getSettings().price_per_mission || 0),
+      // Prix client propre à la mission : seulement s'il est donné (sinon prix du type, puis prix par défaut)
+      ...(typeof p.client_price_ar === 'number' && isFinite(p.client_price_ar) && p.client_price_ar >= 0 ? { client_price_ar: Math.round(p.client_price_ar) } : {}),
       priority: 'Normale',
       region_server: '—',
       no_account: !name,
@@ -1439,6 +1446,8 @@ class DeltaForceStore {
         this.contracts.find(c => c.post_number === post.post_number) ||
         this.contracts.find(c => c.client_name === post.client_name);
       if (linkedContract) linkedContract.current_score = finalScore;
+      // Prix client figé à la validation (comme la paie) : changer les prix ensuite ne modifie pas cette mission
+      post.client_price_ar = clientPriceForContract(linkedContract, this.getSettings());
       post.updated_at = new Date().toISOString();
 
       if (employee) {

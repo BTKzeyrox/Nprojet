@@ -101,11 +101,14 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
 - **Dépenses** = salaires + avances + achats + frais.
 - **Bénéfice net** = encaissé − dépenses. **Marge** = bénéfice ÷ encaissé.
 
-- [ ] **S2.1 — Prix client** (M) — *sans nouvelle table*
+- [x] **S2.1 — Prix client** (M) — *sans nouvelle table* — **fait le 2026-10-19** (non testé à l'écran, voir note ci-dessous)
   - Ajouter un champ `client_price_ar` sur la mission (les missions sont des données JSON : pas de changement de table).
   - Réglages > Missions : prix client par défaut et prix par type ; modifiable mission par mission.
   - Les anciennes missions utilisent le prix par défaut (rien n'est cassé).
   - Dépend de la décision n° 1.
+  - **Décision n° 1 prise par BTK (2026-10-19)** : un prix par défaut + des exceptions par type ou par mission.
+  - **Fait** : `AppSettings.client_price_default_ar` et `client_prices_by_type` ; `ClientContract.client_price_ar` (prix propre à la mission) ; `PostSession.client_price_ar` (prix **figé à la validation**, comme la paie) ; règle dans `src/utils/clientPrice.ts` : prix de la mission, sinon prix du type, sinon prix par défaut (0 est un vrai prix). Réglages > Missions > « Prix client » ; champ « Prix client de cette mission » dans les options avancées (création et modification). Anciennes missions : prix recalculé par la règle (rien n'est cassé). Démo : prix inventés (8 000 / 9 000 / 12 000 Ar). Anglais ajouté. Contrôle : `npm run check:client-price` (29/29), `tsc` et `build` OK.
+  - **⚠ À ne pas faire avant S2.4** : ne pas saisir de vrais prix client dans la vraie base. Aujourd'hui le serveur envoie `settings`, `contracts` et `posts` en entier aux opérateurs : ils verraient les prix client. S2.4 doit retirer `client_price_default_ar`, `client_prices_by_type` et `client_price_ar` pour les non-admins (lecture) et refuser leur écriture (sync). Le prix par défaut vaut 0 tant que BTK n'a rien réglé.
 
 - [ ] **S2.2 — Nouvelle table `df_cash`** (M) — **accord de BTK + sauvegarde avant**
   - Même modèle que les autres tables : `id`, `data` (JSON), `updated_at`, sécurité RLS activée, aucun accès public.

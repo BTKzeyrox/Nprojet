@@ -46,6 +46,7 @@ import { generateProofPlaceholder, compressProofImage } from '../../utils/imageU
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
 import { AdminChecklist } from '../../components/MissionGuide';
+import { clientPriceForType, parsePriceInput } from '../../utils/clientPrice';
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -159,6 +160,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editNotes, setEditNotes] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editProofMode, setEditProofMode] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
+  const [editPrice, setEditPrice] = useState('');
 
   // In-app Toast Notice (no window.alert in iframe)
   const [toastNotice, setToastNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -233,6 +235,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    const priceParsed = parsePriceInput(editPrice);
+    if (priceParsed === null) {
+      setAssignErrorMsg('Le prix client doit être un nombre positif ou vide.');
+      return;
+    }
+
     // 1. Update Contract
     const contractRes = db.updateContract(selectedAdminContract.id, {
       client_name: editClientName.trim(),
@@ -244,6 +252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       game_mode: editGameMode.trim(),
       description: editDescription.trim(),
       proof_mode: editProofMode,
+      client_price_ar: priceParsed, // vide = retour au prix du type / prix par défaut
       no_account: false,
       recommended_shift: editShift,
     });
@@ -468,6 +477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditNotes(session?.notes || '');
             setEditDescription(contract.description || '');
             setEditProofMode(contract.proof_mode || 'type');
+            setEditPrice(typeof contract.client_price_ar === 'number' ? String(contract.client_price_ar) : '');
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
           }}
@@ -678,6 +688,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <option value="note">Note obligatoire</option>
                           <option value="both">Photo et note obligatoires</option>
                         </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 mb-1">Prix client de cette mission (Ar, facultatif)</label>
+                        <input type="number" min={0} step={100} value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder={`Prix du type : ${clientPriceForType(selectedAdminContract?.post_type, db.getSettings())} Ar`} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
+                        <p className="text-[11px] text-slate-400 mt-1">Laisse vide pour utiliser le prix du type, ou le prix par défaut (Réglages, Missions).</p>
                       </div>
                       <p className="text-[11px] text-slate-400">Quantités (facultatives, aucun calcul n'est imposé) :</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

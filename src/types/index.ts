@@ -13,6 +13,8 @@ export interface AppSettings {
   id: 'general';
   price_per_million: number; // Ar pour 1M de score (sert encore aux pénalités automatiques)
   price_per_mission: number; // Ar versés pour chaque mission validée (tarif fixe, quelle que soit la quantité)
+  client_price_default_ar?: number; // Ar payés par le client pour une mission validée (prix par défaut, 0 = pas encore réglé)
+  client_prices_by_type?: Record<string, number>; // exceptions : prix client par type de mission (clé = nom du type)
   day_shift_start: string; // HH:MM
   day_shift_end: string;
   night_shift_start: string;
@@ -127,6 +129,7 @@ export interface PostSession {
   end_proof_urls?: string[]; // 1 to 5 proof photos
   rejection_reason?: string;
   calculated_ar?: number; // 1M score = 1,000 Ar
+  client_price_ar?: number; // prix client figé à la validation (les anciennes missions : calculé au besoin)
   notes?: string;
   start_notes?: string; // description facultative du booster au début de session
   admin_notes?: string; // description facultative de l'admin à la validation
@@ -230,6 +233,7 @@ export interface ClientContract {
   target_score: number;
   recommended_shift: ShiftType | 'any';
   estimated_reward_ar: number;
+  client_price_ar?: number; // prix client propre à cette mission (sinon : prix du type, sinon prix par défaut)
   priority: 'Haute' | 'Normale' | 'Urgente';
   region_server: string;
 }

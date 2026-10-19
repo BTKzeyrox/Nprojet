@@ -1041,5 +1041,17 @@
 "par heure": "by hour",
 "par jour": "by day",
 "par mois": "by month",
-"Employés sans activité": "Employees with no activity"
+"Employés sans activité": "Employees with no activity",
+"Prix client": "Client price",
+"Prix par défaut d'une mission (Ar)": "Default price of a mission (Ar)",
+"Ce que le client paie pour une mission validée. 0 = pas encore réglé. Il est figé au moment de la validation : changer un prix ne modifie pas les missions déjà validées.": "What the client pays for a validated mission. 0 = not set yet. It is fixed at validation time: changing a price does not change missions already validated.",
+"Exceptions par type de mission": "Exceptions by mission type",
+"Aucun type : ajoute-en un plus bas.": "No type: add one below.",
+"Laisse vide pour utiliser le prix par défaut. Tu peux aussi fixer un prix pour une seule mission, dans ses options avancées.": "Leave empty to use the default price. You can also set a price for a single mission, in its advanced options.",
+"Le prix client par défaut ne peut pas être négatif.": "The default client price cannot be negative.",
+"Un prix client par type ne peut pas être négatif.": "A client price by type cannot be negative.",
+"Le prix client doit être un nombre positif ou vide.": "The client price must be a positive number or empty.",
+"Prix client de cette mission (Ar, facultatif)": "Client price of this mission (Ar, optional)",
+"Laisse vide pour utiliser le prix du type, ou le prix par défaut (Réglages, Missions).": "Leave empty to use the type price, or the default price (Settings, Missions).",
+"Prix du type :": "Type price:"
 }
