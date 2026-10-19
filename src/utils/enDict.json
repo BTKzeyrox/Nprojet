@@ -1016,5 +1016,15 @@
 "Missions par type": "Missions by type",
 "Missions à venir": "Upcoming missions",
 "Voir le tableau": "View the board",
-"Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.": "Missions do not have a deadline yet: delays cannot be shown for now."
+"Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.": "Missions do not have a deadline yet: delays cannot be shown for now.",
+"Aucun employé actif.": "No active employee.",
+"Voir moins": "Show less",
+"Salaires": "Salaries",
+"Chiffres provisoires": "Provisional figures",
+"Déjà payé": "Already paid",
+"Reste à payer": "Left to pay",
+"Ouvrir la page Paie": "Open the Payroll page",
+"Lecture de la paie…": "Reading payroll…",
+"La paie du mois n'est pas disponible pour le moment.": "Payroll for this month is not available right now.",
+"La paie se fait par quinzaine : « payé » et « reste à payer » sont dans la page Paie.": "Payroll is done every two weeks: \"paid\" and \"left to pay\" are on the Payroll page."
 }

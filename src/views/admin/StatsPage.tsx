@@ -4,12 +4,18 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
 import { StatCard } from '../../components/StatCard';
-import { BarChart, DonutChart } from '../../components/charts/Charts';
+import { BarChart, DonutChart, compactNumber } from '../../components/charts/Charts';
 import { fmtDuration } from '../../utils/performance';
+import type { User } from '../../types';
+import type { Slip } from '../../utils/payslip';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 
 const GRANS: [StatsGranularity, string][] = [['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois'], ['year', 'Année']];
 const VS: Record<StatsGranularity, string> = { day: 'par rapport à hier', week: 'par rapport à la semaine dernière', month: 'par rapport au mois dernier', year: 'par rapport à l\'année dernière' };
+
+// Fiches de paie déjà lues (2 minutes) : évite de relancer le serveur quand on va et vient entre deux mois
+const payCache = new Map<string, { at: number; slips: Slip[]; status: string }>();
+type PayState = { state: 'idle' | 'loading' | 'ready' | 'na'; slips?: Slip[]; status?: string };
 
 // On garde le choix quand la personne change de page puis revient (et le type de période d'une visite à l'autre)
 let savedAnchor: string | null = null;
@@ -29,19 +35,38 @@ const BY: Record<StatsGranularity, { fr: string; en: string }> = {
   day: { fr: 'par heure', en: 'by hour' }, week: { fr: 'par jour', en: 'by day' }, month: { fr: 'par jour', en: 'by day' }, year: { fr: 'par mois', en: 'by month' },
 };
 
-export const StatsPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
+export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEmployee?: (u: User) => void }> = ({ onNavigate, onOpenEmployee }) => {
   const { lang } = useApp();
   const l = lang === 'en' ? 'en' : 'fr';
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
   const today = todayMada();
+  const [showAll, setShowAll] = useState(false);
   const [g, setG] = useState<StatsGranularity>(loadGran);
   const [anchor, setAnchor] = useState<string>(() => savedAnchor || today);
   useEffect(() => { savedAnchor = anchor; }, [anchor]);
   const pickGran = (next: StatsGranularity) => { setG(next); try { localStorage.setItem('stats_gran', next); } catch { /* stockage refusé */ } };
 
   const ranges = comparableRanges(g, anchor, today);
+
+  // Paie du mois (payé / reste à payer) : lecture seule, une seule demande au serveur par mois affiché
+  const payHalf = db.getSettings().pay_period === 'half';
+  const pid = g === 'month' && !ranges.isFuture && !payHalf ? anchor.slice(0, 7) : null;
+  const [pay, setPay] = useState<PayState>({ state: 'idle' });
+  useEffect(() => {
+    if (!pid) { setPay({ state: 'idle' }); return; }
+    const hit = payCache.get(pid);
+    if (hit && Date.now() - hit.at < 120000) { setPay({ state: 'ready', slips: hit.slips, status: hit.status }); return; }
+    let off = false;
+    setPay({ state: 'loading' });
+    void db.payrollCall('payroll-period', { pid }).then(r => {
+      if (off) return;
+      if (r.success && Array.isArray(r.data?.slips)) { payCache.set(pid, { at: Date.now(), slips: r.data.slips, status: String(r.data.status || 'open') }); setPay({ state: 'ready', slips: r.data.slips, status: String(r.data.status || 'open') }); }
+      else setPay({ state: 'na' });
+    });
+    return () => { off = true; };
+  }, [pid]);
   const atPresent = today >= ranges.cur.start && today <= ranges.cur.end || ranges.isFuture;
 
   const posts = db.getPosts();
@@ -130,6 +155,86 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ o
         )}
         <p className="text-[11px] text-slate-500">Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.</p>
       </Section>
+
+      {/* Équipe : classement, missions par heure, personnes sans mission */}
+      {(() => {
+        const t = stats.team;
+        const shown = showAll ? t.ranking : t.ranking.slice(0, 8);
+        const top = Math.max(1, ...t.ranking.map(r => r.done));
+        const users = db.getUsers();
+        const money = (n: number) => formatCurrencyAr(n);
+        return (
+          <Section title="Équipe" right={<span className="text-[11px] text-slate-400">{l === 'en' ? `${t.active} active` : `${t.active} actifs`}</span>}>
+            <div className="text-xs text-slate-300">
+              {stats.cur.workers > 0
+                ? (l === 'en' ? `${stats.cur.workers} worked on this period · ${t.perHead} missions per person on average` : `${stats.cur.workers} ont travaillé sur cette période · ${t.perHead} missions par personne en moyenne`)
+                : (l === 'en' ? 'Nobody finished a mission on this period.' : 'Personne n\'a terminé de mission sur cette période.')}
+            </div>
+            {t.ranking.length === 0 && <div className="text-sm text-slate-400">Aucun employé actif.</div>}
+            <ol className="space-y-1.5">
+              {shown.map((r, i) => {
+                const hours = r.workMin / 60;
+                const perHour = hours > 0 && r.done > 0 ? Math.round((r.done / hours) * 10) / 10 : null;
+                const u = users.find(x => x.id === r.id);
+                return (
+                  <li key={r.id} className="rounded-lg bg-slate-900/60 border border-slate-800 px-2.5 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 text-center font-mono text-xs text-slate-500">{i + 1}</span>
+                      {onOpenEmployee && u
+                        ? <button type="button" onClick={() => onOpenEmployee(u)} className="min-w-0 flex-1 text-left text-sm font-semibold text-white truncate hover:underline">{r.name}</button>
+                        : <span className="min-w-0 flex-1 text-sm font-semibold text-white truncate">{r.name}</span>}
+                      <span className="font-mono text-sm text-white">{r.done}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-slate-800 overflow-hidden" aria-hidden="true"><div className="h-full bg-emerald-500" style={{ width: `${Math.round((r.done / top) * 100)}%` }} /></div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-slate-400">
+                      <span>{money(r.earned)}</span>
+                      <span>{fmtDuration(r.workMin || null)}</span>
+                      <span>{perHour === null ? '–' : (l === 'en' ? `${perHour} per hour` : `${perHour} par heure`)}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+            {t.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm">{showAll ? 'Voir moins' : (l === 'en' ? `Show all (${t.ranking.length})` : `Voir tout (${t.ranking.length})`)}</button>}
+            {t.idle.length > 0 && stats.cur.workers > 0 && (
+              <div className="text-xs text-amber-300">{l === 'en' ? 'No mission on this period: ' : 'Sans mission sur cette période : '}{t.idle.slice(0, 8).join(', ')}{t.idle.length > 8 ? ` +${t.idle.length - 8}` : ''}</div>
+            )}
+          </Section>
+        );
+      })()}
+
+      {/* Salaires : gagné, avances, et (pour un mois) ce qui est payé ou reste à payer */}
+      {(() => {
+        const money = (n: number) => formatCurrencyAr(n);
+        const slips = pay.slips || [];
+        const net = slips.reduce((t, x) => t + (x.net || 0), 0);
+        const paid = slips.reduce((t, x) => t + (x.paid ? x.net || 0 : 0), 0);
+        const closed = pay.status === 'closed' || pay.status === 'paid';
+        return (
+          <Section title="Salaires">
+            <BarChart values={stats.series.earned} labels={stats.labels} format={v => `${compactNumber(v)} Ar`} ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'} />
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.earned)}</div><div className="text-[11px] text-slate-400">Gagné</div></div>
+              <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.advances)}</div><div className="text-[11px] text-slate-400">Avances accordées</div></div>
+              <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-amber-300 break-words">{money(stats.salary.pendingAdvanceAr)}</div><div className="text-[11px] text-slate-400">{l === 'en' ? `Pending advances (${stats.salary.pendingAdvanceCount})` : `Avances en attente (${stats.salary.pendingAdvanceCount})`}</div></div>
+            </div>
+            {pay.state === 'loading' && <div className="text-xs text-slate-400">Lecture de la paie…</div>}
+            {pay.state === 'ready' && (
+              <div className="rounded-lg border border-slate-700 p-2.5 space-y-2">
+                <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-white">Paie du mois</span><span className={closed ? 'text-emerald-300' : 'text-amber-300'}>{closed ? 'Clôturée' : 'Chiffres provisoires'}</span></div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div><div className="font-mono text-sm font-bold text-white break-words">{money(net)}</div><div className="text-[11px] text-slate-400">Net à payer</div></div>
+                  <div><div className="font-mono text-sm font-bold text-emerald-300 break-words">{money(paid)}</div><div className="text-[11px] text-slate-400">Déjà payé</div></div>
+                  <div><div className="font-mono text-sm font-bold text-amber-300 break-words">{money(Math.max(0, net - paid))}</div><div className="text-[11px] text-slate-400">Reste à payer</div></div>
+                </div>
+                {onNavigate && <button type="button" onClick={() => onNavigate('advances')} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-100 text-sm">Ouvrir la page Paie</button>}
+              </div>
+            )}
+            {pay.state === 'na' && <div className="text-[11px] text-slate-500">La paie du mois n'est pas disponible pour le moment.</div>}
+            {g === 'month' && payHalf && <div className="text-[11px] text-slate-500">La paie se fait par quinzaine : « payé » et « reste à payer » sont dans la page Paie.</div>}
+          </Section>
+        );
+      })()}
     </div>
   );
 };

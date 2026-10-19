@@ -689,6 +689,26 @@ class DeltaForceStore {
         const u = { ...(body.user || {}), id: body.user?.id || `demo_u${Date.now()}` } as User;
         return ok({ user: u });
       }
+      case 'payroll-period': {
+        // Mode démo : fiches de paie calculées dans le navigateur (lecture seule : clôturer, payer, primes ne changent rien)
+        const pidStr = String(body.pid || '');
+        const m = /^(\d{4})-(\d{2})(?:-([AB]))?$/.exec(pidStr);
+        if (!m) return fail('Période invalide.');
+        const y = Number(m[1]), mo = Number(m[2]);
+        const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+        const from = m[3] === 'B' ? 16 : 1, to = m[3] === 'A' ? 15 : last;
+        const p2 = (n: number) => String(n).padStart(2, '0');
+        const start = `${y}-${p2(mo)}-${p2(from)}`, end = `${y}-${p2(mo)}-${p2(to)}`;
+        const isClosed = end < nowIso.slice(0, 10);
+        const emps = this.users.filter(u => u.role === 'employee');
+        const slips = emps.map((u, i) => {
+          const mine = this.posts.filter(x => x.employee_id === u.id && x.status === 'completed' && x.date >= start && x.date <= end);
+          const gross = mine.reduce((tt, x) => tt + Math.max(0, Math.round(typeof x.calculated_ar === 'number' ? x.calculated_ar : 0)), 0);
+          return { id: `slip-${pidStr}-${u.id}`, pid: pidStr, period_start: start, period_end: end, user_id: u.id, name: u.name, username: u.username, phone: u.phone || '', lines: [], gross, bonuses: [], penalties: [], penalty_applied: 0, advance_due_before: 0, advance_deducted: 0, advance_carry: 0, net: gross, paid: isClosed && i % 2 === 0 && gross > 0 ? { at: `${end}T10:00:00.000Z`, method: 'Mobile money', ref: '', by_name: 'Responsable' } : null };
+        }).filter(sl => sl.gross > 0);
+        const pending = this.posts.filter(x => ['pending_start', 'pending_end', 'active'].includes(x.status) && x.date >= start && x.date <= end).length;
+        return ok({ pid: pidStr, start, end, status: isClosed ? 'closed' : 'open', closed_at: isClosed ? `${end}T12:00:00.000Z` : null, closed_by_name: isClosed ? 'Responsable' : '', slips, pending_validation: pending, audit: [], index: [], cfg: { methods: ['Mobile money', 'Espèces'], penalties: false, cap_pct: 50, repay_pct: 30, mode: m[3] ? 'half' : 'month' } });
+      }
       case 'attendance': {
         const day = decodeURIComponent((path.split('day=')[1] || '').split('&')[0]) || nowIso.slice(0, 10);
         const emps = this.users.filter(u => u.role === 'employee');

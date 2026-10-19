@@ -69,14 +69,16 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Missions à venir : à faire, en cours, à valider, en retard (liste cliquable vers le tableau Kanban).
   - **Fait :** barres « Missions faites par heure / jour / mois » avec traits de la période d'avant, validées / refusées / durée moyenne, anneau par type de mission, bloc « Missions à venir » (à faire, en cours, à valider, urgentes) avec boutons « Voir le tableau » et « Valider ». **Pas fait : « en retard »** (les missions n'ont pas de date limite ; une phrase l'explique sur la page). À reprendre si une date limite est ajoutée aux missions (voir P1-1 du `TODO.md`).
 
-- [ ] **S1.6 — Section « Équipe »** (M)
+- [x] **S1.6 — Section « Équipe »** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.5 = commit `d01df8d`*
   - Employés actifs (jour / nuit), présence moyenne (heures connectées), classement des meilleurs, missions par employé et par heure, employés sans activité.
   - Un clic sur un employé ouvre sa fiche.
+  - **Fait :** section « Équipe » : actifs, nombre de personnes qui ont travaillé, moyenne par personne, classement (barre, gagné, temps sur missions, missions par heure ; 8 premiers puis « Voir tout »), liste des personnes sans mission sur la période. Un clic sur un nom ouvre la fiche (CV). Écart avec le plan : « présence » = temps passé sur les missions (pas les heures de connexion, pour ne pas multiplier les appels serveur).
 
-- [ ] **S1.7 — Section « Salaires »** (M)
+- [x] **S1.7 — Section « Salaires »** (M) — *fait le 2026-10-18 (même commit que S1.6)*
   - Salaires gagnés sur la période (missions validées × tarif), déjà payés, **reste à payer**, avances en cours et remboursées.
   - Réutiliser le calcul de `PayrollAdmin.tsx` (ne pas inventer un second calcul qui donnerait d'autres chiffres).
   - Réussite : le total de la page = le total de la page Paie pour la même période.
+  - **Fait :** section « Salaires » : barres des salaires gagnés, gagné / avances accordées / avances en attente, et pour un **mois** (si la paie est mensuelle) « Net à payer / Déjà payé / Reste à payer » lus avec la route existante `payroll-period` (lecture seule, 1 appel par mois affiché, gardé 2 minutes). Même base que la paie (`calculated_ar` des missions validées). Contrôlé en démo : total Paie = total Statistiques (septembre 430 000, octobre 210 000). **Pas encore vérifié sur la vraie base.** La paie de démo (`payroll-period`) est ajoutée au faux serveur, en lecture seule.
 
 - [ ] **S1.8 — Démo, anglais, téléphone** (S)
   - Données de démo déjà sur 60 jours : vérifier que les graphiques sont pleins et jolis.
