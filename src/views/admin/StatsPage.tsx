@@ -24,9 +24,10 @@ const loadGran = (): StatsGranularity => {
   return 'month';
 };
 
-const Section: React.FC<{ title: string; children: React.ReactNode; right?: React.ReactNode }> = ({ title, children, right }) => (
+// raw : le titre est déjà dans la bonne langue (exclu de la traduction automatique)
+const Section: React.FC<{ title: string; children: React.ReactNode; right?: React.ReactNode; raw?: boolean }> = ({ title, children, right, raw }) => (
   <section className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
-    <div className="flex items-center justify-between gap-2"><h2 className="text-sm sm:text-base font-bold text-white">{title}</h2>{right}</div>
+    <div className="flex items-center justify-between gap-2"><h2 {...(raw ? { 'data-notranslate': '' } : {})} className="text-sm sm:text-base font-bold text-white">{title}</h2>{right}</div>
     {children}
   </section>
 );
@@ -94,7 +95,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="text-center min-w-0">
-            <div className="text-base sm:text-lg font-bold text-white truncate">{periodLabel(g, anchor, l)}</div>
+            <div data-notranslate="" className="text-base sm:text-lg font-bold text-white truncate">{periodLabel(g, anchor, l)}</div>
             {ranges.inProgress && <div className="text-[11px] text-slate-400">En cours</div>}
             {ranges.isFuture && <div className="text-[11px] text-slate-400">Période à venir</div>}
           </div>
@@ -127,8 +128,8 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       })()}
 
       {/* Missions : faites sur la période, par type, et ce qui reste à faire */}
-      <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`}>
-        <BarChart values={stats.series.done} labels={stats.labels} compare={ranges.isFuture ? undefined : stats.series.prevDone} unit={l === 'en' ? 'missions' : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} />
+      <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`} raw={l === 'en'}>
+        <BarChart values={stats.series.done} labels={stats.labels} compare={ranges.isFuture ? undefined : stats.series.prevDone} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} lang={l} />
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.done}</div><div className="text-[11px] text-slate-400">Validées</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.rejected}</div><div className="text-[11px] text-slate-400">Refusées</div></div>
@@ -137,16 +138,16 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       </Section>
 
       <Section title="Missions par type">
-        <DonutChart items={stats.byType.map(t => ({ label: t.label, value: t.count }))} ariaLabel="Missions par type" centerLabel={l === 'en' ? 'missions' : 'missions'} />
+        <DonutChart items={stats.byType.map(t => ({ label: t.label, value: t.count }))} ariaLabel={l === 'en' ? 'Missions by type' : 'Missions par type'} centerLabel={l === 'en' ? 'done' : 'missions'} lang={l} />
       </Section>
 
-      <Section title="Missions à venir" right={<span className="text-[11px] text-slate-400">{l === 'en' ? `${stats.upcoming.total} on the board` : `${stats.upcoming.total} sur le tableau`}</span>}>
+      <Section title="Missions à venir" right={<span {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-[11px] text-slate-400">{l === 'en' ? `${stats.upcoming.total} on the board` : `${stats.upcoming.total} sur le tableau`}</span>}>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.upcoming.todo}</div><div className="text-[11px] text-slate-400">À faire</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-sky-300">{stats.upcoming.active}</div><div className="text-[11px] text-slate-400">En cours</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-amber-300">{stats.upcoming.toValidate}</div><div className="text-[11px] text-slate-400">À valider</div></div>
         </div>
-        {stats.upcoming.urgent > 0 && <div className="text-xs text-amber-300">{l === 'en' ? `${stats.upcoming.urgent} urgent mission${stats.upcoming.urgent > 1 ? 's' : ''} to do` : `${stats.upcoming.urgent} mission${stats.upcoming.urgent > 1 ? 's' : ''} urgente${stats.upcoming.urgent > 1 ? 's' : ''} à faire`}</div>}
+        {stats.upcoming.urgent > 0 && <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-amber-300">{l === 'en' ? `Urgent to do: ${stats.upcoming.urgent}` : `${stats.upcoming.urgent} mission${stats.upcoming.urgent > 1 ? 's' : ''} urgente${stats.upcoming.urgent > 1 ? 's' : ''} à faire`}</div>}
         {onNavigate && (
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onNavigate('dashboard')} className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-100 text-sm font-semibold">Voir le tableau</button>
@@ -164,11 +165,11 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         const users = db.getUsers();
         const money = (n: number) => formatCurrencyAr(n);
         return (
-          <Section title="Équipe" right={<span className="text-[11px] text-slate-400">{l === 'en' ? `${t.active} active` : `${t.active} actifs`}</span>}>
-            <div className="text-xs text-slate-300">
+          <Section title="Équipe" right={<span {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-[11px] text-slate-400">{l === 'en' ? `${t.active} active` : `${t.active} actifs`}</span>}>
+            <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-slate-300">
               {stats.cur.workers > 0
-                ? (l === 'en' ? `${stats.cur.workers} worked on this period · ${t.perHead} missions per person on average` : `${stats.cur.workers} ont travaillé sur cette période · ${t.perHead} missions par personne en moyenne`)
-                : (l === 'en' ? 'Nobody finished a mission on this period.' : 'Personne n\'a terminé de mission sur cette période.')}
+                ? (l === 'en' ? `${stats.cur.workers} worked on this period · ${t.perHead} per person on average` : `${stats.cur.workers} ont travaillé sur cette période · ${t.perHead} missions par personne en moyenne`)
+                : (l === 'en' ? 'Nobody finished anything on this period.' : 'Personne n\'a terminé de mission sur cette période.')}
             </div>
             {t.ranking.length === 0 && <div className="text-sm text-slate-400">Aucun employé actif.</div>}
             <ol className="space-y-1.5">
@@ -189,15 +190,15 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
                     <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-slate-400">
                       <span>{money(r.earned)}</span>
                       <span>{fmtDuration(r.workMin || null)}</span>
-                      <span>{perHour === null ? '–' : (l === 'en' ? `${perHour} per hour` : `${perHour} par heure`)}</span>
+                      <span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{perHour === null ? '–' : (l === 'en' ? `${perHour} per hour` : `${perHour} par heure`)}</span>
                     </div>
                   </li>
                 );
               })}
             </ol>
-            {t.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm">{showAll ? 'Voir moins' : (l === 'en' ? `Show all (${t.ranking.length})` : `Voir tout (${t.ranking.length})`)}</button>}
+            {t.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm"><span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{showAll ? (l === 'en' ? 'Show less' : 'Voir moins') : (l === 'en' ? `Show all (${t.ranking.length})` : `Voir tout (${t.ranking.length})`)}</span></button>}
             {t.idle.length > 0 && stats.cur.workers > 0 && (
-              <div className="text-xs text-amber-300">{l === 'en' ? 'No mission on this period: ' : 'Sans mission sur cette période : '}{t.idle.slice(0, 8).join(', ')}{t.idle.length > 8 ? ` +${t.idle.length - 8}` : ''}</div>
+              <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-amber-300">{l === 'en' ? 'Idle on this period: ' : 'Sans mission sur cette période : '}{t.idle.slice(0, 8).join(', ')}{t.idle.length > 8 ? ` +${t.idle.length - 8}` : ''}</div>
             )}
           </Section>
         );
@@ -212,11 +213,11 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         const closed = pay.status === 'closed' || pay.status === 'paid';
         return (
           <Section title="Salaires">
-            <BarChart values={stats.series.earned} labels={stats.labels} format={v => `${compactNumber(v)} Ar`} ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'} />
+            <BarChart values={stats.series.earned} labels={stats.labels} format={v => `${compactNumber(v)} Ar`} ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'} lang={l} />
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.earned)}</div><div className="text-[11px] text-slate-400">Gagné</div></div>
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.advances)}</div><div className="text-[11px] text-slate-400">Avances accordées</div></div>
-              <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-amber-300 break-words">{money(stats.salary.pendingAdvanceAr)}</div><div className="text-[11px] text-slate-400">{l === 'en' ? `Pending advances (${stats.salary.pendingAdvanceCount})` : `Avances en attente (${stats.salary.pendingAdvanceCount})`}</div></div>
+              <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-amber-300 break-words">{money(stats.salary.pendingAdvanceAr)}</div><div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-[11px] text-slate-400">{l === 'en' ? `Pending advances (${stats.salary.pendingAdvanceCount})` : `Avances en attente (${stats.salary.pendingAdvanceCount})`}</div></div>
             </div>
             {pay.state === 'loading' && <div className="text-xs text-slate-400">Lecture de la paie…</div>}
             {pay.state === 'ready' && (

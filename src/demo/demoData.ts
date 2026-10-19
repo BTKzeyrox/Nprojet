@@ -101,6 +101,23 @@ export function buildDemoData(): DemoData {
       }
     }
   }
+  // Aujourd'hui, déjà terminées tôt le matin : pour que les vues « Jour » et « Semaine » ne soient pas vides dans la démo
+  if (daysAgo(0).getDay() !== 0) {
+    PEOPLE.slice(0, 3).forEach((p, i) => {
+      for (let k = 0; k < 2; k++) {
+        const m = MISSIONS[(i * 2 + k + 3) % MISSIONS.length];
+        const startH = 1 + i * 2 + k; // 1 h à 6 h : toujours déjà passé
+        const qty = 30 + ((i * 17 + k * 11) % 50);
+        n++;
+        posts.push({
+          id: `demo_p${n}`, employee_id: p.id, employee_name: p.name, client_name: m.title, account_tag: '', target_score: qty, initial_score: 0,
+          current_score: qty, final_score: qty, remaining_score: 0, status: 'completed', shift_type: p.shift, date: ymd(daysAgo(0)),
+          start_time: `${pad(startH)}:10:00`, end_time: `${pad(startH + 1)}:25:00`,
+          start_proof_url: '', end_proof_url: '', calculated_ar: PRICE, notes: `${qty} fiches traitées`, demo: true, created_at: iso(daysAgo(0), startH), updated_at: iso(daysAgo(0), startH + 1),
+        });
+      }
+    });
+  }
   // Aujourd'hui : une mission en cours, deux à valider
   const today = new Date();
   [[3, 9, 8], [5, 4, 9], [2, 11, 10]].forEach(([who, m, h], i) => {

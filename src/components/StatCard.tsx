@@ -40,7 +40,7 @@ export const StatCard: React.FC<Props> = ({ label, value, unit, hint, variation,
         </div>
         {spark && <div className="shrink-0 pb-1"><Sparkline values={spark} /></div>}
       </div>
-      {hint && <div className="text-[11px] text-slate-400 truncate">{hint}</div>}
+      {hint && <div data-notranslate="" className="text-[11px] text-slate-400 truncate">{hint}</div>}
       {delta !== null && (
         <div className={`flex items-center gap-1 text-xs font-semibold ${toneClass(dir, tone)}`}>
           <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />

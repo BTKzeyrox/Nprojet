@@ -16,6 +16,13 @@ export const compactNumber = (n: number): string => {
 
 const safe = (n: number) => (Number.isFinite(n) ? n : 0);
 
+type ChartLang = 'fr' | 'en';
+// Les textes des graphiques sont fournis dans les deux langues ici (les graphiques sont exclus de la traduction automatique : data-notranslate)
+const TXT = {
+  fr: { empty: 'Aucune donnée sur cette période', tap: 'Touchez une barre pour voir la valeur', before: 'avant', prev: 'Période d\'avant', total: 'Total', others: 'Autres' },
+  en: { empty: 'No data for this period', tap: 'Tap a bar to see its value', before: 'before', prev: 'Previous period', total: 'Total', others: 'Others' },
+} as const;
+
 // ---------- Barres ----------
 
 export interface BarChartProps {
@@ -27,9 +34,12 @@ export interface BarChartProps {
   ariaLabel: string;
   emptyText?: string;
   height?: number;
+  lang?: ChartLang;
 }
 
-export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, format, unit, ariaLabel, emptyText = 'Aucune donnée sur cette période', height = 150 }) => {
+export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, format, unit, ariaLabel, emptyText, height = 150, lang = 'fr' }) => {
+  const tx = TXT[lang];
+  const empty = emptyText ?? tx.empty;
   const [sel, setSel] = useState<number | null>(null);
   const vals = values.map(safe);
   const cmp = (compare || []).map(safe);
@@ -45,14 +55,14 @@ export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, for
   const y = (v: number) => padT + innerH - (v / max) * innerH;
   const idx = sel !== null && sel < vals.length ? sel : null;
 
-  const summary = useMemo(() => `${ariaLabel}. Total : ${fmt(total)}${unit ? ' ' + unit : ''}.`, [ariaLabel, total, unit]); // eslint-disable-line react-hooks/exhaustive-deps
+  const summary = useMemo(() => `${ariaLabel}. ${tx.total}: ${fmt(total)}${unit ? ' ' + unit : ''}.`, [ariaLabel, total, unit, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (vals.length === 0 || total === 0 && cmp.every(v => v === 0)) {
-    return <div role="img" aria-label={`${ariaLabel}. ${emptyText}`} className="h-[96px] flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg">{emptyText}</div>;
+    return <div data-notranslate="" role="img" aria-label={`${ariaLabel}. ${empty}`} className="h-[96px] flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg">{empty}</div>;
   }
 
   return (
-    <div>
+    <div data-notranslate="">
       <svg viewBox={`0 0 ${W} ${height}`} className="w-full h-auto select-none" role="img" aria-label={summary}>
         <line x1={padL} x2={W - padR} y1={padT + innerH} y2={padT + innerH} stroke="currentColor" className="text-slate-600" strokeWidth="1" />
         <line x1={padL} x2={W - padR} y1={padT} y2={padT} stroke="currentColor" className="text-slate-700" strokeWidth="0.5" strokeDasharray="3 3" />
@@ -73,9 +83,9 @@ export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, for
       </svg>
       <div className="min-h-[20px] mt-1 text-xs text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1" aria-live="polite">
         {idx !== null
-          ? <span><b className="text-white">{labels[idx]}</b> : {fmt(vals[idx])}{unit ? ` ${unit}` : ''}{cmp[idx] !== undefined ? ` (avant : ${fmt(cmp[idx])})` : ''}</span>
-          : <span className="text-slate-500">Touchez une barre pour voir la valeur</span>}
-        {compare && <span className="inline-flex items-center gap-1 text-slate-400"><span className="inline-block w-3 h-0.5 bg-amber-500 rounded" />Période d'avant</span>}
+          ? <span><b className="text-white">{labels[idx]}</b> : {fmt(vals[idx])}{unit ? ` ${unit}` : ''}{cmp[idx] !== undefined ? ` (${tx.before}: ${fmt(cmp[idx])})` : ''}</span>
+          : <span className="text-slate-500">{tx.tap}</span>}
+        {compare && <span className="inline-flex items-center gap-1 text-slate-400"><span className="inline-block w-3 h-0.5 bg-amber-500 rounded" />{tx.prev}</span>}
       </div>
     </div>
   );
@@ -85,18 +95,20 @@ export const BarChart: React.FC<BarChartProps> = ({ values, labels, compare, for
 
 export interface DonutItem { label: string; value: number }
 
-export const DonutChart: React.FC<{ items: DonutItem[]; ariaLabel: string; centerLabel?: string; format?: (v: number) => string; emptyText?: string }> = ({ items, ariaLabel, centerLabel, format, emptyText = 'Aucune donnée sur cette période' }) => {
+export const DonutChart: React.FC<{ items: DonutItem[]; ariaLabel: string; centerLabel?: string; format?: (v: number) => string; emptyText?: string; lang?: ChartLang }> = ({ items, ariaLabel, centerLabel, format, emptyText, lang = 'fr' }) => {
+  const tx = TXT[lang];
+  const empty = emptyText ?? tx.empty;
   const clean = items.map(i => ({ ...i, value: Math.max(0, safe(i.value)) })).filter(i => i.value > 0);
   const total = clean.reduce((t, i) => t + i.value, 0);
   const fmt = format || ((v: number) => String(Math.round(v)));
-  if (total === 0) return <div role="img" aria-label={`${ariaLabel}. ${emptyText}`} className="h-[96px] flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg">{emptyText}</div>;
+  if (total === 0) return <div data-notranslate="" role="img" aria-label={`${ariaLabel}. ${empty}`} className="h-[96px] flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg">{empty}</div>;
 
   // Au-delà de 5 parts, le reste est regroupé dans « Autres »
-  const shown = clean.length > 6 ? [...clean.slice(0, 5), { label: 'Autres', value: clean.slice(5).reduce((t, i) => t + i.value, 0) }] : clean;
+  const shown = clean.length > 6 ? [...clean.slice(0, 5), { label: tx.others, value: clean.slice(5).reduce((t, i) => t + i.value, 0) }] : clean;
   const R = 42, C = 2 * Math.PI * R;
   let acc = 0;
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-3">
+    <div data-notranslate="" className="flex flex-col sm:flex-row items-center gap-3">
       <svg viewBox="0 0 120 120" className="w-[132px] h-[132px] shrink-0" role="img" aria-label={`${ariaLabel}. ${shown.map(s => `${s.label} : ${fmt(s.value)}`).join(', ')}`}>
         <circle cx="60" cy="60" r={R} fill="none" stroke="currentColor" className="text-slate-800" strokeWidth="16" />
         {shown.map((s, i) => {

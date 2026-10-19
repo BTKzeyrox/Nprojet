@@ -19,6 +19,8 @@ for (const k of [0, 1, 7, 24, 31, 365]) {
 ok(clean(renderToString(<BarChart values={[5]} labels={['a']} ariaLabel="Test" />)) && renderToString(<BarChart values={[5]} labels={['a']} ariaLabel="Test" />).includes('<rect'), 'barres : une seule donnée = une barre');
 ok(clean(renderToString(<BarChart values={[NaN, 3, Infinity]} labels={['a', 'b', 'c']} ariaLabel="Test" />)), 'barres : valeurs NaN ou infinies ignorées');
 ok(clean(renderToString(<DonutChart items={[]} ariaLabel="Test" />)), 'anneau : vide');
+ok(renderToString(<BarChart values={[1, 2]} labels={['a', 'b']} ariaLabel="Test" lang="en" />).includes('Tap a bar') && renderToString(<BarChart values={[1, 2]} labels={['a', 'b']} ariaLabel="Test" lang="fr" />).includes('Touchez une barre'), 'barres : textes en français et en anglais');
+ok(renderToString(<BarChart values={[1]} labels={['a']} ariaLabel="Test" />).includes('data-notranslate'), 'barres : exclues de la traduction automatique');
 ok(clean(renderToString(<DonutChart items={[{ label: 'A', value: 0 }]} ariaLabel="Test" />)), 'anneau : une part à zéro');
 ok(clean(renderToString(<DonutChart items={[{ label: 'A', value: 5 }]} ariaLabel="Test" />)), 'anneau : une seule part');
 ok(renderToString(<DonutChart items={Array.from({ length: 12 }, (_, i) => ({ label: 'T' + i, value: i + 1 }))} ariaLabel="Test" />).includes('Autres'), 'anneau : plus de 6 parts regroupées en « Autres »');

@@ -35,11 +35,11 @@ Une page **Statistiques** pour l'admin, comme dans une vraie entreprise : suivre
 
 ---
 
-## PHASE 1 — Pilotage (sans nouvelle table) — taille L
+## PHASE 1 — Pilotage (sans nouvelle table) — taille L — **terminée côté code le 2026-10-18 (S1.1 à S1.9) ; essai à l'écran par BTK à faire**
 
 Données déjà disponibles : missions (`posts`, `contracts`), employés (`users`, présence), avances (`advances`), paie à tarif fixe (`settings.price_per_mission`).
 
-- [x] **S1.1 — Calcul des périodes et des chiffres** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`)*
+- [x] **S1.1 — Calcul des périodes et des chiffres** (M) — *fait le 2026-10-18, commit `e4c2c98`*
   - Fichier : `src/utils/stats.ts` (fonctions pures, sans écran).
   - Fonctions : début et fin d'un jour / semaine (lundi) / mois / année ; période d'avant ; regrouper les données par jour ou par mois ; variation en % (gérer le cas « période d'avant = 0 »).
   - Heure de Madagascar (UTC+3) pour couper les jours.
@@ -47,34 +47,34 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - **Fait :** `src/utils/stats.ts` + `scripts/check-stats.ts` (`npm run check:stats`, **41 contrôles réussis**). Les périodes en cours sont comparées au même nombre de jours de la période d'avant (ex. 18 octobre contre 1 à 18 septembre). Le montant gagné = `calculated_ar` des missions validées (même base que la paie du serveur).
   - **Écart avec le plan :** il n'existe pas de date limite sur les missions, donc « en retard » n'est pas calculable pour l'instant (voir S1.5). « Présence » = temps passé sur les missions (pas les heures connectées, trop d'appels serveur).
 
-- [x] **S1.2 — Page « Statistiques » et menu** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.1 = commit `e4c2c98`*
+- [x] **S1.2 — Page « Statistiques » et menu** (M) — *fait le 2026-10-18, commit `6b1576e`*
   - Fichiers : `src/views/admin/StatsPage.tsx` (nouveau, chargé en `lazy`), `src/App.tsx`, `src/components/Sidebar.tsx`, `src/components/BottomNav.tsx`.
   - Barre de filtre : **Jour / Semaine / Mois / Année**, flèches « avant / après », bouton « Aujourd'hui », titre de la période (« Octobre 2026 »).
   - Réussite : on change de période sans recharger la page, le choix reste quand on revient sur la page.
   - **Fait :** menu admin « Statistiques », `StatsPage.tsx` (chargée en `lazy`), filtre Jour / Semaine / Mois / Année, flèches, « Aujourd'hui » (flèche « suivant » bloquée sur la période en cours), réservée à l'admin. Le type de période est gardé d'une visite à l'autre ; la date est gardée quand on change de page. Pour l'instant la page affiche seulement le nombre de missions faites (le reste = S1.3 à S1.7).
 
-- [x] **S1.3 — Composants de graphiques en SVG** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.2 = commit `6b1576e`*
+- [x] **S1.3 — Composants de graphiques en SVG** (M) — *fait le 2026-10-18, commit `4b6b4dd`*
   - Fichier : `src/components/charts/` : barres, courbe, anneau, mini-courbe dans les cartes.
   - Lisible sur téléphone, couleurs du thème, texte alternatif pour l'accessibilité, aucun chiffre qui déborde.
   - Réussite : aucun graphique ne casse avec 0 donnée, 1 donnée ou 365 données.
   - **Fait :** `src/components/charts/Charts.tsx` (`BarChart` avec traits de la période d'avant et valeur au toucher, `DonutChart` avec légende et « Autres » au-delà de 6 parts, `Sparkline`, `compactNumber`) ; `scripts/check-charts.tsx` (`npm run check:charts`, **20 contrôles réussis** : 0, 1, 7, 24, 31 et 365 données, NaN, anneau vide). Pas de couleur seule : chaque part a son texte et son pourcentage.
 
-- [x] **S1.4 — Cartes de chiffres du haut** (S) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.3 = commit `4b6b4dd`*
+- [x] **S1.4 — Cartes de chiffres du haut** (S) — *fait le 2026-10-18, commit `e678f48`*
   - Missions faites, taux de validation, salaires gagnés, avances en cours, employés actifs, missions en retard.
   - Chaque carte : chiffre, petite flèche ▲▼ et « +12 % depuis la période d'avant ».
   - **Fait :** `src/components/StatCard.tsx` + 6 cartes dans `StatsPage.tsx` : Missions faites, Taux de validation (écart en points), Salaires gagnés, Avances accordées (une hausse est en orange : c'est une charge), Employés actifs (jour / nuit), À valider (+ à faire / en cours). Mini-courbes sur Missions et Salaires. Écart avec le plan : la carte « Missions en retard » est remplacée par « À valider », car les missions n'ont pas de date limite.
 
-- [x] **S1.5 — Section « Missions »** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.4 = commit `e678f48`*
+- [x] **S1.5 — Section « Missions »** (M) — *fait le 2026-10-18, commit `d01df8d`*
   - Missions faites par jour (barres), par type (anneau), refusées, durée moyenne, taux de validation.
   - Missions à venir : à faire, en cours, à valider, en retard (liste cliquable vers le tableau Kanban).
   - **Fait :** barres « Missions faites par heure / jour / mois » avec traits de la période d'avant, validées / refusées / durée moyenne, anneau par type de mission, bloc « Missions à venir » (à faire, en cours, à valider, urgentes) avec boutons « Voir le tableau » et « Valider ». **Pas fait : « en retard »** (les missions n'ont pas de date limite ; une phrase l'explique sur la page). À reprendre si une date limite est ajoutée aux missions (voir P1-1 du `TODO.md`).
 
-- [x] **S1.6 — Section « Équipe »** (M) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.5 = commit `d01df8d`*
+- [x] **S1.6 — Section « Équipe »** (M) — *fait le 2026-10-18, commit `45b2a2d`*
   - Employés actifs (jour / nuit), présence moyenne (heures connectées), classement des meilleurs, missions par employé et par heure, employés sans activité.
   - Un clic sur un employé ouvre sa fiche.
   - **Fait :** section « Équipe » : actifs, nombre de personnes qui ont travaillé, moyenne par personne, classement (barre, gagné, temps sur missions, missions par heure ; 8 premiers puis « Voir tout »), liste des personnes sans mission sur la période. Un clic sur un nom ouvre la fiche (CV). Écart avec le plan : « présence » = temps passé sur les missions (pas les heures de connexion, pour ne pas multiplier les appels serveur).
 
-- [x] **S1.7 — Section « Salaires »** (M) — *fait le 2026-10-18 (même commit que S1.6)*
+- [x] **S1.7 — Section « Salaires »** (M) — *fait le 2026-10-18, commit `45b2a2d`*
   - Salaires gagnés sur la période (missions validées × tarif), déjà payés, **reste à payer**, avances en cours et remboursées.
   - Réutiliser le calcul de `PayrollAdmin.tsx` (ne pas inventer un second calcul qui donnerait d'autres chiffres).
   - Réussite : le total de la page = le total de la page Paie pour la même période.
@@ -84,11 +84,13 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Données de démo déjà sur 60 jours : vérifier que les graphiques sont pleins et jolis.
   - Textes anglais dans `enDict.json`.
   - **Fait :** (1) démo étendue à **2 ans** (771 missions : dense sur les 60 derniers jours, plus légère avant) pour que les vues Mois et Année soient pleines **et comparées à la période d'avant** ; 3 missions terminées aujourd'hui (la vue Jour n'est pas vide) ; 6 avances réparties sur l'année ; durées variées (1 h à 3 h 30). Construction en 36 ms, 406 Ko. (2) Nouveau contrôle `npm run check:demo-stats` (`scripts/check-demo-stats.ts`, **35 contrôles réussis**) : barres remplies, comparaison, taux, durée, types, classement, à venir, avances ; tient compte du jour de la semaine (une semaine qui vient de commencer n'a pas 7 barres). (3) Anglais : les textes de la page étaient déjà presque tous couverts ; ajout de 20 entrées dans `enDict.json` pour les phrases mal rendues (Voir tout, Aucune donnée, Classement, Sans activité, Autre, « Les missions n'ont pas encore de date limite… », par heure / jour / mois…). (4) Téléphone : la « Durée moyenne » (ex. « 1 h 52 min ») passe en `text-base` avec retour à la ligne pour ne plus déborder d'une case de 3 colonnes. **Non testé sur un vrai téléphone** (pas de navigateur disponible) : revue du code seulement.
+  - **Complément (2026-10-19, autre chat en parallèle) :** les phrases anglaises construites par la page (périodes, « per person », « Show all »…) et les graphiques sont exclus du traducteur automatique (`data-notranslate`), qui abîmait « Mar » en « Tue » et mettait des majuscules à « missions » ; les graphiques ont leurs textes FR/EN (prop `lang`). Pas vérifié sur un vrai téléphone.
 
 - [x] **S1.9 — Contrôle de la phase 1** (S) — *fait le 2026-10-19 (même commit que S1.8)*
   - `tsc`, `build`, script de contrôle des chiffres, tout noté dans `TODO.md`.
   - **Résultat :** `tsc --noEmit` sans erreur ; `npm run build` sans erreur ; `npm run check:stats` **41/41** ; `npm run check:charts` **20/20** ; `npm run check:demo-stats` **35/35** ; démo exécutée sous Node avec le réseau bloqué : **0 appel** au serveur. **Reste à faire par BTK : ouvrir la page Statistiques sur le téléphone** (admin et démo) et dire ce qui déborde ou semble faux.
   - **La phase 1 est terminée. La phase 2 (finances) attend les 5 décisions de BTK** (prix client, encaissement, catégories de dépenses, stock, remise à zéro).
+  - **Complément (2026-10-19) :** nouveau contrôle `npm run check:page` (**18/18** : page rendue en démo, FR et EN, jour / semaine / mois / année, sans erreur ni NaN ; un opérateur ne voit rien ; 0 appel réseau) ; `npm run check:charts` passe à **22/22** (textes FR/EN, exclusion du traducteur).
 
 ---
 
