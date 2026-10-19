@@ -2,9 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
-import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, type StatsGranularity } from '../../utils/stats';
+import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
+import { StatCard } from '../../components/StatCard';
+import { formatCurrencyAr } from '../../utils/formatUtils';
 
 const GRANS: [StatsGranularity, string][] = [['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois'], ['year', 'Année']];
+const VS: Record<StatsGranularity, string> = { day: 'par rapport à hier', week: 'par rapport à la semaine dernière', month: 'par rapport au mois dernier', year: 'par rapport à l\'année dernière' };
 
 // On garde le choix quand la personne change de page puis revient (et le type de période d'une visite à l'autre)
 let savedAnchor: string | null = null;
@@ -66,10 +69,24 @@ export const StatsPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Les cartes, les graphiques et les sections arrivent aux étapes suivantes (S1.3 à S1.7) */}
-      <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-4 text-sm text-slate-300">
-        <b className="text-white">{stats.cur.done}</b> missions faites sur cette période.
-      </div>
+      {/* Chiffres du haut : chacun est comparé à la période d'avant (même nombre de jours si la période n'est pas finie) */}
+      {(() => {
+        const { cur, prev, upcoming, team, series } = stats;
+        const vs = ranges.isFuture ? undefined : VS[g];
+        const rateDelta = cur.rate !== null && prev.rate !== null ? cur.rate - prev.rate : null;
+        const money = (n: number) => formatCurrencyAr(n).replace(/\s*Ar\s*$/i, '');
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <StatCard label="Missions faites" value={String(cur.done)} variation={ranges.isFuture ? undefined : variation(cur.done, prev.done)} vsText={vs} spark={series.done} />
+            <StatCard label="Taux de validation" value={cur.rate === null ? '–' : `${cur.rate} %`} hint={cur.rejected > 0 ? (l === 'en' ? `${cur.rejected} rejected` : `${cur.rejected} refusée${cur.rejected > 1 ? 's' : ''}`) : undefined}
+              deltaText={rateDelta === null || ranges.isFuture ? undefined : `${rateDelta > 0 ? '+' : ''}${rateDelta} pts`} deltaDir={rateDelta === null ? undefined : rateDelta > 0 ? 'up' : rateDelta < 0 ? 'down' : 'flat'} vsText={vs} />
+            <StatCard label="Salaires gagnés" value={money(cur.earned)} unit="Ar" variation={ranges.isFuture ? undefined : variation(cur.earned, prev.earned)} vsText={vs} tone="neutral" spark={series.earned} />
+            <StatCard label="Avances accordées" value={money(cur.advances)} unit="Ar" variation={ranges.isFuture ? undefined : variation(cur.advances, prev.advances)} vsText={vs} tone="cost" />
+            <StatCard label="Employés actifs" value={String(team.active)} hint={l === 'en' ? `${team.day} day · ${team.night} night` : `${team.day} jour · ${team.night} nuit`} />
+            <StatCard label="À valider" value={String(upcoming.toValidate)} hint={l === 'en' ? `${upcoming.todo} to do · ${upcoming.active} in progress` : `${upcoming.todo} à faire · ${upcoming.active} en cours`} />
+          </div>
+        );
+      })()}
     </div>
   );
 };

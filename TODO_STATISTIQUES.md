@@ -59,9 +59,10 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - Réussite : aucun graphique ne casse avec 0 donnée, 1 donnée ou 365 données.
   - **Fait :** `src/components/charts/Charts.tsx` (`BarChart` avec traits de la période d'avant et valeur au toucher, `DonutChart` avec légende et « Autres » au-delà de 6 parts, `Sparkline`, `compactNumber`) ; `scripts/check-charts.tsx` (`npm run check:charts`, **20 contrôles réussis** : 0, 1, 7, 24, 31 et 365 données, NaN, anneau vide). Pas de couleur seule : chaque part a son texte et son pourcentage.
 
-- [ ] **S1.4 — Cartes de chiffres du haut** (S)
+- [x] **S1.4 — Cartes de chiffres du haut** (S) — *fait le 2026-10-18 (commit : voir le journal de `TODO.md`) ; S1.3 = commit `4b6b4dd`*
   - Missions faites, taux de validation, salaires gagnés, avances en cours, employés actifs, missions en retard.
   - Chaque carte : chiffre, petite flèche ▲▼ et « +12 % depuis la période d'avant ».
+  - **Fait :** `src/components/StatCard.tsx` + 6 cartes dans `StatsPage.tsx` : Missions faites, Taux de validation (écart en points), Salaires gagnés, Avances accordées (une hausse est en orange : c'est une charge), Employés actifs (jour / nuit), À valider (+ à faire / en cours). Mini-courbes sur Missions et Salaires. Écart avec le plan : la carte « Missions en retard » est remplacée par « À valider », car les missions n'ont pas de date limite.
 
 - [ ] **S1.5 — Section « Missions »** (M)
   - Missions faites par jour (barres), par type (anneau), refusées, durée moyenne, taux de validation.

@@ -998,5 +998,17 @@
 "Aucune donnée sur cette période": "No data for this period",
 "Touchez une barre pour voir la valeur": "Tap a bar to see its value",
 "Période d'avant": "Previous period",
-"Autres": "Others"
+"Autres": "Others",
+"Missions faites": "Missions done",
+"Taux de validation": "Approval rate",
+"Salaires gagnés": "Salaries earned",
+"Employés actifs": "Active employees",
+"par rapport à hier": "compared to yesterday",
+"par rapport à la semaine dernière": "compared to last week",
+"par rapport au mois dernier": "compared to last month",
+"par rapport à l'année dernière": "compared to last year",
+"Stable": "Stable",
+"En baisse": "Down",
+"jour": "day",
+"nuit": "night"
 }
