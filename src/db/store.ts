@@ -1,3 +1,4 @@
+import { checkDraft, type CashDraft } from '../utils/finance';
 import { buildDemoData, DEMO_ADMIN_ID } from '../demo/demoData';
 import {
   User,
@@ -460,6 +461,38 @@ class DeltaForceStore {
   // --- Fil d'actualité ---
   /** Lignes d'argent (entrées et sorties). Toujours vide pour un employé : le serveur ne lui envoie rien. */
   public getCash(): CashEntry[] { return [...this.cash]; }
+
+  // Finances (responsable seulement ; le serveur revérifie chaque ligne). Les lignes partent avec la synchro habituelle.
+  // En cas de refus, `error` est un code : 'admin' | 'kind' | 'amount' | 'date' | 'category' | 'missing'.
+  public addCash(d: CashDraft): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const now = new Date().toISOString();
+    const id = `cash-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.cash = [{ id, ...v.clean, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
+    this.notify();
+    return { success: true, id };
+  }
+
+  public updateCash(id: string, d: CashDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.cash.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    const v = checkDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    this.cash = this.cash.map(x => x.id === id ? { ...x, ...v.clean, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+
+  public deleteCash(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.cash.some(x => x.id === id)) return { success: false, error: 'missing' };
+    this.cash = this.cash.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
 
   public getNews(): NewsPost[] {
     return [...this.news];

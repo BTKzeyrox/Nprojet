@@ -100,7 +100,7 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
 - **Facturé** = missions validées × prix client.
 - **Encaissé** = paiements réellement reçus des clients (saisis par l'admin).
 - **À encaisser** = facturé − encaissé.
-- **Dépenses** = salaires + avances + achats + frais.
+- **Dépenses** = salaires + achats + frais (les avances sont des salaires versés d'avance : comprises dans les salaires, non ajoutées ; voir S2.5).
 - **Bénéfice net** = encaissé − dépenses. **Marge** = bénéfice ÷ encaissé.
 
 - [x] **S2.1 — Prix client** (M) — *sans nouvelle table* — **fait le 2026-10-19** (non testé à l'écran, voir note ci-dessous)
@@ -133,12 +133,16 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
   - **Pas encore fait : l'essai réel avec un compte employé** (le réseau de Claude n'atteint pas Supabase). À faire par BTK quand l'écran Finances existera (S2.5) : se connecter en employé et vérifier qu'aucun chiffre d'argent n'apparaît.
 
 
-- [ ] **S2.5 — Écran « Finances »** (L)
+- [x] **S2.5 — Écran « Finances »** (L) — *fait le 2026-10-19 (commit « stats S2.5 »), non testé à l'écran*
   - Onglet dans la page Statistiques (ou page à part).
   - Boutons « + Paiement reçu d'un client » et « + Dépense » : montant, date, catégorie, note, client.
   - Liste filtrable (période, catégorie, entrée/sortie), modifier et supprimer avec confirmation.
   - Salaires payés et avances apparaissent **automatiquement** comme dépenses (calculés, jamais saisis deux fois).
 
+  - **Fait :** onglet **Finances** dans la page Statistiques (deux onglets : Statistiques / Finances ; la période du haut sert aux deux). `src/views/admin/FinanceTab.tsx` (nouveau) : 4 cartes (argent reçu, dépenses, salaires calculés, solde), boutons « Paiement reçu » et « Dépense » (fenêtre : montant, date, catégorie, client pour un paiement, note), liste filtrable (Tout / Entrées / Sorties + catégorie, 20 lignes puis « Voir tout »), modifier, supprimer avec confirmation sur la ligne. Règles dans `src/utils/finance.ts` (mêmes règles que `cleanCash` du serveur) ; `db.addCash`, `db.updateCash`, `db.deleteCash` dans `store.ts` (admin seulement ; les lignes partent avec la synchro habituelle et le serveur les revérifie). Catégories de départ : entrées « Paiement client », « Autre entrée » ; sorties « Achats », « Loyer », « Internet », « Matériel », « Transport », « Autres » ; on peut en écrire une autre (elle est ensuite proposée). FR et EN.
+  - **Choix à valider par BTK (écart avec le « Principe » ci-dessus) :** la ligne « Salaires » est **calculée** (missions validées de la période, comme la carte « Salaires gagnés ») et **non modifiable**. Les **avances ne sont pas ajoutées** aux dépenses : ce sont des salaires versés d'avance, les ajouter les compterait deux fois. Elles sont seulement rappelées sous les cartes (« Avances versées : … déjà comprises dans les salaires »). Si BTK préfère « salaires payés (fiches de paie) + avances », il faut lire les fiches de paie du mois (appel serveur) : plus lourd, à décider.
+  - **Contrôles :** `npm run check:finance` (**27/27** : montants, dates, catégories, filtres, totaux, solde ; le serveur accepte exactement ce que le site prépare) ; `npm run check:finance-page` (**28/28** : démo admin, ajout / modification / suppression, rendu FR et EN, opérateur refusé, 0 appel réseau) ; `check:cash` 28/28, `check:stats` 41/41, `check:page` 18/18, `check:charts` 22/22, `check:demo-stats`, `check:client-price` 29/29, `tsc` et `build` sans erreur.
+  - **Pas vérifié :** le rendu sur un vrai téléphone (fenêtre d'ajout, clavier, mode clair), l'envoi réel au serveur et l'essai avec un compte employé (S2.4). La démo n'a pas encore de lignes d'argent inventées : c'est S2.7.
 - [ ] **S2.6 — Chiffres et graphiques financiers** (L)
   - Cartes : argent entré, sorti, **bénéfice net**, **marge %**, **à encaisser**, trésorerie (argent disponible).
   - Graphiques : entrées vs sorties par jour/semaine/mois ; bénéfice cumulé ; dépenses par catégorie (anneau) ; facturé vs encaissé.

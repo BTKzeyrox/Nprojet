@@ -4,6 +4,7 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
 import { StatCard } from '../../components/StatCard';
+import { FinanceTab } from './FinanceTab';
 import { BarChart, DonutChart, compactNumber } from '../../components/charts/Charts';
 import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
@@ -19,6 +20,7 @@ type PayState = { state: 'idle' | 'loading' | 'ready' | 'na'; slips?: Slip[]; st
 
 // On garde le choix quand la personne change de page puis revient (et le type de période d'une visite à l'autre)
 let savedAnchor: string | null = null;
+let savedTab: 'stats' | 'finance' = 'stats';
 const loadGran = (): StatsGranularity => {
   try { const g = localStorage.getItem('stats_gran'); if (g === 'day' || g === 'week' || g === 'month' || g === 'year') return g; } catch { /* stockage refusé */ }
   return 'month';
@@ -47,6 +49,8 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
   const [g, setG] = useState<StatsGranularity>(loadGran);
   const [anchor, setAnchor] = useState<string>(() => savedAnchor || today);
   useEffect(() => { savedAnchor = anchor; }, [anchor]);
+  const [tab, setTabState] = useState<'stats' | 'finance'>(savedTab);
+  const setTab = (next: 'stats' | 'finance') => { savedTab = next; setTabState(next); };
   const pickGran = (next: StatsGranularity) => { setG(next); try { localStorage.setItem('stats_gran', next); } catch { /* stockage refusé */ } };
 
   const ranges = comparableRanges(g, anchor, today);
@@ -108,6 +112,19 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         </button>
       </div>
 
+      {/* Deux onglets : les chiffres de l'activité, et l'argent (paiements reçus, dépenses) */}
+      <div className="grid grid-cols-2 gap-1.5" role="tablist" aria-label={l === 'en' ? 'Section' : 'Rubrique'} {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
+        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances']] as ['stats' | 'finance', string][]).map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`min-h-[44px] rounded-lg text-sm font-semibold border transition-colors ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'finance' ? (
+        <FinanceTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} salariesAr={ranges.isFuture ? 0 : stats.cur.earned} advancesAr={ranges.isFuture ? 0 : stats.cur.advances} />
+      ) : (<>
       {/* Chiffres du haut : chacun est comparé à la période d'avant (même nombre de jours si la période n'est pas finie) */}
       {(() => {
         const { cur, prev, upcoming, team, series } = stats;
@@ -236,6 +253,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
           </Section>
         );
       })()}
+      </>)}
     </div>
   );
 };
