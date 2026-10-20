@@ -75,7 +75,7 @@ export function releaseOrphanBodyLock(): void {
   }
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') { // (les scripts de contrôle simulent un « window » sans cette fonction)
   // L'écran change de taille (tablette tournée…) : on refait le blocage dans le bon mode, ou on le retire s'il est orphelin
   window.addEventListener('resize', () => {
     if (activeLocksCount === 0) { releaseOrphanBodyLock(); return; }

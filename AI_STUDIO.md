@@ -67,6 +67,8 @@ Chaque table `df_*` contient : `id` (texte), `data` (JSON), `updated_at`.
 - `src/components/` : `PostsGrid20` (tableau Kanban des missions), `MissionGuide` (guides), `ChatView` (messagerie), `ScoreInput` (champs de score `20.467M`), `Sidebar`, `Navbar`, fenêtres (photos, profil, détails du jour)
 - `src/utils/i18n.ts`, `enTranslate.ts`, `enDict.json` : français et anglais (tout nouveau texte visible doit avoir sa version anglaise)
 
+- **Défilement de la page (ne pas casser).** `useLockBodyScroll` fige la page derrière une fenêtre (position fixe sur téléphone seulement ; sur ordinateur et tablette il ne touche à rien). `scrollRescue.ts` (installé dans `main.tsx`) est un filet de sécurité : si un geste de l'utilisateur (molette, pavé tactile, clavier, doigt) ne fait pas bouger une page qui pouvait défiler, il la fait défiler lui-même ; il ne fait rien sous une fenêtre, sur un élément fixe, dans une liste qui défile seule, dans un champ de saisie. Un blocage de défilement chez BTK n'a jamais été reproduit hors de chez lui : `?diag=1` dans l'adresse affiche un panneau de diagnostic (dont « secours du défilement : intervenu N fois »). Essais navigateur : `scripts/browser/*.py` (Playwright, à lancer à la main).
+
 ## 7. INTERDIT
 - Ne remets **pas** Firebase, Express, `server.ts`, Drizzle, Cloud SQL ni un dossier `api/`.
 - N'ajoute **aucune** variable d'environnement : Vercel n'en a pas besoin.

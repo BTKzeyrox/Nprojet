@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getLockInfo } from '../utils/useLockBodyScroll';
+import { getRescueInfo } from '../utils/scrollRescue';
 
 // Panneau de diagnostic du défilement : affiché seulement avec ?diag=1 dans l'adresse.
 // Il ne lit que l'état de la page (tailles, styles, éléments au centre de l'écran) : aucune donnée de l'entreprise.
@@ -42,6 +43,8 @@ export const DiagPanel: React.FC = () => {
       lines.push(`body style="${body.getAttribute('style') || ''}" overflow=${cs(body).overflowX}/${cs(body).overflowY} position=${cs(body).position} hauteur=${cs(body).height}`);
       const lk = getLockInfo();
       lines.push(`verrou compteur=${lk.count} mode=${lk.mode}`);
+      const rs = getRescueInfo();
+      lines.push(`secours du défilement : intervenu ${rs.count} fois${rs.last ? ' (dernier : ' + rs.last + ')' : ''} — 0 = le défilement normal marche`);
       const pts: Array<[string, number, number]> = [['centre', innerWidth / 2, innerHeight / 2], ['droite', innerWidth - 40, innerHeight / 2], ['bas', innerWidth / 2, innerHeight - 30]];
       for (const [label, x, y] of pts) {
         const els = document.elementsFromPoint(x, y).slice(0, 7);
