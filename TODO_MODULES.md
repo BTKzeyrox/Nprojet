@@ -269,6 +269,37 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ---
 
+## MODULE 9 — Détection automatique (retards, absences, actions suspectes) — taille M
+
+**Demande de BTK (2026-10-20) :** que le site détecte tout seul un employé en retard ou absent, ou une action suspecte, sans que l'admin analyse à la main.
+
+**Ce qui existe déjà :** le calendrier calcule « en retard » et « absent » par jour (il faut ouvrir la page) ; un journal de sécurité (`df_security_logs`, « Petit Malin ») garde certaines violations ; les alertes automatiques (S4.2) couvrent l'argent et le stock, **pas les salariés**.
+
+**Approche : des règles claires, pas une « IA » opaque.** Chaque alerte dit **pourquoi** (« 3 retards en 7 jours »). Zéro coût, zéro appel externe, calcul dans le navigateur de l'admin, même cache que `alertsDb.ts`. Une vraie IA (modèle de langage) n'est pas nécessaire ici et ne se justifie pas.
+
+**Alertes salariés (règles réglables dans la page Conditions) :**
+- Absent aujourd'hui (jour travaillé, aucune mission, pas de congé validé) ; absent 2 jours de suite.
+- En retard 3 fois sur 7 jours.
+- Mission « en cours » depuis plus de X heures sans preuve de fin.
+- Taux de refus élevé (ex. plus de 30 % sur 10 missions).
+
+**Actions suspectes (règles) :**
+- Connexions échouées répétées sur un compte ; connexion à une heure inhabituelle.
+- Mission validée en un temps impossible (trop court) ; mêmes preuves envoyées deux fois (même empreinte de fichier).
+- Salarié qui tente d'écrire un champ interdit (déjà bloqué par le serveur : on le **note** dans le journal).
+- Gros changement de tarif, de prix client ou d'avance ; suppression en masse.
+- Un salarié très au-dessus de l'équipe sur le volume (contrôle de plausibilité, **pas une accusation**).
+
+**Règles d'équité :** une alerte est un **signal à vérifier**, jamais une sanction automatique ; l'admin peut « Ignorer » ou « Marquer vérifié » (la raison est gardée) ; seuil minimum de données avant d'alerter ; le salarié ne voit pas ces alertes, sauf un message neutre si l'admin l'envoie.
+
+- [ ] **M9.1 — Règles pures** (M) : `src/utils/watch.ts` + `check:watch` (jour férié, congé, mission de nuit, 0 mission, équipe de 1, dates fausses).
+- [ ] **M9.2 — Journal serveur** (M) — **accord + sauvegarde avant** : le serveur note connexions échouées, écritures refusées, changements de tarif (table `df_audit` ou extension de `df_security_logs`).
+- [ ] **M9.3 — Écran « À surveiller »** (M) : liste triée par gravité, boutons Ignorer / Vérifié, lien vers la fiche salarié ; pastille dans le menu comme pour Statistiques.
+- [ ] **M9.4 — Notifications** (S) : alerte envoyée à l'admin (cloche de l'appli ; e-mail facultatif).
+- [ ] **M9.5 — Réglages, démo, anglais, contrôle** (S).
+
+---
+
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
@@ -278,7 +309,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 5. **Module 2** (Facturation et reçus).
 6. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
 7. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
-8. **Module 8** (direction et contrôle final).
+8. **Module 9** (détection automatique) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
+9. **Module 8** (direction et contrôle final).
 
 ## Risques à surveiller
 
