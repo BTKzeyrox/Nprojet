@@ -158,6 +158,7 @@ export interface PostSession {
   rejection_reason?: string;
   calculated_ar?: number; // 1M score = 1,000 Ar
   client_price_ar?: number; // prix client figé à la validation (les anciennes missions : calculé au besoin)
+  client_id?: string; // fiche client (module 1) : jamais envoyé à un opérateur ; copié depuis la mission
   notes?: string;
   start_notes?: string; // description facultative du booster au début de session
   admin_notes?: string; // description facultative de l'admin à la validation
@@ -262,6 +263,7 @@ export interface ClientContract {
   recommended_shift: ShiftType | 'any';
   estimated_reward_ar: number;
   client_price_ar?: number; // prix client propre à cette mission (sinon : prix du type, sinon prix par défaut)
+  client_id?: string; // fiche client (module 1) ; les anciennes missions gardent leur texte libre `client_name` ; jamais envoyé à un opérateur
   priority: 'Haute' | 'Normale' | 'Urgente';
   region_server: string;
 }
@@ -359,6 +361,24 @@ export interface NewsPost {
   reject_reason?: string;
   submitted_at?: string;
   files_removed?: number; // fichiers supprimés au refus
+}
+
+/** Fiche client (module 1) : visible par l'admin seulement. Le statut n'est jamais stocké : il se calcule (src/utils/clients.ts). */
+export interface Client {
+  id: string;
+  name: string; // raison sociale
+  contact_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  note?: string;
+  payment_terms_days?: number; // échéance de ce client (sinon celle de la page Conditions)
+  price_default_ar?: number; // tarif propre à ce client
+  price_by_type?: Record<string, number>; // exceptions par type de mission
+  active?: boolean; // false = archivé (un client qui a des missions n'est jamais supprimé)
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /** Une ligne d'argent (finances) : entrée (paiement d'un client…) ou sortie (dépense). Visible par l'admin seulement. */

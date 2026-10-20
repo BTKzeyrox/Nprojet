@@ -23,6 +23,7 @@ import {
   CashEntry,
   Product,
   StockMove,
+  Client,
   NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
@@ -33,7 +34,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -91,6 +92,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   cash: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   products: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   stock: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
+  clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -109,6 +111,7 @@ class DeltaForceStore {
   private cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
   private products: Product[] = []; // stock (admin seulement, comme les finances)
   private stockMoves: StockMove[] = [];
+  private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
@@ -150,7 +153,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(),
     };
   }
 
@@ -168,6 +171,7 @@ class DeltaForceStore {
       case 'cash': return this.cash;
       case 'products': return this.products;
       case 'stock': return this.stockMoves;
+      case 'clients': return this.clients;
     }
   }
 
@@ -185,6 +189,7 @@ class DeltaForceStore {
       case 'cash': this.cash = value; break;
       case 'products': this.products = value; break;
       case 'stock': this.stockMoves = value; break;
+      case 'clients': this.clients = value; break;
     }
   }
 
@@ -507,6 +512,7 @@ class DeltaForceStore {
   }
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
+  public getClients(): Client[] { return [...this.clients]; } // admin seulement (l'opérateur n'en reçoit jamais)
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
 
@@ -849,13 +855,13 @@ class DeltaForceStore {
       case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
       case 'backup-now': {
         const id = Math.max(0, ...this.demoBackups.map(b => b.id)) + 1;
-        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 19, bytes: 204800 + id * 512 }];
+        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 20, bytes: 204800 + id * 512 }];
         return ok({ ok: true, id });
       }
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -926,7 +932,7 @@ class DeltaForceStore {
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
-    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 19, bytes: 204800 }];
+    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
     return this.currentUser;

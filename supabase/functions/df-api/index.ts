@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer";
 
 const T = {
   users: "df_users",
+  clients: "df_clients", // avant les missions et les sessions : une fiche créée dans le même envoi existe déjà quand on vérifie le lien
   posts: "df_posts",
   contracts: "df_contracts",
   securityLogs: "df_security_logs",
@@ -21,9 +22,9 @@ const COLS = Object.keys(T) as Col[];
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -106,6 +107,67 @@ function cleanStockMove(rec: any, existing: any, meId: string, now: string): { o
 }
 // ===== END STOCK =====
 
+// ===== BEGIN CLIENTS (fiches clients : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-clients-server.ts) =====
+const CLIENT_MAX_MONEY = 1_000_000_000_000;
+const CLIENT_MAX_TERMS = 365;
+const CLIENT_MAX_TYPES = 20;
+const CLIENT_BAD_KEYS = ["__proto__", "constructor", "prototype"];
+/** Vérifie et nettoie une fiche client envoyée par l'admin. Le statut n'est jamais stocké : il se calcule sur le site. */
+function cleanClient(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object" || typeof rec.id !== "string" || !rec.id || rec.id.length > 80) return { ok: false, reason: "id" };
+  const name = String(rec.name ?? "").trim().slice(0, 80);
+  if (!name) return { ok: false, reason: "name" };
+  const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+  const email = text(rec.email, 120);
+  if (email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return { ok: false, reason: "email" };
+  const none = (v: unknown) => v === undefined || v === null || v === "";
+  let terms: number | undefined;
+  if (!none(rec.payment_terms_days)) {
+    const t = Number(rec.payment_terms_days);
+    if (!Number.isFinite(t) || t < 0 || t > CLIENT_MAX_TERMS) return { ok: false, reason: "terms" };
+    terms = Math.round(t);
+  }
+  let price: number | undefined;
+  if (!none(rec.price_default_ar)) {
+    const p = Number(rec.price_default_ar);
+    if (!Number.isFinite(p) || p < 0 || p > CLIENT_MAX_MONEY) return { ok: false, reason: "price" };
+    price = Math.round(p);
+  }
+  let byType: Record<string, number> | undefined;
+  if (!none(rec.price_by_type)) {
+    const src = rec.price_by_type;
+    if (typeof src !== "object" || Array.isArray(src)) return { ok: false, reason: "price_by_type" };
+    const entries = Object.entries(src);
+    if (entries.length > CLIENT_MAX_TYPES) return { ok: false, reason: "price_by_type" };
+    byType = {};
+    for (const [k, v] of entries) {
+      const key = String(k).trim().slice(0, 40);
+      const p = Number(v);
+      if (!key || CLIENT_BAD_KEYS.includes(key) || !Number.isFinite(p) || p < 0 || p > CLIENT_MAX_MONEY) return { ok: false, reason: "price_by_type" };
+      byType[key] = Math.round(p);
+    }
+  }
+  return {
+    ok: true,
+    save: {
+      id: rec.id, name,
+      contact_name: text(rec.contact_name, 80), phone: text(rec.phone, 40), email, address: text(rec.address, 200), note: text(rec.note, 500),
+      ...(terms !== undefined ? { payment_terms_days: terms } : {}),
+      ...(price !== undefined ? { price_default_ar: price } : {}),
+      ...(byType !== undefined && Object.keys(byType).length ? { price_by_type: byType } : {}),
+      active: rec.active === false ? false : true,
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+/** Lien mission ou session → client : vide, ou un texte court. L'existence de la fiche est contrôlée dans sync. */
+function cleanClientRef(v: unknown): { ok: true; id: string | null } | { ok: false } {
+  if (v === undefined || v === null || v === "") return { ok: true, id: null };
+  if (typeof v !== "string" || v.length > 80) return { ok: false };
+  return { ok: true, id: v };
+}
+// ===== END CLIENTS =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar"];
@@ -116,11 +178,12 @@ const stripSettings = (rec: any, me: any) => {
   for (const k of SETTINGS_ADMIN_KEYS) delete out[k];
   return out;
 };
-/** Mission ou session envoyée à un employé : sans le prix client (même pour ses propres sessions). */
+/** Mission ou session envoyée à un employé : sans le prix client ni le lien vers la fiche client (même pour ses propres sessions). */
 const withoutClientPrice = (rec: any, me: any) => {
-  if (!rec || me.role === "admin" || !("client_price_ar" in rec)) return rec;
+  if (!rec || me.role === "admin" || !("client_price_ar" in rec || "client_id" in rec)) return rec;
   const out = { ...rec };
   delete out.client_price_ar;
+  delete out.client_id;
   return out;
 };
 // ===== END PRIVACY =====
@@ -779,7 +842,7 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'posts') {
           ok = rec.employee_id === me.id && EMP_POST_TARGET.includes(rec.status) &&
             (!existing || (existing.employee_id === me.id && OPEN_STATUS.includes(existing.status)));
-          if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes, client_price_ar: existing?.client_price_ar }; // le prix client ne vient jamais d'un employé
+          if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes, client_price_ar: existing?.client_price_ar, client_id: existing?.client_id }; // le prix client et le lien client ne viennent jamais d'un employé
         } else if (col === 'advances') {
           ok = !existing && rec.employee_id === me.id && rec.status === 'pending' &&
             Number.isFinite(rec.amount_ar) && rec.amount_ar > 0 && rec.amount_ar <= 100_000_000;
@@ -796,6 +859,23 @@ async function sync(req: any, res: any, me: any) {
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
       if (col === 'settings') toSave = cleanSettingsRecord(rec, existing, me, now); // seul l'admin arrive ici ; `company` est revérifié
+      if (col === 'clients') {
+        const v = cleanClient(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        toSave = v.save;
+      }
+      if (admin && (col === 'contracts' || col === 'posts')) {
+        // Lien mission ou session → fiche client : texte court, et la fiche doit exister ; sans lien, on n'écrit pas le champ.
+        const ref = cleanClientRef((toSave as any)?.client_id);
+        if (!ref.ok) { rejected.push({ col, id: rec.id, reason: 'client' }); continue; }
+        if (ref.id) {
+          const { data: crow } = await sb.from(T.clients).select('id').eq('id', ref.id).maybeSingle();
+          if (!crow) { rejected.push({ col, id: rec.id, reason: 'client' }); continue; }
+          toSave = { ...toSave, client_id: ref.id };
+        } else if (toSave && typeof toSave === 'object' && 'client_id' in toSave) {
+          toSave = { ...toSave }; delete (toSave as any).client_id;
+        }
+      }
       if (col === 'cash') {
         const v = cleanCash(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
@@ -849,6 +929,12 @@ async function sync(req: any, res: any, me: any) {
           ok = !!g && g.owner_id === me.id;
         }
         if (!ok) { rejected.push({ col, id, reason: 'forbidden' }); continue; }
+      }
+      if (col === 'clients') {
+        // Un client qui a des missions ou des sessions ne se supprime jamais : on le désactive (active = false).
+        const { data: usedC } = await sb.from(T.contracts).select('id').eq('data->>client_id', id).limit(1);
+        const { data: usedP } = await sb.from(T.posts).select('id').eq('data->>client_id', id).limit(1);
+        if ((usedC && usedC.length) || (usedP && usedP.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
       }
       if (col === 'users') {
         const u = await getUserRow(id);

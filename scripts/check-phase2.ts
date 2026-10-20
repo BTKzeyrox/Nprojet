@@ -72,7 +72,7 @@ ok(db.deleteCash(a.id as string).success && db.getCash().length === before, 'dé
 
 // ---------- Sauvegardes de démo (S2.8) ----------
 const backups = await db.listBackups();
-ok(backups.ok && backups.rows.length > 0 && backups.rows.every(b => b.tables === 19), 'démo : la page Sauvegardes annonce 19 tables (df_cash, df_products et df_stock_moves comprises)');
+ok(backups.ok && backups.rows.length > 0 && backups.rows.every(b => b.tables === 20), 'démo : la page Sauvegardes annonce 20 tables (df_cash, df_products, df_stock_moves et df_clients comprises)');
 
 // ---------- Opérateur : rien ----------
 db.enterDemo('employee');
