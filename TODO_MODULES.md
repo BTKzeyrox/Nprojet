@@ -320,6 +320,16 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 - L'IA **ne peut rien modifier** : elle lit et explique. Toute action (valider, payer, supprimer) reste un bouton que l'admin confirme lui-même.
 - **Honnêteté :** une IA peut se tromper ; chaque réponse montre ses sources (« d'après 42 missions du 01/09 au 20/10 ») et un lien vers l'écran d'origine.
 
+**Niveau A+ — Aide à la rédaction (demande de BTK, 2026-10-20).** Le niveau A ne sait pas écrire une phrase adaptée (exemple : s'excuser auprès d'un client pour un retard). On ajoute donc deux étapes, dans cet ordre.
+- **A+1 — Modèles de messages (gratuit, sans clé, sans service externe).** Une bibliothèque de messages professionnels : excuse pour retard, relance de facture, confirmation de mission, refus poli, remerciement. L'admin choisit le cas ; l'assistant remplit le nom du client, la date et le motif ; l'admin modifie si besoin avant d'envoyer. Textes FR et EN, ton toujours poli. Couvre la plupart des besoins.
+- **A+2 — Rédaction libre par IA (clé gratuite, facultatif, désactivé par défaut).** Pour les cas hors modèles. Services à palier gratuit possibles (exemples : Google Gemini, Groq) ; **les limites et conditions du palier gratuit changent souvent : les vérifier le jour du codage**, ne pas se fier à ce plan.
+- **Règles de confidentialité de A+2 :**
+  - l'IA reçoit **seulement** le motif, le ton demandé et, au besoin, le prénom du destinataire ; **jamais** salaires, finances, données d'employés, mots de passe, jetons ;
+  - les rappels et les récaps d'employés restent calculés par les règles du niveau A : rien de sensible ne sort ;
+  - **rien ne part automatiquement** : l'admin relit et envoie lui-même ;
+  - certains paliers gratuits peuvent utiliser les textes pour entraîner le modèle : raison de plus de n'y mettre aucune donnée sensible ;
+  - la clé est un secret côté Supabase, jamais dans le dépôt ; case « Activer la rédaction par IA » désactivée par défaut dans la page Conditions, avec avertissement ; limite de demandes par jour.
+
 **Sécurité transversale :** conversation créée côté admin seulement ; un opérateur ne la reçoit jamais (même filtre que les routes admin) ; aucun chiffre d'argent n'est écrit dans une conversation visible d'un opérateur.
 
 - [ ] **M10.1 — Règles pures des rappels** (M) : `src/utils/assistantReminders.ts` + `check:assistant` (rien à signaler = aucun message ; pas de doublon ; priorité ; textes FR/EN).
@@ -327,6 +337,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 - [ ] **M10.3 — Conversation « Assistant »** (L) : fil épinglé dans la messagerie admin, messages générés **dans le navigateur de l'admin** (pas de nouvelle table pour le niveau A), boutons de réponses rapides, résumé du matin réglable (heure, on/off) dans la page Conditions.
 - [ ] **M10.4 — Récap imprimable** (S) : page claire isolée comme le rapport mensuel.
 - [ ] **M10.5 — Essai de BTK** : admin (voit l'assistant), opérateur (ne voit rien), téléphone, clair et sombre, FR et EN.
+- [ ] **M10.5b — Modèles de messages (A+1)** (M) : `src/utils/messageTemplates.ts` (modèles FR/EN avec champs : client, date, motif) + test (champ manquant = message refusé, jamais de « undefined » dans le texte) + écran « Rédiger un message » dans l'assistant, modification libre avant envoi.
+- [ ] **M10.5c — Rédaction par IA (A+2)** (L) : **accord + clé + limites du palier gratuit vérifiées avant** ; route serveur dédiée, case d'activation désactivée par défaut, filtre qui n'envoie que motif et ton, test d'injection, limite par jour, aperçu obligatoire avant envoi.
 - [ ] **M10.6 — (facultatif, niveau B)** (L) — **accord + clé + coût expliqués avant** : route `assistant` dans `df-api`, bouton d'activation, avertissement de confidentialité, test d'injection (un texte malveillant dans un nom de mission ne doit rien déclencher), limite de questions par jour.
 
 ---
@@ -341,7 +353,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 6. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
 7. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
 8. **Module 9** (détection automatique) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
-9. **Module 10, niveau A** (assistant à règles dans la messagerie) — après les modules 3 et 9, car il s'appuie sur leurs calculs ; le niveau B (IA externe) seulement si BTK le veut.
+9. **Module 10, niveau A** (assistant à règles dans la messagerie) — après les modules 3 et 9, car il s'appuie sur leurs calculs ; puis A+1 (modèles de messages), puis A+2 (rédaction par IA, clé gratuite) et le niveau B (IA externe) seulement si BTK le veut.
 10. **Module 8** (direction et contrôle final).
 
 ## Risques à surveiller
@@ -361,3 +373,4 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## Journal de ce plan
 - 2026-10-20 : plan créé à la demande de BTK (clients, facturation et reçus, salariés, argent, stock, suivi de performance avec badges pour salariés et clients). **Rien n'est codé.** En attente : réponses aux décisions D1 à D11 et « GO » pour le module 1.
+- 2026-10-20 : Module 10 complété avec le niveau A+ (modèles de messages gratuits, puis rédaction par IA à clé gratuite, désactivée par défaut, sans données sensibles). **Rien n'est codé.**
