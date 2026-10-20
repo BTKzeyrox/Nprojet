@@ -127,6 +127,15 @@ for (const lang of ['fr', 'en'] as const) {
   ok(b.includes(lang === 'en' ? 'Monthly goals' : 'Objectifs du mois') && d.includes('<iframe') && d.includes('sandbox="allow-same-origin allow-modals"'), `${lang} : objectifs et rapport (page isolée dans un cadre sans script)`);
 }
 ok(html(<ReportTab anchor={today2} lang="fr" />).includes('Excel') && html(<ReportTab anchor={today2} lang="fr" />).includes('Imprimer'), 'rapport : boutons Excel et Imprimer / PDF');
+// Cache des alertes du menu : même liste tant que rien ne change, nouvelle liste dès qu'une donnée change
+db.enterDemo('admin');
+const l1 = getAdminAlerts(), l2 = getAdminAlerts();
+ok(l1 === l2, 'alertes du menu : le résultat est gardé tant que rien ne change');
+const before = db.getCash().length;
+db.addCash({ kind: 'out', category: 'Achats', amount: 99999999999, date: todayMada() });
+const l3 = getAdminAlerts();
+ok(db.getCash().length === before + 1 && l3 !== l1 && l3.some(a => a.id === 'budget' || a.id === 'cash-low'), 'alertes du menu : une dépense énorme ajoutée change la liste tout de suite');
+const t0 = performance.now(); for (let k = 0; k < 50; k++) getAdminAlerts(); ok((performance.now() - t0) / 50 < 3, 'alertes du menu : appel répété en moins de 3 ms (cache)');
 db.enterDemo('employee');
 ok(getAdminAlerts().length === 0, 'opérateur : aucune alerte calculée');
 ok(['AlertsList', 'GoalsBars', 'ForecastCard', 'ReportTab'].every((k, i) => html([<AlertsList lang="fr" />, <GoalsBars lang="fr" />, <ForecastCard lang="fr" />, <ReportTab anchor={today2} lang="fr" />][i]) === ''), 'opérateur : alertes, objectifs, prévision et rapport ne montrent rien');

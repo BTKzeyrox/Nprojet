@@ -123,3 +123,12 @@ Pour la mise en ligne du serveur : pousser sur `main`, relever le commit, redép
 - Changer le mot de passe `admin123` après la première connexion.
 - Régénérer les clés Cloudinary et Resend.
 - Supprimer le token GitHub : https://github.com/settings/tokens
+
+## 10. Statistiques, finances et stock (état au 2026-10-20)
+Détail et décisions : `TODO_STATISTIQUES.md` (phases 1 à 5, graphiques C1 à C4). État réel : `AI_STUDIO.md` §§ 5 et 9.
+- **Fait et en ligne** : statistiques, finances (`df_cash`), stock (`df_products`, `df_stock_moves`), objectifs, alertes, prévision, rapport (Excel + impression), graphiques interactifs. `df-api` **v10 = 9a88594** (retour en arrière : 6c1fe78 = v9).
+- **Règle d'argent** : tout ce qui touche à l'argent de l'entreprise est calculé dans le navigateur de l'admin et n'est jamais envoyé à un opérateur (filtre côté serveur, bloc `PRIVACY`).
+- **Contrôles** : `npm run check:<nom>` (liste dans `package.json` ; tous doivent réussir avant un push). `check:demo-stats` peut échouer entre 00 h et 03 h à Madagascar si la machine est en UTC (problème de fuseau déjà présent).
+- **Vérifié le 2026-10-20 (lecture seule sur `nprojet`)** : aucune ligne de démo dans la vraie base ; aucun prix client ni objectif réglé ; `df_posts` vide ; `df_cash` contient **4 lignes d'essai de BTK** (créées le 2026-10-20 à 00 h 23 heure de Madagascar : 150 000 Ar de « Iol », 20 000 Ar, deux « Achats » de 2 822 828 et 20 000 Ar) ; `df_contracts` contient 10 missions d'exemple (`contract-1` à `contract-10`, clients fictifs « Société Aina »…, sans prix). **Rien n'a été supprimé** : à supprimer seulement sur demande précise de BTK (règle n° 6, § 0).
+- **Reste** : essai à l'écran par BTK (S5.1 et C4), décision sur les 4 lignes d'essai et les 10 missions d'exemple, révoquer le token GitHub (https://github.com/settings/tokens), changer `admin123`.
+

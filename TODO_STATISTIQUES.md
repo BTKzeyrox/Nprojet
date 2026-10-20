@@ -225,9 +225,16 @@ Choix de BTK (2026-10-20) : objectifs de **missions, bénéfice et dépenses max
 ## PHASE 5 — Contrôle final et documents — taille S
 
 - [ ] **S5.1 — Essai complet par BTK** (téléphone, mode clair et sombre, FR et EN, démo admin) ; liste des petits défauts.
-- [ ] **S5.2 — Vitesse** : la page Statistiques s'ouvre vite avec 60 jours de données ; ne pas lancer de nouveaux appels serveur en boucle (économie de quota, voir P1-2).
-- [ ] **S5.3 — Documents** : mettre à jour `PROJET.md` (menu admin), `HANDOVER.md`, `AI_STUDIO.md` (nouvelles tables, routes, procédure de retour), `TODO.md` (journal).
-- [ ] **S5.4 — Nettoyage** : aucun chiffre inventé ne doit apparaître dans la vraie base ; la démo reste 100 % locale.
+- [x] **S5.2 — Vitesse** — *fait le 2026-10-20, mesuré hors navigateur (pas sur un vrai téléphone)*
+  - **Mesures** (démo : 771 missions, 145 lignes d'argent, Node) : `computeStats` mois 5 ms, année 6 ms ; `computeFinance` année 2 ms ; `buildReport` 19 ms ; **alertes du menu 13 ms par affichage** (le menu les recalculait à chaque affichage).
+  - **Corrigé :** `getAdminAlerts` garde son résultat jusqu'à la prochaine modification des données (abonnement au store + signature bon marché des chiffres, du jour et de la personne) ; un appel répété coûte moins de 3 ms (contrôle `check:phase4` : le résultat change tout de suite quand une dépense est ajoutée).
+  - **Appels serveur :** les écrans Statistiques, Finances, Stock, Rapport, objectifs et alertes ne lancent **aucun** appel (0 appel dans tous les contrôles) ; seul `payroll-period` est appelé, **une fois par mois affiché** et gardé 2 minutes (S1.7). Aucun `setInterval` ni `setTimeout` dans ces écrans. Le serveur n'est pas plus sollicité qu'avant (même synchro toutes les 5 s).
+  - **Pas vérifié :** la fluidité sur un téléphone d'entrée de gamme (animations des graphiques, 4 onglets), le temps d'ouverture réel avec beaucoup de données.
+- [x] **S5.3 — Documents** — *fait le 2026-10-20* : `PROJET.md` (menu admin avec Performance, Statistiques et Paie ; sécurité de l'argent ; sauvegardes ; liste « non testé »), `HANDOVER.md` (nouvelle section 10 : état, règle d'argent, contrôles, vérification de la base), `AI_STUDIO.md` (tables `df_groups`, `df_news`, `df_cash`, `df_products`, `df_stock_moves`, `df_backups` ; historique des versions de `df-api` v6 à v10 et retour en arrière ; fichiers de la phase 4), `TODO.md` (journal).
+- [x] **S5.4 — Nettoyage** (vérification en lecture seule, rien supprimé) — *fait le 2026-10-20*
+  - **Vraie base `nprojet` :** aucun identifiant de démo (`demo…`) dans `df_cash`, `df_products`, `df_stock_moves`, `df_contracts`, `df_posts`, `df_advances`, `df_users`, `df_messages`, `df_news` ; aucun prix client ni objectif dans les réglages ; `df_products` et `df_stock_moves` vides ; `df_posts` vide.
+  - **À décider par BTK (je n'ai rien supprimé) :** (1) `df_cash` contient **4 lignes d'essai** de BTK (2026-10-20, 00 h 23 : 150 000 Ar « Iol », 20 000 Ar, achats de 2 822 828 et 20 000 Ar) : elles faussent la trésorerie et le bénéfice réels ; (2) `df_contracts` contient **10 missions d'exemple** (`contract-1` à `contract-10`, « Société Aina », « Cabinet Rado »…, sans prix) revenues après le nettoyage du 2026-10-18. Dire « supprime les 4 lignes d'essai » et / ou « supprime les 10 missions d'exemple » : sauvegarde avant, suppression ciblée par identifiant, retour en arrière écrit.
+  - **Démo 100 % locale :** tous les contrôles qui l'utilisent vérifient **0 appel réseau** (`check:phase2`, `check:phase4`, `check:stock`, `check:page`, `check:finance-page`…).
 
 ---
 
