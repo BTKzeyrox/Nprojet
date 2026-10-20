@@ -55,6 +55,29 @@ export interface AppSettings {
   grid_columns?: number; // colonnes de la grille des postes (2 à 10)
   rules: string;
   post_types: string[];
+  company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
+  company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
+}
+
+/** Conditions de l'entreprise (module 0). Tout est facultatif ; rien n'est écrit en dur ailleurs dans le code. */
+export interface CompanySettings {
+  identity: { name: string; address: string; phone: string; email: string; logo_url: string; currency: string };
+  legal: { tax_id: string; register_id: string; notes: string[] };
+  tax: { vat_enabled: boolean; vat_rate: number; vat_exempt_text: string };
+  billing: { invoice_prefix: string; receipt_prefix: string; payment_days: number; late_penalty_text: string; payment_methods_text: string; invoice_footer: string };
+  payroll: { pay_day: number; pay_rounding: 'none' | '10' | '100' | '1000' };
+  leave: { leave_days_per_year: number; work_days_per_week: number; late_limit_time: string };
+  missions: { validation_hours: number; refusal_reason_required: boolean };
+  options: { invoice_per: 'client_month' | 'mission'; quotes_enabled: boolean; employee_sees_badges: boolean; employee_sees_attention: boolean; mission_requires_client: boolean; badges_enabled: boolean };
+  texts: { internal_rules: string; customer_terms: string };
+}
+
+export interface CompanyLogEntry {
+  at: string; // date ISO, posée par le serveur
+  by: string; // id de l'admin
+  by_name: string;
+  path: string; // ex. « tax.vat_rate »
+  before: string; // valeur d'avant (coupée à 120 caractères)
 }
 
 export interface ProfileChangeRequest {
