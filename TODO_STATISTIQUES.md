@@ -245,3 +245,19 @@ Choix de BTK (2026-10-20) : objectifs de **missions, bénéfice et dépenses max
 | Nouvelles tables oubliées dans la sauvegarde de nuit | S2.2 et S3.1 : les ajouter à `df_take_backup()` |
 | Quota Supabase | Pas de nouvelle synchro rapide ; calculs faits dans le navigateur |
 | Chiffres faux (fuseau, fin de mois) | S1.1 : script de contrôle des périodes |
+
+---
+
+## Graphiques professionnels (demandé par BTK le 2026-10-20)
+
+But : remplacer les petits graphiques « débutant » par de grands graphiques précis, avec objectif et prévision tracés. Moteur en SVG maison, sans bibliothèque. Un commit par étape.
+
+- [x] **C1 — Moteur de graphiques** — *fait le 2026-10-20 (commit « graphiques C1 »), non testé à l'écran*
+  - **Fait :** `src/components/charts/XYChart.tsx` (nouveau) : pleine largeur (mesurée), 260 px de haut sur téléphone et 340 px sur ordinateur ; axe vertical gradué en nombres ronds, grille, ligne du zéro ; infobulle au toucher, au glisser, à la souris et au clavier (flèches, Échap) avec les valeurs exactes et la variation en % par rapport à la période d'avant ; légende cliquable (une série reste toujours visible) ; barres groupées ou empilées, courbes douces sans fausse bosse, zones, combinés ; trait de moyenne ; lignes de repère (objectif…) ; vert au-dessus de zéro et rouge en dessous ; animation d'entrée (coupée si l'appareil demande moins de mouvement) ; étiquettes du bas espacées selon leur longueur. `src/utils/chartScale.ts` (nouveau) : graduations rondes (entières pour les comptes), courbe douce, point le plus proche, variation, résumé. `chartCommon.ts` : couleurs, textes FR/EN, « Md » pour les milliards.
+  - **Déjà visible partout :** `BarChart` et `LineChart` (même appel qu'avant) s'appuient sur `XYChart` ; les 7 graphiques existants (missions faites, salaires, argent reçu et dépenses, facturé et reçu, bénéfice cumulé, valeur du stock) sont donc déjà plus grands, avec axes, grille, infobulle, moyenne et résumé. L'anneau (`DonutChart`) et la mini-courbe (`Sparkline`) n'ont pas encore changé.
+  - **Contrôles :** `npm run check:chart-scale` (**17/17**) ; `npm run check:charts` (**42/42** : axes, grille, repères, légende, couleurs, empilé, 365 points, NaN, FR/EN) ; `check:page` 18/18, `check:finance-page` 29/29 et les autres sans erreur ; `tsc` et `build` sans erreur ; le site grossit d'environ 9 Ko (JS non compressé).
+  - **Pas vérifié :** le rendu réel sur téléphone (largeur, doigt qui glisse, infobulle près des bords), les modes clair et sombre, et le défilement vertical de la page quand on touche un graphique.
+- [ ] **C2 — Détails dans chaque graphique** : noms de séries et titres complets des jours dans l'infobulle ; objectif tracé en pointillé sur les missions, les salaires et le bénéfice (S4.1) ; prévision de fin de période en pointillé (S4.3) ; missions par type en barres empilées ; entrées et dépenses en barres groupées ; facturé et reçu en combiné.
+- [ ] **C3 — Anneau interactif, classement et jauges** : anneau avec part sélectionnée au toucher ; classement en barres horizontales (employés, clients, catégories) ; jauge d'objectif ; mini-courbes des cartes plus lisibles.
+- [ ] **C4 — Contrôle final des graphiques** : essai à l'écran par BTK (téléphone 360 × 640, 390 × 844, ordinateur ; clair et sombre ; FR et EN ; démo).
+

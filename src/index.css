@@ -827,3 +827,15 @@ aside.df-sb button:has(svg.lucide-message-square) .df-sb-badge { background-colo
   }
   img { -webkit-user-drag: none; -webkit-touch-callout: none; }
 }
+
+/* Graphiques : animation d'entrée (désactivée si l'appareil demande moins de mouvement) */
+@keyframes chart-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes chart-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes chart-draw { to { stroke-dashoffset: 0; } }
+.chart-bar { transform-box: fill-box; animation: chart-grow .45s cubic-bezier(.2, .7, .2, 1) both; }
+.chart-area { animation: chart-fade .7s ease-out both; }
+.chart-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: chart-draw .9s ease-out .05s forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .chart-bar, .chart-area { animation: none; }
+  .chart-line { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
+}
