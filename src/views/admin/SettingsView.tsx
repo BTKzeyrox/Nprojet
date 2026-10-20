@@ -94,6 +94,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     if (!(s.price_per_mission >= 0)) return setError('Le tarif par mission ne peut pas être négatif.');
     if (!((s.client_price_default_ar ?? 0) >= 0)) return setError('Le prix client par défaut ne peut pas être négatif.');
     for (const v of Object.values(s.client_prices_by_type || {})) if (!(Number(v) >= 0)) return setError('Un prix client par type ne peut pas être négatif.');
+    for (const k of ['goal_missions', 'goal_profit_ar', 'goal_max_expenses_ar', 'alert_low_cash_ar'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Objectifs et alertes : un montant ne peut pas être négatif.');
+    if (s.alert_unpaid_days !== undefined && !(Number(s.alert_unpaid_days) >= 1)) return setError('Alerte « client qui n\'a pas payé » : 1 jour ou plus.');
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     for (const k of ['auto_pen_late1_min', 'auto_pen_late2_min'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 1)) return setError('Pénalités automatiques : les minutes de retard doivent être 1 ou plus.');
     for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de volume ne peut pas être négatif.');
@@ -112,6 +114,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       price_per_million: Math.round(s.price_per_million),
       price_per_mission: Math.round(s.price_per_mission),
       client_price_default_ar: Math.round(s.client_price_default_ar ?? 0),
+      goal_missions: Math.round(Number(s.goal_missions) || 0),
+      goal_profit_ar: Math.round(Number(s.goal_profit_ar) || 0),
+      goal_max_expenses_ar: Math.round(Number(s.goal_max_expenses_ar) || 0),
+      alert_unpaid_days: Math.round(Number(s.alert_unpaid_days) || 30),
+      alert_low_cash_ar: Math.round(Number(s.alert_low_cash_ar) || 0),
       client_prices_by_type: Object.fromEntries(Object.entries(s.client_prices_by_type || {}).filter(([, v]) => isFinite(Number(v))).map(([k, v]) => [k, Math.round(Number(v))])),
       retention_days: Math.round(s.retention_days),
       late_tolerance_min: Math.round(s.late_tolerance_min),
@@ -367,6 +374,36 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           ))}
         </div>
         <p className="text-[11px] text-slate-500">Laisse vide pour utiliser le prix par défaut. Tu peux aussi fixer un prix pour une seule mission, dans ses options avancées.</p>
+      </section>
+      )}
+
+      {tab === 'missions' && (
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white">Objectifs et alertes</h3>
+        <p className="text-[11px] text-slate-400">Objectifs du mois : 0 ou vide = pas d'objectif. Les montants sont vus par le responsable seulement.</p>
+        <div>
+          <label className={labelCls}>Objectif de missions validées (par mois)</label>
+          <input type="number" min={0} step={1} value={s.goal_missions ?? ''} onChange={e => set('goal_missions', e.target.value === '' ? 0 : Number(e.target.value))} className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>Objectif de bénéfice (Ar par mois)</label>
+          <input type="number" min={0} step={1000} value={s.goal_profit_ar ?? ''} onChange={e => set('goal_profit_ar', e.target.value === '' ? 0 : Number(e.target.value))} className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>Dépenses maximum (Ar par mois)</label>
+          <input type="number" min={0} step={1000} value={s.goal_max_expenses_ar ?? ''} onChange={e => set('goal_max_expenses_ar', e.target.value === '' ? 0 : Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">Dépenses saisies + salaires. Une alerte apparaît à 90 % du plafond, puis au dépassement.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Alerte « client qui n'a pas payé » (jours)</label>
+          <input type="number" min={1} step={1} value={s.alert_unpaid_days ?? 30} onChange={e => set('alert_unpaid_days', Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">Alerte si un client n'a rien payé depuis ce nombre de jours et qu'il reste de l'argent à encaisser. 30 par défaut.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Alerte trésorerie basse (Ar)</label>
+          <input type="number" min={0} step={1000} value={s.alert_low_cash_ar ?? 0} onChange={e => set('alert_low_cash_ar', Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">0 = alerte seulement si la trésorerie est négative.</p>
+        </div>
       </section>
       )}
 

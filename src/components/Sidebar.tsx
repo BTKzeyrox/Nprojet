@@ -31,6 +31,7 @@ import { countPending } from '../utils/pendingCount';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { useChatUnread } from '../utils/useChatUnread';
+import { getAdminAlerts } from '../utils/alertsDb';
 
 interface SidebarProps {
   currentUser: User;
@@ -71,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isLight = theme === 'light';
   const pending = countPending().total;
   const chatUnread = useChatUnread(currentUser);
+  const alertCount = isAdmin ? getAdminAlerts().length : 0; // pastille rouge : alertes de l'accueil (argent, stock, avances)
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
     { id: 'feed', label: 'Actualités', icon: Newspaper },
@@ -80,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
           { id: 'history', label: 'Historique', icon: History },
           { id: 'performance', label: 'Performance', icon: BarChart3 },
-          { id: 'stats', label: 'Statistiques', icon: TrendingUp },
+          { id: 'stats', label: 'Statistiques', icon: TrendingUp, badge: alertCount > 0 ? String(alertCount) : undefined, tone: 'alert' as const },
         ]
       : [
           { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },

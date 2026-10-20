@@ -15,6 +15,11 @@ export interface AppSettings {
   price_per_mission: number; // Ar versés pour chaque mission validée (tarif fixe, quelle que soit la quantité)
   client_price_default_ar?: number; // Ar payés par le client pour une mission validée (prix par défaut, 0 = pas encore réglé)
   client_prices_by_type?: Record<string, number>; // exceptions : prix client par type de mission (clé = nom du type)
+  goal_missions?: number; // objectif du mois : missions validées (0 ou vide = pas d'objectif)
+  goal_profit_ar?: number; // objectif du mois : bénéfice net en Ar (admin seulement : jamais envoyé aux employés)
+  goal_max_expenses_ar?: number; // plafond de dépenses du mois en Ar (admin seulement)
+  alert_unpaid_days?: number; // alerte « client qui n'a pas payé depuis X jours » (30 par défaut)
+  alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
   day_shift_start: string; // HH:MM
   day_shift_end: string;
   night_shift_start: string;

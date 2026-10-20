@@ -1,7 +1,7 @@
 # TODO — Statistiques, finances et stock (Gestion Pro)
 
 Créé le 2026-10-18 à la demande de BTK. À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md` et `TODO.md`.
-Les **phases 1 et 2 sont faites côté code, et la phase 3 (stock) aussi sauf la création des tables sur `nprojet` et le déploiement de `df-api` v9** (2026-10-19 ; non testées à l'écran) ; finances et stock réservés à l'admin côté serveur (voir S2.9 et S3.1) ; essai avec un compte employé à faire ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
+Les **phases 1 et 2 sont faites côté code, et la phase 3 (stock) aussi sauf la création des tables sur `nprojet` et le déploiement de `df-api` v9** (2026-10-19 ; non testées à l'écran) ; finances et stock réservés à l'admin côté serveur (voir S2.9 et S3.1) ; essai avec un compte employé à faire ; la **phase 4 est faite côté code (2026-10-20)** ; la phase 5 est **à faire**. Taille : S = petite, M = moyenne, L = grosse.
 
 ## But
 
@@ -201,24 +201,24 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
 
 ---
 
-## PHASE 4 — Objectifs, alertes, prévisions, exports — taille M
+## PHASE 4 — Objectifs, alertes, prévisions, exports — taille M — **terminée côté code le 2026-10-20 (S4.1 à S4.5) ; `df-api` v10 à déployer (accord de BTK) ; essai à l'écran par BTK à faire**
 
-- [ ] **S4.1 — Objectifs du mois** (M)
-  - Réglages : objectif de missions, de bénéfice, de dépenses maximum. Barre d'avancement sur l'accueil et sur Statistiques.
+Choix de BTK (2026-10-20) : objectifs de **missions, bénéfice et dépenses maximum** ; « missions en retard » **remplacée** par « client qui n'a pas payé depuis X jours » (30 par défaut, réglable) ; accord pour `df-api` v10 après le plan, puis « GO ».
 
-- [ ] **S4.2 — Alertes sur l'accueil admin** (M)
-  - Dépassement de budget, bénéfice en baisse, trésorerie basse, **stock bas**, missions en retard, avance trop grosse, client qui n'a pas payé depuis X jours.
-  - Pastille rouge dans le menu quand il y a une alerte. Lien avec les notifications (voir P1-1 du `TODO.md`).
-
-- [ ] **S4.3 — Prévision simple** (S)
-  - « À ce rythme, fin du mois : X missions, Y Ar de bénéfice » (calcul linéaire, expliqué en une phrase, jamais présenté comme une certitude).
-
-- [ ] **S4.4 — Export** (M)
-  - Excel (bibliothèque `xlsx` déjà dans le projet) : un onglet par section. PDF : page imprimable avec les graphiques.
-  - Les exports contiennent des chiffres d'argent : bouton visible seulement par l'admin.
-
-- [ ] **S4.5 — Rapport du mois** (S)
-  - Une page « Rapport mensuel » prête à montrer : résumé, 3 points forts, 3 points d'attention.
+- [x] **S4.1 — Objectifs du mois** (M) — *fait le 2026-10-20, non testé à l'écran*
+  - **Fait :** Réglages > Missions > « Objectifs et alertes » (3 objectifs, 0 ou vide = pas d'objectif). Règles pures dans `src/utils/goals.ts` : missions et bénéfice = « à atteindre » (vert à 100 %, « à surveiller » si en retard sur le rythme du mois), dépenses = plafond (orange dès 90 %, rouge au-dessus ; dépenses = dépenses saisies + salaires, comme l'onglet Finances). Barres d'avancement (`GoalsBars` dans `src/components/GoalsPanel.tsx`) sur le **tableau de bord admin** (si au moins un objectif est réglé) et en haut de **Statistiques**. Le mois en cours seulement.
+  - **Sécurité (`df-api` v10, à déployer) :** le serveur retire aux employés `goal_*`, `alert_*`, `client_price_default_ar`, `client_prices_by_type` (réglages), `client_price_ar` (missions et sessions, même les leurs) et refuse qu'un employé écrive un prix client sur une session. **⚠ Écart trouvé :** cette retenue des **prix client** était demandée par S2.1 mais n'avait **jamais été faite** (S2.4 ne traitait que `cash`) : tant que la v10 n'est pas en ligne (v9 actuelle), un employé peut voir les prix client et les objectifs. **Ne pas saisir de vrais objectifs d'argent ni de vrais prix client avant la v10.** Bloc `BEGIN PRIVACY` de `df-api/index.ts`, contrôlé par `check:phase4`.
+- [x] **S4.2 — Alertes sur l'accueil admin** (M) — *fait le 2026-10-20, non testé à l'écran*
+  - **Fait :** `src/utils/alerts.ts` (règles pures). Budget dépassé (rouge) ou presque (orange) ; bénéfice en baisse d'au moins 20 % contre le mois d'avant (même nombre de jours, après 5 jours) ; trésorerie négative (rouge) ou sous le seuil réglé ; stock bas (rouge si un produit est vide) ; avance en attente plus grosse que ce que la personne a gagné ce mois-ci ; client sans paiement depuis plus de X jours. Liste cliquable (ouvre le bon onglet de Statistiques ou la page Paie) sur le tableau de bord et en haut de Statistiques ; **pastille rouge** (nombre d'alertes) sur « Statistiques » dans le menu (`getAdminAlerts`, admin seulement). **« Missions en retard » : toujours impossible** (pas de date limite).
+  - **Limite à connaître :** « client qui n'a pas payé » se base sur les paiements notés avec un nom de client, et seulement s'il reste de l'argent à encaisser **au total** (le prix client est par mission, pas par client : on ne sait pas ce que chaque client doit). Pas de notification téléphone (reste dans P1-1).
+- [x] **S4.3 — Prévision simple** (S) — *fait le 2026-10-20, non testé à l'écran*
+  - **Fait :** `forecastMonth` : ce qui est fait depuis le 1er, au même rythme jusqu'à la fin du mois (missions, bénéfice, dépenses, reçu). Encart « Prévision de fin de mois » en haut de Statistiques, avec une phrase qui dit que ce n'est pas une certitude. Pas de prévision avant 3 jours dans le mois.
+- [x] **S4.4 — Export** (M) — *fait le 2026-10-20, non testé à l'écran (téléchargement Excel et impression à vérifier sur le vrai navigateur)*
+  - **Fait :** 4e onglet « Rapport » dans Statistiques (admin seulement) avec **Excel** (8 onglets : Résumé, Missions, Équipe, Salaires, Finances, Stock, Objectifs, Alertes ; bibliothèque `xlsx` chargée seulement au clic) et **PDF** par « Imprimer / PDF » (page claire, tout échappé, sans script, dans un cadre isolé ; choisir « Enregistrer au format PDF »). Les deux utilisent le mois choisi en haut.
+- [x] **S4.5 — Rapport du mois** (S) — *fait le 2026-10-20, non testé à l'écran*
+  - **Fait :** `src/utils/report.ts` : résumé avec le mois d'avant et l'écart, **3 points forts** et **3 points d'attention** (règles simples, chacune avec son chiffre), objectifs, prévision, barres des missions par jour et du bénéfice cumulé, équipe (5 premiers), marge par type, alertes. FR et EN. Mois passé : ni objectifs ni prévision.
+- **Contrôles :** `npm run check:phase4` (**75/75** : objectifs, prévision, 11 cas d'alerte, rapport sur 8 mois × 2 langues, Excel, page imprimable échappée, rendu admin et opérateur, filtre du serveur extrait du vrai fichier). `tsc`, `build` et les 11 anciens contrôles OK.
+- **Pas vérifié :** rendu sur téléphone (4 onglets étroits, barres, cadre du rapport), clavier des Réglages, téléchargement Excel et impression réels, la v10 sur le vrai serveur, essai avec un compte employé.
 
 ---
 

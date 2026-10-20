@@ -47,6 +47,9 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
 import { AdminChecklist } from '../../components/MissionGuide';
 import { clientPriceForType, parsePriceInput } from '../../utils/clientPrice';
+import { AlertsList, GoalsBars } from '../../components/GoalsPanel';
+import { setStatsTab } from '../../utils/statsNav';
+import { useApp } from '../../context/AppContext';
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -76,6 +79,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   activeSubTab = 'dashboard',
   onNavigateTab,
 }) => {
+  const { lang: appLang } = useApp();
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
@@ -380,6 +384,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h2 className="text-xl font-extrabold text-white">Tableau de bord</h2>
           <p className="text-sm text-slate-400">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
+
+        {/* Alertes (seulement s'il y en a) et objectifs du mois (seulement s'il y en a de réglés) : responsable seulement */}
+        <AlertsList lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty onGo={a => { if (a.tab) setStatsTab(a.tab); onNavigateTab?.(a.go); }} />
+        <GoalsBars lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {tile('Opérateurs en ligne', <>{onlineEmployees.length}<span className="text-base font-medium text-slate-400"> / {nbEmployees}</span></>, 'Voir les opérateurs', Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
@@ -1003,7 +1011,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
-      
       {isValidations && (
         <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">

@@ -106,6 +106,25 @@ function cleanStockMove(rec: any, existing: any, meId: string, now: string): { o
 }
 // ===== END STOCK =====
 
+// ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
+// Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar"];
+/** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
+const stripSettings = (rec: any, me: any) => {
+  if (!rec || me.role === "admin") return rec;
+  const out = { ...rec };
+  for (const k of SETTINGS_ADMIN_KEYS) delete out[k];
+  return out;
+};
+/** Mission ou session envoyée à un employé : sans le prix client (même pour ses propres sessions). */
+const withoutClientPrice = (rec: any, me: any) => {
+  if (!rec || me.role === "admin" || !("client_price_ar" in rec)) return rec;
+  const out = { ...rec };
+  delete out.client_price_ar;
+  return out;
+};
+// ===== END PRIVACY =====
+
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
@@ -502,8 +521,8 @@ async function chatRead(req: any, res: any, me: any) {
 const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined });
 const stripPost = (p: any, me: any) =>
   me.role === 'admin' || p.employee_id === me.id
-    ? p
-    : { ...p, start_proof_url: '', start_proof_urls: [], end_proof_url: '', end_proof_urls: [] };
+    ? withoutClientPrice(p, me)
+    : { ...withoutClientPrice(p, me), start_proof_url: '', start_proof_urls: [], end_proof_url: '', end_proof_urls: [] };
 
 async function state(req: any, res: any, me: any) {
   const since = typeof req.query.since === 'string' && req.query.since ? req.query.since : '1970-01-01T00:00:00.000Z';
@@ -546,6 +565,8 @@ async function state(req: any, res: any, me: any) {
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me));
+    if (col === 'contracts') recs = recs.map((c: any) => withoutClientPrice(c, me));
+    if (col === 'settings') recs = recs.map((r: any) => stripSettings(r, me));
     out[col] = { changed: recs, ids: (ids || []).map((r: any) => r.id) };
   }
   let resets: any[] = [];
@@ -634,7 +655,7 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'posts') {
           ok = rec.employee_id === me.id && EMP_POST_TARGET.includes(rec.status) &&
             (!existing || (existing.employee_id === me.id && OPEN_STATUS.includes(existing.status)));
-          if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes };
+          if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes, client_price_ar: existing?.client_price_ar }; // le prix client ne vient jamais d'un employé
         } else if (col === 'advances') {
           ok = !existing && rec.employee_id === me.id && rec.status === 'pending' &&
             Number.isFinite(rec.amount_ar) && rec.amount_ar > 0 && rec.amount_ar <= 100_000_000;

@@ -6,6 +6,9 @@ import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, va
 import { StatCard } from '../../components/StatCard';
 import { FinanceTab } from './FinanceTab';
 import { StockTab } from './StockTab';
+import { ReportTab } from './ReportTab';
+import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
+import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
 import { BarChart, DonutChart, compactNumber } from '../../components/charts/Charts';
 import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
@@ -21,7 +24,6 @@ type PayState = { state: 'idle' | 'loading' | 'ready' | 'na'; slips?: Slip[]; st
 
 // On garde le choix quand la personne change de page puis revient (et le type de période d'une visite à l'autre)
 let savedAnchor: string | null = null;
-let savedTab: 'stats' | 'finance' | 'stock' = 'stats';
 const loadGran = (): StatsGranularity => {
   try { const g = localStorage.getItem('stats_gran'); if (g === 'day' || g === 'week' || g === 'month' || g === 'year') return g; } catch { /* stockage refusé */ }
   return 'month';
@@ -50,8 +52,8 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
   const [g, setG] = useState<StatsGranularity>(loadGran);
   const [anchor, setAnchor] = useState<string>(() => savedAnchor || today);
   useEffect(() => { savedAnchor = anchor; }, [anchor]);
-  const [tab, setTabState] = useState<'stats' | 'finance' | 'stock'>(savedTab);
-  const setTab = (next: 'stats' | 'finance' | 'stock') => { savedTab = next; setTabState(next); };
+  const [tab, setTabState] = useState<StatsTab>(getStatsTab);
+  const setTab = (next: StatsTab) => { setStatsTab(next); setTabState(next); };
   const pickGran = (next: StatsGranularity) => { setG(next); try { localStorage.setItem('stats_gran', next); } catch { /* stockage refusé */ } };
 
   const ranges = comparableRanges(g, anchor, today);
@@ -113,21 +115,28 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         </button>
       </div>
 
-      {/* Trois onglets : les chiffres de l'activité, l'argent (paiements reçus, dépenses) et le stock */}
-      <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={l === 'en' ? 'Section' : 'Rubrique'} {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
-        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['stock', 'Stock']] as ['stats' | 'finance' | 'stock', string][]).map(([id, label]) => (
+      {/* Quatre onglets : les chiffres de l'activité, l'argent (paiements reçus, dépenses), le stock et le rapport du mois */}
+      <div className="grid grid-cols-4 gap-1.5" role="tablist" aria-label={l === 'en' ? 'Section' : 'Rubrique'} {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
+        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['stock', 'Stock'], ['report', l === 'en' ? 'Report' : 'Rapport']] as [StatsTab, string][]).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={`min-h-[44px] rounded-lg text-sm font-semibold border transition-colors ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+            className={`min-h-[44px] rounded-lg text-xs sm:text-sm font-semibold border transition-colors px-0.5 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
             {label}
           </button>
         ))}
       </div>
 
-      {tab === 'stock' ? (
+      {tab === 'report' ? (
+        <ReportTab anchor={anchor} lang={l} />
+      ) : tab === 'stock' ? (
         <StockTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} />
       ) : tab === 'finance' ? (
         <FinanceTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} salariesAr={ranges.isFuture ? 0 : stats.cur.earned} advancesAr={ranges.isFuture ? 0 : stats.cur.advances} />
       ) : (<>
+      {/* Alertes, objectifs du mois et prévision (admin seulement) */}
+      <AlertsList lang={l} hideWhenEmpty onGo={a => { if (a.go === 'stats' && a.tab) setTab(a.tab); else if (a.go !== 'stats') onNavigate?.(a.go); }} />
+      <GoalsBars lang={l} hideWhenEmpty />
+      <ForecastCard lang={l} />
+
       {/* Chiffres du haut : chacun est comparé à la période d'avant (même nombre de jours si la période n'est pas finie) */}
       {(() => {
         const { cur, prev, upcoming, team, series } = stats;

@@ -7,6 +7,8 @@ import { clientPriceForPost } from '../utils/clientPrice';
 
 export const DEMO_ADMIN_ID = 'demo_admin';
 // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions). Les types sont ceux des missions de la démo.
+// Objectifs et seuils inventés pour la démo (objectifs du mois, alertes)
+export const DEMO_GOALS = { goal_missions: 120, goal_profit_ar: 400000, goal_max_expenses_ar: 900000, alert_unpaid_days: 30, alert_low_cash_ar: 0 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 const PRICE = 5000; // Ar par mission validée (tarif fixe de la démo)
 

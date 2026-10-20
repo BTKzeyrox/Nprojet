@@ -1,6 +1,6 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_GOALS } from '../demo/demoData';
 import {
   User,
   PostSession,
@@ -921,7 +921,7 @@ class DeltaForceStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES }]; // prix client inventés
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS }]; // prix client et objectifs inventés
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
