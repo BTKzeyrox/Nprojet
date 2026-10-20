@@ -24,6 +24,7 @@ import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { releaseOrphanBodyLock } from './utils/useLockBodyScroll';
 import { ScrollButtons } from './components/ScrollButtons';
+import { DiagPanel } from './components/DiagPanel';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { NAV_TARGET_EVENT, peekNavTarget, flashNav } from './utils/navTarget';
@@ -540,6 +541,7 @@ export default function App() {
       />
 
       <ToastHost />
+      {typeof location !== 'undefined' && /[?&]diag=1/.test(location.search) && <DiagPanel />}
       <DemoBanner />
       {/* SMOOTH ANIMATED LOGOUT TRANSITION */}
       <LogoutTransition />

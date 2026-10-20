@@ -100,3 +100,8 @@ export function useLockBodyScroll(isLocked: boolean): void {
     };
   }, [isLocked]);
 }
+
+/** Pour le panneau de diagnostic : état du verrou de page. */
+export function getLockInfo(): { count: number; mode: string | null } {
+  return { count: activeLocksCount, mode };
+}
