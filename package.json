@@ -7,6 +7,7 @@
     "dev": "vite",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",
+    "check:clients-page": "esbuild scripts/check-clients-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-clients-page.mjs && node node_modules/.cache/check-clients-page.mjs",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:company": "npx --yes tsx scripts/check-company.ts",
     "check:company-page": "esbuild scripts/check-company-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-company-page.mjs && node node_modules/.cache/check-company-page.mjs",

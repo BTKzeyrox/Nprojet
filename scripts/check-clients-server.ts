@@ -5,6 +5,7 @@
 // qu'un client avec des missions ne se supprime pas ; 3) vérifie la migration (RLS, aucun accès public). Si quelqu'un retire une protection, ce contrôle échoue.
 import fs from 'node:fs';
 import { transformSync } from 'esbuild';
+import { checkClientDraft } from '../src/utils/clients';
 
 const read = (p: string) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const src = read('supabase/functions/df-api/index.ts');
@@ -81,6 +82,35 @@ ok(!('password_hash' in evil) && !('role' in evil) && !('status' in evil) && !('
 ok(cleanClient({ ...good, created_by: 'pirate', created_at: '1999-01-01' }, undefined, 'admin-1', NOW).save.created_by === 'admin-1', 'créateur envoyé par le navigateur ignoré');
 ok(cleanClient({ ...good, name: '  Espaces  ' }, undefined, 'a', NOW).save.name === 'Espaces', 'espaces autour du nom retirés');
 ok(cleanClient({ ...good, price_by_type: { '  NO R/C  ': 1000 } }, undefined, 'a', NOW).save.price_by_type['NO R/C'] === 1000, 'clé d\'exception nettoyée');
+
+// --- le site (checkClientDraft) et le serveur (cleanClient) donnent le même résultat ---
+{
+  type Spec = { name?: unknown; contact?: unknown; phone?: unknown; email?: unknown; address?: unknown; note?: unknown; terms?: unknown; price?: unknown; types?: [unknown, unknown][] };
+  const toSite = (x: Spec): any => ({ name: x.name, contact_name: x.contact, phone: x.phone, email: x.email, address: x.address, note: x.note, payment_terms_days: x.terms, price_default: x.price, price_by_type: (x.types || []).map(([type, price]) => ({ type, price })) });
+  const toServer = (x: Spec): any => ({ id: 'cl-p', name: x.name, contact_name: x.contact, phone: x.phone, email: x.email, address: x.address, note: x.note, payment_terms_days: x.terms, price_default_ar: x.price, price_by_type: x.types ? Object.fromEntries(x.types.map(([k, v]) => [String(k), v])) : undefined });
+  const strip = (s: any) => { const { id, active, created_by, created_at, updated_at, ...rest } = s; return rest; };
+  const L = (n: number) => 'x'.repeat(n);
+  const specs: Spec[] = [
+    { name: 'Atelier' }, { name: ' Atelier  ', contact: ' R ', phone: '034', email: 'a@b.mg', address: 'Tana', note: 'ok', terms: 30, price: 50000, types: [['WEB', 12000]] },
+    { name: '' }, { name: '   ' }, { name: undefined }, { name: 5 }, { name: L(300), contact: L(300), phone: L(300), address: L(900), note: L(2000) },
+    { name: 'X', email: 'oups' }, { name: 'X', email: 'a b@c.mg' }, { name: 'X', email: L(200) + '@b.mg' }, { name: 'X', email: '' }, { name: 'X', email: '  a@b.mg ' },
+    { name: 'X', terms: 0 }, { name: 'X', terms: 365 }, { name: 'X', terms: 366 }, { name: 'X', terms: -1 }, { name: 'X', terms: 29.6 }, { name: 'X', terms: 'abc' }, { name: 'X', terms: '' }, { name: 'X', terms: null }, { name: 'X', terms: [5] }, { name: 'X', terms: true }, { name: 'X', terms: NaN }, { name: 'X', terms: Infinity },
+    { name: 'X', price: 0 }, { name: 'X', price: 1e12 }, { name: 'X', price: 1e12 + 1 }, { name: 'X', price: 1500.5 }, { name: 'X', price: '2500' }, { name: 'X', price: 'abc' }, { name: 'X', price: [5] }, { name: 'X', price: false }, { name: 'X', price: -0.4 },
+    { name: 'X', types: [['WEB', 0]] }, { name: 'X', types: [['WEB', '']] }, { name: 'X', types: [['WEB', null]] }, { name: 'X', types: [['WEB', -1]] }, { name: 'X', types: [['WEB', 'abc']] }, { name: 'X', types: [['WEB', [5]]] }, { name: 'X', types: [['WEB', true]] },
+    { name: 'X', types: [['', 500]] }, { name: 'X', types: [['   ', 500]] }, { name: 'X', types: [['__proto__', 5]] }, { name: 'X', types: [['constructor', 5]] }, { name: 'X', types: [['prototype', 5]] },
+    { name: 'X', types: [['  WEB ', 1000], ['WEB', 2000]] }, { name: 'X', types: [[L(60), 1000]] }, { name: 'X', types: [] },
+    { name: 'X', types: Array.from({ length: 20 }, (_, i) => ['T' + i, 100] as [string, number]) }, { name: 'X', types: Array.from({ length: 21 }, (_, i) => ['T' + i, 100] as [string, number]) },
+  ];
+  let same = 0; const diffs: string[] = [];
+  for (const sp of specs) {
+    const a = checkClientDraft(toSite(sp)), b = cleanClient(toServer(sp), undefined, 'a', NOW);
+    // Un champ vide (ligne d'exception ou champ ignoré) n'existe pas côté serveur : on compare seulement quand les deux ont une réponse comparable
+    const okSame = a.ok === b.ok && (a.ok ? JSON.stringify(a.clean) === JSON.stringify(strip(b.save)) : (a as any).error === b.reason);
+    if (okSame) same++; else diffs.push(JSON.stringify(sp).slice(0, 90) + ' → site ' + JSON.stringify(a).slice(0, 70) + ' / serveur ' + JSON.stringify(b).slice(0, 70));
+  }
+  for (const x of diffs) console.log('   différence : ' + x);
+  ok(diffs.length === 0, `site et serveur donnent le même résultat sur ${specs.length} fiches (${same} identiques)`);
+}
 
 // --- lien mission → client ---
 ok(cleanClientRef(undefined).ok && cleanClientRef(undefined).id === null && cleanClientRef('').id === null && cleanClientRef(null).id === null, 'lien vide : accepté, aucun client');

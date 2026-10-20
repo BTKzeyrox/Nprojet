@@ -2,6 +2,8 @@
 // Le statut n'est JAMAIS stocké : il se calcule à partir des missions validées (voir TODO_MODULES.md, module 1).
 // Dates = textes « AAAA-MM-JJ » (jour de Madagascar), calculs en UTC pour éviter les décalages d'heure.
 import { addDays, daysBetween } from './stats';
+import { clientPriceWithClient } from './clientPrice';
+import type { CashEntry, ClientContract, PostSession } from '../types';
 
 /** Fiche client (sera stockée dans la table df_clients à l'étape M1.3). */
 export interface ClientRecord {
@@ -158,6 +160,156 @@ export function suggestClientMatches(freeTexts: string[], clients: ClientRecord[
 export function rankClients(clients: ClientRecord[], summaries: Map<string, ClientSummary>): ClientRecord[] {
   const rank = (c: ClientRecord) => STATUS_PRIORITY.indexOf(summaries.get(c.id)?.main || 'prospect');
   return [...clients].sort((a, b) => rank(a) - rank(b) || (summaries.get(b.id)?.revenue_12m || 0) - (summaries.get(a.id)?.revenue_12m || 0) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Étape M1.4 : écran Clients. Libellés, vérification d'une fiche avant l'envoi, lien missions/paiements, filtre et tri.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Libellés des statuts [français, anglais] et ce qu'ils veulent dire (aide affichée à l'écran). */
+export const CLIENT_STATUS_LABEL: Record<ClientStatus, { fr: string; en: string; help_fr: string; help_en: string }> = {
+  prospect: { fr: 'Prospect', en: 'Prospect', help_fr: 'Fiche créée, aucune mission validée.', help_en: 'Record created, no validated mission yet.' },
+  new: { fr: 'Nouveau', en: 'New', help_fr: 'Première mission récente.', help_en: 'First mission is recent.' },
+  regular: { fr: 'Régulier', en: 'Regular', help_fr: 'Missions validées régulièrement ces derniers mois.', help_en: 'Missions validated regularly in recent months.' },
+  strategic: { fr: 'Stratégique', en: 'Strategic', help_fr: 'Parmi les clients qui rapportent le plus.', help_en: 'Among the clients that bring in the most.' },
+  inactive: { fr: 'Inactif', en: 'Inactive', help_fr: 'Aucune mission depuis longtemps.', help_en: 'No mission for a long time.' },
+  active: { fr: 'Actif', en: 'Active', help_fr: 'A des missions, sans autre statut particulier.', help_en: 'Has missions, no other particular status.' },
+};
+
+// Mêmes limites que le serveur (df-api, bloc CLIENTS) : `npm run check:clients-server` compare les deux sur les mêmes cas.
+export const CLIENT_LIMITS = { name: 80, contact: 80, phone: 40, email: 120, address: 200, note: 500, terms_max: 365, money_max: 1_000_000_000_000, types_max: 20, type_key: 40 } as const;
+const BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+/** Ce que l'écran envoie : tout en texte (champs de saisie). */
+export interface ClientDraft {
+  name: string; contact_name?: string; phone?: string; email?: string; address?: string; note?: string;
+  payment_terms_days?: string | number; price_default?: string | number;
+  price_by_type?: { type: string; price: string | number }[]; // une ligne par exception ; une ligne vide est ignorée
+}
+export type ClientDraftError = 'name' | 'email' | 'terms' | 'price' | 'price_by_type';
+export type ClientDraftResult =
+  | { ok: true; clean: { name: string; contact_name: string; phone: string; email: string; address: string; note: string; payment_terms_days?: number; price_default_ar?: number; price_by_type?: Record<string, number> } }
+  | { ok: false; error: ClientDraftError };
+
+const toNum = (v: string | number | undefined): number | undefined | null => {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return NaN; // un tableau, un booléen ou un objet n'est pas un nombre
+  const t = String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
+  return t === '' ? undefined : Number(t); // NaN si ce n'est pas un nombre
+};
+
+/** Vérifie une fiche avant l'envoi (mêmes règles que le serveur ; le serveur revérifie toujours). */
+export function checkClientDraft(d: ClientDraft): ClientDraftResult {
+  const L = CLIENT_LIMITS;
+  const text = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
+  const name = text(d?.name, L.name);
+  if (!name) return { ok: false, error: 'name' };
+  const email = text(d.email, L.email);
+  if (email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return { ok: false, error: 'email' };
+  let terms: number | undefined;
+  const t = toNum(d.payment_terms_days);
+  if (t !== undefined) { if (t === null || !Number.isFinite(t) || t < 0 || t > L.terms_max) return { ok: false, error: 'terms' }; terms = Math.round(t); }
+  let price: number | undefined;
+  const p = toNum(d.price_default);
+  if (p !== undefined) { if (p === null || !Number.isFinite(p) || p < 0 || p > L.money_max) return { ok: false, error: 'price' }; price = Math.round(p); }
+  let byType: Record<string, number> | undefined;
+  const rows = (d.price_by_type || []).filter(r => r && (String(r.type ?? '').trim() !== '' || String(r.price ?? '').trim() !== ''));
+  if (rows.length) {
+    if (rows.length > L.types_max) return { ok: false, error: 'price_by_type' };
+    byType = {};
+    for (const r of rows) {
+      const key = String(r.type ?? '').trim().slice(0, L.type_key);
+      const v = toNum(r.price);
+      if (!key || BAD_KEYS.includes(key) || v === undefined || v === null || !Number.isFinite(v) || v < 0 || v > L.money_max) return { ok: false, error: 'price_by_type' };
+      byType[key] = Math.round(v);
+    }
+  }
+  return { ok: true, clean: {
+    name, contact_name: text(d.contact_name, L.contact), phone: text(d.phone, L.phone), email, address: text(d.address, L.address), note: text(d.note, L.note),
+    ...(terms !== undefined ? { payment_terms_days: terms } : {}),
+    ...(price !== undefined ? { price_default_ar: price } : {}),
+    ...(byType && Object.keys(byType).length ? { price_by_type: byType } : {}),
+  } };
+}
+
+/**
+ * Missions validées rattachées à un client, avec leur prix. Le client d'une session = son `client_id`, sinon celui de sa mission (contrat).
+ * Prix : celui figé sur la session, sinon celui de la mission, sinon la règle à 5 niveaux avec les tarifs du client.
+ * Les missions sans client (anciennes, texte libre) ne comptent pour aucun client : elles restent visibles dans Finances comme avant.
+ */
+export function clientMissionsFromPosts(
+  posts: Pick<PostSession, 'status' | 'date' | 'post_number' | 'client_name' | 'client_id' | 'client_price_ar'>[],
+  contracts: Pick<ClientContract, 'post_number' | 'client_name' | 'client_id' | 'client_price_ar' | 'post_type'>[],
+  clients: ClientRecord[],
+  prices: Parameters<typeof clientPriceWithClient>[2],
+): ClientMission[] {
+  const byId = new Map(clients.map(c => [c.id, c]));
+  const out: ClientMission[] = [];
+  for (const p of posts) {
+    if (p.status !== 'completed') continue;
+    const contract = contracts.find(x => (p.post_number !== undefined && x.post_number === p.post_number) || (!!x.client_name && x.client_name === p.client_name));
+    const id = p.client_id || contract?.client_id;
+    const client = id ? byId.get(id) : undefined;
+    if (!id || !client) continue; // pas de fiche (ou fiche supprimée) : la mission ne compte pour aucun client
+    const own = typeof p.client_price_ar === 'number' && Number.isFinite(p.client_price_ar) && p.client_price_ar >= 0 ? p.client_price_ar : contract?.client_price_ar;
+    out.push({ client_id: id, date: p.date, price_ar: clientPriceWithClient({ client_price_ar: own, post_type: contract?.post_type }, client, prices) });
+  }
+  return out;
+}
+
+export interface ClientMoney { received: number; payments: number; last_date: string | null }
+/**
+ * Argent reçu par client : les paiements (entrées « Finances ») dont le nom de client est le même que la fiche (comparé sans accents ni majuscules).
+ * Les lignes d'argent n'ont pas de lien vers la fiche : si deux fiches ont le même nom, aucune ne reçoit ces paiements (on ne devine pas).
+ */
+export function clientReceived(cash: Pick<CashEntry, 'kind' | 'client_name' | 'amount_ar' | 'date'>[], clients: ClientRecord[]): Map<string, ClientMoney> {
+  const idx = new Map<string, string[]>();
+  for (const c of clients) { const k = normalizeName(c.name); if (!k) continue; const l = idx.get(k); if (l) l.push(c.id); else idx.set(k, [c.id]); }
+  const out = new Map<string, ClientMoney>(clients.map(c => [c.id, { received: 0, payments: 0, last_date: null }]));
+  for (const e of cash) {
+    if (e.kind !== 'in' || !e.client_name || !validNum(e.amount_ar)) continue;
+    const ids = idx.get(normalizeName(e.client_name));
+    if (!ids || ids.length !== 1) continue;
+    const m = out.get(ids[0])!;
+    m.received += Math.round(e.amount_ar); m.payments++;
+    if (!m.last_date || e.date > m.last_date) m.last_date = e.date;
+  }
+  return out;
+}
+
+export type ClientSort = 'status' | 'revenue' | 'name' | 'recent';
+export interface ClientFilter { q: string; status: ClientStatus | 'all' | 'archived'; sort: ClientSort }
+
+/** Liste affichée : recherche (nom, contact, téléphone, e-mail), filtre de statut, tri. Les clients désactivés n'apparaissent que dans « Archivés ». */
+export function filterClients(clients: ClientRecord[], summaries: Map<string, ClientSummary>, f: ClientFilter): ClientRecord[] {
+  const q = normalizeName(f.q);
+  const hit = (c: ClientRecord) => !q || [c.name, c.contact_name, c.phone, c.email].some(x => normalizeName(String(x || '')).includes(q));
+  const list = clients.filter(c => {
+    const archived = c.active === false;
+    if (f.status === 'archived') { if (!archived) return false; }
+    else if (archived) return false;
+    else if (f.status !== 'all' && !(summaries.get(c.id)?.statuses || []).includes(f.status)) return false;
+    return hit(c);
+  });
+  const rev = (c: ClientRecord) => summaries.get(c.id)?.revenue_12m || 0;
+  const last = (c: ClientRecord) => summaries.get(c.id)?.last_date || '';
+  const byName = (a: ClientRecord, b: ClientRecord) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+  if (f.sort === 'name') return list.sort(byName);
+  if (f.sort === 'revenue') return list.sort((a, b) => rev(b) - rev(a) || byName(a, b));
+  if (f.sort === 'recent') return list.sort((a, b) => last(b).localeCompare(last(a)) || byName(a, b));
+  return rankClients(list, summaries);
+}
+
+/** Nombre de clients par statut (pour les pastilles de filtre). Un client qui cumule compte dans chacun de ses statuts. Les archivés sont comptés à part. */
+export function countByStatus(clients: ClientRecord[], summaries: Map<string, ClientSummary>): Record<ClientStatus | 'all' | 'archived', number> {
+  const out: Record<string, number> = { all: 0, archived: 0, prospect: 0, new: 0, regular: 0, strategic: 0, inactive: 0, active: 0 };
+  for (const c of clients) {
+    if (c.active === false) { out.archived++; continue; }
+    out.all++;
+    for (const st of summaries.get(c.id)?.statuses || []) out[st]++;
+  }
+  return out as Record<ClientStatus | 'all' | 'archived', number>;
 }
 
 export { addDays };

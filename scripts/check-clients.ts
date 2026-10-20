@@ -1,6 +1,6 @@
 // Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur.
 // Lancer : npm run check:clients
-import { addMonths, clientThresholds, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
+import { addMonths, checkClientDraft, clientMissionsFromPosts, clientReceived, clientThresholds, countByStatus, filterClients, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
 import { addDays } from '../src/utils/stats';
 import { clientPriceWithClient } from '../src/utils/clientPrice';
 
@@ -99,6 +99,82 @@ eq(clientThresholds({ clients: { new_days: 30.6 } }).new_days, 31, 'seuils : arr
   // un seuil réglé change vraiment le statut : 70 jours depuis la première mission = « Actif » avec 60 j, « Nouveau » avec 90 j
   const one = [cl('a')], list = ms('a', [d(70)]);
   eq([sum(one, list).get('a')!.main, sum(one, list, clientThresholds({ clients: { new_days: 90 } })).get('a')!.main], ['active', 'new'], 'seuils : changer « Nouveau » à 90 jours change le statut');
+}
+
+// --- Vérification d'une fiche (M1.4) ---
+{
+  const ok1 = checkClientDraft({ name: '  Atelier  ', contact_name: 'Rakoto', phone: '034', email: 'a@b.mg', address: 'Tana', note: 'ok', payment_terms_days: '30', price_default: '50 000', price_by_type: [{ type: 'WEB', price: '12000' }, { type: '', price: '' }] });
+  eq(ok1.ok && ok1.clean, { name: 'Atelier', contact_name: 'Rakoto', phone: '034', email: 'a@b.mg', address: 'Tana', note: 'ok', payment_terms_days: 30, price_default_ar: 50000, price_by_type: { WEB: 12000 } }, 'fiche : espaces retirés, nombres lus (« 50 000 »), ligne vide ignorée');
+  const min = checkClientDraft({ name: 'X' });
+  eq(min.ok && Object.keys(min.clean).sort(), ['address', 'contact_name', 'email', 'name', 'note', 'phone'], 'fiche minimale : aucun prix ni échéance inventés');
+  const bad = (d: any, e: string, name: string) => eq(checkClientDraft(d), { ok: false, error: e }, name);
+  bad({ name: '   ' }, 'name', 'fiche : nom vide refusé');
+  bad({ name: 'X', email: 'oups' }, 'email', 'fiche : e-mail faux refusé');
+  bad({ name: 'X', payment_terms_days: '-1' }, 'terms', 'fiche : échéance négative refusée');
+  bad({ name: 'X', payment_terms_days: 366 }, 'terms', 'fiche : échéance de 366 jours refusée');
+  bad({ name: 'X', payment_terms_days: 'abc' }, 'terms', 'fiche : échéance texte refusée');
+  bad({ name: 'X', price_default: 'abc' }, 'price', 'fiche : prix texte refusé');
+  bad({ name: 'X', price_default: -5 }, 'price', 'fiche : prix négatif refusé');
+  bad({ name: 'X', price_by_type: [{ type: 'WEB', price: '' }] }, 'price_by_type', 'fiche : type sans prix refusé');
+  bad({ name: 'X', price_by_type: [{ type: '', price: '500' }] }, 'price_by_type', 'fiche : prix sans type refusé');
+  bad({ name: 'X', price_by_type: [{ type: '__proto__', price: '500' }] }, 'price_by_type', 'fiche : type « __proto__ » refusé');
+  bad({ name: 'X', price_by_type: Array.from({ length: 21 }, (_, i) => ({ type: 'T' + i, price: '1' })) }, 'price_by_type', 'fiche : plus de 20 exceptions refusées');
+  eq(checkClientDraft({ name: 'X', payment_terms_days: 0 }).ok, true, 'fiche : échéance 0 (comptant) acceptée');
+  eq(checkClientDraft({ name: 'X', price_default: 0 }).ok && (checkClientDraft({ name: 'X', price_default: 0 }) as any).clean.price_default_ar, 0, 'fiche : prix 0 (mission offerte) gardé');
+  eq((checkClientDraft({ name: 'n'.repeat(200), note: 'x'.repeat(900) }) as any).clean.name.length, 80, 'fiche : nom coupé à 80');
+}
+
+// --- Missions et paiements par client (M1.4) ---
+{
+  const cs = [cl('a', { price_default_ar: 7000, price_by_type: { WEB: 9000 } }), cl('b')];
+  const contracts: any[] = [
+    { post_number: 1, client_name: 'M1', client_id: 'a', post_type: 'WEB' }, { post_number: 2, client_name: 'M2', client_id: 'a', post_type: 'AUTRE' },
+    { post_number: 3, client_name: 'M3', post_type: 'WEB' }, { post_number: 4, client_name: 'M4', client_id: 'zzz', post_type: 'WEB' }, { post_number: 5, client_name: 'M5', client_id: 'a', post_type: 'WEB', client_price_ar: 15000 },
+  ];
+  const posts: any[] = [
+    { status: 'completed', date: d(5), post_number: 1, client_name: 'M1' }, { status: 'completed', date: d(4), post_number: 2, client_name: 'M2' },
+    { status: 'completed', date: d(3), post_number: 3, client_name: 'M3' }, { status: 'completed', date: d(2), post_number: 4, client_name: 'M4' },
+    { status: 'pending_end', date: d(1), post_number: 1, client_name: 'M1' }, { status: 'completed', date: d(1), post_number: 5, client_name: 'M5' },
+    { status: 'completed', date: d(1), post_number: 1, client_name: 'M1', client_id: 'b', client_price_ar: 100 },
+  ];
+  const prices = { client_price_default_ar: 1000, client_prices_by_type: { WEB: 2000 } };
+  const r = clientMissionsFromPosts(posts, contracts, cs, prices);
+  eq(r.map(x => [x.client_id, x.price_ar]), [['a', 9000], ['a', 7000], ['a', 15000], ['b', 100]], 'missions : client de la mission, prix du client pour ce type, sinon prix du client, prix de la mission, prix figé');
+  eq(r.length, 4, 'missions : sans client, client supprimé et mission non validée ne comptent pour personne');
+  eq(clientMissionsFromPosts([], contracts, cs, prices), [], 'missions : aucune session, aucune mission');
+  const cash: any[] = [
+    { kind: 'in', client_name: 'A', amount_ar: 1000, date: '2026-10-01' }, { kind: 'in', client_name: ' a ', amount_ar: 500.4, date: '2026-10-09' }, { kind: 'out', client_name: 'a', amount_ar: 99999, date: '2026-10-05' },
+    { kind: 'in', client_name: 'Inconnu', amount_ar: 777, date: '2026-10-02' }, { kind: 'in', amount_ar: 5, date: '2026-10-03' }, { kind: 'in', client_name: 'a', amount_ar: -5, date: '2026-10-04' },
+  ];
+  const m = clientReceived(cash, cs);
+  eq([m.get('a')!.received, m.get('a')!.payments, m.get('a')!.last_date, m.get('b')!.received], [1500, 2, '2026-10-09', 0], 'paiements : même nom sans accent ni majuscule, entrées seulement, montants invalides ignorés');
+  const twin = clientReceived([{ kind: 'in', client_name: 'Dupont', amount_ar: 10, date: '2026-10-01' } as any], [cl('x', { name: 'Dupont' }), cl('y', { name: 'DUPONT' })]);
+  eq([twin.get('x')!.received, twin.get('y')!.received], [0, 0], 'paiements : deux fiches de même nom, on ne devine pas');
+}
+
+// --- Recherche, filtre, tri, comptes (M1.4) ---
+{
+  const cs: ClientRecord[] = [
+    cl('c1', { name: 'Zébulon', phone: '034 11', contact_name: 'Hery' }), cl('c2', { name: 'alpha', email: 'x@y.mg' }), cl('c3', { name: 'Beta', active: false }), cl('c4', { name: 'Gamma' }),
+  ];
+  const ml = [...ms('c1', [d(5), d(4), d(3)], 2000), ...ms('c2', [d(200)], 9000)];
+  const sm = sum(cs, ml);
+  const names = (f: any) => filterClients(cs, sm, { q: '', status: 'all', sort: 'status', ...f }).map(c => c.name);
+  eq(names({}), ['alpha', 'Zébulon', 'Gamma'], 'liste : archivés cachés ; inactif d\'abord, puis les autres par chiffre d\'affaires');
+  eq(names({ sort: 'name' }), ['alpha', 'Gamma', 'Zébulon'], 'tri par nom (sans tenir compte des majuscules)');
+  eq(names({ sort: 'revenue' }), ['alpha', 'Zébulon', 'Gamma'], 'tri par chiffre d\'affaires sur 12 mois : le plus gros d\'abord (9 000 puis 6 000 puis 0)');
+  eq(names({ sort: 'recent' })[0], 'Zébulon', 'tri par dernière mission : la plus récente d\'abord');
+  eq(names({ status: 'archived' }), ['Beta'], 'filtre « Archivés »');
+  eq(names({ status: 'inactive' }), ['alpha'], 'filtre « Inactif »');
+  eq(names({ status: 'prospect' }), ['Gamma'], 'filtre « Prospect »');
+  eq(names({ q: 'zebulon' }), ['Zébulon'], 'recherche sans accent');
+  eq(names({ q: '034' }), ['Zébulon'], 'recherche par téléphone');
+  eq(names({ q: 'X@Y' }), ['alpha'], 'recherche par e-mail, sans majuscules');
+  eq(names({ q: 'hery' }), ['Zébulon'], 'recherche par nom du contact');
+  eq(names({ q: 'beta' }), [], 'recherche : un archivé n\'apparaît pas hors du filtre « Archivés »');
+  eq(names({ q: 'zzz' }), [], 'recherche sans résultat');
+  const cnt = countByStatus(cs, sm);
+  eq([cnt.all, cnt.archived, cnt.inactive, cnt.prospect, cnt.new], [3, 1, 1, 1, 1], 'comptes par statut (archivés à part, statuts cumulés comptés partout)');
 }
 
 // --- Pureté et vitesse ---

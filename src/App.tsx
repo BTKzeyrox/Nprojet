@@ -37,6 +37,7 @@ const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
+const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
@@ -389,6 +390,8 @@ export default function App() {
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'performance' ? (
                 <PerformancePage />
+              ) : activeView === 'clients' ? (
+                <ClientsPage />
               ) : activeView === 'stats' ? (
                 <StatsPage onNavigate={view => setActiveView(view)} onOpenEmployee={handleOpenEmployeeCV} />
               ) : activeView === 'history' ? (

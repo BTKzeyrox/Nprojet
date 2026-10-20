@@ -1,4 +1,5 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
+import { checkClientDraft, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -513,6 +514,54 @@ class DeltaForceStore {
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
   public getClients(): Client[] { return [...this.clients]; } // admin seulement (l'opérateur n'en reçoit jamais)
+
+  // Clients (responsable seulement ; le serveur revérifie chaque fiche). Codes d'erreur : 'admin' | 'name' | 'email' | 'terms' | 'price' | 'price_by_type' | 'duplicate' | 'missing' | 'in_use'.
+  // Le statut d'un client n'est jamais enregistré : il se calcule (src/utils/clients.ts).
+  public addClient(d: ClientDraft): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkClientDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    if (this.clients.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
+    const now = new Date().toISOString();
+    const id = `cli-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.clients = [{ id, ...v.clean, active: true, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.clients];
+    this.notify();
+    return { success: true, id };
+  }
+
+  public updateClient(id: string, d: ClientDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.clients.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    const v = checkClientDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    if (this.clients.some(x => x.id !== id && normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
+    // Les champs facultatifs vidés par l'admin disparaissent vraiment (on ne garde pas l'ancienne valeur).
+    const { payment_terms_days: _t, price_default_ar: _p, price_by_type: _b, ...base } = old;
+    this.clients = this.clients.map(x => x.id === id ? { ...base, ...v.clean, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+
+  /** Désactive (archive) ou réactive un client. Un client désactivé reste là avec ses missions et n'apparaît plus dans les listes de choix. */
+  public setClientActive(id: string, active: boolean): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
+    this.clients = this.clients.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+
+  /** Supprime une fiche seulement si aucune mission ni session ne la cite (le serveur refuse aussi) : sinon, on la désactive. */
+  public deleteClient(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
+    if (this.contracts.some(c => c.client_id === id) || this.posts.some(p => p.client_id === id)) return { success: false, error: 'in_use' };
+    this.clients = this.clients.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
 

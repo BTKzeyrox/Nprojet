@@ -121,14 +121,18 @@ function cleanClient(rec: any, existing: any, meId: string, now: string): { ok: 
   const email = text(rec.email, 120);
   if (email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return { ok: false, reason: "email" };
   const none = (v: unknown) => v === undefined || v === null || v === "";
+  // Un nombre ou un texte non vide : jamais un tableau, un booléen ou un objet (Number([5]) vaudrait 5, Number(true) vaudrait 1).
+  const numIn = (v: unknown) => typeof v === "number" || (typeof v === "string" && v.trim() !== "");
   let terms: number | undefined;
   if (!none(rec.payment_terms_days)) {
+    if (!numIn(rec.payment_terms_days)) return { ok: false, reason: "terms" };
     const t = Number(rec.payment_terms_days);
     if (!Number.isFinite(t) || t < 0 || t > CLIENT_MAX_TERMS) return { ok: false, reason: "terms" };
     terms = Math.round(t);
   }
   let price: number | undefined;
   if (!none(rec.price_default_ar)) {
+    if (!numIn(rec.price_default_ar)) return { ok: false, reason: "price" };
     const p = Number(rec.price_default_ar);
     if (!Number.isFinite(p) || p < 0 || p > CLIENT_MAX_MONEY) return { ok: false, reason: "price" };
     price = Math.round(p);
@@ -142,7 +146,7 @@ function cleanClient(rec: any, existing: any, meId: string, now: string): { ok: 
     byType = {};
     for (const [k, v] of entries) {
       const key = String(k).trim().slice(0, 40);
-      const p = Number(v);
+      const p = numIn(v) ? Number(v) : NaN; // un prix vide (« ») n'est pas 0 : il est refusé
       if (!key || CLIENT_BAD_KEYS.includes(key) || !Number.isFinite(p) || p < 0 || p > CLIENT_MAX_MONEY) return { ok: false, reason: "price_by_type" };
       byType[key] = Math.round(p);
     }
