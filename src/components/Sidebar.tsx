@@ -68,7 +68,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCompact,
 }) => {
   const { theme, t } = useApp();
-  useLockBodyScroll(!!isOpenMobile); // menu ouvert : la page derrière ne défile plus
+  // Menu ouvert sur petit écran : la page derrière ne défile plus. Sur grand écran (menu toujours visible,
+  // ou téléphone/tablette tourné), le verrou est retiré tout de suite : sinon la page restait figée.
+  const [isWide, setIsWide] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  React.useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const on = () => setIsWide(mq.matches);
+    mq.addEventListener('change', on);
+    on();
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  useLockBodyScroll(!!isOpenMobile && !isWide);
   const isAdmin = currentUser.role === 'admin';
   const isLight = theme === 'light';
   const pending = countPending().total;
