@@ -27,6 +27,7 @@ const d = clone(COMPANY_DEFAULTS);
   ok(r.errors.length === 0 && J(r.value) === J(d), 'valeurs de départ : valides et inchangées');
   ok(J(cleanCompany(undefined).value) === J(d) && J(cleanCompany({}).value) === J(d), 'rien envoyé = valeurs de départ');
   ok(d.tax.vat_enabled === false && d.billing.payment_days === 30 && d.billing.invoice_prefix === 'FA-' && d.billing.receipt_prefix === 'RC-' && d.identity.currency === 'Ar' && d.legal.tax_id === '' && d.legal.register_id === '', 'départ : TVA non, 30 jours, FA-/RC-, Ar, aucun identifiant légal inventé');
+  ok(d.clients.new_days === 60 && d.clients.regular_missions === 3 && d.clients.regular_months === 6 && d.clients.strategic_top_pct === 20 && d.clients.strategic_months === 12 && d.clients.strategic_min_missions === 5 && d.clients.inactive_days === 90, 'départ : seuils des statuts clients = ceux du plan (60 j, 3 missions sur 6 mois, 20 % et 5 missions sur 12 mois, 90 j)');
   ok(d.options.invoice_per === 'client_month' && d.options.quotes_enabled === false && d.options.employee_sees_badges && !d.options.employee_sees_attention && d.options.mission_requires_client && d.missions.refusal_reason_required, 'départ : choix D5 à D11 comme prévu');
 }
 // cas : [section, clé, valeur envoyée, valeur attendue, refusée ?]
@@ -42,6 +43,9 @@ const cases: [string, string, unknown, unknown, boolean][] = [
   ['payroll', 'pay_day', 31, 31, false], ['payroll', 'pay_day', 32, 0, true], ['payroll', 'pay_rounding', '100', '100', false], ['payroll', 'pay_rounding', '50', 'none', true],
   ['leave', 'late_limit_time', '08:30', '08:30', false], ['leave', 'late_limit_time', '25:00', '', true], ['leave', 'late_limit_time', '8:30', '', true], ['leave', 'leave_days_per_year', 30, 30, false], ['leave', 'leave_days_per_year', 61, 0, true], ['leave', 'work_days_per_week', 8, 0, true],
   ['missions', 'validation_hours', 48, 48, false], ['missions', 'validation_hours', 721, 0, true], ['missions', 'refusal_reason_required', false, false, false],
+  ['clients', 'new_days', 90, 90, false], ['clients', 'new_days', 0, 60, true], ['clients', 'new_days', 366, 60, true], ['clients', 'new_days', 'abc', 60, true], ['clients', 'new_days', '45', 45, false],
+  ['clients', 'regular_months', 24, 24, false], ['clients', 'regular_months', 25, 6, true], ['clients', 'regular_missions', 0, 3, true], ['clients', 'strategic_top_pct', 50, 50, false], ['clients', 'strategic_top_pct', 101, 20, true],
+  ['clients', 'strategic_months', 36, 36, false], ['clients', 'strategic_months', 37, 12, true], ['clients', 'strategic_min_missions', 1000, 1000, false], ['clients', 'strategic_min_missions', 1001, 5, true], ['clients', 'inactive_days', 730, 730, false], ['clients', 'inactive_days', -1, 90, true],
   ['options', 'invoice_per', 'mission', 'mission', false], ['options', 'invoice_per', 'weekly', 'client_month', true],
   ['texts', 'internal_rules', 'Règle 1\nRègle 2', 'Règle 1\nRègle 2', false], ['texts', 'internal_rules', '<img src=x onerror=alert(1)>Texte', 'Texte', false], ['texts', 'internal_rules', 'x'.repeat(5001), '', true], ['texts', 'internal_rules', 'x'.repeat(5000), 'x'.repeat(5000), false],
   ['legal', 'notes', ['RCS 123', '', '  ', 'NIF 456'], ['RCS 123', 'NIF 456'], false], ['legal', 'notes', Array.from({ length: 11 }, (_, i) => `l${i}`), [], true], ['legal', 'notes', ['a'.repeat(201)], [], true], ['legal', 'notes', 'texte seul', [], true], ['legal', 'notes', [1, 2], [], true],

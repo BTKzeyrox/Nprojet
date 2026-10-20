@@ -42,6 +42,14 @@ export const CLIENT_THRESHOLDS_DEFAULT: ClientThresholds = {
   inactive_days: 90,
 };
 
+/** Seuils tirés de la page Conditions (section « clients »). Une valeur absente ou fausse prend la valeur de départ. */
+export function clientThresholds(company: { clients?: Partial<ClientThresholds> } | undefined | null): ClientThresholds {
+  const src: any = (company && company.clients) || {};
+  const out: any = { ...CLIENT_THRESHOLDS_DEFAULT };
+  for (const k of Object.keys(CLIENT_THRESHOLDS_DEFAULT)) { const v = src[k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 1) out[k] = Math.round(v); }
+  return out as ClientThresholds;
+}
+
 /** Statut le plus important à montrer : un client inactif est signalé d'abord, ensuite stratégique > régulier > nouveau > actif > prospect. */
 export const STATUS_PRIORITY: ClientStatus[] = ['inactive', 'strategic', 'regular', 'new', 'active', 'prospect'];
 

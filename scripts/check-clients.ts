@@ -1,6 +1,6 @@
 // Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur.
 // Lancer : npm run check:clients
-import { addMonths, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
+import { addMonths, clientThresholds, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
 import { addDays } from '../src/utils/stats';
 import { clientPriceWithClient } from '../src/utils/clientPrice';
 
@@ -86,6 +86,20 @@ eq(clientPriceWithClient({ post_type: 'WEB' }, undefined, {} as any), 0, 'aucun 
 eq(clientPriceWithClient({ client_price_ar: 0 }, C, S), 0, '0 est un vrai prix (mission offerte)');
 eq(clientPriceWithClient({ client_price_ar: NaN, post_type: 'SAISIE' }, { price_by_type: { SAISIE: -5 }, price_default_ar: NaN }, S), 200, 'prix invalides (NaN, négatif) ignorés : on passe au niveau suivant');
 eq(clientPriceWithClient({ client_price_ar: 99.6 }, undefined, S), 100, 'prix arrondi à l\'Ar');
+
+// --- Seuils venant de la page Conditions ---
+eq(clientThresholds(undefined), CLIENT_THRESHOLDS_DEFAULT, 'seuils : rien reçu = valeurs de départ');
+eq(clientThresholds({}), CLIENT_THRESHOLDS_DEFAULT, 'seuils : section absente = valeurs de départ');
+eq(clientThresholds({ clients: { new_days: 30, inactive_days: 120 } }).new_days, 30, 'seuils : valeur réglée gardée');
+eq(clientThresholds({ clients: { new_days: 30, inactive_days: 120 } }).regular_missions, 3, 'seuils : valeur non réglée = valeur de départ');
+eq(clientThresholds({ clients: { new_days: 0, regular_months: -2, inactive_days: NaN } as any }), CLIENT_THRESHOLDS_DEFAULT, 'seuils : 0, négatif ou NaN refusés (valeurs de départ)');
+eq(clientThresholds({ clients: { new_days: '30' } as any }).new_days, 60, 'seuils : un texte n\'est pas un nombre (valeur de départ)');
+eq(clientThresholds({ clients: { new_days: 30.6 } }).new_days, 31, 'seuils : arrondi au jour');
+{
+  // un seuil réglé change vraiment le statut : 70 jours depuis la première mission = « Actif » avec 60 j, « Nouveau » avec 90 j
+  const one = [cl('a')], list = ms('a', [d(70)]);
+  eq([sum(one, list).get('a')!.main, sum(one, list, clientThresholds({ clients: { new_days: 90 } })).get('a')!.main], ['active', 'new'], 'seuils : changer « Nouveau » à 90 jours change le statut');
+}
 
 // --- Pureté et vitesse ---
 const frozen = Object.freeze([Object.freeze(cl('a'))]) as ClientRecord[];

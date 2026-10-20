@@ -198,6 +198,7 @@ const COMPANY_SPEC = {
   payroll: { pay_day: { t: "int", min: 0, max: 31 }, pay_rounding: { t: "enum", vals: ["none", "10", "100", "1000"] } },
   leave: { leave_days_per_year: { t: "int", min: 0, max: 60 }, work_days_per_week: { t: "int", min: 0, max: 7 }, late_limit_time: { t: "time" } },
   missions: { validation_hours: { t: "int", min: 0, max: 720 }, refusal_reason_required: { t: "bool" } },
+  clients: { new_days: { t: "int", min: 1, max: 365 }, regular_missions: { t: "int", min: 1, max: 100 }, regular_months: { t: "int", min: 1, max: 24 }, strategic_top_pct: { t: "int", min: 1, max: 100 }, strategic_months: { t: "int", min: 1, max: 36 }, strategic_min_missions: { t: "int", min: 1, max: 1e3 }, inactive_days: { t: "int", min: 1, max: 730 } },
   options: { invoice_per: { t: "enum", vals: ["client_month", "mission"] }, quotes_enabled: { t: "bool" }, employee_sees_badges: { t: "bool" }, employee_sees_attention: { t: "bool" }, mission_requires_client: { t: "bool" }, badges_enabled: { t: "bool" } },
   texts: { internal_rules: { t: "text", max: 5e3, multi: true }, customer_terms: { t: "text", max: 5e3, multi: true } }
 };
@@ -209,6 +210,7 @@ const COMPANY_DEFAULTS = {
   payroll: { pay_day: 0, pay_rounding: "none" },
   leave: { leave_days_per_year: 0, work_days_per_week: 0, late_limit_time: "" },
   missions: { validation_hours: 0, refusal_reason_required: true },
+  clients: { new_days: 60, regular_missions: 3, regular_months: 6, strategic_top_pct: 20, strategic_months: 12, strategic_min_missions: 5, inactive_days: 90 },
   options: { invoice_per: "client_month", quotes_enabled: false, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
   texts: { internal_rules: "", customer_terms: "" }
 };

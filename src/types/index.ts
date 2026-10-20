@@ -68,6 +68,7 @@ export interface CompanySettings {
   payroll: { pay_day: number; pay_rounding: 'none' | '10' | '100' | '1000' };
   leave: { leave_days_per_year: number; work_days_per_week: number; late_limit_time: string };
   missions: { validation_hours: number; refusal_reason_required: boolean };
+  clients: { new_days: number; regular_missions: number; regular_months: number; strategic_top_pct: number; strategic_months: number; strategic_min_missions: number; inactive_days: number };
   options: { invoice_per: 'client_month' | 'mission'; quotes_enabled: boolean; employee_sees_badges: boolean; employee_sees_attention: boolean; mission_requires_client: boolean; badges_enabled: boolean };
   texts: { internal_rules: string; customer_terms: string };
 }
