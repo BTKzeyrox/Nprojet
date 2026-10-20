@@ -32,6 +32,7 @@ export interface FinanceStats {
   bestClient: { name: string; amount: number } | null;
   expensesByCategory: { label: string; value: number }[];
   labels: string[];
+  fullLabels: string[];
   series: { inflow: number[]; outflow: number[]; billed: number[]; cumulative: number[] };
 }
 
@@ -94,6 +95,7 @@ export function computeFinance(input: FinanceInput, g: StatsGranularity, range: 
     bestClient: best ? { name: best[0], amount: best[1] } : null,
     expensesByCategory,
     labels: b.labels,
+    fullLabels: b.fullLabels,
     series: { inflow, outflow, billed: billedS, cumulative },
   };
 }

@@ -63,5 +63,15 @@ ok(clean(renderToString(<XYChart labels={['a']} series={[{ key: 'a', label: 'A',
 ok(clean(renderToString(<XYChart labels={L3} series={[{ key: 'a', label: 'A', values: [NaN, Infinity, 3], kind: 'line' }]} ariaLabel="Test" />)), 'courbe : NaN et infini ignorés');
 ok(renderToString(<XYChart labels={L3} series={[{ key: 'a', label: 'A', values: [1, 2, 3] }]} ariaLabel="Test" />).includes('data-notranslate'), 'XYChart : exclu de la traduction automatique');
 
+
+// ---------- Trous (prévision, jours à venir) ----------
+const gapA = renderToString(<XYChart labels={['a', 'b', 'c', 'd']} series={[{ key: 'r', label: 'Réel', values: [10, 20, null, null], kind: 'area' }, { key: 'f', label: 'Prévision', values: [null, 20, 30, 40], kind: 'line', dashed: true, color: '#a78bfa' }]} ariaLabel="Test" summary="last" />);
+ok(clean(gapA) && (gapA.match(/chart-line/g) || []).length === 1 && gapA.includes('stroke-dasharray="5 4"') && gapA.includes('#a78bfa'), 'trous : réel en trait plein, prévision en pointillé violet');
+ok(gapA.includes('Dernier') && gapA.includes('>20</b>') && !gapA.includes('>40</b>'), 'trous : « Dernier » = dernière valeur réelle (20), pas la prévision (40)');
+const gapMid = renderToString(<XYChart labels={['a', 'b', 'c']} series={[{ key: 'r', label: 'R', values: [5, null, 9], kind: 'line' }]} ariaLabel="Test" />);
+ok(clean(gapMid) && (gapMid.match(/chart-line/g) || []).length === 2, 'trous : un trou au milieu coupe la courbe en deux morceaux');
+ok(clean(renderToString(<XYChart labels={['a', 'b']} series={[{ key: 'r', label: 'R', values: [null, null], kind: 'line' }]} ariaLabel="Test" />)), 'trous : série entièrement vide sans erreur');
+ok(clean(renderToString(<XYChart labels={['a', 'b', 'c']} series={[{ key: 'r', label: 'R', values: [1, null, 3], kind: 'bar' }, { key: 'q', label: 'Q', values: [null, 2, null], kind: 'bar' }]} ariaLabel="Test" />)), 'trous : barres avec cases vides sans erreur');
+
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

@@ -2,8 +2,10 @@ import React, { useMemo } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { computeFinance } from '../../utils/financeStats';
-import { daysBetween, type StatsGranularity } from '../../utils/stats';
-import { BarChart, DonutChart, LineChart, compactNumber } from '../../components/charts/Charts';
+import { daysBetween, todayMada, type StatsGranularity } from '../../utils/stats';
+import { DonutChart, XYChart, compactNumber } from '../../components/charts/Charts';
+import { forecastMonth, monthFigures } from '../../utils/goals';
+import { actualUntil, forecastLine } from '../../utils/chartData';
 
 // Chiffres et graphiques financiers de la période (responsable seulement). Tout est calculé ici, sans appel serveur.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
@@ -29,6 +31,19 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
   );
   const ar = (n: number) => formatCurrencyAr(n);
   const short = (n: number) => compactNumber(n);
+  // Objectif de bénéfice et prévision de fin de mois : seulement sur le mois en cours (par jour)
+  const today = todayMada();
+  const onThisMonth = g === 'month' && r.start <= today && today <= r.end;
+  const todayIdx = onThisMonth ? daysBetween(r.start, today) : -1;
+  const fc = onThisMonth ? forecastMonth(monthFigures({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0 }, today)) : null;
+  const goalProfit = onThisMonth ? Number(s.goal_profit_ar) || 0 : 0;
+  const cum = f.series.cumulative;
+  const cumSeries = todayIdx >= 0 && todayIdx < cum.length
+    ? [
+        { key: 'cum', label: t('Bénéfice cumulé', 'Cumulative profit'), values: actualUntil(cum, todayIdx), kind: 'area' as const },
+        ...(fc ? [{ key: 'fc', label: t('Prévision fin de mois', 'End-of-month forecast'), values: forecastLine(cum, todayIdx, fc.profit), kind: 'line' as const, dashed: true, color: '#a78bfa' }] : []),
+      ]
+    : [{ key: 'cum', label: t('Bénéfice cumulé', 'Cumulative profit'), values: cum, kind: 'area' as const }];
   const tile = (label: string, value: string, tone = 'text-white', hint?: string) => (
     <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 min-w-0">
       <div className="text-[11px] text-slate-400">{label}</div>
@@ -59,17 +74,30 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
 
       <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Argent reçu et dépenses', 'Money in and out')} <span className="text-xs font-normal text-slate-400">({BY[g][lang]})</span></h2>
-        <BarChart values={f.series.inflow} compare={f.series.outflow} compareLabel={t('Dépenses', 'Expenses')} labels={f.labels} format={short} unit="Ar" lang={lang} ariaLabel={t('Argent reçu (barres) et dépenses (traits)', 'Money received (bars) and expenses (lines)')} />
+        <XYChart labels={f.labels} fullLabels={f.fullLabels} lang={lang} format={ar} axisFormat={short} unit="Ar" summary="sum" showAverage legend
+          ariaLabel={t('Argent reçu et dépenses', 'Money received and expenses')}
+          series={[
+            { key: 'in', label: t('Argent reçu', 'Money received'), values: f.series.inflow, kind: 'bar' },
+            { key: 'out', label: t('Dépenses', 'Expenses'), values: f.series.outflow, kind: 'bar', color: '#fb7185' },
+          ]} />
       </div>
 
       <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Bénéfice cumulé', 'Cumulative profit')}</h2>
-        <LineChart values={f.series.cumulative} labels={f.labels} format={short} lang={lang} ariaLabel={t('Bénéfice cumulé', 'Cumulative profit')} />
+        <XYChart labels={f.labels} fullLabels={f.fullLabels} lang={lang} format={ar} axisFormat={short} summary="last" signColors legend={cumSeries.length > 1}
+          ariaLabel={t('Bénéfice cumulé', 'Cumulative profit')} series={cumSeries}
+          refLines={goalProfit > 0 ? [{ value: goalProfit, label: t('Objectif', 'Goal'), color: '#a78bfa' }] : []} />
+        {fc && <p className="text-[11px] text-slate-500">{t(`Prévision : ${ar(fc.profit)} à la fin du mois, au rythme actuel.`, `Forecast: ${ar(fc.profit)} at the end of the month at the current pace.`)}</p>}
       </div>
 
       <div className={box}>
-        <h2 className="text-sm sm:text-base font-bold text-white">{t('Facturé (barres) et reçu (traits)', 'Billed (bars) and received (lines)')}</h2>
-        <BarChart values={f.series.billed} compare={f.series.inflow} compareLabel={t('Reçu', 'Received')} labels={f.labels} format={short} unit="Ar" lang={lang} ariaLabel={t('Facturé et reçu', 'Billed and received')} />
+        <h2 className="text-sm sm:text-base font-bold text-white">{t('Facturé et reçu', 'Billed and received')}</h2>
+        <XYChart labels={f.labels} fullLabels={f.fullLabels} lang={lang} format={ar} axisFormat={short} unit="Ar" summary="sum" legend
+          ariaLabel={t('Facturé et reçu', 'Billed and received')}
+          series={[
+            { key: 'billed', label: t('Facturé', 'Billed'), values: f.series.billed, kind: 'bar', color: '#38bdf8' },
+            { key: 'rec', label: t('Reçu', 'Received'), values: f.series.inflow, kind: 'bar' },
+          ]} />
       </div>
 
       <div className={box}>

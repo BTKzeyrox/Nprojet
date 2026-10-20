@@ -6,7 +6,8 @@ import { labelStep, monotonePath, nearestIndex, niceScale, seriesStats, variatio
 // Axe vertical gradué, grille, ligne du zéro, infobulle au toucher / à la souris / au clavier, légende cliquable,
 // moyenne, lignes de repère (objectif…), vert au-dessus de zéro et rouge en dessous, animation d'entrée.
 
-export interface XYSeries { key: string; label: string; values: number[]; kind?: 'bar' | 'line' | 'area'; color?: string; dashed?: boolean }
+export interface XYSeries { key: string; label: string; values: (number | null)[]; // null = pas de point (jour pas encore arrivé, prévision qui commence plus tard)
+   kind?: 'bar' | 'line' | 'area'; color?: string; dashed?: boolean }
 export interface RefLine { value: number; label: string; color?: string }
 
 export interface XYChartProps {
@@ -55,7 +56,11 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
     return () => ro.disconnect();
   }, []);
 
-  const all = series.map((s, i) => ({ ...s, kind: s.kind ?? 'bar', color: s.color ?? CHART_COLORS[i % CHART_COLORS.length], values: s.values.map(safe) }));
+  const all = series.map((s, i) => ({
+    ...s, kind: s.kind ?? 'bar', color: s.color ?? CHART_COLORS[i % CHART_COLORS.length],
+    has: s.values.map(v => v !== null && v !== undefined && Number.isFinite(v)), // faux = pas de point
+    values: s.values.map(v => (v === null || v === undefined ? 0 : safe(v))),
+  }));
   const visible = all.filter(s => !hidden.includes(s.key));
   const n = Math.max(1, labels.length, ...all.map(s => s.values.length));
   const fmt = p.format ?? ((v: number) => String(Math.round(v)));
@@ -99,7 +104,7 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
     const sIdx = all.findIndex(a => a.key === s.key);
     for (let i = 0; i < n; i++) {
       const v = s.values[i] ?? 0;
-      if (v === 0) continue;
+      if (v === 0 || !s.has[i]) continue;
       let from = 0;
       if (stacked) for (let k = 0; k < bi; k++) { const o = bars[k].values[i] ?? 0; if ((o >= 0) === (v >= 0)) from += o; }
       const a = Y(from), b = Y(from + v);
@@ -110,7 +115,12 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
 
   // --- repères ---
   const primary = visible[0];
-  const stats = primary ? seriesStats(primary.values.slice(0, n)) : null;
+  const stats = (() => {
+    if (!primary) return null;
+    const at = primary.values.slice(0, n).map((_, i) => i).filter(i => primary.has[i]);
+    const sub = seriesStats(at.map(i => primary.values[i]));
+    return { ...sub, bestIndex: at[sub.bestIndex] ?? -1, worstIndex: at[sub.worstIndex] ?? -1 };
+  })();
   const pick = (e: React.PointerEvent) => {
     const r = svgRef.current?.getBoundingClientRect();
     if (!r || r.width === 0) return 0;
@@ -121,8 +131,8 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
   const fullLabel = (i: number) => p.fullLabels?.[i] ?? labels[i] ?? '';
   const valueText = (v: number) => `${fmt(v)}${unit ? ` ${unit}` : ''}`;
   const varPair = p.variationBetween ? [all.find(s => s.key === p.variationBetween![0]), all.find(s => s.key === p.variationBetween![1])] : null;
-  const variation = idx !== null && varPair?.[0] && varPair[1] ? variationPct(varPair[0].values[idx] ?? 0, varPair[1].values[idx] ?? 0) : null;
-  const aria = `${ariaLabel}. ${primary ? `${tx.total}: ${valueText(seriesStats(primary.values.slice(0, n)).total)}.` : ''}`;
+  const variation = idx !== null && varPair?.[0] && varPair[1] && varPair[0].has[idx] && varPair[1].has[idx] ? variationPct(varPair[0].values[idx] ?? 0, varPair[1].values[idx] ?? 0) : null;
+  const aria = `${ariaLabel}. ${stats ? `${tx.total}: ${valueText(stats.total)}.` : ''}`;
   const markers = n <= 40;
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -183,26 +193,37 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
           {/* zones et courbes */}
           {lines.map(s => {
             const sIdx = all.findIndex(a => a.key === s.key);
-            const pts = s.values.slice(0, n).map((v, i) => [X(i), Y(v)] as [number, number]);
-            const d = monotonePath(pts);
-            if (!d) return null;
-            const area = `${d}L${pts[pts.length - 1][0]},${zeroY}L${pts[0][0]},${zeroY}Z`;
-            const vals = s.values.slice(0, n);
-            const crosses = signColors && vals.some(v => v < 0) && vals.some(v => v > 0);
-            const solid = signColors && !crosses ? (vals.some(v => v < 0) ? BAD : GOOD) : s.color;
-            if (crosses) {
-              return (
-                <g key={s.key}>
-                  {s.kind === 'area' && <><path className="chart-area" d={area} fill={`url(#${uid}up)`} clipPath={`url(#${uid}ca)`} /><path className="chart-area" d={area} fill={`url(#${uid}dn)`} clipPath={`url(#${uid}cb)`} /></>}
-                  <path className="chart-line" pathLength={1} d={d} fill="none" stroke={GOOD} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" clipPath={`url(#${uid}ca)`} />
-                  <path className="chart-line" pathLength={1} d={d} fill="none" stroke={BAD} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" clipPath={`url(#${uid}cb)`} />
-                </g>
-              );
+            const segs: [number, number][][] = [];
+            let run: [number, number][] = [];
+            for (let i = 0; i < n; i++) {
+              if (s.has[i]) run.push([X(i), Y(s.values[i] ?? 0)]);
+              else if (run.length) { segs.push(run); run = []; }
             }
+            if (run.length) segs.push(run);
+            const vals = s.values.slice(0, n).filter((_, i) => s.has[i]);
+            const crosses = !s.dashed && signColors && vals.some(v => v < 0) && vals.some(v => v > 0);
+            const solid = s.dashed ? s.color : signColors && !crosses ? (vals.some(v => v < 0) ? BAD : GOOD) : s.color; // une prévision en pointillé garde sa couleur
             return (
               <g key={s.key}>
-                {s.kind === 'area' && <path className="chart-area" d={area} fill={signColors ? `url(#${uid}${solid === BAD ? 'dn' : 'up'})` : `url(#${uid}g${sIdx})`} />}
-                <path className={s.dashed ? 'chart-area' : 'chart-line'} pathLength={1} d={d} fill="none" stroke={solid} strokeWidth={s.dashed ? 1.8 : 2.2} strokeDasharray={s.dashed ? '5 4' : undefined} strokeLinejoin="round" strokeLinecap="round" />
+                {segs.map((pts, k) => {
+                  const d = monotonePath(pts);
+                  const area = `${d}L${pts[pts.length - 1][0]},${zeroY}L${pts[0][0]},${zeroY}Z`;
+                  if (crosses) {
+                    return (
+                      <g key={k}>
+                        {s.kind === 'area' && <><path className="chart-area" d={area} fill={`url(#${uid}up)`} clipPath={`url(#${uid}ca)`} /><path className="chart-area" d={area} fill={`url(#${uid}dn)`} clipPath={`url(#${uid}cb)`} /></>}
+                        <path className="chart-line" pathLength={1} d={d} fill="none" stroke={GOOD} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" clipPath={`url(#${uid}ca)`} />
+                        <path className="chart-line" pathLength={1} d={d} fill="none" stroke={BAD} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" clipPath={`url(#${uid}cb)`} />
+                      </g>
+                    );
+                  }
+                  return (
+                    <g key={k}>
+                      {s.kind === 'area' && pts.length > 1 && <path className="chart-area" d={area} fill={signColors ? `url(#${uid}${solid === BAD ? 'dn' : 'up'})` : `url(#${uid}g${sIdx})`} />}
+                      <path className={s.dashed ? 'chart-area' : 'chart-line'} pathLength={1} d={d} fill="none" stroke={solid} strokeWidth={s.dashed ? 1.8 : 2.2} strokeDasharray={s.dashed ? '5 4' : undefined} strokeLinejoin="round" strokeLinecap="round" />
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
@@ -222,10 +243,10 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
           ))}
 
           {/* points */}
-          {lines.filter(s => !s.dashed).map(s => s.values.slice(0, n).map((v, i) => (markers || idx === i) ? (
+          {lines.filter(s => !s.dashed).map(s => s.values.slice(0, n).map((v, i) => s.has[i] && (markers || idx === i) ? (
             <circle key={`${s.key}${i}`} cx={X(i)} cy={Y(v)} r={idx === i ? 5 : 2.6} fill={idx === i ? '#0b1220' : s.color} stroke={signColors ? (v < 0 ? BAD : GOOD) : s.color} strokeWidth={idx === i ? 2.4 : 0} />
           ) : null))}
-          {idx !== null && lines.filter(s => s.dashed).map(s => <circle key={`d${s.key}`} cx={X(idx)} cy={Y(s.values[idx] ?? 0)} r={4} fill="#0b1220" stroke={s.color} strokeWidth="2" />)}
+          {idx !== null && lines.filter(s => s.dashed && s.has[idx]).map(s => <circle key={`d${s.key}`} cx={X(idx)} cy={Y(s.values[idx] ?? 0)} r={4} fill="#0b1220" stroke={s.color} strokeWidth="2" />)}
 
           {/* trait de lecture */}
           {idx !== null && <line x1={X(idx)} x2={X(idx)} y1={padT} y2={padT + innerH} stroke="currentColor" className="text-slate-400" strokeWidth="1" strokeDasharray="3 3" />}
@@ -243,7 +264,7 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
             {visible.map(s => (
               <div key={s.key} className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1.5 min-w-0"><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} /><span className="truncate">{s.label}</span></span>
-                <span className="font-mono text-white whitespace-nowrap">{valueText(s.values[idx] ?? 0)}</span>
+                <span className="font-mono text-white whitespace-nowrap">{s.has[idx] ? valueText(s.values[idx] ?? 0) : '—'}</span>
               </div>
             ))}
             {stacked && bars.length > 1 && <div className="flex items-center justify-between gap-3 border-t border-slate-700 pt-1"><span>{tx.total}</span><span className="font-mono text-white">{valueText(bars.reduce((t, s) => t + (s.values[idx] ?? 0), 0))}</span></div>}

@@ -11,6 +11,7 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 
 const { db } = await import('../src/db/store');
 const { FinanceTab } = await import('../src/views/admin/FinanceTab');
+const { FinanceInsights } = await import('../src/views/admin/FinanceInsights');
 const { todayMada } = await import('../src/utils/stats');
 
 let fails = 0, n = 0;
@@ -47,6 +48,17 @@ ok(/50[\s\u00a0\u202f]000 Ar/.test(view('fr', 60000)), 'solde affiché = 150 000
 ok(!view('fr', 0).includes('Calculé avec les missions validées'), 'sans salaire calculé : pas de ligne « Salaires »');
 const other = view('fr', 0, 0, { start: '2020-01-01', end: '2020-01-31' });
 ok(other.includes('Aucune ligne sur cette période.') && !other.includes('Client Test'), 'autre période : les lignes d\'aujourd\'hui n\'apparaissent pas');
+
+
+// ---------- Graphiques financiers (FinanceInsights) ----------
+for (const lang of ['fr', 'en'] as const) {
+  const html = renderToString(<FinanceInsights range={range} lang={lang} />);
+  ok(!bad(html), `${lang} : graphiques financiers sans NaN ni « undefined »`);
+  ok(html.includes(lang === 'en' ? 'Money received' : 'Argent reçu') && html.includes(lang === 'en' ? 'Expenses' : 'Dépenses') && html.includes(lang === 'en' ? 'Billed' : 'Facturé'), `${lang} : légendes des graphiques financiers`);
+  ok(html.includes(lang === 'en' ? 'Cumulative profit' : 'Bénéfice cumulé'), `${lang} : graphique du bénéfice cumulé`);
+}
+ok(!bad(renderToString(<FinanceInsights range={{ start: '2020-01-01', end: '2020-12-31' }} lang="fr" />)), 'année passée sans donnée : sans erreur');
+ok(!bad(renderToString(<FinanceInsights range={{ start: today, end: today }} lang="en" />)), 'un seul jour : sans erreur');
 
 // modifier / supprimer
 const id = a.id as string;

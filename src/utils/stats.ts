@@ -86,24 +86,27 @@ export function periodLabel(g: StatsGranularity, anchor: string, lang: 'fr' | 'e
 
 // ---------- Barres des graphiques ----------
 
-export interface Buckets { labels: string[]; count: number; index: (date: string, time?: string) => number }
+export interface Buckets { labels: string[]; fullLabels: string[]; count: number; index: (date: string, time?: string) => number } // fullLabels : titres complets (infobulle des graphiques)
 
 /** Jour : 24 heures · Semaine / Mois : un par jour · Année : un par mois. */
 export function buckets(g: StatsGranularity, range: StatsRange, lang: 'fr' | 'en' = 'fr'): Buckets {
   if (g === 'day') {
-    return { labels: Array.from({ length: 24 }, (_, h) => String(h)), count: 24, index: (_d, t) => { const h = Number((t || '00:00').slice(0, 2)); return Number.isFinite(h) && h >= 0 && h < 24 ? h : 0; } };
+    const pad = (h: number) => String(h % 24).padStart(2, '0');
+    return { labels: Array.from({ length: 24 }, (_, h) => String(h)), fullLabels: Array.from({ length: 24 }, (_, h) => `${pad(h)}:00 – ${pad(h + 1)}:00`), count: 24, index: (_d, t) => { const h = Number((t || '00:00').slice(0, 2)); return Number.isFinite(h) && h >= 0 && h < 24 ? h : 0; } };
   }
   if (g === 'year') {
     const loc = lang === 'en' ? 'en-GB' : 'fr-FR';
     const labels = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(loc, { timeZone: 'UTC', month: 'short' }).format(new Date(Date.UTC(2000, i, 1))).replace('.', ''));
-    return { labels, count: 12, index: d => Number(d.slice(5, 7)) - 1 };
+    const full = Array.from({ length: 12 }, (_, i) => `${new Intl.DateTimeFormat(loc, { timeZone: 'UTC', month: 'long' }).format(new Date(Date.UTC(2000, i, 1)))} ${range.start.slice(0, 4)}`);
+    return { labels, fullLabels: full, count: 12, index: d => Number(d.slice(5, 7)) - 1 };
   }
   const loc = lang === 'en' ? 'en-GB' : 'fr-FR';
   const labels = Array.from({ length: range.days }, (_, i) => {
     const s = addDays(range.start, i);
     return g === 'week' ? new Intl.DateTimeFormat(loc, { timeZone: 'UTC', weekday: 'short' }).format(new Date(toMs(s))).replace('.', '') : String(Number(s.slice(8, 10)));
   });
-  return { labels, count: range.days, index: d => daysBetween(range.start, d.slice(0, 10)) };
+  const fullLabels = Array.from({ length: range.days }, (_, i) => new Intl.DateTimeFormat(loc, { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(toMs(addDays(range.start, i)))).replace(/\./g, ''));
+  return { labels, fullLabels, count: range.days, index: d => daysBetween(range.start, d.slice(0, 10)) };
 }
 
 // ---------- Variation ----------
@@ -166,8 +169,10 @@ export interface StatsResult {
   cur: Totals;
   prev: Totals;
   labels: string[];
+  fullLabels: string[];
   series: { done: number[]; earned: number[]; prevDone: number[] };
   byType: { label: string; count: number }[];
+  byTypeSeries: { label: string; values: number[] }[]; // missions faites par type et par barre (5 types au plus, le reste dans « Autres »)
   upcoming: { todo: number; active: number; toValidate: number; urgent: number; total: number };
   team: { active: number; day: number; night: number; ranking: RankRow[]; idle: string[]; perHead: number | null };
   salary: { pendingAdvanceCount: number; pendingAdvanceAr: number; perHead: number | null };
@@ -197,6 +202,18 @@ export function computeStats(input: StatsInput, g: StatsGranularity, anchor: str
   const types = new Map<string, number>();
   if (!ranges.isFuture) for (const p of input.posts) if (p.status === 'completed' && inRange(p.date, ranges.curEff)) { const t = typeOf(p, input.contracts); types.set(t, (types.get(t) || 0) + 1); }
   const byType = [...types.entries()].map(([label, count]) => ({ label, count })).sort((a, c) => c.count - a.count);
+  const perType = new Map<string, number[]>();
+  if (!ranges.isFuture) for (const p of input.posts) if (p.status === 'completed' && inRange(p.date, ranges.curEff)) {
+    const i = b.index(p.date, p.start_time);
+    if (i < 0 || i >= b.count) continue;
+    const t = typeOf(p, input.contracts);
+    if (!perType.has(t)) perType.set(t, new Array(b.count).fill(0));
+    perType.get(t)![i]++;
+  }
+  const typeSeries = byType.map(t => ({ label: t.label, values: perType.get(t.label) || new Array(b.count).fill(0) }));
+  const byTypeSeries = typeSeries.length > 6
+    ? [...typeSeries.slice(0, 5), { label: lang === 'en' ? 'Others' : 'Autres', values: typeSeries.slice(5).reduce((acc, t) => acc.map((v, i) => v + t.values[i]), new Array(b.count).fill(0) as number[]) }]
+    : typeSeries;
 
   // Missions à venir (état actuel du tableau, pas lié à la période)
   const board = input.contracts.filter(c => !c.no_account);
@@ -220,8 +237,10 @@ export function computeStats(input: StatsInput, g: StatsGranularity, anchor: str
   return {
     ranges, cur, prev,
     labels: b.labels,
+    fullLabels: b.fullLabels,
     series: { done, earned, prevDone },
     byType,
+    byTypeSeries,
     upcoming: { todo, active, toValidate, urgent, total: board.length },
     team: {
       active: employees.length,

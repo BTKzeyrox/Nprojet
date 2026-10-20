@@ -8,6 +8,7 @@ import { todayMada } from '../../utils/stats';
 import { purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
 import type { Product, StockMoveType } from '../../types';
 import { LineChart, compactNumber } from '../../components/charts/Charts';
+import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
@@ -162,7 +163,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
       {products.length > 0 && (
         <div className={card}>
           <h3 className="text-sm font-bold text-white">{t('Valeur du stock dans le temps', 'Stock value over time')}</h3>
-          <LineChart values={months.values} labels={months.labels} format={v => ar(v)} ariaLabel={t('Valeur du stock à la fin de chaque mois', 'Stock value at the end of each month')} emptyText={t('Pas encore de stock.', 'No stock yet.')} lang={lang} />
+          <LineChart values={months.values} labels={months.labels} fullLabels={months.keys.map(k => monthTitle(k, lang))} format={v => ar(v)} ariaLabel={t('Valeur du stock à la fin de chaque mois', 'Stock value at the end of each month')} emptyText={t('Pas encore de stock.', 'No stock yet.')} lang={lang} />
           <p className="text-[11px] text-slate-500">{t('Les 12 derniers mois, avec les prix d\'achat actuels.', 'The last 12 months, using current purchase prices.')}</p>
         </div>
       )}

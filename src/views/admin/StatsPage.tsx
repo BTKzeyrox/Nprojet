@@ -9,7 +9,8 @@ import { StockTab } from './StockTab';
 import { ReportTab } from './ReportTab';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
-import { BarChart, DonutChart, compactNumber } from '../../components/charts/Charts';
+import { DonutChart, XYChart, compactNumber } from '../../components/charts/Charts';
+import { pacePerBar } from '../../utils/chartData';
 import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
 import type { Slip } from '../../utils/payslip';
@@ -57,6 +58,10 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
   const pickGran = (next: StatsGranularity) => { setG(next); try { localStorage.setItem('stats_gran', next); } catch { /* stockage refusé */ } };
 
   const ranges = comparableRanges(g, anchor, today);
+  // Objectif de missions du mois : trait de rythme par jour, seulement sur le mois en cours
+  const goalMissions = Number(db.getSettings().goal_missions) || 0;
+  const onThisMonth = g === 'month' && !ranges.isFuture && ranges.cur.start <= today && today <= ranges.cur.end;
+  const paceLine = onThisMonth && goalMissions > 0 ? [{ value: pacePerBar(goalMissions, ranges.cur.days), label: l === 'en' ? 'Goal pace / day' : 'Rythme de l\'objectif / jour', color: '#a78bfa' }] : [];
 
   // Paie du mois (payé / reste à payer) : lecture seule, une seule demande au serveur par mois affiché
   const payHalf = db.getSettings().pay_period === 'half';
@@ -158,7 +163,12 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
 
       {/* Missions : faites sur la période, par type, et ce qui reste à faire */}
       <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`} raw={l === 'en'}>
-        <BarChart values={stats.series.done} labels={stats.labels} compare={ranges.isFuture ? undefined : stats.series.prevDone} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} lang={l} />
+        <XYChart labels={stats.labels} fullLabels={stats.fullLabels} lang={l} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'}
+          summary="sum" showAverage legend={!ranges.isFuture} variationBetween={ranges.isFuture ? undefined : ['done', 'prev']} refLines={paceLine}
+          series={[
+            { key: 'done', label: l === 'en' ? 'Missions done' : 'Missions faites', values: stats.series.done, kind: 'bar' },
+            ...(ranges.isFuture ? [] : [{ key: 'prev', label: l === 'en' ? 'Previous period' : 'Période d\'avant', values: stats.series.prevDone, kind: 'line' as const, dashed: true, color: '#f59e0b' }]),
+          ]} />
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.done}</div><div className="text-[11px] text-slate-400">Validées</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.rejected}</div><div className="text-[11px] text-slate-400">Refusées</div></div>
@@ -167,6 +177,10 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       </Section>
 
       <Section title="Missions par type">
+        {stats.byTypeSeries.length > 0 && (
+          <XYChart stacked legend labels={stats.labels} fullLabels={stats.fullLabels} lang={l} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? `Missions by type ${BY[g].en}` : `Missions par type ${BY[g].fr}`}
+            series={stats.byTypeSeries.map(t => ({ key: t.label, label: t.label, values: t.values, kind: 'bar' as const }))} />
+        )}
         <DonutChart items={stats.byType.map(t => ({ label: t.label, value: t.count }))} ariaLabel={l === 'en' ? 'Missions by type' : 'Missions par type'} centerLabel={l === 'en' ? 'done' : 'missions'} lang={l} />
       </Section>
 
@@ -242,7 +256,8 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         const closed = pay.status === 'closed' || pay.status === 'paid';
         return (
           <Section title="Salaires">
-            <BarChart values={stats.series.earned} labels={stats.labels} format={v => `${compactNumber(v)} Ar`} ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'} lang={l} />
+            <XYChart labels={stats.labels} fullLabels={stats.fullLabels} lang={l} format={v => formatCurrencyAr(v)} axisFormat={compactNumber} summary="sum" showAverage ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'}
+              series={[{ key: 'earned', label: l === 'en' ? 'Salaries earned' : 'Salaires gagnés', values: stats.series.earned, kind: 'bar' }]} />
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.earned)}</div><div className="text-[11px] text-slate-400">Gagné</div></div>
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.advances)}</div><div className="text-[11px] text-slate-400">Avances accordées</div></div>
