@@ -62,6 +62,7 @@ Chaque module suit **toujours le même chemin**, dans cet ordre. C'est la métho
 | Congés et présence | jours de congé par an, jours travaillés par semaine, heure limite pour le retard | vide |
 | Missions | délai de validation attendu, règle de refus (motif obligatoire : oui) | oui |
 | Badges | seuils et poids de la performance (module 3) | valeurs proposées |
+| Choix de fonctionnement (ex-décisions D5 à D11) | facture par mission / par client et par mois ; devis activés oui/non ; le salarié voit ses badges et son score oui/non ; le salarié voit ses points d'attention oui/non ; mission toujours liée à un client oui/non ; module Badges activé oui/non | par client et par mois ; devis non ; badges oui ; points d'attention non ; client obligatoire oui ; badges oui |
 | Règlement intérieur | texte libre affiché aux salariés (lecture seule) | vide |
 | Conditions pour les clients | texte libre imprimé sur devis et factures (conditions de vente) | vide |
 
@@ -83,7 +84,7 @@ Chaque module suit **toujours le même chemin**, dans cet ordre. C'est la métho
 
 ## DÉCISIONS À PRENDRE AVEC BTK (avant le module 1)
 
-> **Mise à jour 2026-10-20 :** D1, D2, D3, D4, D6 sont remplies **dans la page Conditions (module 0)**, pas dans le code. BTK n'a rien à connaître d'avance : on garde les valeurs de départ et on les change quand l'entreprise donne ses règles.
+> **Mise à jour 2026-10-20 (demande de BTK) :** plus aucune décision n'est figée. **Chacune devient un réglage** dans la page Conditions (module 0), avec la valeur proposée par défaut ; l'entreprise choisit et peut changer plus tard. Les modules lisent ces réglages (ex. : si « devis » est sur Non, l'écran des devis n'apparaît pas). BTK n'a donc rien à trancher maintenant.
 
 | # | Question | Défaut proposé |
 |---|---|---|
@@ -271,7 +272,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
-2. **Décisions D5, D7 à D11** (D1 à D4 et D6 vont dans la page Conditions).
+2. **Plus de décisions à prendre** : D1 à D11 sont des réglages de la page Conditions.
 3. **Module 1** (Clients) — il débloque tout le reste.
 4. **Module 3.A** (performance et badges des salariés) — peut se faire en parallèle, sans nouvelle table.
 5. **Module 2** (Facturation et reçus).
