@@ -37,6 +37,8 @@ ok(f.billed === 32000, 'facturé = prix figés 12 000 + 12 000 + 8 000');
 ok(f.toCollect === 0, 'à encaisser jamais négatif (reçu > facturé)');
 ok(f.done === 3 && f.costPerMission === 13000 && f.gainPerMission === 47000, 'coût et gain par mission (39 000 ÷ 3, 141 000 ÷ 3)');
 ok(f.bestClient?.name === 'Client A' && f.bestClient.amount === 130000, 'meilleur client = Client A (130 000)');
+ok(f.clients.length >= 1 && f.clients[0].name === 'Client A' && f.clients[0].amount === 130000 && f.clients.every((c, i, a) => i === 0 || a[i - 1].amount >= c.amount), 'classement des clients : du plus gros au plus petit, le premier = le meilleur client');
+ok(f.clients.reduce((t, c) => t + c.amount, 0) <= f.received, 'classement des clients : leur total ne dépasse jamais l\'argent reçu');
 const saisie = f.byType.find(r => r.type === 'Saisie');
 ok(!!saisie && saisie.done === 2 && saisie.billed === 24000 && saisie.margin === 14000 && saisie.marginPct === 58, 'marge du type Saisie : 24 000 − 10 000 = 14 000 (58 %)');
 ok(f.byType[0].type === 'Saisie' || f.byType[0].margin >= f.byType[1].margin, 'types triés par marge');
@@ -50,7 +52,7 @@ ok(f.series.billed.reduce((a, b) => a + b, 0) === f.billed, 'barres du facturé 
 
 // Cas limites
 const empty = computeFinance({ ...input, cash: [], posts: [] }, 'month', range);
-ok(empty.profit === 0 && empty.marginPct === null && empty.costPerMission === null && empty.bestClient === null && empty.byType.length === 0, 'période vide : zéros, pas de division par 0');
+ok(empty.profit === 0 && empty.marginPct === null && empty.costPerMission === null && empty.bestClient === null && empty.clients.length === 0 && empty.byType.length === 0, 'période vide : zéros, pas de division par 0');
 const loss = computeFinance({ ...input, cash: [cash('x', 'in', 1000, '2026-10-02', 'Paiement client'), cash('y', 'out', 9000, '2026-10-03', 'Achats')], posts: [] }, 'month', range);
 ok(loss.profit === -8000 && loss.marginPct === -800, 'perte : bénéfice et marge négatifs');
 const noPrice = computeFinance({ ...input, posts: [post('q', 9, '2026-10-04', '08:00:00', 5000)], contracts: [] }, 'month', range);

@@ -18,6 +18,6 @@ export const safe = (n: number) => (Number.isFinite(n) ? n : 0);
 export type ChartLang = 'fr' | 'en';
 // Les textes des graphiques sont fournis dans les deux langues ici (les graphiques sont exclus de la traduction automatique : data-notranslate)
 export const TXT = {
-  fr: { empty: 'Aucune donnée sur cette période', tapChart: 'Touchez le graphique pour voir les valeurs', before: 'avant', prev: 'Période d\'avant', total: 'Total', others: 'Autres', avg: 'Moyenne', best: 'Meilleur', last: 'Dernier', min: 'Min', max: 'Max', vsPrev: 'par rapport à la période d\'avant', value: 'Valeur' },
-  en: { empty: 'No data for this period', tapChart: 'Tap the chart to see the values', before: 'before', prev: 'Previous period', total: 'Total', others: 'Others', avg: 'Average', best: 'Best', last: 'Latest', min: 'Min', max: 'Max', vsPrev: 'vs previous period', value: 'Value' },
+  fr: { empty: 'Aucune donnée sur cette période', tapChart: 'Touchez le graphique pour voir les valeurs', before: 'avant', prev: 'Période d\'avant', total: 'Total', others: 'Autres', avg: 'Moyenne', best: 'Meilleur', last: 'Dernier', min: 'Min', max: 'Max', vsPrev: 'par rapport à la période d\'avant', value: 'Valeur', tapDonut: 'Touchez une part pour la détailler', pace: 'Trait blanc : où vous devriez en être aujourd\'hui', seeAll: 'Tout voir', share: 'du total' },
+  en: { empty: 'No data for this period', tapChart: 'Tap the chart to see the values', before: 'before', prev: 'Previous period', total: 'Total', others: 'Others', avg: 'Average', best: 'Best', last: 'Latest', min: 'Min', max: 'Max', vsPrev: 'vs previous period', value: 'Value', tapDonut: 'Tap a slice to see its details', pace: 'White mark: where you should be today', seeAll: 'Show all', share: 'of total' },
 } as const;

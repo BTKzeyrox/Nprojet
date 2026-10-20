@@ -7,7 +7,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
 import type { Product, StockMoveType } from '../../types';
-import { LineChart, compactNumber } from '../../components/charts/Charts';
+import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
 import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
@@ -83,7 +83,6 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
     </div>
   );
   const typeLabel = (x: StockMoveType) => (x === 'in' ? t('Entrée', 'Entry') : x === 'out' ? t('Sortie', 'Exit') : t('Ajustement', 'Adjustment'));
-  const maxUsed = Math.max(1, ...used.map(u => u.used));
 
   return (
     <div className="space-y-3" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -172,14 +171,8 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
         <div className={card}>
           <h3 className="text-sm font-bold text-white">{t('Produits les plus utilisés (période)', 'Most used products (period)')}</h3>
           {used.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune sortie sur cette période.', 'No exits in this period.')}</div> : (
-            <ul className="space-y-2">
-              {used.map(u => (
-                <li key={u.product.id}>
-                  <div className="flex justify-between text-[12px] text-slate-300"><span className="truncate pr-2">{u.product.name}</span><span className="whitespace-nowrap">{num(u.used)} {u.product.unit}</span></div>
-                  <div className="h-2 rounded bg-slate-800 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${Math.max(4, Math.round((u.used / maxUsed) * 100))}%` }} /></div>
-                </li>
-              ))}
-            </ul>
+            <RankBars lang={lang} ariaLabel={t('Produits les plus utilisés', 'Most used products')} barClass="bg-sky-500"
+              items={used.map(u => ({ key: u.product.id, label: u.product.name, value: u.used, valueText: `${num(u.used)} ${u.product.unit}` }))} />
           )}
           {period.soldAr > 0 && <p className="text-[11px] text-slate-500">{t(`Valeur des sorties au prix de vente : ${compactNumber(period.soldAr)} Ar.`, `Value of exits at selling price: ${compactNumber(period.soldAr)} Ar.`)}</p>}
         </div>

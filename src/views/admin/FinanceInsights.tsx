@@ -3,7 +3,7 @@ import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { computeFinance } from '../../utils/financeStats';
 import { daysBetween, todayMada, type StatsGranularity } from '../../utils/stats';
-import { DonutChart, XYChart, compactNumber } from '../../components/charts/Charts';
+import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
 import { forecastMonth, monthFigures } from '../../utils/goals';
 import { actualUntil, forecastLine } from '../../utils/chartData';
 
@@ -73,6 +73,13 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
       </div>
 
       <div className={box}>
+        <h2 className="text-sm sm:text-base font-bold text-white">{t('Clients : argent reçu', 'Clients: money received')}</h2>
+        <RankBars lang={lang} ariaLabel={t('Classement des clients par argent reçu', 'Clients ranked by money received')} format={ar} limit={5} showShare
+          emptyText={t('Aucun paiement avec un nom de client sur cette période.', 'No payment with a client name in this period.')}
+          items={f.clients.map(c => ({ key: c.name, label: c.name, value: c.amount, valueText: ar(c.amount) }))} />
+      </div>
+
+      <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Argent reçu et dépenses', 'Money in and out')} <span className="text-xs font-normal text-slate-400">({BY[g][lang]})</span></h2>
         <XYChart labels={f.labels} fullLabels={f.fullLabels} lang={lang} format={ar} axisFormat={short} unit="Ar" summary="sum" showAverage legend
           ariaLabel={t('Argent reçu et dépenses', 'Money received and expenses')}
@@ -107,16 +114,11 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
 
       <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Marge par type de mission', 'Margin by mission type')}</h2>
-        {f.byType.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune mission validée sur cette période.', 'No validated mission in this period.')}</div> : (
-          <ul>
-            {f.byType.map(r => (
-              <li key={r.type} className="flex items-center gap-2 py-2 border-t border-slate-800 first:border-t-0">
-                <div className="min-w-0 flex-1"><div className="text-sm text-white truncate">{r.type}</div><div className="text-[11px] text-slate-400">{t(`${r.done} mission(s) · facturé ${ar(r.billed)} · salaires ${ar(r.salaries)}`, `${r.done} mission(s) · billed ${ar(r.billed)} · salaries ${ar(r.salaries)}`)}</div></div>
-                <div className={`text-sm font-bold whitespace-nowrap ${r.margin < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{ar(r.margin)}{r.marginPct !== null ? ` · ${r.marginPct} %` : ''}</div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <RankBars lang={lang} ariaLabel={t('Marge par type de mission', 'Margin by mission type')} emptyText={t('Aucune mission validée sur cette période.', 'No validated mission in this period.')} format={ar}
+          items={f.byType.map(r => ({
+            key: r.type, label: r.type, value: r.margin, valueText: `${r.margin < 0 ? '−' : ''}${ar(Math.abs(r.margin))}${r.marginPct !== null ? ` · ${r.marginPct} %` : ''}`,
+            sub: <div className="text-[11px] text-slate-400">{t(`${r.done} mission(s) · facturé ${ar(r.billed)} · salaires ${ar(r.salaries)}`, `${r.done} mission(s) · billed ${ar(r.billed)} · salaries ${ar(r.salaries)}`)}</div>,
+          }))} />
         <p className="text-[11px] text-slate-500">{t('Marge d\'un type = prix client − salaire des missions validées (sans les autres dépenses).', 'Type margin = client price − salaries of validated missions (other expenses not included).')}</p>
       </div>
     </div>

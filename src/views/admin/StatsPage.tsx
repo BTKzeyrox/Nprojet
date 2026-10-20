@@ -9,7 +9,7 @@ import { StockTab } from './StockTab';
 import { ReportTab } from './ReportTab';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
-import { DonutChart, XYChart, compactNumber } from '../../components/charts/Charts';
+import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
 import { pacePerBar } from '../../utils/chartData';
 import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
@@ -204,7 +204,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       {(() => {
         const t = stats.team;
         const shown = showAll ? t.ranking : t.ranking.slice(0, 8);
-        const top = Math.max(1, ...t.ranking.map(r => r.done));
         const users = db.getUsers();
         const money = (n: number) => formatCurrencyAr(n);
         return (
@@ -215,30 +214,23 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
                 : (l === 'en' ? 'Nobody finished anything on this period.' : 'Personne n\'a terminé de mission sur cette période.')}
             </div>
             {t.ranking.length === 0 && <div className="text-sm text-slate-400">Aucun employé actif.</div>}
-            <ol className="space-y-1.5">
-              {shown.map((r, i) => {
+            <RankBars lang={l} ariaLabel={l === 'en' ? 'Ranking by missions done' : 'Classement par missions faites'}
+              items={shown.map(r => {
                 const hours = r.workMin / 60;
                 const perHour = hours > 0 && r.done > 0 ? Math.round((r.done / hours) * 10) / 10 : null;
                 const u = users.find(x => x.id === r.id);
-                return (
-                  <li key={r.id} className="rounded-lg bg-slate-900/60 border border-slate-800 px-2.5 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 text-center font-mono text-xs text-slate-500">{i + 1}</span>
-                      {onOpenEmployee && u
-                        ? <button type="button" onClick={() => onOpenEmployee(u)} className="min-w-0 flex-1 text-left text-sm font-semibold text-white truncate hover:underline">{r.name}</button>
-                        : <span className="min-w-0 flex-1 text-sm font-semibold text-white truncate">{r.name}</span>}
-                      <span className="font-mono text-sm text-white">{r.done}</span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-slate-800 overflow-hidden" aria-hidden="true"><div className="h-full bg-emerald-500" style={{ width: `${Math.round((r.done / top) * 100)}%` }} /></div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-slate-400">
+                return {
+                  key: r.id, label: r.name, value: r.done, valueText: String(r.done),
+                  onClick: onOpenEmployee && u ? () => onOpenEmployee(u) : undefined,
+                  sub: (
+                    <div className="flex flex-wrap gap-x-3 text-[11px] text-slate-400">
                       <span>{money(r.earned)}</span>
                       <span>{fmtDuration(r.workMin || null)}</span>
                       <span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{perHour === null ? '–' : (l === 'en' ? `${perHour} per hour` : `${perHour} par heure`)}</span>
                     </div>
-                  </li>
-                );
-              })}
-            </ol>
+                  ),
+                };
+              })} />
             {t.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm"><span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{showAll ? (l === 'en' ? 'Show less' : 'Voir moins') : (l === 'en' ? `Show all (${t.ranking.length})` : `Voir tout (${t.ranking.length})`)}</span></button>}
             {t.idle.length > 0 && stats.cur.workers > 0 && (
               <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-amber-300">{l === 'en' ? 'Idle on this period: ' : 'Sans mission sur cette période : '}{t.idle.slice(0, 8).join(', ')}{t.idle.length > 8 ? ` +${t.idle.length - 8}` : ''}</div>

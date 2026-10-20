@@ -30,6 +30,7 @@ export interface FinanceStats {
   done: number; costPerMission: number | null; gainPerMission: number | null;
   byType: TypeRow[];
   bestClient: { name: string; amount: number } | null;
+  clients: { name: string; amount: number }[]; // tous les clients qui ont payé sur la période, du plus gros au plus petit (classement)
   expensesByCategory: { label: string; value: number }[];
   labels: string[];
   fullLabels: string[];
@@ -67,7 +68,8 @@ export function computeFinance(input: FinanceInput, g: StatsGranularity, range: 
   // Meilleur client : celui qui a le plus payé sur la période (lignes « entrée » avec un nom de client)
   const byClient = new Map<string, number>();
   for (const e of cash) if (e.kind === 'in' && e.client_name?.trim()) byClient.set(e.client_name.trim(), (byClient.get(e.client_name.trim()) || 0) + e.amount_ar);
-  const best = [...byClient.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+  const clientList = [...byClient.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const best = clientList[0];
 
   // Dépenses par catégorie (+ salaires)
   const cats = new Map<string, number>();
@@ -93,6 +95,7 @@ export function computeFinance(input: FinanceInput, g: StatsGranularity, range: 
     gainPerMission: done.length ? Math.round(profit / done.length) : null,
     byType,
     bestClient: best ? { name: best[0], amount: best[1] } : null,
+    clients: clientList.map(([name, amount]) => ({ name, amount })),
     expensesByCategory,
     labels: b.labels,
     fullLabels: b.fullLabels,

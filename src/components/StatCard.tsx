@@ -23,6 +23,7 @@ const toneClass = (dir: 'up' | 'down' | 'flat', tone: StatTone) => {
   const good = tone === 'good' ? dir === 'up' : dir === 'down';
   return good ? 'text-emerald-400' : 'text-amber-400';
 };
+const SPARK_HEX = { 'text-emerald-400': '#10b981', 'text-amber-400': '#f59e0b', 'text-sky-300': '#38bdf8' } as const;
 
 export const StatCard: React.FC<Props> = ({ label, value, unit, hint, variation, deltaText, deltaDir, vsText, tone = 'good', spark }) => {
   const dir = deltaDir || variation?.dir || 'flat';
@@ -38,7 +39,7 @@ export const StatCard: React.FC<Props> = ({ label, value, unit, hint, variation,
           <span className="text-xl sm:text-2xl font-bold font-mono text-white break-words">{value}</span>
           {unit && <span className="ml-1 text-xs text-slate-400">{unit}</span>}
         </div>
-        {spark && <div className="shrink-0 pb-1"><Sparkline values={spark} /></div>}
+        {spark && <div className="shrink-0 pb-1"><Sparkline values={spark} color={SPARK_HEX[toneClass(dir, tone) as keyof typeof SPARK_HEX]} /></div>}
       </div>
       {hint && <div data-notranslate="" className="text-[11px] text-slate-400 truncate">{hint}</div>}
       {delta !== null && (

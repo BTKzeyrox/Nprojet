@@ -6,6 +6,7 @@ import { forecastMonth, goalRows, monthFigures, type GoalRow } from '../utils/go
 import { getAdminAlerts } from '../utils/alertsDb';
 import type { AlertItem } from '../utils/alerts';
 import { formatCurrencyAr } from '../utils/formatUtils';
+import { Gauge } from './charts/Gauge';
 
 // Objectifs du mois, alertes et prévision : réservés à l'admin (les chiffres d'argent ne sont jamais montrés à un employé).
 const box = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
@@ -18,7 +19,6 @@ function monthNow() {
 }
 
 const NAMES = { missions: ['Missions', 'Missions'], profit: ['Bénéfice', 'Profit'], expenses: ['Dépenses maximum', 'Maximum expenses'] } as const;
-const COLORS: Record<GoalRow['state'], string> = { good: 'bg-emerald-500', ok: 'bg-sky-500', warn: 'bg-amber-500', over: 'bg-rose-500' };
 const TEXT: Record<GoalRow['state'], { fr: string; en: string }> = {
   good: { fr: 'Objectif atteint', en: 'Goal reached' }, ok: { fr: 'Dans le rythme', en: 'On track' }, warn: { fr: 'À surveiller', en: 'Watch out' }, over: { fr: 'Plafond dépassé', en: 'Limit exceeded' },
 };
@@ -35,21 +35,19 @@ export const GoalsBars: React.FC<{ lang: 'fr' | 'en'; hideWhenEmpty?: boolean }>
   return (
     <div className={box} data-notranslate="">
       <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2"><Target className="w-4 h-4" />{t('Objectifs du mois', 'Monthly goals')} <span className="text-[11px] font-normal text-slate-400">{t(`jour ${m.day} sur ${m.daysInMonth}`, `day ${m.day} of ${m.daysInMonth}`)}</span></h2>
-      {rows.map(g => {
-        const money = g.key !== 'missions';
-        return (
-          <div key={g.key}>
-            <div className="flex items-baseline justify-between gap-2 text-xs">
-              <b className="text-white">{NAMES[g.key][lang === 'en' ? 1 : 0]}</b>
-              <span className="text-slate-300 text-right">{money ? formatCurrencyAr(g.value) : g.value} / {money ? formatCurrencyAr(g.goal) : g.goal} · {g.pct} %</span>
-            </div>
-            <div className="mt-1 h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, g.pct)} aria-label={NAMES[g.key][lang === 'en' ? 1 : 0]}>
-              <div className={`h-full ${COLORS[g.state]}`} style={{ width: `${Math.min(100, g.pct)}%` }} />
-            </div>
-            <div className="mt-0.5 text-[11px] text-slate-400">{TEXT[g.state][lang]}</div>
-          </div>
-        );
-      })}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {rows.map(g => {
+          const money = g.key !== 'missions';
+          const name = NAMES[g.key][lang === 'en' ? 1 : 0];
+          const markPct = (m.day / m.daysInMonth) * 100;
+          return (
+            <Gauge key={g.key} pct={g.pct} state={g.state} label={name} stateText={TEXT[g.state][lang]}
+              detail={`${money ? formatCurrencyAr(g.value) : g.value} / ${money ? formatCurrencyAr(g.goal) : g.goal}`}
+              markPct={markPct} markText={t(`Rythme attendu aujourd'hui : ${Math.round(markPct)} %`, `Expected pace today: ${Math.round(markPct)} %`)} />
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-slate-500">{t('Trait blanc : où vous devriez en être aujourd\'hui. L\'arc doit le dépasser (pour les dépenses : rester en dessous).', 'White mark: where you should be today. The arc should go past it (for expenses: stay below it).')}</p>
     </div>
   );
 };

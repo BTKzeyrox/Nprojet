@@ -119,9 +119,11 @@ ok(!evil2.includes('<b>Evil') && !evil2.includes('<u>Zed') && (evil2.includes('&
 
 // ---------- Rendu des blocs (admin et opérateur) ----------
 const html = (el: React.ReactElement) => renderToString(<AppProvider>{el}</AppProvider>);
+const count3 = (h: string) => (h.match(/role="progressbar"/g) || []).length;
 for (const lang of ['fr', 'en'] as const) {
   const a = html(<AlertsList lang={lang} />), b = html(<GoalsBars lang={lang} />), c = html(<ForecastCard lang={lang} />), d = html(<ReportTab anchor={today2} lang={lang} />);
   ok(![a, b, c, d].some(bad), `${lang} : blocs rendus sans NaN ni « undefined »`);
+  ok(count3(b) === 3 && b.includes(lang === 'en' ? 'White mark: where you should be today' : 'Trait blanc : où vous devriez en être aujourd'), `${lang} : objectifs = 3 jauges avec la consigne du trait blanc`);
   ok(b.includes(lang === 'en' ? 'Monthly goals' : 'Objectifs du mois') && d.includes('<iframe') && d.includes('sandbox="allow-same-origin allow-modals"'), `${lang} : objectifs et rapport (page isolée dans un cadre sans script)`);
 }
 ok(html(<ReportTab anchor={today2} lang="fr" />).includes('Excel') && html(<ReportTab anchor={today2} lang="fr" />).includes('Imprimer'), 'rapport : boutons Excel et Imprimer / PDF');
