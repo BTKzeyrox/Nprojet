@@ -1,4 +1,5 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
+import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES } from '../demo/demoData';
 import {
   User,
@@ -19,6 +20,8 @@ import {
   ChatRead,
   NewsPost,
   CashEntry,
+  Product,
+  StockMove,
   NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
@@ -29,7 +32,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -85,6 +88,8 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   advances: (a, b) => String(b.id).localeCompare(String(a.id)),
   news: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   cash: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
+  products: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
+  stock: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -101,6 +106,8 @@ class DeltaForceStore {
   private settings: AppSettings[] = [];
   private news: NewsPost[] = [];
   private cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
+  private products: Product[] = []; // stock (admin seulement, comme les finances)
+  private stockMoves: StockMove[] = [];
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
@@ -142,7 +149,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(),
     };
   }
 
@@ -158,6 +165,8 @@ class DeltaForceStore {
       case 'settings': return this.settings;
       case 'news': return this.news;
       case 'cash': return this.cash;
+      case 'products': return this.products;
+      case 'stock': return this.stockMoves;
     }
   }
 
@@ -173,6 +182,8 @@ class DeltaForceStore {
       case 'settings': this.settings = value; break;
       case 'news': this.news = value; break;
       case 'cash': this.cash = value; break;
+      case 'products': this.products = value; break;
+      case 'stock': this.stockMoves = value; break;
     }
   }
 
@@ -494,6 +505,81 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
+  public getProducts(): Product[] { return [...this.products]; }
+  public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
+
+  public addProduct(d: ProductDraft): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkProductDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const now = new Date().toISOString();
+    const id = `prod-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.products = [{ id, ...v.clean, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.products];
+    this.notify();
+    return { success: true, id };
+  }
+
+  public updateProduct(id: string, d: ProductDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
+    const v = checkProductDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    this.products = this.products.map(x => x.id === id ? { ...x, ...v.clean, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+
+  /** Supprime le produit ET tous ses mouvements (le serveur fait pareil). */
+  public deleteProduct(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
+    this.products = this.products.filter(x => x.id !== id);
+    this.stockMoves = this.stockMoves.filter(m => m.product_id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  /**
+   * Entrée, sortie ou ajustement. Une sortie qui dépasse le stock est refusée ('stock') ; un ajustement ne peut pas rendre le stock négatif.
+   * `withExpense` (entrée avec un prix payé) : crée aussi une dépense « Achats » du même montant, liée à l'entrée (S3.3).
+   */
+  public addStockMove(d: MoveDraft, opts: { withExpense?: boolean } = {}): { success: boolean; error?: string; id?: string; cashId?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkMoveDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const p = this.products.find(x => x.id === v.clean.product_id);
+    if (!p) return { success: false, error: 'product' };
+    const have = quantities([p], this.stockMoves).get(p.id) || 0;
+    if (v.clean.type !== 'in' && have + (v.clean.type === 'out' ? -v.clean.qty : v.clean.qty) < 0) return { success: false, error: 'stock' };
+    const now = new Date().toISOString();
+    const id = `mv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    let cashId: string | undefined;
+    if (opts.withExpense && v.clean.type === 'in') {
+      const amount = purchaseAmount(v.clean.qty, v.clean.unit_cost_ar);
+      if (amount < 1) return { success: false, error: 'cost' }; // pas de prix : pas de dépense à créer
+      const c = this.addCash({ kind: 'out', category: 'Achats', amount, date: v.clean.date, note: `Stock : ${p.name} (${v.clean.qty} ${p.unit})` });
+      if (!c.success) return { success: false, error: c.error };
+      cashId = c.id;
+    }
+    this.stockMoves = [{ id, ...v.clean, ...(cashId ? { cash_id: cashId } : {}), created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.stockMoves];
+    this.notify();
+    return { success: true, id, cashId };
+  }
+
+  /** Supprime un mouvement (la quantité se recalcule). Refusé si cela rendrait le stock négatif. La dépense liée, s'il y en a une, reste : elle se supprime dans Finances. */
+  public deleteStockMove(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const m = this.stockMoves.find(x => x.id === id);
+    if (!m) return { success: false, error: 'missing' };
+    const rest = this.stockMoves.filter(x => x.id !== id);
+    const p = this.products.find(x => x.id === m.product_id);
+    if (p && (quantities([p], rest).get(p.id) || 0) < 0 && (quantities([p], this.stockMoves).get(p.id) || 0) >= 0) return { success: false, error: 'stock' };
+    this.stockMoves = rest;
+    this.notify();
+    return { success: true };
+  }
+
   public getNews(): NewsPost[] {
     return [...this.news];
   }
@@ -762,13 +848,13 @@ class DeltaForceStore {
       case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
       case 'backup-now': {
         const id = Math.max(0, ...this.demoBackups.map(b => b.id)) + 1;
-        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 17, bytes: 190464 + id * 512 }];
+        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 19, bytes: 204800 + id * 512 }];
         return ok({ ok: true, id });
       }
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -837,7 +923,9 @@ class DeltaForceStore {
     this.demoErrors = d.errors;
     this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES }]; // prix client inventés
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
-    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 17, bytes: 190464 }];
+    this.products = role === 'admin' ? d.products : []; // le stock aussi
+    this.stockMoves = role === 'admin' ? d.stock : [];
+    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 19, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
     return this.currentUser;

@@ -72,7 +72,7 @@ ok(db.deleteCash(a.id as string).success && db.getCash().length === before, 'dé
 
 // ---------- Sauvegardes de démo (S2.8) ----------
 const backups = await db.listBackups();
-ok(backups.ok && backups.rows.length > 0 && backups.rows.every(b => b.tables === 17), 'démo : la page Sauvegardes annonce 17 tables (df_cash comprise)');
+ok(backups.ok && backups.rows.length > 0 && backups.rows.every(b => b.tables === 19), 'démo : la page Sauvegardes annonce 19 tables (df_cash, df_products et df_stock_moves comprises)');
 
 // ---------- Opérateur : rien ----------
 db.enterDemo('employee');
@@ -83,8 +83,8 @@ const restore = read('supabase/functions/df-restore/index.ts');
 ok(!/df_cash/.test(restore), 'df-restore : ne touche pas à df_cash (la remise à zéro garde les finances)');
 ok(/wipe\("df_posts"\)/.test(restore), 'df-restore : efface toujours les missions faites (donc les salaires calculés repartent à 0)');
 const screen = read('src/components/RestoreSection.tsx');
-ok(screen.includes('Vos finances (paiements reçus et dépenses) sont gardées'), 'écran de remise à zéro : dit que les finances sont gardées');
-ok(read('src/utils/enDict.json').includes('Your finances (payments received and expenses) are kept'), 'écran de remise à zéro : phrase anglaise présente');
+ok(screen.includes('Vos finances (paiements reçus et dépenses) et votre stock sont gardés'), 'écran de remise à zéro : dit que les finances sont gardées');
+ok(read('src/utils/enDict.json').includes('Your finances (payments received and expenses) and your stock are kept'), 'écran de remise à zéro : phrase anglaise présente');
 ok(/'Finances'\)/.test(read('src/utils/backupExcel.ts')), 'sauvegarde Excel : feuille « Finances »');
 const mig = read('supabase/migrations/20261019_create_df_cash.sql');
 ok(/enable row level security/.test(mig) && /revoke all on public\.df_cash from anon, authenticated/.test(mig), 'migration df_cash : sécurité RLS et aucun accès public');

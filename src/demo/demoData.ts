@@ -1,4 +1,4 @@
-import type { CashEntry, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -54,6 +54,8 @@ export interface DemoData {
   presence: PresenceRow[];
   errors: Record<string, unknown>[];
   cash: CashEntry[];
+  products: Product[];
+  stock: StockMove[];
 }
 
 // ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
@@ -107,6 +109,47 @@ export function buildDemoCash(posts: PostSession[], contracts: ClientContract[])
   });
   add('out', 'Transport', 6000, todayKey, 'Course du jour (démo)'); // la vue « Jour » n'est pas vide
   return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// ----- Stock inventé (6 produits, 12 mois de mouvements). Générateur à part (graine propre) : les autres données de la démo ne changent pas. -----
+// La quantité n'est jamais écrite : elle se calcule avec les mouvements, et une sortie ne dépasse jamais ce qu'il y a en stock.
+export function buildDemoStock(): { products: Product[]; stock: StockMove[] } {
+  const r = rng(20261020);
+  const today = new Date();
+  const todayKey = ymd(today);
+  const at = (d: string) => new Date(`${d}T09:00:00`).toISOString();
+  // [nom, catégorie, unité, prix d'achat, prix de vente, seuil, sorties par jour (moyenne), lot de réapprovisionnement, mois sans réapprovisionnement à la fin]
+  const defs: [string, string, string, number, number, number, number, number, number][] = [
+    ['Papier A4', 'Bureau', 'ramette', 12000, 15000, 10, 0.5, 30, 1],
+    ['Cartouche d\'encre', 'Bureau', 'unité', 45000, 55000, 2, 0.06, 2, 0],
+    ['Casque audio', 'Matériel', 'unité', 35000, 45000, 3, 0.1, 3, 3],
+    ['Souris', 'Matériel', 'unité', 12000, 18000, 3, 0.12, 4, 0],
+    ['Clé USB 32 Go', 'Matériel', 'unité', 15000, 20000, 4, 0.08, 3, 0],
+    ['Câble réseau 5 m', 'Matériel', 'unité', 8000, 12000, 5, 0.1, 3, 0],
+  ];
+  const products: Product[] = [];
+  const stock: StockMove[] = [];
+  let n = 0;
+  const start = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+  defs.forEach(([name, category, unit, buy, sell, thr, perDay, lot, noRestock], i) => {
+    const id = `demo_p${i + 1}`;
+    products.push({ id, name, category, unit, buy_price_ar: buy, sell_price_ar: sell, alert_threshold: thr, created_by: DEMO_ADMIN_ID, created_at: at(ymd(start)), updated_at: at(ymd(start)) });
+    let have = 0;
+    const add = (type: 'in' | 'out', qty: number, date: string, note: string, cost?: number) => {
+      if (qty <= 0 || date > todayKey) return;
+      n++;
+      stock.push({ id: `demo_mv${n}`, product_id: id, type, qty, date, note, ...(cost ? { unit_cost_ar: cost } : {}), created_by: DEMO_ADMIN_ID, created_at: at(date), updated_at: at(date) });
+      have += type === 'in' ? qty : -qty;
+    };
+    for (let d = new Date(start); ymd(d) <= todayKey; d.setDate(d.getDate() + 1)) {
+      const key = ymd(d);
+      const monthsAgo = (today.getFullYear() - d.getFullYear()) * 12 + today.getMonth() - d.getMonth();
+      if (d.getDate() === 1 && monthsAgo >= noRestock) add('in', monthsAgo === 11 ? lot * 2 : lot, key, monthsAgo === 11 ? 'Stock de départ' : 'Réapprovisionnement', Math.round(buy * (0.95 + r() * 0.1) / 100) * 100);
+      if (r() < perDay && have > 0) add('out', Math.min(have, i === 0 ? 1 + Math.floor(r() * 3) : 1), key, i === 0 ? 'Impression des missions' : 'Remis à un opérateur');
+    }
+  });
+  stock.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  return { products, stock };
 }
 
 export function buildDemoData(): DemoData {
@@ -265,5 +308,6 @@ export function buildDemoData(): DemoData {
   ];
 
   const cash = buildDemoCash(posts, contracts);
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash };
+  const { products, stock } = buildDemoStock();
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash, products, stock };
 }

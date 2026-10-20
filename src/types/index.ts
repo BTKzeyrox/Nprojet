@@ -348,3 +348,31 @@ export interface CashEntry {
   created_at?: string;
   updated_at?: string;
 }
+
+// Stock (responsable seulement, comme les finances). La quantité en stock n'est JAMAIS saisie : elle se calcule avec les mouvements.
+export interface Product {
+  id: string;
+  name: string;
+  category: string;
+  unit: string; // « unité », « kg », « boîte »…
+  buy_price_ar: number; // prix d'achat par unité
+  sell_price_ar: number; // prix de vente par unité
+  alert_threshold: number; // voyant rouge quand la quantité est à ce nombre ou en dessous (0 = pas d'alerte)
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+export type StockMoveType = 'in' | 'out' | 'adjust';
+export interface StockMove {
+  id: string;
+  product_id: string;
+  type: StockMoveType; // in = entrée (+), out = sortie (−), adjust = ajustement (+ ou −, pour corriger après un comptage)
+  qty: number; // in/out : toujours > 0 ; adjust : positif ou négatif, jamais 0
+  date: string; // AAAA-MM-JJ
+  note: string;
+  unit_cost_ar?: number; // entrée seulement : prix payé par unité (facultatif)
+  cash_id?: string; // dépense « Achats » créée avec cette entrée (S3.3)
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}

@@ -13,15 +13,17 @@ const T = {
   settings: "df_settings",
   news: "df_news",
   cash: "df_cash",
+  products: "df_products",
+  stock: "df_stock_moves",
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -45,6 +47,64 @@ function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: tr
   };
 }
 // ===== END CASH =====
+
+// ===== BEGIN STOCK (produits et mouvements de stock : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-stock.ts) =====
+const STOCK_MAX_QTY = 1_000_000_000;
+const STOCK_MAX_MONEY = 1_000_000_000_000;
+const stockDate = (d: unknown): string | null => {
+  const date = String(d || "");
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + "T00:00:00Z") : null;
+  return parsed && !isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null;
+};
+const round2s = (n: number) => Math.round(n * 100) / 100;
+
+/** Vérifie et nettoie un produit envoyé par l'admin. */
+function cleanProduct(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  const name = String(rec?.name || "").trim().slice(0, 80);
+  if (!name) return { ok: false, reason: "name" };
+  const buy = rec.buy_price_ar === undefined || rec.buy_price_ar === null || rec.buy_price_ar === "" ? 0 : Number(rec.buy_price_ar);
+  if (!Number.isFinite(buy) || buy < 0 || buy > STOCK_MAX_MONEY) return { ok: false, reason: "buy" };
+  const sell = rec.sell_price_ar === undefined || rec.sell_price_ar === null || rec.sell_price_ar === "" ? 0 : Number(rec.sell_price_ar);
+  if (!Number.isFinite(sell) || sell < 0 || sell > STOCK_MAX_MONEY) return { ok: false, reason: "sell" };
+  const thr = rec.alert_threshold === undefined || rec.alert_threshold === null || rec.alert_threshold === "" ? 0 : Number(rec.alert_threshold);
+  if (!Number.isFinite(thr) || thr < 0 || thr > STOCK_MAX_QTY) return { ok: false, reason: "threshold" };
+  return {
+    ok: true,
+    save: {
+      id: rec.id, name, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
+      buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2s(thr),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+
+/** Vérifie et nettoie un mouvement de stock (le produit doit exister : contrôlé dans sync). La quantité en stock n'est jamais envoyée : elle se calcule. */
+function cleanStockMove(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  const type = rec && (rec.type === "in" || rec.type === "out" || rec.type === "adjust") ? rec.type : null;
+  if (!type) return { ok: false, reason: "type" };
+  const productId = String(rec.product_id || "").slice(0, 80);
+  if (!productId) return { ok: false, reason: "product" };
+  const qty = round2s(Number(rec.qty));
+  if (!Number.isFinite(qty) || qty === 0 || Math.abs(qty) > STOCK_MAX_QTY || (type !== "adjust" && qty < 0)) return { ok: false, reason: "qty" };
+  const date = stockDate(rec.date);
+  if (!date) return { ok: false, reason: "date" };
+  let cost: number | undefined;
+  if (type === "in" && rec.unit_cost_ar !== undefined && rec.unit_cost_ar !== null && rec.unit_cost_ar !== "") {
+    cost = Number(rec.unit_cost_ar);
+    if (!Number.isFinite(cost) || cost < 0 || cost > STOCK_MAX_MONEY) return { ok: false, reason: "cost" };
+    cost = Math.round(cost);
+  }
+  return {
+    ok: true,
+    save: {
+      id: rec.id, product_id: productId, type, qty, date, note: String(rec.note || "").slice(0, 300),
+      ...(cost !== undefined ? { unit_cost_ar: cost } : {}),
+      ...(rec.cash_id ? { cash_id: String(rec.cash_id).slice(0, 80) } : {}),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+// ===== END STOCK =====
 
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -595,6 +655,18 @@ async function sync(req: any, res: any, me: any) {
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         toSave = v.save;
       }
+      if (col === 'products') {
+        const v = cleanProduct(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        toSave = v.save;
+      }
+      if (col === 'stock') {
+        const v = cleanStockMove(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        const { data: prow } = await sb.from(T.products).select('id').eq('id', v.save.product_id).maybeSingle();
+        if (!prow) { rejected.push({ col, id: rec.id, reason: 'product' }); continue; } // mouvement d'un produit qui n'existe pas
+        toSave = v.save;
+      }
       if (col === 'news') {
         // Réservé au responsable (les autres sont déjà refusés plus haut). On ne perd jamais les réactions reçues.
         // Le statut, le motif de refus et les fichiers d'une publication existante ne changent jamais par ici.
@@ -644,6 +716,7 @@ async function sync(req: any, res: any, me: any) {
         if (nrow) await dropFiles(newsFilesOf(nrow.data));
       }
       await sb.from(T[col]).delete().eq('id', id);
+      if (col === 'products') await sb.from(T.stock).delete().eq('data->>product_id', id); // un produit supprimé emporte ses mouvements
       if (col === 'groups') {
         await sb.from(T.messages).delete().eq('data->>recipient_id', id);
         await sb.from(CHAT_READS).delete().eq('thread', id);

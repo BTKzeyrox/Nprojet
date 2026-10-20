@@ -34,6 +34,14 @@ export async function downloadBackupExcel(): Promise<void> {
     Client: c.client_name || '', Note: c.note || '',
   }))), 'Finances'); // vide pour un opérateur : le serveur n'envoie les finances qu'au responsable
 
+  const names = new Map(db.getProducts().map(p => [p.id, p.name]));
+  XLSX.utils.book_append_sheet(wb, sheet(db.getProducts().map(p => ({
+    Produit: p.name, Catégorie: p.category, Unité: p.unit, "Prix d'achat (Ar)": p.buy_price_ar, 'Prix de vente (Ar)': p.sell_price_ar, "Seuil d'alerte": p.alert_threshold,
+  }))), 'Produits');
+  XLSX.utils.book_append_sheet(wb, sheet(db.getStockMoves().map(m => ({
+    Date: m.date, Produit: names.get(m.product_id) || m.product_id, Type: m.type === 'in' ? 'Entrée' : m.type === 'out' ? 'Sortie' : 'Ajustement', Quantité: m.qty, 'Prix payé par unité (Ar)': m.unit_cost_ar ?? '', Note: m.note || '',
+  }))), 'Mouvements de stock'); // vides pour un opérateur : le serveur n'envoie le stock qu'au responsable
+
   const day = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `sauvegarde-gestion-pro-${day}.xlsx`);
 }

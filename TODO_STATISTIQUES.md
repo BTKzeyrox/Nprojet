@@ -1,7 +1,7 @@
 # TODO — Statistiques, finances et stock (Gestion Pro)
 
 Créé le 2026-10-18 à la demande de BTK. À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md` et `TODO.md`.
-Les **phases 1 et 2 sont faites côté code** (2026-10-19 ; non testées à l'écran) ; **`df-api` v8 (finances réservées à l'admin) est déployé depuis le 2026-10-20** (voir S2.9) ; essai avec un compte employé à faire ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
+Les **phases 1 et 2 sont faites côté code, et la phase 3 (stock) aussi sauf la création des tables sur `nprojet` et le déploiement de `df-api` v9** (2026-10-19 ; non testées à l'écran) ; **`df-api` v8 (finances réservées à l'admin) est déployé depuis le 2026-10-20** (voir S2.9) ; essai avec un compte employé à faire ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
 
 ## But
 
@@ -175,22 +175,28 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
 
 ## PHASE 3 — Stock et produits — taille L (dépend de la décision n° 4)
 
-- [ ] **S3.1 — Nouvelles tables** (M) — **accord de BTK + sauvegarde avant**
+- [ ] **S3.1 — Nouvelles tables** (M) — **accord de BTK + sauvegarde avant** — *accord donné le 2026-10-20 (« Phase 3 (stock), puis 4 et 5 ») ; sauvegarde n° 6 faite ; **reste à faire : appliquer la migration sur `nprojet`** (les outils Supabase n'étaient plus disponibles pendant ce tour)*
   - `df_products` : nom, catégorie, unité, prix d'achat, prix de vente, **seuil d'alerte**.
   - `df_stock_moves` : produit, type (entrée / sortie / ajustement), quantité, date, note.
   - Ajouter les deux à `df_take_backup()`, RLS activée, admin seulement (comme S2.4).
+  - **Fait :** migration écrite : `supabase/migrations/20261020_create_df_stock.sql` (même modèle que `df_cash` : `id`, `data jsonb`, `updated_at`, RLS activée, aucun accès pour `anon` / `authenticated`, index). Serveur (`df-api`, bloc `BEGIN STOCK`) : collections `products` et `stock`, **lecture et écriture réservées à l'admin**, `cleanProduct` et `cleanStockMove` (le serveur revérifie tout), un mouvement d'un produit inexistant est refusé, supprimer un produit supprime ses mouvements. `df_take_backup()` prend déjà toutes les tables `df_*` : rien à ajouter, **à vérifier après la création (19 tables attendues)**. `df-restore` ne touche pas au stock.
+  - **⚠ Ordre à respecter :** (1) appliquer la migration, (2) vérifier la sauvegarde (19 tables), (3) SEULEMENT ENSUITE déployer `df-api` v9. Si la v9 est déployée avant les tables, le serveur interroge des tables qui n'existent pas et l'écran de l'admin peut ne plus se charger. Retour en arrière de la migration (tables vides) : `drop table public.df_stock_moves; drop table public.df_products;` ; de `df-api` : redéployer le commit `eb7129a` (v8).
 
-- [ ] **S3.2 — Écran « Stock »** (L)
+- [x] **S3.2 — Écran « Stock »** (L) — *fait le 2026-10-20 (code et contrôles), non testé à l'écran ni avec le vrai serveur*
   - Liste des produits avec quantité en stock, valeur du stock, voyant rouge sous le seuil.
   - « + Entrée » et « + Sortie » (la quantité se calcule à partir des mouvements, jamais saisie à la main).
+  - **Fait :** 3e onglet « Stock » dans Statistiques (`src/views/admin/StockTab.tsx`, règles pures dans `src/utils/stock.ts`). Par produit : voyant (rouge à « seuil ou moins »), quantité, valeur (quantité × prix d'achat), boutons Entrée / Sortie / Historique / Modifier / Supprimer (confirmation). Une fenêtre unique pour les mouvements avec 3 types (entrée, sortie, **ajustement + ou −** pour corriger après un comptage). Règles : une sortie plus grande que le stock est refusée ; un ajustement ou une suppression de mouvement qui rendrait le stock négatif est refusé ; supprimer un produit demande confirmation et supprime ses mouvements. Boutons de 44 px minimum. Prix d'achat, de vente et seuil acceptent les espaces et la virgule.
 
-- [ ] **S3.3 — Lien avec les finances** (S)
+- [x] **S3.3 — Lien avec les finances** (S) — *fait le 2026-10-20, non testé à l'écran*
   - Option : un achat de stock crée automatiquement une dépense « Achats » (avec confirmation).
+  - **Fait :** dans une **entrée**, case « Créer aussi la dépense « Achats » » (décochée par défaut). Elle affiche le montant (quantité × prix payé par unité) et la date avant d'enregistrer ; sans prix payé, la dépense est refusée et rien n'est créé. La dépense et l'entrée gardent un lien (`cash_id`). Supprimer le produit ou le mouvement **ne supprime pas** la dépense (elle se supprime dans Finances).
 
-- [ ] **S3.4 — Graphiques de stock** (M)
+- [x] **S3.4 — Graphiques de stock** (M) — *fait le 2026-10-20, non testé à l'écran*
   - Valeur du stock dans le temps, produits les plus utilisés, produits bientôt en rupture.
+  - **Fait :** courbe de la valeur à la fin de chacun des 12 derniers mois (prix d'achat **actuels** appliqués aux quantités de l'époque) ; barres des 5 produits les plus sortis sur la période choisie en haut (les ajustements ne comptent pas comme usage) ; liste « Bientôt en rupture » = produits vides dans moins de 14 jours selon les sorties des 30 derniers jours (sans sortie récente, on ne devine pas).
 
-- [ ] **S3.5 — Démo, anglais, contrôle** (S)
+- [x] **S3.5 — Démo, anglais, contrôle** (S) — *fait le 2026-10-20*
+  - **Fait :** démo : 6 produits et environ 380 mouvements inventés sur 12 mois (`buildDemoStock`, graine propre : les autres données de la démo ne changent pas), aucun produit sous zéro, 3 produits sous le seuil, une valeur de stock qui varie ; un opérateur en démo ne voit rien ; la démo annonce 19 tables. Anglais : `t(fr, en)` dans tout l'écran. Sauvegarde Excel : feuilles « Produits » et « Mouvements de stock ». L'écran de remise à zéro dit maintenant « finances **et stock** gardés » (FR/EN). Contrôle : `npm run check:stock` (**92/92** : règles du serveur extraites du vrai fichier, calculs, store, démo, FR/EN) ; `check:phase2` adapté (19 tables). `tsc`, `build` et tous les anciens contrôles OK.
 
 ---
 
