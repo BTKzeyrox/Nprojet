@@ -45,7 +45,45 @@ Chaque module suit **toujours le même chemin**, dans cet ordre. C'est la métho
 
 ---
 
+## MODULE 0 — Page « Conditions de l'entreprise » — taille M (à faire AVANT les autres)
+
+**Pourquoi (demande de BTK, 2026-10-20) :** BTK ne connaît pas les règles des entreprises, et elles changent d'une entreprise à l'autre (TVA, délai de paiement, numéros, mentions légales, règles de congés, de paie…). Le site ne doit donc **rien écrire en dur** : toutes ces règles vivent dans **une page de réglages**, modifiable par l'admin quand l'entreprise lui dit ce qu'elle veut. Si les conditions changent, on change la page, pas le code.
+
+**Où :** Réglages > « Conditions de l'entreprise » (admin seulement). Un bouton « Valeurs de départ » remet des choix prudents. Chaque champ a une phrase d'aide en mots simples (« C'est quoi ? », « Si je ne sais pas : laisser comme ça »).
+
+**Sections et champs (tous facultatifs, avec valeur de départ) :**
+| Section | Champs | Valeur de départ |
+|---|---|---|
+| Identité | nom de l'entreprise, adresse, téléphone, e-mail, logo, devise | Ar, le reste vide |
+| Mentions légales | numéro d'identification fiscale, numéro de registre, autres mentions libres (une ligne par mention) | vide : **rien d'inventé** ; les documents n'affichent que ce qui est rempli |
+| Taxes | TVA oui/non, taux, texte « TVA non applicable » | Non |
+| Facturation | préfixe et forme du numéro, délai de paiement (jours), pénalités de retard (texte libre), mode de paiement accepté, texte en bas de facture | `FA-` / `RC-`, 30 jours, vide |
+| Paie | jour de paie, règle des avances (plafond), arrondi | selon l'existant |
+| Congés et présence | jours de congé par an, jours travaillés par semaine, heure limite pour le retard | vide |
+| Missions | délai de validation attendu, règle de refus (motif obligatoire : oui) | oui |
+| Badges | seuils et poids de la performance (module 3) | valeurs proposées |
+| Règlement intérieur | texte libre affiché aux salariés (lecture seule) | vide |
+| Conditions pour les clients | texte libre imprimé sur devis et factures (conditions de vente) | vide |
+
+**Fonctionnement :**
+- Les autres modules **lisent** cette page ; aucun chiffre ni texte légal n'est fixé dans le code.
+- **Historique :** chaque changement garde la date, la valeur d'avant et qui l'a fait ; un document déjà émis (facture) garde les conditions **de son jour** (copie figée).
+- **Admin seulement** : un opérateur ne reçoit que le règlement intérieur et les règles de congés/présence qui le concernent (rien d'argent, ni TVA, ni tarifs).
+- **Pas de nouvelle table pour démarrer** : les champs vont dans `df_settings` (ligne `general`, déjà admin-protégée en écriture), avec un bloc `COMPANY` dans `df-api` qui revérifie chaque champ (longueurs, nombres, taux entre 0 et 100, texte échappé). Un historique séparé (`df_settings_log`) viendra avec le module 7 si BTK l'accepte.
+- Aide intégrée : à côté de chaque champ, un petit « ? » qui explique en une phrase. En bas : « À vérifier avec un comptable ou le responsable de l'entreprise. Gestion Pro ne donne pas de conseil légal. »
+
+- [ ] **M0.1 — Valeurs de départ et textes d'aide** (S) : BTK relit les phrases d'aide (français et anglais).
+- [ ] **M0.2 — Règles pures** (S) : `src/utils/companyRules.ts` (valeurs de départ, validation, fusion avec l'existant) + `check:company` (taux hors limites, texte trop long, vide, HTML malveillant, champ inconnu).
+- [ ] **M0.3 — Serveur** (M) — **accord + sauvegarde avant** : bloc `COMPANY` dans `df-api` (nouveaux champs dans `df_settings`, **pas de nouvelle table**), filtre pour que les opérateurs ne reçoivent que leur part ; redéploiement avec accord, retour en arrière écrit.
+- [ ] **M0.4 — Écran** (M) : page Réglages > Conditions, par sections repliables, aides « ? », bouton « Valeurs de départ », avertissement d'enregistrement, téléphone d'abord, clair et sombre, français et anglais.
+- [ ] **M0.5 — Branchement** (S) : le rapport mensuel et les futurs documents lisent l'identité de l'entreprise ; la démo a des conditions inventées, locales.
+- [ ] **M0.6 — Essai de BTK** : compte admin puis compte opérateur (ne voit que le règlement et les congés).
+
+---
+
 ## DÉCISIONS À PRENDRE AVEC BTK (avant le module 1)
+
+> **Mise à jour 2026-10-20 :** D1, D2, D3, D4, D6 sont remplies **dans la page Conditions (module 0)**, pas dans le code. BTK n'a rien à connaître d'avance : on garde les valeurs de départ et on les change quand l'entreprise donne ses règles.
 
 | # | Question | Défaut proposé |
 |---|---|---|
@@ -232,13 +270,14 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## Ordre conseillé
 
-1. **Décisions D1 à D11** (BTK répond).
-2. **Module 1** (Clients) — il débloque tout le reste.
-3. **Module 3.A** (performance et badges des salariés) — peut se faire en parallèle, sans nouvelle table.
-4. **Module 2** (Facturation et reçus).
-5. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
-6. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
-7. **Module 8** (direction et contrôle final).
+1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
+2. **Décisions D5, D7 à D11** (D1 à D4 et D6 vont dans la page Conditions).
+3. **Module 1** (Clients) — il débloque tout le reste.
+4. **Module 3.A** (performance et badges des salariés) — peut se faire en parallèle, sans nouvelle table.
+5. **Module 2** (Facturation et reçus).
+6. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
+7. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
+8. **Module 8** (direction et contrôle final).
 
 ## Risques à surveiller
 
