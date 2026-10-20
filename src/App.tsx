@@ -23,6 +23,7 @@ import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { releaseOrphanBodyLock } from './utils/useLockBodyScroll';
+import { ScrollButtons } from './components/ScrollButtons';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { NAV_TARGET_EVENT, peekNavTarget, flashNav } from './utils/navTarget';
@@ -363,6 +364,7 @@ export default function App() {
         <ConnectionBanner />
 
         <PullToRefresh disabled={activeView === 'chat'} />
+        <ScrollButtons hidden={activeView === 'chat'} />
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
           currentUser={viewUser}

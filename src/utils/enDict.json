@@ -1066,5 +1066,9 @@
 "Alerte trésorerie basse (Ar)": "Low cash alert (Ar)",
 "0 = alerte seulement si la trésorerie est négative.": "0 = alert only if cash is negative.",
 "Objectifs et alertes : un montant ne peut pas être négatif.": "Goals and alerts: an amount cannot be negative.",
-"Alerte « client qui n'a pas payé » : 1 jour ou plus.": "“Client has not paid” alert: 1 day or more."
+"Alerte « client qui n'a pas payé » : 1 jour ou plus.": "“Client has not paid” alert: 1 day or more.",
+"Remonter en haut": "Back to top",
+"Descendre en bas": "Go to bottom",
+"Haut": "Top",
+"Bas": "Bottom"
 }
