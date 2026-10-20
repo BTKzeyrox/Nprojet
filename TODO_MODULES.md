@@ -300,6 +300,37 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ---
 
+## MODULE 10 — Assistant de l'administration (dans la messagerie) — taille L
+
+**Demande de BTK (2026-10-20) :** un assistant, comme un administrateur automatique, dans les messages. Il rappelle ce que l'admin a oublié (validations, actions à faire), connaît les conditions de l'entreprise, le stock, et sait faire le **récapitulatif d'un employé** (son parcours, son travail, ses chiffres, son financement).
+
+**Idée : deux niveaux, on commence par le sûr et gratuit.**
+
+**Niveau A — Assistant à règles (gratuit, sans service externe, à faire d'abord).**
+- Conversation « Assistant » épinglée dans la messagerie de l'admin (visible **seulement par l'admin**).
+- **Rappels automatiques** (ce que l'admin a oublié) : missions à valider depuis plus de X heures, inscriptions et demandes en attente, factures en retard, stock bas, avance en attente, alertes du module 9 non vérifiées, objectifs en danger. Un message par sujet, regroupé en un résumé du matin, jamais de spam (une fois par sujet, sauf si ça empire).
+- **Récapitulatif d'un employé** : le menu « Récap de… » (ou la commande « résumé de Marie ») génère une fiche : date d'arrivée et ancienneté (« 2 ans et 1 mois »), nombre de missions, taux de validation, badges (module 3), présence et retards, salaire gagné, avances, reste dû. Texte lisible + bouton « Imprimer / PDF ».
+- **Questions simples** par boutons et mots-clés : « Quoi à faire aujourd'hui ? », « Stock bas ? », « Qui a un retard ? », « Que dit la règle des congés ? » (lit la page Conditions).
+- Tout est **calculé par les règles déjà testées** (mêmes fonctions que Statistiques et Finances) : pas d'invention possible.
+
+**Niveau B — Vrai assistant IA (modèle de langage), facultatif, plus tard.**
+- Permet de poser des questions libres en langage naturel.
+- **Ce qu'il demande :** une clé d'un service d'IA (secret côté Supabase, jamais dans le code), un petit coût à l'usage, et une fonction serveur dédiée (route `assistant`), **avec accord de BTK**.
+- **Confidentialité :** les données financières et personnelles quittent alors le serveur vers un service externe. Règles : admin seulement ; on n'envoie que le **résumé calculé** nécessaire à la question (jamais mots de passe, jetons, identifiants, fichiers) ; une case « Activer l'IA externe » **désactivée par défaut** dans la page Conditions, avec un avertissement clair ; journal des questions posées.
+- L'IA **ne peut rien modifier** : elle lit et explique. Toute action (valider, payer, supprimer) reste un bouton que l'admin confirme lui-même.
+- **Honnêteté :** une IA peut se tromper ; chaque réponse montre ses sources (« d'après 42 missions du 01/09 au 20/10 ») et un lien vers l'écran d'origine.
+
+**Sécurité transversale :** conversation créée côté admin seulement ; un opérateur ne la reçoit jamais (même filtre que les routes admin) ; aucun chiffre d'argent n'est écrit dans une conversation visible d'un opérateur.
+
+- [ ] **M10.1 — Règles pures des rappels** (M) : `src/utils/assistantReminders.ts` + `check:assistant` (rien à signaler = aucun message ; pas de doublon ; priorité ; textes FR/EN).
+- [ ] **M10.2 — Récap d'un employé** (M) : `src/utils/employeeRecap.ts` (ancienneté, chiffres, badges, paie) + test (employé sans mission, arrivé aujourd'hui, 2 ans pile, compte supprimé).
+- [ ] **M10.3 — Conversation « Assistant »** (L) : fil épinglé dans la messagerie admin, messages générés **dans le navigateur de l'admin** (pas de nouvelle table pour le niveau A), boutons de réponses rapides, résumé du matin réglable (heure, on/off) dans la page Conditions.
+- [ ] **M10.4 — Récap imprimable** (S) : page claire isolée comme le rapport mensuel.
+- [ ] **M10.5 — Essai de BTK** : admin (voit l'assistant), opérateur (ne voit rien), téléphone, clair et sombre, FR et EN.
+- [ ] **M10.6 — (facultatif, niveau B)** (L) — **accord + clé + coût expliqués avant** : route `assistant` dans `df-api`, bouton d'activation, avertissement de confidentialité, test d'injection (un texte malveillant dans un nom de mission ne doit rien déclencher), limite de questions par jour.
+
+---
+
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
@@ -310,7 +341,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 6. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
 7. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
 8. **Module 9** (détection automatique) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
-9. **Module 8** (direction et contrôle final).
+9. **Module 10, niveau A** (assistant à règles dans la messagerie) — après les modules 3 et 9, car il s'appuie sur leurs calculs ; le niveau B (IA externe) seulement si BTK le veut.
+10. **Module 8** (direction et contrôle final).
 
 ## Risques à surveiller
 
