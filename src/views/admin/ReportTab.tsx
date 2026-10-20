@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Download, Printer } from 'lucide-react';
 import { db } from '../../db/store';
 import { buildReport, downloadReportExcel, reportHtml } from '../../utils/report';
+import { readCompany } from '../../utils/companyRules';
 import { todayMada } from '../../utils/stats';
 
 // Rapport du mois : résumé, 3 points forts, 3 points d'attention, objectifs, prévision. Excel et PDF (impression) réservés à l'admin.
@@ -15,7 +16,7 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
   const settings = db.getSettings();
   const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length;
   const report = useMemo(() => admin ? buildReport({
-    today: todayMada(), anchor, lang, settings, posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
+    today: todayMada(), anchor, lang, settings, companyName: readCompany(settings.company).identity.name, posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
     cash, products: db.getProducts(), moves: db.getStockMoves(),
   }) : null, [admin, anchor, lang, settings, sig]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!report) return null;

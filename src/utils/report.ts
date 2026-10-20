@@ -10,12 +10,13 @@ import { stockRows, stockValue, type StockRow } from './stock';
 export interface ReportInput {
   today: string; anchor: string; lang: 'fr' | 'en';
   settings: AlertSettings;
+  companyName?: string; // nom de l'entreprise (Conditions, module 0) : affiché seulement s'il est rempli
   posts: PostSession[]; contracts: ClientContract[]; users: User[]; advances: SalaryAdvanceRequest[];
   cash: CashEntry[]; products: Product[]; moves: StockMove[];
 }
 
 export interface Report {
-  lang: 'fr' | 'en'; title: string; month: string; inProgress: boolean;
+  lang: 'fr' | 'en'; title: string; month: string; inProgress: boolean; company: string;
   stats: StatsResult; fin: FinanceStats; finPrev: FinanceStats;
   goals: GoalRow[]; forecast: Forecast | null; alerts: AlertItem[];
   stock: { rows: StockRow[]; value: number };
@@ -78,6 +79,7 @@ export function buildReport(i: ReportInput): Report {
 
   return {
     lang: i.lang, title: t('Rapport mensuel', 'Monthly report'), month: periodLabel('month', i.anchor, i.lang), inProgress: rg.inProgress,
+    company: String(i.companyName || '').trim().slice(0, 80),
     stats, fin, finPrev, goals, forecast, alerts,
     stock: { rows, value: stockValue(rows) }, cashLines,
     strengths: strengths.slice(0, 3), attention: attention.slice(0, 3),
@@ -94,6 +96,7 @@ export function exportSheets(r: Report): SheetData[] {
   const sheets: SheetData[] = [];
   sheets.push({ name: t('Résumé', 'Summary'), rows: [
     [r.title, r.month],
+    ...(r.company ? [[r.company]] : []),
     [],
     [t('Chiffre', 'Figure'), t('Ce mois', 'This month'), t('Mois d\'avant', 'Previous month')],
     [t('Missions validées', 'Validated missions'), st.cur.done, st.prev.done],
@@ -191,7 +194,7 @@ ul{margin:4px 0 0 18px;padding:0}li{margin:2px 0}.two{display:grid;grid-template
 .g{margin:6px 0}.gl{display:flex;justify-content:space-between;gap:8px}.gb{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}.gb i{display:block;height:100%}
 .note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two{break-inside:avoid}}@page{margin:14mm}
 </style></head><body>
-<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t('mois en cours', 'month in progress')) : ''}</div>
+${r.company ? `<div class="sub"><b>${esc(r.company)}</b></div>` : ''}<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t('mois en cours', 'month in progress')) : ''}</div>
 <h2>${esc(t('Résumé', 'Summary'))}</h2>
 <table><tr><th></th><th class="n">${esc(t('Ce mois', 'This month'))}</th><th class="n">${esc(t('Mois d\'avant', 'Previous month'))}</th><th class="n">${esc(t('Écart', 'Change'))}</th></tr>
 ${row(t('Missions validées', 'Validated missions'), String(st.cur.done), String(st.prev.done), delta(st.cur.done, st.prev.done))}

@@ -11,6 +11,7 @@ import { FontSizePicker } from '../../components/FontSizePicker';
 import { TwoStepDialog } from '../../components/TwoStepDialog';
 import { setModeSwitchHidden, useModeSwitchHidden } from '../../utils/modeSwitch';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
+import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyConditions';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -58,7 +59,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'data'>('general');
+  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'company' | 'data'>('general');
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,8 +110,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     if (s.alert_idle_2_min <= s.alert_idle_1_min) return setError('La 2e alerte doit être plus longue que la 1re.');
     if (s.err_max_per_session < 0 || s.err_max_per_session > 20) return setError('Rapports par session : entre 0 et 20.');
     if (s.retry_seconds < 5) return setError('Le délai entre deux tentatives doit être de 5 secondes ou plus.');
+    const { company: _keepCompany, company_log: _keepLog, ...general } = s; // les Conditions ont leur propre bouton : jamais de vieille copie renvoyée ici
     db.updateSettings({
-      ...s,
+      ...general,
       price_per_million: Math.round(s.price_per_million),
       price_per_mission: Math.round(s.price_per_mission),
       client_price_default_ar: Math.round(s.client_price_default_ar ?? 0),
@@ -176,6 +178,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </button>
         {soundMsg && <p className="text-[11px] text-amber-300">{soundMsg}</p>}
       </section>
+      <CompanyForEmployee lang={lang} />
       </div>
     );
   }
@@ -194,11 +197,13 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {saved && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-950 border-emerald-500/60 text-emerald-200'}`}>Réglages enregistrés.</div>}
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-700/60">
-        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['data', 'Données']] as const).map(([id, label]) => (
+        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['company', 'Conditions'], ['data', 'Données']] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px cursor-pointer whitespace-nowrap ${tab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>{label}</button>
         ))}
       </div>
 
+
+      {tab === 'company' && <CompanyConditions lang={lang} />}
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">

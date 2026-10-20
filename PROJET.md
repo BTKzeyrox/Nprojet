@@ -53,6 +53,7 @@ Mis à jour : 2026-10-20. « Non testé à l'écran » = le code compile, mais B
 - Après une mise à jour du site : rechargement automatique une seule fois.
 - **Bandeau « Connexion perdue »** : nouvelle tentative automatique toutes les 15 s.
 - **Journal des erreurs** (admin) + bouton **« Signaler un problème »** (opérateur).
+- **Conditions de l'entreprise** (Réglages > Conditions, admin) : identité, mentions légales, TVA, facturation, paie, congés, missions, choix de fonctionnement, règlement. Tout est facultatif, rien d'inventé. L'opérateur ne voit que le règlement et les congés, en lecture seule, dans ses Réglages.
 - **Mode maintenance** (Réglages) : les opérateurs sont refusés avec un message, l'admin entre toujours.
 - **`/secours.html`** : page simple qui marche même si le site est cassé.
 - **Procédure** : 1) Journal des erreurs ; 2) si tout est en panne, mode maintenance ; 3) voir le dernier déploiement sur Vercel (revenir à une version précédente) ; 4) journaux de `df-api` sur Supabase ; 5) retour arrière du serveur en redéployant `df-api` avec un commit précédent (voir `HANDOVER.md`).
