@@ -1,4 +1,5 @@
 import type { AppSettings, ClientContract, PostSession } from '../types';
+import type { ClientRecord } from './clients';
 
 // Prix client : ce que le client paie pour une mission validée.
 // Ordre : 1) prix de la mission  2) prix de son type  3) prix par défaut (Réglages > Missions).
@@ -35,4 +36,21 @@ export function parsePriceInput(raw: string): number | undefined | null {
   const n = Number(t.replace(/\s/g, '').replace(',', '.'));
   if (!isFinite(n) || n < 0) return null;
   return Math.round(n);
+}
+
+/**
+ * Règle à 5 niveaux (module 1) : 1) prix de la mission  2) prix du client pour ce type  3) prix du client par défaut
+ * 4) prix du type (Réglages > Missions)  5) prix par défaut (Réglages). Un prix vide ou invalide est ignoré ; 0 est un vrai prix (mission offerte).
+ */
+export function clientPriceWithClient(
+  c: Pick<ClientContract, 'client_price_ar' | 'post_type'> | undefined,
+  client: Pick<ClientRecord, 'price_default_ar' | 'price_by_type'> | undefined,
+  s: PriceSettings,
+): number {
+  if (c && valid(c.client_price_ar)) return Math.round(c.client_price_ar);
+  const type = c?.post_type;
+  const own = client?.price_by_type || {};
+  if (type && valid(own[type])) return Math.round(own[type]);
+  if (client && valid(client.price_default_ar)) return Math.round(client.price_default_ar);
+  return clientPriceForType(type, s);
 }
