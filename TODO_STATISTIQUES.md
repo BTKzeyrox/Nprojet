@@ -1,7 +1,7 @@
 # TODO — Statistiques, finances et stock (Gestion Pro)
 
 Créé le 2026-10-18 à la demande de BTK. À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md` et `TODO.md`.
-Les **phases 1 et 2 sont faites côté code, et la phase 3 (stock) aussi sauf la création des tables sur `nprojet` et le déploiement de `df-api` v9** (2026-10-19 ; non testées à l'écran) ; **`df-api` v8 (finances réservées à l'admin) est déployé depuis le 2026-10-20** (voir S2.9) ; essai avec un compte employé à faire ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
+Les **phases 1 et 2 sont faites côté code, et la phase 3 (stock) aussi sauf la création des tables sur `nprojet` et le déploiement de `df-api` v9** (2026-10-19 ; non testées à l'écran) ; finances et stock réservés à l'admin côté serveur (voir S2.9 et S3.1) ; essai avec un compte employé à faire ; les phases 3 à 5 sont **à faire**. Taille : S = petite, M = moyenne, L = grosse.
 
 ## But
 
@@ -175,12 +175,13 @@ Données déjà disponibles : missions (`posts`, `contracts`), employés (`users
 
 ## PHASE 3 — Stock et produits — taille L (dépend de la décision n° 4)
 
-- [ ] **S3.1 — Nouvelles tables** (M) — **accord de BTK + sauvegarde avant** — *accord donné le 2026-10-20 (« Phase 3 (stock), puis 4 et 5 ») ; sauvegarde n° 6 faite ; **reste à faire : appliquer la migration sur `nprojet`** (les outils Supabase n'étaient plus disponibles pendant ce tour)*
+- [x] **S3.1 — Nouvelles tables** (M) — **accord de BTK + sauvegarde avant** — *fait le 2026-10-20 : accord (« Phase 3 (stock), puis 4 et 5 » puis « Go »), sauvegarde n° 6 avant, migration appliquée sur `nprojet`, `df-api` v9 déployé*
   - `df_products` : nom, catégorie, unité, prix d'achat, prix de vente, **seuil d'alerte**.
   - `df_stock_moves` : produit, type (entrée / sortie / ajustement), quantité, date, note.
   - Ajouter les deux à `df_take_backup()`, RLS activée, admin seulement (comme S2.4).
   - **Fait :** migration écrite : `supabase/migrations/20261020_create_df_stock.sql` (même modèle que `df_cash` : `id`, `data jsonb`, `updated_at`, RLS activée, aucun accès pour `anon` / `authenticated`, index). Serveur (`df-api`, bloc `BEGIN STOCK`) : collections `products` et `stock`, **lecture et écriture réservées à l'admin**, `cleanProduct` et `cleanStockMove` (le serveur revérifie tout), un mouvement d'un produit inexistant est refusé, supprimer un produit supprime ses mouvements. `df_take_backup()` prend déjà toutes les tables `df_*` : rien à ajouter, **à vérifier après la création (19 tables attendues)**. `df-restore` ne touche pas au stock.
-  - **⚠ Ordre à respecter :** (1) appliquer la migration, (2) vérifier la sauvegarde (19 tables), (3) SEULEMENT ENSUITE déployer `df-api` v9. Si la v9 est déployée avant les tables, le serveur interroge des tables qui n'existent pas et l'écran de l'admin peut ne plus se charger. Retour en arrière de la migration (tables vides) : `drop table public.df_stock_moves; drop table public.df_products;` ; de `df-api` : redéployer le commit `eb7129a` (v8).
+  - **Fait en ligne le 2026-10-20 :** (1) migration appliquée sur `nprojet` ; (2) contrôle : `df_products`, `df_stock_moves` et `df_cash` ont la RLS activée et **0 droit pour `anon` / `authenticated`** ; sauvegarde n° 8 prise : **19 tables** (la n° 7, de nuit, en avait 17) ; (3) **`df-api` v9 déployé = commit `6c1fe78b8b8eab0a55cbab37abfea41ebc68fbc2`** (fichier GitHub comparé au dépôt : identique ; `verify_jwt` désactivé comme avant). Retour en arrière : `df-api` → redéployer le commit `eb7129a7648f71449956d0f2392f7fc6595f4ccd` (v8) ; tables (vides) : `drop table public.df_stock_moves; drop table public.df_products;`. **La v9 n'a pas encore reçu de requête** (logs lus juste après) : essai réel à faire (voir ci-dessous).
+  - **Reste à faire par BTK :** ouvrir Statistiques > Stock en admin, ajouter un produit et une entrée, recharger la page : ils doivent rester ; compte employé : aucun produit visible.
 
 - [x] **S3.2 — Écran « Stock »** (L) — *fait le 2026-10-20 (code et contrôles), non testé à l'écran ni avec le vrai serveur*
   - Liste des produits avec quantité en stock, valeur du stock, voyant rouge sous le seuil.
