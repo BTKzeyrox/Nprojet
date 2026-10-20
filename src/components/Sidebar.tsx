@@ -68,11 +68,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCompact,
 }) => {
   const { theme, t } = useApp();
-  // Menu ouvert sur petit écran : la page derrière ne défile plus. Sur grand écran (menu toujours visible,
-  // ou téléphone/tablette tourné), le verrou est retiré tout de suite : sinon la page restait figée.
-  const [isWide, setIsWide] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  // Menu ouvert sur téléphone (moins de 768 px) : la page derrière ne défile plus. Dès 768 px (tablette, ordinateur : menu toujours visible,
+  // ou agrandi par le bouton), la page garde son défilement : sinon elle restait figée.
+  const [isWide, setIsWide] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   React.useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
+    const mq = window.matchMedia('(min-width: 768px)');
     const on = () => setIsWide(mq.matches);
     mq.addEventListener('change', on);
     on();
