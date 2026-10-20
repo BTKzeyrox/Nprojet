@@ -42,6 +42,9 @@ Chaque module suit **toujours le même chemin**, dans cet ordre. C'est la métho
 - Quota Supabase gratuit : calculs faits dans le navigateur de l'admin, pas de nouvel appel en boucle, pas de nouvelle synchro rapide.
 - Aucun chiffre inventé dans la vraie base ; la démo reste locale.
 - Un module à la fois. Chaque module est utilisable seul quand il est fini.
+- **Une étape à la fois (règle de BTK, 2026-10-20) :** chaque étape (M1.3, M1.4…) finie = **un commit, un push sur `main` et ce fichier mis à jour dans le même commit** (case cochée avec la date). Jamais le module en un seul gros commit.
+- **« GO M1 » = tout le module M1, étape par étape :** on commence par la première étape non cochée, on pousse, puis on enchaîne la suivante **sans attendre BTK**, jusqu'à la fin du module. Arrêt seulement pour une action qui efface des données, un vrai doute, ou un essai que seul BTK peut faire (écran, téléphone). Les accords déjà inclus dans « GO Mx » : table du module, sauvegarde avant, déploiement de `df-api`.
+- **Écriture sur GitHub :** avec le token de BTK et le terminal (`git`), jamais avec le connecteur git (lecture seule). Le token n'est écrit nulle part.
 
 ---
 

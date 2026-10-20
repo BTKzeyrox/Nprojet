@@ -17,6 +17,9 @@ Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 9. **Des fichiers un par un**, jamais de ZIP, sauf si BTK le demande.
 10. **Avant une action qui efface des données** : demande une confirmation précise à BTK. Ne supprime jamais rien sans son accord.
 11. **Ne pousse que sur le dépôt que BTK t'a donné pour CE chat.** Si tu travailles sur une **copie** (nouveau projet), le dépôt original `BTKzeyrox/DF-boosting` est en **lecture seule** : n'y écris jamais. Lance `git remote -v` avant chaque envoi.
+12. **Écrire sur GitHub : avec le token de BTK et le terminal (`git`), jamais avec le connecteur git.** Le connecteur ne sert qu'à lire. Le token ne s'écrit jamais dans un fichier ni dans l'adresse du dépôt (le passer à la commande seulement).
+13. **Une étape à la fois : une étape finie = un commit + un push + le TODO mis à jour dans le même commit.** Jamais plusieurs étapes d'un coup dans un seul gros commit.
+14. **« GO M1 » (ou M2, M3…) = tout le module, étape par étape.** Tu fais la première étape non cochée (ex. M1.3), tu pousses avec le TODO à jour, puis tu enchaînes avec l'étape suivante **sans attendre BTK**, jusqu'à la fin du module. Tu ne t'arrêtes que pour : une action qui efface des données (règle 10), un vrai doute qui change le résultat, ou un essai que seul BTK peut faire (écran, téléphone).
 
 ## Le token GitHub (classique) : comment l'avoir
 - **Lien pour créer le token** (la case `repo` est déjà cochée) :
