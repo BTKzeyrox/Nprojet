@@ -41,7 +41,7 @@ with sync_playwright() as p:
     pg.keyboard.press('PageDown'); pg.wait_for_timeout(800); y3 = pg.evaluate('scrollY')
     pg.keyboard.press('PageUp'); pg.wait_for_timeout(800); y4 = pg.evaluate('scrollY'); c3 = diag_count(pg)
     print(f"{ok(y1==500 and c1==0)} A2. grand coup de molette isolé sur page saine : {y1} (attendu 500), interventions={c1} (attendu 0)")
-    print(f"{ok(y2==769 and c2==0 and c3==0)} A3. série rapide 40×20 px sur page saine : {y2} (attendu 769 = bas de page), interventions={c2}, puis PageDown→{y3}, PageUp→{y4}, interventions={c3} (attendu 0)")
+    print(f"{ok(y2==min(800, pg.evaluate('document.scrollingElement.scrollHeight-innerHeight')) and c2==0 and c3==0)} A3. série rapide 40×20 px sur page saine : {y2} (attendu 800, ou le bas de page si plus court), interventions={c2}, puis PageDown→{y3}, PageUp→{y4}, interventions={c3} (attendu 0)")
     b.close()
 
     # B. page bloquée (overflow hidden resté par erreur) : le filet doit réparer
