@@ -23,7 +23,8 @@ const today = todayMada();
 
 // ---------- liste vide ----------
 db.enterDemo('admin');
-ok(db.getClients().length === 0, 'démo admin : aucune fiche au départ (la démo des clients viendra à l\'étape M1.7)');
+ok(db.getClients().length === 6, 'démo admin : 6 fiches de démonstration (étape M1.7)');
+(db as any).clients = []; // la suite part d'une liste vide : les ajouts ci-dessous ne doivent pas tomber sur les noms de la démo
 const empty = view('fr');
 ok(!bad(empty) && empty.includes('Aucun client pour l&#x27;instant'), 'liste vide : message clair, sans erreur');
 ok(view('en').includes('No clients yet'), 'liste vide en anglais');

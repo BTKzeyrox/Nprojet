@@ -1,4 +1,4 @@
-import type { CashEntry, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, Client, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -70,6 +70,7 @@ export interface DemoData {
   cash: CashEntry[];
   products: Product[];
   stock: StockMove[];
+  clients: Client[];
 }
 
 // ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
@@ -166,6 +167,35 @@ export function buildDemoStock(): { products: Product[]; stock: StockMove[] } {
   return { products, stock };
 }
 
+// ----- Clients inventés (module Clients) : un de chaque statut, calculés à partir des missions de la démo -----
+// Missions du tableau (index dans MISSIONS) rattachées à une fiche. L'index 6 (« Aide à l'équipe du support ») reste sans fiche, comme une ancienne mission :
+// l'outil « Missions à rattacher » a donc quelque chose à montrer.
+const DEMO_CLIENT_OF_MISSION: Record<number, string> = {
+  0: 'demo_cl1', 1: 'demo_cl1', 2: 'demo_cl1', 9: 'demo_cl1', 3: 'demo_cl1', // Atelier Rivage : le plus gros chiffre d'affaires (stratégique)
+  4: 'demo_cl2', 5: 'demo_cl2', 7: 'demo_cl2', 8: 'demo_cl2', 10: 'demo_cl2', 11: 'demo_cl2', // Société Delta Services : régulier
+};
+// Missions supplémentaires de la démo : chacune a son propre historique, pour obtenir les statuts « nouveau », « actif » et « inactif ».
+const EXTRA_MISSIONS: { title: string; type: string; desc: string; client: string; back: number[] }[] = [
+  { title: 'Numérisation des dossiers du cabinet', type: 'ADMINISTRATIF', desc: 'Scanner les dossiers et nommer les fichiers.', client: 'demo_cl3', back: [38, 9] }, // première mission il y a moins de 60 jours : nouveau
+  { title: 'Inventaire du stock de la boutique', type: 'SAISIE DE FICHES', desc: 'Compter les articles et saisir les quantités.', client: 'demo_cl4', back: [78, 71] }, // plus de 60 jours, moins de 3 missions récentes : actif
+  { title: 'Rangement des archives de la boutique', type: 'ADMINISTRATIF', desc: 'Trier et ranger les anciennes archives.', client: 'demo_cl5', back: [270, 240, 225, 205, 101] }, // rien depuis plus de 90 jours : inactif
+];
+
+function buildDemoClients(): Client[] {
+  const at = iso(daysAgo(240), 9);
+  const mk = (id: string, name: string, contact: string, phone: string, extra: Partial<Client> = {}): Client => ({
+    id, name, contact_name: contact, phone, email: '', address: '', note: '', active: true, created_by: DEMO_ADMIN_ID, created_at: at, updated_at: at, ...extra,
+  });
+  return [
+    mk('demo_cl1', 'Atelier Rivage', 'Mme Rivage', '034 00 000 01', { note: 'Client fidèle depuis deux ans. (démo)', payment_terms_days: 30, price_default_ar: 11000 }),
+    mk('demo_cl2', 'Société Delta Services', 'M. Delta', '034 00 000 02', { price_default_ar: 9000, payment_terms_days: 45 }),
+    mk('demo_cl3', 'Cabinet Horizon', 'Dr Horizon', '034 00 000 03', { price_default_ar: 15000, note: 'Nouveau client, tarif négocié. (démo)' }),
+    mk('demo_cl4', 'Maison Lumière', 'Mme Lumière', '034 00 000 04'),
+    mk('demo_cl5', 'Boutique Soleil', 'M. Soleil', '034 00 000 05', { note: 'Plus de commande depuis longtemps : à relancer. (démo)' }),
+    mk('demo_cl6', 'Studio Nova', 'Mme Nova', '034 00 000 06', { note: 'Premier contact, pas encore de mission. (démo)' }),
+  ];
+}
+
 export function buildDemoData(): DemoData {
   const r = rng(20261018);
   const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
@@ -188,6 +218,12 @@ export function buildDemoData(): DemoData {
     id: `demo_c${i + 1}`, post_number: i + 1, client_name: m.title, account_tag: '', game_mode: '', description: m.desc, post_type: m.type,
     proof_mode: 'type', no_account: false, current_rank: '—', target_rank: '—', initial_score: 0, current_score: 0, target_score: 0,
     recommended_shift: 'any', estimated_reward_ar: PRICE, priority: i % 5 === 0 ? 'Urgente' : 'Normale', region_server: '',
+    ...(DEMO_CLIENT_OF_MISSION[i] ? { client_id: DEMO_CLIENT_OF_MISSION[i] } : {}),
+  }));
+  EXTRA_MISSIONS.forEach((m, k) => contracts.push({
+    id: `demo_c${MISSIONS.length + k + 1}`, post_number: MISSIONS.length + k + 1, client_name: m.title, account_tag: '', game_mode: '', description: m.desc, post_type: m.type,
+    proof_mode: 'type', no_account: false, current_rank: '—', target_rank: '—', initial_score: 0, current_score: 0, target_score: 0,
+    recommended_shift: 'any', estimated_reward_ar: PRICE, priority: 'Normale', region_server: '', client_id: m.client,
   }));
 
   // ----- Historique : missions des 2 dernières années (dense sur les 60 derniers jours) -----
@@ -257,6 +293,17 @@ export function buildDemoData(): DemoData {
     });
   });
 
+  // Historique des missions supplémentaires (sans le générateur aléatoire : le reste de la démo ne change pas)
+  EXTRA_MISSIONS.forEach((m, k) => m.back.forEach((back, j) => {
+    const p = PEOPLE[(k + j) % PEOPLE.length]; const d = daysAgo(back); const qty = 30 + ((k * 13 + j * 7) % 40); n++;
+    posts.push({
+      id: `demo_p${n}`, employee_id: p.id, employee_name: p.name, client_name: m.title, account_tag: '', target_score: qty, initial_score: 0,
+      current_score: qty, final_score: qty, remaining_score: 0, status: 'completed', shift_type: p.shift, date: ymd(d),
+      start_time: '09:10:00', end_time: '11:25:00', start_proof_url: '', end_proof_url: '', calculated_ar: PRICE, notes: `${qty} fiches traitées`,
+      demo: true, created_at: iso(d, 9), updated_at: iso(d, 11),
+    });
+  }));
+
   // Totaux affichés dans les fiches
   for (const u of users) {
     const mine = posts.filter(p => p.employee_id === u.id && p.status === 'completed');
@@ -323,5 +370,5 @@ export function buildDemoData(): DemoData {
 
   const cash = buildDemoCash(posts, contracts);
   const { products, stock } = buildDemoStock();
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash, products, stock };
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash, products, stock, clients: buildDemoClients() };
 }

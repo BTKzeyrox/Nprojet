@@ -973,7 +973,10 @@ class DeltaForceStore {
     this.token = null;
     this.demo = true;
     const d = buildDemoData();
-    this.users = d.users; this.contracts = d.contracts; this.posts = d.posts; this.advanceRequests = d.advances;
+    // Les fiches clients ne sont pas visibles par un opérateur : ni les fiches, ni le lien client_id sur les missions (comme le vrai serveur)
+    const strip = <T extends object>(x: T): T => { const { client_id, ...rest } = x as any; return rest as T; };
+    this.users = d.users; this.contracts = role === 'admin' ? d.contracts : d.contracts.map(strip); this.posts = role === 'admin' ? d.posts : d.posts.map(strip); this.advanceRequests = d.advances;
+    this.clients = role === 'admin' ? d.clients : [];
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;

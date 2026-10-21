@@ -161,7 +161,7 @@ ok(pick('fr') === '' || !pick('fr').includes('<select'), 'sélecteur : un opéra
 // Outil « Rattacher les anciennes missions »
 db.enterDemo('admin');
 const zed = db.addClient({ name: 'Cabinet Zed' }).id as string; const archived = db.addClient({ name: 'Maison Vieille' }).id as string; db.setClientActive(archived, false);
-for (const nm of ['cabinet zed', 'Cabinet ZED', 'Nom Inconnu SA', 'Maison Vieille']) { mk(nm); await wait(); }
+for (const nm of ['cabinet zed', 'Cabinet ZED', 'Nom Inconnu SA', 'Maison Vieille', 'Atelier Alpha', 'Atelier Beta']) { mk(nm); await wait(); } // la démo n'a plus qu'une mission sans fiche : on en ajoute assez pour dépasser 5 lignes
 db.addClient({ name: 'Doublon' }); // un seul : pas ambigu ; l'ambigu est testé en pur plus haut
 const pageHtml = html(<MissionsToLink />);
 ok((pageHtml.match(/<li[ >]/g) || []).length === 5 && /Tout voir \(\d+\)/.test(pageHtml) && html(<MissionsToLink />, 'en').includes('Show all ('), 'outil : 5 lignes à la fois et un bouton « Tout voir (N) » (FR et EN) quand il y en a plus');
