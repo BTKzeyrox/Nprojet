@@ -19,6 +19,9 @@ import { useApp } from '../context/AppContext';
 import { EmojiPicker, ReactionChips, TypingDots } from './Reactions';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
+/** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
+const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
+
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
 
@@ -499,12 +502,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className={`flex-1 min-w-0 truncate text-[13px] font-semibold ${P.title}`}>{t.title}</span>
+            <span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
             {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
           <span className="flex items-center gap-2 mt-0.5">
-            <span className={`flex-1 min-w-0 truncate text-[12px] ${P.sub}`}>{preview}</span>
+            <span className={`flex-1 min-w-0 text-[12px] ${P.sub}`} style={ONE_LINE}>{preview}</span>
             {unread > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white shadow text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
           </span>
         </span>
@@ -774,7 +777,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).bar }} />
               <span className="min-w-0 flex-1">
                 <span className="block text-xs font-bold" style={{ color: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).name }}>{replyTo.sender_id === currentUser.id ? 'Toi' : replyTo.sender_name}</span>
-                <span className={`block text-[13px] truncate ${P.sub}`}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
+                <span className={`block text-[13px] ${P.sub}`} style={ONE_LINE}>{replyTo.message || replyTo.attachment_name || 'Pièce jointe'}</span>
               </span>
               <button type="button" onClick={() => setReplyTo(null)} className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer ${P.sub}`} title="Annuler la réponse">
                 <X className="w-4 h-4" />
@@ -848,7 +851,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {threadMenu && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>
           <div className={`w-full max-w-xs rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} onClick={e => e.stopPropagation()}>
-            <div className={`px-4 py-2.5 border-b ${P.div} text-xs truncate ${P.sub}`}>{current.title}</div>
+            <div className={`px-4 py-2.5 border-b ${P.div} text-xs ${P.sub}`} style={ONE_LINE}>{current.title}</div>
             {current.kind === 'user' && current.user && (
               <button type="button" onClick={() => { setThreadMenu(false); openProfile(current.user!.id); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
                 <Info className="w-4 h-4 text-emerald-600" /> Voir le profil

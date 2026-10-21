@@ -1,6 +1,6 @@
 """Essai du filet de sécurité du défilement dans un vrai Chromium (Playwright, Python).
 Prérequis : npm run build, puis servir dist sur le port 4173 (python3 -m http.server 4173 --directory dist). Lancer : python3 scripts/browser/check-scroll-rescue.py
-Cas : page saine (le filet ne fait rien), page bloquée (il répare : molette, clavier), menu fixe / fenêtre ouverte / champ de saisie (il ne touche à rien).
+Cas : page saine (le filet ne fait rien : molette, grand coup isolé, série rapide, clavier), page bloquée (il répare), menu fixe / fenêtre ouverte / champ de saisie (il ne touche à rien).
 """
 import re, json
 from playwright.sync_api import sync_playwright
@@ -29,6 +29,19 @@ with sync_playwright() as p:
     pg.keyboard.press('Home'); pg.wait_for_timeout(600); y4 = pg.evaluate('scrollY'); pg.wait_for_timeout(300)
     c = diag_count(pg)
     print(f"{ok(c==0 and abs(y-360)<2 and y3==mx and y4==0)} A. page saine : molette={y} (attendu 360), PageDown={y2}, End={y3}/{mx}, Home={y4}, interventions={c} (attendu 0), erreurs={errs}")
+    b.close()
+
+    # A2/A3. page saine : un grand coup de molette isolé, puis une série rapide façon pavé tactile : aucune intervention, aucun double défilement
+    b, ctx, pg, errs = new(p, 1366, 768)
+    pg.mouse.move(800, 400)
+    pg.mouse.wheel(0, 500); pg.wait_for_timeout(900); y1 = pg.evaluate('scrollY'); c1 = diag_count(pg)
+    pg.evaluate('scrollTo(0,0)'); pg.wait_for_timeout(300)
+    for _ in range(40): pg.mouse.wheel(0, 20); pg.wait_for_timeout(12)
+    pg.wait_for_timeout(1200); y2 = pg.evaluate('scrollY'); c2 = diag_count(pg)
+    pg.keyboard.press('PageDown'); pg.wait_for_timeout(800); y3 = pg.evaluate('scrollY')
+    pg.keyboard.press('PageUp'); pg.wait_for_timeout(800); y4 = pg.evaluate('scrollY'); c3 = diag_count(pg)
+    print(f"{ok(y1==500 and c1==0)} A2. grand coup de molette isolé sur page saine : {y1} (attendu 500), interventions={c1} (attendu 0)")
+    print(f"{ok(y2==769 and c2==0 and c3==0)} A3. série rapide 40×20 px sur page saine : {y2} (attendu 769 = bas de page), interventions={c2}, puis PageDown→{y3}, PageUp→{y4}, interventions={c3} (attendu 0)")
     b.close()
 
     # B. page bloquée (overflow hidden resté par erreur) : le filet doit réparer

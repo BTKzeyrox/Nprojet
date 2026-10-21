@@ -44,6 +44,13 @@
     max-width: 100vw;
     -webkit-text-size-adjust: 100%;
   }
+  /* Défilement : avec `overflow-x: hidden` sur html ET body, body devient un 2e conteneur de défilement (overflow-y: auto) imbriqué dans html.
+     Il n'a rien à défiler mais se place entre le doigt/la molette et la page : piège connu de Chrome Android, relevé sur la tablette de BTK
+     (diagnostic : « html overflow=hidden/auto » et « body overflow=hidden/auto », défilement normal absent). `clip` coupe de la même façon sans créer
+     de conteneur. Les navigateurs trop anciens pour `clip` gardent la règle d'avant. */
+  @supports (overflow: clip) {
+    body { overflow-x: clip; }
+  }
 
   body {
     font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;

@@ -43,11 +43,14 @@ function belongsToSomethingElse(target: EventTarget | null, dy: number): boolean
 // ---------- défilement fait par le filet ----------
 let rescued = 0; // distance totale que CE module a fait défiler (pour ne pas la confondre avec le défilement normal)
 let brokenAt = 0; // instant de la dernière preuve que le défilement normal est absent (0 = aucune)
+let lastNativeScroll = -1e9; // dernier événement « scroll » de la page qui ne vient PAS de nous : preuve que le défilement normal marche
+let ownUntil = 0; // jusqu'à cet instant, les événements « scroll » sont les nôtres (on les ignore)
 const anim = { raf: 0, pos: 0, target: 0 };
 
 /** Déplace la page. On ne relit PAS la position après coup (chaque lecture force un calcul de page, cher sur une machine lente) :
  *  `rescued` compte la distance demandée ; l'écart avec la position réellement arrondie par le navigateur reste sous 1 pixel (positions absolues). */
 function moveTo(y: number, from: number) {
+  ownUntil = performance.now() + 250; // l'événement « scroll » qui va suivre est le nôtre (marge large : machine lente)
   window.scrollTo({ top: y, left: 0, behavior: 'instant' as ScrollBehavior });
   rescued += y - from;
 }
@@ -85,12 +88,14 @@ function stopAnim() { if (anim.raf) { window.cancelAnimationFrame(anim.raf); ani
 
 // ---------- gestes ----------
 type Kind = 'molette' | 'clavier' | 'doigt';
-interface Gesture { active: boolean; y0: number; r0: number; pending: number; rescuing: boolean; native: boolean; end: number; check: number; chkAt: number; skip: boolean; max: number }
-const newGesture = (): Gesture => ({ active: false, y0: 0, r0: 0, pending: 0, rescuing: false, native: false, end: 0, check: 0, chkAt: -1e9, skip: false, max: 0 });
+interface Gesture { active: boolean; t0: number; y0: number; r0: number; pending: number; rescuing: boolean; native: boolean; end: number; check: number; chkAt: number; skip: boolean; max: number }
+const newGesture = (): Gesture => ({ active: false, t0: 0, y0: 0, r0: 0, pending: 0, rescuing: false, native: false, end: 0, check: 0, chkAt: -1e9, skip: false, max: 0 });
 const gestures: Record<Kind, Gesture> = { molette: newGesture(), clavier: newGesture(), doigt: newGesture() };
 
 /** Le défilement normal a-t-il bougé la page, en plus de ce que nous avons fait nous-mêmes ? */
-const nativeMoved = (g: Gesture) => Math.abs((root().scrollTop - g.y0) - (rescued - g.r0)) >= 2; // 2 px : absorbe l'arrondi du navigateur
+const nativeMoved = (g: Gesture) =>
+  Math.abs((root().scrollTop - g.y0) - (rescued - g.r0)) >= 2 // la page a bougé en plus de ce que nous avons fait (2 px : absorbe l'arrondi)
+  || lastNativeScroll >= g.t0 - 150; // ou le navigateur a envoyé un événement « scroll » (le défilement normal peut avoir déjà bougé la page AVANT que nous lisions sa position)
 
 /**
  * Un « geste » = une série d'événements rapprochés (tour de molette, doigt posé, touche maintenue).
@@ -110,8 +115,11 @@ function feed(kind: Kind, dy: number, target: EventTarget | null) {
   g.end = window.setTimeout(() => { g.active = false; }, QUIET_MS); // geste fini après un court silence
 
   if (!g.active) {
-    Object.assign(g, { active: true, y0: s.scrollTop, r0: rescued, pending: 0, native: false, rescuing: brokenAt > 0 && now - brokenAt < BROKEN_TTL_MS });
+    const nativeJustMoved = now - lastNativeScroll < 150; // le défilement normal vient de bouger la page : il marche
+    if (nativeJustMoved) brokenAt = 0;
+    Object.assign(g, { active: true, t0: now, y0: s.scrollTop, r0: rescued, pending: 0, native: nativeJustMoved, rescuing: !nativeJustMoved && brokenAt > 0 && now - brokenAt < BROKEN_TTL_MS });
     window.clearTimeout(g.check);
+    if (g.native) return;
     if (g.rescuing) { applyScroll(kind, dy); return; } // blocage déjà constaté : on suit tout de suite, sans attendre
     g.pending = dy;
     g.check = window.setTimeout(() => {
@@ -142,6 +150,9 @@ let installed = false;
 export function installScrollRescue(): void {
   if (installed || typeof window === 'undefined') return;
   installed = true;
+
+  // Défilement normal de la page : tout événement « scroll » hors de notre fenêtre « ownUntil » vient du navigateur (ou de l'application elle-même)
+  document.addEventListener('scroll', () => { const t = performance.now(); if (t > ownUntil) lastNativeScroll = t; }, { passive: true });
 
   window.addEventListener('wheel', (e: WheelEvent) => {
     if (e.ctrlKey || e.defaultPrevented || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // zoom, geste déjà géré, défilement de côté
