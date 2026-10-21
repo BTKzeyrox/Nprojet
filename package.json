@@ -30,7 +30,9 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
-    "check:client-price": "npx --yes tsx scripts/check-client-price.ts"
+    "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
+    "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
+    "check:deadlines-store": "esbuild scripts/check-deadlines-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-deadlines-store.mjs && node node_modules/.cache/check-deadlines-store.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

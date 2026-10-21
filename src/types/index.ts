@@ -266,6 +266,8 @@ export interface ClientContract {
   client_price_ar?: number; // prix client propre à cette mission (sinon : prix du type, sinon prix par défaut)
   client_id?: string; // fiche client (module 1) ; les anciennes missions gardent leur texte libre `client_name` ; jamais envoyé à un opérateur
   priority: 'Haute' | 'Normale' | 'Urgente';
+  due_date?: string; // date limite AAAA-MM-JJ (module 6, M6.1) ; facultative
+  due_time?: string; // heure limite HH:MM ; seulement avec une date
   region_server: string;
 }
 

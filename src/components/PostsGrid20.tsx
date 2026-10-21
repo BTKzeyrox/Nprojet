@@ -34,6 +34,8 @@ import { ScoreInput } from './ScoreInput';
 import { clientPriceForType, parsePriceInput } from '../utils/clientPrice';
 import { getRemainingBand } from '../utils/postBand';
 import { PendingPostActions } from './PendingPostActions';
+import { DeadlineBadges, DeadlineFields } from './DeadlineFields';
+import { dueSortKey, type MissionPriority } from '../utils/deadlines';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -76,7 +78,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     window.addEventListener(NAV_TARGET_EVENT, apply);
     return () => window.removeEventListener(NAV_TARGET_EVENT, apply);
   }, []);
-  const [sortBy, setSortBy] = useState<'number' | 'rest_desc' | 'obj_asc' | 'obj_desc'>('number');
+  const [sortBy, setSortBy] = useState<'number' | 'rest_desc' | 'obj_asc' | 'obj_desc' | 'due'>('number');
 
   const isLight = theme === 'light';
 
@@ -91,6 +93,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [addProof, setAddProof] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [addPrice, setAddPrice] = useState('');
   const [addClientId, setAddClientId] = useState('');
+  const [addDue, setAddDue] = useState<{ date: string; time: string; priority: MissionPriority }>({ date: '', time: '', priority: 'Normale' });
   const [addClientError, setAddClientError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const needClient = missionRequiresClient(readCompany(db.getSettings().company)); // réglage « Une mission a toujours un client » (Conditions)
@@ -104,10 +107,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     if (!addName.trim()) return setAddError('Écris le titre de la mission.');
     const price = parsePriceInput(addPrice);
     if (price === null) return setAddError('Le prix client doit être un nombre positif ou vide.');
-    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, requireClient: needClient });
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, due_date: addDue.date, due_time: addDue.time, priority: addDue.priority, requireClient: needClient });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null);
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null); setAddDue({ date: '', time: '', priority: 'Normale' });
   };
 
   // Keep contracts synchronized with store
@@ -187,6 +190,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     if (sortBy === 'rest_desc') return restOf(b) - restOf(a) || a.post_number - b.post_number;
     if (sortBy === 'obj_asc') return objectiveOf(a) - objectiveOf(b) || a.post_number - b.post_number;
     if (sortBy === 'obj_desc') return objectiveOf(b) - objectiveOf(a) || a.post_number - b.post_number;
+    if (sortBy === 'due') return dueSortKey(a).localeCompare(dueSortKey(b)) || a.post_number - b.post_number;
     return a.post_number - b.post_number;
   });
   const settings = db.getSettings();
@@ -338,6 +342,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               <option value="rest_desc">À faire : plus → moins</option>
               <option value="obj_asc">Objectif : petit → grand</option>
               <option value="obj_desc">Objectif : grand → petit</option>
+              <option value="due">Date limite : la plus proche</option>
             </select>
           </div>
 
@@ -427,6 +432,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             <span className="text-[10px] font-mono text-slate-400 shrink-0">{contract.account_tag}</span>
                           )}
                         </div>
+                        <DeadlineBadges due_date={contract.due_date} due_time={contract.due_time} priority={contract.priority} done={contract.target_score > contract.initial_score && pct >= 100} />
                         {isAdminView ? (
                           <select
                             value={contract.post_type || ''}
@@ -536,6 +542,8 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             <details className={`rounded-2xl border px-4 py-3 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-white/[0.03]'}`}>
               <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
               <div className="mt-3 space-y-3">
+                <DeadlineFields date={addDue.date} time={addDue.time} priority={addDue.priority} onChange={setAddDue}
+                  inputClass={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 opacity-70">Justificatif demandé à la fin</label>
                   <select value={addProof} onChange={e => setAddProof(e.target.value as typeof addProof)} className={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}>

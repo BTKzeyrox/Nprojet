@@ -1,4 +1,5 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
+import { checkDeadline } from '../utils/deadlines';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
@@ -96,6 +97,13 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
+};
+
+const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority', string> = {
+  date: 'La date limite n\'est pas une vraie date.',
+  time: 'L\'heure limite doit être entre 00:00 et 23:59.',
+  time_without_date: 'Choisis une date pour pouvoir ajouter une heure.',
+  priority: 'Priorité inconnue.',
 };
 
 class DeltaForceStore {
@@ -1216,7 +1224,7 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; requireClient?: boolean }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
       return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
@@ -1228,13 +1236,15 @@ class DeltaForceStore {
       if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
       clientId = v.client_id;
     }
+    const dl = checkDeadline({ due_date: p.due_date, due_time: p.due_time, priority: p.priority });
+    if (!dl.ok) return { success: false, error: DEADLINE_MESSAGE[dl.error] };
     const used = new Set(this.contracts.map(c => c.post_number));
     let n = 1;
     while (used.has(n)) n++;
     const initial = Math.max(0, p.initial_score || 0);
     const objective = Math.max(0, p.objective || 0);
     this.contracts.push({
-      id: `contract-${Date.now()}`,
+      id: (() => { let id = `contract-${Date.now()}`; for (let k = 2; this.contracts.some(c => c.id === id); k++) id = `contract-${Date.now()}-${k}`; return id; })(), // jamais deux missions avec le même identifiant, même ajoutées dans la même milliseconde
       post_number: n,
       client_name: name,
       account_tag: name ? `ACC-${n}` : '',
@@ -1251,7 +1261,9 @@ class DeltaForceStore {
       // Prix client propre à la mission : seulement s'il est donné (sinon prix du type, puis prix par défaut)
       ...(typeof p.client_price_ar === 'number' && isFinite(p.client_price_ar) && p.client_price_ar >= 0 ? { client_price_ar: Math.round(p.client_price_ar) } : {}),
       ...(clientId ? { client_id: clientId } : {}),
-      priority: 'Normale',
+      priority: dl.priority,
+      ...(dl.due_date ? { due_date: dl.due_date } : {}),
+      ...(dl.due_time ? { due_time: dl.due_time } : {}),
       region_server: '—',
       no_account: !name,
     });
@@ -1335,6 +1347,16 @@ class DeltaForceStore {
     const contract = this.contracts.find(c => c.id === contractId);
     if (!contract) return { success: false, error: 'Contrat introuvable' };
 
+    // Date limite et priorité (M6.1) : revérifiées ; un champ vidé disparaît vraiment
+    if ('due_date' in updates || 'due_time' in updates || 'priority' in updates) {
+      if ('due_date' in updates && !updates.due_date && !('due_time' in updates)) updates = { ...updates, due_time: '' }; // sans date, plus d'heure
+      const dl = checkDeadline({ due_date: 'due_date' in updates ? updates.due_date : contract.due_date, due_time: 'due_time' in updates ? updates.due_time : contract.due_time, priority: 'priority' in updates ? updates.priority : contract.priority });
+      if (!dl.ok) return { success: false, error: DEADLINE_MESSAGE[dl.error] };
+      updates = { ...updates, priority: dl.priority };
+      delete updates.due_date; delete updates.due_time;
+      if (dl.due_date) updates.due_date = dl.due_date; else delete contract.due_date;
+      if (dl.due_time) updates.due_time = dl.due_time; else delete contract.due_time;
+    }
     const oldClientName = contract.client_name;
     Object.assign(contract, updates);
 

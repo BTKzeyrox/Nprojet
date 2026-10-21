@@ -6,6 +6,7 @@ import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
 import { proofsOf } from '../utils/proofs';
 import { db } from '../db/store';
+import { useApp } from '../context/AppContext';
 
 interface DayDetailsModalProps {
   isOpen: boolean;
@@ -36,12 +37,14 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onOpenProofLightbox,
 }) => {
   useLockBodyScroll(isOpen);
+  const appLang = useApp().lang;
 
   if (!isOpen || !dateStr) return null;
 
   const currentUser = db.getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
 
+  const dueToday = db.getContracts().filter(c => c.due_date === dateStr && !(c.target_score > c.initial_score && (c.current_score ?? c.initial_score) >= c.target_score));
   const [year, month, day] = dateStr.split('-');
   const formattedDate = `${day}/${month}/${year}`;
 
@@ -117,6 +120,14 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
         {/* Content Body */}
         <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+          {dueToday.length > 0 && (
+            <div data-notranslate="" className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-3 space-y-1.5">
+              <div className="text-[11px] font-mono font-bold text-amber-400 uppercase">{appLang === 'en' ? 'Missions due this day' : 'Missions à rendre ce jour'}</div>
+              {dueToday.map(c => (
+                <div key={c.id} className="text-xs text-slate-200 break-words">#{c.post_number} · {c.client_name || (appLang === 'en' ? 'Untitled mission' : 'Mission sans titre')}{c.due_time ? ` · ${c.due_time}` : ''}{c.priority === 'Urgente' ? (appLang === 'en' ? ' · Urgent' : ' · Urgent') : ''}</div>
+              ))}
+            </div>
+          )}
           {presenceRows.length > 0 && (
             <div className="bg-slate-900/60 border border-slate-700/80 rounded-lg p-3 space-y-1.5">
               <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">Présence du jour</div>

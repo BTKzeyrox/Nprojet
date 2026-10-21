@@ -1070,5 +1070,10 @@
 "Remonter en haut": "Back to top",
 "Descendre en bas": "Go to bottom",
 "Haut": "Top",
-"Bas": "Bottom"
+"Bas": "Bottom",
+"La date limite n'est pas une vraie date.": "The deadline is not a real date.",
+"L'heure limite doit être entre 00:00 et 23:59.": "The deadline time must be between 00:00 and 23:59.",
+"Choisis une date pour pouvoir ajouter une heure.": "Choose a date to be able to add a time.",
+"Priorité inconnue.": "Unknown priority.",
+"Date limite : la plus proche": "Deadline: nearest first"
 }

@@ -172,6 +172,31 @@ function cleanClientRef(v: unknown): { ok: true; id: string | null } | { ok: fal
 }
 // ===== END CLIENTS =====
 
+// ===== BEGIN MISSIONS (date limite et priorité d'une mission : le serveur revérifie ; ce bloc est contrôlé par scripts/check-deadlines.ts) =====
+const MISSION_PRIORITIES = ['Normale', 'Haute', 'Urgente'];
+const isRealMissionDate = (s: unknown): boolean => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  if (y < 2000 || y > 2100) return false;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+};
+function cleanMissionDeadline(c: any): { ok: true; save: any } | { ok: false; reason: string } {
+  const save: any = { ...c };
+  const date = save.due_date === undefined || save.due_date === null ? '' : save.due_date;
+  const time = save.due_time === undefined || save.due_time === null ? '' : save.due_time;
+  const prio = save.priority === undefined || save.priority === null || save.priority === '' ? 'Normale' : save.priority;
+  if (typeof prio !== 'string' || !MISSION_PRIORITIES.includes(prio)) return { ok: false, reason: 'mission_priority' };
+  if (date !== '' && !isRealMissionDate(date)) return { ok: false, reason: 'mission_date' };
+  if (time !== '' && !(typeof time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(time))) return { ok: false, reason: 'mission_time' };
+  if (date === '' && time !== '') return { ok: false, reason: 'mission_time' };
+  save.priority = prio;
+  if (date === '') delete save.due_date; else save.due_date = date;
+  if (time === '') delete save.due_time; else save.due_time = time;
+  return { ok: true, save };
+}
+// ===== END MISSIONS =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar"];
@@ -867,6 +892,11 @@ async function sync(req: any, res: any, me: any) {
       if (col === 'settings') toSave = cleanSettingsRecord(rec, existing, me, now); // seul l'admin arrive ici ; `company` est revérifié
       if (col === 'clients') {
         const v = cleanClient(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        toSave = v.save;
+      }
+      if (admin && col === 'contracts') {
+        const v = cleanMissionDeadline(toSave);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         toSave = v.save;
       }

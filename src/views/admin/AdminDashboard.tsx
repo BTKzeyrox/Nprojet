@@ -35,6 +35,8 @@ import { User, PostSession, SecurityViolation, ClientContract, ShiftType, Passwo
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { ClientPicker } from '../../components/ClientPicker';
+import { DeadlineFields } from '../../components/DeadlineFields';
+import type { MissionPriority } from '../../utils/deadlines';
 import { checkMissionClient, MISSION_CLIENT_MESSAGE, missionRequiresClient } from '../../utils/clients';
 import { readCompany } from '../../utils/companyRules';
 import { proofsOf } from '../../utils/proofs';
@@ -170,6 +172,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editDescription, setEditDescription] = useState('');
   const [editProofMode, setEditProofMode] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [editPrice, setEditPrice] = useState('');
+  const [editDue, setEditDue] = useState<{ date: string; time: string; priority: MissionPriority }>({ date: '', time: '', priority: 'Normale' });
 
   // In-app Toast Notice (no window.alert in iframe)
   const [toastNotice, setToastNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -272,6 +275,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       description: editDescription.trim(),
       proof_mode: editProofMode,
       client_price_ar: priceParsed, // vide = retour au prix du type / prix par défaut
+      due_date: editDue.date, due_time: editDue.time, priority: editDue.priority, // date limite et priorité (M6.1) ; vide = retirée
       no_account: false,
       recommended_shift: editShift,
     });
@@ -509,6 +513,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditDescription(contract.description || '');
             setEditProofMode(contract.proof_mode || 'type');
             setEditPrice(typeof contract.client_price_ar === 'number' ? String(contract.client_price_ar) : '');
+            setEditDue({ date: contract.due_date || '', time: contract.due_time || '', priority: contract.priority === 'Urgente' || contract.priority === 'Haute' ? contract.priority : 'Normale' });
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
           }}
@@ -715,6 +720,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <details className="rounded-xl border border-slate-700 bg-black/10 px-3 py-2.5">
                     <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
                     <div className="mt-3 space-y-3">
+                      <DeadlineFields date={editDue.date} time={editDue.time} priority={editDue.priority} onChange={setEditDue} inputClass="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
                       <div>
                         <label className="block text-slate-300 mb-1">Justificatif demandé à la fin</label>
                         <select value={editProofMode} onChange={e => setEditProofMode(e.target.value as typeof editProofMode)} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white">

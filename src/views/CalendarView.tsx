@@ -115,6 +115,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   const daysShort = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   const today = todayStr();
+  // Échéances (M6.1) : nombre de missions non terminées qui ont une date limite ce jour-là
+  const appLang = useApp().lang;
+  const dueByDay = new Map<string, number>();
+  for (const c of db.getContracts()) {
+    if (!c.due_date || (c.target_score > c.initial_score && (c.current_score ?? c.initial_score) >= c.target_score)) continue;
+    dueByDay.set(c.due_date, (dueByDay.get(c.due_date) || 0) + 1);
+  }
   const cfg = db.getSettings();
   const monthPrefix = `${year}-${pad(month + 1)}-`;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -418,6 +425,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                           <StatusIcon status={d.status} className="w-3.5 h-3.5" />
                         </span>
                       </div>
+                      {dueByDay.get(d.dateStr) ? (
+                        <div data-notranslate="" className={`self-start text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${d.dateStr < today ? 'bg-red-500/15 text-red-400 border-red-500/40' : 'bg-amber-500/15 text-amber-500 border-amber-500/40'}`} title={appLang === 'en' ? 'Missions due this day' : 'Missions à rendre ce jour'}>
+                          ⏰ {dueByDay.get(d.dateStr)} {appLang === 'en' ? 'due' : 'à rendre'}
+                        </div>
+                      ) : null}
                       {d.shifts.length > 0 && (
                         <>
                           <div className={`self-start text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${L ? 'bg-white text-slate-700' : 'bg-white/10 text-slate-200'}`}>
