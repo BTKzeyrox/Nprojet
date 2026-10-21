@@ -53,19 +53,18 @@
   }
 
   body {
-    font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    font-feature-settings: 'cv11' on, 'ss01' on;
+    font-family: 'Poppins', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   }
 }
 
 /* ===== Polices modernes ===== */
 .font-tactical {
-  font-family: 'Inter', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Poppins', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   letter-spacing: 0.005em;
 }
 .font-mono,
 .font-mono-numbers {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Poppins', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
