@@ -1,22 +1,28 @@
 // Filet de sécurité du défilement (grand écran, tablette).
 // Symptôme observé chez BTK : le défilement fait par un bouton marche, mais celui de la molette, du pavé tactile, du clavier ou du doigt non.
-// Cause exacte encore inconnue (non reproduite dans la démo). Ce module ne cherche pas la cause : il surveille, et seulement si la page
+// Cause exacte encore inconnue (non reproduite hors de chez lui). Ce module ne cherche pas la cause : il surveille, et seulement si la page
 // n'a PAS bougé après un geste de l'utilisateur alors qu'elle pouvait défiler, il fait lui-même le défilement (celui qui marche).
 // Il ne fait rien quand le défilement normal marche (compteur à 0), ni sous une fenêtre ouverte, ni dans une liste qui défile seule.
+//
+// Fluidité : une fois le blocage constaté, les gestes suivants sont suivis tout de suite (plus d'attente), la molette et le clavier glissent
+// en douceur (une image après l'autre, comme le défilement normal), le doigt suit 1 pour 1.
 import { getLockInfo } from './useLockBodyScroll';
 
-const WAIT_MS = 160; // le défilement normal commence bien avant : au-delà, il est considéré comme absent (pas moins : une page chargée peut tarder)
+const WAIT_MS = 160; // 1er geste seulement : le défilement normal commence bien avant ; au-delà, il est considéré comme absent
 const QUIET_MS = 300; // silence qui termine un geste
+const RECHECK_MS = 120; // les vérifications « fenêtre, liste, menu fixe » sont refaites au plus toutes les 120 ms (coût réduit)
+const BROKEN_TTL_MS = 120000; // après une preuve de blocage, on agit tout de suite pendant 2 minutes (ou jusqu'à preuve du contraire)
+const EASE = 0.2; // part de la distance restante parcourue à chaque image (glissement)
+const MIN_STEP = 1.5; // pixels minimum par image, pour toujours arriver
+
 const info = { count: 0, last: '' };
 export const getRescueInfo = (): { count: number; last: string } => ({ ...info });
 
 const root = (): HTMLElement => (document.scrollingElement as HTMLElement) || document.documentElement;
 const pageMax = () => Math.max(0, root().scrollHeight - root().clientHeight);
-const canMovePage = (dy: number) => { const s = root(); return pageMax() > 2 && (dy > 0 ? s.scrollTop < pageMax() - 1 : s.scrollTop > 1); };
 
-/** Vrai si le geste doit être laissé au navigateur : fenêtre ouverte, menu fixe, ou liste qui défile seule (ou qui a demandé de ne pas passer au parent). */
+/** Vrai si le geste doit être laissé au navigateur : menu fixe, fenêtre, liste qui défile seule (ou qui a demandé de ne pas passer au parent). */
 function belongsToSomethingElse(target: EventTarget | null, dy: number): boolean {
-  if (getLockInfo().count > 0) return true; // une fenêtre est ouverte : la page derrière doit rester figée
   let n = target as HTMLElement | null;
   if (n && n.nodeType !== 1) n = (n as Node).parentElement;
   while (n && n !== document.body && n !== document.documentElement) {
@@ -34,40 +40,86 @@ function belongsToSomethingElse(target: EventTarget | null, dy: number): boolean
   return false;
 }
 
+// ---------- défilement fait par le filet ----------
 let rescued = 0; // distance totale que CE module a fait défiler (pour ne pas la confondre avec le défilement normal)
+let brokenAt = 0; // instant de la dernière preuve que le défilement normal est absent (0 = aucune)
+const anim = { raf: 0, pos: 0, target: 0 };
 
-function rescue(kind: string, dy: number) {
-  const s = root();
-  const before = s.scrollTop;
-  window.scrollBy({ top: dy, left: 0, behavior: 'auto' });
-  const moved = s.scrollTop - before;
-  if (moved !== 0) { rescued += moved; info.count++; info.last = `${kind} ${Math.round(dy)}`; }
+/** Déplace la page. On ne relit PAS la position après coup (chaque lecture force un calcul de page, cher sur une machine lente) :
+ *  `rescued` compte la distance demandée ; l'écart avec la position réellement arrondie par le navigateur reste sous 1 pixel (positions absolues). */
+function moveTo(y: number, from: number) {
+  window.scrollTo({ top: y, left: 0, behavior: 'instant' as ScrollBehavior });
+  rescued += y - from;
 }
+
+function tick() {
+  anim.raf = 0;
+  const cur = root().scrollTop; // seule lecture de la position à chaque image
+  if (Math.abs(cur - anim.pos) > 2) { anim.pos = anim.target = cur; return; } // autre chose a déplacé la page (barre de défilement, défilement normal) : on s'arrête
+  const diff = anim.target - anim.pos;
+  if (Math.abs(diff) < 0.5) { // arrivé : dernier pas pour se poser exactement sur la cible (pas d'écart d'arrondi)
+    const end = Math.round(anim.target);
+    if (end !== Math.round(cur)) { moveTo(end, anim.pos); }
+    anim.pos = anim.target = end;
+    return;
+  }
+  let step = diff * EASE;
+  if (Math.abs(step) < MIN_STEP) step = Math.sign(diff) * Math.min(MIN_STEP, Math.abs(diff));
+  const from = anim.pos;
+  anim.pos += step;
+  moveTo(anim.pos, from);
+  anim.raf = window.requestAnimationFrame(tick);
+}
+
+/** Molette et clavier : glissement doux vers une cible qui avance à chaque geste. Doigt : suivi immédiat 1 pour 1. */
+function applyScroll(kind: Kind, dy: number) {
+  info.count++; info.last = `${kind} ${Math.round(dy)}`;
+  const s = root();
+  if (kind === 'doigt') { const cur = s.scrollTop; moveTo(Math.min(pageMax(), Math.max(0, cur + dy)), cur); return; }
+  if (!anim.raf) { anim.pos = s.scrollTop; anim.target = s.scrollTop; }
+  anim.target = Math.min(pageMax(), Math.max(0, anim.target + dy));
+  if (!anim.raf) anim.raf = window.requestAnimationFrame(tick);
+}
+
+function stopAnim() { if (anim.raf) { window.cancelAnimationFrame(anim.raf); anim.raf = 0; } anim.target = anim.pos = root().scrollTop; }
+
+// ---------- gestes ----------
+type Kind = 'molette' | 'clavier' | 'doigt';
+interface Gesture { active: boolean; y0: number; r0: number; pending: number; rescuing: boolean; native: boolean; end: number; check: number; chkAt: number; skip: boolean; max: number }
+const newGesture = (): Gesture => ({ active: false, y0: 0, r0: 0, pending: 0, rescuing: false, native: false, end: 0, check: 0, chkAt: -1e9, skip: false, max: 0 });
+const gestures: Record<Kind, Gesture> = { molette: newGesture(), clavier: newGesture(), doigt: newGesture() };
+
+/** Le défilement normal a-t-il bougé la page, en plus de ce que nous avons fait nous-mêmes ? */
+const nativeMoved = (g: Gesture) => Math.abs((root().scrollTop - g.y0) - (rescued - g.r0)) >= 2; // 2 px : absorbe l'arrondi du navigateur
 
 /**
  * Un « geste » = une série d'événements rapprochés (tour de molette, doigt posé, touche maintenue).
- * Au début du geste on note la position de la page. Après WAIT_MS, si la page n'a PAS bougé toute seule, le défilement normal est absent :
- * on fait défiler ce qui s'est accumulé, puis chaque événement suivant du même geste tout de suite. Si la page a bougé, on ne fait rien du tout.
+ * Au début du geste on note la position de la page. Si, après WAIT_MS, la page n'a PAS bougé toute seule, le défilement normal est absent :
+ * on fait défiler ce qui s'est accumulé, puis chaque événement suivant tout de suite. Si la page a bougé, on ne fait rien du tout.
+ * Après une première preuve, les gestes suivants sont suivis sans attendre (BROKEN_TTL_MS).
  */
-interface Gesture { active: boolean; y0: number; r0: number; pending: number; rescuing: boolean; native: boolean; end: number; check: number }
-const newGesture = (): Gesture => ({ active: false, y0: 0, r0: 0, pending: 0, rescuing: false, native: false, end: 0, check: 0 });
-const gestures: Record<string, Gesture> = { molette: newGesture(), clavier: newGesture(), doigt: newGesture() };
-
-function feed(kind: 'molette' | 'clavier' | 'doigt', dy: number, target: EventTarget | null) {
+function feed(kind: Kind, dy: number, target: EventTarget | null) {
+  if (dy === 0 || getLockInfo().count > 0) return; // une fenêtre est ouverte : la page derrière doit rester figée
   const g = gestures[kind];
-  if (dy === 0 || !canMovePage(dy) || belongsToSomethingElse(target, dy)) return;
+  const now = performance.now();
+  const s = root();
+  if (now - g.chkAt > RECHECK_MS) { g.max = pageMax(); g.skip = g.max <= 2 || belongsToSomethingElse(target, dy); g.chkAt = now; }
+  if (g.skip) return;
+  if (dy > 0 ? s.scrollTop >= g.max - 1 : s.scrollTop <= 1) return; // déjà en haut ou en bas
   window.clearTimeout(g.end);
   g.end = window.setTimeout(() => { g.active = false; }, QUIET_MS); // geste fini après un court silence
+
   if (!g.active) {
-    Object.assign(g, { active: true, y0: root().scrollTop, r0: rescued, pending: dy, rescuing: false, native: false });
+    Object.assign(g, { active: true, y0: s.scrollTop, r0: rescued, pending: 0, native: false, rescuing: brokenAt > 0 && now - brokenAt < BROKEN_TTL_MS });
     window.clearTimeout(g.check);
+    if (g.rescuing) { applyScroll(kind, dy); return; } // blocage déjà constaté : on suit tout de suite, sans attendre
+    g.pending = dy;
     g.check = window.setTimeout(() => {
-      if (g.native) return; // (un geste très court peut être fini avant la vérification : on vérifie quand même)
-      const nativeMove = (root().scrollTop - g.y0) - (rescued - g.r0);
-      if (Math.abs(nativeMove) >= 1) { g.native = true; return; } // le défilement normal marche : on ne touche à rien
-      if (getLockInfo().count > 0 || !canMovePage(g.pending)) { g.pending = 0; return; }
-      g.rescuing = true;
-      rescue(kind, g.pending);
+      if (g.native || g.rescuing) return;
+      if (nativeMoved(g)) { g.native = true; brokenAt = 0; return; } // le défilement normal marche : on ne touche à rien
+      if (getLockInfo().count > 0) { g.pending = 0; return; }
+      g.rescuing = true; brokenAt = performance.now(); // preuve : le défilement normal est absent
+      applyScroll(kind, g.pending);
       g.pending = 0;
     }, WAIT_MS);
     return;
@@ -75,8 +127,8 @@ function feed(kind: 'molette' | 'clavier' | 'doigt', dy: number, target: EventTa
   if (g.native) return;
   if (g.rescuing) {
     // Tout déplacement en plus de ce que nous avons fait nous-mêmes est le défilement normal, arrivé en retard : on s'arrête (pas de double vitesse)
-    if (Math.abs((root().scrollTop - g.y0) - (rescued - g.r0)) >= 1) { g.native = true; g.rescuing = false; return; }
-    rescue(kind, dy); // le défilement normal est absent : on suit le geste tout de suite
+    if (nativeMoved(g)) { g.native = true; g.rescuing = false; brokenAt = 0; stopAnim(); return; }
+    applyScroll(kind, dy);
   } else g.pending += dy;
 }
 
