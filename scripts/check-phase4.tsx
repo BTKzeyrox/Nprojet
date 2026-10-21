@@ -76,6 +76,23 @@ const ua = unp.find(a => a.id === 'unpaid');
 ok(!!ua && ua.fr.includes('Alpha (80 j)') && !ua.fr.includes('Beta') && ua.fr.includes('plus de 30 jours'), 'client sans paiement depuis 80 jours : Alpha oui, Beta (10 jours) non');
 ok(!computeAlerts({ ...base, settings: { ...base.settings, alert_unpaid_days: 90 }, posts: posts3, cash: [cashE('a', 'in', 10000, '2026-08-01', 'Alpha')] }).some(a => a.id === 'unpaid'), 'seuil réglé à 90 jours : plus d\'alerte à 80 jours');
 ok(!computeAlerts({ ...base, posts: [post('p1', 'u1', '2026-09-01')], cash: [cashE('a', 'in', 10000, '2026-08-01', 'Alpha'), cashE('b', 'in', 5000, '2026-10-01', 'Beta')] }).some(a => a.id === 'unpaid'), 'tout est encaissé : pas d\'alerte « client qui n\'a pas payé »');
+// M1.6 : alerte par fiche client
+{
+  const recs = [{ id: 'k1', name: 'Alpha' }, { id: 'k2', name: 'Beta' }, { id: 'k3', name: 'Gamma', active: false }] as any[];
+  const pk = (id: string, date: string, kid: string) => ({ ...post(id, 'u1', date), client_id: kid });
+  const run = (extra: any) => computeAlerts({ ...base, clients: recs, ...extra }).find(a => a.id === 'unpaid');
+  const a1 = run({ posts: [pk('p1', '2026-08-01', 'k1')], cash: [] });
+  ok(!!a1 && a1.fr.includes('Alpha (80 j)') && /10\s000 Ar/.test(a1.fr), 'client jamais payé : attente comptée depuis sa première mission (80 j), reste dû affiché');
+  ok(!run({ posts: [pk('p1', '2026-08-01', 'k1')], cash: [cashE('a', 'in', 10000, '2026-08-05', 'alpha')] }), 'client qui a tout payé : pas d\'alerte');
+  const a2 = run({ posts: [pk('p1', '2026-08-01', 'k1'), pk('p2', '2026-10-10', 'k1')], cash: [cashE('a', 'in', 10000, '2026-08-05', 'ALPHA')] });
+  ok(!!a2 && a2.fr.includes('Alpha (76 j)'), 'client qui doit encore : attente depuis son dernier paiement (nom écrit autrement reconnu)');
+  ok(!run({ posts: [pk('p1', '2026-10-15', 'k1')], cash: [] }), 'mission récente (5 jours) : pas d\'alerte');
+  ok(!run({ posts: [pk('p1', '2026-08-01', 'k3')], cash: [] }), 'fiche archivée : pas d\'alerte');
+  ok(!!run({ posts: [pk('p1', '2026-08-01', 'k1')], cash: [cashE('a', 'in', 99999, '2026-10-19', 'Beta')] }), 'le paiement d\'un AUTRE client ne cache pas l\'alerte d\'Alpha');
+  const a3 = run({ posts: [pk('p1', '2026-08-01', 'k1')], cash: [cashE('z', 'in', 1000, '2026-08-01', 'Sans fiche')] });
+  ok(!!a3 && a3.fr.includes('Alpha') && a3.fr.includes('Sans fiche'), 'client sans fiche (nom libre) : ancienne règle gardée en plus');
+  ok(!!computeAlerts({ ...base, posts: [pk('p1', '2026-08-01', 'k1')], cash: [cashE('z', 'in', 1000, '2026-08-01', 'Sans fiche')] }).find(a => a.id === 'unpaid'), 'sans fiches fournies : ancienne règle inchangée');
+}
 // Bénéfice en baisse (mois en cours contre le mois d'avant, même nombre de jours)
 const drop = computeAlerts({ ...base, cash: [cashE('a', 'in', 300000, '2026-09-05', 'C'), cashE('b', 'in', 100000, '2026-10-05', 'C')] });
 ok(drop.some(a => a.id === 'profit-drop' && a.fr.includes('67 %')), 'bénéfice en baisse de 67 % par rapport au mois dernier');

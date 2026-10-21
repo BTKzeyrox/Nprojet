@@ -1,6 +1,6 @@
 // Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur.
 // Lancer : npm run check:clients
-import { addMonths, checkClientDraft, clientMissionsFromPosts, clientReceived, clientThresholds, countByStatus, filterClients, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
+import { addMonths, checkClientDraft, clientMissionsFromPosts, clientReceived, clientThresholds, countByStatus, filterClients, normalizeName, paymentTermsDays, rankClients, summarizeClients, suggestClientMatches, canonicalClientName, CLIENT_THRESHOLDS_DEFAULT, type ClientMission, type ClientRecord } from '../src/utils/clients';
 import { addDays } from '../src/utils/stats';
 import { clientPriceWithClient } from '../src/utils/clientPrice';
 
@@ -175,6 +175,15 @@ eq(clientThresholds({ clients: { new_days: 30.6 } }).new_days, 31, 'seuils : arr
   eq(names({ q: 'zzz' }), [], 'recherche sans résultat');
   const cnt = countByStatus(cs, sm);
   eq([cnt.all, cnt.archived, cnt.inactive, cnt.prospect, cnt.new], [3, 1, 1, 1, 1], 'comptes par statut (archivés à part, statuts cumulés comptés partout)');
+}
+
+// --- Nom officiel d'un paiement (M1.6) ---
+{
+  const cs = [cl('c1', { name: 'Atelier Rivage' }), cl('c2', { name: 'Dup' }), cl('c3', { name: 'dup' })];
+  eq(canonicalClientName('  atelier   RIVAGE ', cs), { name: 'Atelier Rivage', id: 'c1' }, 'paiement : nom écrit autrement = nom de la fiche');
+  eq(canonicalClientName('Autre', cs), { name: 'Autre', id: null }, 'paiement sans fiche : nom saisi gardé');
+  eq(canonicalClientName('DUP', cs), { name: 'DUP', id: null }, 'deux fiches de même nom : pas de choix');
+  eq(canonicalClientName('   ', cs), { name: '', id: null }, 'nom vide : rien');
 }
 
 // --- Pureté et vitesse ---

@@ -7,6 +7,7 @@ import { stockRows } from './stock';
 import { goalRows, monthFigures, type GoalSettings } from './goals';
 import { missionAmount } from './stats';
 import type { StatsTab } from './statsNav';
+import { canonicalClientName, clientMissionsFromPosts, clientReceived, type ClientRecord } from './clients';
 
 export type AlertLevel = 'danger' | 'warn';
 export interface AlertItem {
@@ -23,6 +24,7 @@ export interface AlertInput {
   today: string; settings: AlertSettings;
   cash: CashEntry[]; posts: PostSession[]; contracts: ClientContract[]; advances: SalaryAdvanceRequest[];
   products: Product[]; moves: StockMove[];
+  clients?: ClientRecord[]; // fiches clients (admin) : l'alerte « pas de paiement » suit chaque fiche
 }
 
 const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} Ar`;
@@ -83,17 +85,46 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
       en: `Advance too large: ${big.length} request${big.length > 1 ? 's' : ''} above what was earned this month (${list(names)}).` });
   }
 
-  // 6. Client qui n'a pas payé depuis X jours : seulement s'il reste de l'argent à encaisser (au total, tous clients confondus)
+  // 6. Client qui n'a pas payé depuis X jours.
+  //    Avec une fiche client : on compare ce que CE client doit (missions validées × son prix) à ce qu'il a payé ; l'attente se compte depuis son dernier paiement
+  //    (ou, s'il n'a jamais payé, depuis sa première mission). Un nom de paiement sans fiche garde l'ancienne règle (il reste de l'argent à encaisser au total).
   const days = Math.max(1, Math.round(Number(s.alert_unpaid_days) || DEFAULT_UNPAID_DAYS));
+  const records = i.clients || [];
+  const late: { name: string; ago: number; due: number }[] = [];
   if (all.toCollect > 0) {
     const last = new Map<string, string>();
-    for (const e of i.cash) if (e.kind === 'in' && e.client_name?.trim() && e.date <= i.today) { const k = e.client_name.trim(); if (!last.has(k) || e.date > last.get(k)!) last.set(k, e.date); }
-    const late = [...last.entries()].map(([name, d]) => ({ name, ago: daysBetween(d, i.today) })).filter(x => x.ago > days).sort((a, b) => b.ago - a.ago || a.name.localeCompare(b.name));
-    if (late.length) {
-      out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance',
-        fr: `Pas de paiement depuis plus de ${days} jours : ${late.slice(0, 3).map(x => `${x.name} (${x.ago} j)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Reste à encaisser : ${ar(all.toCollect)}.`,
-        en: `No payment for over ${days} days: ${late.slice(0, 3).map(x => `${x.name} (${x.ago} d)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Left to collect: ${ar(all.toCollect)}.` });
+    for (const e of i.cash) {
+      if (e.kind !== 'in' || !e.client_name?.trim() || e.date > i.today) continue;
+      const c = records.length ? canonicalClientName(e.client_name, records) : { name: e.client_name.trim(), id: null };
+      if (c.id) continue; // suivi par fiche juste en dessous
+      if (!last.has(c.name) || e.date > last.get(c.name)!) last.set(c.name, e.date);
     }
+    for (const [name, d] of last) { const ago = daysBetween(d, i.today); if (ago > days) late.push({ name, ago, due: 0 }); }
+  }
+  if (records.length) {
+    const cashNow = i.cash.filter(e => e.date <= i.today);
+    const money = clientReceived(cashNow, records);
+    const billed = new Map<string, number>(), first = new Map<string, string>();
+    for (const m of clientMissionsFromPosts(i.posts.filter(p => p.date <= i.today), i.contracts, records, s)) {
+      billed.set(m.client_id, (billed.get(m.client_id) || 0) + m.price_ar);
+      if (!first.has(m.client_id) || m.date < first.get(m.client_id)!) first.set(m.client_id, m.date);
+    }
+    for (const c of records) {
+      if (c.active === false) continue;
+      const due = (billed.get(c.id) || 0) - (money.get(c.id)?.received || 0);
+      if (due <= 0) continue;
+      const ref = money.get(c.id)?.last_date || first.get(c.id);
+      if (!ref) continue;
+      const ago = daysBetween(ref, i.today);
+      if (ago > days) late.push({ name: c.name, ago, due });
+    }
+  }
+  late.sort((a, b) => b.ago - a.ago || a.name.localeCompare(b.name));
+  if (late.length) {
+    const left = all.toCollect > 0 ? all.toCollect : late.reduce((t, x) => t + x.due, 0);
+    out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance',
+      fr: `Pas de paiement depuis plus de ${days} jours : ${late.slice(0, 3).map(x => `${x.name} (${x.ago} j)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Reste à encaisser : ${ar(left)}.`,
+      en: `No payment for over ${days} days: ${late.slice(0, 3).map(x => `${x.name} (${x.ago} d)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Left to collect: ${ar(left)}.` });
   }
 
   const order = { danger: 0, warn: 1 } as const;

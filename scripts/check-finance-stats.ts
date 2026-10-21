@@ -62,6 +62,19 @@ for (const g of ['day', 'week', 'year'] as const) {
   const x = computeFinance(input, g, r);
   ok(x.series.inflow.length === x.labels.length && x.series.cumulative.every(Number.isFinite), `granularité ${g} : séries complètes, nombres valides`);
 }
+// M1.6 : « meilleur client » et classement avec les fiches clients
+{
+  const recs = [{ id: 'k1', name: 'Client A' }, { id: 'k2', name: 'Client B' }, { id: 'k3', name: 'Doublon' }, { id: 'k4', name: 'doublon' }] as any[];
+  const cs = [cash('a1', 'in', 40000, '2026-10-02', 'Paiement client', 'client  a'), cash('a2', 'in', 30000, '2026-10-03', 'Paiement client', 'CLIENT A'), cash('b1', 'in', 50000, '2026-10-04', 'Paiement client', 'Client B'),
+    cash('x1', 'in', 20000, '2026-10-05', 'Paiement client', 'Inconnu SA'), cash('d1', 'in', 5000, '2026-10-06', 'Paiement client', 'Doublon')];
+  const g = computeFinance({ ...input, cash: cs, clients: recs }, 'month', range);
+  ok(g.bestClient?.name === 'Client A' && g.bestClient.amount === 70000 && g.bestClient.id === 'k1', 'avec fiches : « client  a » et « CLIENT A » comptent pour la fiche « Client A » (70 000)');
+  ok(g.clients.map(c => c.name).join('|') === 'Client A|Client B|Inconnu SA|Doublon', 'classement : fiches regroupées, nom sans fiche gardé tel quel, deux fiches de même nom = nom saisi');
+  ok(g.clients.find(c => c.name === 'Inconnu SA')?.id === undefined && g.clients.find(c => c.name === 'Doublon')?.id === undefined, 'nom sans fiche ou ambigu : pas d\'identifiant');
+  const h = computeFinance({ ...input, cash: cs }, 'month', range);
+  ok(h.clients.length === 5 && h.clients.some(c => c.name === 'client  a') && h.clients.every(c => c.id === undefined), 'sans fiches : ancien comportement (noms saisis séparés)');
+  ok(computeFinance({ ...input, cash: cs, clients: [] }, 'month', range).bestClient?.name === 'Client B', 'liste de fiches vide : ancien comportement');
+}
 const text = JSON.stringify(f);
 ok(!/NaN|Infinity|null.*undefined/.test(text), 'aucun NaN ni Infinity');
 

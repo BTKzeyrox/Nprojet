@@ -286,6 +286,18 @@ export function clientReceived(cash: Pick<CashEntry, 'kind' | 'client_name' | 'a
   return out;
 }
 
+/**
+ * Nom officiel d'un nom saisi sur une ligne d'argent : si UNE seule fiche porte ce nom (sans accents ni majuscules), on rend le nom de la fiche
+ * (« atelier  rivage » et « Atelier Rivage » comptent alors pour le même client). Sinon (aucune fiche, ou deux fiches de même nom) : le nom saisi, nettoyé.
+ */
+export function canonicalClientName(name: string, clients: ClientRecord[]): { name: string; id: string | null } {
+  const raw = String(name || '').trim();
+  const k = normalizeName(raw);
+  if (!k) return { name: raw, id: null };
+  const hits = clients.filter(c => normalizeName(c.name) === k);
+  return hits.length === 1 ? { name: hits[0].name, id: hits[0].id } : { name: raw, id: null };
+}
+
 export type ClientSort = 'status' | 'revenue' | 'name' | 'recent';
 export interface ClientFilter { q: string; status: ClientStatus | 'all' | 'archived'; sort: ClientSort }
 

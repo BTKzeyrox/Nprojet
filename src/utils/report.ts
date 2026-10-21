@@ -4,6 +4,7 @@ import type { CashEntry, ClientContract, PostSession, Product, SalaryAdvanceRequ
 import { comparableRanges, computeStats, periodLabel, variation, type StatsResult } from './stats';
 import { computeFinance, type FinanceStats } from './financeStats';
 import { forecastMonth, goalRows, monthFigures, type Forecast, type GoalRow } from './goals';
+import type { ClientRecord } from './clients';
 import { computeAlerts, type AlertItem, type AlertSettings } from './alerts';
 import { stockRows, stockValue, type StockRow } from './stock';
 
@@ -13,6 +14,7 @@ export interface ReportInput {
   companyName?: string; // nom de l'entreprise (Conditions, module 0) : affiché seulement s'il est rempli
   posts: PostSession[]; contracts: ClientContract[]; users: User[]; advances: SalaryAdvanceRequest[];
   cash: CashEntry[]; products: Product[]; moves: StockMove[];
+  clients?: ClientRecord[]; // fiches clients (admin)
 }
 
 export interface Report {
@@ -33,7 +35,7 @@ export function buildReport(i: ReportInput): Report {
   const price = s.price_per_mission || 0;
   const stats = computeStats({ posts: i.posts, contracts: i.contracts, users: i.users, advances: i.advances, pricePerMission: price }, 'month', i.anchor, i.today, i.lang);
   const rg = stats.ranges;
-  const fin0 = { cash: i.cash, posts: i.posts, contracts: i.contracts, prices: s, pricePerMission: price };
+  const fin0 = { cash: i.cash, posts: i.posts, contracts: i.contracts, prices: s, pricePerMission: price, clients: i.clients };
   const empty = rg.isFuture;
   const fin = computeFinance(fin0, 'month', empty ? { start: rg.cur.start, end: rg.cur.start, days: 1 } : rg.curEff, i.lang, t('Salaires', 'Salaries'));
   const finPrev = computeFinance(fin0, 'month', rg.prev, i.lang, t('Salaires', 'Salaries'));
@@ -42,7 +44,7 @@ export function buildReport(i: ReportInput): Report {
   // Objectifs et prévision : seulement pour le mois en cours (un mois passé n'a plus de « rythme »)
   const goals = sameMonthAsToday ? goalRows(s, monthNow) : [];
   const forecast = sameMonthAsToday ? forecastMonth(monthNow) : null;
-  const alerts = sameMonthAsToday ? computeAlerts({ today: i.today, settings: s, cash: i.cash, posts: i.posts, contracts: i.contracts, advances: i.advances, products: i.products, moves: i.moves }) : [];
+  const alerts = sameMonthAsToday ? computeAlerts({ today: i.today, settings: s, cash: i.cash, posts: i.posts, contracts: i.contracts, advances: i.advances, products: i.products, moves: i.moves, clients: i.clients }) : [];
   const rows = stockRows(i.products, i.moves);
   const cashLines = i.cash.filter(e => e.date >= rg.cur.start && e.date <= (empty ? '0000' : rg.curEff.end)).sort((a, b) => a.date.localeCompare(b.date));
 

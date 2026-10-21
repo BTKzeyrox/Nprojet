@@ -24,10 +24,10 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
   const range = { start: r.start, end: r.end, days };
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const s = db.getSettings();
-  const cash = db.getCash(), posts = db.getPosts(), contracts = db.getContracts();
+  const cash = db.getCash(), posts = db.getPosts(), contracts = db.getContracts(), clients = db.getClients();
   const f = useMemo(
-    () => computeFinance({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0 }, g, range, lang, t('Salaires', 'Salaries')),
-    [cash, posts, contracts, s, g, range.start, range.end, lang], // eslint-disable-line react-hooks/exhaustive-deps
+    () => computeFinance({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0, clients }, g, range, lang, t('Salaires', 'Salaries')),
+    [cash, posts, contracts, clients, s, g, range.start, range.end, lang], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const ar = (n: number) => formatCurrencyAr(n);
   const short = (n: number) => compactNumber(n);

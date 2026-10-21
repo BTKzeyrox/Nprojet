@@ -4,6 +4,7 @@
 import type { CashEntry, ClientContract, PostSession } from '../types';
 import { buckets, type StatsGranularity, type StatsRange } from './stats';
 import { clientPriceForPost } from './clientPrice';
+import { canonicalClientName, type ClientRecord } from './clients';
 
 type PriceSettings = Parameters<typeof clientPriceForPost>[2];
 
@@ -13,6 +14,7 @@ export interface FinanceInput {
   contracts: ClientContract[];
   prices: PriceSettings;
   pricePerMission: number; // salaire d'une mission si aucun montant figé
+  clients?: ClientRecord[]; // fiches clients (admin) : « meilleur client » et le classement reprennent le nom officiel de la fiche
 }
 
 const inR = (d: string, r: { start: string; end: string }) => d >= r.start && d <= r.end;
@@ -29,8 +31,8 @@ export interface FinanceStats {
   billed: number; toCollect: number; treasury: number;
   done: number; costPerMission: number | null; gainPerMission: number | null;
   byType: TypeRow[];
-  bestClient: { name: string; amount: number } | null;
-  clients: { name: string; amount: number }[]; // tous les clients qui ont payé sur la période, du plus gros au plus petit (classement)
+  bestClient: { name: string; amount: number; id?: string } | null;
+  clients: { name: string; amount: number; id?: string }[]; // tous les clients qui ont payé sur la période, du plus gros au plus petit (classement)
   expensesByCategory: { label: string; value: number }[];
   labels: string[];
   fullLabels: string[];
@@ -66,9 +68,17 @@ export function computeFinance(input: FinanceInput, g: StatsGranularity, range: 
     .sort((a, b) => b.margin - a.margin || a.type.localeCompare(b.type));
 
   // Meilleur client : celui qui a le plus payé sur la période (lignes « entrée » avec un nom de client)
-  const byClient = new Map<string, number>();
-  for (const e of cash) if (e.kind === 'in' && e.client_name?.trim()) byClient.set(e.client_name.trim(), (byClient.get(e.client_name.trim()) || 0) + e.amount_ar);
-  const clientList = [...byClient.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  // Avec les fiches clients : un nom qui correspond à UNE fiche prend le nom de la fiche (mêmes clients regroupés, id gardé)
+  const records = input.clients || [];
+  const byClient = new Map<string, { amount: number; id?: string }>();
+  for (const e of cash) {
+    if (e.kind !== 'in' || !e.client_name?.trim()) continue;
+    const c = records.length ? canonicalClientName(e.client_name, records) : { name: e.client_name.trim(), id: null };
+    const row = byClient.get(c.name) || { amount: 0, id: c.id || undefined };
+    row.amount += e.amount_ar;
+    byClient.set(c.name, row);
+  }
+  const clientList = [...byClient.entries()].map(([name, v]) => ({ name, amount: v.amount, id: v.id })).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
   const best = clientList[0];
 
   // Dépenses par catégorie (+ salaires)
@@ -94,8 +104,8 @@ export function computeFinance(input: FinanceInput, g: StatsGranularity, range: 
     costPerMission: done.length ? Math.round(totalOut / done.length) : null,
     gainPerMission: done.length ? Math.round(profit / done.length) : null,
     byType,
-    bestClient: best ? { name: best[0], amount: best[1] } : null,
-    clients: clientList.map(([name, amount]) => ({ name, amount })),
+    bestClient: best ? { name: best.name, amount: best.amount, ...(best.id ? { id: best.id } : {}) } : null,
+    clients: clientList.map(c => ({ name: c.name, amount: c.amount, ...(c.id ? { id: c.id } : {}) })),
     expensesByCategory,
     labels: b.labels,
     fullLabels: b.fullLabels,

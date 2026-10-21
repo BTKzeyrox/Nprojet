@@ -14,10 +14,10 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
   const admin = db.getCurrentUser()?.role === 'admin';
   const posts = db.getPosts(), cash = db.getCash();
   const settings = db.getSettings();
-  const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length;
+  const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length + ':' + db.getClients().map(c => c.name + (c.active === false ? 0 : 1)).join(',');
   const report = useMemo(() => admin ? buildReport({
     today: todayMada(), anchor, lang, settings, companyName: readCompany(settings.company).identity.name, posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
-    cash, products: db.getProducts(), moves: db.getStockMoves(),
+    cash, products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(),
   }) : null, [admin, anchor, lang, settings, sig]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!report) return null;
   const html = reportHtml(report);
