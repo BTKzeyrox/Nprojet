@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { ClientContract, PostSession, User } from '../types';
 import { db } from '../db/store';
+import { ClientPicker } from './ClientPicker';
+import { checkMissionClient, MISSION_CLIENT_MESSAGE, missionRequiresClient } from '../utils/clients';
+import { readCompany } from '../utils/companyRules';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { useApp } from '../context/AppContext';
 import { askConfirm } from './ConfirmModal';
@@ -58,7 +61,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   onOpenProofLightbox,
   onNavigateToActivePost,
 }) => {
-  const { t, theme } = useApp();
+  const { t, theme, lang } = useApp();
   const [contractsList, setContractsList] = useState<ClientContract[]>(() => db.getContracts());
   const [filterShift, setFilterShift] = useState<'all' | 'day' | 'night' | 'urgent'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'free'>('all');
@@ -87,18 +90,24 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [addType, setAddType] = useState('');
   const [addProof, setAddProof] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [addPrice, setAddPrice] = useState('');
+  const [addClientId, setAddClientId] = useState('');
+  const [addClientError, setAddClientError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const needClient = missionRequiresClient(readCompany(db.getSettings().company)); // réglage « Une mission a toujours un client » (Conditions)
   const postTypes = db.getSettings().post_types || [];
 
   const submitAdd = (e: React.FormEvent) => {
     e.preventDefault();
+    setAddClientError(null);
+    const cv = checkMissionClient({ required: needClient, clientId: addClientId, clients: db.getClients() });
+    if (!cv.ok) { setAddError(null); return setAddClientError(MISSION_CLIENT_MESSAGE[cv.error][lang === 'en' ? 'en' : 'fr']); }
     if (!addName.trim()) return setAddError('Écris le titre de la mission.');
     const price = parsePriceInput(addPrice);
     if (price === null) return setAddError('Le prix client doit être un nombre positif ou vide.');
-    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price });
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, requireClient: needClient });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddError(null);
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null);
   };
 
   // Keep contracts synchronized with store
@@ -505,6 +514,9 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
           <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className={`w-full max-w-md my-auto rounded-3xl border p-5 space-y-4 text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
             <h3 className="font-bold text-lg">Nouvelle mission</h3>
             {addError && <div className="p-2.5 rounded-xl border border-red-500/60 bg-red-500/10 text-red-500 font-semibold text-xs">{addError}</div>}
+            <ClientPicker value={addClientId} required={needClient} error={addClientError}
+              inputClass={`w-full min-h-[44px] rounded-2xl border px-4 py-2.5 focus:outline-none focus:border-blue-500 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}
+              onChange={(id, name) => { setAddClientId(id); setAddClientError(null); if (id && name && !addName.trim()) setAddName(name); }} />
             <div>
               <label className="block text-xs font-semibold mb-1.5 opacity-70">Titre</label>
               <input type="text" autoFocus value={addName} onChange={e => setAddName(e.target.value)} placeholder="Ex. : fiches du lot 12" className={`w-full rounded-2xl border px-4 py-2.5 focus:outline-none focus:border-blue-500 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />

@@ -1,5 +1,5 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
-import { checkClientDraft, normalizeName, type ClientDraft } from '../utils/clients';
+import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -1213,11 +1213,18 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; requireClient?: boolean }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
       return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
     const name = p.client_name.trim();
+    // Client de la mission (module 1) : `requireClient` vient du réglage « Une mission a toujours un client » (les formulaires le passent ; sans lui, rien n'est exigé)
+    let clientId: string | null = null;
+    if (p.client_id !== undefined || p.requireClient) {
+      const v = checkMissionClient({ required: !!p.requireClient, clientId: p.client_id, clients: this.clients });
+      if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
+      clientId = v.client_id;
+    }
     const used = new Set(this.contracts.map(c => c.post_number));
     let n = 1;
     while (used.has(n)) n++;
@@ -1240,6 +1247,7 @@ class DeltaForceStore {
       estimated_reward_ar: Math.round(this.getSettings().price_per_mission || 0),
       // Prix client propre à la mission : seulement s'il est donné (sinon prix du type, puis prix par défaut)
       ...(typeof p.client_price_ar === 'number' && isFinite(p.client_price_ar) && p.client_price_ar >= 0 ? { client_price_ar: Math.round(p.client_price_ar) } : {}),
+      ...(clientId ? { client_id: clientId } : {}),
       priority: 'Normale',
       region_server: '—',
       no_account: !name,
@@ -1262,6 +1270,50 @@ class DeltaForceStore {
     this.contracts = this.contracts.filter(x => x.id !== id);
     this.notify();
     return { success: true };
+  }
+
+  /**
+   * Lie une mission à une fiche client (ou enlève le lien avec `null`). Admin seulement ; le serveur revérifie que la fiche existe.
+   * L'histoire reste figée : les sessions de cette mission (trouvées par numéro de poste, sinon par titre) qui n'ont pas encore de client prennent le client d'AVANT le changement
+   * (ou le nouveau client si la mission n'en avait pas). Une session déjà liée ne change jamais.
+   */
+  private applyContractClient(c: ClientContract, next: string | null): number {
+    const old = c.client_id || null;
+    if (old === next) return 0;
+    const freezeId = old || next;
+    let stamped = 0;
+    if (freezeId) {
+      const now = new Date().toISOString();
+      for (const p of this.posts) {
+        if (!p.client_id && matchContract(p, this.contracts) === c) { p.client_id = freezeId; p.updated_at = now; stamped++; } // mêmes sessions que celles comptées pour le client de la mission
+      }
+    }
+    if (next) c.client_id = next; else delete c.client_id;
+    return stamped;
+  }
+
+  public setContractClient(contractId: string, clientId: string | null): { success: boolean; error?: string; stamped?: number } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const c = this.contracts.find(x => x.id === contractId);
+    if (!c) return { success: false, error: 'Mission introuvable.' };
+    const v = checkMissionClient({ required: false, clientId, clients: this.clients, current: c.client_id || null });
+    if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
+    const stamped = this.applyContractClient(c, v.client_id);
+    this.notify();
+    return { success: true, stamped };
+  }
+
+  /** Rattache d'un coup les anciennes missions qui portent ce nom (comparé sans accents ni majuscules) à un client. Une ligne confirmée = un appel. */
+  public attachMissionsByName(text: string, clientId: string): { success: boolean; error?: string; linked?: number } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const v = checkMissionClient({ required: true, clientId, clients: this.clients });
+    if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
+    const key = normalizeName(text);
+    const list = key ? this.contracts.filter(c => !c.client_id && !c.no_account && normalizeName(c.client_name) === key) : [];
+    if (list.length === 0) return { success: false, error: 'Aucune mission à rattacher avec ce nom.' };
+    for (const c of list) this.applyContractClient(c, v.client_id);
+    this.notify();
+    return { success: true, linked: list.length };
   }
 
   public getContracts(): ClientContract[] {

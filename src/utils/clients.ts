@@ -238,6 +238,14 @@ export function checkClientDraft(d: ClientDraft): ClientDraftResult {
  * Prix : celui figé sur la session, sinon celui de la mission, sinon la règle à 5 niveaux avec les tarifs du client.
  * Les missions sans client (anciennes, texte libre) ne comptent pour aucun client : elles restent visibles dans Finances comme avant.
  */
+/**
+ * La mission (contrat) d'une session : par numéro de poste quand la session en a un, sinon par titre identique. Premier trouvé.
+ * Même règle pour les chiffres des clients et pour figer l'histoire quand une mission change de client (M1.5).
+ */
+export function matchContract<C extends Pick<ClientContract, 'post_number' | 'client_name'>>(p: Pick<PostSession, 'post_number' | 'client_name'>, contracts: C[]): C | undefined {
+  return contracts.find(x => (p.post_number !== undefined && x.post_number === p.post_number) || (!!x.client_name && x.client_name === p.client_name));
+}
+
 export function clientMissionsFromPosts(
   posts: Pick<PostSession, 'status' | 'date' | 'post_number' | 'client_name' | 'client_id' | 'client_price_ar'>[],
   contracts: Pick<ClientContract, 'post_number' | 'client_name' | 'client_id' | 'client_price_ar' | 'post_type'>[],
@@ -248,7 +256,7 @@ export function clientMissionsFromPosts(
   const out: ClientMission[] = [];
   for (const p of posts) {
     if (p.status !== 'completed') continue;
-    const contract = contracts.find(x => (p.post_number !== undefined && x.post_number === p.post_number) || (!!x.client_name && x.client_name === p.client_name));
+    const contract = matchContract(p, contracts);
     const id = p.client_id || contract?.client_id;
     const client = id ? byId.get(id) : undefined;
     if (!id || !client) continue; // pas de fiche (ou fiche supprimée) : la mission ne compte pour aucun client
@@ -313,3 +321,72 @@ export function countByStatus(clients: ClientRecord[], summaries: Map<string, Cl
 }
 
 export { addDays };
+
+// ---------- M1.5 : missions liées aux clients ----------
+
+export interface MissionToLink {
+  key: string; // nom normalisé : une ligne par nom (plusieurs missions peuvent porter le même texte)
+  text: string; // le texte tel qu'écrit sur la première mission
+  contract_ids: string[];
+  count: number;
+  suggestion: { client_id: string | null; ambiguous: boolean }; // client actif dont le nom est identique (sans accents ni majuscules)
+}
+
+/**
+ * Anciennes missions sans client, regroupées par nom (le texte libre `client_name` de la mission). L'admin confirme UNE ligne à la fois.
+ * Un poste « sans compte » (sans nom) n'est pas une mission à rattacher. Seuls les clients actifs sont proposés.
+ */
+export function missionsToLink(
+  contracts: Pick<ClientContract, 'id' | 'client_name' | 'client_id' | 'no_account'>[],
+  clients: ClientRecord[],
+): MissionToLink[] {
+  const groups = new Map<string, { text: string; ids: string[] }>();
+  for (const c of contracts) {
+    if (!c || c.client_id || c.no_account) continue;
+    const text = String(c.client_name || '').trim();
+    const key = normalizeName(text);
+    if (!key) continue;
+    const g = groups.get(key);
+    if (g) g.ids.push(c.id); else groups.set(key, { text, ids: [c.id] });
+  }
+  const active = clients.filter(c => c.active !== false);
+  const sug = new Map(suggestClientMatches([...groups.values()].map(g => g.text), active).map(s => [normalizeName(s.text), s]));
+  return [...groups.entries()]
+    .map(([key, g]) => ({ key, text: g.text, contract_ids: g.ids, count: g.ids.length, suggestion: { client_id: sug.get(key)?.client_id ?? null, ambiguous: sug.get(key)?.ambiguous ?? false } }))
+    .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text));
+}
+
+export interface ClientChoice { id: string; name: string; archived: boolean }
+
+/** Liste de choix pour une mission : clients actifs par ordre alphabétique (sans accents) ; le client déjà choisi reste dans la liste même s'il est archivé. */
+export function clientChoices(clients: ClientRecord[], currentId?: string | null): ClientChoice[] {
+  return clients
+    .filter(c => c.active !== false || c.id === currentId)
+    .map(c => ({ id: c.id, name: c.name, archived: c.active === false }))
+    .sort((a, b) => normalizeName(a.name).localeCompare(normalizeName(b.name)) || a.id.localeCompare(b.id));
+}
+
+export type MissionClientError = 'required' | 'missing' | 'archived';
+/**
+ * Contrôle du client choisi pour une mission (mêmes règles pour la création et la modification).
+ * `required` = réglage « Une mission a toujours un client » (page Conditions, Oui par défaut).
+ * Un client archivé ne peut plus être choisi, sauf s'il l'est déjà sur cette mission (`current`).
+ */
+export function checkMissionClient(p: { required: boolean; clientId: string | null | undefined; clients: Pick<ClientRecord, 'id' | 'active'>[]; current?: string | null }): { ok: true; client_id: string | null } | { ok: false; error: MissionClientError } {
+  const id = String(p.clientId || '');
+  if (!id) return p.required ? { ok: false, error: 'required' } : { ok: true, client_id: null };
+  const c = p.clients.find(x => x.id === id);
+  if (!c) return { ok: false, error: 'missing' };
+  if (c.active === false && id !== p.current) return { ok: false, error: 'archived' };
+  return { ok: true, client_id: id };
+}
+
+/** Réglage « Une mission a toujours un client » (Oui par défaut quand rien n'est réglé). */
+export const missionRequiresClient = (company: { options?: { mission_requires_client?: boolean } } | undefined | null): boolean =>
+  company?.options?.mission_requires_client !== false;
+
+export const MISSION_CLIENT_MESSAGE: Record<MissionClientError, { fr: string; en: string }> = {
+  required: { fr: 'Choisis le client de cette mission (ou crée-le avec « Nouveau client »).', en: 'Choose this mission\'s client (or create it with “New client”).' },
+  missing: { fr: 'Ce client n\'existe plus : choisis-en un autre.', en: 'This client no longer exists: choose another one.' },
+  archived: { fr: 'Ce client est archivé : réactive-le dans la page Clients, ou choisis-en un autre.', en: 'This client is archived: reactivate it in the Clients page, or choose another one.' },
+};

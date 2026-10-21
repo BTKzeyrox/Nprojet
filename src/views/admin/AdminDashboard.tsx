@@ -34,6 +34,9 @@ import {
 import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest, SignupRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
+import { ClientPicker } from '../../components/ClientPicker';
+import { checkMissionClient, MISSION_CLIENT_MESSAGE, missionRequiresClient } from '../../utils/clients';
+import { readCompany } from '../../utils/companyRules';
 import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
@@ -120,6 +123,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Full editable fields by Admin for any post
   const [editClientName, setEditClientName] = useState('');
+  const [editClientId, setEditClientId] = useState(''); // fiche client de la mission (module 1)
+  const [editClientError, setEditClientError] = useState<string | null>(null);
   const [editAccountTag, setEditAccountTag] = useState('');
   const [editInitialScore, setEditInitialScore] = useState<number>(0);
   // Champs liés : Cible = Début + Objectif ; Reste = Cible − Actuel
@@ -226,6 +231,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setAssignErrorMsg('Le titre de la mission ne peut pas être vide.');
       return;
     }
+    // Client : « Une mission a toujours un client » empêche d'ENLEVER un client déjà choisi ; une ancienne mission sans client reste modifiable (on la rattache dans la page Clients)
+    setEditClientError(null);
+    const hadClient = !!selectedAdminContract.client_id;
+    const cv = checkMissionClient({ required: missionRequiresClient(readCompany(db.getSettings().company)) && hadClient, clientId: editClientId, clients: db.getClients(), current: selectedAdminContract.client_id || null });
+    if (!cv.ok) {
+      const msg = MISSION_CLIENT_MESSAGE[cv.error][appLang === 'en' ? 'en' : 'fr'];
+      setEditClientError(msg);
+      setAssignErrorMsg(msg);
+      return;
+    }
     if (editTargetScore <= editInitialScore) {
       setAssignErrorMsg('La cible doit être supérieure au départ.');
       return;
@@ -260,6 +275,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       no_account: false,
       recommended_shift: editShift,
     });
+
+    // 1b. Client de la mission (l'histoire reste figée : les anciennes sessions gardent l'ancien client)
+    if (contractRes.success && (cv.client_id || null) !== (selectedAdminContract.client_id || null)) {
+      const link = db.setContractClient(selectedAdminContract.id, cv.client_id);
+      if (!link.success) { setAssignErrorMsg(link.error || 'Le client n\'a pas pu être enregistré.'); return; }
+    }
 
     // 2. If an active or pending session exists, update it too
     if (activeSessionForModal) {
@@ -474,6 +495,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setSelectedAdminContract(contract);
             setActiveSessionForModal(session || null);
             setEditClientName(contract.client_name);
+            setEditClientId(contract.client_id || '');
+            setEditClientError(null);
             setEditAccountTag(contract.account_tag);
             setEditInitialScore(contract.initial_score);
             setEditTargetScore(contract.target_score);
@@ -682,6 +705,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white font-bold"
                       />
                     </div>
+                    <ClientPicker value={editClientId} error={editClientError}
+                      required={!!selectedAdminContract?.client_id && missionRequiresClient(readCompany(db.getSettings().company))}
+                      inputClass="w-full min-h-[44px] bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white"
+                      labelClass="block text-slate-300 uppercase mb-1" hintClass="text-[11px] text-slate-400 mt-1"
+                      onChange={id => { setEditClientId(id); setEditClientError(null); }} />
                   </div>
 
                   <details className="rounded-xl border border-slate-700 bg-black/10 px-3 py-2.5">

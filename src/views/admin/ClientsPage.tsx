@@ -12,6 +12,7 @@ import {
   type ClientDraft, type ClientSort, type ClientStatus,
 } from '../../utils/clients';
 import type { Client } from '../../types';
+import { MissionsToLink } from './MissionsToLink';
 
 // Page « Clients » (responsable seulement) : liste, fiche, création, modification, archivage.
 // Le statut (Nouveau, Régulier, Stratégique, Inactif…) n'est JAMAIS saisi : il se calcule avec les missions validées (src/utils/clients.ts)
@@ -117,6 +118,8 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
         </div>
         <button type="button" onClick={newClient} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau client', 'New client')}</button>
       </div>
+
+      <MissionsToLink />
 
       <div className={card}>
         <label className="relative block">
