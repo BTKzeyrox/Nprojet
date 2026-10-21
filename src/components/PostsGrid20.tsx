@@ -36,6 +36,7 @@ import { getRemainingBand } from '../utils/postBand';
 import { PendingPostActions } from './PendingPostActions';
 import { DeadlineBadges, DeadlineFields } from './DeadlineFields';
 import { dueSortKey, type MissionPriority } from '../utils/deadlines';
+import { applyTemplate } from '../utils/missionTemplates';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -98,6 +99,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [addError, setAddError] = useState<string | null>(null);
   const needClient = missionRequiresClient(readCompany(db.getSettings().company)); // réglage « Une mission a toujours un client » (Conditions)
   const postTypes = db.getSettings().post_types || [];
+  const templates = db.getMissionTemplates();
+  const [addTemplateId, setAddTemplateId] = useState('');
+  const chooseTemplate = (id: string) => {
+    setAddTemplateId(id);
+    const tpl = templates.find(x => x.id === id);
+    if (!tpl) return;
+    const a = applyTemplate(tpl, postTypes);
+    if (a.title) setAddName(a.title);
+    setAddType(a.post_type); setAddDesc(a.description); setAddProof(a.proof_mode);
+  };
 
   const submitAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +121,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, due_date: addDue.date, due_time: addDue.time, priority: addDue.priority, requireClient: needClient });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null); setAddDue({ date: '', time: '', priority: 'Normale' });
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null); setAddDue({ date: '', time: '', priority: 'Normale' }); setAddTemplateId('');
   };
 
   // Keep contracts synchronized with store
@@ -520,6 +531,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
           <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className={`w-full max-w-md my-auto rounded-3xl border p-5 space-y-4 text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
             <h3 className="font-bold text-lg">Nouvelle mission</h3>
             {addError && <div className="p-2.5 rounded-xl border border-red-500/60 bg-red-500/10 text-red-500 font-semibold text-xs">{addError}</div>}
+            {templates.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 opacity-70">{lang === 'en' ? 'Create from a template (optional)' : 'Créer depuis un modèle (facultatif)'}</label>
+                <select value={addTemplateId} onChange={e => chooseTemplate(e.target.value)} aria-label={lang === 'en' ? 'Template' : 'Modèle'} className={`w-full min-h-[44px] rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}>
+                  <option value="">{lang === 'en' ? 'No template' : 'Aucun modèle'}</option>
+                  {templates.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+                <p className="text-[11px] opacity-60 mt-1">{lang === 'en' ? 'Fills the title, type, instruction and proof. You can still change everything.' : 'Remplit le titre, le type, la consigne et le justificatif. Tu peux tout modifier ensuite.'}</p>
+              </div>
+            )}
             <ClientPicker value={addClientId} required={needClient} error={addClientError}
               inputClass={`w-full min-h-[44px] rounded-2xl border px-4 py-2.5 focus:outline-none focus:border-blue-500 ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#0a1424] border-slate-600'}`}
               onChange={(id, name) => { setAddClientId(id); setAddClientError(null); if (id && name && !addName.trim()) setAddName(name); }} />

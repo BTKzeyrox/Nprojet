@@ -1075,5 +1075,11 @@
 "L'heure limite doit être entre 00:00 et 23:59.": "The deadline time must be between 00:00 and 23:59.",
 "Choisis une date pour pouvoir ajouter une heure.": "Choose a date to be able to add a time.",
 "Priorité inconnue.": "Unknown priority.",
-"Date limite : la plus proche": "Deadline: nearest first"
+"Date limite : la plus proche": "Deadline: nearest first",
+"Donne un nom au modèle.": "Give the template a name.",
+"Un modèle porte déjà ce nom.": "A template already has this name.",
+"Maximum 30 modèles de mission.": "Maximum 30 mission templates.",
+"Justificatif inconnu.": "Unknown proof type.",
+"Modèle illisible.": "Unreadable template.",
+"Modèle introuvable.": "Template not found."
 }

@@ -195,11 +195,37 @@ function cleanMissionDeadline(c: any): { ok: true; save: any } | { ok: false; re
   if (time === '') delete save.due_time; else save.due_time = time;
   return { ok: true, save };
 }
+// Modèles de mission (M6.2) : nom, titre, type, consigne, justificatif. Mêmes règles que src/utils/missionTemplates.ts (contrôlé par scripts/check-templates.ts).
+const TPL_PROOFS = ['type', 'none', 'photo', 'note', 'both'];
+const tplClean = (v: unknown, max: number): string => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
+function cleanMissionTemplates(list: unknown): any[] {
+  if (!Array.isArray(list)) return [];
+  const out: any[] = [];
+  const ids = new Set<string>();
+  for (const raw of list) {
+    if (out.length >= 30) break;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    if (Object.keys(raw).some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) continue;
+    const d: any = raw;
+    if (['name', 'title', 'post_type', 'description', 'id'].some((k) => d[k] !== undefined && d[k] !== null && typeof d[k] !== 'string')) continue;
+    const name = tplClean(d.name ?? '', 60);
+    if (!name) continue;
+    const proof = d.proof_mode === undefined || d.proof_mode === null || d.proof_mode === '' ? 'type' : d.proof_mode;
+    if (typeof proof !== 'string' || !TPL_PROOFS.includes(proof)) continue;
+    const id = tplClean(d.id ?? '', 40);
+    if (!id || ids.has(id)) continue;
+    if (out.some((o) => o.name.trim().toLowerCase() === name.toLowerCase())) continue;
+    const title = tplClean(d.title ?? '', 80), type = tplClean(d.post_type ?? '', 40), desc = tplClean(d.description ?? '', 500);
+    ids.add(id);
+    out.push({ id, name, title, ...(type ? { post_type: type } : {}), ...(desc ? { description: desc } : {}), proof_mode: proof });
+  }
+  return out;
+}
 // ===== END MISSIONS =====
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || me.role === "admin") return rec;
@@ -890,6 +916,11 @@ async function sync(req: any, res: any, me: any) {
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
       if (col === 'settings') toSave = cleanSettingsRecord(rec, existing, me, now); // seul l'admin arrive ici ; `company` est revérifié
+      if (col === 'settings') {
+        // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
+        const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
+        if (sentTpl !== undefined) toSave = { ...toSave, mission_templates: cleanMissionTemplates(sentTpl) };
+      }
       if (col === 'clients') {
         const v = cleanClient(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }

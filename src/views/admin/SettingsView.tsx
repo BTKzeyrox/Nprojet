@@ -12,6 +12,7 @@ import { TwoStepDialog } from '../../components/TwoStepDialog';
 import { setModeSwitchHidden, useModeSwitchHidden } from '../../utils/modeSwitch';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyConditions';
+import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -111,6 +112,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     if (s.err_max_per_session < 0 || s.err_max_per_session > 20) return setError('Rapports par session : entre 0 et 20.');
     if (s.retry_seconds < 5) return setError('Le délai entre deux tentatives doit être de 5 secondes ou plus.');
     const { company: _keepCompany, company_log: _keepLog, ...general } = s; // les Conditions ont leur propre bouton : jamais de vieille copie renvoyée ici
+    delete (general as { mission_templates?: unknown }).mission_templates; // les modèles de mission s'enregistrent tout de suite (jamais écrasés par une vieille copie)
     db.updateSettings({
       ...general,
       price_per_million: Math.round(s.price_per_million),
@@ -439,6 +441,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les missions qui l'utilisent déjà.</p>
       </section>
       )}
+
+      {tab === 'missions' && <MissionTemplatesSection />}
 
 
       {tab === 'missions' && (

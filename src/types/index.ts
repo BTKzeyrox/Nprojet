@@ -1,3 +1,4 @@
+import type { MissionTemplate } from '../utils/missionTemplates';
 export interface PasswordResetRequest {
   id: string;
   user_id: string;
@@ -55,6 +56,7 @@ export interface AppSettings {
   grid_columns?: number; // colonnes de la grille des postes (2 à 10)
   rules: string;
   post_types: string[];
+  mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
   company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
 }

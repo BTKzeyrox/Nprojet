@@ -37,6 +37,7 @@ import { db } from '../../db/store';
 import { ClientPicker } from '../../components/ClientPicker';
 import { DeadlineFields } from '../../components/DeadlineFields';
 import type { MissionPriority } from '../../utils/deadlines';
+import { templateFromMission } from '../../utils/missionTemplates';
 import { checkMissionClient, MISSION_CLIENT_MESSAGE, missionRequiresClient } from '../../utils/clients';
 import { readCompany } from '../../utils/companyRules';
 import { proofsOf } from '../../utils/proofs';
@@ -172,6 +173,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editDescription, setEditDescription] = useState('');
   const [editProofMode, setEditProofMode] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [editPrice, setEditPrice] = useState('');
+  const [tplName, setTplName] = useState('');
+  const [tplMsg, setTplMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [editDue, setEditDue] = useState<{ date: string; time: string; priority: MissionPriority }>({ date: '', time: '', priority: 'Normale' });
 
   // In-app Toast Notice (no window.alert in iframe)
@@ -513,6 +516,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditDescription(contract.description || '');
             setEditProofMode(contract.proof_mode || 'type');
             setEditPrice(typeof contract.client_price_ar === 'number' ? String(contract.client_price_ar) : '');
+            setTplName(''); setTplMsg(null);
             setEditDue({ date: contract.due_date || '', time: contract.due_time || '', priority: contract.priority === 'Urgente' || contract.priority === 'Haute' ? contract.priority : 'Normale' });
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
@@ -721,6 +725,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
                     <div className="mt-3 space-y-3">
                       <DeadlineFields date={editDue.date} time={editDue.time} priority={editDue.priority} onChange={setEditDue} inputClass="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
+                      <div className="space-y-1.5" data-notranslate="">
+                        <label className="block text-slate-300 mb-1">{appLang === 'en' ? 'Save this mission as a template' : 'Enregistrer cette mission comme modèle'}</label>
+                        <div className="flex gap-2">
+                          <input value={tplName} maxLength={60} onChange={e => { setTplName(e.target.value); setTplMsg(null); }} placeholder={appLang === 'en' ? 'Template name' : 'Nom du modèle'} className="min-w-0 flex-1 bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
+                          <button type="button" onClick={() => {
+                            const c = selectedAdminContract;
+                            if (!c) return;
+                            const r = db.saveMissionTemplate(templateFromMission({ client_name: editClientName, post_type: c.post_type, description: editDescription, proof_mode: editProofMode }, tplName));
+                            setTplMsg(r.success ? { ok: true, text: appLang === 'en' ? 'Template saved (Settings > Missions).' : 'Modèle enregistré (Réglages > Missions).' } : { ok: false, text: r.error || '' });
+                            if (r.success) setTplName('');
+                          }} className="min-h-[44px] px-3 rounded-lg border border-emerald-500/50 text-emerald-300 text-xs font-semibold shrink-0">{appLang === 'en' ? 'Save as template' : 'Enregistrer comme modèle'}</button>
+                        </div>
+                        {tplMsg && <p role="status" className={`text-[11px] ${tplMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{tplMsg.text}</p>}
+                        <p className="text-[11px] text-slate-400">{appLang === 'en' ? 'Keeps the title, type, instruction and proof only: no price, client or date.' : 'Garde seulement le titre, le type, la consigne et le justificatif : ni prix, ni client, ni date.'}</p>
+                      </div>
                       <div>
                         <label className="block text-slate-300 mb-1">Justificatif demandé à la fin</label>
                         <select value={editProofMode} onChange={e => setEditProofMode(e.target.value as typeof editProofMode)} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white">

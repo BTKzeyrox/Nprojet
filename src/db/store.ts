@@ -1,5 +1,6 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { checkDeadline } from '../utils/deadlines';
+import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
@@ -97,6 +98,14 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
+};
+
+const TEMPLATE_MESSAGE: Record<'name' | 'duplicate' | 'limit' | 'proof' | 'format', string> = {
+  name: 'Donne un nom au modèle.',
+  duplicate: 'Un modèle porte déjà ce nom.',
+  limit: 'Maximum 30 modèles de mission.',
+  proof: 'Justificatif inconnu.',
+  format: 'Modèle illisible.',
 };
 
 const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority', string> = {
@@ -1044,6 +1053,30 @@ class DeltaForceStore {
 
   public getSettings(): AppSettings {
     return { ...DEFAULT_SETTINGS, ...(this.settings[0] || {}), id: 'general' };
+  }
+
+  /** Modèles de mission (M6.2) : gardés dans les réglages, sans nouvelle table. */
+  public getMissionTemplates(): MissionTemplate[] { return cleanTemplates(this.getSettings().mission_templates); }
+
+  /** Crée (sans `id`) ou modifie (avec `id`) un modèle. Admin seulement. */
+  public saveMissionTemplate(d: TemplateDraft): { success: boolean; error?: string; template?: MissionTemplate } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getMissionTemplates();
+    const id = typeof d?.id === 'string' ? d.id : '';
+    if (id && !list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
+    const v = checkTemplate(d, list.filter(t => t.id !== id));
+    if (!v.ok) return { success: false, error: TEMPLATE_MESSAGE[v.error] };
+    const template = { ...v.value, id: id || newTemplateId(list) };
+    this.updateSettings({ mission_templates: id ? list.map(t => (t.id === id ? template : t)) : [...list, template] });
+    return { success: true, template };
+  }
+
+  public removeMissionTemplate(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getMissionTemplates();
+    if (!list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
+    this.updateSettings({ mission_templates: list.filter(t => t.id !== id) });
+    return { success: true };
   }
 
   // Admin : enregistre les réglages (le serveur refuse tout autre utilisateur)
