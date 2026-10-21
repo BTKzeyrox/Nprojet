@@ -155,6 +155,7 @@ Chaque module suit **toujours le même chemin**, dans cet ordre. C'est la métho
 **Créances :** balance âgée par client (0-30, 31-60, 61-90, plus de 90 jours) ; relance = texte prêt à copier (FR / EN) avec la liste des factures en retard.
 **PDF :** même méthode que le rapport mensuel (page claire isolée, tout échappé, « Imprimer » puis « Enregistrer en PDF »), sans nouvelle bibliothèque.
 
+- ⏳ **MODULE 2 PRIS le 2026-10-21 vers 20:06 UTC par une session, à la demande de BTK (« Go M2 »). Ne pas le refaire en parallèle.**
 - [ ] **M2.1 — Décisions** (S) : D1 à D7 ; BTK donne les mentions de l'entreprise (D3).
 - [ ] **M2.2 — Réglages entreprise** (S) : Réglages > Entreprise (nom, adresse, contact, logo, mentions, TVA éventuelle, préfixes de numéros, délai par défaut). Admin seulement.
 - [ ] **M2.3 — Règles pures** (M) : `src/utils/invoices.ts` (lignes, totaux et arrondis à l'Ar, TVA, états, échéance, retard, balance âgée, « missions à facturer ») + `check:invoices` (dont : total des lignes = total de la facture ; un paiement trop grand est refusé ; arrondi ; 0 ligne refusée).
