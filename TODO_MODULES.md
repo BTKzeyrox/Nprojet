@@ -283,6 +283,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 9 — Détection automatique (retards, absences, actions suspectes) — taille M
 
+> ⚠️ **Fusionné dans le module 11 « Admin IA Pro » (demande de BTK, 2026-10-21).** Les étapes de ce module restent valables comme **briques**, mais elles se font **dans le cadre du module 11** (qui élargit la détection à toutes les pages). Ne pas les faire séparément.
+
 **Demande de BTK (2026-10-20) :** que le site détecte tout seul un employé en retard ou absent, ou une action suspecte, sans que l'admin analyse à la main.
 
 **Ce qui existe déjà :** le calendrier calcule « en retard » et « absent » par jour (il faut ouvrir la page) ; un journal de sécurité (`df_security_logs`, « Petit Malin ») garde certaines violations ; les alertes automatiques (S4.2) couvrent l'argent et le stock, **pas les salariés**.
@@ -313,6 +315,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 ---
 
 ## MODULE 10 — Assistant de l'administration (dans la messagerie) — taille L
+
+> ⚠️ **Fusionné dans le module 11 « Admin IA Pro » (demande de BTK, 2026-10-21).** Les étapes de ce module restent valables comme **briques**, mais elles se font **dans le cadre du module 11** (qui élargit la détection à toutes les pages). Ne pas les faire séparément.
 
 **Demande de BTK (2026-10-20) :** un assistant, comme un administrateur automatique, dans les messages. Il rappelle ce que l'admin a oublié (validations, actions à faire), connaît les conditions de l'entreprise, le stock, et sait faire le **récapitulatif d'un employé** (son parcours, son travail, ses chiffres, son financement).
 
@@ -355,6 +359,76 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ---
 
+## MODULE 11 — Admin IA Pro (détection automatique + assistant) — taille XL (regroupe les modules 9 et 10)
+
+**Demande de BTK (2026-10-21) :** la détection automatique ne doit pas servir seulement aux retards et aux actions suspectes : elle doit **vérifier aussi le stock, les finances, tout, dans chaque page**. Réunie avec l'assistant IA, elle devient un **« Admin IA Pro »** qui connaît tout le site, **mieux qu'un administrateur ordinaire**.
+
+**En une phrase :** un **moteur de contrôles** qui surveille toutes les pages (il détecte) + un **assistant** qui explique, conseille et rédige (il aide). Trois promesses : (1) il surveille **chaque page** ; (2) il **connaît tout le site** (ses chiffres, ses règles, son mode d'emploi) ; (3) il **ne fait rien tout seul** : l'admin décide et clique.
+
+### 1. Couverture : un contrôleur par page
+Chaque page a ses règles. Les contrôleurs d'une page s'ajoutent **quand la page existe** ; on commence par celles qui existent déjà.
+
+| Page | Exemples de contrôles |
+|---|---|
+| **Missions** | à valider depuis plus de X h ; en cours depuis plus de X h sans preuve de fin ; mission sans client ; prix absent ; mêmes preuves envoyées deux fois ; validée en un temps impossible |
+| **Équipe** | absent aujourd'hui ou 2 jours de suite ; en retard 3 fois sur 7 jours ; taux de refus élevé ; salarié inactif ; nouveau sans mission ; volume qui monte ou chute d'un coup |
+| **Paie et avances** | période non clôturée en retard ; net négatif ; avance au-dessus du plafond des Conditions ; avance non remboursée ; écart entre « gagné » (Statistiques) et la paie |
+| **Finances** | trésorerie basse ou négative ; dépense d'une catégorie bien au-dessus de sa moyenne ; paiement sans client ; doublon probable (même montant, date et client) ; ligne datée dans le futur ; marge en baisse ; catégorie « Autres » trop grosse |
+| **Clients** | client Stratégique sans mission depuis X jours ; créance au-dessus d'un seuil ; client sans prix ; fiches en double (noms proches) ; client archivé avec une facture ouverte |
+| **Stock** | rupture ; sous le seuil ; quantité négative (impossible) ; produit dormant (aucun mouvement depuis 90 jours) ; valeur du stock qui chute ; achat sans mouvement de stock |
+| **Facturation** (module 2) | facture en retard ; brouillon oublié ; numérotation avec un trou ; total différent de la somme des lignes |
+| **Fournisseurs et RH** (modules 4 et 5) | commande en retard ; congé non traité ; solde négatif ; fin de période d'essai proche |
+| **Performance** (module 3) | chute de score ; badge perdu ; client à points d'attention |
+| **Conditions** | valeur incohérente (échéance 0, plafond absurde, seuils qui se contredisent) ; réglage manquant |
+| **Qualité des données** | mission dont le client a disparu ; dates dans le futur ; montants négatifs ; champs vides ; doublons |
+| **Sécurité** | connexions échouées répétées ; écritures interdites refusées ; changement de rôle ; compte sans connexion depuis 60 jours |
+| **Système** | **sauvegarde de nuit absente depuis plus de 26 h** ; trop d'appels serveur (quota) ; erreurs récentes (journal d'erreurs) ; version du site ancienne |
+
+### 2. Une alerte, toujours le même format
+Gravité (**Info / À voir / Urgent**) · page · titre · **pourquoi** (les chiffres) · **depuis quand** · **que faire** (bouton qui ouvre la bonne page déjà filtrée) · **Ignorer** / **Vérifié** (la raison est gardée). Pas de doublon, regroupement par sujet, identifiant stable. **Seuils réglables** dans Réglages > Conditions (section « Surveillance »), valeurs de départ prudentes, **nombre minimum de données avant d'alerter**.
+
+### 3. Le moteur
+- Un fichier de règles **pures** par page (`src/utils/health/…`) + un registre. Calcul **dans le navigateur de l'admin**, aucun appel serveur en plus (économie de quota).
+- **Pastille** (orange ou rouge, avec le nombre) sur chaque entrée du menu qui a une alerte ; une page **« Santé du site »** qui montre tout, page par page. Pas de « note globale » magique : un état par page (OK / À voir / Urgent).
+- **Détection statistique simple, jamais une boîte noire :** comparaison avec la médiane des périodes d'avant (écart robuste), avec une phrase claire (« 12 000 Ar de dépenses Internet contre 4 000 en moyenne »). Minimum 3 périodes de données.
+
+### 4. « Il sait tout du site » : ce que ça veut dire concrètement
+- **Carte du site** (`siteKnowledge.ts`) : pour chaque page, à quoi elle sert, comment l'utiliser en 3 lignes, ses règles (liées aux Conditions), ses chiffres et leurs **formules** (« Marge = bénéfice ÷ encaissé »), FR et EN. Un contrôle automatique **échoue si une page du menu n'a pas sa fiche**.
+- **Instantané du site** (`siteSnapshot.ts`) : un résumé **calculé** de tous les modules (chiffres clés, alertes, tendances) en une seule structure. L'assistant s'en sert ; si l'IA externe est activée, c'est **lui seul** qui lui est donné (jamais les données brutes).
+- **« Pourquoi ce chiffre ? »** : sur n'importe quel chiffre de Statistiques ou de Finances, l'assistant montre la formule, la période et les lignes qui le composent.
+- **Liens entre pages** qu'un humain voit rarement : client Stratégique avec une facture en retard ; refus qui montent avec un employé récent ; stock bas sur un produit de missions en cours ; achats payés mais absents du stock ; avance demandée alors que la paie du mois est négative.
+
+### 5. L'assistant (niveau A d'abord : gratuit, sans service externe)
+Conversation « Assistant » épinglée dans la messagerie de l'admin (**admin seulement**) : **résumé du matin** classé par priorité ; **« Quoi faire maintenant ? »** (les 3 actions les plus utiles, avec boutons) ; **« Explique-moi cette page »** ; **« Pourquoi cette alerte ? »** ; récaps (employé, client, produit) ; **« Et si… ? »** (calcul simple : si je monte le prix de 5 %, que devient la marge ?) ; conseils de gestion à règles ; **modèles de messages** (excuse, relance…). Niveau B (IA externe, questions libres) : facultatif, désactivé par défaut, avec accord, clé et coût expliqués avant (voir module 10).
+
+### 6. « Plus que l'admin en général » : ce que c'est, et ce que ce n'est pas
+- **Il sait ce qu'un humain ne peut pas garder en tête :** tout l'historique, toutes les règles, tous les liens entre pages, à toute heure, sans oubli.
+- **Il ne sait pas ce qui n'est pas dans le site** (une promesse orale, un événement extérieur) et ne devine jamais : chaque réponse montre ses **sources** (« d'après 42 missions du 01/09 au 20/10 ») ; s'il manque une donnée, il le dit.
+- **Il ne décide pas et n'agit pas :** valider, payer, supprimer restent des boutons que l'admin confirme. Une alerte est un **signal à vérifier**, jamais une sanction automatique.
+
+### 7. Sécurité et vie privée
+Admin seulement (le serveur filtre, comme pour les finances) ; l'opérateur ne voit ni alertes ni assistant ; les alertes sur des salariés sont des signaux, pas des accusations ; jamais de mot de passe ni de jeton dans un message ; niveau B : consentement explicite, journal des questions, résumé seulement.
+
+### 8. Étapes (dans cet ordre)
+- [ ] **M11.1 — Décisions** (S) : seuils de départ, heure du résumé du matin, ce qui déclenche une notification, niveau B oui ou non (valeurs par défaut proposées, BTK corrige).
+- [ ] **M11.2 — Format d'alerte et registre** (M) : `src/utils/health/types.ts`, `registry.ts`, identifiants stables, « Ignorer / Vérifié » (où le garder pour tous les appareils : **accord avant** si une table ou un champ de réglages est ajouté) ; `check:health` (format, pas de doublon, identifiants stables, minimum de données).
+- [ ] **M11.3 — Lot 1 : Missions, Équipe, Paie** (M) (inclut M9.1).
+- [ ] **M11.4 — Lot 2 : Finances, Clients, Stock** (M).
+- [ ] **M11.5 — Lot 3 : Qualité des données, Conditions, Système (sauvegarde de nuit, quota, erreurs), Sécurité** (M) (inclut M9.2, journal serveur : **accord + sauvegarde avant**).
+- [ ] **M11.6 — Détection statistique** (M) : écart à la médiane, phrases claires, minimum de données.
+- [ ] **M11.7 — Page « Santé du site », pastilles dans le menu, notifications** (L) (inclut M9.3 et M9.4).
+- [ ] **M11.8 — Carte du site** (M) : une fiche par page, FR et EN, contrôle « chaque page du menu a sa fiche ».
+- [ ] **M11.9 — Instantané du site et « Pourquoi ce chiffre ? »** (M).
+- [ ] **M11.10 — Assistant, niveau A** (L) (inclut M10.1 à M10.4 : rappels, récap d'un employé, conversation épinglée, récap imprimable ; plus « Quoi faire maintenant », « Explique cette page », « Et si… »).
+- [ ] **M11.11 — Modèles de messages** (S) (= M10.5b).
+- [ ] **M11.12 — Contrôleurs des nouveaux modules** (S par module) : à chaque module livré (factures, fournisseurs, RH, performance), ajouter ses contrôles et sa fiche de la carte du site.
+- [ ] **M11.13 — (facultatif) IA externe, niveau B** (L) (= M10.6) : **accord + clé + coût expliqués avant**.
+- [ ] **M11.14 — Réglages « Surveillance », démo, anglais, essai de BTK, contrôle final** (M) : alertes de démonstration dans tous les états, essai opérateur (rien de visible), vitesse avec 2 ans de données.
+
+**Ordre conseillé du module :** M11.1 → M11.2 → M11.3 à M11.5 (les contrôleurs des pages qui existent déjà, sans attendre les autres modules) → M11.6 → M11.7 → M11.8 et M11.9 → M11.10 et M11.11 → M11.12 au fil des modules → M11.13 en dernier, si BTK le veut.
+
+---
+
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
@@ -364,7 +438,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 5. **Module 2** (Facturation et reçus).
 6. **Module 3.B** (badges clients), puis **Module 4** (fournisseurs et achats).
 7. **Module 5** (RH), **Module 6** (missions avancées), **Module 7** (droits et audit).
-8. **Module 9** (détection automatique) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
+8. **Module 9** (détection automatique, **absorbé par le module 11 « Admin IA Pro »**) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
 9. **Module 10, niveau A** (assistant à règles dans la messagerie) — après les modules 3 et 9, car il s'appuie sur leurs calculs ; puis A+1 (modèles de messages), puis A+2 (rédaction par IA, clé gratuite) et le niveau B (IA externe) seulement si BTK le veut.
 10. **Module 8** (direction et contrôle final).
 
@@ -392,3 +466,4 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 - 2026-10-20 : **Module 1, M1.4 fait** : page Clients (liste, recherche, filtres, tri, fiche, création, modification, archivage), `df-api` v14 = `d8c9438` (sauvegarde n° 14). Prochaine étape **M1.5 : missions liées aux clients**.
 - 2026-10-20 (21 h UTC) : **état vérifié** : M1.1 à M1.4 faits, M1.5 à M1.7 à faire ; `df-api` v14 = `d8c9438` (déployée), `df_clients` protégée (RLS, aucun accès public, 0 ligne), sauvegardes n° 12 à 14 la contiennent, tâche de nuit active ; tous les contrôles passent sauf `check:demo-stats` dans un conteneur en UTC après minuit à Madagascar (passe avec `TZ=Indian/Antananarivo` : problème du test, pas du site). Une 2e session reprend **M1.5**.
 - 2026-10-21 : **Module 1, M1.6 fait** : meilleur client, classement et alerte « pas de paiement » suivent les fiches clients. Pas de déploiement serveur. Prochaine étape **M1.7 : démo, anglais, contrôle du module**.
+- 2026-10-21 : **module 11 « Admin IA Pro » ajouté** à la demande de BTK : la détection automatique couvre **toutes les pages** (missions, équipe, paie, finances, clients, stock, données, conditions, sécurité, système) et se réunit avec l'assistant IA ; les modules 9 et 10 deviennent ses briques. 14 étapes (M11.1 à M11.14). **Rien n'est codé.**
