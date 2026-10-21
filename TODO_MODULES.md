@@ -410,7 +410,7 @@ Conversation « Assistant » épinglée dans la messagerie de l'admin (**admin s
 Admin seulement (le serveur filtre, comme pour les finances) ; l'opérateur ne voit ni alertes ni assistant ; les alertes sur des salariés sont des signaux, pas des accusations ; jamais de mot de passe ni de jeton dans un message ; niveau B : consentement explicite, journal des questions, résumé seulement.
 
 ### 8. Étapes (dans cet ordre)
-- [ ] **M11.1 — Décisions** (S) : seuils de départ, heure du résumé du matin, ce qui déclenche une notification, niveau B oui ou non (valeurs par défaut proposées, BTK corrige).
+- [ ] **M11.1 — Décisions** (S) — ⏳ **en cours : prise par une session le 2026-10-21 (« Go M9 » de BTK, M9 est fusionné dans M11) ; M11.1 et M11.2 ensemble, ne pas les refaire en parallèle** : seuils de départ, heure du résumé du matin, ce qui déclenche une notification, niveau B oui ou non (valeurs par défaut proposées, BTK corrige).
 - [ ] **M11.2 — Format d'alerte et registre** (M) : `src/utils/health/types.ts`, `registry.ts`, identifiants stables, « Ignorer / Vérifié » (où le garder pour tous les appareils : **accord avant** si une table ou un champ de réglages est ajouté) ; `check:health` (format, pas de doublon, identifiants stables, minimum de données).
 - [ ] **M11.3 — Lot 1 : Missions, Équipe, Paie** (M) (inclut M9.1).
 - [ ] **M11.4 — Lot 2 : Finances, Clients, Stock** (M).
