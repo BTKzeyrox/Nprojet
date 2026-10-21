@@ -11,6 +11,7 @@
     "check:clients-page": "esbuild scripts/check-clients-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-clients-page.mjs && node node_modules/.cache/check-clients-page.mjs",
     "check:clients-demo": "esbuild scripts/check-clients-demo.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-clients-demo.mjs && node node_modules/.cache/check-clients-demo.mjs",
     "check:health": "npx --yes tsx scripts/check-health.ts",
+    "check:health-lot1": "npx --yes tsx scripts/check-health-lot1.ts",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:company": "npx --yes tsx scripts/check-company.ts",
     "check:company-page": "esbuild scripts/check-company-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-company-page.mjs && node node_modules/.cache/check-company-page.mjs",

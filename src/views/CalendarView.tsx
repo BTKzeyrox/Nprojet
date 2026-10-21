@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { isLate } from '../utils/attendance';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -62,18 +63,6 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   if (status === 'absent') return <XCircle className={c} />;
   return <Circle className={c} />;
 };
-
-const toMin = (hhmm: string) => {
-  const [h, m] = (hhmm || '0:0').split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
-
-// Une session est en retard si elle démarre plus tard que l'heure du shift + la tolérance (Réglages)
-function isLate(s: PostSession, cfg: AppSettings): boolean {
-  const base = s.shift_type === 'night' ? cfg.night_shift_start : cfg.day_shift_start;
-  const diff = toMin(s.start_time) - toMin(base);
-  return diff > cfg.late_tolerance_min && diff < 12 * 60;
-}
 
 // Statut d'un jour pour un booster
 function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings): DayStatus {
