@@ -233,6 +233,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 4 — Fournisseurs, achats et stock — taille M (dépend du stock existant)
 
+- ⏳ **MODULE 4 PRIS le 2026-10-21 vers 20:24 UTC par une session, à la demande de BTK (« Go M4 »). Ne pas le refaire en parallèle.**
+
 **But :** relier le stock et les dépenses à de vrais **fournisseurs**, avec des **bons de commande** et un **inventaire**.
 
 **Données :** table `df_suppliers` (nom, contact, délai, note) ; table `df_purchase_orders` (fournisseur, lignes produit × quantité × prix, états *Brouillon / Commandé / Reçu / Annulé*).
