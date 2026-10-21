@@ -258,6 +258,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 6 — Missions avancées — taille M (voir `TODO.md` P2)
 
+- ⏳ **MODULE 6 PRIS le 2026-10-21 vers 12 h UTC par une session, à la demande de BTK (« Go M6 »). Ne pas le refaire en parallèle.**
 - [ ] **M6.1 — Date limite et priorité** (M) : champs `due_date` et `priority`, pastille « En retard » sur la carte, tri, échéance dans le calendrier. **Débloque** l'alerte « missions en retard » et le badge **Ponctualité des livraisons**.
 - [ ] **M6.2 — Modèles de mission** (S) et **M6.3 — Liste de tâches dans une mission** (M).
 - [ ] **M6.4 — Notifications** (L) : rappels de date limite, validation, refus (`TODO.md` P1-1 : push navigateur, e-mail seulement pour validation / refus).
