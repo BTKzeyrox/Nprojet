@@ -285,3 +285,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-22 : **Module 6, M6.4 fait** : notifications push ; `df-api` v18 = `28f47c7` (sauvegarde n° 20 ; retour en arrière = v17 = `2a3fa70`). Pas d'e-mail. Module 6 terminé ; test sur un vrai téléphone à faire par BTK.
 - 2026-10-22 : **Module 2, M2.5 faite** : écran « Facturation » ; `check:invoices-page` 33/33. Dépend de la migration et du déploiement M2.4 (autre session).
 - 2026-10-22 : **Module 2, M2.6 faite** : facture, avoir et reçu imprimables ; `check:invoice-doc` OK. Suite : M2.7.
+- 2026-10-22 : **Module 2, M2.7 faite** : créances et relances ; `check:receivables` OK. Suite : M2.8.

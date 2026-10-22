@@ -9,10 +9,11 @@ import { todayMada } from '../../utils/stats';
 import { readCompany } from '../../utils/companyRules';
 import { askConfirm } from '../../components/ConfirmModal';
 import {
-  billableMissions, canCancel, dueDate, invoiceInfo, invoiceTotals, invoiceTotalsAll, lineTotal, proposeLines,
+  agedBalance, billableMissions, canCancel, dueDate, invoiceInfo, invoiceTotals, invoiceTotalsAll, lineTotal, proposeLines,
   type InvoiceError, type InvoiceState, type LineDraft,
 } from '../../utils/invoices';
 import { parseAmount } from '../../utils/finance';
+import { chaseText, toChase } from '../../utils/receivables';
 import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
 import type { Invoice } from '../../types';
 
@@ -62,6 +63,9 @@ export const InvoicesView: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [pay, setPay] = useState<Pay | null>(null);
+  const [tab, setTab] = useState<'list' | 'receivables'>('list');
+  const [chaseLang, setChaseLang] = useState<'fr' | 'en'>(lang === 'en' ? 'en' : 'fr');
+  const [copied, setCopied] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   useLockBodyScroll(!!editor || !!pay || !!openId);
@@ -85,6 +89,9 @@ export const InvoicesView: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoices, cash, today, q, state, clientId, clients]);
   const totals = useMemo(() => invoiceTotalsAll(invoices, cash, today), [invoices, cash, today]);
+  const aged = useMemo(() => agedBalance(invoices, cash, today), [invoices, cash, today]);
+  const chase = useMemo(() => toChase(invoices, cash, today, Object.fromEntries(clients.map(c => [c.id, c.name]))), [invoices, cash, today, clients]);
+  const copy = async (key: string, text: string) => { try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 2000); } catch { setError(t('Copie impossible : sélectionne le texte et copie-le à la main.', 'Copy failed: select the text and copy it by hand.')); } };
 
   // ----- éditeur de brouillon -----
   const newEditor = (): Editor => ({ client_id: '', issue_date: today, due_date: dueDate(today, undefined, company.billing.payment_days), dueTouched: false, lines: [], note: '', picked: [] });
@@ -170,9 +177,15 @@ export const InvoicesView: React.FC = () => {
         <div className={card}><p className="text-[11px] text-slate-400">{t('Dont en retard', 'Of which overdue')}</p><p className={`text-base font-bold ${totals.overdue > 0 ? 'text-rose-300' : 'text-white'}`}>{ar(totals.overdue)}</p></div>
       </div>
 
+      <div className="grid grid-cols-2 gap-2" role="tablist">
+        {([['list', t('Factures', 'Invoices')], ['receivables', `${t('Créances', 'Receivables')}${chase.length ? ` (${chase.length})` : ''}`]] as const).map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`${btn} ${tab === k ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-200'}`}>{label}</button>
+        ))}
+      </div>
+
       {error && !editor && !pay && <p className="text-sm text-rose-300" role="alert">{error}</p>}
 
-      <div className="flex flex-col sm:flex-row gap-2">
+      {tab === 'list' && <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1"><Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Numéro ou client…', 'Number or client…')} className={`${field} pl-9`} /></div>
         <select value={state} onChange={e => setState(e.target.value as InvoiceState | 'all')} className={field} aria-label={t('État', 'State')}>
           <option value="all">{t('Tous les états', 'All states')}</option>
@@ -182,9 +195,9 @@ export const InvoicesView: React.FC = () => {
           <option value="all">{t('Tous les clients', 'All clients')}</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-      </div>
+      </div>}
 
-      {rows.length === 0 ? (
+      {tab === 'list' && (rows.length === 0 ? (
         <div className={card}><p className="text-sm text-slate-300">{invoices.length === 0 ? t('Aucune facture pour le moment. Clique sur « Nouvelle facture » pour commencer : tu peux y mettre les missions validées d\'un client.', 'No invoice yet. Click “New invoice” to start: you can add a client\'s approved missions.') : t('Aucune facture ne correspond à ces filtres.', 'No invoice matches these filters.')}</p></div>
       ) : (
         <ul className="space-y-2">
@@ -207,6 +220,31 @@ export const InvoicesView: React.FC = () => {
             </li>
           ))}
         </ul>
+      ))}
+
+      {tab === 'receivables' && (
+        <div className="space-y-3" data-testid="receivables">
+          <div className={card}>
+            <h3 className="font-bold text-white text-sm">{t('Ce que les clients doivent (par retard)', 'What clients owe (by delay)')}</h3>
+            {aged.length === 0 ? <p className="text-sm text-slate-300">{t('Aucune créance : toutes les factures émises sont payées.', 'No receivable: all issued invoices are paid.')}</p> : (
+              <div className="overflow-x-auto"><table className="w-full text-xs text-slate-200"><thead><tr className="text-slate-400 text-left"><th className="py-1">{t('Client', 'Client')}</th><th className="text-right">{t('Pas échu', 'Not due')}</th><th className="text-right">1-30 j</th><th className="text-right">31-60 j</th><th className="text-right">61-90 j</th><th className="text-right">90+ j</th><th className="text-right">{t('Total', 'Total')}</th></tr></thead>
+                <tbody>{aged.map(r => <tr key={r.client_id} className="border-t border-slate-800"><td className="py-1.5 pr-2">{clientName(r.client_id)}</td>{[r.current, r.d30, r.d60, r.d90, r.d90p].map((v, k) => <td key={k} className={`text-right whitespace-nowrap ${v > 0 && k >= 3 ? 'text-rose-300' : ''}`}>{v ? ar(v) : '–'}</td>)}<td className="text-right font-bold whitespace-nowrap">{ar(r.total)}</td></tr>)}</tbody></table></div>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2"><h3 className="font-bold text-white text-sm">{t('À relancer', 'To chase')} ({chase.length})</h3>
+            <select value={chaseLang} onChange={e => setChaseLang(e.target.value as 'fr' | 'en')} className={`${field} !w-auto`} aria-label={t('Langue du message', 'Message language')}><option value="fr">{t('Message en français', 'Message in French')}</option><option value="en">{t('Message en anglais', 'Message in English')}</option></select></div>
+          {chase.length === 0 ? <div className={card}><p className="text-sm text-slate-300">{t('Personne à relancer : aucune facture n\'a dépassé son échéance.', 'Nobody to chase: no invoice is past its due date.')}</p></div> : chase.map(r => {
+            const text = chaseText(r, { lang: chaseLang, company_name: company.identity.name, currency: company.identity.currency, payment_methods: company.billing.payment_methods_text, penalty: company.billing.late_penalty_text });
+            return (
+              <div key={r.client_id} className={card}>
+                <div className="flex items-center justify-between gap-2"><span className="font-bold text-white text-sm">{r.client_name}</span><span className="text-rose-300 text-sm font-bold whitespace-nowrap">{ar(r.total)} · {r.max_days} {t('j', 'd')}</span></div>
+                <ul className="text-xs text-slate-300 space-y-0.5">{r.invoices.map(i => <li key={i.id}>{i.number} · {t('échue le', 'due')} {fmtDate(i.due_date)} · {ar(i.balance)} · {i.days_late} {t('j de retard', 'd late')}</li>)}</ul>
+                <textarea readOnly value={text} rows={8} className={`${field} py-2 font-mono text-xs`} aria-label={t('Texte de relance', 'Reminder text')} />
+                <button type="button" onClick={() => copy(r.client_id, text)} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{copied === r.client_id ? t('Copié !', 'Copied!') : t('Copier le texte', 'Copy the text')}</button>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {open && openInfo && !editor && !pay && modal(<>

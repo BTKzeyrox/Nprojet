@@ -49,6 +49,7 @@
     "check:push-store": "esbuild scripts/check-push-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-push-store.mjs && node node_modules/.cache/check-push-store.mjs",
     "check:invoices-page": "esbuild scripts/check-invoices-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-invoices-page.mjs && node node_modules/.cache/check-invoices-page.mjs",
     "check:invoice-doc": "npx --yes tsx scripts/check-invoice-doc.ts",
+    "check:receivables": "npx --yes tsx scripts/check-receivables.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:tasks": "npx --yes tsx scripts/check-tasks.ts",
     "check:tasks-store": "esbuild scripts/check-tasks-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-tasks-store.mjs && node node_modules/.cache/check-tasks-store.mjs",

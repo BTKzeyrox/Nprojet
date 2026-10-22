@@ -14,6 +14,7 @@ export function getAdminAlerts(): AlertItem[] {
   const today = todayMada();
   const st = db.getSettings();
   const cash = db.getCash(), posts = db.getPosts(), advances = db.getAdvanceRequests(), products = db.getProducts(), moves = db.getStockMoves(), contracts = db.getContracts(), clients = db.getClients();
+  const invoices = db.getInvoices();
   // Signature bon marché des données : même si une modification ne prévenait pas les écrans, le cache ne reste jamais faux
   let sum = 0;
   for (const e of cash) sum += e.amount_ar;
@@ -22,11 +23,12 @@ export function getAdminAlerts(): AlertItem[] {
   for (const m of moves) sum += m.qty;
   for (const p of products) sum += p.alert_threshold;
   for (const c of clients) sum += (c.active === false ? 1 : 2) + c.name.length + (c.price_default_ar || 0) + JSON.stringify(c.price_by_type || {}).length;
+  for (const v of invoices) sum += v.total_ar + (v.status === 'issued' ? 1 : v.status === 'cancelled' ? 2 : 3) + (v.due_date || '').length;
   for (const p of posts) if (p.client_id) sum += p.client_id.length;
   for (const c of contracts) if (c.client_id) sum += c.client_id.length;
-  const key = [me.id, today, cash.length, posts.length, advances.length, products.length, moves.length, contracts.length, clients.length, sum, st.goal_missions, st.goal_profit_ar, st.goal_max_expenses_ar, st.alert_unpaid_days, st.alert_low_cash_ar, st.client_price_default_ar, JSON.stringify(st.client_prices_by_type || {}), st.price_per_mission].join('|');
+  const key = [me.id, today, invoices.length, cash.length, posts.length, advances.length, products.length, moves.length, contracts.length, clients.length, sum, st.goal_missions, st.goal_profit_ar, st.goal_max_expenses_ar, st.alert_unpaid_days, st.alert_low_cash_ar, st.client_price_default_ar, JSON.stringify(st.client_prices_by_type || {}), st.price_per_mission].join('|');
   if (cache && cache.key === key) return cache.list;
-  const list = computeAlerts({ today, settings: st, cash, posts, contracts, advances, products, moves, clients });
+  const list = computeAlerts({ today, settings: st, cash, posts, contracts, advances, products, moves, clients, invoices });
   cache = { key, list };
   return list;
 }

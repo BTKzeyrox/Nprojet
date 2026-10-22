@@ -7,6 +7,8 @@ import { stockRows } from './stock';
 import { goalRows, monthFigures, type GoalSettings } from './goals';
 import { missionAmount } from './stats';
 import type { StatsTab } from './statsNav';
+import { receivablesAlert, toChase } from './receivables';
+import type { Invoice } from '../types';
 import { canonicalClientName, clientMissionsFromPosts, clientReceived, type ClientRecord } from './clients';
 
 export type AlertLevel = 'danger' | 'warn';
@@ -25,6 +27,7 @@ export interface AlertInput {
   cash: CashEntry[]; posts: PostSession[]; contracts: ClientContract[]; advances: SalaryAdvanceRequest[];
   products: Product[]; moves: StockMove[];
   clients?: ClientRecord[]; // fiches clients (admin) : l'alerte « pas de paiement » suit chaque fiche
+  invoices?: Invoice[]; // factures (module 2) : alerte « factures en retard »
 }
 
 const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} Ar`;
@@ -125,6 +128,14 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance',
       fr: `Pas de paiement depuis plus de ${days} jours : ${late.slice(0, 3).map(x => `${x.name} (${x.ago} j)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Reste à encaisser : ${ar(left)}.`,
       en: `No payment for over ${days} days: ${late.slice(0, 3).map(x => `${x.name} (${x.ago} d)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Left to collect: ${ar(left)}.` });
+  }
+
+  // 7. Factures en retard (module 2) : échéance dépassée et reste à payer
+  if (i.invoices && i.invoices.length) {
+    const names: Record<string, string> = {};
+    for (const c of i.clients || []) names[c.id] = c.name;
+    const ra = receivablesAlert(toChase(i.invoices, i.cash, i.today, names));
+    if (ra) out.push({ id: 'invoices_overdue', level: ra.level, go: 'invoices', fr: ra.fr, en: ra.en });
   }
 
   const order = { danger: 0, warn: 1 } as const;
