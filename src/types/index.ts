@@ -400,6 +400,9 @@ export interface CashEntry {
   note: string;
   client_name?: string;
   mission_id?: string;
+  invoice_id?: string; // facture payée par cette ligne (module 2)
+  receipt_no?: string; // numéro de reçu attribué par le serveur (module 2)
+  payment_method?: string; // espèces, virement, mobile money…
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -428,6 +431,41 @@ export interface StockMove {
   note: string;
   unit_cost_ar?: number; // entrée seulement : prix payé par unité (facultatif)
   cash_id?: string; // dépense « Achats » créée avec cette entrée (S3.3)
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ---------- Facturation (module 2, responsable seulement) ----------
+export type InvoiceStatus = 'draft' | 'issued' | 'cancelled'; // en retard / partiellement payée / payée se CALCULENT (voir src/utils/invoices.ts)
+export interface InvoiceLine {
+  id: string;
+  description: string;
+  qty: number; // jusqu'à 2 décimales
+  unit_price_ar: number;
+  total_ar: number; // qty × prix, arrondi à l'Ar
+  refs?: string[]; // identifiants des sessions de mission facturées par cette ligne
+}
+export interface InvoiceParty { name: string; address?: string; contact_name?: string; email?: string; phone?: string; tax_id?: string; register_id?: string }
+export interface Invoice {
+  id: string;
+  type?: 'invoice' | 'credit_note'; // « avoir » : annule une facture émise
+  number?: string; // attribué par le serveur à l'émission (jamais pour un brouillon)
+  status: InvoiceStatus;
+  client_id: string;
+  client: InvoiceParty; // copie du client AU MOMENT de l'émission : un document émis ne change plus
+  issuer?: InvoiceParty; // copie de l'entreprise à l'émission
+  issue_date: string;
+  due_date: string;
+  lines: InvoiceLine[];
+  subtotal_ar: number;
+  tax_rate: number;
+  tax_ar: number;
+  total_ar: number;
+  note?: string;
+  credit_of?: string; // avoir : identifiant de la facture annulée
+  cancelled_by?: string; // facture annulée : identifiant de l'avoir
+  issued_at?: string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;
