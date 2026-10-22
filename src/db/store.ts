@@ -2050,6 +2050,27 @@ class DeltaForceStore {
     if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
     return { ok: true, backup: r.data?.backup };
   }
+  // --- Notifications push (M6.4) : le mode démo n'en a pas (rien ne part sur internet) ---
+  public async pushKey(): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
+    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
+    const r = await this.api('push-key');
+    return r.ok && typeof r.data?.key === 'string' ? { ok: true, key: r.data.key } : { ok: false, error: r.data?.error || 'Notifications indisponibles.' };
+  }
+  public async pushSubscribe(subscription: unknown): Promise<{ ok: boolean; error?: string }> {
+    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
+    const r = await this.api('push-subscribe', { method: 'POST', body: JSON.stringify({ subscription }) });
+    return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };
+  }
+  public async pushUnsubscribe(endpoint: string): Promise<void> {
+    if (this.demo) return;
+    await this.api('push-unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) });
+  }
+  public async pushTest(): Promise<{ ok: boolean; sent: number; error?: string }> {
+    if (this.demo) return { ok: false, sent: 0, error: 'Indisponible en mode démo.' };
+    const r = await this.api('push-test', { method: 'POST', body: '{}' });
+    return r.ok ? { ok: true, sent: Number(r.data?.sent) || 0 } : { ok: false, sent: 0, error: r.data?.error || 'Erreur.' };
+  }
+
   public async backupNow(): Promise<{ ok: boolean; error?: string }> {
     const r = await this.api('backup-now', { method: 'POST', body: '{}' });
     return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };

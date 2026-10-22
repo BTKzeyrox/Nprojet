@@ -38,6 +38,8 @@
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
+    "check:push": "npx --yes tsx scripts/check-push.ts",
+    "check:push-store": "esbuild scripts/check-push-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-push-store.mjs && node node_modules/.cache/check-push-store.mjs",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:tasks": "npx --yes tsx scripts/check-tasks.ts",
     "check:tasks-store": "esbuild scripts/check-tasks-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-tasks-store.mjs && node node_modules/.cache/check-tasks-store.mjs",

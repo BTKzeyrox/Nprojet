@@ -13,6 +13,7 @@ import { setModeSwitchHidden, useModeSwitchHidden } from '../../utils/modeSwitch
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyConditions';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
+import { NotificationsCard } from '../../components/NotificationsCard';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -157,6 +158,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <FontSizePicker />
       </section>
 
+      <NotificationsCard />
+
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
@@ -222,6 +225,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'general' && <ModeSwitchSection />}
+      {tab === 'general' && <NotificationsCard />}
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">

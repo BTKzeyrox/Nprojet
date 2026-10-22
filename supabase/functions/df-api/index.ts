@@ -258,6 +258,137 @@ function tasksBlockSubmit(contract: any, done: unknown): boolean {
 }
 // ===== END MISSIONS =====
 
+// ===== BEGIN PUSH (notifications : règles, chiffrement Web Push et signature VAPID ; ce bloc est contrôlé par scripts/check-push.ts) =====
+// La partie « règles » est copiée de src/utils/pushRules.ts ; `npm run check:push` vérifie qu'elle donne les mêmes résultats que le site.
+const isRealDate = isRealMissionDate;
+const isRealTime = (s: unknown): boolean => typeof s === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+type PushKind = 'start_ok' | 'end_ok' | 'refused' | 'due_24h' | 'due_1h' | 'late';
+interface PushText { fr: { title: string; body: string }; en: { title: string; body: string } }
+const pushCut = (s: unknown, n: number) => String(s ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+
+/** Texte d'une notification (les deux langues : l'appareil choisit selon sa langue). `m.title` = titre de la mission. */
+function pushText(kind: PushKind, m: { post_number?: number; title?: string; reason?: string; due?: string }): PushText {
+  const n = Number.isFinite(m.post_number) ? `#${m.post_number} ` : '';
+  const t = pushCut(m.title, 60) || '—';
+  const label = `${n}${t}`.trim();
+  const reason = pushCut(m.reason, 120);
+  switch (kind) {
+    case 'start_ok': return { fr: { title: 'Début validé', body: `${label} : tu peux commencer.` }, en: { title: 'Start approved', body: `${label}: you can start.` } };
+    case 'end_ok': return { fr: { title: 'Mission validée', body: `${label} a été validée.` }, en: { title: 'Mission approved', body: `${label} was approved.` } };
+    case 'refused': return { fr: { title: 'Mission refusée', body: reason ? `${label} : ${reason}` : `${label} a été refusée.` }, en: { title: 'Mission refused', body: reason ? `${label}: ${reason}` : `${label} was refused.` } };
+    case 'due_24h': return { fr: { title: 'Échéance dans moins de 24 h', body: `${label} est à rendre ${pushCut(m.due, 20)}.` }, en: { title: 'Due within 24 h', body: `${label} is due ${pushCut(m.due, 20)}.` } };
+    case 'due_1h': return { fr: { title: 'Échéance dans moins d\'1 h', body: `${label} est à rendre ${pushCut(m.due, 20)}.` }, en: { title: 'Due within 1 h', body: `${label} is due ${pushCut(m.due, 20)}.` } };
+    case 'late': return { fr: { title: 'Mission en retard', body: `${label} devait être rendue ${pushCut(m.due, 20)}.` }, en: { title: 'Mission late', body: `${label} was due ${pushCut(m.due, 20)}.` } };
+  }
+}
+
+/** Moment limite en millisecondes : la date + l'heure (23:59 s'il n'y a pas d'heure), à l'heure de Madagascar (UTC+3). NaN si la date est fausse. */
+function dueAtMs(due_date: unknown, due_time?: unknown): number {
+  if (!isRealDate(due_date)) return NaN;
+  const t = isRealTime(due_time) ? due_time : '23:59';
+  return Date.parse(`${due_date}T${t}:00+03:00`);
+}
+
+interface ReminderContract { id: string; post_number: number; client_name: string; no_account?: boolean; due_date?: string; due_time?: string; initial_score: number; target_score: number; current_score?: number }
+interface ReminderPost { employee_id: string; status: string; post_number?: number; client_name: string }
+interface Reminder { key: string; kind: 'due_24h' | 'due_1h' | 'late'; contract_id: string; post_number: number; title: string; due: string; user_ids: string[]; admins: boolean }
+
+const LATE_WINDOW_MS = 3 * 24 * 3600 * 1000; // un retard plus vieux que 3 jours n'est plus signalé (évite une avalanche au premier passage)
+
+/**
+ * Rappels à envoyer maintenant. Règles :
+ *  - « dans moins de 24 h » (et plus d'1 h) et « dans moins d'1 h » (seulement si la mission a une heure) : prévient l'opérateur qui a une session ouverte sur la mission ;
+ *  - « en retard » (jusqu'à 3 jours de retard) : l'opérateur et les responsables ;
+ *  - une mission terminée, sans titre ou « sans compte » ne déclenche rien ;
+ *  - la clé identifie rappel + échéance : changer la date limite remet le rappel à zéro.
+ */
+function dueReminders(contracts: ReminderContract[], posts: ReminderPost[], nowMs: number): Reminder[] {
+  if (!Number.isFinite(nowMs)) return [];
+  const out: Reminder[] = [];
+  for (const c of Array.isArray(contracts) ? contracts : []) {
+    if (!c || c.no_account || !String(c.client_name || '').trim()) continue;
+    const at = dueAtMs(c.due_date, c.due_time);
+    if (!Number.isFinite(at)) continue;
+    if (c.target_score > c.initial_score && (c.current_score ?? c.initial_score) >= c.target_score) continue;
+    const left = at - nowMs;
+    let kind: Reminder['kind'] | null = null;
+    if (left < 0) kind = -left <= LATE_WINDOW_MS ? 'late' : null;
+    else if (isRealTime(c.due_time) && left <= 3600 * 1000) kind = 'due_1h';
+    else if (left <= 24 * 3600 * 1000 && left > 3600 * 1000) kind = 'due_24h';
+    else if (left <= 24 * 3600 * 1000 && !isRealTime(c.due_time)) kind = 'due_24h';
+    if (!kind) continue;
+    const users = [...new Set((Array.isArray(posts) ? posts : []).filter(p => p && (p.status === 'active' || p.status === 'pending_start') && (p.post_number === c.post_number || (!!c.client_name && p.client_name === c.client_name))).map(p => String(p.employee_id)))];
+    const admins = kind === 'late';
+    if (!users.length && !admins) continue;
+    out.push({ key: `${c.id}:${kind}:${c.due_date}:${c.due_time || ''}`, kind, contract_id: c.id, post_number: c.post_number, title: String(c.client_name).trim(), due: `${(c.due_date as string).split('-').reverse().join('/')}${c.due_time ? ' ' + c.due_time : ''}`, user_ids: users, admins });
+  }
+  return out;
+}
+
+const B64U = /^[A-Za-z0-9_-]+$/;
+/** Abonnement envoyé par un téléphone : adresse https, deux clés base64url de la bonne taille. Rend null si quelque chose est faux. */
+function cleanPushSubscription(raw: unknown): { endpoint: string; p256dh: string; auth: string } | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
+  const endpoint = typeof r.endpoint === 'string' ? r.endpoint.trim() : '';
+  if (endpoint.length < 20 || endpoint.length > 600 || !/^https:\/\/[^\s/]+\/\S*$/.test(endpoint)) return null;
+  const k = r.keys && typeof r.keys === 'object' ? r.keys : null;
+  if (!k || typeof k.p256dh !== 'string' || typeof k.auth !== 'string') return null;
+  if (!B64U.test(k.p256dh) || k.p256dh.length !== 87 || !B64U.test(k.auth) || k.auth.length < 20 || k.auth.length > 24) return null;
+  return { endpoint, p256dh: k.p256dh, auth: k.auth };
+}
+
+// ---- Chiffrement Web Push (RFC 8291, aes128gcm) et signature VAPID (RFC 8292) : WebCrypto, aucune dépendance ----
+const b64uEnc = (b: Uint8Array): string => Buffer.from(b).toString('base64url');
+const b64uDec = (s: string): Uint8Array => new Uint8Array(Buffer.from(s, 'base64url'));
+const pushHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => new Uint8Array(createHmac('sha256', key).update(data).digest());
+const hkdfExpand = (prk: Uint8Array, info: Uint8Array, len: number): Uint8Array => pushHmac(prk, new Uint8Array([...info, 1])).slice(0, len);
+const utf8 = (s: string): Uint8Array => new TextEncoder().encode(s);
+const concatBytes = (...parts: Uint8Array[]): Uint8Array => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
+
+/** Corps chiffré d'une notification. `fixed` : valeurs imposées (seulement pour le contrôle avec l'exemple du standard). */
+async function encryptPush(uaPublic: Uint8Array, authSecret: Uint8Array, plaintext: Uint8Array, fixed?: { asPrivate: Uint8Array; asPublic: Uint8Array; salt: Uint8Array }): Promise<Uint8Array> {
+  const S = crypto.subtle;
+  let priv: CryptoKey, asPublic: Uint8Array;
+  if (fixed) {
+    asPublic = fixed.asPublic;
+    priv = await S.importKey('jwk', { kty: 'EC', crv: 'P-256', x: b64uEnc(asPublic.slice(1, 33)), y: b64uEnc(asPublic.slice(33, 65)), d: b64uEnc(fixed.asPrivate) }, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+  } else {
+    const kp = await S.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    priv = kp.privateKey;
+    asPublic = new Uint8Array(await S.exportKey('raw', kp.publicKey));
+  }
+  const uaKey = await S.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const secret = new Uint8Array(await S.deriveBits({ name: 'ECDH', public: uaKey }, priv, 256));
+  const ikm = hkdfExpand(pushHmac(authSecret, secret), concatBytes(utf8('WebPush: info\0'), uaPublic, asPublic), 32);
+  const salt = fixed ? fixed.salt : crypto.getRandomValues(new Uint8Array(16));
+  const prk = pushHmac(salt, ikm);
+  const cek = hkdfExpand(prk, utf8('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = hkdfExpand(prk, utf8('Content-Encoding: nonce\0'), 12);
+  const aes = await S.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await S.encrypt({ name: 'AES-GCM', iv: nonce }, aes, concatBytes(plaintext, new Uint8Array([2]))));
+  const rs = new Uint8Array([0, 0, 16, 0]); // 4096
+  return concatBytes(salt, rs, new Uint8Array([asPublic.length]), asPublic, ct);
+}
+
+/** Paire de clés VAPID (publique 65 octets, privée 32 octets, en base64url). */
+async function generateVapidKeys(): Promise<{ publicKey: string; privateKey: string }> {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']);
+  const jwk: any = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  return { publicKey: b64uEnc(concatBytes(new Uint8Array([4]), b64uDec(jwk.x), b64uDec(jwk.y))), privateKey: jwk.d };
+}
+
+/** En-tête « Authorization » VAPID pour une adresse de service push. */
+async function vapidHeader(endpoint: string, subject: string, publicKey: string, privateKey: string, nowSec: number): Promise<string> {
+  const pub = b64uDec(publicKey);
+  const key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: b64uEnc(pub.slice(1, 33)), y: b64uEnc(pub.slice(33, 65)), d: privateKey }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const head = b64uEnc(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const claims = b64uEnc(utf8(JSON.stringify({ aud: new URL(endpoint).origin, exp: nowSec + 12 * 3600, sub: subject })));
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(`${head}.${claims}`)));
+  return `vapid t=${head}.${claims}.${b64uEnc(sig)}, k=${publicKey}`;
+}
+// ===== END PUSH =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates"];
@@ -897,6 +1028,7 @@ async function sync(req: any, res: any, me: any) {
   const rejected: { col: string; id: string; reason: string }[] = [];
   const now = new Date().toISOString();
   let tookPost = false;
+  const pushJobs: Promise<unknown>[] = [];
 
   for (const col of COLS) {
     const ch = changes[col];
@@ -1025,6 +1157,11 @@ async function sync(req: any, res: any, me: any) {
         if (!toSave.text.trim() && !toSave.files.length) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
+      if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {
+        // Notification de l'opérateur (M6.4) : début validé, mission validée ou refusée
+        const k = pushKindFor(existing.status, toSave.status);
+        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60)));
+      }
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
 
@@ -1055,6 +1192,7 @@ async function sync(req: any, res: any, me: any) {
         await purgeEmployee(id); // efface aussi toutes ses données (missions, messages, publications, fichiers…)
         await sb.from('df_credentials').delete().eq('user_id', id);
         await sb.from(PRESENCE).delete().eq('user_id', id);
+        await sb.from(PUSH_SUBS).delete().eq('data->>user_id', id); // plus de notifications pour un compte supprimé
       }
       if (col === 'news') {
         const { data: nrow } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
@@ -1069,6 +1207,7 @@ async function sync(req: any, res: any, me: any) {
     }
   }
   if (tookPost) await sb.from(PRESENCE).update({ waiting_since: null }).eq('user_id', me.id);
+  if (pushJobs.length) await later(Promise.allSettled(pushJobs));
   return res.json({ ok: true, rejected });
 }
 
@@ -2130,6 +2269,125 @@ async function newsWithdraw(req: any, res: any, me: any) {
 }
 
 // ---------- routeur ----------
+// ---------- notifications push (M6.4) ----------
+const PUSH_SUBS = "df_push_subs";
+const PUSH_LOG = "df_push_log";
+const PUSH_SUBJECT = "https://github.com/BTKzeyrox/Nprojet"; // adresse de contact exigée par le standard VAPID (pas d'email personnel)
+const PUSH_MAX_SUBS = 5;
+let pushKeysCache: { pub: string; priv: string } | null = null;
+const okKey = (pub: unknown, priv: unknown) => typeof pub === 'string' && typeof priv === 'string' && b64uDec(pub).length === 65 && b64uDec(priv).length === 32;
+// Clés VAPID : créées la première fois, rangées dans le coffre-fort, jamais écrites dans GitHub.
+async function pushKeys(): Promise<{ pub: string; priv: string } | null> {
+  if (pushKeysCache) return pushKeysCache;
+  const read = async () => {
+    const [p, k] = await Promise.all([sb.rpc('df_push_get_secret', { secret_name: 'push_vapid_public' }), sb.rpc('df_push_get_secret', { secret_name: 'push_vapid_private' })]);
+    return okKey(p.data, k.data) ? { pub: String(p.data), priv: String(k.data) } : null;
+  };
+  let keys = await read();
+  if (!keys) {
+    const g = await generateVapidKeys();
+    const a = await sb.rpc('df_push_set_secret', { secret_name: 'push_vapid_private', secret_value: g.privateKey });
+    const b = await sb.rpc('df_push_set_secret', { secret_name: 'push_vapid_public', secret_value: g.publicKey });
+    if (a.error || b.error) { console.error('push keys vault error:', a.error || b.error); return null; }
+    for (let i = 0; i < 4 && !keys; i++) { keys = await read(); if (!keys) await new Promise(r => setTimeout(r, 300)); }
+  }
+  if (keys) pushKeysCache = keys;
+  return keys;
+}
+const subId = (endpoint: string) => 's_' + createHash('sha256').update(endpoint).digest('hex').slice(0, 40);
+
+// Envoie une notification à un appareil. 'ok' | 'gone' (abonnement mort : à supprimer) | 'fail'
+async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: string }): Promise<'ok' | 'gone' | 'fail'> {
+  try {
+    const body = await encryptPush(b64uDec(sub.p256dh), b64uDec(sub.auth), utf8(JSON.stringify(payload)));
+    const r = await fetch(sub.endpoint, {
+      method: 'POST',
+      headers: { Authorization: await vapidHeader(sub.endpoint, PUSH_SUBJECT, keys.pub, keys.priv, Math.floor(Date.now() / 1000)), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal' },
+      body,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.status === 404 || r.status === 410) return 'gone';
+    if (!r.ok) { console.error('push refused:', r.status); return 'fail'; }
+    return 'ok';
+  } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120)); return 'fail'; }
+}
+// Prévient des personnes (tous leurs appareils). Rend le nombre d'envois réussis ; ne plante jamais.
+async function pushTo(userIds: string[], text: PushText, tag: string): Promise<number> {
+  try {
+    const ids = [...new Set(userIds.map(String))];
+    if (!ids.length) return 0;
+    const keys = await pushKeys();
+    if (!keys) return 0;
+    const { data: rows } = await sb.from(PUSH_SUBS).select('id,data').in('data->>user_id', ids);
+    const subs = (rows || []) as any[];
+    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: '/', tag }, keys) })));
+    const dead = results.filter(x => x.res === 'gone').map(x => x.id);
+    if (dead.length) await sb.from(PUSH_SUBS).delete().in('id', dead);
+    return results.filter(x => x.res === 'ok').length;
+  } catch (e) { console.error('pushTo error:', String((e as any)?.message || e).slice(0, 120)); return 0; }
+}
+// Un résultat envoyé « en arrière-plan » quand c'est possible, pour ne pas ralentir la réponse
+function later(p: Promise<unknown>): Promise<unknown> { const rt = (globalThis as any).EdgeRuntime; if (rt && typeof rt.waitUntil === 'function') { rt.waitUntil(p); return Promise.resolve(); } return p; }
+// Changement de statut d'une session par le responsable → notification de l'opérateur
+function pushKindFor(before: unknown, after: unknown): PushKind | null {
+  if (before === 'pending_start' && after === 'active') return 'start_ok';
+  if (before === 'pending_end' && after === 'completed') return 'end_ok';
+  if ((before === 'pending_start' || before === 'pending_end') && after === 'rejected') return 'refused';
+  return null;
+}
+
+async function pushKeyRoute(_req: any, res: any, _me: any) {
+  const k = await pushKeys();
+  if (!k) return res.status(503).json({ error: 'Notifications indisponibles pour le moment.' });
+  return res.json({ key: k.pub });
+}
+async function pushSubscribeRoute(req: any, res: any, me: any) {
+  const sub = cleanPushSubscription(req.body?.subscription);
+  if (!sub) return res.status(400).json({ error: 'Abonnement invalide.' });
+  const id = subId(sub.endpoint);
+  const { data: mine } = await sb.from(PUSH_SUBS).select('id').eq('data->>user_id', me.id);
+  if ((mine || []).filter((r: any) => r.id !== id).length >= PUSH_MAX_SUBS) return res.status(400).json({ error: `${PUSH_MAX_SUBS} appareils au maximum. Désactive les notifications sur un autre appareil.` });
+  await sb.from(PUSH_SUBS).upsert({ id, data: { user_id: me.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, created: new Date().toISOString() }, updated_at: new Date().toISOString() });
+  return res.json({ ok: true });
+}
+async function pushUnsubscribeRoute(req: any, res: any, me: any) {
+  const ep = typeof req.body?.endpoint === 'string' ? req.body.endpoint.trim().slice(0, 600) : '';
+  if (!ep) return res.status(400).json({ error: 'Abonnement invalide.' });
+  await sb.from(PUSH_SUBS).delete().eq('id', subId(ep)).eq('data->>user_id', me.id);
+  return res.json({ ok: true });
+}
+async function pushTestRoute(_req: any, res: any, me: any) {
+  const n = await pushTo([me.id], { fr: { title: 'Notifications actives', body: 'Tu recevras ici les validations et les échéances de tes missions.' }, en: { title: 'Notifications on', body: 'You will get mission approvals and deadlines here.' } }, 'test');
+  return res.json({ ok: true, sent: n });
+}
+// Appelée toutes les 15 minutes par la base (pg_cron), avec un secret : rappels d'échéance, jamais deux fois.
+async function pushDue(request: Request, res: any) {
+  const given = request.headers.get('x-cron-secret') || '';
+  const { data: want } = await sb.rpc('df_push_get_secret', { secret_name: 'push_cron_secret' });
+  const a = Buffer.from(given), b = Buffer.from(String(want || ''));
+  if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return res.status(401).json({ error: 'refusé' });
+  const nowMs = Date.now();
+  const [{ data: cs }, { data: ps }, { data: us }] = await Promise.all([
+    sb.from(T.contracts).select('data').not('data->>due_date', 'is', null),
+    sb.from(T.posts).select('data').in('data->>status', ['active', 'pending_start']),
+    sb.from(T.users).select('id,data').eq('data->>role', 'admin'),
+  ]);
+  const reminders = dueReminders((cs || []).map((r: any) => r.data), (ps || []).map((r: any) => r.data), nowMs);
+  const adminIds = (us || []).map((r: any) => String(r.id));
+  let sent = 0, done = 0;
+  if (reminders.length) {
+    const { data: seen } = await sb.from(PUSH_LOG).select('id').in('id', reminders.map(r => r.key));
+    const seenSet = new Set((seen || []).map((r: any) => r.id));
+    for (const r of reminders) {
+      if (seenSet.has(r.key)) continue;
+      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60));
+      if (n > 0) { await sb.from(PUSH_LOG).upsert({ id: r.key, data: { at: new Date().toISOString(), kind: r.kind, sent: n }, updated_at: new Date().toISOString() }); sent += n; done++; }
+    }
+  }
+  await sb.from(PUSH_LOG).delete().lt('updated_at', new Date(nowMs - 30 * 24 * 3600 * 1000).toISOString()); // le journal ne grossit pas
+  return res.json({ ok: true, reminders: reminders.length, notified: done, sent });
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(request.url);
@@ -2160,6 +2418,7 @@ Deno.serve(async (request: Request) => {
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
     if (action === "signup" && req.method === "POST") return await signup(req, res);
     if (action === "report-error" && req.method === "POST") return await reportError(req, res);
+    if (action === "push-due" && req.method === "POST") return await pushDue(request, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
     if (action !== "logout") {
@@ -2176,6 +2435,10 @@ Deno.serve(async (request: Request) => {
     if (action === "backup-get" && req.method === "GET") return await backupGet(req, res, me);
     if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
+    if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
+    if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);
+    if (action === "push-unsubscribe" && req.method === "POST") return await pushUnsubscribeRoute(req, res, me);
+    if (action === "push-test" && req.method === "POST") return await pushTestRoute(req, res, me);
     if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);
     if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);
     if (action === "news-comment-delete" && req.method === "POST") return await newsAction('comment-delete', req, res, me);
