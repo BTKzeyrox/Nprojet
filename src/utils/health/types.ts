@@ -55,17 +55,22 @@ export interface HealthThresholds {
   min_duration_minutes: number; // mission terminée en moins de N minutes = trop rapide
   advance_pending_days: number; // avance en attente depuis plus de N jours
   inactive_days: number; // salarié sans mission depuis N jours
+  strategic_silent_days: number; // client Stratégique sans mission depuis N jours
+  dormant_days: number; // produit sans aucun mouvement depuis N jours
+  others_pct: number; // catégorie « Autres » = plus de N % des dépenses (90 jours)
 }
 export const HEALTH_THRESHOLDS_DEFAULT: HealthThresholds = {
   validate_hours: 24, active_no_end_hours: 12, late_count: 3, late_window_days: 7, absent_streak_days: 2,
   refusal_rate_pct: 30, refusal_min_missions: 10, min_periods: 3, ignore_days: 14,
   min_duration_minutes: 3, advance_pending_days: 3, inactive_days: 30,
+  strategic_silent_days: 30, dormant_days: 90, others_pct: 40,
 };
 /** Plus grandes valeurs acceptées (une valeur absurde est ignorée : on garde alors la valeur de départ). */
 export const HEALTH_THRESHOLDS_MAX: HealthThresholds = {
   validate_hours: 24 * 30, active_no_end_hours: 24 * 30, late_count: 100, late_window_days: 365, absent_streak_days: 60,
   refusal_rate_pct: 100, refusal_min_missions: 1000, min_periods: 60, ignore_days: 365,
   min_duration_minutes: 600, advance_pending_days: 90, inactive_days: 365,
+  strategic_silent_days: 365, dormant_days: 730, others_pct: 100,
 };
 
 /** Seuils tirés de la page Conditions (section « watch », plus tard). Une valeur absente, fausse ou hors limites prend la valeur de départ. */
