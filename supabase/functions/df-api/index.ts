@@ -18,15 +18,16 @@ const T = {
   products: "df_products",
   stock: "df_stock_moves",
   purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
+  invoices: "df_invoices", // factures et avoirs (les compteurs de numéros ne sont JAMAIS une collection : uniquement des fonctions SQL)
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -122,6 +123,110 @@ function cleanStockMove(rec: any, existing: any, meId: string, now: string): { o
   };
 }
 // ===== END STOCK =====
+
+// ===== BEGIN INVOICES (factures : réservé à l'administrateur, numéros attribués par le serveur ; ce bloc est contrôlé par scripts/check-invoices-server.ts) =====
+// Mêmes règles de calcul que src/utils/invoices.ts (un test compare les deux sur 300 factures au hasard).
+const INV_MAX = 100_000_000_000; // plafond d'une facture : au-delà, les calculs ne seraient plus exacts
+const INV_MAX_LINES = 200;
+const INV_MAX_QTY = 1_000_000;
+const INV_MAX_REFS = 2000;
+const invRound2 = (n: number) => Math.round(n * 100) / 100;
+const invNum = (v: unknown): number => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v.replace(/[\s\u00a0]/g, "").replace(",", ".")) : NaN);
+const invDate = (d: unknown): string | null => {
+  const date = String(d || "");
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + "T00:00:00Z") : null;
+  return parsed && !isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null;
+};
+const invAddDays = (iso: string, days: number): string => new Date(new Date(iso + "T00:00:00Z").getTime() + Math.round(days) * 86400000).toISOString().slice(0, 10);
+const invDaysBetween = (a: string, b: string): number => Math.round((new Date(b + "T00:00:00Z").getTime() - new Date(a + "T00:00:00Z").getTime()) / 86400000);
+const invTodayMada = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "Indian/Antananarivo" });
+
+/** Sous-total, TVA (arrondie UNE fois, en entiers) et total. La TVA vient des Conditions de l'entreprise, jamais du navigateur. */
+function invTotals(lines: { total_ar: number }[], vatEnabled: boolean, vatRate: number) {
+  const subtotal = lines.reduce((t, l) => t + l.total_ar, 0);
+  const rate = vatEnabled && Number.isFinite(vatRate) ? Math.min(100, Math.max(0, invRound2(vatRate))) : 0;
+  const tax = rate > 0 ? Math.round((subtotal * Math.round(rate * 100)) / 10000) : 0;
+  return { subtotal_ar: subtotal, tax_rate: rate, tax_ar: tax, total_ar: subtotal + tax };
+}
+
+/** Vérifie et nettoie un BROUILLON de facture envoyé par l'admin. Les totaux, la TVA, le statut, le numéro et les copies du client et de l'entreprise ne viennent jamais du navigateur. */
+function cleanInvoice(rec: any, existing: any, meId: string, now: string, company: any): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object") return { ok: false, reason: "invoice" };
+  const clientId = String(rec.client_id || "").trim().slice(0, 80);
+  if (!clientId) return { ok: false, reason: "client" };
+  const issue = invDate(rec.issue_date); if (!issue) return { ok: false, reason: "issue_date" };
+  const due = invDate(rec.due_date); if (!due) return { ok: false, reason: "due_date" };
+  if (due < issue) return { ok: false, reason: "due_before" };
+  if (!Array.isArray(rec.lines) || rec.lines.length === 0) return { ok: false, reason: "lines" };
+  if (rec.lines.length > INV_MAX_LINES) return { ok: false, reason: "too_many_lines" };
+  const lines: any[] = [];
+  for (let i = 0; i < rec.lines.length; i++) {
+    const l = rec.lines[i];
+    const description = String(l?.description ?? "").trim().slice(0, 200);
+    if (!description) return { ok: false, reason: "description" };
+    const qty = invRound2(invNum(l.qty));
+    if (!Number.isFinite(qty) || qty <= 0 || qty > INV_MAX_QTY) return { ok: false, reason: "qty" };
+    const unitRaw = invNum(l.unit_price_ar);
+    if (!Number.isFinite(unitRaw) || unitRaw < 0 || unitRaw > INV_MAX) return { ok: false, reason: "price" };
+    const unit = Math.round(unitRaw);
+    const total = Math.round(qty * unit); // jamais le total envoyé : toujours recalculé
+    if (!Number.isFinite(total) || total > INV_MAX) return { ok: false, reason: "total" };
+    const refs = Array.isArray(l.refs) ? [...new Set(l.refs.map((r: unknown) => String(r).slice(0, 80)).filter(Boolean))].slice(0, INV_MAX_REFS) : [];
+    lines.push({ id: `l${i + 1}`, description, qty, unit_price_ar: unit, total_ar: total, ...(refs.length ? { refs } : {}) });
+  }
+  const t = invTotals(lines, company?.tax?.vat_enabled === true, Number(company?.tax?.vat_rate));
+  if (t.total_ar <= 0 || t.total_ar > INV_MAX) return { ok: false, reason: "total" };
+  return {
+    ok: true,
+    save: {
+      id: rec.id, type: "invoice", status: "draft", client_id: clientId, issue_date: issue, due_date: due,
+      lines, ...t, note: String(rec.note || "").slice(0, 500),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+
+/** Ce que l'émission écrit en plus : date du jour (heure de Madagascar), échéance de même durée, copies du client et de l'entreprise, totaux recalculés avec la TVA ACTUELLE. */
+function invoiceIssuePatch(draft: any, client: any, company: any, today: string) {
+  const term = Math.max(0, invDaysBetween(draft.issue_date, draft.due_date));
+  const t = invTotals(draft.lines, company?.tax?.vat_enabled === true, Number(company?.tax?.vat_rate));
+  const id = company?.identity || {}, lg = company?.legal || {}, bl = company?.billing || {}, tx = company?.tax || {};
+  return {
+    issue_date: today, due_date: invAddDays(today, term), ...t,
+    client: {
+      name: String(client?.name || "").slice(0, 80), address: String(client?.address || "").slice(0, 200), contact_name: String(client?.contact || "").slice(0, 80),
+      email: String(client?.email || "").slice(0, 120), phone: String(client?.phone || "").slice(0, 40),
+    },
+    issuer: {
+      name: String(id.name || ""), address: String(id.address || ""), phone: String(id.phone || ""), email: String(id.email || ""), logo_url: String(id.logo_url || ""), currency: String(id.currency || "Ar"),
+      tax_id: String(lg.tax_id || ""), register_id: String(lg.register_id || ""), notes: Array.isArray(lg.notes) ? lg.notes.slice(0, 10) : [],
+      vat_enabled: tx.vat_enabled === true, vat_exempt_text: String(tx.vat_exempt_text || ""),
+      payment_days: Number(bl.payment_days) || 0, late_penalty_text: String(bl.late_penalty_text || ""), payment_methods_text: String(bl.payment_methods_text || ""), footer: String(bl.invoice_footer || ""),
+      terms: String(company?.texts?.customer_terms || ""),
+    },
+  };
+}
+
+/** Messages des codes d'erreur renvoyés par les fonctions SQL df_issue_invoice, df_cancel_invoice et df_pay_invoice. */
+const INVOICE_ERRORS: Record<string, [number, string]> = {
+  invoice_missing: [404, "Facture introuvable."],
+  changed: [409, "Cette facture vient d'être modifiée. Recharge la page et réessaie."],
+  not_draft: [409, "Seul un brouillon peut être émis."],
+  not_issued: [409, "Cette opération n'est possible que sur une facture émise."],
+  no_lines: [422, "Une facture doit avoir au moins une ligne."],
+  no_total: [422, "Le total de la facture doit être supérieur à 0."],
+  refs_taken: [409, "Une mission de cette facture est déjà dans une autre facture."],
+  refs_missing: [409, "Une mission de cette facture n'existe plus ou n'est pas validée."],
+  has_payments: [409, "Cette facture a déjà reçu un paiement : elle ne peut pas être annulée par un avoir."],
+  bad_amount: [400, "Montant invalide (un nombre entier d'Ar supérieur à 0)."],
+};
+function invoiceErrorOf(message: string): { status: number; error: string; max?: number } {
+  const m = /too_much:(\d+)/.exec(message || "");
+  if (m) return { status: 409, error: "Ce paiement dépasse ce qui reste à payer.", max: Number(m[1]) };
+  const code = Object.keys(INVOICE_ERRORS).find(k => (message || "").includes(k));
+  return code ? { status: INVOICE_ERRORS[code][0], error: INVOICE_ERRORS[code][1] } : { status: 500, error: "L'opération a échoué." };
+}
+// ===== END INVOICES =====
 
 // ===== BEGIN CLIENTS (fiches clients : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-clients-server.ts) =====
 const CLIENT_MAX_MONEY = 1_000_000_000_000;
@@ -1274,11 +1379,28 @@ async function sync(req: any, res: any, me: any) {
         }
       }
       if (col === 'cash') {
+        // Un paiement lié à une facture (ou portant un reçu) ne se modifie JAMAIS par la synchro : il est créé par invoice-pay et reste tel quel
+        if (existing && (existing.invoice_id || existing.receipt_no)) { rejected.push({ col, id: rec.id, reason: 'invoice_locked' }); continue; }
         const v = cleanCash(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         toSave = v.save;
         if (v.save.supplier_id) { const { data: sr } = await sb.from(T.suppliers).select('id').eq('id', v.save.supplier_id).maybeSingle(); if (!sr) { rejected.push({ col, id: rec.id, reason: 'supplier' }); continue; } }
         if (v.save.po_id) { const { data: pr } = await sb.from(T.purchases).select('id').eq('id', v.save.po_id).maybeSingle(); if (!pr) { rejected.push({ col, id: rec.id, reason: 'po' }); continue; } }
+      }
+      if (col === 'invoices') {
+        // La synchro n'écrit que des BROUILLONS. Émission, avoir et paiement passent par invoice-issue, invoice-cancel et invoice-pay ; une facture émise ne change plus.
+        if (existing && (existing.status !== 'draft' || (existing.type || 'invoice') !== 'invoice')) { rejected.push({ col, id: rec.id, reason: 'locked' }); continue; }
+        const v = cleanInvoice(rec, existing, me.id, now, await companyNow());
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        const { data: crow } = await sb.from(T.clients).select('id').eq('id', v.save.client_id).maybeSingle();
+        if (!crow) { rejected.push({ col, id: rec.id, reason: 'client' }); continue; }
+        const refs: string[] = [...new Set<string>(v.save.lines.flatMap((l: any) => l.refs || []))];
+        if (refs.length) {
+          const { data: chk } = await sb.rpc('df_invoice_ref_check', { p_id: rec.id, p_refs: refs });
+          if (chk?.taken?.length) { rejected.push({ col, id: rec.id, reason: 'refs_taken' }); continue; }
+          if (chk?.missing?.length) { rejected.push({ col, id: rec.id, reason: 'refs_missing' }); continue; }
+        }
+        toSave = v.save;
       }
       if (col === 'products') {
         const v = cleanProduct(rec, existing, me.id, now);
@@ -1347,10 +1469,17 @@ async function sync(req: any, res: any, me: any) {
         if (!ok) { rejected.push({ col, id, reason: 'forbidden' }); continue; }
       }
       if (col === 'clients') {
-        // Un client qui a des missions ou des sessions ne se supprime jamais : on le désactive (active = false).
+        // Un client qui a des missions, des sessions ou des factures ne se supprime jamais : on le désactive (active = false).
         const { data: usedC } = await sb.from(T.contracts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedP } = await sb.from(T.posts).select('id').eq('data->>client_id', id).limit(1);
-        if ((usedC && usedC.length) || (usedP && usedP.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+        const { data: usedI } = await sb.from(T.invoices).select('id').eq('data->>client_id', id).limit(1);
+        if ((usedC && usedC.length) || (usedP && usedP.length) || (usedI && usedI.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+      }
+      if (col === 'invoices' || col === 'cash') {
+        // Une facture émise (ou annulée, ou un avoir) ne se supprime jamais : on l'annule par un avoir. Un paiement lié à une facture non plus. Seul un brouillon se supprime.
+        const { data: xrow } = await sb.from(T[col]).select('data').eq('id', id).maybeSingle();
+        const xd: any = xrow?.data;
+        if (xd && ((col === 'invoices' && xd.status !== 'draft') || (col === 'cash' && (xd.invoice_id || xd.receipt_no)))) { rejected.push({ col, id, reason: col === 'cash' ? 'invoice_locked' : 'locked' }); continue; }
       }
       if (col === 'suppliers') {
         // Un fournisseur qui a servi (bon de commande, entrée de stock, dépense) ne se supprime jamais : on l'archive (active = false).
@@ -1394,6 +1523,63 @@ async function sync(req: any, res: any, me: any) {
   if (tookPost) await sb.from(PRESENCE).update({ waiting_since: null }).eq('user_id', me.id);
   if (pushJobs.length) await later(Promise.allSettled(pushJobs));
   return res.json({ ok: true, rejected });
+}
+
+// ---------- Facturation : émission, avoir, paiement (numéros attribués par des fonctions SQL atomiques) ----------
+async function companyNow() {
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  return readCompany((st?.data as any)?.company);
+}
+const invoiceFail = (res: any, message: string) => { const f = invoiceErrorOf(message); return res.status(f.status).json({ error: f.error, ...(f.max !== undefined ? { max: f.max } : {}) }); };
+const newDocId = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+async function invoiceIssue(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || '');
+  if (!id) return res.status(400).json({ error: 'Demande invalide.' });
+  const { data: row } = await sb.from(T.invoices).select('data, updated_at').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: INVOICE_ERRORS.invoice_missing[1] });
+  const draft: any = row.data;
+  if ((draft.type || 'invoice') !== 'invoice' || draft.status !== 'draft') return res.status(409).json({ error: INVOICE_ERRORS.not_draft[1] });
+  const company = await companyNow();
+  if (!String(company.identity.name || '').trim()) return res.status(422).json({ error: "Écris le nom de ton entreprise dans Réglages > Conditions avant d'émettre une facture.", code: 'company_incomplete' });
+  const { data: crow } = await sb.from(T.clients).select('data').eq('id', draft.client_id).maybeSingle();
+  if (!crow) return res.status(409).json({ error: "Le client de cette facture n'existe plus." });
+  const now = new Date().toISOString();
+  const v = cleanInvoice(draft, draft, me.id, now, company); // revérifie tout, recalcule les totaux avec la TVA actuelle
+  if (!v.ok) return res.status(422).json({ error: 'Brouillon invalide.', code: v.reason });
+  const today = invTodayMada();
+  const patch = { ...invoiceIssuePatch(v.save, crow.data, company, today), lines: v.save.lines, note: v.save.note };
+  const { data, error } = await sb.rpc('df_issue_invoice', { p_id: id, p_expected: row.updated_at, p_prefix: company.billing.invoice_prefix, p_year: Number(today.slice(0, 4)), p_patch: patch });
+  if (error) return invoiceFail(res, error.message);
+  return res.json({ ok: true, invoice: data });
+}
+
+async function invoiceCancel(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || '');
+  if (!id) return res.status(400).json({ error: 'Demande invalide.' });
+  const today = invTodayMada();
+  const { data, error } = await sb.rpc('df_cancel_invoice', { p_id: id, p_credit_id: newDocId('cn'), p_prefix: 'AV-', p_year: Number(today.slice(0, 4)), p_today: today, p_by: me.id });
+  if (error) return invoiceFail(res, error.message);
+  return res.json({ ok: true, ...data });
+}
+
+async function invoicePay(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || '');
+  const amount = invNum(req.body?.amount);
+  const date = invDate(req.body?.date);
+  if (!id || !date) return res.status(400).json({ error: 'Demande invalide.' });
+  if (!Number.isFinite(amount) || amount < 1 || amount > INV_MAX || amount !== Math.trunc(amount)) return res.status(400).json({ error: INVOICE_ERRORS.bad_amount[1] });
+  const company = await companyNow();
+  const today = invTodayMada();
+  const { data, error } = await sb.rpc('df_pay_invoice', {
+    p_id: id, p_cash_id: newDocId('cash'), p_amount: amount, p_date: date, p_method: String(req.body?.method || '').slice(0, 40), p_note: String(req.body?.note || '').slice(0, 300),
+    p_prefix: company.billing.receipt_prefix, p_year: Number(today.slice(0, 4)), p_by: me.id,
+  });
+  if (error) return invoiceFail(res, error.message);
+  return res.json({ ok: true, ...data });
 }
 
 // ---------- comptes ----------
@@ -2639,6 +2825,9 @@ Deno.serve(async (request: Request) => {
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
+    if (action === "invoice-issue" && req.method === "POST") return await invoiceIssue(req, res, me);
+    if (action === "invoice-cancel" && req.method === "POST") return await invoiceCancel(req, res, me);
+    if (action === "invoice-pay" && req.method === "POST") return await invoicePay(req, res, me);
     if (action === "payroll-period" && req.method === "POST") return await payrollPeriod(req, res, me);
     if (action === "payroll-close" && req.method === "POST") return await payrollClose(req, res, me);
     if (action === "payroll-reopen" && req.method === "POST") return await payrollReopen(req, res, me);

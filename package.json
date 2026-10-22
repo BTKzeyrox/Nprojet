@@ -9,6 +9,8 @@
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",
     "check:missions-link": "esbuild scripts/check-missions-link.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-missions-link.mjs && node node_modules/.cache/check-missions-link.mjs",
+    "check:invoices-sql": "node scripts/check-invoices-sql.mjs",
+    "check:invoices-server": "npx --yes tsx scripts/check-invoices-server.ts",
     "check:invoices": "npx --yes tsx scripts/check-invoices.ts",
     "check:clients-page": "esbuild scripts/check-clients-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-clients-page.mjs && node node_modules/.cache/check-clients-page.mjs",
     "check:clients-demo": "esbuild scripts/check-clients-demo.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-clients-demo.mjs && node node_modules/.cache/check-clients-demo.mjs",
@@ -62,6 +64,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

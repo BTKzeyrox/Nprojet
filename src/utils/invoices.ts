@@ -77,7 +77,7 @@ export function checkInvoiceDraft(d: InvoiceDraft): InvoiceResult {
     const unit = Math.round(unitRaw);
     const total = lineTotal(qty, unit);
     if (!Number.isFinite(total) || total > INVOICE_MAX) return { ok: false, error: 'total', line: i };
-    const refs = Array.isArray(l.refs) ? [...new Set(l.refs.map(r => String(r).slice(0, 80)).filter(Boolean))].slice(0, 5000) : undefined;
+    const refs = Array.isArray(l.refs) ? [...new Set(l.refs.map(r => String(r).slice(0, 80)).filter(Boolean))].slice(0, 2000) : undefined;
     lines.push({ id: `l${i + 1}`, description, qty, unit_price_ar: unit, total_ar: total, ...(refs && refs.length ? { refs } : {}) });
   }
   const t = invoiceTotals(lines, !!d.vat_enabled, d.vat_rate ?? 0);
