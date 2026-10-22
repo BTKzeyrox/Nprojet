@@ -249,6 +249,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 5 — Ressources humaines — taille M
 
+- ⏳ **MODULE 5 PRIS le 2026-10-22 vers 03 h UTC par une session, à la demande de BTK (« Go M5 »). Ne pas le refaire en parallèle.** Cette session n'a pas accès au serveur Supabase : les parties serveur (M5.1, M5.2) sont écrites et testées dans le dépôt, le **déploiement de `df-api` et la migration SQL restent à faire par BTK ou par une session qui a l'accès**.
+
 **But :** un **dossier du salarié** complet et la gestion des **congés et absences** (déjà prévus dans `TODO.md` P4-1).
 
 - [ ] **M5.1 — Dossier du salarié** (M) : poste, date d'embauche, type de contrat, contact d'urgence, documents (CV existant), historique des changements de tarif. Données sensibles : **visibles par l'admin et par le salarié concerné seulement**.
