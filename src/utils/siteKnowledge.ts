@@ -83,7 +83,7 @@ export const SITE_MAP: SitePage[] = [
     figures: [
       { name: b('Facturé', 'Billed'), formula: b('Missions validées × prix client.', 'Validated missions × client price.') },
       { name: b('Encaissé', 'Collected'), formula: b('Somme des paiements reçus.', 'Sum of payments received.') },
-      { name: b('À encaisser', 'To collect'), formula: b('Facturé − encaissé.', 'Billed − collected.') },
+      { name: b('À encaisser', 'To collect'), formula: b('Facturé − encaissé (jamais négatif).', 'Billed − collected (never negative).') },
       { name: b('Dépenses', 'Expenses'), formula: b('Dépenses saisies + salaires (les avances sont déjà dans les salaires).', 'Recorded expenses + salaries (advances are already in salaries).') },
       { name: b('Bénéfice', 'Profit'), formula: b('Encaissé − dépenses.', 'Collected − expenses.') },
       { name: b('Marge', 'Margin'), formula: b('Bénéfice ÷ encaissé, en %. Vide si rien n\'est encaissé.', 'Profit ÷ collected, in %. Empty if nothing is collected.') },

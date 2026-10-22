@@ -6,6 +6,8 @@ import { daysBetween, todayMada, type StatsGranularity } from '../../utils/stats
 import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
 import { forecastMonth, monthFigures } from '../../utils/goals';
 import { actualUntil, forecastLine } from '../../utils/chartData';
+import { WhyFigure } from '../../components/WhyFigure';
+import type { FigureId } from '../../utils/siteSnapshot';
 
 // Chiffres et graphiques financiers de la période (responsable seulement). Tout est calculé ici, sans appel serveur.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
@@ -44,9 +46,9 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
         ...(fc ? [{ key: 'fc', label: t('Prévision fin de mois', 'End-of-month forecast'), values: forecastLine(cum, todayIdx, fc.profit), kind: 'line' as const, dashed: true, color: '#a78bfa' }] : []),
       ]
     : [{ key: 'cum', label: t('Bénéfice cumulé', 'Cumulative profit'), values: cum, kind: 'area' as const }];
-  const tile = (label: string, value: string, tone = 'text-white', hint?: string) => (
+  const tile = (label: string, value: string, tone = 'text-white', hint?: string, why?: FigureId) => (
     <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 min-w-0">
-      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="text-[11px] text-slate-400 flex items-center justify-between gap-1"><span className="truncate">{label}</span>{why && <WhyFigure id={why} range={r} lang={lang} />}</div>
       <div className={`text-base font-bold truncate ${tone}`}>{value}</div>
       {hint && <div className="text-[11px] text-slate-500 truncate">{hint}</div>}
     </div>
@@ -59,12 +61,12 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
       <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Résultat de la période', 'Result for the period')}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {tile(t('Bénéfice net', 'Net profit'), ar(f.profit), f.profit < 0 ? 'text-rose-400' : 'text-emerald-400', t('reçu − dépenses − salaires', 'received − expenses − salaries'))}
-          {tile(t('Marge', 'Margin'), f.marginPct === null ? dash : `${f.marginPct} %`, f.marginPct !== null && f.marginPct < 0 ? 'text-rose-400' : 'text-white', f.marginPct === null ? t('aucun paiement reçu', 'no payment received') : t('bénéfice ÷ reçu', 'profit ÷ received'))}
-          {tile(t('À encaisser', 'To collect'), ar(f.toCollect), 'text-amber-400', t(`facturé ${ar(f.billed)}`, `billed ${ar(f.billed)}`))}
-          {tile(t('Trésorerie', 'Cash on hand'), ar(f.treasury), f.treasury < 0 ? 'text-rose-400' : 'text-sky-300', t('depuis le début', 'since the start'))}
-          {tile(t('Coût par mission', 'Cost per mission'), f.costPerMission === null ? dash : ar(f.costPerMission), 'text-white', t(`${f.done} mission(s) validée(s)`, `${f.done} validated mission(s)`))}
-          {tile(t('Gain par mission', 'Gain per mission'), f.gainPerMission === null ? dash : ar(f.gainPerMission), f.gainPerMission !== null && f.gainPerMission < 0 ? 'text-rose-400' : 'text-white')}
+          {tile(t('Bénéfice net', 'Net profit'), ar(f.profit), f.profit < 0 ? 'text-rose-400' : 'text-emerald-400', t('reçu − dépenses − salaires', 'received − expenses − salaries'), 'profit')}
+          {tile(t('Marge', 'Margin'), f.marginPct === null ? dash : `${f.marginPct} %`, f.marginPct !== null && f.marginPct < 0 ? 'text-rose-400' : 'text-white', f.marginPct === null ? t('aucun paiement reçu', 'no payment received') : t('bénéfice ÷ reçu', 'profit ÷ received'), 'margin')}
+          {tile(t('À encaisser', 'To collect'), ar(f.toCollect), 'text-amber-400', t(`facturé ${ar(f.billed)}`, `billed ${ar(f.billed)}`), 'toCollect')}
+          {tile(t('Trésorerie', 'Cash on hand'), ar(f.treasury), f.treasury < 0 ? 'text-rose-400' : 'text-sky-300', t('depuis le début', 'since the start'), 'treasury')}
+          {tile(t('Coût par mission', 'Cost per mission'), f.costPerMission === null ? dash : ar(f.costPerMission), 'text-white', t(`${f.done} mission(s) validée(s)`, `${f.done} validated mission(s)`), 'costPerMission')}
+          {tile(t('Gain par mission', 'Gain per mission'), f.gainPerMission === null ? dash : ar(f.gainPerMission), f.gainPerMission !== null && f.gainPerMission < 0 ? 'text-rose-400' : 'text-white', undefined, 'gainPerMission')}
         </div>
         <div className="text-sm text-slate-300">
           {t('Meilleur client', 'Best client')} : {f.bestClient ? <b className="text-white">{f.bestClient.name} · {ar(f.bestClient.amount)}</b> : <span className="text-slate-500">{dash}</span>}
