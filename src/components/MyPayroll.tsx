@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Printer, ChevronDown, ChevronUp, BadgeCheck } from 'lucide-react';
 import { db } from '../db/store';
 import { formatCurrencyAr } from '../utils/formatUtils';
-import { Slip, pidLabel, fmtDay, fmtScore, printSlip } from '../utils/payslip';
+import { Slip, pidLabel, fmtDay, fmtScore, printSlip, companyForSlip } from '../utils/payslip';
+import { useApp } from '../context/AppContext';
 
 export interface AdvanceRoom {
   pid: string; start: string; end: string; gross: number; bonuses: number; due: number;
@@ -37,6 +38,7 @@ export const AdvanceRoomInfo: React.FC<{ room: AdvanceRoom | null }> = ({ room }
 };
 
 export const MyPayroll: React.FC = () => {
+  const { lang } = useApp();
   const [data, setData] = useState<{ slips: Slip[]; current: AdvanceRoom } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export const MyPayroll: React.FC = () => {
                   {s.advance_deducted > 0 && <div className="flex justify-between text-amber-300"><span>Avances remboursées</span><span>− {formatCurrencyAr(s.advance_deducted)}</span></div>}
                   {s.advance_carry > 0 && <div className="flex justify-between text-slate-400"><span>Avance restant à rembourser</span><span>{formatCurrencyAr(s.advance_carry)}</span></div>}
                   {s.paid && <div className="text-emerald-300">Payé le {fmtDay(s.paid.at)} par {s.paid.method}{s.paid.ref ? ` (réf. ${s.paid.ref})` : ''}</div>}
-                  <button type="button" onClick={() => printSlip(s)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
+                  <button type="button" onClick={() => printSlip(s, { lang, company: companyForSlip(db.getSettings().company) })} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
                 </div>
               )}
             </div>

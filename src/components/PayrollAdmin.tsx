@@ -6,7 +6,8 @@ import { askConfirm } from './ConfirmModal';
 import { askReason } from './ReasonModal';
 import { dayMada } from '../utils/presence';
 import { formatCurrencyAr } from '../utils/formatUtils';
-import { Slip, pidLabel, fmtDay, fmtScore, printSlip, downloadCsv } from '../utils/payslip';
+import { Slip, pidLabel, fmtDay, fmtScore, printSlip, downloadCsv, companyForSlip } from '../utils/payslip';
+import { useApp } from '../context/AppContext';
 
 const p2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 // Les 12 dernières périodes, de la plus récente à la plus ancienne
@@ -41,6 +42,7 @@ const inp = 'w-full rounded-xl bg-[#141e2a] border border-slate-600 p-2.5 text-w
 const sum = (a: { amount: number }[]) => a.reduce((t, x) => t + (x.amount || 0), 0);
 
 export const PayrollAdmin: React.FC = () => {
+  const { lang } = useApp();
   const mode0 = db.getSettings().pay_period === 'half' ? 'half' : 'month';
   const [pid, setPid] = useState(() => periodsBack(mode0)[0]);
   const [data, setData] = useState<any>(null);
@@ -215,7 +217,7 @@ export const PayrollAdmin: React.FC = () => {
               {open.paid && <div className="text-emerald-300">Payé le {fmtDay(open.paid.at)} par {open.paid.method}{open.paid.ref ? ` (réf. ${open.paid.ref})` : ''}</div>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => printSlip(open)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
+              <button type="button" onClick={() => printSlip(open, { lang, company: companyForSlip(db.getSettings().company) })} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
               {isClosed && open.paid && (
                 <button type="button" className="rounded-full px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
               )}
