@@ -4,6 +4,7 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
+import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import {
@@ -28,6 +29,7 @@ import {
   Product,
   StockMove,
   Client,
+  Invoice,
   NewsAttachment,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
@@ -38,7 +40,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -97,6 +99,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   products: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   stock: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
+  invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -138,6 +141,7 @@ class DeltaForceStore {
   private cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
   private products: Product[] = []; // stock (admin seulement, comme les finances)
   private stockMoves: StockMove[] = [];
+  private invoices: Invoice[] = []; // factures et avoirs (admin seulement)
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
@@ -180,7 +184,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(),
     };
   }
 
@@ -199,6 +203,7 @@ class DeltaForceStore {
       case 'products': return this.products;
       case 'stock': return this.stockMoves;
       case 'clients': return this.clients;
+      case 'invoices': return this.invoices;
     }
   }
 
@@ -217,6 +222,7 @@ class DeltaForceStore {
       case 'products': this.products = value; break;
       case 'stock': this.stockMoves = value; break;
       case 'clients': this.clients = value; break;
+      case 'invoices': this.invoices = value; break;
     }
   }
 
@@ -537,6 +543,62 @@ class DeltaForceStore {
     this.notify();
     return { success: true };
   }
+
+  // --- Factures (module 2, responsable seulement). Brouillons : modifiables ici (le serveur revérifie les totaux). ---
+  // Émission, paiement et avoir passent par des routes dédiées : le numéro et le reçu sont attribués par le serveur, jamais ici.
+  // Codes d'erreur d'un brouillon : 'admin' | 'client' | 'issue_date' | 'due_date' | 'due_before' | 'lines' | 'too_many_lines' | 'description' | 'qty' | 'price' | 'total' | 'note' | 'missing' | 'not_draft' | 'no_client' | 'ref_used'.
+  public getInvoices(): Invoice[] { return [...this.invoices]; }
+
+  public saveInvoiceDraft(d: InvoiceDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const company = readCompany(this.getSettings().company);
+    const v = checkInvoiceDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
+    if (!v.ok) return { success: false, error: v.error, line: v.line };
+    const client = this.clients.find(c => c.id === v.clean.client_id);
+    if (!client) return { success: false, error: 'no_client' };
+    const used = new Set<string>();
+    for (const i of this.invoices) if (i.id !== d.id && i.type !== 'credit_note' && i.status !== 'cancelled') for (const l of i.lines) for (const r of l.refs || []) used.add(r);
+    if (v.clean.lines.some(l => (l.refs || []).some(r => used.has(r)))) return { success: false, error: 'ref_used' }; // une mission ne va que dans une facture
+    const now = new Date().toISOString();
+    if (d.id) {
+      const old = this.invoices.find(x => x.id === d.id);
+      if (!old) return { success: false, error: 'missing' };
+      if (old.status !== 'draft' || old.type === 'credit_note') return { success: false, error: 'not_draft' };
+      this.invoices = this.invoices.map(x => x.id === d.id ? { ...x, ...v.clean, client: { name: client.name }, updated_at: now } : x);
+      this.notify();
+      return { success: true, id: d.id };
+    }
+    const id = `inv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.invoices = [{ id, type: 'invoice', status: 'draft', ...v.clean, client: { name: client.name }, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.invoices];
+    this.notify();
+    return { success: true, id };
+  }
+
+  public deleteInvoiceDraft(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const inv = this.invoices.find(x => x.id === id);
+    if (!inv) return { success: false, error: 'missing' };
+    if (inv.status !== 'draft' || inv.type === 'credit_note') return { success: false, error: 'not_draft' }; // une facture émise ne se supprime jamais : on l'annule par un avoir
+    this.invoices = this.invoices.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  /** Envoie d'abord les changements en attente (le serveur lit le brouillon enregistré), puis appelle la route. */
+  private async invoiceCall(route: string, body: unknown): Promise<{ ok: boolean; error?: string; data?: any }> {
+    if (this.currentUser?.role !== 'admin') return { ok: false, error: 'Réservé au responsable.' };
+    if (!this.demo) {
+      for (let i = 0; i < 50 && this.syncing; i++) await new Promise(r => setTimeout(r, 100));
+      await this.flush();
+    }
+    const r = await this.api(route, { method: 'POST', body: JSON.stringify(body) });
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
+    if (!this.demo) { this.since = ''; await this.pull(true); }
+    return { ok: true, data: r.data };
+  }
+  public issueInvoice(id: string) { return this.invoiceCall('invoice-issue', { id }); }
+  public cancelInvoice(id: string) { return this.invoiceCall('invoice-cancel', { id }); }
+  public payInvoice(id: string, p: { amount: number; date: string; method?: string; note?: string }) { return this.invoiceCall('invoice-pay', { id, ...p }); }
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
   public getClients(): Client[] { return [...this.clients]; } // admin seulement (l'opérateur n'en reçoit jamais)
@@ -936,7 +998,7 @@ class DeltaForceStore {
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -986,6 +1048,42 @@ class DeltaForceStore {
         this.emit();
         return ok();
       }
+      case 'invoice-issue': {
+        const inv = this.invoices.find(x => x.id === body.id);
+        if (!inv || inv.status !== 'draft') return fail('Cette facture n\'est plus un brouillon.');
+        const co = readCompany(this.getSettings().company);
+        const client = this.clients.find(c => c.id === inv.client_id);
+        const year = Number(nowIso.slice(0, 4));
+        const n = this.invoices.filter(x => x.type !== 'credit_note' && x.number).length + 1;
+        const t = invoiceTotals(inv.lines, co.tax.vat_enabled, co.tax.vat_rate);
+        this.invoices = this.invoices.map(x => x.id === inv.id ? { ...x, ...t, status: 'issued', number: formatNumber(co.billing.invoice_prefix, year, n), issued_at: nowIso, client: { name: client?.name || inv.client.name, address: client?.address, email: client?.email, phone: client?.phone }, issuer: { name: co.identity.name, address: co.identity.address, email: co.identity.email, phone: co.identity.phone, tax_id: co.legal.tax_id, register_id: co.legal.register_id } } : x);
+        this.emit();
+        return ok({ ok: true });
+      }
+      case 'invoice-pay': {
+        const inv = this.invoices.find(x => x.id === body.id);
+        if (!inv || inv.status !== 'issued' || inv.type === 'credit_note') return fail('Cette facture n\'est pas émise.');
+        const info = invoiceInfo(inv, this.cash, nowIso.slice(0, 10));
+        const amount = Math.round(Number(body.amount));
+        if (!Number.isFinite(amount) || amount < 1) return fail('Montant invalide.');
+        if (amount > info.balance) return fail(`Le paiement dépasse le reste à payer (${info.balance} Ar).`);
+        const co = readCompany(this.getSettings().company);
+        const n = this.cash.filter(x => x.receipt_no).length + 1;
+        this.cash = [{ id: `cash-${Date.now().toString(36)}`, kind: 'in', category: 'Paiement client', amount_ar: amount, date: String(body.date || nowIso.slice(0, 10)), note: String(body.note || ''), client_name: inv.client.name, invoice_id: inv.id, receipt_no: formatNumber(co.billing.receipt_prefix, Number(nowIso.slice(0, 4)), n), payment_method: String(body.method || ''), created_at: nowIso, updated_at: nowIso }, ...this.cash];
+        this.emit();
+        return ok({ ok: true });
+      }
+      case 'invoice-cancel': {
+        const inv = this.invoices.find(x => x.id === body.id);
+        if (!inv || inv.status !== 'issued' || inv.type === 'credit_note') return fail('Cette facture ne peut pas être annulée.');
+        if (invoiceInfo(inv, this.cash, nowIso.slice(0, 10)).paid > 0) return fail('Cette facture a déjà reçu un paiement : supprime d\'abord le paiement.');
+        const n = this.invoices.filter(x => x.type === 'credit_note').length + 1;
+        const credit: Invoice = { ...inv, id: `cn-${Date.now().toString(36)}`, type: 'credit_note', number: formatNumber('AV-', Number(nowIso.slice(0, 4)), n), credit_of: inv.id, cancelled_by: undefined, issue_date: nowIso.slice(0, 10), issued_at: nowIso, created_at: nowIso, updated_at: nowIso };
+        delete credit.cancelled_by;
+        this.invoices = [credit, ...this.invoices.map(x => x.id === inv.id ? { ...x, status: 'cancelled' as const, cancelled_by: credit.id } : x)];
+        this.emit();
+        return ok({ ok: true });
+      }
       case 'typing': return ok({ typing: [] });
       default: return ok(); // chat-read, report-error, queue, set-password, décisions… : accepté, sans rien envoyer
     }
@@ -1010,6 +1108,7 @@ class DeltaForceStore {
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
+    this.invoices = [];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
