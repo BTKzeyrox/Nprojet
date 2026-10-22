@@ -26,9 +26,11 @@ import {
   TrendingUp,
   Wallet,
   Building2,
+  HeartPulse,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
+import { getMenuBadges } from '../utils/healthDb';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { useChatUnread } from '../utils/useChatUnread';
@@ -83,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isLight = theme === 'light';
   const pending = countPending().total;
   const chatUnread = useChatUnread(currentUser);
+  const health = isAdmin ? getMenuBadges() : { byItem: {} as Record<string, { count: number; urgent: boolean }>, total: 0, urgent: 0 }; // pastilles « Santé du site » (admin seulement)
   const alertCount = isAdmin ? getAdminAlerts().length : 0; // pastille rouge : alertes de l'accueil (argent, stock, avances)
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
@@ -106,9 +109,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
+    ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },
-  ];
+  ].map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
   const inBottomBar = ['feed', 'chat', 'calendar', isAdmin ? 'validations' : 'active-post'];
