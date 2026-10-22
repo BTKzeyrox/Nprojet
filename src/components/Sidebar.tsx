@@ -28,6 +28,7 @@ import {
   Building2,
   Receipt,
   HeartPulse,
+  Bot,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -112,6 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
+    ...(isAdmin ? [{ id: 'assistant', label: 'Assistant', icon: Bot }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },
   ].map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));

@@ -286,3 +286,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-22 : **Module 2, M2.5 faite** : écran « Facturation » ; `check:invoices-page` 33/33. Dépend de la migration et du déploiement M2.4 (autre session).
 - 2026-10-22 : **Module 2, M2.6 faite** : facture, avoir et reçu imprimables ; `check:invoice-doc` OK. Suite : M2.7.
 - 2026-10-22 : **Module 2, M2.7 faite** : créances et relances ; `check:receivables` OK. Suite : M2.8.
+- 2026-10-22 : **Module 11, M11.10 fait en grande partie** : assistant niveau A (règles, sans IA externe) + page « Assistant » admin. `npm run check:assistant` 81/81, `tsc` et `build` OK ; `check:cash`/`check:company` restent cassés par `0e90dbc` (module 4). Reste : récap imprimable, rappels du matin, notifications.

@@ -34,6 +34,7 @@ import { LogoutTransition } from './components/LogoutTransition';
 let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir revenir au français)
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
+const AssistantPage = lazy(() => import('./views/admin/AssistantPage').then(m => ({ default: m.AssistantPage })));
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
@@ -390,6 +391,8 @@ export default function App() {
                 <SettingsView />
               ) : activeView === 'health' ? (
                 <HealthPage onNavigate={view => setActiveView(view)} />
+              ) : activeView === 'assistant' ? (
+                <AssistantPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
