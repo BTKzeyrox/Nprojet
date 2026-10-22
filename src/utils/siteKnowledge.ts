@@ -170,15 +170,6 @@ export const SITE_MAP: SitePage[] = [
     ],
   },
   {
-    id: 'assistant', audience: 'admin', title: b('Assistant', 'Assistant'),
-    purpose: b('Il résume la journée, dit quoi faire d\'abord, explique une page ou un chiffre et calcule un « et si ».', 'It sums up the day, says what to do first, explains a page or a figure and computes a "what if".'),
-    howto: [b('Cliquer un bouton ou écrire une question courte.', 'Click a button or write a short question.'), b('Lire la réponse et la source des chiffres.', 'Read the answer and the source of the figures.'), b('Cliquer le bouton de la réponse pour ouvrir la bonne page.', 'Click the answer\'s button to open the right page.')],
-    rules: [b('Il ne devine pas : s\'il ne comprend pas ou s\'il manque une donnée, il le dit.', 'It does not guess: if it does not understand or data is missing, it says so.'), b('Il ne fait rien tout seul : ses boutons ouvrent seulement une page.', 'It does nothing on its own: its buttons only open a page.'), b('Calcul dans le navigateur de l\'admin, sans IA externe ; un employé ne le voit pas.', 'Computed in the admin\'s browser, no external AI; an employee does not see it.')],
-    figures: [
-      { name: b('Et si', 'What if'), formula: b('bénéfice possible = facturé − dépenses saisies − salaires ; ce n\'est pas une prévision.', 'possible profit = billed − recorded expenses − salaries; it is not a forecast.') },
-    ],
-  },
-  {
     id: 'errors', audience: 'admin', title: b('Journal des erreurs', 'Error log'),
     purpose: b('Les plantages et erreurs du site, regroupés, avec les signalements des employés.', 'Site crashes and errors, grouped, with employee reports.'),
     howto: [b('Ouvrir une erreur pour voir le détail.', 'Open an error to see the details.'), b('Copier le rapport pour le développeur.', 'Copy the report for the developer.'), b('La marquer « résolue ».', 'Mark it "resolved".')],

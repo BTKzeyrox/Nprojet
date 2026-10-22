@@ -287,3 +287,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-22 : **Module 2, M2.6 faite** : facture, avoir et reçu imprimables ; `check:invoice-doc` OK. Suite : M2.7.
 - 2026-10-22 : **Module 2, M2.7 faite** : créances et relances ; `check:receivables` OK. Suite : M2.8.
 - 2026-10-22 : **Module 11, M11.10 fait en grande partie** : assistant niveau A (règles, sans IA externe) + page « Assistant » admin. `npm run check:assistant` 81/81, `tsc` et `build` OK ; `check:cash`/`check:company` restent cassés par `0e90dbc` (module 4). Reste : récap imprimable, rappels du matin, notifications.
+- 2026-10-22 : **M11.10 : l'assistant est maintenant une conversation épinglée dans la Messagerie** (admin seulement, historique sur l'appareil), page à part retirée. `check:assistant` 82/82, `tsc` et `build` OK ; seuls `check:cash`, `check:company`, `check:invoices-sql` échouent (autres sessions).

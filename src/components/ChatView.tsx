@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Bot } from 'lucide-react';
+import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
   Send, Paperclip, FileText, Users, MessageSquare, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown,
@@ -54,7 +56,7 @@ const dayLabel = (day: string) => {
   return day.split('-').reverse().join('/');
 };
 
-export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; onOpenProfile?: (u: User) => void }> = ({ currentUser, initialThreadId, onOpenProfile }) => {
+export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; onOpenProfile?: (u: User) => void; onNavigate?: (view: string) => void }> = ({ currentUser, initialThreadId, onOpenProfile, onNavigate }) => {
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   // Couleurs de la messagerie (clair par défaut, sombre en option)
@@ -220,6 +222,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const shownList = sorted.filter(x => !isArchived(x.t, x.ts)).map(x => x.t);
   const archivedList = sorted.filter(x => isArchived(x.t, x.ts)).map(x => x.t);
 
+  const onAssistant = isAdmin && threadId === 'assistant';
   const current = threads.find(t => t.id === threadId) || threads[0];
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
   const convVisible = !showList || (typeof window !== 'undefined' && window.innerWidth >= 768);
@@ -487,7 +490,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         key={t.id}
         type="button"
         onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors ${accent.bar} ${t.id === current.id ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
+        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
         {t.kind === 'group' && t.group?.avatar_url ? (
           <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -562,6 +565,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
+          {isAdmin && (
+            <button type="button" data-assistant-row onClick={() => { setThreadId('assistant'); setShowList(false); setReplyTo(null); cancelEdit(); }}
+              className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border border-l-sky-500 cursor-pointer shadow-sm ${onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200' : 'bg-white/5 border-white/10')}`}>
+              <span className="w-12 h-12 rounded-full bg-sky-600 flex items-center justify-center shrink-0"><Bot className="w-6 h-6 text-white" /></span>
+              <span className="min-w-0 flex-1"><span className={`block font-bold text-sm ${P.title}`}>Assistant <span className="ml-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700">IA</span></span><span className={`block text-xs truncate ${P.sub}`}>{lastAssistantPreview(currentUser.id, 'fr') || 'Résumé, quoi faire, « et si… »'}</span></span>
+            </button>
+          )}
           {shownList.filter(matches).map(t => renderThread(t))}
           {shownList.filter(matches).length === 0 && <div className={`px-4 py-6 text-center text-sm ${P.sub}`}>Aucune discussion trouvée.</div>}
           {archivedList.length > 0 && (
@@ -576,7 +586,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       </div>
 
       {/* Conversation */}
-      <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0 min-h-0`}>
+      {onAssistant && <AssistantChat userId={currentUser.id} onBack={() => setShowList(true)} onNavigate={onNavigate} className={showList ? 'hidden md:flex' : 'flex'} />}
+      <div className={`${onAssistant ? 'hidden' : `${showList ? 'hidden' : 'flex'} md:flex`} flex-col flex-1 min-w-0 min-h-0`}>
         <div className="px-2.5 py-2.5 bg-[#0b2a4a] text-white flex items-center gap-2 shrink-0 shadow-md relative z-10">
           <button type="button" onClick={() => setShowList(true)} className="md:hidden w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Retour">
             <ArrowLeft className="w-5 h-5" />

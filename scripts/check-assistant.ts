@@ -119,12 +119,13 @@ const t0 = Date.now(); for (const q of ['résumé du jour', 'quoi faire maintena
 ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() - t0} ms (limite 1500)`);
 
 
-// ---------- Assemblage de l'écran (M11.10 B) ----------
+// ---------- Assemblage de l'écran : l'assistant est une conversation de la messagerie (M11.10 B) ----------
 {
-  const sb = fs.readFileSync('src/components/Sidebar.tsx', 'utf8'), app = fs.readFileSync('src/App.tsx', 'utf8'), pg = fs.readFileSync('src/views/admin/AssistantPage.tsx', 'utf8');
-  ok(/isAdmin \? \[\{ id: 'assistant'/.test(sb), 'menu : « Assistant » réservé à l\'admin');
-  ok(app.includes("activeView === 'assistant'") && /viewUser\.role === 'admin'/.test(app), 'application : route « assistant » dans la partie admin');
-  ok(!/fetch\(|localStorage/.test(pg) && pg.includes('getSnapshotInput'), 'page : aucune donnée hors getSnapshotInput (qui refuse si pas admin)');
+  const chat = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), sb = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
+  ok(/isAdmin && \(\s*<button type="button" data-assistant-row/.test(chat) && /onAssistant = isAdmin && threadId === 'assistant'/.test(chat), 'messagerie : la ligne « Assistant » et la conversation n\'existent que pour l\'admin');
+  ok(!/id: 'assistant'/.test(sb) && !fs.existsSync('src/views/admin/AssistantPage.tsx'), 'plus de page « Assistant » à part dans le menu');
+  ok(ac.includes('getSnapshotInput') && !/fetch\(|db\.sendMessage|XMLHttpRequest/.test(ac), 'conversation : rien n\'est envoyé au serveur, les données viennent de getSnapshotInput (refuse si pas admin)');
+  ok(/localStorage/.test(ac) && /try \{/.test(ac), 'historique : gardé sur l\'appareil, avec protection si le stockage est refusé');
 }
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
