@@ -58,6 +58,7 @@ export interface AppSettings {
   post_types: string[];
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
+  budgets?: Record<string, number>; // plafond mensuel par catégorie de dépense, en Ar (module 4) : admin seulement, jamais envoyé à un opérateur
   company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
 }
 
@@ -400,6 +401,8 @@ export interface CashEntry {
   note: string;
   client_name?: string;
   mission_id?: string;
+  supplier_id?: string; // fournisseur d'un achat (module 4)
+  po_id?: string; // bon de commande qui a créé cette dépense (module 4)
   invoice_id?: string; // facture payée par cette ligne (module 2)
   receipt_no?: string; // numéro de reçu attribué par le serveur (module 2)
   payment_method?: string; // espèces, virement, mobile money…
@@ -431,6 +434,11 @@ export interface StockMove {
   note: string;
   unit_cost_ar?: number; // entrée seulement : prix payé par unité (facultatif)
   cash_id?: string; // dépense « Achats » créée avec cette entrée (S3.3)
+  supplier_id?: string; // fournisseur de cette entrée (module 4)
+  po_id?: string; // bon de commande reçu (module 4)
+  reason?: 'inventory'; // ajustement fait après un comptage physique (module 4)
+  counted_qty?: number; // inventaire : quantité comptée
+  expected_qty?: number; // inventaire : quantité que le stock indiquait
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -466,6 +474,39 @@ export interface Invoice {
   credit_of?: string; // avoir : identifiant de la facture annulée
   cancelled_by?: string; // facture annulée : identifiant de l'avoir
   issued_at?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Fournisseurs, bons de commande, inventaire et budgets (module 4, responsable seulement, comme le stock et les finances).
+export interface Supplier {
+  id: string;
+  name: string;
+  contact: string; // téléphone, e-mail ou nom : texte libre
+  lead_days?: number; // délai habituel de livraison (jours), vide = inconnu
+  note: string;
+  active: boolean; // faux = archivé (jamais supprimé s'il a servi)
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+export type PurchaseStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
+export interface PurchaseLine {
+  product_id: string;
+  qty: number; // commandé
+  unit_cost_ar: number; // prix convenu par unité
+  received_qty: number; // déjà reçu (réception partielle possible)
+}
+export interface PurchaseOrder {
+  id: string;
+  ref: string; // « BC-0001 »
+  supplier_id: string;
+  date: string; // AAAA-MM-JJ, date de la commande
+  expected_date?: string; // livraison prévue
+  status: PurchaseStatus; // Brouillon → Commandé → Reçu, ou Annulé
+  lines: PurchaseLine[]; // figées une fois commandé : seule la quantité reçue avance
+  note: string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;

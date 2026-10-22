@@ -21,6 +21,8 @@
     "check:health-system": "npx --yes tsx scripts/check-health-system.ts",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:company": "npx --yes tsx scripts/check-company.ts",
+    "check:purchasing": "npx --yes tsx scripts/check-purchasing.ts",
+    "check:purchasing-server": "npx --yes tsx scripts/check-purchasing-server.ts",
     "check:company-page": "esbuild scripts/check-company-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-company-page.mjs && node node_modules/.cache/check-company-page.mjs",
     "check:finance": "npx --yes tsx scripts/check-finance.ts",
     "check:finance-stats": "npx --yes tsx scripts/check-finance-stats.ts",

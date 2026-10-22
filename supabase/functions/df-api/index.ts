@@ -5,6 +5,7 @@ import { Buffer } from "node:buffer";
 const T = {
   users: "df_users",
   clients: "df_clients", // avant les missions et les sessions : une fiche créée dans le même envoi existe déjà quand on vérifie le lien
+  suppliers: "df_suppliers", // avant les dépenses, le stock et les bons de commande : le fournisseur existe déjà quand on vérifie le lien
   posts: "df_posts",
   contracts: "df_contracts",
   securityLogs: "df_security_logs",
@@ -16,15 +17,16 @@ const T = {
   cash: "df_cash",
   products: "df_products",
   stock: "df_stock_moves",
+  purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -43,6 +45,8 @@ function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: tr
       id: rec.id, kind, category, amount_ar: Math.round(amount), date,
       note: String(rec.note || "").slice(0, 300), client_name: String(rec.client_name || "").slice(0, 80),
       ...(rec.mission_id ? { mission_id: String(rec.mission_id).slice(0, 80) } : {}),
+      ...(typeof rec.supplier_id === "string" && rec.supplier_id ? { supplier_id: rec.supplier_id.slice(0, 80) } : {}), // fournisseur d'un achat (module 4) : l'existence est contrôlée dans sync
+      ...(typeof rec.po_id === "string" && rec.po_id ? { po_id: rec.po_id.slice(0, 80) } : {}),
       created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
     },
   };
@@ -95,12 +99,24 @@ function cleanStockMove(rec: any, existing: any, meId: string, now: string): { o
     if (!Number.isFinite(cost) || cost < 0 || cost > STOCK_MAX_MONEY) return { ok: false, reason: "cost" };
     cost = Math.round(cost);
   }
+  // Inventaire (module 4) : un ajustement peut porter la quantité comptée et celle que le stock indiquait.
+  let inv: { reason: "inventory"; counted_qty: number; expected_qty: number } | undefined;
+  if (rec.reason !== undefined && rec.reason !== null && rec.reason !== "") {
+    if (rec.reason !== "inventory" || type !== "adjust") return { ok: false, reason: "reason" };
+    const counted = Number(rec.counted_qty), expected = Number(rec.expected_qty);
+    const bad = (n: number, v: unknown) => typeof v === "boolean" || Array.isArray(v) || v === null || v === "" || !Number.isFinite(n) || n < 0 || n > STOCK_MAX_QTY;
+    if (bad(counted, rec.counted_qty) || bad(expected, rec.expected_qty)) return { ok: false, reason: "count" };
+    inv = { reason: "inventory", counted_qty: round2s(counted), expected_qty: round2s(expected) };
+  }
   return {
     ok: true,
     save: {
       id: rec.id, product_id: productId, type, qty, date, note: String(rec.note || "").slice(0, 300),
       ...(cost !== undefined ? { unit_cost_ar: cost } : {}),
       ...(rec.cash_id ? { cash_id: String(rec.cash_id).slice(0, 80) } : {}),
+      ...(typeof rec.supplier_id === "string" && rec.supplier_id ? { supplier_id: rec.supplier_id.slice(0, 80) } : {}), // module 4 : l'existence est contrôlée dans sync
+      ...(typeof rec.po_id === "string" && rec.po_id ? { po_id: rec.po_id.slice(0, 80) } : {}),
+      ...(inv || {}),
       created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
     },
   };
@@ -389,9 +405,140 @@ async function vapidHeader(endpoint: string, subject: string, publicKey: string,
 }
 // ===== END PUSH =====
 
+// ===== BEGIN SUPPLIERS (fournisseurs, bons de commande et budgets : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-purchasing-server.ts) =====
+const PUR_MAX_LEAD = 365;
+const PUR_MAX_LINES = 50;
+const PUR_MAX_BUDGETS = 30;
+const PUR_BAD_KEYS = ["__proto__", "constructor", "prototype"];
+const purNone = (v: unknown) => v === undefined || v === null || String(v).trim() === "";
+// Un nombre ou un texte non vide : jamais un tableau, un booléen ou un objet (Number([5]) vaudrait 5, Number(true) vaudrait 1).
+const purNumIn = (v: unknown) => typeof v === "number" || (typeof v === "string" && v.trim() !== "");
+const purNum = (v: unknown): number => (typeof v === "number" ? v : Number(String(v).replace(/[\s\u00a0\u202f]/g, "").replace(",", ".")));
+
+/** Vérifie et nettoie une fiche fournisseur envoyée par l'admin. */
+function cleanSupplier(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object" || typeof rec.id !== "string" || !rec.id || rec.id.length > 80) return { ok: false, reason: "id" };
+  const name = String(rec.name ?? "").trim().slice(0, 80);
+  if (!name) return { ok: false, reason: "name" };
+  let lead: number | undefined;
+  if (!purNone(rec.lead_days)) {
+    if (!purNumIn(rec.lead_days)) return { ok: false, reason: "lead" };
+    const n = purNum(rec.lead_days);
+    if (!Number.isFinite(n) || n < 0 || n > PUR_MAX_LEAD) return { ok: false, reason: "lead" };
+    lead = Math.round(n);
+  }
+  return {
+    ok: true,
+    save: {
+      id: rec.id, name, contact: String(rec.contact ?? "").trim().slice(0, 120), ...(lead !== undefined ? { lead_days: lead } : {}), note: String(rec.note ?? "").trim().slice(0, 500),
+      active: rec.active === false ? false : true,
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+
+/**
+ * Vérifie et nettoie un bon de commande. États : Brouillon → Commandé → Reçu, ou Annulé (jamais de retour en arrière).
+ * Une fois commandé, le fournisseur, la date, les produits et les quantités sont figés ; seule la quantité reçue avance (jamais en arrière),
+ * et le prix d'une ligne peut encore changer tant que rien n'en a été reçu. « Reçu » = tout reçu, jamais autrement. Reçu et Annulé sont définitifs (la note seule reste modifiable).
+ * L'existence du fournisseur et des produits est contrôlée dans sync.
+ */
+function cleanPurchase(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object" || typeof rec.id !== "string" || !rec.id || rec.id.length > 80) return { ok: false, reason: "id" };
+  const ref = typeof rec.ref === "string" && /^BC-\d{1,9}$/.test(rec.ref) ? rec.ref : null;
+  if (!ref || (existing && existing.ref !== ref)) return { ok: false, reason: "ref" };
+  const supplier = typeof rec.supplier_id === "string" ? rec.supplier_id : "";
+  if (!supplier || supplier.length > 80) return { ok: false, reason: "supplier" };
+  const date = stockDate(rec.date);
+  if (!date) return { ok: false, reason: "date" };
+  let expected: string | undefined;
+  if (!purNone(rec.expected_date)) {
+    const e = stockDate(rec.expected_date);
+    if (!e || e < date) return { ok: false, reason: "expected" };
+    expected = e;
+  }
+  const status = ["draft", "ordered", "received", "cancelled"].includes(rec.status) ? (rec.status as string) : null;
+  if (!status) return { ok: false, reason: "status" };
+  if (!Array.isArray(rec.lines) || rec.lines.length < 1 || rec.lines.length > PUR_MAX_LINES) return { ok: false, reason: "lines" };
+  const seen = new Set<string>();
+  const lines: { product_id: string; qty: number; unit_cost_ar: number; received_qty: number }[] = [];
+  for (const l of rec.lines) {
+    const pid = typeof l?.product_id === "string" ? l.product_id : "";
+    if (!pid || pid.length > 80) return { ok: false, reason: "product" };
+    if (seen.has(pid)) return { ok: false, reason: "duplicate" };
+    seen.add(pid);
+    if (!purNumIn(l.qty)) return { ok: false, reason: "qty" };
+    const qty = round2s(purNum(l.qty));
+    if (!Number.isFinite(qty) || qty <= 0 || qty > STOCK_MAX_QTY) return { ok: false, reason: "qty" };
+    const cost = purNone(l.unit_cost_ar) ? 0 : purNumIn(l.unit_cost_ar) ? purNum(l.unit_cost_ar) : NaN;
+    if (!Number.isFinite(cost) || cost < 0 || cost > STOCK_MAX_MONEY) return { ok: false, reason: "cost" };
+    const got = purNone(l.received_qty) ? 0 : purNumIn(l.received_qty) ? round2s(purNum(l.received_qty)) : NaN;
+    if (!Number.isFinite(got) || got < 0 || got > qty) return { ok: false, reason: "received" };
+    lines.push({ product_id: pid, qty, unit_cost_ar: Math.round(cost), received_qty: got });
+  }
+  const allReceived = lines.every((l) => l.received_qty === l.qty);
+  const anyReceived = lines.some((l) => l.received_qty > 0);
+  const note = String(rec.note ?? "").slice(0, 300);
+  if (status === "received" && !allReceived) return { ok: false, reason: "status" };
+  if (!existing) {
+    if (status !== "draft" && status !== "ordered") return { ok: false, reason: "status" };
+    if (anyReceived) return { ok: false, reason: "received" };
+  } else if (existing.status === "received" || existing.status === "cancelled") {
+    // Définitif : seule la note peut changer.
+    const same = status === existing.status && supplier === existing.supplier_id && date === existing.date && (expected || "") === (existing.expected_date || "") &&
+      JSON.stringify(lines) === JSON.stringify((existing.lines || []).map((l: any) => ({ product_id: l.product_id, qty: l.qty, unit_cost_ar: l.unit_cost_ar, received_qty: l.received_qty })));
+    if (!same) return { ok: false, reason: "final" };
+  } else if (existing.status === "draft") {
+    if (status !== "draft" && status !== "ordered" && status !== "cancelled") return { ok: false, reason: "status" };
+    if (anyReceived) return { ok: false, reason: "received" };
+  } else {
+    // Commandé : tout est figé sauf la quantité reçue (qui n'avance que), la livraison prévue et le prix des lignes pas encore reçues.
+    if (supplier !== existing.supplier_id || date !== existing.date) return { ok: false, reason: "frozen" };
+    const old: any[] = existing.lines || [];
+    if (old.length !== lines.length) return { ok: false, reason: "frozen" };
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].product_id !== old[i].product_id || lines[i].qty !== old[i].qty) return { ok: false, reason: "frozen" };
+      if (lines[i].received_qty < old[i].received_qty) return { ok: false, reason: "received" };
+      if (old[i].received_qty > 0 && lines[i].unit_cost_ar !== old[i].unit_cost_ar) return { ok: false, reason: "frozen" };
+    }
+    if (status === "cancelled") { if (anyReceived) return { ok: false, reason: "received" }; }
+    else if (status === "draft") return { ok: false, reason: "status" };
+    else if (allReceived ? status !== "received" : status !== "ordered") return { ok: false, reason: "status" };
+  }
+  const base = { id: rec.id, ref, supplier_id: supplier, date, ...(expected ? { expected_date: expected } : {}), status, lines, note };
+  return { ok: true, save: { ...base, created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now } };
+}
+
+/** Budgets mensuels par catégorie (Ar). Une valeur vide ou 0 retire le plafond. Si quelque chose est faux, on garde l'existant. */
+function cleanBudgets(input: any, fallback: any): Record<string, number> {
+  const keep = fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) return keep;
+  const entries = Object.entries(input);
+  if (entries.length > PUR_MAX_BUDGETS) return keep;
+  const out: Record<string, number> = {};
+  for (const [k, v] of entries) {
+    const cat = String(k).trim().slice(0, 40);
+    if (!cat || PUR_BAD_KEYS.includes(cat)) return keep;
+    if (purNone(v)) continue;
+    if (!purNumIn(v)) return keep;
+    const n = purNum(v);
+    if (!Number.isFinite(n) || n < 0 || n > STOCK_MAX_MONEY) return keep;
+    if (Math.round(n) > 0) out[cat] = Math.round(n);
+  }
+  return out;
+}
+/** Réglages écrits par l'admin : les budgets sont revérifiés ; absents (ancien site) = l'existant est gardé. */
+function applyBudgets(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const b = rec && rec.budgets === undefined ? existing?.budgets : cleanBudgets(rec?.budgets, existing?.budgets);
+  if (b && Object.keys(b).length) out.budgets = b; else delete out.budgets;
+  return out;
+}
+// ===== END SUPPLIERS =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || me.role === "admin") return rec;
@@ -1090,7 +1237,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') toSave = cleanSettingsRecord(rec, existing, me, now); // seul l'admin arrive ici ; `company` est revérifié
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
@@ -1109,6 +1256,11 @@ async function sync(req: any, res: any, me: any) {
         if (!tk.ok) { rejected.push({ col, id: rec.id, reason: tk.reason }); continue; }
         toSave = tk.save;
       }
+      if (col === 'suppliers') {
+        const v = cleanSupplier(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        toSave = v.save;
+      }
       if (admin && (col === 'contracts' || col === 'posts')) {
         // Lien mission ou session → fiche client : texte court, et la fiche doit exister ; sans lien, on n'écrit pas le champ.
         const ref = cleanClientRef((toSave as any)?.client_id);
@@ -1125,6 +1277,8 @@ async function sync(req: any, res: any, me: any) {
         const v = cleanCash(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         toSave = v.save;
+        if (v.save.supplier_id) { const { data: sr } = await sb.from(T.suppliers).select('id').eq('id', v.save.supplier_id).maybeSingle(); if (!sr) { rejected.push({ col, id: rec.id, reason: 'supplier' }); continue; } }
+        if (v.save.po_id) { const { data: pr } = await sb.from(T.purchases).select('id').eq('id', v.save.po_id).maybeSingle(); if (!pr) { rejected.push({ col, id: rec.id, reason: 'po' }); continue; } }
       }
       if (col === 'products') {
         const v = cleanProduct(rec, existing, me.id, now);
@@ -1136,6 +1290,18 @@ async function sync(req: any, res: any, me: any) {
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         const { data: prow } = await sb.from(T.products).select('id').eq('id', v.save.product_id).maybeSingle();
         if (!prow) { rejected.push({ col, id: rec.id, reason: 'product' }); continue; } // mouvement d'un produit qui n'existe pas
+        if (v.save.supplier_id) { const { data: sr } = await sb.from(T.suppliers).select('id').eq('id', v.save.supplier_id).maybeSingle(); if (!sr) { rejected.push({ col, id: rec.id, reason: 'supplier' }); continue; } }
+        if (v.save.po_id) { const { data: pr } = await sb.from(T.purchases).select('id').eq('id', v.save.po_id).maybeSingle(); if (!pr) { rejected.push({ col, id: rec.id, reason: 'po' }); continue; } }
+        toSave = v.save;
+      }
+      if (col === 'purchases') {
+        const v = cleanPurchase(rec, existing, me.id, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        const { data: srow } = await sb.from(T.suppliers).select('id').eq('id', v.save.supplier_id).maybeSingle();
+        if (!srow) { rejected.push({ col, id: rec.id, reason: 'supplier' }); continue; } // fournisseur qui n'existe pas
+        const ids: string[] = v.save.lines.map((l: any) => l.product_id);
+        const { data: prows } = await sb.from(T.products).select('id').in('id', ids);
+        if ((prows || []).length !== ids.length) { rejected.push({ col, id: rec.id, reason: 'product' }); continue; } // produit qui n'existe pas
         toSave = v.save;
       }
       if (col === 'news') {
@@ -1185,6 +1351,25 @@ async function sync(req: any, res: any, me: any) {
         const { data: usedC } = await sb.from(T.contracts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedP } = await sb.from(T.posts).select('id').eq('data->>client_id', id).limit(1);
         if ((usedC && usedC.length) || (usedP && usedP.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+      }
+      if (col === 'suppliers') {
+        // Un fournisseur qui a servi (bon de commande, entrée de stock, dépense) ne se supprime jamais : on l'archive (active = false).
+        let inUse = false;
+        for (const t of [T.purchases, T.stock, T.cash]) {
+          const { data: used } = await sb.from(t).select('id').eq('data->>supplier_id', id).limit(1);
+          if (used && used.length) { inUse = true; break; }
+        }
+        if (inUse) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+      }
+      if (col === 'purchases') {
+        // Seuls un brouillon et un bon annulé se suppriment : un bon commandé ou reçu reste (historique des achats).
+        const { data: prow } = await sb.from(T.purchases).select('data').eq('id', id).maybeSingle();
+        if (prow && prow.data.status !== 'draft' && prow.data.status !== 'cancelled') { rejected.push({ col, id, reason: 'status' }); continue; }
+      }
+      if (col === 'products') {
+        // Un produit cité par un bon en cours (brouillon ou commandé) ne se supprime pas.
+        const { data: inPo } = await sb.from(T.purchases).select('id').in('data->>status', ['draft', 'ordered']).filter('data->lines', 'cs', JSON.stringify([{ product_id: id }])).limit(1);
+        if (inPo && inPo.length) { rejected.push({ col, id, reason: 'in_use' }); continue; }
       }
       if (col === 'users') {
         const u = await getUserRow(id);
