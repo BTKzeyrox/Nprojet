@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Ban, CheckCircle2, FilePlus2, Pencil, Plus, Search, Send, Trash2, Wallet, X } from 'lucide-react';
+import { Ban, CheckCircle2, FilePlus2, Pencil, Plus, Printer, Search, Send, Trash2, Wallet, X } from 'lucide-react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
@@ -13,6 +13,7 @@ import {
   type InvoiceError, type InvoiceState, type LineDraft,
 } from '../../utils/invoices';
 import { parseAmount } from '../../utils/finance';
+import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
 import type { Invoice } from '../../types';
 
 // Page « Facturation » (responsable seulement) : liste, brouillon, émission, paiement, avoir.
@@ -225,9 +226,10 @@ export const InvoicesView: React.FC = () => {
           {open.status === 'issued' && open.type !== 'credit_note' && <><p>{t('Déjà payé', 'Already paid')} : {ar(openInfo.paid)}</p><p className="font-bold">{t('Reste à payer', 'Left to pay')} : {ar(openInfo.balance)}</p></>}
         </div>
         {open.note && <p className="text-xs text-slate-400 whitespace-pre-wrap">{open.note}</p>}
-        {payments.length > 0 && <div><h3 className="text-xs font-bold text-slate-300 mb-1">{t('Paiements reçus', 'Payments received')}</h3><ul className="text-sm text-slate-200 space-y-1">{payments.map(p => <li key={p.id} className="flex justify-between gap-2"><span>{fmtDate(p.date)} · {p.receipt_no || ''} {p.payment_method ? `· ${p.payment_method}` : ''}</span><span>{ar(p.amount_ar)}</span></li>)}</ul></div>}
+        {payments.length > 0 && <div><h3 className="text-xs font-bold text-slate-300 mb-1">{t('Paiements reçus', 'Payments received')}</h3><ul className="text-sm text-slate-200 space-y-1">{payments.map(p => <li key={p.id} className="flex items-center justify-between gap-2"><span>{fmtDate(p.date)} · {p.receipt_no || ''} {p.payment_method ? `· ${p.payment_method}` : ''}</span><span className="flex items-center gap-2">{ar(p.amount_ar)}<button type="button" onClick={() => printDoc(receiptHtml(p, open, cash, { lang, company }))} className="min-h-[36px] px-2 rounded border border-slate-600 text-xs text-slate-100 cursor-pointer inline-flex items-center gap-1"><Printer className="w-3.5 h-3.5" />{t('Reçu', 'Receipt')}</button></span></li>)}</ul></div>}
         {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
+          <button type="button" onClick={() => printDoc(invoiceHtml(open, { lang, company, paid: openInfo.paid, creditOfNumber: invoices.find(i => i.id === open.credit_of)?.number }))} className={`${btn} border-slate-600 text-slate-100`}><Printer className="w-4 h-4" />{t('Imprimer / PDF', 'Print / PDF')}</button>
           {open.status === 'draft' && <>
             <button type="button" disabled={busy} onClick={() => { setError(''); setEditor(editDraft(open)); }} className={`${btn} border-slate-600 text-slate-100`}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>
             <button type="button" disabled={busy} onClick={() => issue(open)} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Send className="w-4 h-4" />{t('Émettre', 'Issue')}</button>

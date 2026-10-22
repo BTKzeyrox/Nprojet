@@ -284,3 +284,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-22 : **Module 11, M11.9 fait** : instantané du site (sans noms) et « Pourquoi ce chiffre ? » (bouton sur les 6 chiffres de Finances). `npm run check:site-snapshot` 53/53, `tsc` et `build` OK ; `check:cash` et `check:company` échouent toujours (cause `0e90dbc`, module 4, pas M11.9). Essayé dans un navigateur (démo). Aucune table, aucun serveur. Prochaine étape M11.10.
 - 2026-10-22 : **Module 6, M6.4 fait** : notifications push ; `df-api` v18 = `28f47c7` (sauvegarde n° 20 ; retour en arrière = v17 = `2a3fa70`). Pas d'e-mail. Module 6 terminé ; test sur un vrai téléphone à faire par BTK.
 - 2026-10-22 : **Module 2, M2.5 faite** : écran « Facturation » ; `check:invoices-page` 33/33. Dépend de la migration et du déploiement M2.4 (autre session).
+- 2026-10-22 : **Module 2, M2.6 faite** : facture, avoir et reçu imprimables ; `check:invoice-doc` OK. Suite : M2.7.
