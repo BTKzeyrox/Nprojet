@@ -17,6 +17,7 @@
     "check:health-lot2": "npx --yes tsx scripts/check-health-lot2.ts",
     "check:health-lot3": "npx --yes tsx scripts/check-health-lot3.ts",
     "check:health-stats": "npx --yes tsx scripts/check-health-stats.ts",
+    "check:health-system": "npx --yes tsx scripts/check-health-system.ts",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",
     "check:company": "npx --yes tsx scripts/check-company.ts",
     "check:company-page": "esbuild scripts/check-company-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-company-page.mjs && node node_modules/.cache/check-company-page.mjs",

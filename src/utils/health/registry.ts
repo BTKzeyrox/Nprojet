@@ -11,6 +11,9 @@ export interface HealthContext {
   cash: CashEntry[]; products: Product[]; moves: StockMove[]; advances: SalaryAdvanceRequest[];
   settings: Partial<AppSettings>;
   thresholds: HealthThresholds;
+  /** Lectures serveur faites par l'admin (listes qui existent déjà). `undefined` ou `null` = pas chargé : les règles « système » se taisent. */
+  backups?: { taken_at: string }[] | null;
+  errors?: { id?: string; kind?: string; message?: string; count?: number; last_seen?: string; status?: string }[] | null;
 }
 
 export interface HealthRule { id: string; page: HealthPage; run: (ctx: HealthContext) => HealthAlert[] }
