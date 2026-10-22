@@ -38,6 +38,8 @@ import { ClientPicker } from '../../components/ClientPicker';
 import { DeadlineFields } from '../../components/DeadlineFields';
 import type { MissionPriority } from '../../utils/deadlines';
 import { templateFromMission } from '../../utils/missionTemplates';
+import { TaskListEditor } from '../../components/TaskChecklist';
+import { tasksFromLines } from '../../utils/taskList';
 import { checkMissionClient, MISSION_CLIENT_MESSAGE, missionRequiresClient } from '../../utils/clients';
 import { readCompany } from '../../utils/companyRules';
 import { proofsOf } from '../../utils/proofs';
@@ -173,6 +175,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editDescription, setEditDescription] = useState('');
   const [editProofMode, setEditProofMode] = useState<'type' | 'none' | 'photo' | 'note' | 'both'>('type');
   const [editPrice, setEditPrice] = useState('');
+  const [editTasks, setEditTasks] = useState<{ text: string; required: boolean }>({ text: '', required: false });
   const [tplName, setTplName] = useState('');
   const [tplMsg, setTplMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [editDue, setEditDue] = useState<{ date: string; time: string; priority: MissionPriority }>({ date: '', time: '', priority: 'Normale' });
@@ -279,6 +282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       proof_mode: editProofMode,
       client_price_ar: priceParsed, // vide = retour au prix du type / prix par défaut
       due_date: editDue.date, due_time: editDue.time, priority: editDue.priority, // date limite et priorité (M6.1) ; vide = retirée
+      tasks: tasksFromLines(editTasks.text, selectedAdminContract.tasks || []), tasks_required: editTasks.required, // liste de tâches (M6.3) ; mêmes lignes = mêmes cases cochées
       no_account: false,
       recommended_shift: editShift,
     });
@@ -517,6 +521,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditProofMode(contract.proof_mode || 'type');
             setEditPrice(typeof contract.client_price_ar === 'number' ? String(contract.client_price_ar) : '');
             setTplName(''); setTplMsg(null);
+            setEditTasks({ text: (contract.tasks || []).map(k => k.text).join('\n'), required: !!contract.tasks_required });
             setEditDue({ date: contract.due_date || '', time: contract.due_time || '', priority: contract.priority === 'Urgente' || contract.priority === 'Haute' ? contract.priority : 'Normale' });
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
@@ -725,6 +730,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
                     <div className="mt-3 space-y-3">
                       <DeadlineFields date={editDue.date} time={editDue.time} priority={editDue.priority} onChange={setEditDue} inputClass="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
+                      <TaskListEditor text={editTasks.text} required={editTasks.required} onChange={setEditTasks} inputClass="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
                       <div className="space-y-1.5" data-notranslate="">
                         <label className="block text-slate-300 mb-1">{appLang === 'en' ? 'Save this mission as a template' : 'Enregistrer cette mission comme modèle'}</label>
                         <div className="flex gap-2">

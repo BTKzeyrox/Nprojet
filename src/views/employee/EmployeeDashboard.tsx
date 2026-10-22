@@ -33,6 +33,9 @@ import {
 } from 'lucide-react';
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
+import { matchContract } from '../../utils/clients';
+import { TaskChecklist } from '../../components/TaskChecklist';
+import { cleanTasks } from '../../utils/taskList';
 import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
@@ -715,6 +718,19 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {(() => {
+                    const ct = matchContract(activePost, db.getContracts());
+                    const tasks = cleanTasks(ct?.tasks);
+                    if (!tasks.length) return null;
+                    const live = db.getPosts().find(x => x.id === activePost.id) || activePost;
+                    return (
+                      <div className="mt-4">
+                        <TaskChecklist tasks={tasks} done={live.tasks_done} required={ct?.tasks_required}
+                          onToggle={live.status === 'active' || live.status === 'pending_start' ? (id => { db.toggleSessionTask(live.id, id); }) : undefined} />
+                      </div>
+                    );
+                  })()}
 
                   {/* Score Readouts (Initial, Current, Target, Remaining) */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-6">

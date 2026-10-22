@@ -33,6 +33,8 @@
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
+    "check:tasks": "npx --yes tsx scripts/check-tasks.ts",
+    "check:tasks-store": "esbuild scripts/check-tasks-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-tasks-store.mjs && node node_modules/.cache/check-tasks-store.mjs",
     "check:templates-store": "esbuild scripts/check-templates-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-templates-store.mjs && node node_modules/.cache/check-templates-store.mjs",
     "check:deadlines-store": "esbuild scripts/check-deadlines-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-deadlines-store.mjs && node node_modules/.cache/check-deadlines-store.mjs"
   },

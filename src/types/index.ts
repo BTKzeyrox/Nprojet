@@ -163,6 +163,7 @@ export interface PostSession {
   client_price_ar?: number; // prix client figé à la validation (les anciennes missions : calculé au besoin)
   client_id?: string; // fiche client (module 1) : jamais envoyé à un opérateur ; copié depuis la mission
   notes?: string;
+  tasks_done?: string[]; // identifiants des tâches cochées de la mission (module 6, M6.3)
   start_notes?: string; // description facultative du booster au début de session
   admin_notes?: string; // description facultative de l'admin à la validation
   demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
@@ -270,6 +271,8 @@ export interface ClientContract {
   priority: 'Haute' | 'Normale' | 'Urgente';
   due_date?: string; // date limite AAAA-MM-JJ (module 6, M6.1) ; facultative
   due_time?: string; // heure limite HH:MM ; seulement avec une date
+  tasks?: { id: string; text: string }[]; // liste de tâches à cocher (module 6, M6.3), 20 au plus
+  tasks_required?: boolean; // vrai = tout doit être coché avant d'envoyer la mission
   region_server: string;
 }
 

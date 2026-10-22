@@ -1081,5 +1081,14 @@
 "Maximum 30 modèles de mission.": "Maximum 30 mission templates.",
 "Justificatif inconnu.": "Unknown proof type.",
 "Modèle illisible.": "Unreadable template.",
-"Modèle introuvable.": "Template not found."
+"Modèle introuvable.": "Template not found.",
+"Liste de tâches illisible.": "Unreadable task list.",
+"Une tâche ne peut pas être vide.": "A task cannot be empty.",
+"Maximum 20 tâches par mission.": "Maximum 20 tasks per mission.",
+"Deux tâches portent le même identifiant.": "Two tasks have the same identifier.",
+"Ajoute au moins une tâche pour exiger qu'elles soient toutes cochées.": "Add at least one task to require that all are ticked.",
+"Coche toutes les tâches avant d'envoyer la mission.": "Tick all the tasks before sending the mission.",
+"Ce n'est pas ta mission.": "This is not your mission.",
+"La mission n'est plus ouverte.": "The mission is no longer open.",
+"Tâche introuvable.": "Task not found."
 }

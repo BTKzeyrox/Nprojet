@@ -1,5 +1,6 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { checkDeadline } from '../utils/deadlines';
+import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
@@ -106,6 +107,14 @@ const TEMPLATE_MESSAGE: Record<'name' | 'duplicate' | 'limit' | 'proof' | 'forma
   limit: 'Maximum 30 modèles de mission.',
   proof: 'Justificatif inconnu.',
   format: 'Modèle illisible.',
+};
+
+const TASKS_MESSAGE: Record<TasksError, string> = {
+  format: 'Liste de tâches illisible.',
+  empty_text: 'Une tâche ne peut pas être vide.',
+  too_many: 'Maximum 20 tâches par mission.',
+  duplicate_id: 'Deux tâches portent le même identifiant.',
+  required_without_tasks: 'Ajoute au moins une tâche pour exiger qu\'elles soient toutes cochées.',
 };
 
 const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority', string> = {
@@ -1257,7 +1266,7 @@ class DeltaForceStore {
   public static readonly MAX_CONTRACTS = 100;
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; tasks?: { id: string; text: string }[]; tasks_required?: boolean; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
     if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
       return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
     }
@@ -1271,6 +1280,8 @@ class DeltaForceStore {
     }
     const dl = checkDeadline({ due_date: p.due_date, due_time: p.due_time, priority: p.priority });
     if (!dl.ok) return { success: false, error: DEADLINE_MESSAGE[dl.error] };
+    const tk = checkTasks(p.tasks, p.tasks_required);
+    if (!tk.ok) return { success: false, error: TASKS_MESSAGE[tk.error] };
     const used = new Set(this.contracts.map(c => c.post_number));
     let n = 1;
     while (used.has(n)) n++;
@@ -1297,6 +1308,8 @@ class DeltaForceStore {
       priority: dl.priority,
       ...(dl.due_date ? { due_date: dl.due_date } : {}),
       ...(dl.due_time ? { due_time: dl.due_time } : {}),
+      ...(tk.tasks.length ? { tasks: tk.tasks } : {}),
+      ...(tk.required ? { tasks_required: true } : {}),
       region_server: '—',
       no_account: !name,
     });
@@ -1389,6 +1402,16 @@ class DeltaForceStore {
       delete updates.due_date; delete updates.due_time;
       if (dl.due_date) updates.due_date = dl.due_date; else delete contract.due_date;
       if (dl.due_time) updates.due_time = dl.due_time; else delete contract.due_time;
+    }
+    // Liste de tâches (M6.3) : revérifiée ; vider la liste retire aussi l'exigence « tout cocher »
+    if ('tasks' in updates || 'tasks_required' in updates) {
+      const list = 'tasks' in updates ? updates.tasks : contract.tasks;
+      const tk = checkTasks(list, 'tasks_required' in updates ? updates.tasks_required : (Array.isArray(list) && list.length ? contract.tasks_required : false));
+      if (!tk.ok) return { success: false, error: TASKS_MESSAGE[tk.error] };
+      updates = { ...updates };
+      delete updates.tasks; delete updates.tasks_required;
+      if (tk.tasks.length) updates.tasks = tk.tasks; else delete contract.tasks;
+      if (tk.required) updates.tasks_required = true; else delete contract.tasks_required;
     }
     const oldClientName = contract.client_name;
     Object.assign(contract, updates);
@@ -1669,6 +1692,10 @@ class DeltaForceStore {
     const post = this.posts.find(p => p.id === params.postId);
     if (!post) return { success: false, error: 'Mission introuvable' };
 
+    // Liste de tâches (M6.3) : si la mission exige que tout soit coché, on n'envoie pas avant
+    const ct = matchContract(post, this.contracts);
+    if (ct && !canSubmitTasks(cleanTasks(ct.tasks), post.tasks_done, ct.tasks_required)) return { success: false, error: 'Coche toutes les tâches avant d\'envoyer la mission.' };
+
     // Built-in Score Consistency Constraint:
     if (params.finalScore < post.initial_score) {
       // Log security violation in Petit Malin
@@ -1710,6 +1737,23 @@ class DeltaForceStore {
 
     this.notify();
     return { success: true };
+  }
+
+  /** Coche ou décoche une tâche sur une session ouverte. L'opérateur : seulement la sienne. Rend les cases cochées. */
+  public toggleSessionTask(postId: string, taskId: string): { success: boolean; error?: string; done?: string[] } {
+    const post = this.posts.find(p => p.id === postId);
+    if (!post) return { success: false, error: 'Mission introuvable' };
+    const me = this.currentUser;
+    if (!me) return { success: false, error: 'Connexion requise.' };
+    if (me.role !== 'admin' && post.employee_id !== me.id) return { success: false, error: 'Ce n\'est pas ta mission.' };
+    if (post.status !== 'active' && post.status !== 'pending_start') return { success: false, error: 'La mission n\'est plus ouverte.' };
+    const ct = matchContract(post, this.contracts);
+    const tasks = cleanTasks(ct?.tasks);
+    if (!tasks.some(t => t.id === taskId)) return { success: false, error: 'Tâche introuvable.' };
+    post.tasks_done = toggleTask(tasks, post.tasks_done, taskId);
+    post.updated_at = new Date().toISOString();
+    this.notify();
+    return { success: true, done: cleanDone(post.tasks_done, tasks) };
   }
 
   // --- ADMIN ACTIONS ---

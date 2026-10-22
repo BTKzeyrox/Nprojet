@@ -221,6 +221,41 @@ function cleanMissionTemplates(list: unknown): any[] {
   }
   return out;
 }
+// Liste de tâches d'une mission (M6.3). Mêmes règles que src/utils/taskList.ts (contrôlé par scripts/check-tasks.ts).
+const tkClean = (v: unknown, max: number): string => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
+const tkBad = (o: any) => Object.keys(o).some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype');
+function cleanMissionTasks(c: any): { ok: true; save: any } | { ok: false; reason: string } {
+  const save: any = { ...c };
+  const list = save.tasks === undefined || save.tasks === null ? [] : save.tasks;
+  if (!Array.isArray(list)) return { ok: false, reason: 'mission_tasks' };
+  if (list.length > 20) return { ok: false, reason: 'mission_tasks' };
+  if (save.tasks_required !== undefined && save.tasks_required !== null && typeof save.tasks_required !== 'boolean') return { ok: false, reason: 'mission_tasks' };
+  const out: any[] = [];
+  const ids = new Set<string>();
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || tkBad(raw)) return { ok: false, reason: 'mission_tasks' };
+    if (typeof (raw as any).id !== 'string' || typeof (raw as any).text !== 'string') return { ok: false, reason: 'mission_tasks' };
+    const id = tkClean((raw as any).id, 24), text = tkClean((raw as any).text, 120);
+    if (!id || !text || ids.has(id)) return { ok: false, reason: 'mission_tasks' };
+    ids.add(id);
+    out.push({ id, text });
+  }
+  if (save.tasks_required === true && out.length === 0) return { ok: false, reason: 'mission_tasks' };
+  if (out.length) save.tasks = out; else delete save.tasks;
+  if (save.tasks_required === true) save.tasks_required = true; else delete save.tasks_required;
+  return { ok: true, save };
+}
+/** Cases cochées d'une session : seulement les identifiants de la mission, sans doublon. `tasks` = liste de la mission. */
+function cleanTasksDone(done: unknown, tasks: any[]): string[] {
+  if (!Array.isArray(done)) return [];
+  const set = new Set(done.filter((x) => typeof x === 'string'));
+  return tasks.filter((t) => set.has(t.id)).map((t) => t.id);
+}
+/** Envoi de fin de mission par un opérateur : refusé si la mission exige tout coché et que ce n'est pas le cas. */
+function tasksBlockSubmit(contract: any, done: unknown): boolean {
+  if (!contract || contract.tasks_required !== true || !Array.isArray(contract.tasks) || contract.tasks.length === 0) return false;
+  return cleanTasksDone(done, contract.tasks).length !== contract.tasks.length;
+}
 // ===== END MISSIONS =====
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
@@ -899,7 +934,15 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'posts') {
           ok = rec.employee_id === me.id && EMP_POST_TARGET.includes(rec.status) &&
             (!existing || (existing.employee_id === me.id && OPEN_STATUS.includes(existing.status)));
-          if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes, client_price_ar: existing?.client_price_ar, client_id: existing?.client_id }; // le prix client et le lien client ne viennent jamais d'un employé
+          if (ok) {
+            toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes, client_price_ar: existing?.client_price_ar, client_id: existing?.client_id }; // le prix client et le lien client ne viennent jamais d'un employé
+            // Liste de tâches (M6.3) : seules les cases de la mission comptent ; envoi refusé si la mission exige tout coché
+            const { data: crow } = await sb.from(T.contracts).select('data').eq('data->>post_number', String(rec.post_number)).maybeSingle();
+            const tasks = Array.isArray((crow as any)?.data?.tasks) ? (crow as any).data.tasks : [];
+            const done = cleanTasksDone(rec.tasks_done, tasks);
+            if (tasks.length) toSave.tasks_done = done; else delete toSave.tasks_done;
+            if (rec.status === 'pending_end' && tasksBlockSubmit((crow as any)?.data, done)) { rejected.push({ col, id: rec.id, reason: 'tasks' }); continue; }
+          }
         } else if (col === 'advances') {
           ok = !existing && rec.employee_id === me.id && rec.status === 'pending' &&
             Number.isFinite(rec.amount_ar) && rec.amount_ar > 0 && rec.amount_ar <= 100_000_000;
@@ -930,6 +973,9 @@ async function sync(req: any, res: any, me: any) {
         const v = cleanMissionDeadline(toSave);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
         toSave = v.save;
+        const tk = cleanMissionTasks(toSave);
+        if (!tk.ok) { rejected.push({ col, id: rec.id, reason: tk.reason }); continue; }
+        toSave = tk.save;
       }
       if (admin && (col === 'contracts' || col === 'posts')) {
         // Lien mission ou session → fiche client : texte court, et la fiche doit exister ; sans lien, on n'écrit pas le champ.

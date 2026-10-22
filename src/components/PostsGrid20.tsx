@@ -37,6 +37,8 @@ import { PendingPostActions } from './PendingPostActions';
 import { DeadlineBadges, DeadlineFields } from './DeadlineFields';
 import { dueSortKey, type MissionPriority } from '../utils/deadlines';
 import { applyTemplate } from '../utils/missionTemplates';
+import { TaskBar, TaskListEditor } from './TaskChecklist';
+import { tasksFromLines } from '../utils/taskList';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -101,6 +103,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const postTypes = db.getSettings().post_types || [];
   const templates = db.getMissionTemplates();
   const [addTemplateId, setAddTemplateId] = useState('');
+  const [addTasks, setAddTasks] = useState<{ text: string; required: boolean }>({ text: '', required: false });
   const chooseTemplate = (id: string) => {
     setAddTemplateId(id);
     const tpl = templates.find(x => x.id === id);
@@ -118,10 +121,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     if (!addName.trim()) return setAddError('Écris le titre de la mission.');
     const price = parsePriceInput(addPrice);
     if (price === null) return setAddError('Le prix client doit être un nombre positif ou vide.');
-    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, due_date: addDue.date, due_time: addDue.time, priority: addDue.priority, requireClient: needClient });
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType, proof_mode: addProof, client_price_ar: price, client_id: cv.client_id || undefined, due_date: addDue.date, due_time: addDue.time, priority: addDue.priority, tasks: tasksFromLines(addTasks.text), tasks_required: addTasks.required, requireClient: needClient });
     if (!r.success) return setAddError(r.error || 'Ajout impossible.');
     setShowAdd(false);
-    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null); setAddDue({ date: '', time: '', priority: 'Normale' }); setAddTemplateId('');
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddProof('type'); setAddPrice(''); setAddClientId(''); setAddClientError(null); setAddError(null); setAddDue({ date: '', time: '', priority: 'Normale' }); setAddTemplateId(''); setAddTasks({ text: '', required: false });
   };
 
   // Keep contracts synchronized with store
@@ -444,6 +447,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                           )}
                         </div>
                         <DeadlineBadges due_date={contract.due_date} due_time={contract.due_time} priority={contract.priority} done={contract.target_score > contract.initial_score && pct >= 100} />
+                        <TaskBar tasks={contract.tasks} done={sess?.tasks_done} />
                         {isAdminView ? (
                           <select
                             value={contract.post_type || ''}
@@ -564,6 +568,8 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               <summary className="cursor-pointer font-semibold text-sm select-none">Options avancées (facultatif)</summary>
               <div className="mt-3 space-y-3">
                 <DeadlineFields date={addDue.date} time={addDue.time} priority={addDue.priority} onChange={setAddDue}
+                  inputClass={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
+                <TaskListEditor text={addTasks.text} required={addTasks.required} onChange={setAddTasks}
                   inputClass={`w-full rounded-2xl border px-4 py-2.5 ${isLight ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 opacity-70">Justificatif demandé à la fin</label>
