@@ -490,3 +490,4 @@ Admin seulement (le serveur filtre, comme pour les finances) ; l'opérateur ne v
 - 2026-10-21 : **Module 3 pris** par la 6e session (GO de BTK « Go M3 »). M3.1 faite (décisions écrites ci-dessus). M1.7 avait déjà été faite par une autre session.
 - 2026-10-21 : **Module 3, M3.2 faite** (règles pures des salariés, `npm run check:badges` 98/98, aucun écran). M3.3 (écrans) en cours.
 - 2026-10-22 : **Module 6, M6.4 fait** : notifications push (début validé, mission validée/refusée, échéances 24 h / 1 h / retard), `df-api` v18 = `28f47c7` (sauvegarde n° 20 ; retour en arrière = v17 = `2a3fa70`). `check:push` et `check:push-store` OK (exemple officiel RFC 8291). À tester par BTK sur un téléphone.
+- ⏳ **2026-10-22 23:30 (Madagascar) : la session M6 prend M2.5 (écran « Facturation » : `src/views/admin/InvoicesView.tsx`, méthodes du store, menu). Ne pas la doubler : la session M2.4 continue migration + déploiement seulement.**
