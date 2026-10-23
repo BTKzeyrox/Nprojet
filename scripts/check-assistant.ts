@@ -135,6 +135,8 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   const chat = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), sb = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
   ok(/isAdmin && \(\s*<button type="button" data-assistant-row/.test(chat) && /onAssistant = isAdmin && threadId === 'assistant'/.test(chat), 'messagerie : la ligne « Assistant » et la conversation n\'existent que pour l\'admin');
   ok(!/id: 'assistant'/.test(sb) && !fs.existsSync('src/views/admin/AssistantPage.tsx'), 'plus de page « Assistant » à part dans le menu');
+  ok(/intent: 'ai_off'/.test(ac) && /go: \{ view: ENABLE_AI \}/.test(ac) && /setAiOptIn\(userId, true\)/.test(ac) && !/Je n'ai pas compris/.test(ac), 'conversation : question non comprise sans IA = message clair avec un bouton « Activer l\'IA externe » (jamais le « pas compris » sec)');
+  ok(/intent: 'ai_error'/.test(ac), 'conversation : si l\'IA échoue, le vrai motif est affiché (quota, clé, démo…)');
   ok(/inflight\.current\) return/.test(ac) && /inflight\.current = true/.test(ac) && /inflight\.current = false/.test(ac) && /lastQ\.current\.q === q/.test(ac), 'conversation : garde anti double envoi (deux touches rapides ou « Entrée » deux fois = un seul envoi)');
   ok(/onPointerDown=\{e => e\.preventDefault\(\)\}/.test(ac) && /enterKeyHint="send"/.test(ac) && /bg-\[#e9eff8\]/.test(ac), 'conversation : même zone de saisie et mêmes couleurs que la messagerie');
   ok(ac.includes('getSnapshotInput') && !/fetch\(|db\.sendMessage|XMLHttpRequest/.test(ac), 'conversation : rien n\'est envoyé au serveur, les données viennent de getSnapshotInput (refuse si pas admin)');
