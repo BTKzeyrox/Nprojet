@@ -308,3 +308,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - M11.13 (suite) : fiabilité IA (2 tentatives si Gemini occupé, réflexion coupée, modèle de secours), réponses IA sans « générée par IA » ni source, boutons vers les pages citées, bouton « Suggestions » (solution par alerte, sans accusation). df-assistant v5 déployée (aucun changement de base).
 - M11 : récap employé imprimable (bouton dans l'assistant, page HTML autonome, check:assistant 120/120). Aucun changement serveur/base.
 - M11.12 (Achats/Fournisseurs) : 2 règles (bons de commande en retard, budgets dépassés), solutions dans l'assistant, check:health-suppliers 13/13. Reste M11.12 : factures, RH/congés, performance. Aucun changement serveur/base.
+- M11.12 (Factures) : 2 règles (factures en retard de paiement, brouillons oubliés), solutions dans l'assistant, check:health-invoices 10/10. Reste M11.12 : RH/congés, performance. Aucun changement serveur/base.

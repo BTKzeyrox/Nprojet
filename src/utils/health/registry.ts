@@ -1,6 +1,6 @@
 // Registre et moteur d'alertes (module 11) : exécute les règles de chaque page, ne garde que des alertes valides,
 // sans doublon, triées, et applique « Ignorer / Vérifié ». Aucune règle ne peut faire tomber les autres.
-import type { AppSettings, CashEntry, Client, ClientContract, PostSession, Product, PurchaseOrder, SalaryAdvanceRequest, StockMove, User } from '../../types';
+import type { AppSettings, CashEntry, Client, ClientContract, PostSession, Product, PurchaseOrder, Invoice, SalaryAdvanceRequest, StockMove, User } from '../../types';
 import { HEALTH_PAGES, severityRank, type HealthAck, type HealthAlert, type HealthPage, type HealthSeverity, type HealthThresholds } from './types';
 
 /** Tout ce qu'une règle a le droit de lire. Les règles ne changent jamais ces données. */
@@ -13,6 +13,7 @@ export interface HealthContext {
   thresholds: HealthThresholds;
   /** Lectures serveur faites par l'admin (listes qui existent déjà). `undefined` ou `null` = pas chargé : les règles « système » se taisent. */
   purchases?: PurchaseOrder[] | null;
+  invoices?: Invoice[] | null;
   backups?: { taken_at: string }[] | null;
   errors?: { id?: string; kind?: string; message?: string; count?: number; last_seen?: string; status?: string }[] | null;
 }
