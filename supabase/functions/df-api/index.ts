@@ -20,6 +20,7 @@ const T = {
   purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
   invoices: "df_invoices", // factures et avoirs (les compteurs de numéros ne sont JAMAIS une collection : uniquement des fonctions SQL)
   leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
+  quotes: "df_quotes", // devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture)
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
@@ -27,7 +28,7 @@ const COLS = Object.keys(T) as Col[];
 // ===== BEGIN ROLES (rôles : admin, Comptable, Chef d'équipe, opérateur ; ce bloc est contrôlé par scripts/check-roles.ts) =====
 const ROLES = ["admin", "accountant", "team_lead", "employee"];
 const CREATABLE_ROLES = ["employee", "accountant", "team_lead"];
-const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 const READ_ADMIN_COLS: string[] = ["securityLogs", ...MONEY_COLS];
 const isRole = (v: unknown): boolean => typeof v === "string" && ROLES.includes(v);
 const isCreatableRole = (v: unknown): boolean => typeof v === "string" && CREATABLE_ROLES.includes(v);
@@ -43,9 +44,9 @@ const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.inclu
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -245,6 +246,53 @@ function invoiceErrorOf(message: string): { status: number; error: string; max?:
   return code ? { status: INVOICE_ERRORS[code][0], error: INVOICE_ERRORS[code][1] } : { status: 500, error: "L'opération a échoué." };
 }
 // ===== END INVOICES =====
+
+// ===== BEGIN QUOTES (devis, module 2 M2.9 : réservé à l'administrateur et au Comptable ; ce bloc est contrôlé par scripts/check-quotes.ts) =====
+// Règles de src/utils/quotes.ts. Un devis réutilise cleanInvoice (client, lignes, totaux recalculés). Brouillon → Envoyé → Accepté ou Refusé ; ensuite le contenu est figé.
+function cleanQuote(rec: any, existing: any, meId: string, now: string, company: any): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object" || typeof rec.id !== "string" || !rec.id || rec.id.length > 80) return { ok: false, reason: "id" };
+  const ref = typeof rec.ref === "string" && /^DV-\d{1,9}$/.test(rec.ref) ? rec.ref : null;
+  if (!ref || (existing && existing.ref !== ref)) return { ok: false, reason: "ref" };
+  const status = ["draft", "sent", "accepted", "refused"].includes(rec.status) ? (rec.status as string) : null;
+  if (!status) return { ok: false, reason: "status" };
+  const untilRaw = rec.valid_until == null ? "" : String(rec.valid_until).trim();
+  const v = cleanInvoice({ id: rec.id, client_id: rec.client_id, issue_date: rec.date, due_date: untilRaw || rec.date, lines: rec.lines, note: rec.note }, null, meId, now, company);
+  if (!v.ok) return { ok: false, reason: v.reason === "issue_date" ? "date" : v.reason === "due_date" ? "valid_until" : v.reason === "due_before" ? "valid_before" : v.reason };
+  const inv: any = v.save;
+  let invoiceId: string | undefined;
+  if (rec.invoice_id != null && rec.invoice_id !== "") {
+    if (typeof rec.invoice_id !== "string" || rec.invoice_id.length > 80) return { ok: false, reason: "invoice" };
+    invoiceId = rec.invoice_id;
+  }
+  const note = String(rec.note ?? "").slice(0, 500);
+  let body: any = { client_id: inv.client_id, date: inv.issue_date, lines: inv.lines, subtotal_ar: inv.subtotal_ar, tax_rate: inv.tax_rate, tax_ar: inv.tax_ar, total_ar: inv.total_ar, ...(untilRaw ? { valid_until: inv.due_date } : {}) };
+  if (!existing) {
+    if (status !== "draft" && status !== "sent") return { ok: false, reason: "status" };
+    if (invoiceId) return { ok: false, reason: "invoice" };
+  } else if (existing.status === "draft") {
+    if (status !== "draft" && status !== "sent") return { ok: false, reason: "status" };
+    if (invoiceId) return { ok: false, reason: "invoice" };
+  } else {
+    // Envoyé, Accepté, Refusé : le contenu est figé (on garde les lignes et les totaux d'origine, même si la TVA a changé depuis).
+    const keep = (l: any) => ({ d: l.description, q: l.qty, u: l.unit_price_ar });
+    const same = inv.client_id === existing.client_id && inv.issue_date === existing.date && (untilRaw ? inv.due_date : "") === (existing.valid_until || "") &&
+      JSON.stringify(inv.lines.map(keep)) === JSON.stringify((existing.lines || []).map(keep));
+    if (!same) return { ok: false, reason: "frozen" };
+    body = { client_id: existing.client_id, date: existing.date, lines: existing.lines, subtotal_ar: existing.subtotal_ar, tax_rate: existing.tax_rate, tax_ar: existing.tax_ar, total_ar: existing.total_ar, ...(existing.valid_until ? { valid_until: existing.valid_until } : {}) };
+    if (existing.status === "sent") { if (status !== "sent" && status !== "accepted" && status !== "refused") return { ok: false, reason: "status" }; if (invoiceId) return { ok: false, reason: "invoice" }; }
+    else if (status !== existing.status) return { ok: false, reason: "final" }; // Accepté et Refusé sont définitifs
+    if (existing.status === "refused" && invoiceId) return { ok: false, reason: "invoice" };
+  }
+  const clientName = String(rec.client?.name ?? existing?.client?.name ?? "").slice(0, 80);
+  return {
+    ok: true,
+    save: {
+      id: rec.id, ref, status, ...body, ...(clientName ? { client: { name: clientName } } : {}), note, ...(invoiceId ? { invoice_id: invoiceId } : {}),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+// ===== END QUOTES =====
 
 // ===== BEGIN CLIENTS (fiches clients : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-clients-server.ts) =====
 const CLIENT_MAX_MONEY = 1_000_000_000_000;
@@ -1773,6 +1821,14 @@ async function sync(req: any, res: any, me: any) {
         if (v.save.po_id) { const { data: pr } = await sb.from(T.purchases).select('id').eq('id', v.save.po_id).maybeSingle(); if (!pr) { rejected.push({ col, id: rec.id, reason: 'po' }); continue; } }
         toSave = v.save;
       }
+      if (col === 'quotes') {
+        const v = cleanQuote(rec, existing, me.id, now, await companyNow());
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        const { data: qcl } = await sb.from(T.clients).select('id').eq('id', v.save.client_id).maybeSingle();
+        if (!qcl) { rejected.push({ col, id: rec.id, reason: 'client' }); continue; }
+        if (v.save.invoice_id) { const { data: qin } = await sb.from(T.invoices).select('id').eq('id', v.save.invoice_id).maybeSingle(); if (!qin) { rejected.push({ col, id: rec.id, reason: 'invoice' }); continue; } }
+        toSave = v.save;
+      }
       if (col === 'purchases') {
         const v = cleanPurchase(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
@@ -1846,7 +1902,8 @@ async function sync(req: any, res: any, me: any) {
         const { data: usedC } = await sb.from(T.contracts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedP } = await sb.from(T.posts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedI } = await sb.from(T.invoices).select('id').eq('data->>client_id', id).limit(1);
-        if ((usedC && usedC.length) || (usedP && usedP.length) || (usedI && usedI.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+        const { data: usedQ } = await sb.from(T.quotes).select('id').eq('data->>client_id', id).limit(1);
+        if ((usedC && usedC.length) || (usedP && usedP.length) || (usedI && usedI.length) || (usedQ && usedQ.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
       }
       if (col === 'invoices' || col === 'cash') {
         // Une facture émise (ou annulée, ou un avoir) ne se supprime jamais : on l'annule par un avoir. Un paiement lié à une facture non plus. Seul un brouillon se supprime.
@@ -1862,6 +1919,11 @@ async function sync(req: any, res: any, me: any) {
           if (used && used.length) { inUse = true; break; }
         }
         if (inUse) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+      }
+      if (col === 'quotes') {
+        // Seuls un brouillon et un devis refusé (jamais facturé) se suppriment : un devis envoyé ou accepté reste (histoire du client).
+        const { data: qrow } = await sb.from(T.quotes).select('data').eq('id', id).maybeSingle();
+        if (qrow && (qrow.data.invoice_id || (qrow.data.status !== 'draft' && qrow.data.status !== 'refused'))) { rejected.push({ col, id, reason: 'status' }); continue; }
       }
       if (col === 'purchases') {
         // Seuls un brouillon et un bon annulé se suppriment : un bon commandé ou reçu reste (historique des achats).

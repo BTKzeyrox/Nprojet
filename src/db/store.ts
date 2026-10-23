@@ -4,6 +4,8 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
+import { todayMada } from '../utils/stats';
+import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
 import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
@@ -31,6 +33,8 @@ import {
   CashEntry,
   Product,
   StockMove,
+  Quote,
+  QuoteStatus,
   Supplier,
   PurchaseOrder,
   Client,
@@ -46,7 +50,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'suppliers', 'purchases'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -107,6 +111,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
+  quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
@@ -150,6 +155,7 @@ class DeltaForceStore {
   private products: Product[] = []; // stock (admin seulement, comme les finances)
   private stockMoves: StockMove[] = [];
   private invoices: Invoice[] = []; // factures et avoirs (admin seulement)
+  private quotes: Quote[] = []; // devis (admin et Comptable)
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
@@ -194,7 +200,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(),
     };
   }
 
@@ -214,6 +220,7 @@ class DeltaForceStore {
       case 'stock': return this.stockMoves;
       case 'clients': return this.clients;
       case 'invoices': return this.invoices;
+      case 'quotes': return this.quotes;
       case 'suppliers': return this.suppliers;
       case 'purchases': return this.purchases;
     }
@@ -235,6 +242,7 @@ class DeltaForceStore {
       case 'stock': this.stockMoves = value; break;
       case 'clients': this.clients = value; break;
       case 'invoices': this.invoices = value; break;
+      case 'quotes': this.quotes = value; break;
       case 'suppliers': this.suppliers = value; break;
       case 'purchases': this.purchases = value; break;
     }
@@ -597,6 +605,8 @@ class DeltaForceStore {
     if (!inv) return { success: false, error: 'missing' };
     if (inv.status !== 'draft' || inv.type === 'credit_note') return { success: false, error: 'not_draft' }; // une facture émise ne se supprime jamais : on l'annule par un avoir
     this.invoices = this.invoices.filter(x => x.id !== id);
+    // un devis accepté qui avait donné ce brouillon peut être transformé de nouveau
+    this.quotes = this.quotes.map(q => { if (q.invoice_id !== id) return q; const { invoice_id: _i, ...rest } = q; return { ...rest, updated_at: new Date().toISOString() }; });
     this.notify();
     return { success: true };
   }
@@ -833,6 +843,65 @@ class DeltaForceStore {
     if (!v.ok) return { success: false, error: v.error, category: v.category };
     this.updateSettings({ budgets: v.clean });
     return { success: true };
+  }
+
+  // Devis (module 2, M2.9 ; admin et Comptable, comme les factures ; le serveur revérifie chaque devis). Codes d'erreur : 'admin' | 'no_client' | 'missing' | 'status' | 'invoiced' | + ceux de checkQuoteDraft.
+  // Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé. Un devis accepté se transforme en UNE facture brouillon (mêmes lignes) ; aucun total n'est saisi.
+  public getQuotes(): Quote[] { return [...this.quotes]; }
+  public saveQuote(d: QuoteDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const company = readCompany(this.getSettings().company);
+    const v = checkQuoteDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
+    if (!v.ok) return { success: false, error: v.error, line: v.line };
+    const client = this.clients.find(c => c.id === v.clean.client_id);
+    if (!client) return { success: false, error: 'no_client' };
+    const now = new Date().toISOString();
+    if (d.id) {
+      const old = this.quotes.find(x => x.id === d.id);
+      if (!old) return { success: false, error: 'missing' };
+      if (old.status !== 'draft') return { success: false, error: 'status' };
+      const { valid_until: _v, ...base } = old; // une fin de validité vidée disparaît vraiment
+      this.quotes = this.quotes.map(x => x.id === d.id ? { ...base, ...v.clean, client: { name: client.name }, updated_at: now } : x);
+      this.notify();
+      return { success: true, id: d.id };
+    }
+    const id = `qt-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.quotes = [{ id, ref: nextQuoteRef(this.quotes), status: 'draft', ...v.clean, client: { name: client.name }, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.quotes];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Brouillon → Envoyé ; Envoyé → Accepté ou Refusé. */
+  public setQuoteStatus(id: string, to: QuoteStatus): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canQuoteTransition(q, to)) return { success: false, error: 'status' };
+    this.quotes = this.quotes.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime un brouillon ou un devis refusé (jamais facturé). */
+  public deleteQuote(id: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canDeleteQuote(q)) return { success: false, error: 'status' };
+    this.quotes = this.quotes.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+  /** Devis accepté → facture BROUILLON avec les mêmes lignes (émission aujourd'hui, échéance selon les conditions de paiement). Le devis garde le lien. */
+  public quoteToInvoice(id: string): { success: boolean; error?: string; invoice_id?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canInvoiceQuote(q)) return { success: false, error: q.invoice_id ? 'invoiced' : 'status' };
+    const days = readCompany(this.getSettings().company).billing.payment_days;
+    const r = this.saveInvoiceDraft(quoteToInvoiceDraft(q, todayMada(), days));
+    if (!r.success || !r.id) return { success: false, error: r.error || 'status' };
+    this.quotes = this.quotes.map(x => x.id === id ? { ...x, invoice_id: r.id, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true, invoice_id: r.id };
   }
 
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
@@ -1193,7 +1262,7 @@ class DeltaForceStore {
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases, quotes: this.quotes } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -1304,6 +1373,7 @@ class DeltaForceStore {
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
     this.invoices = role === 'admin' ? d.invoices : [];
+    this.quotes = role === 'admin' ? d.quotes : [];
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];

@@ -309,3 +309,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - M11 : récap employé imprimable (bouton dans l'assistant, page HTML autonome, check:assistant 120/120). Aucun changement serveur/base.
 - M11.12 (Achats/Fournisseurs) : 2 règles (bons de commande en retard, budgets dépassés), solutions dans l'assistant, check:health-suppliers 13/13. Reste M11.12 : factures, RH/congés, performance. Aucun changement serveur/base.
 - M11.12 (Factures) : 2 règles (factures en retard de paiement, brouillons oubliés), solutions dans l'assistant, check:health-invoices 10/10. Reste M11.12 : RH/congés, performance. Aucun changement serveur/base.
+- 2026-10-23 : **M2.9 faite côté site (devis)** : onglet Devis, états, transformation en facture, bloc serveur `QUOTES`, migration `df_quotes`. `check:quotes` 33/33, `check:quotes-page` 40/40. Reste : migration et déploiement serveur (voir ci-dessous si fait).

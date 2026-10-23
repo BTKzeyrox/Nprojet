@@ -480,6 +480,29 @@ export interface Invoice {
   updated_at?: string;
 }
 
+// Devis (module 2, M2.9, facultatif : réglage « Devis activés »). Mêmes lignes qu'une facture ; Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé.
+// « Facturé » n'est pas un état saisi : un devis accepté dont `invoice_id` existe. Aucun total n'est saisi : le serveur recalcule tout.
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'refused';
+export interface Quote {
+  id: string;
+  ref: string; // DV-0001, attribué à la création
+  status: QuoteStatus;
+  client_id: string;
+  client?: { name: string }; // copie du nom au moment de l'envoi
+  date: string;
+  valid_until?: string; // fin de validité (facultatif)
+  lines: InvoiceLine[];
+  subtotal_ar: number;
+  tax_rate: number;
+  tax_ar: number;
+  total_ar: number;
+  note?: string;
+  invoice_id?: string; // facture brouillon créée à partir de ce devis accepté
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Fournisseurs, bons de commande, inventaire et budgets (module 4, responsable seulement, comme le stock et les finances).
 export interface Supplier {
   id: string;
