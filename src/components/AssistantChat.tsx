@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, type Reply } from '../utils/assistant';
+import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
 import { isKnownView } from '../utils/health/menu';
 
@@ -25,6 +26,14 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
+  // « Rédiger un message » : modèle + champs ; texte final modifiable avant de le copier (rien n'est envoyé)
+  const [composing, setComposing] = useState(false);
+  const [tplId, setTplId] = useState(TEMPLATES[0].id);
+  const [vals, setVals] = useState<Partial<Record<Field, string>>>({});
+  const [draft, setDraft] = useState<string | null>(null);
+  const [problem, setProblem] = useState('');
+  const [copied, setCopied] = useState(false);
+  const tpl = TEMPLATES.find(x => x.id === tplId) || TEMPLATES[0];
   useEffect(() => { void loadHealthExternal(); }, []);
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }); }, [msgs, busy]);
 
@@ -43,6 +52,14 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       setBusy(false);
     }, 350);
   };
+  const fill = () => {
+    const r = compose(tplId, vals, l);
+    if (r.ok) { setDraft(r.text); setProblem(''); setCopied(false); return; }
+    setDraft(null);
+    const names = (a: Field[]) => a.map(f => (l === 'en' ? FIELDS[f].label.en : FIELDS[f].label.fr)).join(', ');
+    setProblem([r.missing.length ? t(`À remplir : ${names(r.missing)}.`, `To fill in: ${names(r.missing)}.`) : '', r.invalid.length ? t(`Valeur à corriger : ${names(r.invalid)}.`, `Value to fix: ${names(r.invalid)}.`) : ''].filter(Boolean).join(' '));
+  };
+  const copy = async () => { if (draft == null) return; try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setCopied(false); setProblem(t('Copie impossible ici : sélectionne le texte et copie-le à la main.', 'Copy not possible here: select the text and copy it by hand.')); } };
   const go = (g: { view: string; tab?: string }) => {
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
     if (isKnownView(g.view)) onNavigate?.(g.view);
@@ -73,7 +90,23 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
         <div ref={end} />
       </div>
       <div className={`px-3 pt-2 pb-3 border-t shrink-0 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`}>
-        <div className="flex gap-2 overflow-x-auto pb-2">{quick.map(q => <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q}</button>)}</div>
+        {composing && (
+          <div className={`mb-2 rounded-xl border p-2.5 space-y-2 text-sm ${L ? 'border-slate-300 bg-slate-50 text-slate-800' : 'border-white/15 bg-white/5 text-slate-100'}`} data-compose>
+            <select aria-label={t('Modèle', 'Template')} value={tplId} onChange={e => { setTplId(e.target.value); setDraft(null); setProblem(''); }} className={`w-full min-h-[40px] rounded-lg border px-2 ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`}>
+              {TEMPLATES.map(x => <option key={x.id} value={x.id}>{l === 'en' ? x.name.en : x.name.fr}</option>)}
+            </select>
+            <div className="grid grid-cols-2 gap-2">
+              {tpl.fields.map(f => <label key={f} className="text-xs space-y-0.5"><span>{l === 'en' ? FIELDS[f].label.en : FIELDS[f].label.fr}</span>
+                <input type={FIELDS[f].kind === 'date' ? 'date' : 'text'} inputMode={FIELDS[f].kind === 'amount' ? 'decimal' : undefined} value={vals[f] || ''} onChange={e => setVals(v => ({ ...v, [f]: e.target.value }))} className={`w-full min-h-[40px] rounded-lg border px-2 text-sm ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`} /></label>)}
+            </div>
+            <div className="flex gap-2"><button type="button" onClick={fill} className="min-h-[40px] px-3 rounded-lg bg-sky-600 text-white text-xs font-semibold cursor-pointer">{t('Préparer le message', 'Prepare the message')}</button><button type="button" onClick={() => setComposing(false)} className="min-h-[40px] px-3 rounded-lg border border-slate-400/50 text-xs cursor-pointer">{t('Fermer', 'Close')}</button></div>
+            {problem && <p className="text-xs text-rose-500" role="alert">{problem}</p>}
+            {draft != null && <><textarea aria-label={t('Message à modifier', 'Message to edit')} value={draft} onChange={e => { setDraft(e.target.value); setCopied(false); }} rows={4} className={`w-full rounded-lg border p-2 text-sm ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`} />
+              <div className="flex items-center gap-2"><button type="button" onClick={copy} className="min-h-[40px] px-3 rounded-lg bg-emerald-700 text-white text-xs font-semibold cursor-pointer">{t('Copier', 'Copy')}</button>{copied && <span className="text-xs text-emerald-500">{t('Copié. Rien n\'a été envoyé : collez-le où vous voulez.', 'Copied. Nothing was sent: paste it where you want.')}</span>}</div></>}
+          </div>
+        )}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q}</button>)}</div>
         <form onSubmit={e => { e.preventDefault(); ask(text); }} className="flex gap-2">
           <input value={text} onChange={e => setText(e.target.value)} aria-label={t('Question', 'Question')} placeholder={t('Posez une question…', 'Ask a question…')} className={`flex-1 min-h-[44px] rounded-full border px-4 text-sm focus:outline-none ${L ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#16243a] border-white/15 text-slate-100'}`} />
           <button type="submit" disabled={busy || !text.trim()} aria-label={t('Envoyer', 'Send')} className="w-11 h-11 rounded-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white flex items-center justify-center cursor-pointer"><Send className="w-5 h-5" /></button>

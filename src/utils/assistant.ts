@@ -235,6 +235,7 @@ export function helpReply(): Reply {
       b('• « Récap de Camille » : ses chiffres, sans jugement.', '• "Recap of Camille": their figures, without judgement.'),
       b('• « Pourquoi la marge ? » : la formule et les lignes du chiffre.', '• "Why the margin?": the formula and the lines behind the figure.'),
       b('• « Et si je monte le prix client de 5 % ? » : un calcul simple.', '• "What if I raise the client price by 5%?": a simple calculation.'),
+      b('• Bouton « Rédiger un message » : un modèle à remplir (relance, remerciement…), que tu modifies avant de le copier.', '• "Write a message" button: a template to fill in (reminder, thanks…) that you edit before copying it.'),
       b('Je ne décide rien et je ne fais rien tout seul : tu valides, tu paies, tu supprimes toi-même. Je ne devine pas : s\'il manque une donnée, je le dis.', 'I decide nothing and do nothing by myself: you validate, pay and delete yourself. I do not guess: if data is missing, I say so.'),
     ],
     actions: [], sources: b('carte du site', 'site map'),
