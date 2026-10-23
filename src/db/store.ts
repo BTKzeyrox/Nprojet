@@ -40,6 +40,7 @@ const TOKEN_KEY = 'df_session_token_v2';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
+const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
 const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -1222,6 +1223,18 @@ class DeltaForceStore {
       return { ok: false, error: 'Connexion impossible. Réessayez.' };
     } finally {
       this.netTick(-1);
+    }
+  }
+  /** Assistant IA externe (admin seulement, fonction séparée df-assistant). En démo : rien ne part au serveur. */
+  public async aiCall(path: 'status' | 'ask', body: Record<string, unknown> = {}): Promise<{ ok: boolean; error?: string; data?: any }> {
+    if (this.demo) return { ok: false, error: 'demo' };
+    if (this.currentUser?.role !== 'admin') return { ok: false, error: 'admin_only' };
+    try {
+      const res = await fetch(`${AI_BASE}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      return res.ok ? { ok: true, data } : { ok: false, error: String(data?.error || 'unavailable') };
+    } catch {
+      return { ok: false, error: 'network' };
     }
   }
   public restoreStatus() { return this.restoreCall('restore-status'); }

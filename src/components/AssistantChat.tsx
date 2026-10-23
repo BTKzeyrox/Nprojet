@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, type Reply } from '../utils/assistant';
+import { aiOptIn, askAi } from '../utils/aiAssist';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
 import { isKnownView } from '../utils/health/menu';
@@ -45,9 +46,17 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     const now = Date.now();
     push([{ id: `a${now}`, who: 'me', text: q, at: now }]);
     setBusy(true);
-    window.setTimeout(() => { // petite pause : il « écrit » (le calcul, lui, est instantané)
+    window.setTimeout(async () => { // petite pause : il « écrit » (le calcul des règles, lui, est instantané)
       const i = getSnapshotInput();
-      const reply = i ? respond(q, i, getHealth().alerts) : helpReply();
+      let reply = i ? respond(q, i, getHealth().alerts) : helpReply();
+      if (reply.intent === 'unknown' && i) {
+        if (aiOptIn(userId)) { // question libre : seulement si l'admin a activé l'IA externe (Réglages), sinon rien ne sort du site
+          const r = await askAi(q, l);
+          reply = r.ok
+            ? { intent: 'ai', title: { fr: 'Réponse de l\'IA (générée par IA)', en: 'AI answer (AI-generated)' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: [], sources: { fr: 'IA externe (Gemini) sur le résumé du site sans noms : elle peut se tromper, vérifiez avant d\'agir.', en: 'External AI (Gemini) on the site summary without names: it can be wrong, check before acting.' } }
+            : { ...reply, lines: [...reply.lines, r.error] };
+        } else reply = { ...reply, lines: [...reply.lines, { fr: 'Pour les questions libres, vous pouvez activer l\'IA externe (facultatif) dans Réglages > Général.', en: 'For free-form questions, you can turn on the external AI (optional) in Settings > General.' }] };
+      }
       push([{ id: `b${Date.now()}`, who: 'bot', reply, at: Date.now() }]);
       setBusy(false);
     }, 350);

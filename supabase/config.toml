@@ -5,3 +5,7 @@ verify_jwt = false
 # Restauration du site (remise à zéro avec code par mail)
 [functions.df-restore]
 verify_jwt = false
+
+# Assistant IA externe (admin seulement, désactivé sans secret GEMINI_API_KEY)
+[functions.df-assistant]
+verify_jwt = false
