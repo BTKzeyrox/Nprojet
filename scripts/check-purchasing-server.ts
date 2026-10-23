@@ -219,10 +219,10 @@ const ordered = (lines = [L('p-1', 10, 500), L('p-2', 4, 1200)], extra: any = {}
   ok(order.indexOf('products') >= 0 && order.indexOf('products') < order.indexOf('purchases') && order.indexOf('purchases') > order.indexOf('stock'), 'ordre de traitement : les produits avant les bons de commande');
   ok(/suppliers: "df_suppliers"/.test(T) && /purchases: "df_purchase_orders"/.test(T), 'tables df_suppliers et df_purchase_orders déclarées');
   const syncFn = src.slice(src.indexOf('async function sync('));
-  const nonAdmin = syncFn.slice(syncFn.indexOf("if (!admin && ADMIN_ONLY_WRITE.includes(col))"), syncFn.indexOf('for (const rec of upserts)'));
+  const nonAdmin = syncFn.slice(syncFn.indexOf("if (!admin && ADMIN_ONLY_WRITE.includes(col) && !canWriteMoneyCol(me.role, col))"), syncFn.indexOf('for (const rec of upserts)'));
   ok(nonAdmin.includes("reason: 'forbidden'") && nonAdmin.includes('continue;'), 'sync : un employé ne peut rien écrire ni supprimer dans les collections réservées (dont fournisseurs et bons)');
   const stateFn = src.slice(src.indexOf('async function state('), src.indexOf('async function sync('));
-  ok(stateFn.includes('ADMIN_ONLY_READ.includes(col)') && stateFn.includes('changed: []'), 'state : ces collections ne sont jamais envoyées à un employé');
+  ok(stateFn.includes('!canReadCol(me.role, col)') && stateFn.includes('changed: []'), 'state : ces collections ne sont jamais envoyées à un employé');
   ok(syncFn.includes("if (col === 'suppliers') {\n        const v = cleanSupplier(rec, existing, me.id, now);"), 'sync : chaque fournisseur passe par cleanSupplier');
   ok(syncFn.includes('cleanPurchase(rec, existing, me.id, now)') && syncFn.includes("reason: 'supplier'") && syncFn.includes("reason: 'product'"), 'sync : chaque bon passe par cleanPurchase, avec contrôle du fournisseur et des produits');
   ok(/v\.save\.supplier_id\)[\s\S]{0,200}T\.suppliers[\s\S]{0,200}reason: 'supplier'/.test(syncFn) && /v\.save\.po_id\)[\s\S]{0,200}T\.purchases[\s\S]{0,200}reason: 'po'/.test(syncFn), 'sync : le fournisseur et le bon cités par une dépense ou un mouvement de stock doivent exister');

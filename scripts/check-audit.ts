@@ -88,7 +88,7 @@ for (const [fnName, action] of [['invoiceIssue', 'invoice_issue'], ['invoiceCanc
   eq(fn(fnName).includes(`auditLog(me, '${action}'`), true, `${fnName} écrit dans le journal`);
 const syncSrc = fn('sync');
 for (const a of ['delete', 'tariff_change', 'settings_change', 'company_change']) eq(syncSrc.includes(`auditLog(me, '${a}'`), true, `sync écrit « ${a} »`);
-eq(/auditDel = admin && col !== 'messages'/.test(syncSrc), true, 'suppression : étiquette lue avant, messages exclus');
+eq(/auditDel = \(admin \|\| isMoneyRole\(me\.role\)\) && col !== 'messages'/.test(syncSrc), true, 'suppression : étiquette lue avant, messages exclus');
 eq(/password/i.test(/auditLog\(me, 'user_password'[^\n]*\n/.exec(fn('setPassword'))![0].replace("'user_password'", '')), false, 'mot de passe jamais écrit dans le journal');
 const companyLine = /auditLog\(me, 'company_change'[^\n]*\n/.exec(syncSrc)![0];
 eq(companyLine.includes('cp.join') && !/before|after|\.value/.test(companyLine), true, 'Conditions : noms de champs seulement, pas de valeurs');

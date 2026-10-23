@@ -130,11 +130,11 @@ ok(withoutClientPrice({ id: 'm3' }, emp).id === 'm3', 'mission sans lien : rien 
 // --- lecture du code : les protections sont bien branchées ---
 const stateFn = /async function state\([\s\S]*?\n}\n/.exec(src)?.[0] || '';
 const syncFn = /async function sync\([\s\S]*?\n}\n/.exec(src)?.[0] || '';
-ok(stateFn.includes('!admin && ADMIN_ONLY_READ.includes(col)'), 'state : clients jamais envoyés à un employé');
+ok(stateFn.includes('!canReadCol(me.role, col)'), 'state : clients jamais envoyés à un employé (M7.1 : ni au Chef d\'équipe ; le Comptable les reçoit)');
 ok(stateFn.includes("withoutClientPrice(c, me)") && /stripPost[\s\S]{0,200}withoutClientPrice/.test(src), 'state : missions et sessions passent par withoutClientPrice (qui retire client_id)');
 const gate = syncFn.indexOf('!admin && ADMIN_ONLY_WRITE.includes(col)');
 ok(gate > 0 && gate < syncFn.indexOf('for (const rec of upserts)'), 'sync : refus des écritures d\'un employé AVANT toute autre règle');
-ok(/ADMIN_ONLY_WRITE\.includes\(col\)\)\s*\{[\s\S]*?for \(const id of deletes\) rejected\.push[\s\S]*?continue;/.test(syncFn), 'sync : suppressions d\'un employé refusées aussi');
+ok(/ADMIN_ONLY_WRITE\.includes\(col\) && !canWriteMoneyCol\(me\.role, col\)\)\s*\{[\s\S]*?for \(const id of deletes\) rejected\.push[\s\S]*?continue;/.test(syncFn), 'sync : suppressions d\'un employé refusées aussi');
 ok(syncFn.includes("col === 'clients'") && syncFn.includes('cleanClient('), 'sync : chaque fiche de l\'admin passe par cleanClient');
 ok(/client_id: existing\?\.client_id/.test(syncFn), 'sync : une session écrite par un employé garde le client_id d\'origine (jamais celui du navigateur)');
 ok(syncFn.includes('cleanClientRef(') && syncFn.includes('T.clients'), 'sync : le lien mission → client est vérifié (texte court, fiche existante)');

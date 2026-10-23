@@ -23,6 +23,23 @@ const T = {
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
 
+// ===== BEGIN ROLES (rôles : admin, Comptable, Chef d'équipe, opérateur ; ce bloc est contrôlé par scripts/check-roles.ts) =====
+const ROLES = ["admin", "accountant", "team_lead", "employee"];
+const CREATABLE_ROLES = ["employee", "accountant", "team_lead"];
+const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const READ_ADMIN_COLS: string[] = ["securityLogs", ...MONEY_COLS];
+const isRole = (v: unknown): boolean => typeof v === "string" && ROLES.includes(v);
+const isCreatableRole = (v: unknown): boolean => typeof v === "string" && CREATABLE_ROLES.includes(v);
+const roleOf = (v: unknown): string => (isRole(v) ? (v as string) : "employee");
+const isMoneyRole = (role: unknown): boolean => role === "admin" || role === "accountant";
+const isOperator = (role: unknown): boolean => roleOf(role) === "employee";
+const canReadCol = (role: unknown, col: string): boolean => role === "admin" || (isMoneyRole(role) ? MONEY_COLS.includes(col) || !READ_ADMIN_COLS.includes(col) : !READ_ADMIN_COLS.includes(col));
+const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_COLS.includes(col) || isMoneyRole(role);
+const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
+const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay"];
+const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
+// ===== END ROLES =====
+
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
 const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
@@ -646,14 +663,14 @@ function applyBudgets(saved: any, rec: any, existing: any): any {
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
-  if (!rec || me.role === "admin") return rec;
+  if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
   const out = { ...rec };
   for (const k of SETTINGS_ADMIN_KEYS) delete out[k];
   return out;
 };
 /** Mission ou session envoyée à un employé : sans le prix client ni le lien vers la fiche client (même pour ses propres sessions). */
 const withoutClientPrice = (rec: any, me: any) => {
-  if (!rec || me.role === "admin" || !("client_price_ar" in rec || "client_id" in rec)) return rec;
+  if (!rec || (me.role === "admin" || me.role === "accountant") || !("client_price_ar" in rec || "client_id" in rec)) return rec;
   const out = { ...rec };
   delete out.client_price_ar;
   delete out.client_id;
@@ -770,7 +787,7 @@ function companyDiff(before, after) {
 const COMPANY_LOG_MAX = 100;
 /** Employé : jamais le journal des changements, et seulement le règlement et les congés dans `company` (rien d'argent ni de TVA). */
 const stripCompany = (rec, me) => {
-  if (!rec || me.role === "admin") return rec;
+  if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
   const out = { ...rec };
   delete out.company_log;
   if (out.company) out.company = companyForEmployee(out.company);
@@ -949,7 +966,7 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }
 
 // Mode maintenance (Réglages) : les boosters sont refusés avec le message de l'admin ; l'admin entre toujours.
 async function maintenanceMessage(user: any): Promise<string | null> {
-  if (user.role === 'admin') return null;
+  if (!isOperator(user.role)) return null; // admin, Comptable et Chef d'équipe entrent toujours
   const st = await getSettings();
   if (!st.maintenance_on) return null;
   return String(st.maintenance_message || '').trim().slice(0, 300) || 'Le site est en maintenance. Réessaie un peu plus tard.';
@@ -1231,7 +1248,7 @@ async function state(req: any, res: any, me: any) {
   const serverTime = new Date(Date.now() - 3000).toISOString();
   const out: Record<string, { changed: any[]; ids: string[] }> = {};
   const admin = me.role === 'admin';
-  if (!admin) await touchPresence(me);
+  if (isOperator(me.role)) await touchPresence(me); // seuls les opérateurs comptent comme « en ligne » (vacations, file d'attente)
 
   // Groupes : chacun ne reçoit que les groupes dont il est membre (l'admin voit tout)
   const { data: groupRows } = await sb.from(T.groups).select('id, data, updated_at');
@@ -1239,7 +1256,7 @@ async function state(req: any, res: any, me: any) {
   const myGroupIds = myGroups.map((r: any) => r.id).filter((id: string) => /^[A-Za-z0-9_]+$/.test(id));
 
   for (const col of COLS) {
-    if (!admin && ADMIN_ONLY_READ.includes(col)) { out[col] = { changed: [], ids: [] }; continue; } // journal de sécurité et finances : jamais envoyés à un employé
+    if (!canReadCol(me.role, col)) { out[col] = { changed: [], ids: [] }; continue; } // journal de sécurité et finances : jamais envoyés à un employé
     if (col === 'groups') {
       const sinceMs = new Date(since).getTime();
       out[col] = { changed: myGroups.filter((r: any) => new Date(r.updated_at).getTime() >= sinceMs).map((r: any) => r.data), ids: myGroups.map((r: any) => r.id) };
@@ -1328,7 +1345,7 @@ async function sync(req: any, res: any, me: any) {
     const upserts: any[] = Array.isArray(ch.upserts) ? ch.upserts : [];
     const deletes: string[] = Array.isArray(ch.deletes) ? ch.deletes : [];
 
-    if (!admin && ADMIN_ONLY_WRITE.includes(col)) {
+    if (!admin && ADMIN_ONLY_WRITE.includes(col) && !canWriteMoneyCol(me.role, col)) {
       // Finances : un employé ne peut rien écrire ni supprimer, quoi qu'il envoie
       for (const r of upserts) rejected.push({ col, id: String((r && r.id) || ''), reason: 'forbidden' });
       for (const id of deletes) rejected.push({ col, id: String(id), reason: 'forbidden' });
@@ -1345,7 +1362,7 @@ async function sync(req: any, res: any, me: any) {
         const v = col === 'messages' ? await checkMessage(rec, existing, me, admin, now) : await checkGroup(rec, existing, me, admin, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: (v as any).reason || 'forbidden' }); continue; }
         toSave = v.save;
-      } else if (!admin) {
+      } else if (!admin && !(isMoneyRole(me.role) && MONEY_COLS.includes(col))) {
         let ok = false;
         if (col === 'users') {
           ok = rec.id === me.id && !!existing;
@@ -1485,7 +1502,7 @@ async function sync(req: any, res: any, me: any) {
         if (!toSave.text.trim() && !toSave.files.length) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
-      if (admin && existing) {
+      if ((admin || isMoneyRole(me.role)) && existing) {
         // Journal d'audit : changement de tarif et de réglage (jamais bloquant ; seuls les noms de champs des Conditions sont notés, pas leurs valeurs)
         if (col === 'settings') {
           const tch = auditChanges(existing, toSave, AUDIT_TARIFF_KEYS);
@@ -1509,8 +1526,8 @@ async function sync(req: any, res: any, me: any) {
 
     for (const id of deletes) {
       // Journal d'audit : le nom de ce qu'on supprime est lu AVANT (la ligne disparaît ensuite). Les messages ne sont pas notés.
-      const auditDel = admin && col !== 'messages' ? (await sb.from(T[col]).select('data').eq('id', id).maybeSingle()).data : null;
-      if (!admin) {
+      const auditDel = (admin || isMoneyRole(me.role)) && col !== 'messages' ? (await sb.from(T[col]).select('data').eq('id', id).maybeSingle()).data : null;
+      if (!admin && !(isMoneyRole(me.role) && MONEY_COLS.includes(col))) {
         let ok = false;
         if (col === 'posts') {
           const { data: row } = await sb.from(T.posts).select('data').eq('id', id).maybeSingle();
@@ -1591,7 +1608,7 @@ const invoiceFail = (res: any, message: string) => { const f = invoiceErrorOf(me
 const newDocId = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
 async function invoiceIssue(req: any, res: any, me: any) {
-  const no = adminOnly(res, me); if (no) return no;
+  const no = moneyOnly(res, me); if (no) return no;
   const id = String(req.body?.id || '');
   if (!id) return res.status(400).json({ error: 'Demande invalide.' });
   const { data: row } = await sb.from(T.invoices).select('data, updated_at').eq('id', id).maybeSingle();
@@ -1614,7 +1631,7 @@ async function invoiceIssue(req: any, res: any, me: any) {
 }
 
 async function invoiceCancel(req: any, res: any, me: any) {
-  const no = adminOnly(res, me); if (no) return no;
+  const no = moneyOnly(res, me); if (no) return no;
   const id = String(req.body?.id || '');
   if (!id) return res.status(400).json({ error: 'Demande invalide.' });
   const today = invTodayMada();
@@ -1625,7 +1642,7 @@ async function invoiceCancel(req: any, res: any, me: any) {
 }
 
 async function invoicePay(req: any, res: any, me: any) {
-  const no = adminOnly(res, me); if (no) return no;
+  const no = moneyOnly(res, me); if (no) return no;
   const id = String(req.body?.id || '');
   const amount = invNum(req.body?.amount);
   const date = invDate(req.body?.date);
@@ -1671,9 +1688,11 @@ async function createUser(req: any, res: any, me: any) {
   const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
   if (dup) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
 
+  const newRole = user?.role === undefined ? 'employee' : (isCreatableRole(user.role) ? String(user.role) : '');
+  if (!newRole) return res.status(400).json({ error: 'Rôle inconnu.' });
   const id = `user-emp-${Date.now()}`;
   const rec = {
-    ...user, id, username: uname, role: 'employee', status: 'active', is_online: false,
+    ...user, id, username: uname, role: newRole, status: 'active', is_online: false,
     total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0,
   };
   await sb.from(T.users).upsert({ id, data: rec, updated_at: new Date().toISOString() });
@@ -2105,6 +2124,7 @@ async function advanceRoom(uid: string, cfg: PayCfg) {
   };
 }
 
+const moneyOnly = (res: any, me: any) => (!isMoneyRole(me.role) ? res.status(403).json({ error: "Réservé à l'administrateur et au comptable." }) : null);
 const adminOnly = (res: any, me: any) => (me.role !== 'admin' ? res.status(403).json({ error: "Réservé à l'administrateur." }) : null);
 const reasonText = (b: any) => String(b?.reason || '').trim().slice(0, 200);
 

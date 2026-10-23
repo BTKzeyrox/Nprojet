@@ -95,8 +95,8 @@ const gate = syncFn.indexOf('!admin && ADMIN_ONLY_WRITE.includes(col)');
 ok(gate > 0 && gate < syncFn.indexOf('for (const rec of upserts)'), 'sync : refus d\'un employé AVANT toute règle de facturation');
 for (const [action, fn] of [['invoice-issue', 'invoiceIssue'], ['invoice-cancel', 'invoiceCancel'], ['invoice-pay', 'invoicePay']]) {
   const route = new RegExp(`action === "${action}" && req\\.method === "POST"\\) return await ${fn}\\(req, res, me\\)`).test(src);
-  const body = new RegExp(`async function ${fn}\\(req: any, res: any, me: any\\) \\{\\n  const no = adminOnly\\(res, me\\); if \\(no\\) return no;`).test(src);
-  ok(route && body, `route ${action} : enregistrée en POST, et le contrôle « admin seulement » est la PREMIÈRE ligne`);
+  const body = new RegExp(`async function ${fn}\\(req: any, res: any, me: any\\) \\{\\n  const no = moneyOnly\\(res, me\\); if \\(no\\) return no;`).test(src);
+  ok(route && body, `route ${action} : enregistrée en POST, et le contrôle « admin ou Comptable » (moneyOnly) est la PREMIÈRE ligne`);
 }
 const issueFn = /async function invoiceIssue[\s\S]*?\n}\n/.exec(src)?.[0] || '';
 ok(/company\.identity\.name/.test(issueFn) && /company_incomplete/.test(issueFn) && /p_expected: row\.updated_at/.test(issueFn) && /company\.billing\.invoice_prefix/.test(issueFn) && /cleanInvoice\(draft, draft/.test(issueFn) && /invoiceIssuePatch/.test(issueFn), 'émission : refusée sans nom d\'entreprise ; revérifie le brouillon ; protège contre une modification en parallèle ; préfixe lu dans les Conditions (jamais envoyé par le navigateur)');

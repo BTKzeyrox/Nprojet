@@ -52,10 +52,10 @@ ok(!('password_hash' in cleanCash({ ...good, password_hash: 'x', role: 'admin' }
 // --- lecture du code : les protections sont bien branchées ---
 const stateFn = /async function state\([\s\S]*?\n}\n/.exec(src)?.[0] || '';
 const syncFn = /async function sync\([\s\S]*?\n}\n/.exec(src)?.[0] || '';
-ok(stateFn.includes('!admin && ADMIN_ONLY_READ.includes(col)'), 'state : cash et journal ne sont jamais envoyés à un employé');
+ok(stateFn.includes('!canReadCol(me.role, col)'), 'state : cash et journal ne sont jamais envoyés à un employé (M7.1 : ni au Chef d\'équipe ; le Comptable reçoit l\'argent, pas le journal de sécurité)');
 const gate = syncFn.indexOf('!admin && ADMIN_ONLY_WRITE.includes(col)');
 ok(gate > 0 && gate < syncFn.indexOf('for (const rec of upserts)'), 'sync : refus des écritures d\'un employé AVANT toute autre règle');
-ok(/ADMIN_ONLY_WRITE\.includes\(col\)\)\s*\{[\s\S]*?for \(const id of deletes\) rejected\.push[\s\S]*?continue;/.test(syncFn), 'sync : suppressions d\'un employé refusées aussi');
+ok(/ADMIN_ONLY_WRITE\.includes\(col\) && !canWriteMoneyCol\(me\.role, col\)\)\s*\{[\s\S]*?for \(const id of deletes\) rejected\.push[\s\S]*?continue;/.test(syncFn), 'sync : suppressions d\'un employé refusées aussi');
 ok(syncFn.includes("col === 'cash'") && syncFn.includes('cleanCash('), 'sync : chaque ligne de l\'admin passe par cleanCash');
 ok((src.match(/df_cash/g) || []).length === 1, 'aucune autre route du serveur ne lit la table df_cash (une seule mention : la liste des collections)');
 // Seule exception : la garde « fournisseur utilisé » (module 4), dans la suppression admin d'un fournisseur ; elle lit seulement l'existence d'une ligne.
