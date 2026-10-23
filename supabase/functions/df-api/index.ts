@@ -39,7 +39,41 @@ const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_COLS.in
 const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
 const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay"];
 const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
+const cleanTeam = (v: unknown): string => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+const sameTeam = (a: any, b: any): boolean => { const x = cleanTeam(a && a.team).toLowerCase(), y = cleanTeam(b && b.team).toLowerCase(); return !!x && x === y; };
+const canDecidePost = (me: any, owner: any): boolean => !!me && !!owner && (me.role === "admin" || (me.role === "team_lead" && isOperator(owner.role) && owner.id !== me.id && sameTeam(me, owner)));
 // ===== END ROLES =====
+
+// ===== BEGIN DECIDE (décision sur une session : valider ou refuser ; ce bloc est contrôlé par scripts/check-team-lead.ts) =====
+const decValidPrice = (n: unknown): boolean => typeof n === "number" && isFinite(n) && n >= 0;
+const decNum = (v: unknown): number => { const n = Number(v); return isFinite(n) ? n : 0; };
+function decisionClientPrice(contract: any, settings: any): number {
+  if (contract && decValidPrice(contract.client_price_ar)) return Math.round(contract.client_price_ar);
+  const byType = (settings && settings.client_prices_by_type) || {};
+  const t = contract && contract.post_type;
+  if (t && decValidPrice(byType[t])) return Math.round(byType[t]);
+  return settings && decValidPrice(settings.client_price_default_ar) ? Math.round(settings.client_price_default_ar) : 0;
+}
+function planPostDecision(post: any, contract: any, settings: any, employee: any, approve: boolean, reason: unknown, nowIso: string): any {
+  if (!post || typeof post !== "object") return { ok: false, error: "missing" };
+  if (post.status !== "pending_start" && post.status !== "pending_end") return { ok: false, error: "not_pending" };
+  if (!approve) {
+    const why = String(reason ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 300);
+    if (!why) return { ok: false, error: "reason" };
+    return { ok: true, kind: "refused", post: { ...post, status: "rejected", rejection_reason: why, updated_at: nowIso } };
+  }
+  if (post.status === "pending_start") return { ok: true, kind: "start_ok", post: { ...post, status: "active", updated_at: nowIso } };
+  const finalScore = decNum(post.final_score ?? post.current_score);
+  const gained = Math.max(0, finalScore - decNum(post.initial_score));
+  const pay = Math.max(0, Math.round(decNum(settings && settings.price_per_mission)));
+  return {
+    ok: true, kind: "end_ok", payAr: pay,
+    post: { ...post, status: "completed", calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), updated_at: nowIso },
+    contract: contract ? { ...contract, current_score: finalScore } : undefined,
+    employee: employee ? { ...employee, total_score_boosted: decNum(employee.total_score_boosted) + gained, total_earnings_ar: decNum(employee.total_earnings_ar) + pay } : undefined,
+  };
+}
+// ===== END DECIDE =====
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
@@ -853,7 +887,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates"];
@@ -1286,8 +1320,8 @@ async function chatRead(req: any, res: any, me: any) {
 
 // ---------- state (lecture) ----------
 const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined });
-const stripPost = (p: any, me: any) =>
-  me.role === 'admin' || p.employee_id === me.id
+const stripPost = (p: any, me: any, mates?: Set<string>) =>
+  me.role === 'admin' || p.employee_id === me.id || (!!mates && mates.has(String(p.employee_id)))
     ? withoutClientPrice(p, me)
     : { ...withoutClientPrice(p, me), start_proof_url: '', start_proof_urls: [], end_proof_url: '', end_proof_urls: [] };
 
@@ -1302,6 +1336,13 @@ async function state(req: any, res: any, me: any) {
   const { data: groupRows } = await sb.from(T.groups).select('id, data, updated_at');
   const myGroups = (groupRows || []).filter((r: any) => admin || (r.data.members || []).includes(me.id));
   const myGroupIds = myGroups.map((r: any) => r.id).filter((id: string) => /^[A-Za-z0-9_]+$/.test(id));
+
+  // Chef d'équipe : il voit les preuves (photos) des opérateurs de SON équipe, pas celles des autres
+  let teamMates: Set<string> | undefined;
+  if (me.role === 'team_lead') {
+    const { data: tu } = await sb.from(T.users).select('id, data');
+    teamMates = new Set((tu || []).filter((r: any) => canDecidePost(me, r.data)).map((r: any) => String(r.id)));
+  }
 
   for (const col of COLS) {
     if (!canReadCol(me.role, col)) { out[col] = { changed: [], ids: [] }; continue; } // journal de sécurité et finances : jamais envoyés à un employé
@@ -1331,7 +1372,7 @@ async function state(req: any, res: any, me: any) {
     ]);
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
-    if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me));
+    if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me, teamMates));
     if (col === 'contracts') recs = recs.map((c: any) => withoutClientPrice(c, me));
     if (col === 'settings') recs = recs.map((r: any) => stripCompany(stripSettings(r, me), me));
     out[col] = { changed: recs, ids: (ids || []).map((r: any) => r.id) };
@@ -1740,6 +1781,43 @@ async function auditList(req: any, res: any, me: any) {
   return res.json({ rows: (data || []).map((r: any) => r.data) });
 }
 
+// ---------- Décision sur une session par le Chef d'équipe (M7.1 d) : le calcul de la paie et du prix client se fait ICI, jamais dans son navigateur ----------
+async function postDecide(req: any, res: any, me: any) {
+  if (me.role !== 'admin' && me.role !== 'team_lead') return res.status(403).json({ error: "Réservé au responsable et au chef d'équipe." });
+  const b = req.body || {};
+  const id = String(b.id || '');
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) return res.status(400).json({ error: 'Mission introuvable.' });
+  const { data: prow } = await sb.from(T.posts).select('data').eq('id', id).maybeSingle();
+  if (!prow) return res.status(404).json({ error: 'Mission introuvable.' });
+  const post = prow.data;
+  const owner = await getUserRow(String(post.employee_id || ''));
+  if (!canDecidePost(me, owner)) return res.status(403).json({ error: "Cette mission n'est pas dans ton équipe." });
+  const approve = b.approve === true;
+  let cRow: any = null;
+  if (approve && post.status === 'pending_end') {
+    const { data: c1 } = await sb.from(T.contracts).select('id, data').eq('data->>post_number', String(post.post_number)).limit(1);
+    cRow = (c1 || [])[0] || null;
+    if (!cRow && post.client_name) {
+      const { data: c2 } = await sb.from(T.contracts).select('id, data').eq('data->>client_name', String(post.client_name)).limit(1);
+      cRow = (c2 || [])[0] || null;
+    }
+  }
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  const now = new Date().toISOString();
+  const plan = planPostDecision(post, cRow ? cRow.data : undefined, st?.data || {}, owner, approve, b.reason, now);
+  if (!plan.ok) {
+    const msg: Record<string, string> = { missing: 'Mission introuvable.', not_pending: "Cette mission n'est plus en attente.", reason: 'Un motif de refus est obligatoire.' };
+    return res.status(plan.error === 'reason' ? 400 : 409).json({ error: msg[plan.error] || 'Décision impossible.' });
+  }
+  await sb.from(T.posts).upsert({ id, data: plan.post, updated_at: now });
+  if (plan.contract && cRow) await sb.from(T.contracts).upsert({ id: cRow.id, data: plan.contract, updated_at: now });
+  if (plan.employee) await sb.from(T.users).upsert({ id: plan.employee.id, data: plan.employee, updated_at: now });
+  const k = pushKindFor(post.status, plan.post.status);
+  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60));
+  await auditLog(me, 'mission_decision', { type: 'posts', id, label: `${auditLabelOf(owner)} · ${post.client_name || post.post_number || id}` }, plan.kind === 'refused' ? `Refusée : ${plan.post.rejection_reason}` : plan.kind === 'start_ok' ? 'Début validé' : 'Mission validée');
+  return res.json({ ok: true, kind: plan.kind });
+}
+
 // ---------- comptes ----------
 async function createUser(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
@@ -1755,6 +1833,7 @@ async function createUser(req: any, res: any, me: any) {
   const id = `user-emp-${Date.now()}`;
   const rec = {
     ...user, id, username: uname, role: newRole, status: 'active', is_online: false,
+    team: cleanTeam(user?.team),
     total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0,
   };
   await sb.from(T.users).upsert({ id, data: rec, updated_at: new Date().toISOString() });
@@ -2978,6 +3057,7 @@ Deno.serve(async (request: Request) => {
     if (action === "backup-get" && req.method === "GET") return await backupGet(req, res, me);
     if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
     if (action === "audit-list" && req.method === "GET") return await auditList(req, res, me);
+    if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
     if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);
