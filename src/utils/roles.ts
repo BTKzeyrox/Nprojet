@@ -7,7 +7,7 @@ export type Role = typeof ROLES[number];
 export const CREATABLE_ROLES = ['employee', 'accountant', 'team_lead'] as const;
 
 /** Collections d'argent et de stock : lues et écrites par l'admin et le Comptable seulement. */
-export const MONEY_COLS = ['cash', 'products', 'stock', 'clients', 'suppliers', 'purchases', 'invoices'];
+export const MONEY_COLS = ['cash', 'products', 'stock', 'clients', 'suppliers', 'purchases', 'invoices', 'quotes'];
 /** Collections jamais envoyées à un non-admin : journal de sécurité + argent. */
 export const READ_ADMIN_COLS = ['securityLogs', ...MONEY_COLS];
 

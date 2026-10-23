@@ -6,12 +6,33 @@ import { compressImageToDataUrl } from '../utils/imageUtils';
 import { db } from '../db/store';
 import { shiftHoursLabel } from '../utils/formatUtils';
 import { Avatar } from './Avatar';
+import { useApp } from '../context/AppContext';
+import { badgeAccess, canSeeProfileBadges, usePerformance } from '../utils/usePerformance';
+import { BadgeChips, ScoreRing } from './PerformanceBadges';
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
 }
+
+/** Score et badges calculés (module 3). Montré au responsable et à la personne elle-même, JAMAIS à un collègue (D8). */
+const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, self }) => {
+  const { lang } = useApp();
+  const { res } = usePerformance();
+  const access = badgeAccess();
+  const p = res.employees.get(userId);
+  if (!p || !access.enabled || (self && !access.seesBadges)) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/50 p-2.5">
+      <span className="text-white"><ScoreRing score={p.score} size={48} tone={self ? 'neutral' : 'color'} /></span>
+      <div className="min-w-0 text-xs space-y-1">
+        <div className="font-bold text-slate-100">Performance</div>
+        {p.badges.length ? <BadgeChips badges={p.badges} lang={lang} max={4} /> : <div className="text-slate-400">{p.score === null ? (lang === 'en' ? 'Not enough data yet' : 'Pas encore assez de données') : (lang === 'en' ? 'No badge yet' : 'Aucun badge pour l\'instant')}</div>}
+      </div>
+    </div>
+  );
+};
 
 // Fenêtre « Profil » : photo, nom, shift, téléphone (plus de CV ni de pièce d'identité)
 export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user }) => {
@@ -121,6 +142,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               {live.shift === 'day' ? `Vacation Jour (${shiftHoursLabel('day', db.getSettings())})` : `Vacation Nuit (${shiftHoursLabel('night', db.getSettings())})`}
             </div>
           )}
+          {canSeeProfileBadges(me, live) && <ProfileBadges userId={live.id} self={me?.role !== 'admin'} />}
           {live.phone && !!me && (me.role === 'admin' || me.id === live.id) && (
             <div className="flex items-center gap-2 text-slate-300">
               <Phone className="w-4 h-4 text-cyan-400" />

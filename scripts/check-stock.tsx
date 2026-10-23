@@ -123,6 +123,7 @@ ok(drows.some(r => r.low) && drows.some(r => !r.low), 'démo : certains produits
 ok(S.stockValue(drows) > 0 && S.valueByMonth(dp, dm, today, 12).values.filter(v => v > 0).length >= 6, 'démo : valeur du stock sur plusieurs mois (courbe pleine)');
 ok(S.runOutSoon(drows, dm, today).length >= 1, 'démo : au moins un produit bientôt en rupture');
 
+(db as any).purchases = []; // un produit cité par un bon en cours ne se supprime pas (module 4) : on retire les bons de la démo avant
 for (const x of db.getProducts()) db.deleteProduct(x.id);
 ok(db.getProducts().length === 0 && db.getStockMoves().length === 0, 'supprimer les produits supprime aussi leurs mouvements');
 const cashBefore = db.getCash().length;
@@ -174,6 +175,7 @@ for (const lang of ['fr', 'en'] as const) {
   if (lang === 'fr') ok(!/Stock value|New product|Running out/.test(html), 'fr : pas de texte anglais');
   else ok(!/Nouveau produit|Valeur du stock|Bientôt en rupture|Entrée</.test(html), 'en : pas de texte français dans les cartes');
 }
+(db as any).purchases = [];
 for (const x of db.getProducts()) db.deleteProduct(x.id);
 const emptyHtml = renderToString(<StockTab range={range} lang="fr" />);
 ok(!bad(emptyHtml) && emptyHtml.includes('Aucun produit pour l&#x27;instant') , 'liste vide : message clair, sans erreur');

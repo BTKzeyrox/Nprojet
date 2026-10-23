@@ -8,6 +8,7 @@ import { goalRows, monthFigures, type GoalSettings } from './goals';
 import { missionAmount } from './stats';
 import type { StatsTab } from './statsNav';
 import { receivablesAlert, toChase } from './receivables';
+import { budgetRows } from './purchasing';
 import type { Invoice } from '../types';
 import { canonicalClientName, clientMissionsFromPosts, clientReceived, type ClientRecord } from './clients';
 
@@ -21,6 +22,7 @@ export interface AlertItem {
 export interface AlertSettings extends GoalSettings {
   alert_unpaid_days?: number; alert_low_cash_ar?: number;
   client_price_default_ar?: number; client_prices_by_type?: Record<string, number>; price_per_mission?: number;
+  budgets?: Record<string, number>; // plafond mensuel par catégorie de dépense (module 4)
 }
 export interface AlertInput {
   today: string; settings: AlertSettings;
@@ -128,6 +130,18 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance',
       fr: `Pas de paiement depuis plus de ${days} jours : ${late.slice(0, 3).map(x => `${x.name} (${x.ago} j)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Reste à encaisser : ${ar(left)}.`,
       en: `No payment for over ${days} days: ${late.slice(0, 3).map(x => `${x.name} (${x.ago} d)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Left to collect: ${ar(left)}.` });
+  }
+
+  // 6b. Budgets par catégorie (module 4) : 80 % et plus = attention, plus de 100 % = dépassé
+  {
+    const rows = budgetRows(s.budgets, i.cash, i.today.slice(0, 7)).filter(r => r.status !== 'ok');
+    if (rows.length) {
+      const over = rows.some(r => r.status === 'over');
+      const txt = () => rows.slice(0, 3).map(r => `${r.category} (${r.pct} %)`).join(', ') + (rows.length > 3 ? ` +${rows.length - 3}` : '');
+      out.push({ id: 'budget_cat', level: over ? 'danger' : 'warn', go: 'stats', tab: 'finance',
+        fr: over ? `Budget de catégorie dépassé ce mois-ci : ${txt()}.` : `Budget de catégorie presque atteint : ${txt()}.`,
+        en: over ? `Category budget exceeded this month: ${txt()}.` : `Category budget almost reached: ${txt()}.` });
+    }
   }
 
   // 7. Factures en retard (module 2) : échéance dépassée et reste à payer

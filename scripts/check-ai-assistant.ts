@@ -64,7 +64,7 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
   await askGemini(async (url, init) => { sent = { url, init }; return { status: 200, json: async () => good }; }, 'SECRETKEY', ['m1'], P);
   ok(!sent.url.includes('SECRETKEY') && sent.init.headers['x-goog-api-key'] === 'SECRETKEY', 'la clé ne va que dans l\'en-tête, jamais dans l\'adresse');
   const body = JSON.parse(sent.init.body);
-  ok(body.systemInstruction.parts[0].text === 's' && body.contents[0].parts[0].text === 'u' && body.generationConfig.maxOutputTokens <= 500, 'consigne séparée du contenu, réponse limitée à 500 jetons');
+  ok(body.systemInstruction.parts[0].text === 's' && body.contents[0].parts[0].text === 'u' && body.generationConfig.maxOutputTokens <= 800, 'consigne séparée du contenu, réponse limitée à 800 jetons');
   // ---- fonction serveur (lue) ----
   const idx = fs.readFileSync('supabase/functions/df-assistant/index.ts', 'utf8'), gd = fs.readFileSync('supabase/functions/df-assistant/guard.ts', 'utf8');
   ok(/me\.user\.role !== "admin"[\s\S]{0,80}403/.test(idx) && idx.indexOf('role !== "admin"') < idx.indexOf('cleanQuestion(body'), 'serveur : seul l\'admin passe, vérifié avant de lire la question');
@@ -104,13 +104,37 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
     ok(/warm, genuine human colleague/.test(pe2.system) && /reminder/.test(pe2.system) && !/[àâçéèêëîïôùûœ]/i.test(pe2.system.replace(/RÉSUMÉ/g, '')), 'personnalité anglaise : complète et sans accents français');
     ok(pe2.system.length < 3600 && ph.system.length < 3600, 'consigne : reste courte (moins de 3600 caractères)');
   }
+  // ---- fiabilité de l'appel ----
+  {
+    const noSleep = async () => {};
+    const okBody = { candidates: [{ content: { parts: [{ text: 'Bonjour !' }] } }] };
+    let calls: { url: string; body: any }[] = [];
+    const seq = (codes: number[]) => { let i = 0; return async (url: string, init: any) => { calls.push({ url, body: JSON.parse(init.body) }); const c = codes[Math.min(i++, codes.length - 1)]; return { status: c, json: async () => (c === 200 ? okBody : {}) }; }; };
+    calls = []; const r1 = await askGemini(seq([503, 200]), 'K', ['gemini-2.5-flash'], P, 1000, noSleep);
+    ok(r1.ok && calls.length === 2, 'fiabilité : serveur de l\'IA occupé (503) = une 2e tentative, puis la réponse');
+    calls = []; const r2 = await askGemini(seq([503, 503, 200]), 'K', ['gemini-2.5-flash', 'gemini-2.0-flash'], P, 1000, noSleep);
+    ok(r2.ok && r2.model === 'gemini-2.0-flash' && calls.length === 3, 'fiabilité : 2 échecs sur le 1er modèle = on passe au 2e modèle');
+    calls = []; const r3 = await askGemini(seq([429, 200]), 'K', ['gemini-2.5-flash', 'gemini-2.0-flash'], P, 1000, noSleep);
+    ok(r3.ok && r3.model === 'gemini-2.0-flash' && calls.length === 2, 'fiabilité : quota d\'un modèle atteint (429) = on essaie l\'autre modèle tout de suite');
+    calls = []; const r4 = await askGemini(seq([429, 429]), 'K', ['a-2.5', 'b-2.0'], P, 1000, noSleep);
+    ok(!r4.ok && (r4 as any).error === 'quota', 'fiabilité : quota atteint partout = message « quota » (pas « indisponible »)');
+    calls = []; await askGemini(seq([200]), 'K', ['gemini-2.5-flash'], P, 1000, noSleep);
+    ok(calls[0].body.generationConfig.thinkingConfig?.thinkingBudget === 0 && calls[0].body.generationConfig.maxOutputTokens >= 800, 'fiabilité : la « réflexion » silencieuse de Gemini 2.5 est coupée et la réponse a de la place (évite les réponses vides)');
+    calls = []; await askGemini(seq([200]), 'K', ['gemini-2.0-flash'], P, 1000, noSleep);
+    ok(calls[0].body.generationConfig.thinkingConfig === undefined, 'fiabilité : ce réglage n\'est pas envoyé aux modèles qui ne le connaissent pas');
+    calls = []; const r5 = await askGemini(async () => ({ status: 200, json: async () => ({}) }), 'K', ['a', 'b'], P, 1000, noSleep);
+    ok(!r5.ok && (r5 as any).error === 'empty', 'fiabilité : réponse vide partout = « vide »');
+    calls = []; const r6 = await askGemini(seq([400, 200]), 'K', ['a-2.5', 'b-2.0'], P, 1000, noSleep);
+    ok(r6.ok && r6.model === 'b-2.0', 'fiabilité : réglage refusé (400) = on essaie le modèle suivant');
+    ok((await askGemini(seq([403]), 'K', ['a', 'b'], P, 1000, noSleep) as any).error === 'key' && calls.length >= 1, 'fiabilité : clé refusée = arrêt tout de suite, message « clé »');
+  }
   // ---- côté site ----
   const ai = fs.readFileSync('src/utils/aiAssist.ts', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), st = fs.readFileSync('src/db/store.ts', 'utf8'), ss = fs.readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
   ok(/=== '1'; \} catch \{ return false; \}/.test(ai), 'site : IA désactivée par défaut (et si le stockage est refusé)');
   ok(/aiCall[\s\S]{0,260}this\.demo\) return \{ ok: false, error: 'demo' \}[\s\S]{0,160}role !== 'admin'\) return \{ ok: false, error: 'admin_only' \}/.test(st), 'site : rien ne part au serveur en démo ni sans être admin');
   ok(/reply\.intent === 'unknown' && i\)[\s\S]{0,80}aiOptIn\(userId\)/.test(ac), 'assistant : l\'IA n\'est appelée que pour une question non comprise ET si la case est cochée');
   ok(/getSnapshot\(\)/.test(ai) && !/db\.get(Users|Clients|Posts|Cash|Products|Advance)/.test(ai), 'site : seul le résumé sans noms (getSnapshot) est envoyé, aucune liste de données');
-  ok(/generated by AI|générée par IA/.test(ac) && /AI-generated/.test(ac), 'réponse IA marquée « générée par IA » (FR et EN)');
+  ok(!/générée par IA|AI-generated|generated by AI/.test(ac + ss) && /intent: 'ai', title: \{ fr: '', en: '' \}/.test(ac) && /pageLinks\(r\.text, l\)/.test(ac), 'réponse IA : texte seul (sans titre « générée par IA » ni « Source »), avec des boutons vers les pages citées');
   ok(/disabled=\{demo\}/.test(ss) && /Confidentialité/.test(ss) && /relecteurs/.test(ss) && /<AiSettingsSection \/>/.test(sv), 'réglages : case + avertissement de confidentialité, bloquée en démo');
   ok(['not_configured', 'quota', 'daily_limit', 'key', 'empty', 'unavailable', 'demo', 'network'].every(c => new RegExp(`\\b${c}: \\{ fr:`).test(ai)), 'site : chaque erreur du serveur a son message FR et EN');
   console.log(`\n${n - fails}/${n} contrôles réussis`);

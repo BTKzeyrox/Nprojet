@@ -1,4 +1,4 @@
-import type { CashEntry, Client, PurchaseOrder, Supplier, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -10,6 +10,8 @@ export const DEMO_ADMIN_ID = 'demo_admin';
 // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions). Les types sont ceux des missions de la démo.
 // Objectifs et seuils inventés pour la démo (objectifs du mois, alertes)
 export const DEMO_GOALS = { goal_missions: 120, goal_profit_ar: 400000, goal_max_expenses_ar: 900000, alert_unpaid_days: 30, alert_low_cash_ar: 0 };
+/** Budgets mensuels inventés pour la démo (module 4) : Achats serré pour montrer une barre qui se remplit. Admin seulement. */
+export const DEMO_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 20000 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 /** Conditions inventées pour la démo (rien de réel : ni numéro fiscal, ni adresse vraie). Locales, jamais envoyées. */
 export const DEMO_COMPANY = {
@@ -20,7 +22,7 @@ export const DEMO_COMPANY = {
   payroll: { pay_day: 5, pay_rounding: 'none' },
   leave: { leave_days_per_year: 30, work_days_per_week: 5, late_limit_time: '08:00' },
   missions: { validation_hours: 48, refusal_reason_required: true },
-  options: { invoice_per: 'client_month', quotes_enabled: false, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
+  options: { invoice_per: 'client_month', quotes_enabled: true, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
   texts: { internal_rules: 'Arriver avant 08:00.\nEnvoyer ses justificatifs au début et à la fin de chaque mission.\n(texte de démonstration)', customer_terms: 'Paiement à 30 jours. (texte de démonstration)' },
 } as const;
 const PRICE = 5000; // Ar par mission validée (tarif fixe de la démo)
@@ -75,6 +77,7 @@ export interface DemoData {
   invoices: Invoice[];
   suppliers: Supplier[];
   purchases: PurchaseOrder[];
+  quotes: Quote[];
 }
 
 // ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
@@ -202,6 +205,28 @@ export function buildDemoPurchasing(products: Product[], stock: StockMove[], cas
     po(5, 'demo_sup1', 40, 35, 'cancelled', [{ product_id: 'demo_p1', qty: 10, unit_cost_ar: price('demo_p1'), received_qty: 0 }], 'Annulé : prix trop haut.'),
   ];
   return { suppliers, purchases, stock: outStock, cash: outCash };
+}
+
+// ----- Devis inventés (module 2, M2.9) : un devis dans chaque état ; le « facturé » cite une vraie facture brouillon de la démo -----
+export function buildDemoQuotes(clients: Client[], invoices: Invoice[]): Quote[] {
+  const base = new Date();
+  const day = (back: number) => { const d = new Date(base); d.setDate(d.getDate() - back); return ymd(d); };
+  const at = (d: string) => new Date(`${d}T09:00:00`).toISOString();
+  const cl = (id: string) => clients.find(c => c.id === id) || clients[0];
+  const draftInv = invoices.find(i => i.status === 'draft' && i.type !== 'credit_note');
+  const mk = (n: number, client: string, back: number, until: number | null, status: Quote['status'], items: [string, number, number][], note = '', invoice_id?: string): Quote => {
+    const lines = items.map(([description, qty, unit], i) => ({ id: `l${i + 1}`, description, qty, unit_price_ar: unit, total_ar: Math.round(qty * unit) }));
+    const sub = lines.reduce((t, l) => t + l.total_ar, 0);
+    return { id: `demo_qt${n}`, ref: `DV-${String(n).padStart(4, '0')}`, status, client_id: client, client: { name: cl(client)?.name || '' }, date: day(back), ...(until !== null ? { valid_until: day(until) } : {}), lines, subtotal_ar: sub, tax_rate: 0, tax_ar: 0, total_ar: sub, note, ...(invoice_id ? { invoice_id } : {}), created_by: DEMO_ADMIN_ID, created_at: at(day(back)), updated_at: at(day(back)) };
+  };
+  return [
+    mk(1, 'demo_cl1', 0, -30, 'draft', [['Saisie de 200 fiches', 200, 800]], 'Brouillon à finir.'),
+    mk(2, 'demo_cl2', 3, -27, 'sent', [['Numérisation de dossiers', 40, 3000], ['Mise en forme des fichiers', 1, 25000]]),
+    mk(3, 'demo_cl3', 40, 10, 'sent', [['Rangement des archives', 1, 90000]], 'Fin de validité dépassée : à relancer.'),
+    mk(4, 'demo_cl1', 12, -18, 'accepted', [['Contrôle qualité mensuel', 3, 45000]], 'Accepté par téléphone.'),
+    mk(5, 'demo_cl4', 25, 0, 'refused', [['Inventaire de la boutique', 1, 150000]], 'Trop cher pour le client.'),
+    ...(draftInv ? [mk(6, 'demo_cl2', 20, -10, 'accepted', [['Saisie de fiches', 100, 900]], 'Déjà transformé en facture.', draftInv.id)] : []),
+  ];
 }
 
 // ----- Clients inventés (module Clients) : un de chaque statut, calculés à partir des missions de la démo -----
@@ -471,5 +496,6 @@ export function buildDemoData(): DemoData {
   const clients = buildDemoClients();
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
   const buy = buildDemoPurchasing(products, stock, inv.cash);
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases };
+  const quotes = buildDemoQuotes(clients, inv.invoices);
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
 }

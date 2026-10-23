@@ -28,7 +28,7 @@ for (const p of SITE_MAP) {
   ok(all.every(x => !/[àâçéèêëîïôùûœ]/i.test(x.en)), `${p.id} : aucun accent français dans l'anglais`);
   ok(all.every(x => !/undefined|\bNaN\b|\[object|\bTODO\b|xxx/.test(x.fr + x.en)), `${p.id} : aucun texte cassé`);
   for (const c of p.conditions || []) { const [s, k] = c.split('.'); ok(!!(COMPANY_SPEC as any)[s]?.[k], `${p.id} : le réglage lié « ${c} » existe dans les Conditions`); }
-  ok(isKnownView(p.id) || ['feed', 'grid', 'profile'].includes(p.id), `${p.id} : identifiant de page connu`);
+  ok(isKnownView(p.id) || ['feed', 'grid', 'profile', 'my-performance'].includes(p.id), `${p.id} : identifiant de page connu`);
 }
 
 // Rôles : chaque rôle a des fiches, et l'employé n'a aucune fiche réservée à l'admin dans son menu

@@ -4,9 +4,11 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
-import { checkSupplierDraft, type SupplierDraft } from '../utils/purchasing';
+import { todayMada } from '../utils/stats';
+import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
+import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
@@ -31,6 +33,8 @@ import {
   CashEntry,
   Product,
   StockMove,
+  Quote,
+  QuoteStatus,
   Supplier,
   PurchaseOrder,
   Client,
@@ -46,7 +50,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'suppliers', 'purchases'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -107,6 +111,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
+  quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
@@ -150,6 +155,7 @@ class DeltaForceStore {
   private products: Product[] = []; // stock (admin seulement, comme les finances)
   private stockMoves: StockMove[] = [];
   private invoices: Invoice[] = []; // factures et avoirs (admin seulement)
+  private quotes: Quote[] = []; // devis (admin et Comptable)
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
@@ -194,7 +200,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(),
     };
   }
 
@@ -214,6 +220,7 @@ class DeltaForceStore {
       case 'stock': return this.stockMoves;
       case 'clients': return this.clients;
       case 'invoices': return this.invoices;
+      case 'quotes': return this.quotes;
       case 'suppliers': return this.suppliers;
       case 'purchases': return this.purchases;
     }
@@ -235,6 +242,7 @@ class DeltaForceStore {
       case 'stock': this.stockMoves = value; break;
       case 'clients': this.clients = value; break;
       case 'invoices': this.invoices = value; break;
+      case 'quotes': this.quotes = value; break;
       case 'suppliers': this.suppliers = value; break;
       case 'purchases': this.purchases = value; break;
     }
@@ -597,6 +605,8 @@ class DeltaForceStore {
     if (!inv) return { success: false, error: 'missing' };
     if (inv.status !== 'draft' || inv.type === 'credit_note') return { success: false, error: 'not_draft' }; // une facture émise ne se supprime jamais : on l'annule par un avoir
     this.invoices = this.invoices.filter(x => x.id !== id);
+    // un devis accepté qui avait donné ce brouillon peut être transformé de nouveau
+    this.quotes = this.quotes.map(q => { if (q.invoice_id !== id) return q; const { invoice_id: _i, ...rest } = q; return { ...rest, updated_at: new Date().toISOString() }; });
     this.notify();
     return { success: true };
   }
@@ -713,6 +723,187 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // Bons de commande (responsable seulement ; le serveur revérifie chaque bon). Codes d'erreur : 'admin' | 'supplier' | 'date' | 'expected' | 'lines' | 'product' | 'qty' | 'cost' | 'duplicate' | 'missing' | 'status' | 'none' | 'unsynced'.
+  // Brouillon (modifiable) → Commandé (figé, seule la quantité reçue avance) → Reçu. Annulé et Reçu sont définitifs. Aucun total n'est enregistré : il se calcule.
+  private purchaseChecks(d: PurchaseDraft): { ok: true; clean: Extract<ReturnType<typeof checkPurchaseDraft>, { ok: true }>['clean'] } | { ok: false; error: string } {
+    const v = checkPurchaseDraft(d);
+    if (!v.ok) return { ok: false, error: v.error };
+    if (!this.suppliers.some(x => x.id === v.clean.supplier_id)) return { ok: false, error: 'supplier' };
+    if (v.clean.lines.some(l => !this.products.some(p => p.id === l.product_id))) return { ok: false, error: 'product' };
+    return { ok: true, clean: v.clean };
+  }
+  public addPurchase(d: PurchaseDraft, order = false): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = this.purchaseChecks(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const now = new Date().toISOString();
+    const id = `po-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.purchases = [{ id, ref: nextPurchaseRef(this.purchases), ...v.clean, status: order ? 'ordered' : 'draft', created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.purchases];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Modifie un BROUILLON seulement (un bon commandé est figé). */
+  public updatePurchase(id: string, d: PurchaseDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (old.status !== 'draft') return { success: false, error: 'status' };
+    const v = this.purchaseChecks(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const { expected_date: _e, ...base } = old; // une livraison prévue vidée disparaît vraiment
+    this.purchases = this.purchases.map(x => x.id === id ? { ...base, ...v.clean, status: 'draft' as const, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Brouillon → Commandé, ou Brouillon / Commandé sans réception → Annulé. */
+  public setPurchaseStatus(id: string, to: 'ordered' | 'cancelled'): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (!canTransition(old, to)) return { success: false, error: 'status' };
+    this.purchases = this.purchases.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime un brouillon ou un bon annulé (le serveur refuse les autres : l'historique des achats reste). */
+  public deletePurchase(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (old.status !== 'draft' && old.status !== 'cancelled') return { success: false, error: 'status' };
+    this.purchases = this.purchases.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+  /**
+   * Réception (totale ou partielle) d'un bon COMMANDÉ : `received` = quantité reçue maintenant, par produit.
+   * Crée une entrée de stock par ligne reçue (avec le bon et le fournisseur) et, si `withExpense`, UNE dépense « Achats » pour toute la réception.
+   * Le serveur doit déjà connaître le bon « commandé » : sinon 'unsynced' (réessayer dans quelques secondes).
+   */
+  public receivePurchase(id: string, received: Record<string, string | number>, opts: { date: string; withExpense?: boolean }): { success: boolean; error?: string; cashId?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const po = this.purchases.find(x => x.id === id);
+    if (!po) return { success: false, error: 'missing' };
+    const r = planReceipt(po, received);
+    if (!r.ok) return { success: false, error: r.error };
+    if (!this.demo) {
+      let seen: string | undefined;
+      try { seen = JSON.parse(this.synced.purchases.get(id) || '{}').status; } catch { seen = undefined; }
+      if (seen !== 'ordered') return { success: false, error: 'unsynced' };
+    }
+    const date = String(opts.date || '');
+    const dv = checkDraft({ kind: 'out', category: 'Achats', amount: Math.max(1, r.plan.amount), date, note: `Bon ${po.ref}`, supplier_id: po.supplier_id });
+    if (!dv.ok || date < po.date) return { success: false, error: 'date' };
+    const now = new Date().toISOString();
+    const rnd = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const wantCash = !!opts.withExpense && r.plan.amount >= 1;
+    const cashId = wantCash ? `cash-${rnd()}` : undefined;
+    if (cashId) this.cash = [{ id: cashId, ...dv.clean, amount_ar: r.plan.amount, note: `Bon ${po.ref} reçu`, po_id: po.id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
+    const newMoves: StockMove[] = r.plan.moves.map((m, i) => ({
+      id: `mv-${rnd()}${i}`, product_id: m.product_id, type: 'in' as const, qty: m.qty, date, note: `Bon ${po.ref}`,
+      ...(m.unit_cost_ar > 0 ? { unit_cost_ar: m.unit_cost_ar } : {}), ...(cashId ? { cash_id: cashId } : {}), supplier_id: po.supplier_id, po_id: po.id,
+      created_by: this.currentUser!.id, created_at: now, updated_at: now,
+    }));
+    this.stockMoves = [...newMoves, ...this.stockMoves];
+    this.purchases = this.purchases.map(x => x.id === id ? { ...x, lines: r.plan.lines, status: r.plan.status, updated_at: now } : x);
+    this.notify();
+    return { success: true, cashId };
+  }
+
+  /**
+   * Inventaire : `counts` = quantité comptée par produit (texte tel que saisi ; vide = pas compté). Pour chaque produit compté dont l'écart n'est pas nul,
+   * crée UN mouvement « ajustement » (raison « inventaire », avec la quantité comptée et celle que le stock indiquait). Tout est refusé si une quantité est fausse.
+   * Codes d'erreur : 'admin' | 'qty' (quantité illisible ou négative) | 'date' | 'none' (aucun écart à corriger) | 'product'.
+   */
+  public applyInventory(counts: Record<string, string | number>, date: string): { success: boolean; error?: string; adjusted?: number } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(`${date}T00:00:00Z`).getTime()) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return { success: false, error: 'date' };
+    if (Object.keys(counts).some(k => !this.products.some(p => p.id === k))) return { success: false, error: 'product' };
+    const rows = inventoryRows(this.products, this.stockMoves, counts);
+    if (rows.some(r => r.bad)) return { success: false, error: 'qty' };
+    const adj = inventoryAdjustments(rows);
+    if (!adj.length) return { success: false, error: 'none' };
+    const now = new Date().toISOString();
+    const moves: StockMove[] = adj.map((a, i) => ({
+      id: `mv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${i}`, product_id: a.product_id, type: 'adjust' as const, qty: a.qty, date, note: 'Inventaire',
+      reason: 'inventory' as const, counted_qty: a.counted, expected_qty: a.expected, created_by: this.currentUser!.id, created_at: now, updated_at: now,
+    }));
+    this.stockMoves = [...moves, ...this.stockMoves];
+    this.notify();
+    return { success: true, adjusted: moves.length };
+  }
+
+  /**
+   * Plafond mensuel par catégorie de dépense (Ar). `input` : catégorie → montant ; vide ou 0 = pas de plafond. Le serveur revérifie.
+   * Codes d'erreur : 'admin' | 'budget' (montant faux ou trop de catégories). Réponse avec `category` quand c'est une catégorie précise.
+   */
+  public setBudgets(input: Record<string, string | number>): { success: boolean; error?: string; category?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkBudgets(input);
+    if (!v.ok) return { success: false, error: v.error, category: v.category };
+    this.updateSettings({ budgets: v.clean });
+    return { success: true };
+  }
+
+  // Devis (module 2, M2.9 ; admin et Comptable, comme les factures ; le serveur revérifie chaque devis). Codes d'erreur : 'admin' | 'no_client' | 'missing' | 'status' | 'invoiced' | + ceux de checkQuoteDraft.
+  // Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé. Un devis accepté se transforme en UNE facture brouillon (mêmes lignes) ; aucun total n'est saisi.
+  public getQuotes(): Quote[] { return [...this.quotes]; }
+  public saveQuote(d: QuoteDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const company = readCompany(this.getSettings().company);
+    const v = checkQuoteDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
+    if (!v.ok) return { success: false, error: v.error, line: v.line };
+    const client = this.clients.find(c => c.id === v.clean.client_id);
+    if (!client) return { success: false, error: 'no_client' };
+    const now = new Date().toISOString();
+    if (d.id) {
+      const old = this.quotes.find(x => x.id === d.id);
+      if (!old) return { success: false, error: 'missing' };
+      if (old.status !== 'draft') return { success: false, error: 'status' };
+      const { valid_until: _v, ...base } = old; // une fin de validité vidée disparaît vraiment
+      this.quotes = this.quotes.map(x => x.id === d.id ? { ...base, ...v.clean, client: { name: client.name }, updated_at: now } : x);
+      this.notify();
+      return { success: true, id: d.id };
+    }
+    const id = `qt-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.quotes = [{ id, ref: nextQuoteRef(this.quotes), status: 'draft', ...v.clean, client: { name: client.name }, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.quotes];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Brouillon → Envoyé ; Envoyé → Accepté ou Refusé. */
+  public setQuoteStatus(id: string, to: QuoteStatus): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canQuoteTransition(q, to)) return { success: false, error: 'status' };
+    this.quotes = this.quotes.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime un brouillon ou un devis refusé (jamais facturé). */
+  public deleteQuote(id: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canDeleteQuote(q)) return { success: false, error: 'status' };
+    this.quotes = this.quotes.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+  /** Devis accepté → facture BROUILLON avec les mêmes lignes (émission aujourd'hui, échéance selon les conditions de paiement). Le devis garde le lien. */
+  public quoteToInvoice(id: string): { success: boolean; error?: string; invoice_id?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const q = this.quotes.find(x => x.id === id);
+    if (!q) return { success: false, error: 'missing' };
+    if (!canInvoiceQuote(q)) return { success: false, error: q.invoice_id ? 'invoiced' : 'status' };
+    const days = readCompany(this.getSettings().company).billing.payment_days;
+    const r = this.saveInvoiceDraft(quoteToInvoiceDraft(q, todayMada(), days));
+    if (!r.success || !r.id) return { success: false, error: r.error || 'status' };
+    this.quotes = this.quotes.map(x => x.id === id ? { ...x, invoice_id: r.id, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true, invoice_id: r.id };
+  }
+
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
@@ -742,6 +933,7 @@ class DeltaForceStore {
   public deleteProduct(id: string): { success: boolean; error?: string } {
     if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
+    if (this.purchases.some(o => (o.status === 'draft' || o.status === 'ordered') && o.lines.some(l => l.product_id === id))) return { success: false, error: 'in_use' };
     this.products = this.products.filter(x => x.id !== id);
     this.stockMoves = this.stockMoves.filter(m => m.product_id !== id);
     this.notify();
@@ -1070,7 +1262,7 @@ class DeltaForceStore {
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases, quotes: this.quotes } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -1176,11 +1368,12 @@ class DeltaForceStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
     this.invoices = role === 'admin' ? d.invoices : [];
+    this.quotes = role === 'admin' ? d.quotes : [];
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];

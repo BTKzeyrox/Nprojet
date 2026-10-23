@@ -25,7 +25,7 @@ export interface Snapshot {
   stock: { products: number; value: number; low: number; empty: number; negative: number };
   team: { employees: number; with_missions_in_period: number };
   payroll: { advances_pending: number; advances_pending_ar: number };
-  health: { urgent: number; watch: number; info: number; by_page: Record<string, number> };
+  health: { urgent: number; watch: number; info: number; by_page: Record<string, number>; by_rule: Record<string, number> };
 }
 
 const priceSettings = (s: any) => ({ client_price_default_ar: s?.client_price_default_ar, client_prices_by_type: s?.client_prices_by_type });
@@ -41,8 +41,9 @@ export function buildSnapshot(i: SnapshotInput): Snapshot {
   const by: Partial<Record<ClientStatus, number>> = {};
   for (const s of sums.values()) by[s.main] = (by[s.main] || 0) + 1;
   const rows = stockRows(i.products, i.moves), alerts = i.alerts || [];
-  const byPage: Record<string, number> = {};
-  for (const a of alerts) byPage[a.page] = (byPage[a.page] || 0) + 1;
+  const byPage: Record<string, number> = {}, byRuleAll: Record<string, number> = {};
+  for (const a of alerts) { byPage[a.page] = (byPage[a.page] || 0) + 1; const k = String(a.rule).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40); byRuleAll[k] = (byRuleAll[k] || 0) + 1; }
+  const byRule = Object.fromEntries(Object.entries(byRuleAll).sort((x, y) => y[1] - x[1]).slice(0, 15)); // règles qui sonnent (jamais de noms) : l'IA propose des solutions avec ça
   const pend = i.advances.filter(a => a.status === 'pending');
   return {
     as_of: i.today, period: { start: r.start, end: r.end, label: 'month' },
@@ -52,7 +53,7 @@ export function buildSnapshot(i: SnapshotInput): Snapshot {
     stock: { products: i.products.length, value: stockValue(rows), low: rows.filter(x => x.low && !x.empty).length, empty: rows.filter(x => x.empty && !x.negative).length, negative: rows.filter(x => x.negative).length },
     team: { employees: i.users.filter(u => u.role === 'employee' && (u.status === undefined || u.status === 'active')).length, with_missions_in_period: new Set(month.filter(p => p.status === 'completed').map(p => p.employee_id)).size },
     payroll: { advances_pending: pend.length, advances_pending_ar: pend.reduce((t, a) => t + (Number.isFinite(a.amount_ar) ? a.amount_ar : 0), 0) },
-    health: { urgent: alerts.filter(a => a.severity === 'urgent').length, watch: alerts.filter(a => a.severity === 'watch').length, info: alerts.filter(a => a.severity === 'info').length, by_page: byPage },
+    health: { urgent: alerts.filter(a => a.severity === 'urgent').length, watch: alerts.filter(a => a.severity === 'watch').length, info: alerts.filter(a => a.severity === 'info').length, by_page: byPage, by_rule: byRule },
   };
 }
 

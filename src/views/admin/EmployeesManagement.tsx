@@ -1,5 +1,8 @@
 import { CREATABLE_ROLES, ROLE_NAMES, roleOf, cleanTeam } from '../../utils/roles';
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
+import { badgeAccess, usePerformance } from '../../utils/usePerformance';
+import { BadgeChips } from '../../components/PerformanceBadges';
 import {
   Users,
   UserCheck,
@@ -59,6 +62,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onNavigate,
   section = 'employees',
 }) => {
+  const { lang } = useApp();
+  const perf = usePerformance();
+  const badgesOn = badgeAccess().enabled;
+  /** Badges calculés du salarié (module 3) : rien si le module est désactivé ou s'il n'a aucun badge. */
+  const chipsFor = (id: string, cls: string) => {
+    const b = badgesOn ? perf.res.employees.get(id)?.badges : undefined;
+    return b && b.length ? <div className={cls}><BadgeChips badges={b} lang={lang} max={3} /></div> : null;
+  };
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [advTab, setAdvTab] = useState<'advances' | 'payroll'>('payroll');
   const [advances, setAdvances] = useState<SalaryAdvanceRequest[]>(db.getAdvanceRequests());
@@ -428,6 +439,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                     <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{badgeLabel(emp.performance_badge)}</span>
                     <span className="text-emerald-400 font-bold">{formatScoreM(emp.total_score_boosted)} unités</span>
                   </div>
+                  {chipsFor(emp.id, '')}
                   <select
                     value={emp.access_mode || 'auto'}
                     onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
@@ -519,6 +531,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                             <div className="text-[11px] text-slate-400">
                               @{emp.username} · {emp.phone}
                             </div>
+                            {chipsFor(emp.id, 'mt-1')}
                           </div>
                         </div>
                       </td>

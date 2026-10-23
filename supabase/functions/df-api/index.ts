@@ -19,6 +19,8 @@ const T = {
   stock: "df_stock_moves",
   purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
   invoices: "df_invoices", // factures et avoirs (les compteurs de numéros ne sont JAMAIS une collection : uniquement des fonctions SQL)
+  leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
+  quotes: "df_quotes", // devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture)
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
@@ -26,7 +28,7 @@ const COLS = Object.keys(T) as Col[];
 // ===== BEGIN ROLES (rôles : admin, Comptable, Chef d'équipe, opérateur ; ce bloc est contrôlé par scripts/check-roles.ts) =====
 const ROLES = ["admin", "accountant", "team_lead", "employee"];
 const CREATABLE_ROLES = ["employee", "accountant", "team_lead"];
-const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 const READ_ADMIN_COLS: string[] = ["securityLogs", ...MONEY_COLS];
 const isRole = (v: unknown): boolean => typeof v === "string" && ROLES.includes(v);
 const isCreatableRole = (v: unknown): boolean => typeof v === "string" && CREATABLE_ROLES.includes(v);
@@ -76,9 +78,9 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -279,6 +281,53 @@ function invoiceErrorOf(message: string): { status: number; error: string; max?:
 }
 // ===== END INVOICES =====
 
+// ===== BEGIN QUOTES (devis, module 2 M2.9 : réservé à l'administrateur et au Comptable ; ce bloc est contrôlé par scripts/check-quotes.ts) =====
+// Règles de src/utils/quotes.ts. Un devis réutilise cleanInvoice (client, lignes, totaux recalculés). Brouillon → Envoyé → Accepté ou Refusé ; ensuite le contenu est figé.
+function cleanQuote(rec: any, existing: any, meId: string, now: string, company: any): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== "object" || typeof rec.id !== "string" || !rec.id || rec.id.length > 80) return { ok: false, reason: "id" };
+  const ref = typeof rec.ref === "string" && /^DV-\d{1,9}$/.test(rec.ref) ? rec.ref : null;
+  if (!ref || (existing && existing.ref !== ref)) return { ok: false, reason: "ref" };
+  const status = ["draft", "sent", "accepted", "refused"].includes(rec.status) ? (rec.status as string) : null;
+  if (!status) return { ok: false, reason: "status" };
+  const untilRaw = rec.valid_until == null ? "" : String(rec.valid_until).trim();
+  const v = cleanInvoice({ id: rec.id, client_id: rec.client_id, issue_date: rec.date, due_date: untilRaw || rec.date, lines: rec.lines, note: rec.note }, null, meId, now, company);
+  if (!v.ok) return { ok: false, reason: v.reason === "issue_date" ? "date" : v.reason === "due_date" ? "valid_until" : v.reason === "due_before" ? "valid_before" : v.reason };
+  const inv: any = v.save;
+  let invoiceId: string | undefined;
+  if (rec.invoice_id != null && rec.invoice_id !== "") {
+    if (typeof rec.invoice_id !== "string" || rec.invoice_id.length > 80) return { ok: false, reason: "invoice" };
+    invoiceId = rec.invoice_id;
+  }
+  const note = String(rec.note ?? "").slice(0, 500);
+  let body: any = { client_id: inv.client_id, date: inv.issue_date, lines: inv.lines, subtotal_ar: inv.subtotal_ar, tax_rate: inv.tax_rate, tax_ar: inv.tax_ar, total_ar: inv.total_ar, ...(untilRaw ? { valid_until: inv.due_date } : {}) };
+  if (!existing) {
+    if (status !== "draft" && status !== "sent") return { ok: false, reason: "status" };
+    if (invoiceId) return { ok: false, reason: "invoice" };
+  } else if (existing.status === "draft") {
+    if (status !== "draft" && status !== "sent") return { ok: false, reason: "status" };
+    if (invoiceId) return { ok: false, reason: "invoice" };
+  } else {
+    // Envoyé, Accepté, Refusé : le contenu est figé (on garde les lignes et les totaux d'origine, même si la TVA a changé depuis).
+    const keep = (l: any) => ({ d: l.description, q: l.qty, u: l.unit_price_ar });
+    const same = inv.client_id === existing.client_id && inv.issue_date === existing.date && (untilRaw ? inv.due_date : "") === (existing.valid_until || "") &&
+      JSON.stringify(inv.lines.map(keep)) === JSON.stringify((existing.lines || []).map(keep));
+    if (!same) return { ok: false, reason: "frozen" };
+    body = { client_id: existing.client_id, date: existing.date, lines: existing.lines, subtotal_ar: existing.subtotal_ar, tax_rate: existing.tax_rate, tax_ar: existing.tax_ar, total_ar: existing.total_ar, ...(existing.valid_until ? { valid_until: existing.valid_until } : {}) };
+    if (existing.status === "sent") { if (status !== "sent" && status !== "accepted" && status !== "refused") return { ok: false, reason: "status" }; if (invoiceId) return { ok: false, reason: "invoice" }; }
+    else if (status !== existing.status) return { ok: false, reason: "final" }; // Accepté et Refusé sont définitifs
+    if (existing.status === "refused" && invoiceId) return { ok: false, reason: "invoice" };
+  }
+  const clientName = String(rec.client?.name ?? existing?.client?.name ?? "").slice(0, 80);
+  return {
+    ok: true,
+    save: {
+      id: rec.id, ref, status, ...body, ...(clientName ? { client: { name: clientName } } : {}), note, ...(invoiceId ? { invoice_id: invoiceId } : {}),
+      created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
+    },
+  };
+}
+// ===== END QUOTES =====
+
 // ===== BEGIN CLIENTS (fiches clients : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-clients-server.ts) =====
 const CLIENT_MAX_MONEY = 1_000_000_000_000;
 const CLIENT_MAX_TERMS = 365;
@@ -343,6 +392,210 @@ function cleanClientRef(v: unknown): { ok: true; id: string | null } | { ok: fal
   return { ok: true, id: v };
 }
 // ===== END CLIENTS =====
+
+// ===== BEGIN HR (dossier du salarié : visible par l'admin et le salarié concerné seulement ; ce bloc est contrôlé par scripts/check-hr.ts) =====
+// BEGIN HRCLEAN
+const HR_CONTRACTS = ['permanent', 'fixed', 'trial', 'intern', 'freelance', 'other'];
+const HR_MAX_DOCS = 10;
+const HR_MAX_RATES = 50;
+const HR_MAX_MONEY = 1_000_000_000_000;
+const hrDate = (v: unknown): string | null => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return null;
+  return v >= '1990-01-01' && v <= '2100-12-31' ? v : null;
+};
+/** Vérifie et nettoie un dossier salarié. Vide ou absent = « pas de dossier » (hr: null). Un champ faux refuse tout le dossier. */
+function cleanHrFile(raw: any): { ok: true; hr: any } | { ok: false; reason: string } {
+  if (raw === undefined || raw === null || raw === '') return { ok: true, hr: null };
+  if (typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'hr' };
+  const text = (v: unknown, max: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+  const none = (v: unknown) => v === undefined || v === null || v === '';
+  const out: any = {};
+  const position = text(raw.position, 80);
+  if (position) out.position = position;
+  if (!none(raw.hire_date)) { const d = hrDate(raw.hire_date); if (!d) return { ok: false, reason: 'hire_date' }; out.hire_date = d; }
+  if (!none(raw.contract_type)) {
+    if (typeof raw.contract_type !== 'string' || !HR_CONTRACTS.includes(raw.contract_type)) return { ok: false, reason: 'contract_type' };
+    out.contract_type = raw.contract_type;
+  }
+  if (!none(raw.contract_end)) {
+    const d = hrDate(raw.contract_end);
+    if (!d || (out.hire_date && d < out.hire_date)) return { ok: false, reason: 'contract_end' };
+    out.contract_end = d;
+  }
+  if (!none(raw.trial_end)) {
+    const d = hrDate(raw.trial_end);
+    if (!d || (out.hire_date && d < out.hire_date)) return { ok: false, reason: 'trial_end' };
+    out.trial_end = d;
+  }
+  if (!none(raw.emergency)) {
+    const e = raw.emergency;
+    if (typeof e !== 'object' || Array.isArray(e)) return { ok: false, reason: 'emergency' };
+    const em: any = {};
+    const name = text(e.name, 80), phone = text(e.phone, 40), relation = text(e.relation, 40);
+    if (phone && !/^[0-9 +().-]{3,40}$/.test(phone)) return { ok: false, reason: 'emergency' };
+    if (phone && !name) return { ok: false, reason: 'emergency' }; // un numéro sans nom ne sert à rien en urgence
+    if (name) em.name = name;
+    if (phone) em.phone = phone;
+    if (relation) em.relation = relation;
+    if (Object.keys(em).length) out.emergency = em;
+  }
+  if (!none(raw.documents)) {
+    if (!Array.isArray(raw.documents) || raw.documents.length > HR_MAX_DOCS) return { ok: false, reason: 'documents' };
+    const seen = new Set<string>();
+    const docs: any[] = [];
+    for (const d of raw.documents) {
+      if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, reason: 'documents' };
+      const id = text(d.id, 80), name = text(d.name, 80), url = typeof d.url === 'string' ? d.url.trim() : '';
+      if (!id || !name || seen.has(id) || url.length > 500 || !/^https:\/\/[^\s<>"']+$/.test(url)) return { ok: false, reason: 'documents' };
+      seen.add(id);
+      const doc: any = { id, name, url };
+      if (typeof d.added_at === 'string' && !isNaN(Date.parse(d.added_at))) doc.added_at = new Date(d.added_at).toISOString();
+      docs.push(doc);
+    }
+    if (docs.length) out.documents = docs;
+  }
+  if (!none(raw.rate_history)) {
+    if (!Array.isArray(raw.rate_history) || raw.rate_history.length > HR_MAX_RATES) return { ok: false, reason: 'rate_history' };
+    const seen = new Set<string>();
+    const rows: any[] = [];
+    const money = (v: unknown): number | null => {
+      if (!(typeof v === 'number' || (typeof v === 'string' && v.trim() !== ''))) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 && n <= HR_MAX_MONEY ? Math.round(n) : null;
+    };
+    for (const r of raw.rate_history) {
+      if (!r || typeof r !== 'object' || Array.isArray(r)) return { ok: false, reason: 'rate_history' };
+      const id = text(r.id, 80), date = hrDate(r.date), to = money(r.to_ar);
+      if (!id || seen.has(id) || !date || to === null) return { ok: false, reason: 'rate_history' };
+      seen.add(id);
+      const row: any = { id, date, to_ar: to };
+      if (!none(r.from_ar)) { const f = money(r.from_ar); if (f === null) return { ok: false, reason: 'rate_history' }; row.from_ar = f; }
+      const reason = text(r.reason, 200);
+      if (reason) row.reason = reason;
+      rows.push(row);
+    }
+    rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+    if (rows.length) out.rate_history = rows;
+  }
+  return { ok: true, hr: Object.keys(out).length ? out : null };
+}
+// END HRCLEAN
+// ===== END HR =====
+
+// ===== BEGIN LEAVES (congés : le salarié ne crée et n'annule que SA demande, l'admin décide ; ce bloc est contrôlé par scripts/check-leaves.ts) =====
+// BEGIN LEAVECLEAN
+const LV_TYPES = ['paid', 'unpaid', 'sick', 'other'];
+const LV_STATUS = ['pending', 'approved', 'rejected', 'cancelled'];
+const LV_MAX_SPAN = 90;
+const lvDate = (v: unknown): string | null => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return null;
+  return v >= '2000-01-01' && v <= '2100-12-31' ? v : null;
+};
+const lvShift = (v: string, n: number): string => { const d = new Date(v + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+/** Jours ouvrés de `start` à `end` compris. perWeek = jours travaillés par semaine (Conditions) : 6 (défaut, dimanche = repos), 5 (samedi aussi), 7 (aucun repos) ; 0 ou faux = 6. Limité à l'année `year` si fourni. */
+function leaveWorkingDays(start: string, end: string, perWeek: number, year?: number): number {
+  const pw = perWeek === 5 || perWeek === 7 ? perWeek : 6;
+  let n = 0, d = start, guard = 0;
+  while (d <= end && guard++ < 400) {
+    const dow = new Date(d + 'T00:00:00Z').getUTCDay(); // 0 = dimanche, 6 = samedi
+    const off = pw === 7 ? false : pw === 6 ? dow === 0 : dow === 0 || dow === 6;
+    if (!off && (year === undefined || Number(d.slice(0, 4)) === year)) n++;
+    d = lvShift(d, 1);
+  }
+  return n;
+}
+/** Jours de congé PAYÉ déjà pris ou demandés (acceptés ou en attente) pendant l'année `year`, sans la demande `exceptId`. */
+function leavePaidUsed(others: any[], year: number, perWeek: number, exceptId: string): number {
+  let used = 0;
+  for (const o of others || []) {
+    if (!o || o.id === exceptId || o.type !== 'paid' || (o.status !== 'approved' && o.status !== 'pending')) continue;
+    if (!lvDate(o.start_date) || !lvDate(o.end_date)) continue;
+    used += leaveWorkingDays(o.start_date, o.end_date, perWeek, year);
+  }
+  return used;
+}
+/**
+ * Vérifie une demande de congé et applique le changement demandé. Le serveur ne fait jamais confiance au navigateur.
+ * actor : { id, name, admin } (admin = responsable). ctx : { today, allowance (jours par an, 0 = pas de solde), perWeek, others (les autres demandes du même salarié) }.
+ * Création : le salarié ne crée que SA demande « en attente » ; l'admin peut créer pour un salarié (en attente ou déjà acceptée). Dates, type et motif ne changent plus après la création.
+ * Changement d'état : en attente → acceptée / refusée (admin ; refus = motif de 3 caractères ou plus) ; en attente → annulée (le salarié ou l'admin) ;
+ * acceptée → annulée (le salarié seulement si le congé n'a pas commencé ; l'admin avec un motif). Refusée et annulée ne changent plus.
+ */
+function cleanLeave(rec: any, existing: any, actor: { id: string; name: string; admin: boolean }, now: string, ctx: { today: string; allowance: number; perWeek: number; others: any[] }): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== 'object' || Array.isArray(rec) || typeof rec.id !== 'string' || !rec.id || rec.id.length > 80) return { ok: false, reason: 'id' };
+  const text = (v: unknown, max: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+  const status = typeof rec.status === 'string' && LV_STATUS.includes(rec.status) ? rec.status : null;
+  if (!status) return { ok: false, reason: 'status' };
+  if (!existing) {
+    const empId = actor.admin ? (typeof rec.employee_id === 'string' ? rec.employee_id : '') : actor.id;
+    if (!empId || empId.length > 80) return { ok: false, reason: 'employee' };
+    if (!actor.admin && rec.employee_id !== actor.id) return { ok: false, reason: 'employee' };
+    if (!actor.admin && status !== 'pending') return { ok: false, reason: 'status' };
+    if (actor.admin && status !== 'pending' && status !== 'approved') return { ok: false, reason: 'status' };
+    if (typeof rec.type !== 'string' || !LV_TYPES.includes(rec.type)) return { ok: false, reason: 'type' };
+    const start = lvDate(rec.start_date), end = lvDate(rec.end_date);
+    if (!start || !end || end < start) return { ok: false, reason: 'dates' };
+    if (lvShift(start, LV_MAX_SPAN) < end) return { ok: false, reason: 'span' };
+    if (start < lvShift(ctx.today, -30)) return { ok: false, reason: 'past' }; // au plus 30 jours en arrière (maladie déclarée en retard)
+    if (start > lvShift(ctx.today, 365)) return { ok: false, reason: 'future' };
+    const days = leaveWorkingDays(start, end, ctx.perWeek);
+    if (days < 1) return { ok: false, reason: 'no_working_day' };
+    for (const o of ctx.others || []) {
+      if (o && o.id !== rec.id && (o.status === 'pending' || o.status === 'approved') && lvDate(o.start_date) && lvDate(o.end_date) && o.start_date <= end && start <= o.end_date) return { ok: false, reason: 'overlap' };
+    }
+    if (rec.type === 'paid' && ctx.allowance > 0) {
+      for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) {
+        const want = leaveWorkingDays(start, end, ctx.perWeek, y);
+        if (want > 0 && leavePaidUsed(ctx.others, y, ctx.perWeek, rec.id) + want > ctx.allowance) return { ok: false, reason: 'balance' };
+      }
+    }
+    const reason = text(rec.reason, 300);
+    const save: any = { id: rec.id, employee_id: empId, employee_name: text(actor.admin ? (rec.employee_name || '') : actor.name, 80), type: rec.type, start_date: start, end_date: end, days, status, created_by: actor.id, created_at: now, updated_at: now };
+    if (reason) save.reason = reason;
+    if (status === 'approved') { save.decided_by = actor.id; save.decided_at = now; }
+    return { ok: true, save };
+  }
+  // Modification d'une demande qui existe : seul l'état peut changer.
+  if (!actor.admin && existing.employee_id !== actor.id) return { ok: false, reason: 'forbidden' };
+  if (status === existing.status) return { ok: true, save: existing }; // rien ne change (les autres champs envoyés sont ignorés)
+  const decision = text(rec.decision_reason, 300);
+  const from = existing.status;
+  const started = lvDate(existing.start_date) !== null && existing.start_date <= ctx.today;
+  let allowed = false;
+  if (from === 'pending' && status === 'approved') allowed = actor.admin;
+  else if (from === 'pending' && status === 'rejected') { allowed = actor.admin; if (allowed && decision.length < 3) return { ok: false, reason: 'decision_reason' }; }
+  else if (from === 'pending' && status === 'cancelled') allowed = true;
+  else if (from === 'approved' && status === 'cancelled') {
+    allowed = actor.admin || !started;
+    if (actor.admin && decision.length < 3) return { ok: false, reason: 'decision_reason' };
+  }
+  if (!allowed) return { ok: false, reason: 'transition' };
+  if (status === 'approved') {
+    const start = existing.start_date, end = existing.end_date;
+    for (const o of ctx.others || []) {
+      if (o && o.id !== existing.id && o.status === 'approved' && lvDate(o.start_date) && lvDate(o.end_date) && o.start_date <= end && start <= o.end_date) return { ok: false, reason: 'overlap' };
+    }
+    if (existing.type === 'paid' && ctx.allowance > 0) {
+      for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) {
+        const want = leaveWorkingDays(start, end, ctx.perWeek, y);
+        if (want > 0 && leavePaidUsed(ctx.others, y, ctx.perWeek, existing.id) + want > ctx.allowance) return { ok: false, reason: 'balance' };
+      }
+    }
+  }
+  const save: any = { ...existing, status, updated_at: now };
+  if (actor.admin && (status === 'approved' || status === 'rejected' || status === 'cancelled')) {
+    save.decided_by = actor.id; save.decided_at = now;
+    if (decision) save.decision_reason = decision; else delete save.decision_reason;
+  }
+  if (!actor.admin && status === 'cancelled') { save.decided_by = actor.id; save.decided_at = now; delete save.decision_reason; }
+  return { ok: true, save };
+}
+// END LEAVECLEAN
+// ===== END LEAVES =====
 
 // ===== BEGIN MISSIONS (date limite et priorité d'une mission : le serveur revérifie ; ce bloc est contrôlé par scripts/check-deadlines.ts) =====
 const MISSION_PRIORITIES = ['Normale', 'Haute', 'Urgente'];
@@ -692,6 +945,79 @@ function applyBudgets(saved: any, rec: any, existing: any): any {
 }
 // ===== END SUPPLIERS =====
 
+// ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
+interface PerformanceConfig {
+  window_days: number; // fenêtre du score
+  score_min_missions: number; // missions jugées (validées + refusées) minimum pour afficher un score
+  quality_min_missions: number; // idem pour le badge Qualité, le rendement et l'employé du mois
+  weights: { quality: number; volume: number; punctuality: number; regularity: number };
+  quality_levels: [number, number, number]; // % de missions validées : Bronze, Argent, Or
+  punctuality_levels: [number, number, number]; // % de jours sans retard
+  streak_levels: [number, number, number]; // jours de travail d'affilée
+  rendement_levels: [number, number, number]; // % de missions par heure au-dessus de l'équipe
+  versatility_levels: [number, number, number]; // types de mission différents
+  rookie_missions: number; // « Recrue prometteuse » : nombre de premières missions
+  rookie_days: number; // …et première mission il y a moins de N jours
+  month_min_team: number; // « Employé du mois » : salariés actifs minimum
+  min_duration_min: number; // durée plus courte = absurde, ignorée
+  max_duration_min: number; // durée plus longue = absurde, ignorée
+  default_work_days: number; // jours travaillés par semaine si les Conditions ne le disent pas
+}
+
+const PERFORMANCE_DEFAULTS: PerformanceConfig = {
+  window_days: 30, score_min_missions: 10, quality_min_missions: 20,
+  weights: { quality: 40, volume: 25, punctuality: 20, regularity: 15 },
+  quality_levels: [90, 95, 98], punctuality_levels: [90, 95, 100], streak_levels: [5, 10, 20],
+  rendement_levels: [10, 25, 40], versatility_levels: [2, 3, 5],
+  rookie_missions: 10, rookie_days: 90, month_min_team: 5,
+  min_duration_min: 2, max_duration_min: 960, default_work_days: 6,
+};
+
+const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+const intIn = (v: unknown, lo: number, hi: number, d: number) => (isNum(v) && v >= lo && v <= hi ? Math.round(v) : d);
+function levelsIn(v: unknown, lo: number, hi: number, d: [number, number, number]): [number, number, number] {
+  if (!Array.isArray(v) || v.length !== 3 || !v.every(x => isNum(x) && x >= lo && x <= hi)) return d;
+  const a = v.map(x => Math.round((x as number) * 10) / 10) as [number, number, number];
+  return a[0] < a[1] && a[1] < a[2] ? a : d; // les niveaux doivent monter : sinon on garde ceux de départ
+}
+
+/** Réglages reçus (du serveur ou du navigateur) → réglages sûrs : toute valeur invalide retombe sur celle de départ. */
+function cleanPerformanceConfig(raw: unknown): PerformanceConfig {
+  const d = PERFORMANCE_DEFAULTS;
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+  const w = (r.weights && typeof r.weights === 'object' ? r.weights : {}) as Record<string, unknown>;
+  const weights = {
+    quality: intIn(w.quality, 0, 100, d.weights.quality), volume: intIn(w.volume, 0, 100, d.weights.volume),
+    punctuality: intIn(w.punctuality, 0, 100, d.weights.punctuality), regularity: intIn(w.regularity, 0, 100, d.weights.regularity),
+  };
+  const sum = weights.quality + weights.volume + weights.punctuality + weights.regularity;
+  return {
+    window_days: intIn(r.window_days, 7, 90, d.window_days),
+    score_min_missions: intIn(r.score_min_missions, 1, 200, d.score_min_missions),
+    quality_min_missions: intIn(r.quality_min_missions, 1, 500, d.quality_min_missions),
+    weights: sum > 0 ? weights : d.weights, // des poids tous à zéro n'ont aucun sens
+    quality_levels: levelsIn(r.quality_levels, 1, 100, d.quality_levels),
+    punctuality_levels: levelsIn(r.punctuality_levels, 1, 100, d.punctuality_levels),
+    streak_levels: levelsIn(r.streak_levels, 1, 365, d.streak_levels),
+    rendement_levels: levelsIn(r.rendement_levels, 1, 500, d.rendement_levels),
+    versatility_levels: levelsIn(r.versatility_levels, 1, 50, d.versatility_levels),
+    rookie_missions: intIn(r.rookie_missions, 3, 100, d.rookie_missions),
+    rookie_days: intIn(r.rookie_days, 7, 365, d.rookie_days),
+    month_min_team: intIn(r.month_min_team, 2, 100, d.month_min_team),
+    min_duration_min: intIn(r.min_duration_min, 0, 60, d.min_duration_min),
+    max_duration_min: intIn(r.max_duration_min, 60, 1440, d.max_duration_min),
+    default_work_days: intIn(r.default_work_days, 1, 7, d.default_work_days),
+  };
+}
+
+/** Réglages écrits par l'admin : `performance` est revérifié champ par champ (valeur invalide = valeur de départ). Aucun réglage envoyé ni existant = rien n'est écrit. */
+function applyPerformance(saved: any, rec: any, existing: any): any {
+  const sent = rec && rec.performance !== undefined ? rec.performance : existing && existing.performance;
+  if (sent === undefined) return saved;
+  return { ...saved, performance: cleanPerformanceConfig(sent) };
+}
+// ===== END PERFORMANCE =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets"];
@@ -806,7 +1132,9 @@ function cleanCompany(input, base = COMPANY_DEFAULTS) {
 const readCompany = (settingsCompany) => cleanCompany(settingsCompany).value;
 function companyForEmployee(c) {
   const full = readCompany(c);
-  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } };
+  // Les 3 réglages « Badges » (oui/non, rien d'argent) : sans eux le salarié ne peut pas savoir si sa page « Ma performance » est ouverte (module 3).
+  const { badges_enabled, employee_sees_badges, employee_sees_attention } = full.options;
+  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules }, options: { badges_enabled, employee_sees_badges, employee_sees_attention } };
 }
 function companyDiff(before, after) {
   const out = [];
@@ -1271,7 +1599,7 @@ async function chatRead(req: any, res: any, me: any) {
 }
 
 // ---------- state (lecture) ----------
-const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined });
+const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined, hr: undefined }); // `hr` (dossier du salarié, M5.1) : admin et salarié concerné seulement
 const stripPost = (p: any, me: any, mates?: Set<string>) =>
   me.role === 'admin' || p.employee_id === me.id || (!!mates && mates.has(String(p.employee_id)))
     ? withoutClientPrice(p, me)
@@ -1306,6 +1634,7 @@ async function state(req: any, res: any, me: any) {
     const scope = (q: any) => {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
+      if (col === 'leaves') return q.eq('data->>employee_id', me.id); // un salarié ne voit que ses demandes de congé
       if (col === 'news') {
         // Publications validées (ou anciennes, sans statut) + les siennes (en attente ou refusées)
         return /^[A-Za-z0-9_-]+$/.test(String(me.id))
@@ -1399,7 +1728,18 @@ async function sync(req: any, res: any, me: any) {
       const existing = row?.data as any | undefined;
       let toSave: any = rec;
 
-      if (col === 'messages' || col === 'groups') {
+      if (col === 'leaves') {
+        // Congés (M5.2) : tous les rôles passent par la même règle ; le salarié ne touche qu'à SA demande, l'admin décide
+        const empId = existing ? String(existing.employee_id || '') : (admin ? String(rec.employee_id || '') : me.id);
+        if (admin && !existing) {
+          const eu = await getUserRow(empId);
+          if (!eu || eu.role === 'admin') { rejected.push({ col, id: rec.id, reason: 'employee' }); continue; }
+          if (!rec.employee_name) rec.employee_name = eu.name;
+        }
+        const lv = cleanLeave(rec, existing, { id: me.id, name: String(me.name || ''), admin }, now, await leaveCtx(empId));
+        if (!lv.ok) { rejected.push({ col, id: rec.id, reason: lv.reason }); continue; }
+        toSave = lv.save;
+      } else if (col === 'messages' || col === 'groups') {
         const v = col === 'messages' ? await checkMessage(rec, existing, me, admin, now) : await checkGroup(rec, existing, me, admin, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: (v as any).reason || 'forbidden' }); continue; }
         toSave = v.save;
@@ -1440,11 +1780,19 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
         if (sentTpl !== undefined) toSave = { ...toSave, mission_templates: cleanMissionTemplates(sentTpl) };
+      }
+      if (admin && col === 'users') {
+        // Dossier du salarié (M5.1) : revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
+        const sentHr = (rec as any).hr === undefined ? existing?.hr : (rec as any).hr;
+        const hv = cleanHrFile(sentHr);
+        if (!hv.ok) { rejected.push({ col, id: rec.id, reason: 'hr_' + hv.reason }); continue; }
+        toSave = { ...toSave };
+        if (hv.hr) (toSave as any).hr = hv.hr; else delete (toSave as any).hr;
       }
       if (col === 'clients') {
         const v = cleanClient(rec, existing, me.id, now);
@@ -1512,6 +1860,14 @@ async function sync(req: any, res: any, me: any) {
         if (!prow) { rejected.push({ col, id: rec.id, reason: 'product' }); continue; } // mouvement d'un produit qui n'existe pas
         if (v.save.supplier_id) { const { data: sr } = await sb.from(T.suppliers).select('id').eq('id', v.save.supplier_id).maybeSingle(); if (!sr) { rejected.push({ col, id: rec.id, reason: 'supplier' }); continue; } }
         if (v.save.po_id) { const { data: pr } = await sb.from(T.purchases).select('id').eq('id', v.save.po_id).maybeSingle(); if (!pr) { rejected.push({ col, id: rec.id, reason: 'po' }); continue; } }
+        toSave = v.save;
+      }
+      if (col === 'quotes') {
+        const v = cleanQuote(rec, existing, me.id, now, await companyNow());
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }
+        const { data: qcl } = await sb.from(T.clients).select('id').eq('id', v.save.client_id).maybeSingle();
+        if (!qcl) { rejected.push({ col, id: rec.id, reason: 'client' }); continue; }
+        if (v.save.invoice_id) { const { data: qin } = await sb.from(T.invoices).select('id').eq('id', v.save.invoice_id).maybeSingle(); if (!qin) { rejected.push({ col, id: rec.id, reason: 'invoice' }); continue; } }
         toSave = v.save;
       }
       if (col === 'purchases') {
@@ -1587,7 +1943,8 @@ async function sync(req: any, res: any, me: any) {
         const { data: usedC } = await sb.from(T.contracts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedP } = await sb.from(T.posts).select('id').eq('data->>client_id', id).limit(1);
         const { data: usedI } = await sb.from(T.invoices).select('id').eq('data->>client_id', id).limit(1);
-        if ((usedC && usedC.length) || (usedP && usedP.length) || (usedI && usedI.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+        const { data: usedQ } = await sb.from(T.quotes).select('id').eq('data->>client_id', id).limit(1);
+        if ((usedC && usedC.length) || (usedP && usedP.length) || (usedI && usedI.length) || (usedQ && usedQ.length)) { rejected.push({ col, id, reason: 'in_use' }); continue; }
       }
       if (col === 'invoices' || col === 'cash') {
         // Une facture émise (ou annulée, ou un avoir) ne se supprime jamais : on l'annule par un avoir. Un paiement lié à une facture non plus. Seul un brouillon se supprime.
@@ -1603,6 +1960,11 @@ async function sync(req: any, res: any, me: any) {
           if (used && used.length) { inUse = true; break; }
         }
         if (inUse) { rejected.push({ col, id, reason: 'in_use' }); continue; }
+      }
+      if (col === 'quotes') {
+        // Seuls un brouillon et un devis refusé (jamais facturé) se suppriment : un devis envoyé ou accepté reste (histoire du client).
+        const { data: qrow } = await sb.from(T.quotes).select('data').eq('id', id).maybeSingle();
+        if (qrow && (qrow.data.invoice_id || (qrow.data.status !== 'draft' && qrow.data.status !== 'refused'))) { rejected.push({ col, id, reason: 'status' }); continue; }
       }
       if (col === 'purchases') {
         // Seuls un brouillon et un bon annulé se suppriment : un bon commandé ou reçu reste (historique des achats).
@@ -1644,6 +2006,17 @@ async function sync(req: any, res: any, me: any) {
 async function companyNow() {
   const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
   return readCompany((st?.data as any)?.company);
+}
+/** Ce qu'il faut savoir pour juger une demande de congé : date du jour (Madagascar), solde annuel et jours travaillés des Conditions, autres demandes du même salarié. */
+async function leaveCtx(employeeId: string) {
+  const company = await companyNow();
+  const { data: rows } = await sb.from(T.leaves).select('data').eq('data->>employee_id', employeeId);
+  return {
+    today: new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10),
+    allowance: Number((company as any)?.leave?.leave_days_per_year) || 0,
+    perWeek: Number((company as any)?.leave?.work_days_per_week) || 0,
+    others: (rows || []).map((r: any) => r.data),
+  };
 }
 const invoiceFail = (res: any, message: string) => { const f = invoiceErrorOf(message); return res.status(f.status).json({ error: f.error, ...(f.max !== undefined ? { max: f.max } : {}) }); };
 const newDocId = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -2634,6 +3007,7 @@ async function purgeEmployee(uid: string) {
     await sb.from(T.posts).delete().eq('data->>employee_id', uid);
   });
   await step('advances', async () => { await sb.from(T.advances).delete().eq('data->>employee_id', uid); });
+  await step('leaves', async () => { await sb.from(T.leaves).delete().eq('data->>employee_id', uid); });
   await step('securityLogs', async () => { await sb.from(T.securityLogs).delete().eq('data->>employee_id', uid); });
 
   // groupes créés par lui : on les supprime avec leurs messages ; les autres : on le retire des membres

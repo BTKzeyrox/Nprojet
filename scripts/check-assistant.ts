@@ -1,11 +1,13 @@
 // Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant
 import fs from 'node:fs';
-import { morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
+import { recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
 import { buildDemoData } from '../src/demo/demoData';
 import { runHealth } from '../src/utils/health/registry';
 import { ALL_RULES } from '../src/utils/health/all';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../src/utils/health/types';
 import { SITE_MAP } from '../src/utils/siteKnowledge';
+import { ADVICE } from '../src/utils/advice';
+import { isKnownView } from '../src/utils/health/menu';
 import type { SnapshotInput } from '../src/utils/siteSnapshot';
 
 let fails = 0, n = 0;
@@ -130,6 +132,34 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   ok(T('récap de ' + emp[0].name.split(' ')[0], base()) === 'employee', 'équipe : « récap de <prénom> » reste un récap d\'employé');
 }
 
+// ---------- Suggestions et liens vers les pages ----------
+{
+  const al = alertsOf(base());
+  const sg = respond('Suggestions', base(), al);
+  ok(sg.intent === 'suggest' && sg.lines.length >= 2 && sg.lines.some(l => l.fr.startsWith('→')) && clean(sg), 'suggestions : titre de l\'alerte puis une solution (→), texte propre FR/EN');
+  ok(sg.actions.length >= 1 && sg.actions.length <= 3 && sg.actions.every(a => isKnownView(a.go.view)), 'suggestions : 1 à 3 boutons vers des pages qui existent');
+  for (const q of ['des suggestions ?', 'tu me proposes quoi', 'donne moi un conseil', 'une solution ?', 'what do you suggest', 'any advice']) ok(T(q, base()) === 'suggest', `suggestions : « ${q} » est compris`);
+  ok(T('rédige un message de conseil', base()) !== 'suggest', 'suggestions : un message à rédiger n\'est pas pris pour une suggestion');
+  const none = suggestionsReply(base(), []);
+  ok(none.empty === true && none.lines.length >= 3 && clean(none), 'suggestions : sans alerte, il félicite et propose des idées pour garder le cap');
+  ok(suggestionsReply(base(), al.map(a => ({ ...a, severity: 'info' as const }))).empty === true, 'suggestions : les alertes « info » ne déclenchent pas de solution');
+  const unknownRule = suggestionsReply(base(), [{ ...al[0], rule: 'inconnue-xyz' }]);
+  ok(unknownRule.lines.some(l => /Ouvre la page concernée/.test(l.fr)), 'suggestions : règle sans fiche = conseil générique, sans plantage');
+  const rules = ALL_RULES.map(r => r.id.split('.')[1]);
+  const alias: Record<string, string> = { 'stock-value-drop': 'value-drop', 'backup-missing': 'backup-missing' };
+  const missing = rules.filter(r => !ADVICE[r] && !ADVICE[alias[r] || '']);
+  ok(missing.length === 0, `suggestions : chaque règle a sa solution (manque : ${missing.join(', ') || 'aucune'})`);
+  ok(Object.values(ADVICE).every(a => a.fr.length > 20 && a.en.length > 20 && !/[àâçéèêëîïôùûœ]/i.test(a.en.replace(/Validations|Payroll/g, ''))), 'suggestions : chaque solution a un texte FR et EN, anglais sans accents');
+  ok(Object.values(ADVICE).every(a => !/\b(sanction|faute|coupable|licenci|renvoy)/i.test(a.fr.replace(/faute de frappe/g, ''))), 'suggestions : aucune accusation ni sanction dans les solutions');
+  // liens
+  const L1 = pageLinks('Va voir « Clients » puis « Statistiques », ou « Clients » encore.', 'fr');
+  ok(L1.length === 2 && L1[0].go.view === 'clients' && L1[1].go.view === 'stats', 'liens : les pages citées entre « » deviennent des boutons, sans doublon');
+  ok(pageLinks('Ouvre "Employés" ou "Payroll".', 'en').map(x => x.go.view).join() === 'employees,advances', 'liens : guillemets droits et noms anglais acceptés');
+  ok(pageLinks('Va dans « Page inventée » ou « Mon avis ».', 'fr').length === 0 && pageLinks('', 'fr').length === 0 && pageLinks('Clients sans guillemets', 'fr').length === 0, 'liens : un nom qui n\'est pas une page (ou sans guillemets) ne donne aucun bouton');
+  ok(pageLinks('« Clients » « Statistiques » « Employés » « Validations » « Historique »', 'fr').length === 3, 'liens : 3 boutons au plus');
+  ok(pageLinks('« Santé du site »', 'fr').every(x => isKnownView(x.go.view)) && pageLinks('« Réglages »', 'fr').every(x => isKnownView(x.go.view)), 'liens : seulement des pages qui existent');
+}
+
 // ---------- Assemblage de l'écran : l'assistant est une conversation de la messagerie (M11.10 B) ----------
 {
   const chat = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), sb = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
@@ -141,6 +171,16 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   ok(/onPointerDown=\{e => e\.preventDefault\(\)\}/.test(ac) && /enterKeyHint="send"/.test(ac) && /bg-\[#e9eff8\]/.test(ac), 'conversation : même zone de saisie et mêmes couleurs que la messagerie');
   ok(ac.includes('getSnapshotInput') && !/fetch\(|db\.sendMessage|XMLHttpRequest/.test(ac), 'conversation : rien n\'est envoyé au serveur, les données viennent de getSnapshotInput (refuse si pas admin)');
   ok(/localStorage/.test(ac) && /try \{/.test(ac), 'historique : gardé sur l\'appareil, avec protection si le stockage est refusé');
+}
+
+{
+  const base = rc([U('u1')], [P('a', 'u1', day(0))]);
+  const h = recapPrintHtml(base, 'u1', 'fr') || '';
+  ok(h.startsWith('<!doctype html>') && !/<script/i.test(h) && /window\.print/.test(h) && h.includes('Gestion Pro'), 'impression : page autonome, sans script externe, avec bouton Imprimer');
+  ok(recapPrintHtml(base, 'zz', 'fr') === null, 'impression : personne inconnue = rien à imprimer');
+  ok(employeeReply(base, 'u1').actions.some(a => a.go.view === PRINT_PREFIX + 'u1'), 'impression : bouton « Imprimer le récap » dans la réponse');
+  const evil = rc([{ ...U('u1'), name: '<img src=x onerror=alert(1)>' }], []);
+  ok(!/<img/.test(recapPrintHtml(evil, 'u1', 'en') || ''), 'impression : un nom piégé est neutralisé (pas de HTML injecté)');
 }
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);

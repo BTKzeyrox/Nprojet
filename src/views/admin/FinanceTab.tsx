@@ -7,6 +7,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { categoriesFor, filterCash, periodMoney } from '../../utils/finance';
 import type { CashEntry, CashKind } from '../../types';
+import { BudgetsCard } from './BudgetsCard';
 import { FinanceInsights } from './FinanceInsights';
 
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
@@ -90,6 +91,8 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
       </div>
 
       <FinanceInsights range={range} lang={lang} />
+
+      <BudgetsCard lang={lang} />
 
       <div className={card}>
         <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={t('Type', 'Type')}>

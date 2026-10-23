@@ -16,6 +16,7 @@ import { parseAmount } from '../../utils/finance';
 import { chaseText, toChase } from '../../utils/receivables';
 import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
 import type { Invoice } from '../../types';
+import { QuotesSection } from './QuotesSection';
 
 // Page « Facturation » (responsable seulement) : liste, brouillon, émission, paiement, avoir.
 // Le numéro, le reçu et les totaux définitifs sont toujours posés par le serveur ; l'état (payée, en retard…) se calcule (src/utils/invoices.ts).
@@ -63,7 +64,7 @@ export const InvoicesView: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [pay, setPay] = useState<Pay | null>(null);
-  const [tab, setTab] = useState<'list' | 'receivables'>('list');
+  const [tab, setTab] = useState<'list' | 'receivables' | 'quotes'>('list');
   const [chaseLang, setChaseLang] = useState<'fr' | 'en'>(lang === 'en' ? 'en' : 'fr');
   const [copied, setCopied] = useState('');
   const [error, setError] = useState('');
@@ -177,13 +178,15 @@ export const InvoicesView: React.FC = () => {
         <div className={card}><p className="text-[11px] text-slate-400">{t('Dont en retard', 'Of which overdue')}</p><p className={`text-base font-bold ${totals.overdue > 0 ? 'text-rose-300' : 'text-white'}`}>{ar(totals.overdue)}</p></div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2" role="tablist">
-        {([['list', t('Factures', 'Invoices')], ['receivables', `${t('Créances', 'Receivables')}${chase.length ? ` (${chase.length})` : ''}`]] as const).map(([k, label]) => (
+      <div className={`grid ${company.options.quotes_enabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2`} role="tablist">
+        {([['list', t('Factures', 'Invoices')], ['receivables', `${t('Créances', 'Receivables')}${chase.length ? ` (${chase.length})` : ''}`], ...(company.options.quotes_enabled ? [['quotes', t('Devis', 'Quotes')]] : [])] as [typeof tab, string][]).map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`${btn} ${tab === k ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-200'}`}>{label}</button>
         ))}
       </div>
 
       {error && !editor && !pay && <p className="text-sm text-rose-300" role="alert">{error}</p>}
+
+      {tab === 'quotes' && company.options.quotes_enabled && <QuotesSection ver={ver} onOpenInvoice={id => { setTab('list'); setState('all'); setClientId('all'); setQ(''); setOpenId(id); }} />}
 
       {tab === 'list' && <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1"><Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Numéro ou client…', 'Number or client…')} className={`${field} pl-9`} /></div>

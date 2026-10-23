@@ -57,6 +57,7 @@ export interface AppSettings {
   rules: string;
   post_types: string[];
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
+  performance?: import('../utils/performanceScore').PerformanceConfig; // Réglages de la performance (module 3) : le serveur revérifie tout
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
   budgets?: Record<string, number>; // plafond mensuel par catégorie de dépense, en Ar (module 4) : admin seulement, jamais envoyé à un opérateur
   company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
@@ -475,6 +476,29 @@ export interface Invoice {
   credit_of?: string; // avoir : identifiant de la facture annulée
   cancelled_by?: string; // facture annulée : identifiant de l'avoir
   issued_at?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Devis (module 2, M2.9, facultatif : réglage « Devis activés »). Mêmes lignes qu'une facture ; Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé.
+// « Facturé » n'est pas un état saisi : un devis accepté dont `invoice_id` existe. Aucun total n'est saisi : le serveur recalcule tout.
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'refused';
+export interface Quote {
+  id: string;
+  ref: string; // DV-0001, attribué à la création
+  status: QuoteStatus;
+  client_id: string;
+  client?: { name: string }; // copie du nom au moment de l'envoi
+  date: string;
+  valid_until?: string; // fin de validité (facultatif)
+  lines: InvoiceLine[];
+  subtotal_ar: number;
+  tax_rate: number;
+  tax_ar: number;
+  total_ar: number;
+  note?: string;
+  invoice_id?: string; // facture brouillon créée à partir de ce devis accepté
   created_by?: string;
   created_at?: string;
   updated_at?: string;

@@ -118,7 +118,9 @@ export const readCompany = (settingsCompany: unknown): CompanySettings => cleanC
 /** Même filtre que le serveur : ce qu'un employé peut recevoir. */
 export function companyForEmployee(c: Partial<CompanySettings> | undefined): Partial<CompanySettings> {
   const full = readCompany(c);
-  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } as CompanySettings['texts'] };
+  // Les 3 réglages « Badges » (oui/non, rien d'argent) : sans eux le salarié ne peut pas savoir si sa page « Ma performance » est ouverte (module 3).
+  const { badges_enabled, employee_sees_badges, employee_sees_attention } = full.options;
+  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } as CompanySettings['texts'], options: { badges_enabled, employee_sees_badges, employee_sees_attention } as CompanySettings['options'] };
 }
 
 /** Liste des champs changés entre deux versions (pour l'historique). `before` est coupé à 120 caractères. */
