@@ -124,6 +124,43 @@ ok(inv1.type === 'adjust' && inv1.qty === 3 && inv1.counted_qty === e1 + 3 && in
 ok(db.applyInventory({ [P1.id]: '0' }, '2026-10-11').success && qtyOf(P1.id) === 0, 'compter 0 remet le stock à 0 (jamais négatif)');
 ok(db.applyInventory({ [P1.id]: '0' }, '2026-10-11').error === 'none', 'recompter la même chose : plus d\'écart');
 
+
+// ---------- M4.4 : budgets par catégorie ----------
+const { budgetRows } = await import('../src/utils/purchasing');
+const { computeAlerts } = await import('../src/utils/alerts');
+const { todayMada } = await import('../src/utils/stats');
+const month = todayMada().slice(0, 7);
+db.enterDemo('admin');
+ok(!!db.getSettings().budgets && Object.keys(db.getSettings().budgets!).length === 4, 'démo admin : 4 budgets inventés');
+db.enterDemo('employee');
+ok(db.getSettings().budgets === undefined, 'démo opérateur : aucun budget (comme le vrai serveur)');
+ok(db.setBudgets({ Achats: '1000' }).error === 'admin', 'opérateur : budgets refusés');
+db.enterDemo('admin');
+ok(db.setBudgets({ Achats: 'abc' }).error === 'budget' && db.setBudgets({ Achats: '-5' }).error === 'budget' && db.setBudgets({ '': '5' }).error === 'budget' && db.setBudgets({ __proto__: '5' } as any).success === true, 'montant faux ou nom vide : refusé ; clé dangereuse sans effet');
+ok(db.setBudgets({ Achats: '1 500', Loyer: '', Internet: '0' }).success && JSON.stringify(db.getSettings().budgets) === '{"Achats":1500}', 'montants lus (« 1 500 »), vide et 0 retirent le plafond');
+const cashM = db.getCash();
+ok(budgetRows({ Achats: 100 }, [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 79, date: `${month}-02`, note: '' }], month)[0].status === 'ok', 'moins de 80 % : normal');
+ok(budgetRows({ Achats: 100 }, [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 80, date: `${month}-02`, note: '' }], month)[0].status === 'warn', '80 % : attention');
+ok(budgetRows({ Achats: 100 }, [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 100, date: `${month}-02`, note: '' }], month)[0].status === 'warn' && budgetRows({ Achats: 100 }, [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 101, date: `${month}-02`, note: '' }], month)[0].status === 'over', '100 % pile : attention ; au-dessus : dépassé');
+ok(budgetRows({ Achats: 100 }, [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 500, date: '2020-01-02', note: '' }, { id: 'b', kind: 'in', category: 'Achats', amount_ar: 500, date: `${month}-02`, note: '' }], month)[0].spent === 0, 'seules les dépenses du mois comptent');
+const alertBase = { today: `${month}-15`, settings: {}, cash: cashM, posts: [], contracts: [], advances: [], products: [], moves: [] } as any;
+const aWarn = computeAlerts({ ...alertBase, settings: { budgets: { Achats: 100 } }, cash: [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 85, date: `${month}-02`, note: '' }] }).find(a => a.id === 'budget_cat');
+const aOver = computeAlerts({ ...alertBase, settings: { budgets: { Achats: 100 } }, cash: [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 150, date: `${month}-02`, note: '' }] }).find(a => a.id === 'budget_cat');
+const aNone = computeAlerts({ ...alertBase, settings: { budgets: { Achats: 100 } }, cash: [{ id: 'a', kind: 'out', category: 'Achats', amount_ar: 10, date: `${month}-02`, note: '' }] }).find(a => a.id === 'budget_cat');
+ok(aWarn?.level === 'warn' && aWarn.fr.includes('presque atteint') && aWarn.en.includes('almost reached') && aOver?.level === 'danger' && aOver.fr.includes('dépassé') && aOver.fr.includes('150 %') && !aNone, 'alerte accueil : attention à 85 %, rouge à 150 %, rien à 10 %');
+ok(computeAlerts({ ...alertBase, settings: {}, cash: [] }).every(a => a.id !== 'budget_cat'), 'sans budget : aucune alerte de catégorie');
+{
+  const { BudgetsCard } = await import('../src/views/admin/BudgetsCard');
+  const render = (lang: 'fr' | 'en') => renderToString(<AppProvider><BudgetsCard lang={lang} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' ');
+  db.setBudgets({ Achats: '9000', Loyer: '25000' });
+  const fr = render('fr'), en = render('en');
+  ok(!bad(fr) && !bad(en), 'carte budgets : aucun NaN, « undefined » ni « null » affichés');
+  ok(fr.includes('Budgets du mois') && en.includes('Budgets this month') && fr.includes('Régler') && en.includes('Set') && fr.includes('role="progressbar"'), 'carte budgets : titre, bouton et barres FR et EN');
+  ok(fr.includes('Achats') && fr.includes('Loyer') && !fr.includes('Transport'), 'carte budgets : seules les catégories réglées');
+  db.setBudgets({});
+  ok(render('fr').includes('Aucun budget réglé') && render('en').includes('No budget set'), 'carte budgets : aucun budget, message clair FR et EN');
+}
+
 // ---------- opérateur : rien ----------
 db.enterDemo('employee');
 ok(db.getSuppliers().length === 0 && db.getPurchases().length === 0, 'démo opérateur : aucun fournisseur ni bon');

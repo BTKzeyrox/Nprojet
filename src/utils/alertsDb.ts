@@ -26,7 +26,7 @@ export function getAdminAlerts(): AlertItem[] {
   for (const v of invoices) sum += v.total_ar + (v.status === 'issued' ? 1 : v.status === 'cancelled' ? 2 : 3) + (v.due_date || '').length;
   for (const p of posts) if (p.client_id) sum += p.client_id.length;
   for (const c of contracts) if (c.client_id) sum += c.client_id.length;
-  const key = [me.id, today, invoices.length, cash.length, posts.length, advances.length, products.length, moves.length, contracts.length, clients.length, sum, st.goal_missions, st.goal_profit_ar, st.goal_max_expenses_ar, st.alert_unpaid_days, st.alert_low_cash_ar, st.client_price_default_ar, JSON.stringify(st.client_prices_by_type || {}), st.price_per_mission].join('|');
+  const key = [me.id, today, invoices.length, cash.length, posts.length, advances.length, products.length, moves.length, contracts.length, clients.length, sum, st.goal_missions, st.goal_profit_ar, st.goal_max_expenses_ar, st.alert_unpaid_days, st.alert_low_cash_ar, st.client_price_default_ar, JSON.stringify(st.client_prices_by_type || {}), st.price_per_mission, JSON.stringify(st.budgets || {})].join('|');
   if (cache && cache.key === key) return cache.list;
   const list = computeAlerts({ today, settings: st, cash, posts, contracts, advances, products, moves, clients, invoices });
   cache = { key, list };

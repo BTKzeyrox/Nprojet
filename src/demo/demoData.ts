@@ -10,6 +10,8 @@ export const DEMO_ADMIN_ID = 'demo_admin';
 // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions). Les types sont ceux des missions de la démo.
 // Objectifs et seuils inventés pour la démo (objectifs du mois, alertes)
 export const DEMO_GOALS = { goal_missions: 120, goal_profit_ar: 400000, goal_max_expenses_ar: 900000, alert_unpaid_days: 30, alert_low_cash_ar: 0 };
+/** Budgets mensuels inventés pour la démo (module 4) : Achats serré pour montrer une barre qui se remplit. Admin seulement. */
+export const DEMO_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 20000 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 /** Conditions inventées pour la démo (rien de réel : ni numéro fiscal, ni adresse vraie). Locales, jamais envoyées. */
 export const DEMO_COMPANY = {

@@ -4,9 +4,9 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
-import { canTransition, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
+import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
@@ -823,6 +823,18 @@ class DeltaForceStore {
     return { success: true, adjusted: moves.length };
   }
 
+  /**
+   * Plafond mensuel par catégorie de dépense (Ar). `input` : catégorie → montant ; vide ou 0 = pas de plafond. Le serveur revérifie.
+   * Codes d'erreur : 'admin' | 'budget' (montant faux ou trop de catégories). Réponse avec `category` quand c'est une catégorie précise.
+   */
+  public setBudgets(input: Record<string, string | number>): { success: boolean; error?: string; category?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkBudgets(input);
+    if (!v.ok) return { success: false, error: v.error, category: v.category };
+    this.updateSettings({ budgets: v.clean });
+    return { success: true };
+  }
+
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
@@ -1287,7 +1299,7 @@ class DeltaForceStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
