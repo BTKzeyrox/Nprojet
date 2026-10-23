@@ -4,7 +4,7 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
-import { checkSupplierDraft, type SupplierDraft } from '../utils/purchasing';
+import { canTransition, checkPurchaseDraft, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -713,6 +713,93 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // Bons de commande (responsable seulement ; le serveur revérifie chaque bon). Codes d'erreur : 'admin' | 'supplier' | 'date' | 'expected' | 'lines' | 'product' | 'qty' | 'cost' | 'duplicate' | 'missing' | 'status' | 'none' | 'unsynced'.
+  // Brouillon (modifiable) → Commandé (figé, seule la quantité reçue avance) → Reçu. Annulé et Reçu sont définitifs. Aucun total n'est enregistré : il se calcule.
+  private purchaseChecks(d: PurchaseDraft): { ok: true; clean: Extract<ReturnType<typeof checkPurchaseDraft>, { ok: true }>['clean'] } | { ok: false; error: string } {
+    const v = checkPurchaseDraft(d);
+    if (!v.ok) return { ok: false, error: v.error };
+    if (!this.suppliers.some(x => x.id === v.clean.supplier_id)) return { ok: false, error: 'supplier' };
+    if (v.clean.lines.some(l => !this.products.some(p => p.id === l.product_id))) return { ok: false, error: 'product' };
+    return { ok: true, clean: v.clean };
+  }
+  public addPurchase(d: PurchaseDraft, order = false): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = this.purchaseChecks(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const now = new Date().toISOString();
+    const id = `po-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.purchases = [{ id, ref: nextPurchaseRef(this.purchases), ...v.clean, status: order ? 'ordered' : 'draft', created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.purchases];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Modifie un BROUILLON seulement (un bon commandé est figé). */
+  public updatePurchase(id: string, d: PurchaseDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (old.status !== 'draft') return { success: false, error: 'status' };
+    const v = this.purchaseChecks(d);
+    if (!v.ok) return { success: false, error: v.error };
+    const { expected_date: _e, ...base } = old; // une livraison prévue vidée disparaît vraiment
+    this.purchases = this.purchases.map(x => x.id === id ? { ...base, ...v.clean, status: 'draft' as const, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Brouillon → Commandé, ou Brouillon / Commandé sans réception → Annulé. */
+  public setPurchaseStatus(id: string, to: 'ordered' | 'cancelled'): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (!canTransition(old, to)) return { success: false, error: 'status' };
+    this.purchases = this.purchases.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime un brouillon ou un bon annulé (le serveur refuse les autres : l'historique des achats reste). */
+  public deletePurchase(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (old.status !== 'draft' && old.status !== 'cancelled') return { success: false, error: 'status' };
+    this.purchases = this.purchases.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+  /**
+   * Réception (totale ou partielle) d'un bon COMMANDÉ : `received` = quantité reçue maintenant, par produit.
+   * Crée une entrée de stock par ligne reçue (avec le bon et le fournisseur) et, si `withExpense`, UNE dépense « Achats » pour toute la réception.
+   * Le serveur doit déjà connaître le bon « commandé » : sinon 'unsynced' (réessayer dans quelques secondes).
+   */
+  public receivePurchase(id: string, received: Record<string, string | number>, opts: { date: string; withExpense?: boolean }): { success: boolean; error?: string; cashId?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const po = this.purchases.find(x => x.id === id);
+    if (!po) return { success: false, error: 'missing' };
+    const r = planReceipt(po, received);
+    if (!r.ok) return { success: false, error: r.error };
+    if (!this.demo) {
+      let seen: string | undefined;
+      try { seen = JSON.parse(this.synced.purchases.get(id) || '{}').status; } catch { seen = undefined; }
+      if (seen !== 'ordered') return { success: false, error: 'unsynced' };
+    }
+    const date = String(opts.date || '');
+    const dv = checkDraft({ kind: 'out', category: 'Achats', amount: Math.max(1, r.plan.amount), date, note: `Bon ${po.ref}`, supplier_id: po.supplier_id });
+    if (!dv.ok || date < po.date) return { success: false, error: 'date' };
+    const now = new Date().toISOString();
+    const rnd = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const wantCash = !!opts.withExpense && r.plan.amount >= 1;
+    const cashId = wantCash ? `cash-${rnd()}` : undefined;
+    if (cashId) this.cash = [{ id: cashId, ...dv.clean, amount_ar: r.plan.amount, note: `Bon ${po.ref} reçu`, po_id: po.id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
+    const newMoves: StockMove[] = r.plan.moves.map((m, i) => ({
+      id: `mv-${rnd()}${i}`, product_id: m.product_id, type: 'in' as const, qty: m.qty, date, note: `Bon ${po.ref}`,
+      ...(m.unit_cost_ar > 0 ? { unit_cost_ar: m.unit_cost_ar } : {}), ...(cashId ? { cash_id: cashId } : {}), supplier_id: po.supplier_id, po_id: po.id,
+      created_by: this.currentUser!.id, created_at: now, updated_at: now,
+    }));
+    this.stockMoves = [...newMoves, ...this.stockMoves];
+    this.purchases = this.purchases.map(x => x.id === id ? { ...x, lines: r.plan.lines, status: r.plan.status, updated_at: now } : x);
+    this.notify();
+    return { success: true, cashId };
+  }
+
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
@@ -742,6 +829,7 @@ class DeltaForceStore {
   public deleteProduct(id: string): { success: boolean; error?: string } {
     if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
+    if (this.purchases.some(o => (o.status === 'draft' || o.status === 'ordered') && o.lines.some(l => l.product_id === id))) return { success: false, error: 'in_use' };
     this.products = this.products.filter(x => x.id !== id);
     this.stockMoves = this.stockMoves.filter(m => m.product_id !== id);
     this.notify();

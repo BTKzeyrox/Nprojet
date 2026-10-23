@@ -49,7 +49,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
     qty: ['Entre une quantité (pas 0 ; une entrée et une sortie sont positives).', 'Enter a quantity (not 0; entries and exits are positive).'],
     date: ['Choisis une date valide.', 'Choose a valid date.'], cost: ['Prix payé invalide, ou à remplir pour créer la dépense.', 'Invalid price paid, or fill it in to create the expense.'],
     product: ['Ce produit n\'existe plus.', 'This product no longer exists.'], stock: ['Il n\'y a pas assez en stock pour cela.', 'There is not enough in stock for that.'],
-    supplier: ['Ce fournisseur n\'existe plus.', 'This supplier no longer exists.'], admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
+    supplier: ['Ce fournisseur n\'existe plus.', 'This supplier no longer exists.'], in_use: ['Ce produit est dans un bon de commande en cours (brouillon ou commandé) : termine ou annule le bon avant.', 'This product is in an open purchase order (draft or ordered): finish or cancel the order first.'], admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
