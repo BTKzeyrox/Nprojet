@@ -1,5 +1,6 @@
 import { Avatar } from './Avatar';
 import { db } from '../db/store';
+import { viewAllowedFor } from '../utils/roles';
 import React from 'react';
 import {
   Layers,
@@ -84,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
   useLockBodyScroll(!!isOpenMobile && !isWide);
   const isAdmin = currentUser.role === 'admin';
+  const isAccountant = currentUser.role === 'accountant';
   const isLight = theme === 'light';
   const pending = countPending().total;
   const chatUnread = useChatUnread(currentUser);
@@ -92,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
     { id: 'feed', label: 'Actualités', icon: Newspaper },
-    ...(isAdmin
+    ...(isAdmin || isAccountant
       ? [
           { id: 'dashboard', label: 'Tableau de bord', icon: Home },
           { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
@@ -116,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },
-  ].map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
+  ].filter(it => viewAllowedFor(currentUser.role, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
   const inBottomBar = ['feed', 'chat', 'calendar', isAdmin ? 'validations' : 'active-post'];
@@ -201,6 +203,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <p className="df-sb-sub text-xs inline-flex items-center gap-1">
                 {isAdmin ? (
                   'Responsable'
+                ) : isAccountant ? (
+                  'Comptable'
                 ) : (
                   <>
                     {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}

@@ -8,6 +8,7 @@ import { checkSupplierDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
+import { isMoneyRole } from '../utils/roles';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
 import {
   User,
@@ -528,7 +529,7 @@ class DeltaForceStore {
   // Finances (responsable seulement ; le serveur revérifie chaque ligne). Les lignes partent avec la synchro habituelle.
   // En cas de refus, `error` est un code : 'admin' | 'kind' | 'amount' | 'date' | 'category' | 'missing'.
   public addCash(d: CashDraft): { success: boolean; error?: string; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const v = checkDraft(d);
     if (!v.ok) return { success: false, error: v.error };
     if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
@@ -540,7 +541,7 @@ class DeltaForceStore {
   }
 
   public updateCash(id: string, d: CashDraft): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const old = this.cash.find(x => x.id === id);
     if (!old) return { success: false, error: 'missing' };
     const v = checkDraft(d);
@@ -553,7 +554,7 @@ class DeltaForceStore {
   }
 
   public deleteCash(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.cash.some(x => x.id === id)) return { success: false, error: 'missing' };
     this.cash = this.cash.filter(x => x.id !== id);
     this.notify();
@@ -566,7 +567,7 @@ class DeltaForceStore {
   public getInvoices(): Invoice[] { return [...this.invoices]; }
 
   public saveInvoiceDraft(d: InvoiceDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const company = readCompany(this.getSettings().company);
     const v = checkInvoiceDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
     if (!v.ok) return { success: false, error: v.error, line: v.line };
@@ -591,7 +592,7 @@ class DeltaForceStore {
   }
 
   public deleteInvoiceDraft(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const inv = this.invoices.find(x => x.id === id);
     if (!inv) return { success: false, error: 'missing' };
     if (inv.status !== 'draft' || inv.type === 'credit_note') return { success: false, error: 'not_draft' }; // une facture émise ne se supprime jamais : on l'annule par un avoir
@@ -602,7 +603,7 @@ class DeltaForceStore {
 
   /** Envoie d'abord les changements en attente (le serveur lit le brouillon enregistré), puis appelle la route. */
   private async invoiceCall(route: string, body: unknown): Promise<{ ok: boolean; error?: string; data?: any }> {
-    if (this.currentUser?.role !== 'admin') return { ok: false, error: 'Réservé au responsable.' };
+    if (!isMoneyRole(this.currentUser?.role)) return { ok: false, error: 'Réservé au responsable et au comptable.' };
     if (!this.demo) {
       for (let i = 0; i < 50 && this.syncing; i++) await new Promise(r => setTimeout(r, 100));
       await this.flush();
@@ -622,7 +623,7 @@ class DeltaForceStore {
   // Clients (responsable seulement ; le serveur revérifie chaque fiche). Codes d'erreur : 'admin' | 'name' | 'email' | 'terms' | 'price' | 'price_by_type' | 'duplicate' | 'missing' | 'in_use'.
   // Le statut d'un client n'est jamais enregistré : il se calcule (src/utils/clients.ts).
   public addClient(d: ClientDraft): { success: boolean; error?: string; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const v = checkClientDraft(d);
     if (!v.ok) return { success: false, error: v.error };
     if (this.clients.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
@@ -634,7 +635,7 @@ class DeltaForceStore {
   }
 
   public updateClient(id: string, d: ClientDraft): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const old = this.clients.find(x => x.id === id);
     if (!old) return { success: false, error: 'missing' };
     const v = checkClientDraft(d);
@@ -649,7 +650,7 @@ class DeltaForceStore {
 
   /** Désactive (archive) ou réactive un client. Un client désactivé reste là avec ses missions et n'apparaît plus dans les listes de choix. */
   public setClientActive(id: string, active: boolean): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
     this.clients = this.clients.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
     this.notify();
@@ -658,7 +659,7 @@ class DeltaForceStore {
 
   /** Supprime une fiche seulement si aucune mission ni session ne la cite (le serveur refuse aussi) : sinon, on la désactive. */
   public deleteClient(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
     if (this.contracts.some(c => c.client_id === id) || this.posts.some(p => p.client_id === id)) return { success: false, error: 'in_use' };
     this.clients = this.clients.filter(x => x.id !== id);
@@ -672,7 +673,7 @@ class DeltaForceStore {
     return this.purchases.some(o => o.supplier_id === id) || this.stockMoves.some(m => m.supplier_id === id) || this.cash.some(c => c.supplier_id === id);
   }
   public addSupplier(d: SupplierDraft): { success: boolean; error?: string; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const v = checkSupplierDraft(d);
     if (!v.ok) return { success: false, error: v.error };
     if (this.suppliers.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
@@ -683,7 +684,7 @@ class DeltaForceStore {
     return { success: true, id };
   }
   public updateSupplier(id: string, d: SupplierDraft): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const old = this.suppliers.find(x => x.id === id);
     if (!old) return { success: false, error: 'missing' };
     const v = checkSupplierDraft(d);
@@ -696,7 +697,7 @@ class DeltaForceStore {
   }
   /** Archive ou réactive. Un fournisseur archivé reste là avec ses bons et n'apparaît plus dans les listes de choix. */
   public setSupplierActive(id: string, active: boolean): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
     this.suppliers = this.suppliers.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
     this.notify();
@@ -704,7 +705,7 @@ class DeltaForceStore {
   }
   /** Supprime seulement un fournisseur qui n'a servi à rien (le serveur refuse aussi) : sinon, on l'archive. */
   public deleteSupplier(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
     if (this.supplierUsed(id)) return { success: false, error: 'in_use' };
     this.suppliers = this.suppliers.filter(x => x.id !== id);
@@ -717,7 +718,7 @@ class DeltaForceStore {
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
 
   public addProduct(d: ProductDraft): { success: boolean; error?: string; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const v = checkProductDraft(d);
     if (!v.ok) return { success: false, error: v.error };
     const now = new Date().toISOString();
@@ -728,7 +729,7 @@ class DeltaForceStore {
   }
 
   public updateProduct(id: string, d: ProductDraft): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
     const v = checkProductDraft(d);
     if (!v.ok) return { success: false, error: v.error };
@@ -739,7 +740,7 @@ class DeltaForceStore {
 
   /** Supprime le produit ET tous ses mouvements (le serveur fait pareil). */
   public deleteProduct(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
     this.products = this.products.filter(x => x.id !== id);
     this.stockMoves = this.stockMoves.filter(m => m.product_id !== id);
@@ -752,7 +753,7 @@ class DeltaForceStore {
    * `withExpense` (entrée avec un prix payé) : crée aussi une dépense « Achats » du même montant, liée à l'entrée (S3.3).
    */
   public addStockMove(d: MoveDraft, opts: { withExpense?: boolean } = {}): { success: boolean; error?: string; id?: string; cashId?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const v = checkMoveDraft(d);
     if (!v.ok) return { success: false, error: v.error };
     const p = this.products.find(x => x.id === v.clean.product_id);
@@ -777,7 +778,7 @@ class DeltaForceStore {
 
   /** Supprime un mouvement (la quantité se recalcule). Refusé si cela rendrait le stock négatif. La dépense liée, s'il y en a une, reste : elle se supprime dans Finances. */
   public deleteStockMove(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const m = this.stockMoves.find(x => x.id === id);
     if (!m) return { success: false, error: 'missing' };
     const rest = this.stockMoves.filter(x => x.id !== id);

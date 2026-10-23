@@ -1,3 +1,4 @@
+import { CREATABLE_ROLES, ROLE_NAMES, roleOf } from '../../utils/roles';
 import React, { useState, useEffect } from 'react';
 import {
   Users,
@@ -84,6 +85,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('261 ');
   const [newShift, setNewShift] = useState<ShiftType>('day');
+  const [newRole, setNewRole] = useState<(typeof CREATABLE_ROLES)[number]>('employee');
 
   // Delete User Confirmation State
   const [addUserError, setAddUserError] = useState<string | null>(null);
@@ -212,7 +214,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       name: newName.trim(),
       phone: phoneIsEmpty(newPhone) ? '' : newPhone.trim(),
       shift: newShift,
-      role: 'employee',
+      role: newRole,
       status: 'active',
       avatar_url: '',
       performance_badge: 'Standard',
@@ -228,6 +230,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setNewPassword('');
     setNewName('');
     setNewPhone('261 ');
+    setNewRole('employee');
   };
 
   const handleOpenReviewAdvance = (adv: SalaryAdvanceRequest, approve: boolean) => {
@@ -247,6 +250,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     db.reviewAdvanceRequest(reviewAdvanceModal.advanceId, reviewAdvanceModal.approve, advanceNotes.trim() || undefined);
     setReviewAdvanceModal(null);
   };
+
+  // Comptables et chefs d'équipe : ils ne sont ni dans les vacations ni dans la paie, on les gère ici
+  const staff = users.filter(u => u.role !== 'employee' && u.role !== 'admin');
 
   // Filtered employees
   const employees = users
@@ -294,6 +300,33 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           <span>Ajouter un Opérateur</span>
         </button>
       </div>
+
+      {staff.length > 0 && (
+        <div className="bg-[#131c28] p-3 rounded-xl border border-slate-800 space-y-2">
+          <div className="text-xs font-mono font-bold text-slate-300 uppercase">Comptables et chefs d'équipe ({staff.length})</div>
+          <ul className="divide-y divide-slate-800">
+            {staff.map(u => {
+              const blocked = u.status === 'blocked';
+              return (
+                <li key={u.id} className="py-2 flex flex-wrap items-center gap-2 justify-between">
+                  <div className="min-w-0">
+                    <div className="text-sm text-white font-semibold truncate">{u.name}</div>
+                    <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]} · @{u.username}{blocked ? ' · bloqué' : ''}</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => askConfirm({ title: blocked ? `Débloquer ${u.name} ?` : `Bloquer ${u.name} ?`, message: blocked ? 'Le compte pourra de nouveau se connecter.' : 'Le compte ne pourra plus se connecter tant qu\'il est bloqué.', confirmLabel: blocked ? 'Débloquer' : 'Bloquer', danger: !blocked, onConfirm: () => handleToggleBlock(u.id) })}
+                      className="min-h-[44px] px-3 rounded text-sm font-bold bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700"
+                    >{blocked ? 'Débloquer' : 'Bloquer'}</button>
+                    <button type="button" onClick={() => handleDeleteUser(u)} className="min-h-[44px] px-3 rounded text-sm font-bold bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800">Supprimer</button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* FILTER BAR: Shift Selector & Live Search */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#131c28] p-3 rounded-xl border border-slate-800 text-xs font-mono">
@@ -886,6 +919,18 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
+                <label className="block text-slate-300 uppercase mb-1">Rôle</label>
+                <select
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value as (typeof CREATABLE_ROLES)[number])}
+                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
+                >
+                  {CREATABLE_ROLES.map(r => <option key={r} value={r}>{ROLE_NAMES[r][0]}</option>)}
+                </select>
+              </div>
+
+              {newRole === 'employee' && (
+              <div>
                 <label className="block text-slate-300 uppercase mb-1">Vacation Initial</label>
                 <select
                   value={newShift}
@@ -896,6 +941,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   <option value="night"> Night Vacation (20h00 - 06h00)</option>
                 </select>
               </div>
+              )}
 
               <div className="pt-2 flex justify-end gap-2">
                 <button

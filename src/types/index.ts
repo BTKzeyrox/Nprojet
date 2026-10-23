@@ -98,7 +98,7 @@ export interface ProfileChangeRequest {
   note?: string; // description facultative du booster
 }
 
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'admin' | 'employee' | 'accountant' | 'team_lead';
 export type UserStatus = 'active' | 'blocked';
 export type ShiftType = 'day' | 'night';
 

@@ -1,3 +1,4 @@
+import { isMoneyRole } from '../utils/roles';
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { db } from '../db/store';
@@ -32,7 +33,7 @@ export const ClientPicker: React.FC<Props> = ({ value, onChange, required, error
   const [qName, setQName] = useState('');
   const [qPhone, setQPhone] = useState('');
   const [qErr, setQErr] = useState('');
-  if (db.getCurrentUser()?.role !== 'admin') return null;
+  if (!isMoneyRole(db.getCurrentUser()?.role)) return null;
 
   const clients = db.getClients();
   const all = clientChoices(clients, value);

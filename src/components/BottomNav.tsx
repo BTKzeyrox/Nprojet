@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu } from 'lucide-react';
+import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2 } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
@@ -64,6 +64,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
       ? { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending }
       : { id: 'active-post', label: 'Mon poste', icon: ClipboardList },
   ];
+  // Comptable : ses pages seulement (Actualités, Messages, Facturation, Clients)
+  const accountantItems: typeof items = [
+    { id: 'feed', label: 'Actualités', icon: Newspaper },
+    { id: 'chat', label: 'Messages', icon: MessageSquare, badge: chatUnread },
+    { id: 'invoices', label: 'Facturation', icon: Receipt },
+    { id: 'clients', label: 'Clients', icon: Building2 },
+  ];
+  const shownItems = currentUser?.role === 'accountant' ? accountantItems : items;
 
   const base = `df-bottomnav fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
   const btn = (active: boolean) =>
@@ -74,7 +82,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
   return (
     <nav ref={navRef} className={base} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Navigation principale">
       <div className="flex items-stretch gap-1 px-2 pt-1.5 pb-1.5">
-        {items.map(it => {
+        {shownItems.map(it => {
           const I = it.icon;
           return (
             <button key={it.id} type="button" onClick={() => onNavigate(it.id)} className={btn(activeView === it.id)} aria-current={activeView === it.id ? 'page' : undefined}>

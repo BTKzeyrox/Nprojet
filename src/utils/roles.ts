@@ -26,6 +26,10 @@ export const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
 /** Routes (hors collections) réservées à l'admin et au Comptable. */
 export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay'];
 export const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
+/** Pages du Comptable (identifiants de vue du site). Jamais : paie, comptes, présence, réglages du site, statistiques (elles montrent la paie). */
+export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'clients', 'purchasing', 'chat', 'settings'] as const;
+/** Le Comptable ne peut ouvrir que ses pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
+export const viewAllowedFor = (role: unknown, view: string): boolean => role !== 'accountant' || (ACCOUNTANT_VIEWS as readonly string[]).includes(view);
 export const ROLE_NAMES: Record<Role, [string, string]> = {
   admin: ['Responsable', 'Manager'], accountant: ['Comptable', 'Accountant'], team_lead: ["Chef d'équipe", 'Team lead'], employee: ['Opérateur', 'Operator'],
 };

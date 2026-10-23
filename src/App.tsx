@@ -384,6 +384,13 @@ export default function App() {
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
             <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+          ) : viewUser.role === 'accountant' ? (
+            /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
+            activeView === 'clients' ? <ClientsPage />
+              : activeView === 'purchasing' ? <PurchasingPage />
+              : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+              : activeView === 'settings' ? <SettingsView personalOnly />
+              : <InvoicesView />
           ) : viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>

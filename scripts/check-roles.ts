@@ -66,5 +66,26 @@ const priv = /BEGIN PRIVACY[\s\S]*?END PRIVACY/.exec(src)![0];
 eq(/stripSettings = [^\n]*\n  if \(!rec \|\| \(me\.role === "admin" \|\| me\.role === "accountant"\)\)/.test(priv), true, 'réglages : prix client pour admin et Comptable');
 eq(/withoutClientPrice = [^\n]*\n  if \(!rec \|\| \(me\.role === "admin" \|\| me\.role === "accountant"\)/.test(priv), true, 'missions : prix client pour admin et Comptable');
 
+// ---- M7.1 c : écran du Comptable (règles de pages + câblage) ----
+eq(R.viewAllowedFor('accountant', 'invoices'), true, 'Comptable : Facturation permise');
+for (const v of ['feed', 'clients', 'purchasing', 'chat', 'settings']) eq(R.viewAllowedFor('accountant', v), true, `Comptable : page permise « ${v} »`);
+for (const v of ['advances', 'employees', 'stats', 'health', 'errors', 'validations', 'dashboard', 'history', 'performance', 'calendar', 'active-post', 'grid', 'security']) eq(R.viewAllowedFor('accountant', v), false, `Comptable : page refusée « ${v} »`);
+for (const r of ['admin', 'employee', 'team_lead', undefined, null, 'zzz']) eq(R.viewAllowedFor(r, 'advances'), true, `autres rôles non limités ici (${String(r)})`);
+eq([...R.ACCOUNTANT_VIEWS].some(v => ['advances', 'employees', 'stats', 'health', 'errors'].includes(v)), false, 'liste du Comptable : jamais paie, comptes, statistiques, santé, erreurs');
+const rd = (f: string) => readFileSync(f, 'utf8');
+const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), bottom = rd('src/components/BottomNav.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = rd('src/db/store.ts'), types = rd('src/types/index.ts');
+eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>/.test(app), true, 'App : écran du Comptable branché (toute autre page mène à Facturation)');
+eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>\s*\) : viewUser\.role === 'admin'/.test(app) || /<InvoicesView \/>\s*\n?\s*\) : viewUser\.role === 'admin'/.test(app), true, 'App : le Comptable passe avant l\'écran admin');
+eq(/viewAllowedFor\(currentUser\.role, it\.id\)/.test(side), true, 'Menu : filtré par rôle');
+eq(/currentUser\?\.role === 'accountant' \? accountantItems/.test(bottom), true, 'Barre du bas : jeu du Comptable');
+eq(/CREATABLE_ROLES\.map/.test(emp) && /role: newRole/.test(emp), true, 'Création de compte : rôle choisi parmi CREATABLE_ROLES');
+eq(/\{newRole === 'employee' && \(/.test(emp), true, 'Création : vacation demandée aux opérateurs seulement');
+eq(/const staff = users\.filter\(u => u\.role !== 'employee' && u\.role !== 'admin'\)/.test(emp), true, 'Liste des Comptables et chefs d\'équipe (bloquer, supprimer)');
+eq(/export type UserRole = 'admin' \| 'employee' \| 'accountant' \| 'team_lead'/.test(types), true, 'Type UserRole : 4 rôles');
+// côté site : l'argent est ouvert au Comptable, tout le reste reste réservé au responsable
+const money = ['addCash', 'updateCash', 'deleteCash', 'saveInvoiceDraft', 'deleteInvoiceDraft', 'addClient', 'updateClient', 'setClientActive', 'deleteClient', 'addSupplier', 'updateSupplier', 'setSupplierActive', 'deleteSupplier', 'addProduct', 'updateProduct', 'deleteProduct', 'addStockMove', 'deleteStockMove'];
+for (const f of money) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,260}?\\n    if \\(([^\\n]*)\\) return`).exec(store); eq(!!mm && mm[1].includes('isMoneyRole'), true, `store.${f} : admin ou Comptable`); }
+for (const f of ['publishNews', 'deleteNews', 'togglePinNews']) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,260}?role !== 'admin'`).exec(store); eq(!!mm, true, `store.${f} : reste réservé au responsable`); }
+
 console.log(fails ? `\n${fails} contrôle(s) en échec` : '\nRôles : tout est bon.');
 process.exit(fails ? 1 : 0);
