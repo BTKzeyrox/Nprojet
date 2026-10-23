@@ -35,6 +35,11 @@ const none = invoiceFigures({ ...base, invoices: [] });
 ok(none.issued_total === 0 && none.to_collect === 0 && none.overdue === 0 && none.collected === 0, 'aucune facture : tout à 0');
 ok(none.unbilled_count > 0 && none.unbilled_total > 0, 'démo : des missions validées ne sont pas encore facturées');
 
+// Les factures de la démo servent à vérifier que tout s'affiche ; les chiffres exacts se vérifient sur les factures créées ici
+const demoIds = new Set(db.getInvoices().map(v => v.id));
+const withDemo = invoiceFigures({ ...base, invoices: db.getInvoices() });
+ok(withDemo.issued_count + withDemo.open_count > 0 && withDemo.to_collect > 0 && withDemo.overdue > 0, 'démo : des factures ouvertes et en retard sont comptées');
+
 // Avec factures (créées par le store, comme sur l'écran)
 const a = db.saveInvoiceDraft({ client_id: c1.id, issue_date: `${month}-02`, due_date: `${month}-03`, lines: [{ description: 'A', qty: 2, unit_price: 10000 }] });
 const b = db.saveInvoiceDraft({ client_id: c1.id, issue_date: `${month}-02`, due_date: '2099-01-01', lines: [{ description: 'B', qty: 1, unit_price: 5000 }] });
@@ -43,7 +48,7 @@ const e = db.saveInvoiceDraft({ client_id: c1.id, issue_date: `${month}-02`, due
 for (const x of [a, b, d]) await db.issueInvoice(x.id!);
 await db.payInvoice(a.id!, { amount: 8000, date: `${month}-02` });
 await db.cancelInvoice(d.id!);
-const invs = db.getInvoices();
+const invs = db.getInvoices().filter(v => !demoIds.has(v.id));
 const f = invoiceFigures({ ...base, cash: db.getCash(), invoices: invs });
 ok(f.issued_count === 2 && f.issued_total === 25000, 'émises sur la période : 2 factures, 25 000 Ar (A 20 000 + B 5 000) ; la brouillon, l\'annulée et l\'avoir ne comptent pas');
 ok(f.cancelled_total === 7000, 'annulée de la période : 7 000 Ar à part');

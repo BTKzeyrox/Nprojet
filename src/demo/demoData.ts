@@ -1,9 +1,10 @@
-import type { CashEntry, Client, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, Client, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
 
 import { clientPriceForPost } from '../utils/clientPrice';
+import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
 
 export const DEMO_ADMIN_ID = 'demo_admin';
 // Prix client inventés pour la démo (les vrais prix se règlent dans Réglages > Missions). Les types sont ceux des missions de la démo.
@@ -71,6 +72,7 @@ export interface DemoData {
   products: Product[];
   stock: StockMove[];
   clients: Client[];
+  invoices: Invoice[];
 }
 
 // ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
@@ -180,6 +182,67 @@ const EXTRA_MISSIONS: { title: string; type: string; desc: string; client: strin
   { title: 'Inventaire du stock de la boutique', type: 'SAISIE DE FICHES', desc: 'Compter les articles et saisir les quantités.', client: 'demo_cl4', back: [78, 71] }, // plus de 60 jours, moins de 3 missions récentes : actif
   { title: 'Rangement des archives de la boutique', type: 'ADMINISTRATIF', desc: 'Trier et ranger les anciennes archives.', client: 'demo_cl5', back: [270, 240, 225, 205, 101] }, // rien depuis plus de 90 jours : inactif
 ];
+
+// ----- Factures de démonstration : un exemplaire de chaque état (brouillon, émise, partielle, payée, en retard, très en retard, annulée + avoir) -----
+// Les paiements sont des lignes d'argent DÉJÀ présentes dans la démo (on leur ajoute seulement le lien vers la facture) : les totaux de Finances ne changent donc pas.
+function buildDemoInvoices(posts: PostSession[], contracts: ClientContract[], clients: Client[], cash: CashEntry[]): { invoices: Invoice[]; cash: CashEntry[] } {
+  const todayKey = ymd(new Date());
+  const counters = new Map<string, number>();
+  const nextNo = (prefix: string, date: string) => { const y = Number(date.slice(0, 4)); const k = `${prefix}${y}`; const n = (counters.get(k) || 0) + 1; counters.set(k, n); return formatNumber(prefix, y, n); };
+  const prices = DEMO_CLIENT_PRICES;
+  const out: Invoice[] = [];
+  const outCash = cash.map(e => ({ ...e }));
+  const client = (id: string) => clients.find(c => c.id === id)!;
+  const line = (i: number, description: string, qty: number, unit: number, refs?: string[]): InvoiceLine => ({ id: `l${i + 1}`, description, qty, unit_price_ar: unit, total_ar: Math.round(qty * unit), ...(refs && refs.length ? { refs } : {}) });
+  const party = (c: Client) => ({ name: c.name, contact_name: c.contact_name, phone: c.phone });
+  const issuer = { name: DEMO_COMPANY.identity.name, address: DEMO_COMPANY.identity.address, phone: DEMO_COMPANY.identity.phone, email: DEMO_COMPANY.identity.email };
+  const make = (id: string, clientId: string, status: Invoice['status'], issue: string, due: string, lines: InvoiceLine[], extra: Partial<Invoice> = {}): Invoice => {
+    const t = invoiceTotals(lines, false, 0);
+    const c = client(clientId);
+    const at = new Date(`${issue}T09:00:00`).toISOString();
+    return { id, type: 'invoice', status, client_id: clientId, client: party(c), issue_date: issue, due_date: due, lines, ...t, created_by: DEMO_ADMIN_ID, created_at: at, updated_at: at, ...(status === 'draft' ? {} : { number: nextNo('FA-', issue), issuer, issued_at: at }), ...extra };
+  };
+  const used: Invoice[] = [];
+  const missionLines = (clientId: string, max: number) => {
+    const ms = billableMissions(posts, contracts, client(clientId), prices, used).slice(0, max);
+    return proposeLines(ms).map((l, i) => line(i, String(l.description), Number(l.qty), Number(l.unit_price), l.refs));
+  };
+  const pay = (clientName: string, nth: number): CashEntry | undefined => outCash.filter(e => e.kind === 'in' && e.client_name === clientName && !e.invoice_id && e.date <= todayKey).sort((a, b) => b.date.localeCompare(a.date))[nth];
+  const link = (e: CashEntry) => { e.invoice_id = out[out.length - 1].id; e.receipt_no = formatNumber('RC-', Number(e.date.slice(0, 4)), outCash.filter(x => x.receipt_no).length + 1); e.payment_method = 'Mobile money'; };
+
+  // 1. Payée en totalité : la facture reprend exactement un paiement existant
+  const pPaid = pay('Atelier Rivage', 0);
+  if (pPaid) { out.push(make('demo_inv1', 'demo_cl1', 'issued', addDays(pPaid.date, -12), addDays(pPaid.date, 18) > todayKey ? addDays(pPaid.date, 18) : todayKey, [line(0, 'Missions du mois (forfait, démo)', 1, pPaid.amount_ar)])); link(pPaid); }
+  // 2. Partiellement payée : la facture vaut le double d'un paiement existant
+  const pPart = pay('Société Delta Services', 0);
+  if (pPart) { out.push(make('demo_inv2', 'demo_cl2', 'issued', addDays(pPart.date, -10), addDays(todayKey, 12), [line(0, 'Missions du mois (forfait, démo)', 2, pPart.amount_ar)])); link(pPart); }
+  // 3. En retard (environ 60 jours) et 4. très en retard (plus de 90 jours) : missions du client, aucun paiement
+  const l3 = missionLines('demo_cl4', 3);
+  if (l3.length) { const iss = ymd(daysAgo(95)); out.push(make('demo_inv3', 'demo_cl4', 'issued', iss, addDays(iss, 30), l3)); used.push(out[out.length - 1]); }
+  const l4 = missionLines('demo_cl3', 2);
+  if (l4.length) { const iss = ymd(daysAgo(140)); out.push(make('demo_inv4', 'demo_cl3', 'issued', iss, addDays(iss, 30), l4)); used.push(out[out.length - 1]); }
+  // 5. Émise et pas encore échue
+  const l5 = missionLines('demo_cl1', 2);
+  if (l5.length) { const iss = ymd(daysAgo(3)); out.push(make('demo_inv5', 'demo_cl1', 'issued', iss, addDays(iss, 30), l5)); used.push(out[out.length - 1]); }
+  // 6. Annulée par un avoir
+  const l6 = [line(0, 'Prestation annulée (démo)', 1, 25000)];
+  const iss6 = ymd(daysAgo(40));
+  const inv6 = make('demo_inv6', 'demo_cl5', 'cancelled', iss6, addDays(iss6, 30), l6, { cancelled_by: 'demo_cn1' });
+  out.push(inv6);
+  const crIssue = ymd(daysAgo(38));
+  out.push({ ...inv6, id: 'demo_cn1', type: 'credit_note', status: 'issued', number: nextNo('AV-', crIssue), credit_of: inv6.id, cancelled_by: undefined, issue_date: crIssue, due_date: crIssue, issued_at: new Date(`${crIssue}T09:00:00`).toISOString() });
+  delete out[out.length - 1].cancelled_by;
+  // 7. Brouillon : sans numéro
+  const l7 = missionLines('demo_cl1', 1);
+  if (l7.length) out.push(make('demo_inv7', 'demo_cl1', 'draft', todayKey, addDays(todayKey, 30), l7));
+  // Numéros dans l'ordre des dates (comme le serveur : le numéro suit l'émission), compteur par année
+  counters.clear();
+  for (const v of [...out].filter(x => x.number && x.type !== 'credit_note').sort((x, y) => x.issue_date.localeCompare(y.issue_date) || x.id.localeCompare(y.id))) v.number = nextNo('FA-', v.issue_date);
+  for (const v of out.filter(x => x.type === 'credit_note')) v.number = nextNo('AV-', v.issue_date);
+  const rc = new Map<string, number>();
+  for (const e of outCash.filter(x => x.receipt_no).sort((x, y) => x.date.localeCompare(y.date) || x.id.localeCompare(y.id))) { const y = e.date.slice(0, 4); const n = (rc.get(y) || 0) + 1; rc.set(y, n); e.receipt_no = formatNumber('RC-', Number(y), n); }
+  return { invoices: out, cash: outCash };
+}
 
 function buildDemoClients(): Client[] {
   const at = iso(daysAgo(240), 9);
@@ -370,5 +433,7 @@ export function buildDemoData(): DemoData {
 
   const cash = buildDemoCash(posts, contracts);
   const { products, stock } = buildDemoStock();
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash, products, stock, clients: buildDemoClients() };
+  const clients = buildDemoClients();
+  const inv = buildDemoInvoices(posts, contracts, clients, cash);
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: inv.cash, products, stock, clients, invoices: inv.invoices };
 }

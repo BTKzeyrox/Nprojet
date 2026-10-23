@@ -1055,7 +1055,7 @@ class DeltaForceStore {
         const co = readCompany(this.getSettings().company);
         const client = this.clients.find(c => c.id === inv.client_id);
         const year = Number(nowIso.slice(0, 4));
-        const n = this.invoices.filter(x => x.type !== 'credit_note' && x.number).length + 1;
+        const n = this.invoices.filter(x => x.type !== 'credit_note' && x.number?.startsWith(`${co.billing.invoice_prefix}${year}-`)).length + 1;
         const t = invoiceTotals(inv.lines, co.tax.vat_enabled, co.tax.vat_rate);
         this.invoices = this.invoices.map(x => x.id === inv.id ? { ...x, ...t, status: 'issued', number: formatNumber(co.billing.invoice_prefix, year, n), issued_at: nowIso, client: { name: client?.name || inv.client.name, address: client?.address, email: client?.email, phone: client?.phone }, issuer: { name: co.identity.name, address: co.identity.address, email: co.identity.email, phone: co.identity.phone, tax_id: co.legal.tax_id, register_id: co.legal.register_id } } : x);
         this.emit();
@@ -1069,7 +1069,7 @@ class DeltaForceStore {
         if (!Number.isFinite(amount) || amount < 1) return fail('Montant invalide.');
         if (amount > info.balance) return fail(`Le paiement dépasse le reste à payer (${info.balance} Ar).`);
         const co = readCompany(this.getSettings().company);
-        const n = this.cash.filter(x => x.receipt_no).length + 1;
+        const n = this.cash.filter(x => x.receipt_no?.startsWith(`${co.billing.receipt_prefix}${nowIso.slice(0, 4)}-`)).length + 1;
         this.cash = [{ id: `cash-${Date.now().toString(36)}`, kind: 'in', category: 'Paiement client', amount_ar: amount, date: String(body.date || nowIso.slice(0, 10)), note: String(body.note || ''), client_name: inv.client.name, invoice_id: inv.id, receipt_no: formatNumber(co.billing.receipt_prefix, Number(nowIso.slice(0, 4)), n), payment_method: String(body.method || ''), created_at: nowIso, updated_at: nowIso }, ...this.cash];
         this.emit();
         return ok({ ok: true });
@@ -1078,7 +1078,7 @@ class DeltaForceStore {
         const inv = this.invoices.find(x => x.id === body.id);
         if (!inv || inv.status !== 'issued' || inv.type === 'credit_note') return fail('Cette facture ne peut pas être annulée.');
         if (invoiceInfo(inv, this.cash, nowIso.slice(0, 10)).paid > 0) return fail('Cette facture a déjà reçu un paiement : supprime d\'abord le paiement.');
-        const n = this.invoices.filter(x => x.type === 'credit_note').length + 1;
+        const n = this.invoices.filter(x => x.type === 'credit_note' && x.number?.startsWith(`AV-${nowIso.slice(0, 4)}-`)).length + 1;
         const credit: Invoice = { ...inv, id: `cn-${Date.now().toString(36)}`, type: 'credit_note', number: formatNumber('AV-', Number(nowIso.slice(0, 4)), n), credit_of: inv.id, cancelled_by: undefined, issue_date: nowIso.slice(0, 10), issued_at: nowIso, created_at: nowIso, updated_at: nowIso };
         delete credit.cancelled_by;
         this.invoices = [credit, ...this.invoices.map(x => x.id === inv.id ? { ...x, status: 'cancelled' as const, cancelled_by: credit.id } : x)];
@@ -1109,7 +1109,7 @@ class DeltaForceStore {
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
-    this.invoices = [];
+    this.invoices = role === 'admin' ? d.invoices : [];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();

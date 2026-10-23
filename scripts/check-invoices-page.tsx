@@ -21,8 +21,12 @@ const view = (lang: 'fr' | 'en') => { mem.delta_lang = lang; return renderToStri
 db.enterDemo('admin');
 const client = db.getClients()[0];
 ok(!!client, 'démo : au moins un client');
-ok(db.getInvoices().length === 0, 'démo : aucune facture au départ');
-ok(view('fr').includes('Aucune facture') && view('en').includes('No invoice yet'), 'liste vide : message clair FR et EN');
+const demoStates = new Set(db.getInvoices().map(i => invoiceInfo(i, db.getCash(), new Date().toISOString().slice(0, 10)).state));
+ok(['draft', 'issued', 'partial', 'paid', 'overdue', 'cancelled', 'credit_note'].every(x => demoStates.has(x as any)), 'démo : une facture dans chaque état (brouillon, émise, partielle, payée, en retard, annulée, avoir)');
+const startCount = db.getInvoices().length;
+const maxNo = (prefix: string) => Math.max(0, ...db.getInvoices().filter(i => i.number?.startsWith(prefix)).map(i => Number(i.number!.split('-')[2])));
+const yr = new Date().getFullYear();
+const faBefore = maxNo(`FA-${yr}-`);
 
 const draft = (o: object = {}) => ({ client_id: client.id, issue_date: '2026-10-20', due_date: '2026-11-19', lines: [{ description: 'Saisie de fiches', qty: 3, unit_price: 5000 }], ...o });
 ok(db.saveInvoiceDraft(draft({ client_id: '' })).error === 'client', 'sans client : refusé');
@@ -37,10 +41,10 @@ ok(inv().status === 'draft' && !inv().number && inv().total_ar === 15000, 'broui
 ok(db.saveInvoiceDraft(draft({ lines: [{ description: 'autre', qty: 1, unit_price: 100, refs: ['s1'] }] })).error === 'ref_used', 'même mission dans deux factures : refusé');
 ok(db.saveInvoiceDraft({ ...draft({ lines: [{ description: 'Saisie', qty: 2, unit_price: 5000, refs: ['s1'] }] }), id: a.id }).success && inv().total_ar === 10000, 'modifier son propre brouillon : permis (garde sa mission)');
 const frHtml = view('fr');
-ok(frHtml.includes('Brouillon') && !bad(frHtml), 'liste : le brouillon apparaît, pas de NaN / undefined');
+ok(frHtml.includes('Brouillon') && !bad(frHtml) && db.getInvoices().length === startCount + 1, 'liste : le brouillon apparaît, pas de NaN / undefined');
 
 const r1 = await db.issueInvoice(a.id!);
-ok(r1.ok && inv().status === 'issued' && /^FA-\d{4}-0001$/.test(inv().number || ''), 'émission : numéro FA-AAAA-0001 attribué');
+ok(r1.ok && inv().status === 'issued' && inv().number === `FA-${yr}-${String(faBefore + 1).padStart(4, '0')}`, 'émission : le numéro suivant de l\'année est attribué');
 ok(db.saveInvoiceDraft({ ...draft(), id: a.id }).error === 'not_draft', 'facture émise : plus modifiable');
 ok(db.deleteInvoiceDraft(a.id!).error === 'not_draft', 'facture émise : jamais supprimée');
 ok(!(await db.issueInvoice(a.id!)).ok, 'émettre deux fois : refusé (un seul numéro)');
@@ -57,16 +61,16 @@ ok(!(await db.payInvoice(a.id!, { amount: 1, date: '2026-10-22' })).ok, 'payer u
 const b = db.saveInvoiceDraft(draft({ lines: [{ description: 'À annuler', qty: 1, unit_price: 20000 }] }));
 await db.issueInvoice(b.id!);
 const nb = db.getInvoices().find(i => i.id === b.id)!;
-ok(/-0002$/.test(nb.number || ''), 'deuxième facture : numéro suivant (0002)');
+ok(nb.number === `FA-${yr}-${String(faBefore + 2).padStart(4, '0')}`, 'deuxième facture : numéro suivant');
 ok((await db.cancelInvoice(b.id!)).ok, 'annulation sans paiement : permise');
-const credit = db.getInvoices().find(i => i.type === 'credit_note');
-ok(!!credit && /^AV-/.test(credit.number || '') && credit.credit_of === b.id, 'un avoir AV-… est créé et cite la facture');
+const credit = db.getInvoices().find(i => i.type === 'credit_note' && i.credit_of === b.id);
+ok(!!credit && /^AV-/.test(credit.number || ''), 'un avoir AV-… est créé et cite la facture');
 ok(db.getInvoices().find(i => i.id === b.id)!.status === 'cancelled', 'la facture annulée est marquée annulée');
 ok(db.saveInvoiceDraft(draft({ lines: [{ description: 'Refaire', qty: 1, unit_price: 5, refs: ['s9'] }] })).success, 'après annulation, on peut refaire une facture');
 
 const html = view('fr'), en = view('en');
 ok(!bad(html) && !bad(en), 'page avec factures : pas de NaN / undefined / null (FR et EN)');
-ok(html.includes('Payée') && html.includes('Annulée') && html.includes('Avoir') && en.includes('Paid') && en.includes('Credit note'), 'états affichés en FR et en EN');
+ok(['Payée', 'Annulée', 'Avoir', 'En retard', 'Brouillon', 'Partiellement payée'].every(x => html.includes(x)) && ['Paid', 'Credit note', 'Overdue', 'Draft', 'Partly paid'].every(x => en.includes(x)), 'les 7 états sont affichés en FR et en EN');
 ok(/Facturé/.test(html) && /À encaisser/.test(html), 'totaux « facturé » et « à encaisser » affichés');
 
 db.enterDemo('employee');
