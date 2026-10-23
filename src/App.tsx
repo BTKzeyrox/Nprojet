@@ -1,3 +1,4 @@
+import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
 import { User, PostSession, AttendanceRow } from './types';
@@ -384,6 +385,11 @@ export default function App() {
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
             <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+          ) : viewUser.role === 'team_lead' ? (
+            /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */
+            activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+              : activeView === 'settings' ? <SettingsView personalOnly />
+              : <TeamValidations currentUser={viewUser} onOpenProofLightbox={handleOpenProofLightbox} />
           ) : viewUser.role === 'accountant' ? (
             /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
             activeView === 'clients' ? <ClientsPage />

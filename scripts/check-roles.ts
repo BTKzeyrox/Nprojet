@@ -70,7 +70,8 @@ eq(/withoutClientPrice = [^\n]*\n  if \(!rec \|\| \(me\.role === "admin" \|\| me
 eq(R.viewAllowedFor('accountant', 'invoices'), true, 'Comptable : Facturation permise');
 for (const v of ['feed', 'clients', 'purchasing', 'chat', 'settings']) eq(R.viewAllowedFor('accountant', v), true, `Comptable : page permise « ${v} »`);
 for (const v of ['advances', 'employees', 'stats', 'health', 'errors', 'validations', 'dashboard', 'history', 'performance', 'calendar', 'active-post', 'grid', 'security']) eq(R.viewAllowedFor('accountant', v), false, `Comptable : page refusée « ${v} »`);
-for (const r of ['admin', 'employee', 'team_lead', undefined, null, 'zzz']) eq(R.viewAllowedFor(r, 'advances'), true, `autres rôles non limités ici (${String(r)})`);
+for (const r of ['admin', 'employee', undefined, null, 'zzz']) eq(R.viewAllowedFor(r, 'advances'), true, `autres rôles non limités ici (${String(r)})`);
+eq(R.viewAllowedFor('team_lead', 'advances'), false, 'Chef d\'équipe : limité à ses pages (voir check:team-lead)');
 eq([...R.ACCOUNTANT_VIEWS].some(v => ['advances', 'employees', 'stats', 'health', 'errors'].includes(v)), false, 'liste du Comptable : jamais paie, comptes, statistiques, santé, erreurs');
 const rd = (f: string) => readFileSync(f, 'utf8');
 const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), bottom = rd('src/components/BottomNav.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = rd('src/db/store.ts'), types = rd('src/types/index.ts');

@@ -50,6 +50,7 @@
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
+    "check:team-lead": "npx --yes tsx scripts/check-team-lead.ts",
     "check:audit": "npx --yes tsx scripts/check-audit.ts",
     "check:roles": "npx --yes tsx scripts/check-roles.ts",
     "check:backup-restore": "npx --yes tsx scripts/check-backup-restore.ts",

@@ -1,6 +1,7 @@
 import { Avatar } from './Avatar';
 import { db } from '../db/store';
 import { viewAllowedFor } from '../utils/roles';
+import { teamPendingPosts } from '../utils/teamLead';
 import React from 'react';
 import {
   Layers,
@@ -86,6 +87,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useLockBodyScroll(!!isOpenMobile && !isWide);
   const isAdmin = currentUser.role === 'admin';
   const isAccountant = currentUser.role === 'accountant';
+  const isTeamLead = currentUser.role === 'team_lead';
+  const teamPending = isTeamLead ? teamPendingPosts(currentUser, db.getUsers(), db.getPosts()).length : 0; // sessions de SON équipe seulement
   const isLight = theme === 'light';
   const pending = countPending().total;
   const chatUnread = useChatUnread(currentUser);
@@ -94,10 +97,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
     { id: 'feed', label: 'Actualités', icon: Newspaper },
-    ...(isAdmin || isAccountant
+    ...(isAdmin || isAccountant || isTeamLead
       ? [
           { id: 'dashboard', label: 'Tableau de bord', icon: Home },
-          { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending > 0 ? String(pending) : undefined, tone: 'alert' as const },
+          { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: (isTeamLead ? teamPending : pending) > 0 ? String(isTeamLead ? teamPending : pending) : undefined, tone: 'alert' as const },
           { id: 'history', label: 'Historique', icon: History },
           { id: 'clients', label: 'Clients', icon: Building2 },
           { id: 'invoices', label: 'Facturation', icon: Receipt },
@@ -121,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ].filter(it => viewAllowedFor(currentUser.role, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
-  const inBottomBar = ['feed', 'chat', 'calendar', isAdmin ? 'validations' : 'active-post'];
+  const inBottomBar = ['feed', 'chat', 'calendar', isAdmin || isTeamLead ? 'validations' : 'active-post'];
 
   const handleItemClick = (id: string) => {
     if (id === 'profile' && onOpenEmployeeCV) {
@@ -205,6 +208,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   'Responsable'
                 ) : isAccountant ? (
                   'Comptable'
+                ) : isTeamLead ? (
+                  `Chef d'équipe${currentUser.team ? ` · ${currentUser.team}` : ''}`
                 ) : (
                   <>
                     {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}

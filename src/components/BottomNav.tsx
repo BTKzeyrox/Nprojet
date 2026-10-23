@@ -3,6 +3,7 @@ import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
+import { teamPendingPosts } from '../utils/teamLead';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { User } from '../types';
 import { useChatUnread } from '../utils/useChatUnread';
@@ -71,7 +72,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
     { id: 'invoices', label: 'Facturation', icon: Receipt },
     { id: 'clients', label: 'Clients', icon: Building2 },
   ];
-  const shownItems = currentUser?.role === 'accountant' ? accountantItems : items;
+  // Chef d'équipe : Actualités, Messages, Validations de son équipe
+  const teamLeadItems: typeof items = [
+    { id: 'feed', label: 'Actualités', icon: Newspaper },
+    { id: 'chat', label: 'Messages', icon: MessageSquare, badge: chatUnread },
+    { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: teamPendingPosts(currentUser, db.getUsers(), db.getPosts()).length },
+  ];
+  const shownItems = currentUser?.role === 'accountant' ? accountantItems : currentUser?.role === 'team_lead' ? teamLeadItems : items;
 
   const base = `df-bottomnav fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
   const btn = (active: boolean) =>

@@ -26,10 +26,18 @@ export const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
 /** Routes (hors collections) réservées à l'admin et au Comptable. */
 export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay'];
 export const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
+/** Nom d'équipe : texte court, sans retour à la ligne ; vide = pas d'équipe. */
+export const cleanTeam = (v: unknown): string => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+/** Même équipe : les deux ont une équipe et c'est la même (sans tenir compte des majuscules). Sans équipe, jamais. */
+export const sameTeam = (a: any, b: any): boolean => { const x = cleanTeam(a && a.team).toLowerCase(), y = cleanTeam(b && b.team).toLowerCase(); return !!x && x === y; };
+/** Qui peut valider ou refuser la session d'un opérateur : l'admin, ou le Chef d'équipe de la même équipe (jamais sa propre session ni celle d'un non-opérateur). */
+export const canDecidePost = (me: any, owner: any): boolean => !!me && !!owner && (me.role === 'admin' || (me.role === 'team_lead' && isOperator(owner.role) && owner.id !== me.id && sameTeam(me, owner)));
 /** Pages du Comptable (identifiants de vue du site). Jamais : paie, comptes, présence, réglages du site, statistiques (elles montrent la paie). */
 export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'clients', 'purchasing', 'chat', 'settings'] as const;
-/** Le Comptable ne peut ouvrir que ses pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
-export const viewAllowedFor = (role: unknown, view: string): boolean => role !== 'accountant' || (ACCOUNTANT_VIEWS as readonly string[]).includes(view);
+/** Pages du Chef d'équipe : Actualités, Validations de son équipe, Messages, réglages personnels. Jamais l'argent, la paie ni les comptes. */
+export const TEAM_LEAD_VIEWS = ['feed', 'validations', 'chat', 'settings'] as const;
+/** Le Comptable et le Chef d'équipe ne peuvent ouvrir que leurs pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
+export const viewAllowedFor = (role: unknown, view: string): boolean => role === 'accountant' ? (ACCOUNTANT_VIEWS as readonly string[]).includes(view) : role === 'team_lead' ? (TEAM_LEAD_VIEWS as readonly string[]).includes(view) : true;
 export const ROLE_NAMES: Record<Role, [string, string]> = {
   admin: ['Responsable', 'Manager'], accountant: ['Comptable', 'Accountant'], team_lead: ["Chef d'équipe", 'Team lead'], employee: ['Opérateur', 'Operator'],
 };

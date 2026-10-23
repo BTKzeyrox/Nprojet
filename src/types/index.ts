@@ -110,6 +110,7 @@ export interface User {
   status: UserStatus;
   shift: ShiftType; // 'day' (08:00 - 18:00) or 'night' (20:00 - 06:00)
   is_online: boolean;
+  team?: string; // équipe (texte court, choisi par l'admin) : un Chef d'équipe valide les sessions des opérateurs de la même équipe
   access_mode?: 'auto' | 'allow' | 'block'; // accès selon le shift : auto (défaut), toute heure, bloqué
   avatar_url: string;
   phone: string;

@@ -2,7 +2,7 @@
 export const AUDIT_ACTIONS = [
   'invoice_issue', 'invoice_cancel', 'invoice_pay', 'delete', 'tariff_change', 'settings_change', 'company_change',
   'user_create', 'user_password', 'signup_decision', 'profile_decision', 'reset_decision',
-  'payroll_close', 'payroll_reopen', 'payroll_pay', 'backup_now', 'backup_restore',
+  'payroll_close', 'payroll_reopen', 'payroll_pay', 'backup_now', 'backup_restore', 'mission_decision',
 ] as const;
 export type AuditAction = typeof AUDIT_ACTIONS[number];
 export interface AuditEntry { id: string; at: string; by: string; by_name: string; action: AuditAction; target_type: string; target_id: string; target_label: string; detail: string }
@@ -59,7 +59,7 @@ const LABELS: Record<AuditAction, [string, string]> = {
   invoice_issue: ['Facture émise', 'Invoice issued'], invoice_cancel: ['Facture annulée (avoir)', 'Invoice cancelled (credit note)'], invoice_pay: ['Paiement de facture', 'Invoice payment'],
   delete: ['Suppression', 'Deletion'], tariff_change: ['Changement de tarif', 'Price change'], settings_change: ['Changement de réglage', 'Setting change'], company_change: ['Conditions de l\'entreprise modifiées', 'Company conditions changed'],
   user_create: ['Compte créé', 'Account created'], user_password: ['Mot de passe changé', 'Password changed'], signup_decision: ['Inscription traitée', 'Sign-up handled'], profile_decision: ['Modification de profil traitée', 'Profile change handled'], reset_decision: ['Mot de passe oublié traité', 'Password reset handled'],
-  payroll_close: ['Paie clôturée', 'Payroll closed'], payroll_reopen: ['Paie rouverte', 'Payroll reopened'], payroll_pay: ['Paie versée', 'Payroll paid'], backup_now: ['Sauvegarde manuelle', 'Manual backup'], backup_restore: ['Restauration d\'une sauvegarde', 'Backup restored'],
+  payroll_close: ['Paie clôturée', 'Payroll closed'], payroll_reopen: ['Paie rouverte', 'Payroll reopened'], payroll_pay: ['Paie versée', 'Payroll paid'], backup_now: ['Sauvegarde manuelle', 'Manual backup'], backup_restore: ['Restauration d\'une sauvegarde', 'Backup restored'], mission_decision: ['Mission validée ou refusée', 'Mission approved or refused'],
 };
 export const auditLabel = (a: string, lang: 'fr' | 'en'): string => { const l = (LABELS as Record<string, [string, string]>)[a]; return l ? l[lang === 'en' ? 1 : 0] : (lang === 'en' ? 'Unknown action' : 'Action inconnue'); };
 

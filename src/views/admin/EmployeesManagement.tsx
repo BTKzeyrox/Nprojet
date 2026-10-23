@@ -1,4 +1,4 @@
-import { CREATABLE_ROLES, ROLE_NAMES, roleOf } from '../../utils/roles';
+import { CREATABLE_ROLES, ROLE_NAMES, roleOf, cleanTeam } from '../../utils/roles';
 import React, { useState, useEffect } from 'react';
 import {
   Users,
@@ -85,6 +85,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('261 ');
   const [newShift, setNewShift] = useState<ShiftType>('day');
+  const [newTeam, setNewTeam] = useState('');
+  const [editTeam, setEditTeam] = useState('');
   const [newRole, setNewRole] = useState<(typeof CREATABLE_ROLES)[number]>('employee');
 
   // Delete User Confirmation State
@@ -150,6 +152,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setEditName(user.name);
     setEditPhone(formatPhone(user.phone || ''));
     setEditShift(user.shift);
+    setEditTeam(user.team || '');
     setEditBadge(user.performance_badge);
     setEditPassword('');
   };
@@ -179,6 +182,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       name: editName,
       phone: phoneIsEmpty(editPhone) ? '' : editPhone,
       shift: editShift,
+      team: cleanTeam(editTeam),
       performance_badge: editBadge,
     });
 
@@ -215,6 +219,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       phone: phoneIsEmpty(newPhone) ? '' : newPhone.trim(),
       shift: newShift,
       role: newRole,
+      team: cleanTeam(newTeam),
       status: 'active',
       avatar_url: '',
       performance_badge: 'Standard',
@@ -231,6 +236,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setNewName('');
     setNewPhone('261 ');
     setNewRole('employee');
+    setNewTeam('');
   };
 
   const handleOpenReviewAdvance = (adv: SalaryAdvanceRequest, approve: boolean) => {
@@ -311,9 +317,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <li key={u.id} className="py-2 flex flex-wrap items-center gap-2 justify-between">
                   <div className="min-w-0">
                     <div className="text-sm text-white font-semibold truncate">{u.name}</div>
-                    <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]} · @{u.username}{blocked ? ' · bloqué' : ''}</div>
+                    <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]}{u.team ? ` · équipe ${u.team}` : ''} · @{u.username}{blocked ? ' · bloqué' : ''}</div>
                   </div>
                   <div className="flex gap-2">
+                    <button type="button" onClick={() => handleOpenEdit(u)} className="min-h-[44px] px-3 rounded text-sm font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600">Modifier</button>
                     <button
                       type="button"
                       onClick={() => askConfirm({ title: blocked ? `Débloquer ${u.name} ?` : `Bloquer ${u.name} ?`, message: blocked ? 'Le compte pourra de nouveau se connecter.' : 'Le compte ne pourra plus se connecter tant qu\'il est bloqué.', confirmLabel: blocked ? 'Débloquer' : 'Bloquer', danger: !blocked, onConfirm: () => handleToggleBlock(u.id) })}
@@ -806,6 +813,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
+              {editingUser && (editingUser.role === 'employee' || editingUser.role === 'team_lead') && (
+              <div>
+                <label className="block text-slate-300 uppercase mb-1">Équipe</label>
+                <input list="df-teams" value={editTeam} onChange={e => setEditTeam(e.target.value)} maxLength={40} placeholder="ex: Équipe Nord (vide = aucune)" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
+                <datalist id="df-teams">{[...new Set(users.map(u => (u.team || '').trim()).filter(Boolean))].map(t => <option key={t} value={t} />)}</datalist>
+              </div>
+              )}
+
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Vacation</label>
                 <select
@@ -928,6 +943,15 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   {CREATABLE_ROLES.map(r => <option key={r} value={r}>{ROLE_NAMES[r][0]}</option>)}
                 </select>
               </div>
+
+              {(newRole === 'employee' || newRole === 'team_lead') && (
+              <div>
+                <label className="block text-slate-300 uppercase mb-1">Équipe (facultatif)</label>
+                <input list="df-teams" value={newTeam} onChange={e => setNewTeam(e.target.value)} maxLength={40} placeholder="ex: Équipe Nord" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
+                <datalist id="df-teams">{[...new Set(users.map(u => (u.team || '').trim()).filter(Boolean))].map(t => <option key={t} value={t} />)}</datalist>
+                <p className="text-[11px] text-slate-400 mt-1">Un Chef d'équipe valide les sessions des opérateurs qui ont le même nom d'équipe.</p>
+              </div>
+              )}
 
               {newRole === 'employee' && (
               <div>

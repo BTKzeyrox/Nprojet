@@ -2232,6 +2232,17 @@ class DeltaForceStore {
     if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
     return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
   }
+  // --- Chef d'équipe (M7.1 d) : valider ou refuser la session d'un opérateur de son équipe. La paie et le prix client sont calculés par le serveur, jamais ici. ---
+  public async decidePost(id: string, approve: boolean, reason?: string): Promise<{ ok: boolean; error?: string }> {
+    const me = this.currentUser;
+    if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return { ok: false, error: 'Réservé au chef d\'équipe.' };
+    if (this.demo) { const r = approve ? this.validatePost(id) : this.rejectPost(id, reason || ''); return r.success ? { ok: true } : { ok: false, error: r.error }; }
+    const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason }) });
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
+    this.since = ''; await this.pull(true);
+    return { ok: true };
+  }
+
   // --- Journal d'audit (M7.2, admin) : lecture seule ; le serveur écrit les lignes ---
   public async listAudit(): Promise<{ ok: boolean; error?: string; rows: AuditEntry[] }> {
     const r = await this.api('audit-list?limit=1000');
