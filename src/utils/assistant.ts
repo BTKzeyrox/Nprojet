@@ -181,6 +181,28 @@ export function employeeRecap(i: SnapshotInput, userId: string): EmployeeRecap {
     missions_30d: done.filter(p => days(p.date, i.today) <= 29).length,
   };
 }
+export const PRINT_PREFIX = '__print:';
+const esc = (x: string) => x.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+/** Page imprimable du récap d'un salarié (HTML autonome, sans script) : mêmes chiffres que la réponse du chat. null si la personne n'existe pas. */
+export function recapPrintHtml(i: SnapshotInput, userId: string, lang: Lang): string | null {
+  const r = employeeRecap(i, userId);
+  if (!r.found) return null;
+  const fr = lang !== 'en', t = (a: string, c: string) => (fr ? a : c);
+  const rows: [string, string][] = [
+    [t('Ancienneté', 'Tenure'), (fr ? r.tenure_text.fr : r.tenure_text.en) + (r.first_date ? ` (${t('première trace le', 'first trace on')} ${fr ? dmy(r.first_date) : r.first_date})` : '')],
+    [t('Missions validées', 'Validated missions'), String(r.validated)],
+    [t('Missions refusées', 'Refused missions'), String(r.rejected)],
+    [t('Acceptation', 'Acceptance'), r.acceptance_pct === null ? '—' : `${r.acceptance_pct} %`],
+    [t('Validées sur 30 jours', 'Validated in 30 days'), String(r.missions_30d)],
+    [t('Jours de retard', 'Late days'), String(r.late_days)],
+    [t('Gagné (missions validées)', 'Earned (validated missions)'), ar(r.earned_ar, lang)],
+    [t('Avances acceptées', 'Approved advances'), ar(r.advances_approved_ar, lang)],
+    [t('Avances en attente', 'Pending advances'), `${r.advances_pending} (${ar(r.advances_pending_ar, lang)})`],
+  ];
+  if (r.badge) rows.push([t('Badge', 'Badge'), r.badge]);
+  const date = fr ? dmy(i.today) : i.today;
+  return `<!doctype html><html lang="${fr ? 'fr' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(t('Récap', 'Recap'))} ${esc(r.name)}</title><style>body{font-family:system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#111}h1{font-size:22px;margin:0 0 4px}p.s{color:#555;margin:0 0 16px;font-size:13px}table{width:100%;border-collapse:collapse}td{padding:8px 6px;border-bottom:1px solid #ccc;font-size:15px}td:last-child{text-align:right;font-weight:600}button{margin-top:16px;padding:10px 16px;font-size:15px}@media print{button{display:none}}</style></head><body><h1>${esc(t('Récap de', 'Recap of'))} ${esc(r.name)}</h1><p class="s">${esc(t('Au', 'On'))} ${esc(date)} · Gestion Pro</p><table>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table><p class="s">${esc(t('Chiffres calculés sur les missions et avances enregistrées.', 'Figures computed from recorded missions and advances.'))}</p><button onclick="window.print()">${esc(t('Imprimer', 'Print'))}</button></body></html>`;
+}
 export function employeeReply(i: SnapshotInput, userId: string): Reply {
   const r = employeeRecap(i, userId);
   if (!r.found) return { intent: 'employee', title: b('Employé introuvable', 'Employee not found'), lines: [b('Je ne trouve pas cette personne.', 'I cannot find this person.')], actions: [], sources: b('liste des employés', 'employee list'), empty: true };
@@ -194,7 +216,7 @@ export function employeeReply(i: SnapshotInput, userId: string): Reply {
   if (r.status !== 'active') L.push(b(`Compte : ${r.status}.`, `Account: ${r.status}.`));
   return {
     intent: 'employee', title: b(`Récap de ${r.name}`, `Recap of ${r.name}`), lines: L,
-    actions: [{ label: b('Voir son calendrier', 'See their calendar'), go: { view: 'calendar' } }, { label: b('Voir la paie', 'See payroll'), go: { view: 'advances' } }],
+    actions: [{ label: b('Voir son calendrier', 'See their calendar'), go: { view: 'calendar' } }, { label: b('Voir la paie', 'See payroll'), go: { view: 'advances' } }, { label: b('Imprimer le récap', 'Print the recap'), go: { view: PRINT_PREFIX + userId } }],
     sources: b(`d'après ${r.validated + r.rejected + r.open} mission(s) et les avances de ${r.name}, au ${dmy(i.today)}`, `based on ${r.validated + r.rejected + r.open} mission(s) and ${r.name}'s advances, on ${i.today}`),
   };
 }

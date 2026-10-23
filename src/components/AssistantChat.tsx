@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
-import { respond, helpReply, pageLinks, type Reply } from '../utils/assistant';
+import { respond, helpReply, pageLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
@@ -79,6 +79,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   };
   const copy = async () => { if (draft == null) return; try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setCopied(false); setProblem(t('Copie impossible ici : sélectionne le texte et copie-le à la main.', 'Copy not possible here: select the text and copy it by hand.')); } };
   const go = (g: { view: string; tab?: string }) => {
+    if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
     if (isKnownView(g.view)) onNavigate?.(g.view);

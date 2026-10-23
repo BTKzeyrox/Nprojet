@@ -1,6 +1,6 @@
 // Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant
 import fs from 'node:fs';
-import { suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
+import { recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
 import { buildDemoData } from '../src/demo/demoData';
 import { runHealth } from '../src/utils/health/registry';
 import { ALL_RULES } from '../src/utils/health/all';
@@ -171,6 +171,16 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   ok(/onPointerDown=\{e => e\.preventDefault\(\)\}/.test(ac) && /enterKeyHint="send"/.test(ac) && /bg-\[#e9eff8\]/.test(ac), 'conversation : même zone de saisie et mêmes couleurs que la messagerie');
   ok(ac.includes('getSnapshotInput') && !/fetch\(|db\.sendMessage|XMLHttpRequest/.test(ac), 'conversation : rien n\'est envoyé au serveur, les données viennent de getSnapshotInput (refuse si pas admin)');
   ok(/localStorage/.test(ac) && /try \{/.test(ac), 'historique : gardé sur l\'appareil, avec protection si le stockage est refusé');
+}
+
+{
+  const base = rc([U('u1')], [P('a', 'u1', day(0))]);
+  const h = recapPrintHtml(base, 'u1', 'fr') || '';
+  ok(h.startsWith('<!doctype html>') && !/<script/i.test(h) && /window\.print/.test(h) && h.includes('Gestion Pro'), 'impression : page autonome, sans script externe, avec bouton Imprimer');
+  ok(recapPrintHtml(base, 'zz', 'fr') === null, 'impression : personne inconnue = rien à imprimer');
+  ok(employeeReply(base, 'u1').actions.some(a => a.go.view === PRINT_PREFIX + 'u1'), 'impression : bouton « Imprimer le récap » dans la réponse');
+  const evil = rc([{ ...U('u1'), name: '<img src=x onerror=alert(1)>' }], []);
+  ok(!/<img/.test(recapPrintHtml(evil, 'u1', 'en') || ''), 'impression : un nom piégé est neutralisé (pas de HTML injecté)');
 }
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
