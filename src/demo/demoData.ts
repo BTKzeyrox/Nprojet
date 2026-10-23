@@ -1,4 +1,4 @@
-import type { CashEntry, Client, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { CashEntry, Client, PurchaseOrder, Supplier, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -73,6 +73,8 @@ export interface DemoData {
   stock: StockMove[];
   clients: Client[];
   invoices: Invoice[];
+  suppliers: Supplier[];
+  purchases: PurchaseOrder[];
 }
 
 // ----- Finances inventées (paiements reçus et dépenses), cohérentes avec les missions validées de la démo -----
@@ -167,6 +169,39 @@ export function buildDemoStock(): { products: Product[]; stock: StockMove[] } {
   });
   stock.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
   return { products, stock };
+}
+
+// ----- Fournisseurs et bons de commande inventés (module 4) : liés aux achats et aux entrées de stock DÉJÀ présents (les totaux ne changent pas) -----
+// 3 fournisseurs (un archivé), 5 bons : reçu, commandé en retard, commandé dans les temps, brouillon, annulé. Le bon reçu cite de vraies entrées de stock.
+export function buildDemoPurchasing(products: Product[], stock: StockMove[], cash: CashEntry[]): { suppliers: Supplier[]; purchases: PurchaseOrder[]; stock: StockMove[]; cash: CashEntry[] } {
+  const base = new Date();
+  const day = (back: number) => { const d = new Date(base); d.setDate(d.getDate() - back); return ymd(d); };
+  const at = (d: string) => new Date(`${d}T09:00:00`).toISOString();
+  const sup = (id: string, name: string, contact: string, lead: number | undefined, note: string, active = true): Supplier => ({ id, name, contact, ...(lead !== undefined ? { lead_days: lead } : {}), note, active, created_by: DEMO_ADMIN_ID, created_at: at(day(300)), updated_at: at(day(300)) });
+  const suppliers = [
+    sup('demo_sup1', 'Papeterie Analakely', '034 00 000 01', 2, 'Papier, encre et fournitures.'),
+    sup('demo_sup2', 'Info Matériel Plus', 'contact@infomateriel.example', 5, 'Casques, souris, câbles, clés USB.'),
+    sup('demo_sup3', 'Ancien Grossiste (démo)', '', undefined, 'N\'est plus utilisé.', false),
+  ];
+  const supOf = (productId: string) => (productId === 'demo_p1' || productId === 'demo_p2' ? 'demo_sup1' : 'demo_sup2');
+  // Entrées de réapprovisionnement : fournisseur selon le produit ; les deux plus récentes (produits 4 et 5) forment le bon reçu BC-0001.
+  const lastIn = (pid: string) => stock.filter(m => m.product_id === pid && m.type === 'in' && m.unit_cost_ar).sort((a, b) => b.date.localeCompare(a.date))[0];
+  const received = ['demo_p4', 'demo_p5'].map(pid => lastIn(pid)).filter(Boolean) as StockMove[];
+  const recvIds = new Set(received.map(m => m.id));
+  const outStock = stock.map(m => m.type === 'in' && m.unit_cost_ar ? { ...m, supplier_id: supOf(m.product_id), ...(recvIds.has(m.id) ? { po_id: 'demo_po1' } : {}) } : m);
+  const outCash = cash.map(c => c.kind === 'out' && c.category === 'Achats' && !c.supplier_id ? { ...c, supplier_id: 'demo_sup1' } : c);
+  const price = (pid: string) => products.find(p => p.id === pid)?.buy_price_ar || 0;
+  const po = (n: number, supplier_id: string, back: number, expected: number | null, status: PurchaseOrder['status'], lines: { product_id: string; qty: number; unit_cost_ar: number; received_qty: number }[], note = ''): PurchaseOrder => ({
+    id: `demo_po${n}`, ref: `BC-${String(n).padStart(4, '0')}`, supplier_id, date: day(back), ...(expected !== null ? { expected_date: day(expected) } : {}), status, lines, note, created_by: DEMO_ADMIN_ID, created_at: at(day(back)), updated_at: at(day(back)),
+  });
+  const purchases: PurchaseOrder[] = [
+    po(1, 'demo_sup2', received[0] ? Math.max(1, Math.round((base.getTime() - new Date(`${received[0].date}T09:00:00`).getTime()) / 86400000)) : 30, null, 'received', received.map(m => ({ product_id: m.product_id, qty: m.qty, unit_cost_ar: m.unit_cost_ar || 0, received_qty: m.qty })), 'Livré en une fois.'),
+    po(2, 'demo_sup2', 12, 5, 'ordered', [{ product_id: 'demo_p3', qty: 3, unit_cost_ar: price('demo_p3'), received_qty: 0 }], 'Livraison en retard : relancer.'),
+    po(3, 'demo_sup1', 1, -3, 'ordered', [{ product_id: 'demo_p1', qty: 30, unit_cost_ar: price('demo_p1'), received_qty: 0 }, { product_id: 'demo_p2', qty: 2, unit_cost_ar: price('demo_p2'), received_qty: 0 }]),
+    po(4, 'demo_sup2', 0, null, 'draft', [{ product_id: 'demo_p6', qty: 5, unit_cost_ar: price('demo_p6'), received_qty: 0 }]),
+    po(5, 'demo_sup1', 40, 35, 'cancelled', [{ product_id: 'demo_p1', qty: 10, unit_cost_ar: price('demo_p1'), received_qty: 0 }], 'Annulé : prix trop haut.'),
+  ];
+  return { suppliers, purchases, stock: outStock, cash: outCash };
 }
 
 // ----- Clients inventés (module Clients) : un de chaque statut, calculés à partir des missions de la démo -----
@@ -435,5 +470,6 @@ export function buildDemoData(): DemoData {
   const { products, stock } = buildDemoStock();
   const clients = buildDemoClients();
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: inv.cash, products, stock, clients, invoices: inv.invoices };
+  const buy = buildDemoPurchasing(products, stock, inv.cash);
+  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases };
 }

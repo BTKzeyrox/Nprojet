@@ -5,7 +5,7 @@ import { HEALTH_PAGES } from './types';
 /** Entrée du menu qui porte la pastille d'une page surveillée. `null` = pas d'entrée de menu à elle (comptée dans « Santé du site » seulement). */
 export const MENU_ITEM_OF_PAGE: Record<HealthPage, string | null> = {
   missions: 'validations', team: 'employees', payroll: 'advances', finance: 'stats', clients: 'clients', stock: 'stats',
-  invoices: 'invoices', suppliers: null, hr: null, performance: 'performance', conditions: 'settings', data: 'history', security: null, system: 'errors',
+  invoices: 'invoices', suppliers: 'purchasing', hr: null, performance: 'performance', conditions: 'settings', data: 'history', security: null, system: 'errors',
 };
 
 /** Pastille par entrée de menu : nombre d'alertes À VOIR + URGENTES (les « infos » ne font pas de pastille). */
@@ -22,6 +22,6 @@ export function menuBadges(alerts: HealthAlert[]): Record<string, { count: numbe
 }
 
 /** Vues du menu admin qui existent vraiment (une alerte ne doit jamais mener à une page qui n'existe pas). */
-export const KNOWN_VIEWS = ['dashboard', 'validations', 'history', 'clients', 'invoices', 'performance', 'stats', 'active-post', 'employees', 'chat', 'calendar', 'advances', 'errors', 'settings', 'health'] as const;
+export const KNOWN_VIEWS = ['dashboard', 'validations', 'history', 'clients', 'invoices', 'purchasing', 'performance', 'stats', 'active-post', 'employees', 'chat', 'calendar', 'advances', 'errors', 'settings', 'health'] as const;
 export const isKnownView = (v: string): boolean => (KNOWN_VIEWS as readonly string[]).includes(v);
 export const allPagesCovered = (): boolean => HEALTH_PAGES.every(p => p in MENU_ITEM_OF_PAGE);

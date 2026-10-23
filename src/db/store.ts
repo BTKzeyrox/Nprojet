@@ -4,6 +4,7 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
+import { checkSupplierDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -29,6 +30,8 @@ import {
   CashEntry,
   Product,
   StockMove,
+  Supplier,
+  PurchaseOrder,
   Client,
   Invoice,
   NewsAttachment,
@@ -42,7 +45,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'suppliers', 'purchases'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -102,6 +105,8 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   stock: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
   clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
+  suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
+  purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
@@ -144,6 +149,8 @@ class DeltaForceStore {
   private products: Product[] = []; // stock (admin seulement, comme les finances)
   private stockMoves: StockMove[] = [];
   private invoices: Invoice[] = []; // factures et avoirs (admin seulement)
+  private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
+  private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
@@ -186,7 +193,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(),
     };
   }
 
@@ -206,6 +213,8 @@ class DeltaForceStore {
       case 'stock': return this.stockMoves;
       case 'clients': return this.clients;
       case 'invoices': return this.invoices;
+      case 'suppliers': return this.suppliers;
+      case 'purchases': return this.purchases;
     }
   }
 
@@ -225,6 +234,8 @@ class DeltaForceStore {
       case 'stock': this.stockMoves = value; break;
       case 'clients': this.clients = value; break;
       case 'invoices': this.invoices = value; break;
+      case 'suppliers': this.suppliers = value; break;
+      case 'purchases': this.purchases = value; break;
     }
   }
 
@@ -520,6 +531,7 @@ class DeltaForceStore {
     if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
     const v = checkDraft(d);
     if (!v.ok) return { success: false, error: v.error };
+    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
     const now = new Date().toISOString();
     const id = `cash-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
     this.cash = [{ id, ...v.clean, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
@@ -533,7 +545,9 @@ class DeltaForceStore {
     if (!old) return { success: false, error: 'missing' };
     const v = checkDraft(d);
     if (!v.ok) return { success: false, error: v.error };
-    this.cash = this.cash.map(x => x.id === id ? { ...x, ...v.clean, updated_at: new Date().toISOString() } : x);
+    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
+    const { supplier_id: _sid, ...oldCash } = old; // un fournisseur vidé par l'admin disparaît vraiment
+    this.cash = this.cash.map(x => x.id === id ? { ...oldCash, ...v.clean, updated_at: new Date().toISOString() } : x);
     this.notify();
     return { success: true };
   }
@@ -652,6 +666,53 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // Fournisseurs (responsable seulement ; le serveur revérifie chaque fiche). Codes d'erreur : 'admin' | 'name' | 'lead' | 'duplicate' | 'missing' | 'in_use'.
+  public getSuppliers(): Supplier[] { return [...this.suppliers]; }
+  private supplierUsed(id: string): boolean {
+    return this.purchases.some(o => o.supplier_id === id) || this.stockMoves.some(m => m.supplier_id === id) || this.cash.some(c => c.supplier_id === id);
+  }
+  public addSupplier(d: SupplierDraft): { success: boolean; error?: string; id?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const v = checkSupplierDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    if (this.suppliers.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
+    const now = new Date().toISOString();
+    const id = `sup-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    this.suppliers = [{ id, ...v.clean, active: true, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.suppliers];
+    this.notify();
+    return { success: true, id };
+  }
+  public updateSupplier(id: string, d: SupplierDraft): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.suppliers.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    const v = checkSupplierDraft(d);
+    if (!v.ok) return { success: false, error: v.error };
+    if (this.suppliers.some(x => x.id !== id && normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
+    const { lead_days: _l, ...base } = old; // un délai vidé disparaît vraiment
+    this.suppliers = this.suppliers.map(x => x.id === id ? { ...base, ...v.clean, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Archive ou réactive. Un fournisseur archivé reste là avec ses bons et n'apparaît plus dans les listes de choix. */
+  public setSupplierActive(id: string, active: boolean): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
+    this.suppliers = this.suppliers.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime seulement un fournisseur qui n'a servi à rien (le serveur refuse aussi) : sinon, on l'archive. */
+  public deleteSupplier(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
+    if (this.supplierUsed(id)) return { success: false, error: 'in_use' };
+    this.suppliers = this.suppliers.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
 
@@ -696,6 +757,7 @@ class DeltaForceStore {
     if (!v.ok) return { success: false, error: v.error };
     const p = this.products.find(x => x.id === v.clean.product_id);
     if (!p) return { success: false, error: 'product' };
+    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
     const have = quantities([p], this.stockMoves).get(p.id) || 0;
     if (v.clean.type !== 'in' && have + (v.clean.type === 'out' ? -v.clean.qty : v.clean.qty) < 0) return { success: false, error: 'stock' };
     const now = new Date().toISOString();
@@ -704,7 +766,7 @@ class DeltaForceStore {
     if (opts.withExpense && v.clean.type === 'in') {
       const amount = purchaseAmount(v.clean.qty, v.clean.unit_cost_ar);
       if (amount < 1) return { success: false, error: 'cost' }; // pas de prix : pas de dépense à créer
-      const c = this.addCash({ kind: 'out', category: 'Achats', amount, date: v.clean.date, note: `Stock : ${p.name} (${v.clean.qty} ${p.unit})` });
+      const c = this.addCash({ kind: 'out', category: 'Achats', amount, date: v.clean.date, note: `Stock : ${p.name} (${v.clean.qty} ${p.unit})`, ...(v.clean.supplier_id ? { supplier_id: v.clean.supplier_id } : {}) });
       if (!c.success) return { success: false, error: c.error };
       cashId = c.id;
     }
@@ -1007,7 +1069,7 @@ class DeltaForceStore {
       case 'backup-get': {
         const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
         if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices } } });
+        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases } } });
       }
       case 'errors': {
         const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
@@ -1118,6 +1180,8 @@ class DeltaForceStore {
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
     this.invoices = role === 'admin' ? d.invoices : [];
+    this.suppliers = role === 'admin' ? d.suppliers : [];
+    this.purchases = role === 'admin' ? d.purchases : [];
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();

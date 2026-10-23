@@ -77,6 +77,14 @@ export const SITE_MAP: SitePage[] = [
     ],
   },
   {
+    id: 'purchasing', audience: 'admin', title: b('Achats', 'Purchasing'),
+    purpose: b('Garder la liste de tes fournisseurs et les relier au stock et aux dépenses « Achats ».', 'Keep your suppliers list and link it to stock and “Achats” expenses.'),
+    howto: [b('Nouveau fournisseur : nom, contact, délai habituel de livraison.', 'New supplier: name, contact, usual delivery time.'), b('Dans une entrée de stock ou une dépense « Achats », choisir le fournisseur dans la liste.', 'In a stock entry or an “Achats” expense, pick the supplier from the list.'), b('Archiver un fournisseur qu\'on n\'utilise plus : il disparaît des listes de choix mais garde son histoire.', 'Archive a supplier you no longer use: it leaves the choice lists but keeps its history.')],
+    rules: [b('Un fournisseur qui a servi ne se supprime pas : on l\'archive.', 'A supplier that has been used is never deleted: it is archived.'), b('Seul le responsable voit les fournisseurs ; le serveur n\'en envoie aucun aux opérateurs.', 'Only the admin sees suppliers; the server sends none to operators.')],
+    conditions: [],
+    figures: [],
+  },
+  {
     id: 'performance', audience: 'admin', title: b('Performance', 'Performance'),
     purpose: b('Comment chaque salarié travaille : missions faites, refusées, délais.', 'How each employee works: missions done, refused, timing.'),
     howto: [b('Choisir la période (7 jours, 30 jours, tout).', 'Pick the period (7 days, 30 days, all).'), b('Comparer les salariés entre eux.', 'Compare employees with each other.'), b('Exporter en Excel ou en CSV.', 'Export to Excel or CSV.')],

@@ -241,13 +241,13 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 4 — Fournisseurs, achats et stock — taille M (dépend du stock existant)
 
-- ⏳ **MODULE 4 PRIS le 2026-10-21 vers 20:24 UTC par une session, à la demande de BTK (« Go M4 »). Ne pas le refaire en parallèle.**
+- ⏳ **MODULE 4 PRIS le 2026-10-21 vers 20:24 UTC par une session, à la demande de BTK (« Go M4 »). Ne pas le refaire en parallèle.** Repris le 2026-10-23 par une autre session (« GO M4 » de BTK) : règles et serveur déjà là (`0e90dbc`), écrans faits étape par étape (M4.1 d'abord).
 
 **But :** relier le stock et les dépenses à de vrais **fournisseurs**, avec des **bons de commande** et un **inventaire**.
 
 **Données :** table `df_suppliers` (nom, contact, délai, note) ; table `df_purchase_orders` (fournisseur, lignes produit × quantité × prix, états *Brouillon / Commandé / Reçu / Annulé*).
 
-- [ ] **M4.1 — Fournisseurs** (M) : fiche fournisseur ; le champ « fournisseur » devient une liste dans l'entrée de stock et dans la dépense « Achats » — **accord + sauvegarde** pour la table.
+- [x] **M4.1 — Fournisseurs** (M) — **fait le 2026-10-23** : fiche fournisseur (page « Achats » > Fournisseurs, menu admin), le champ « fournisseur » est une liste dans l'entrée de stock et dans la dépense « Achats » (la dépense créée avec une entrée porte le même fournisseur). Tables `df_suppliers` et `df_purchase_orders` et blocs serveur `SUPPLIERS` : déjà en place (tables vues dans la base le 2026-10-23 ; `df-api` v22). `check:purchasing-page` 39/39, `check:purchasing` 89/89, `check:purchasing-server` 146/146, `check:cash` 29/29 et `check:company` 119/119 réparés (ils lisaient l'ancien texte du serveur), `tsc` et `build` OK. **Non vérifié :** écran sur un vrai téléphone, vrai appel du serveur pour un fournisseur (aucun essai réel fait).
 - [ ] **M4.2 — Bons de commande** (L) : création, réception (crée **automatiquement** les entrées de stock **et** la dépense « Achats » après confirmation), réception partielle.
 - [ ] **M4.3 — Inventaire** (M) : comptage physique d'un produit ou de tout le stock, écart affiché, ajustement en un clic (mouvement « ajustement » déjà existant), historique.
 - [ ] **M4.4 — Budgets par catégorie** (M) : plafond mensuel par catégorie de dépense (Loyer, Internet, Achats…), barre d'avancement et alerte (étend les objectifs de S4.1).

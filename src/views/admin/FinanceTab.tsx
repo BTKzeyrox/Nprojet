@@ -12,7 +12,7 @@ import { FinanceInsights } from './FinanceInsights';
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
 // Les salaires viennent des missions validées (calculés, jamais saisis) ; les avances sont des salaires versés d'avance : elles ne s'ajoutent pas.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en'; salariesAr: number; advancesAr: number }
-interface Editor { id?: string; kind: CashKind; amount: string; date: string; category: string; custom: string; client: string; note: string }
+interface Editor { id?: string; kind: CashKind; amount: string; date: string; category: string; custom: string; client: string; note: string; supplier: string }
 
 const CUSTOM = '__custom';
 const PAGE = 20;
@@ -33,6 +33,7 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
   const all: CashEntry[] = db.getCash();
   const inRange = useMemo(() => filterCash(all, { ...range, kind: 'all', category: '' }), [all, range.start, range.end]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => filterCash(all, { ...range, kind, category }), [all, range.start, range.end, kind, category]); // eslint-disable-line react-hooks/exhaustive-deps
+  const supplierNames = useMemo(() => Object.fromEntries(db.getSuppliers().map(x => [x.id, x.name])) as Record<string, string>, [all]); // eslint-disable-line react-hooks/exhaustive-deps
   const money = periodMoney(inRange, salariesAr);
   const usedCategories = useMemo(() => [...new Set(inRange.map(e => e.category))].sort((a, b) => a.localeCompare(b)), [inRange]);
   const shown = showAll ? rows : rows.slice(0, PAGE);
@@ -42,19 +43,19 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
   const errors: Record<string, [string, string]> = {
     amount: ['Entre un montant supérieur à 0.', 'Enter an amount above 0.'], date: ['Choisis une date valide.', 'Choose a valid date.'],
     category: ['Choisis une catégorie.', 'Choose a category.'], kind: ['Type inconnu.', 'Unknown type.'],
-    admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
+    supplier: ['Ce fournisseur n\'existe plus.', 'This supplier no longer exists.'], admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
-  const open = (k: CashKind) => { setError(''); setConfirmId(null); setEditor({ kind: k, amount: '', date: todayMada(), category: categoriesFor(k, all)[0], custom: '', client: '', note: '' }); };
+  const open = (k: CashKind) => { setError(''); setConfirmId(null); setEditor({ kind: k, amount: '', date: todayMada(), category: categoriesFor(k, all)[0], custom: '', client: '', note: '', supplier: '' }); };
   const edit = (e: CashEntry) => {
     setError(''); setConfirmId(null);
     const known = categoriesFor(e.kind, all).includes(e.category);
-    setEditor({ id: e.id, kind: e.kind, amount: String(e.amount_ar), date: e.date, category: known ? e.category : CUSTOM, custom: known ? '' : e.category, client: e.client_name || '', note: e.note || '' });
+    setEditor({ id: e.id, kind: e.kind, amount: String(e.amount_ar), date: e.date, category: known ? e.category : CUSTOM, custom: known ? '' : e.category, client: e.client_name || '', note: e.note || '', supplier: e.supplier_id || '' });
   };
   const save = () => {
     if (!editor) return;
-    const draft = { kind: editor.kind, category: editor.category === CUSTOM ? editor.custom : editor.category, amount: editor.amount, date: editor.date, note: editor.note, client_name: editor.kind === 'in' ? editor.client : '' };
+    const draft = { kind: editor.kind, category: editor.category === CUSTOM ? editor.custom : editor.category, amount: editor.amount, date: editor.date, note: editor.note, client_name: editor.kind === 'in' ? editor.client : '', supplier_id: editor.kind === 'out' ? editor.supplier : '' };
     const r = editor.id ? db.updateCash(editor.id, draft) : db.addCash(draft);
     if (!r.success) { setError(say(r.error)); return; }
     setEditor(null);
@@ -114,7 +115,7 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
             {shown.map(e => (
               <li key={e.id} className="flex items-center gap-2 py-2 border-t border-slate-800">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-white truncate">{e.category}{e.client_name ? ` · ${e.client_name}` : ''}</div>
+                  <div className="text-sm text-white truncate">{e.category}{e.client_name ? ` · ${e.client_name}` : ''}{e.supplier_id && supplierNames[e.supplier_id] ? ` · ${supplierNames[e.supplier_id]}` : ''}</div>
                   <div className="text-[11px] text-slate-400 truncate">{fmtDate(e.date)}{e.note ? ` · ${e.note}` : ''}</div>
                 </div>
                 <div className={`text-sm font-bold whitespace-nowrap ${e.kind === 'in' ? 'text-emerald-400' : 'text-rose-400'}`}>{e.kind === 'in' ? '+' : '−'} {ar(e.amount_ar)}</div>
@@ -163,6 +164,14 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
             {editor.kind === 'in' && (
               <label className="block text-xs text-slate-400">{t('Client', 'Client')}
                 <input value={editor.client} maxLength={80} onChange={e => setEditor({ ...editor, client: e.target.value })} className={`${field} mt-1`} />
+              </label>
+            )}
+            {editor.kind === 'out' && (editor.category === CUSTOM ? editor.custom : editor.category).trim() === 'Achats' && (
+              <label className="block text-xs text-slate-400">{t('Fournisseur (facultatif)', 'Supplier (optional)')}
+                <select value={editor.supplier} onChange={e => setEditor({ ...editor, supplier: e.target.value })} className={`${field} mt-1`}>
+                  <option value="">{t('— Aucun —', '— None —')}</option>
+                  {db.getSuppliers().filter(s => s.active !== false || s.id === editor.supplier).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </label>
             )}
             <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}

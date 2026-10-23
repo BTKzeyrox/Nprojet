@@ -58,7 +58,10 @@ ok(gate > 0 && gate < syncFn.indexOf('for (const rec of upserts)'), 'sync : refu
 ok(/ADMIN_ONLY_WRITE\.includes\(col\)\)\s*\{[\s\S]*?for \(const id of deletes\) rejected\.push[\s\S]*?continue;/.test(syncFn), 'sync : suppressions d\'un employé refusées aussi');
 ok(syncFn.includes("col === 'cash'") && syncFn.includes('cleanCash('), 'sync : chaque ligne de l\'admin passe par cleanCash');
 ok((src.match(/df_cash/g) || []).length === 1, 'aucune autre route du serveur ne lit la table df_cash (une seule mention : la liste des collections)');
-ok((src.match(/T\.cash/g) || []).length === 0, 'aucun accès direct T.cash en dehors de state et sync');
+// Seule exception : la garde « fournisseur utilisé » (module 4), dans la suppression admin d'un fournisseur ; elle lit seulement l'existence d'une ligne.
+const guardLine = "for (const t of [T.purchases, T.stock, T.cash]) {";
+ok(src.split(guardLine).length - 1 === 1, 'garde « fournisseur utilisé » : la seule lecture de T.cash hors state et sync');
+ok((src.split(guardLine).join('').match(/T\.cash/g) || []).length === 0, 'aucun autre accès direct T.cash en dehors de state et sync');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

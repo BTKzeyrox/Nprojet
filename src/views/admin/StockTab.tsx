@@ -14,7 +14,7 @@ import { monthTitle } from '../../utils/chartData';
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
 interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string }
-interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean }
+interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean; supplier: string }
 
 const field = 'w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm text-white';
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
@@ -49,7 +49,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
     qty: ['Entre une quantité (pas 0 ; une entrée et une sortie sont positives).', 'Enter a quantity (not 0; entries and exits are positive).'],
     date: ['Choisis une date valide.', 'Choose a valid date.'], cost: ['Prix payé invalide, ou à remplir pour créer la dépense.', 'Invalid price paid, or fill it in to create the expense.'],
     product: ['Ce produit n\'existe plus.', 'This product no longer exists.'], stock: ['Il n\'y a pas assez en stock pour cela.', 'There is not enough in stock for that.'],
-    admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
+    supplier: ['Ce fournisseur n\'existe plus.', 'This supplier no longer exists.'], admin: ['Réservé au responsable.', 'Admins only.'], missing: ['Cette ligne n\'existe plus.', 'This line no longer exists.'],
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
@@ -64,13 +64,13 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   };
   const removeProduct = (id: string) => { const r = db.deleteProduct(id); setConfirmId(null); if (!r.success) setError(say(r.error)); };
 
-  const newMove = (p: Product, type: StockMoveType) => { setError(''); setMEdit({ product: p, type, qty: '', date: today, cost: type === 'in' && p.buy_price_ar ? String(p.buy_price_ar) : '', note: '', expense: false }); };
+  const newMove = (p: Product, type: StockMoveType) => { setError(''); setMEdit({ product: p, type, qty: '', date: today, cost: type === 'in' && p.buy_price_ar ? String(p.buy_price_ar) : '', note: '', expense: false, supplier: '' }); };
   const costNum = mEdit ? Number(String(mEdit.cost).replace(/[\s\u00a0]/g, '').replace(',', '.')) : 0;
   const qtyNum = mEdit ? Number(String(mEdit.qty).replace(/[\s\u00a0]/g, '').replace(',', '.')) : 0;
   const expenseAmount = mEdit && mEdit.type === 'in' && Number.isFinite(costNum) && Number.isFinite(qtyNum) ? purchaseAmount(qtyNum, costNum) : 0;
   const saveMove = () => {
     if (!mEdit) return;
-    const r = db.addStockMove({ product_id: mEdit.product.id, type: mEdit.type, qty: mEdit.qty, date: mEdit.date, note: mEdit.note, unit_cost: mEdit.type === 'in' ? mEdit.cost : undefined }, { withExpense: mEdit.type === 'in' && mEdit.expense });
+    const r = db.addStockMove({ product_id: mEdit.product.id, type: mEdit.type, qty: mEdit.qty, date: mEdit.date, note: mEdit.note, unit_cost: mEdit.type === 'in' ? mEdit.cost : undefined, supplier_id: mEdit.type === 'in' ? mEdit.supplier : undefined }, { withExpense: mEdit.type === 'in' && mEdit.expense });
     if (!r.success) { setError(say(r.error)); return; }
     setMEdit(null);
   };
@@ -254,6 +254,12 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
             </label>
             {mEdit.type === 'in' && (
               <>
+                <label className="block text-xs text-slate-400">{t('Fournisseur (facultatif)', 'Supplier (optional)')}
+                  <select value={mEdit.supplier} onChange={e => setMEdit({ ...mEdit, supplier: e.target.value })} className={`${field} mt-1`}>
+                    <option value="">{t('— Aucun —', '— None —')}</option>
+                    {db.getSuppliers().filter(s => s.active !== false).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
                 <label className="block text-xs text-slate-400">{t('Prix payé par unité (Ar, facultatif)', 'Price paid per unit (Ar, optional)')}
                   <input inputMode="numeric" value={mEdit.cost} onChange={e => setMEdit({ ...mEdit, cost: e.target.value })} className={`${field} mt-1`} />
                 </label>

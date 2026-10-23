@@ -7,10 +7,10 @@ export const OUT_CATEGORIES = ['Achats', 'Loyer', 'Internet', 'Matériel', 'Tran
 export const MAX_AMOUNT = 1_000_000_000_000;
 export const MAX_CATEGORY = 40;
 
-export interface CashDraft { kind: CashKind; category: string; amount: string | number; date: string; note?: string; client_name?: string }
+export interface CashDraft { kind: CashKind; category: string; amount: string | number; date: string; note?: string; client_name?: string; supplier_id?: string }
 export type DraftError = 'kind' | 'amount' | 'date' | 'category';
 export type DraftResult =
-  | { ok: true; clean: { kind: CashKind; category: string; amount_ar: number; date: string; note: string; client_name: string } }
+  | { ok: true; clean: { kind: CashKind; category: string; amount_ar: number; date: string; note: string; client_name: string; supplier_id?: string } }
   | { ok: false; error: DraftError };
 
 /** « 1 500 », « 1500,5 » ou 1500 → nombre ; NaN si ce n'est pas un nombre. */
@@ -34,7 +34,7 @@ export function checkDraft(d: CashDraft): DraftResult {
   if (!isRealDate(String(d.date || ''))) return { ok: false, error: 'date' };
   const category = String(d.category || '').trim().slice(0, MAX_CATEGORY);
   if (!category) return { ok: false, error: 'category' };
-  return { ok: true, clean: { kind: d.kind, category, amount_ar: Math.round(amount), date: d.date, note: String(d.note || '').slice(0, 300), client_name: String(d.client_name || '').slice(0, 80) } };
+  return { ok: true, clean: { kind: d.kind, category, amount_ar: Math.round(amount), date: d.date, note: String(d.note || '').slice(0, 300), client_name: String(d.client_name || '').slice(0, 80), ...(d.kind === 'out' && category === 'Achats' && typeof d.supplier_id === 'string' && d.supplier_id.trim() ? { supplier_id: d.supplier_id.trim().slice(0, 80) } : {}) } };
 }
 
 export interface CashFilter { start: string; end: string; kind: 'all' | CashKind; category: string } // category '' = toutes

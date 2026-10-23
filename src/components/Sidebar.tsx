@@ -27,6 +27,7 @@ import {
   Wallet,
   Building2,
   Receipt,
+  Truck,
   HeartPulse,
 } from 'lucide-react';
 import { User } from '../types';
@@ -98,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'history', label: 'Historique', icon: History },
           { id: 'clients', label: 'Clients', icon: Building2 },
           { id: 'invoices', label: 'Facturation', icon: Receipt },
+          { id: 'purchasing', label: 'Achats', icon: Truck },
           { id: 'performance', label: 'Performance', icon: BarChart3 },
           { id: 'stats', label: 'Statistiques', icon: TrendingUp, badge: alertCount > 0 ? String(alertCount) : undefined, tone: 'alert' as const },
         ]

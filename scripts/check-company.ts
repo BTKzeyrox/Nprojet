@@ -142,9 +142,9 @@ const NOW = '2026-10-20T10:00:00.000Z';
 {
   const syncFn = src.slice(src.indexOf('async function sync('));
   const stateFn = src.slice(src.indexOf('async function state('), src.indexOf('async function sync('));
-  const nonAdmin = syncFn.slice(syncFn.indexOf('} else if (!admin) {'), syncFn.indexOf("if (col === 'settings') toSave = cleanSettingsRecord("));
+  const nonAdmin = syncFn.slice(syncFn.indexOf('} else if (!admin) {'), syncFn.indexOf("if (col === 'settings') { toSave = cleanSettingsRecord("));
   ok(nonAdmin.length > 200 && !nonAdmin.includes("'settings'"), 'sync : un employé ne peut pas écrire les réglages');
-  ok(syncFn.includes("if (col === 'settings') toSave = cleanSettingsRecord(rec, existing, me, now)"), 'sync : les réglages de l\'admin passent par la revérification');
+  ok(syncFn.includes("if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now);"), 'sync : les réglages de l\'admin passent par la revérification');
   ok(stateFn.includes("col === 'settings'") && stateFn.includes('stripCompany(stripSettings(r, me), me)'), 'state : les réglages envoyés passent par les deux filtres');
   ok(!/SETTINGS_ADMIN_KEYS[^\n]*"company"/.test(src), 'le filtre de « company » est le filtre propre (sections), pas une simple suppression');
 }

@@ -26,10 +26,10 @@ export function checkProductDraft(d: ProductDraft): ProductResult {
   return { ok: true, clean: { name, category: String(d.category || '').trim().slice(0, 40), unit: String(d.unit || '').trim().slice(0, 16) || DEFAULT_UNIT, buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2(thr) } };
 }
 
-export interface MoveDraft { product_id: string; type: StockMoveType; qty: string | number; date: string; note?: string; unit_cost?: string | number }
+export interface MoveDraft { product_id: string; type: StockMoveType; qty: string | number; date: string; note?: string; unit_cost?: string | number; supplier_id?: string }
 export type MoveError = 'type' | 'qty' | 'date' | 'cost' | 'product';
 export type MoveResult =
-  | { ok: true; clean: { product_id: string; type: StockMoveType; qty: number; date: string; note: string; unit_cost_ar?: number } }
+  | { ok: true; clean: { product_id: string; type: StockMoveType; qty: number; date: string; note: string; unit_cost_ar?: number; supplier_id?: string } }
   | { ok: false; error: MoveError };
 
 const isRealDate = (d: string): boolean => {
@@ -44,12 +44,13 @@ export function checkMoveDraft(d: MoveDraft): MoveResult {
   const qty = round2(parseAmount(d.qty));
   if (!Number.isFinite(qty) || Math.abs(qty) > MAX_QTY || qty === 0 || (d.type !== 'adjust' && qty < 0)) return { ok: false, error: 'qty' };
   if (!isRealDate(String(d.date || ''))) return { ok: false, error: 'date' };
-  const out: { product_id: string; type: StockMoveType; qty: number; date: string; note: string; unit_cost_ar?: number } = { product_id: String(d.product_id), type: d.type, qty, date: d.date, note: String(d.note || '').slice(0, 300) };
+  const out: { product_id: string; type: StockMoveType; qty: number; date: string; note: string; unit_cost_ar?: number; supplier_id?: string } = { product_id: String(d.product_id), type: d.type, qty, date: d.date, note: String(d.note || '').slice(0, 300) };
   if (d.type === 'in' && d.unit_cost !== undefined && String(d.unit_cost).trim() !== '') {
     const c = parseAmount(d.unit_cost);
     if (!Number.isFinite(c) || c < 0 || c > MAX_AMOUNT) return { ok: false, error: 'cost' };
     out.unit_cost_ar = Math.round(c);
   }
+  if (d.type === 'in' && typeof d.supplier_id === 'string' && d.supplier_id.trim()) out.supplier_id = d.supplier_id.trim().slice(0, 80); // seule une entrée a un fournisseur
   return { ok: true, clean: out };
 }
 
