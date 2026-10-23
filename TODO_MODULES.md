@@ -288,6 +288,8 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 7 — Droits, traçabilité et sauvegardes — taille M
 
+- ⏳ **MODULE 7 PRIS le 2026-10-23 (session M6, « Module 7 » choisi par BTK). Ordre : M7.2 (journal), M7.3 (restauration), puis M7.1 seulement après la décision de BTK sur les rôles. Ne pas le refaire en parallèle.**
+
 - [ ] **M7.1 — Rôles intermédiaires** (L) : **Comptable** (voit factures et argent, ne gère pas les comptes) et **Chef d'équipe** (valide les missions de son équipe, sans paie ni réglages). Chaque route du serveur dit quels rôles sont autorisés. **Décision de BTK avant** (ex. : le chef d'équipe voit-il la paie de son équipe ? défaut : non).
 - [ ] **M7.2 — Journal d'audit** (M) : qui a fait quoi et quand (émission ou annulation d'une facture, suppression, changement de tarif, de réglage) ; admin seulement ; conservé 12 mois.
 - [ ] **M7.3 — Restaurer depuis une sauvegarde** (M) : aujourd'hui on sauvegarde et on télécharge, on ne restaure pas ; prévoir double confirmation et une sauvegarde automatique juste avant.
