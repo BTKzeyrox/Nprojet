@@ -787,6 +787,46 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 };
 // ===== END COMPANY =====
 
+// ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now"];
+const AUDIT_KEEP_DAYS = 365;
+const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
+const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates"];
+const auditCut = (v: unknown, n: number) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
+function buildAuditEntry(me: any, action: string, target: any, detail: unknown, at: string, rand: string): any | null {
+  if (!AUDIT_ACTIONS.includes(action)) return null;
+  const t = target || {};
+  return {
+    id: `${at.replace(/\D/g, "").slice(0, 17)}-${auditCut(rand, 8)}`,
+    at, by: auditCut(me && me.id, 80), by_name: auditCut((me && (me.name || me.username)) || "", 80), action,
+    target_type: auditCut(t.type, 30), target_id: auditCut(t.id, 80), target_label: auditCut(t.label, 80), detail: auditCut(detail, 300),
+  };
+}
+function auditLabelOf(d: any): string {
+  if (!d || typeof d !== "object") return "";
+  return auditCut(d.number || d.name || d.client_name || d.title || d.username || d.id || "", 80);
+}
+const auditShow = (v: unknown) => auditCut(v !== null && typeof v === "object" ? JSON.stringify(v) : v, 60) || "—";
+function auditChanges(before: any, after: any, keys: string[]): string[] {
+  const out: string[] = [];
+  for (const k of keys) {
+    const a = before ? before[k] : undefined, b = after ? after[k] : undefined;
+    if (JSON.stringify(a) !== JSON.stringify(b)) out.push(`${k} : ${auditShow(a)} → ${auditShow(b)}`);
+  }
+  return out;
+}
+function auditSettingsKeys(before: any, after: any): string[] {
+  const keys = new Set<string>([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  const out: string[] = [];
+  for (const k of [...keys].sort()) {
+    if (AUDIT_SETTINGS_SKIP.includes(k) || AUDIT_TARIFF_KEYS.includes(k)) continue;
+    if (JSON.stringify((before || {})[k]) !== JSON.stringify((after || {})[k])) out.push(k);
+  }
+  return out.slice(0, 12);
+}
+const auditCutoffMs = (nowMs: number) => nowMs - AUDIT_KEEP_DAYS * 86400_000;
+// ===== END AUDIT =====
+
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
@@ -1445,6 +1485,20 @@ async function sync(req: any, res: any, me: any) {
         if (!toSave.text.trim() && !toSave.files.length) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
+      if (admin && existing) {
+        // Journal d'audit : changement de tarif et de réglage (jamais bloquant ; seuls les noms de champs des Conditions sont notés, pas leurs valeurs)
+        if (col === 'settings') {
+          const tch = auditChanges(existing, toSave, AUDIT_TARIFF_KEYS);
+          if (tch.length) await auditLog(me, 'tariff_change', { type: 'settings', id: rec.id, label: 'Réglages' }, tch.join(' ; '));
+          const sk = auditSettingsKeys(existing, toSave);
+          if (sk.length) await auditLog(me, 'settings_change', { type: 'settings', id: rec.id, label: 'Réglages' }, sk.join(', '));
+          const cp = (Array.isArray((toSave as any).company_log) ? (toSave as any).company_log : []).filter((x: any) => x && x.at === now).map((x: any) => x.path);
+          if (cp.length) await auditLog(me, 'company_change', { type: 'settings', id: rec.id, label: 'Conditions' }, cp.join(', '));
+        } else if (col === 'contracts' || col === 'products') {
+          const tch = auditChanges(existing, toSave, col === 'products' ? ['buy_price_ar', 'sell_price_ar'] : ['client_price_ar']);
+          if (tch.length) await auditLog(me, 'tariff_change', { type: col, id: rec.id, label: auditLabelOf(toSave) }, tch.join(' ; '));
+        }
+      }
       if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {
         // Notification de l'opérateur (M6.4) : début validé, mission validée ou refusée
         const k = pushKindFor(existing.status, toSave.status);
@@ -1454,6 +1508,8 @@ async function sync(req: any, res: any, me: any) {
     }
 
     for (const id of deletes) {
+      // Journal d'audit : le nom de ce qu'on supprime est lu AVANT (la ligne disparaît ensuite). Les messages ne sont pas notés.
+      const auditDel = admin && col !== 'messages' ? (await sb.from(T[col]).select('data').eq('id', id).maybeSingle()).data : null;
       if (!admin) {
         let ok = false;
         if (col === 'posts') {
@@ -1513,6 +1569,7 @@ async function sync(req: any, res: any, me: any) {
         if (nrow) await dropFiles(newsFilesOf(nrow.data));
       }
       await sb.from(T[col]).delete().eq('id', id);
+      if (auditDel) await auditLog(me, 'delete', { type: col, id, label: auditLabelOf(auditDel.data) });
       if (col === 'products') await sb.from(T.stock).delete().eq('data->>product_id', id); // un produit supprimé emporte ses mouvements
       if (col === 'groups') {
         await sb.from(T.messages).delete().eq('data->>recipient_id', id);
@@ -1552,6 +1609,7 @@ async function invoiceIssue(req: any, res: any, me: any) {
   const patch = { ...invoiceIssuePatch(v.save, crow.data, company, today), lines: v.save.lines, note: v.save.note };
   const { data, error } = await sb.rpc('df_issue_invoice', { p_id: id, p_expected: row.updated_at, p_prefix: company.billing.invoice_prefix, p_year: Number(today.slice(0, 4)), p_patch: patch });
   if (error) return invoiceFail(res, error.message);
+  await auditLog(me, 'invoice_issue', { type: 'invoices', id, label: auditLabelOf(data) || id }, `Client : ${auditLabelOf(crow.data)}`);
   return res.json({ ok: true, invoice: data });
 }
 
@@ -1562,6 +1620,7 @@ async function invoiceCancel(req: any, res: any, me: any) {
   const today = invTodayMada();
   const { data, error } = await sb.rpc('df_cancel_invoice', { p_id: id, p_credit_id: newDocId('cn'), p_prefix: 'AV-', p_year: Number(today.slice(0, 4)), p_today: today, p_by: me.id });
   if (error) return invoiceFail(res, error.message);
+  await auditLog(me, 'invoice_cancel', { type: 'invoices', id, label: id }, 'Annulée par un avoir');
   return res.json({ ok: true, ...data });
 }
 
@@ -1579,7 +1638,27 @@ async function invoicePay(req: any, res: any, me: any) {
     p_prefix: company.billing.receipt_prefix, p_year: Number(today.slice(0, 4)), p_by: me.id,
   });
   if (error) return invoiceFail(res, error.message);
+  await auditLog(me, 'invoice_pay', { type: 'invoices', id, label: id }, `${amount} Ar le ${date}${req.body?.method ? ` (${String(req.body.method).slice(0, 40)})` : ''}`);
   return res.json({ ok: true, ...data });
+}
+
+
+// ---------- Journal d'audit : écriture (jamais bloquante) et lecture (admin) ----------
+const AUDIT = "df_audit";
+async function auditLog(me: any, action: string, target: { type?: string; id?: string; label?: string } | undefined, detail?: unknown) {
+  try {
+    const e = buildAuditEntry(me, action, target, detail, new Date().toISOString(), Math.random().toString(36).slice(2, 8));
+    if (!e) return;
+    const { error } = await sb.from(AUDIT).insert({ id: e.id, data: e, updated_at: e.at });
+    if (error) console.error("audit error:", error.message);
+  } catch (err) { console.error("audit error:", err); }
+}
+async function auditList(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const limit = Math.min(1000, Math.max(1, Math.trunc(Number(req.query?.limit)) || 300));
+  const { data, error } = await sb.from(AUDIT).select("data").order("id", { ascending: false }).limit(limit);
+  if (error) return res.status(500).json({ error: "Le journal n'est pas disponible (table df_audit absente ?)." });
+  return res.json({ rows: (data || []).map((r: any) => r.data) });
 }
 
 // ---------- comptes ----------
@@ -1599,6 +1678,7 @@ async function createUser(req: any, res: any, me: any) {
   };
   await sb.from(T.users).upsert({ id, data: rec, updated_at: new Date().toISOString() });
   await sb.from('df_credentials').insert({ user_id: id, username: uname, password_hash: hashPw(password) });
+  await auditLog(me, 'user_create', { type: 'users', id, label: rec.name || uname }, `Pseudo : ${uname}`);
   return res.json({ user: rec });
 }
 
@@ -1611,6 +1691,7 @@ async function setPassword(req: any, res: any, me: any) {
     if (!c || !checkPw(String(currentPassword || ''), c.password_hash)) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
   }
   await sb.from('df_credentials').update({ password_hash: hashPw(password), updated_at: new Date().toISOString() }).eq('user_id', target);
+  await auditLog(me, 'user_password', { type: 'users', id: target, label: auditLabelOf(await getUserRow(target)) }, target === me.id ? 'Son propre mot de passe' : 'Changé par l\'admin');
   return res.json({ ok: true });
 }
 
@@ -1688,6 +1769,7 @@ async function profileDecision(req: any, res: any, me: any) {
     const now = new Date().toISOString();
     await sb.from(PROFILE_REQ).upsert({ id, data: { ...r, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
   }
+  await auditLog(me, 'profile_decision', { type: 'users', id: String(r.user_id || ''), label: auditLabelOf(r) }, approve === true ? 'Acceptée' : `Refusée : ${reasonOf(req.body)}`);
   return res.json({ ok: true });
 }
 
@@ -1735,6 +1817,7 @@ async function resetDecision(req: any, res: any, me: any) {
     const now = new Date().toISOString();
     await sb.from(RESETS).upsert({ id, data: { ...row.data, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
   }
+  await auditLog(me, 'reset_decision', { type: 'users', id: String(row.data.user_id || ''), label: auditLabelOf(row.data) }, approve === true ? 'Acceptée' : `Refusée : ${reasonOf(req.body)}`);
   return res.json({ ok: true });
 }
 
@@ -1805,6 +1888,7 @@ async function signupDecision(req: any, res: any, me: any) {
     const now = new Date().toISOString();
     await sb.from(SIGNUPS).upsert({ id, data: { ...r, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
   }
+  await auditLog(me, 'signup_decision', { type: 'users', id, label: auditLabelOf(r) }, approve === true ? 'Acceptée' : `Refusée : ${reasonOf(req.body)}`);
   return res.json({ ok: true });
 }
 
@@ -2074,6 +2158,7 @@ async function payrollClose(req: any, res: any, me: any) {
     updated_at: now,
   });
   await audit(info.pid, 'close', me, `Clôture : ${slips.length} fiche(s), net total ${slips.reduce((t, x) => t + x.net, 0)} Ar`);
+  await auditLog(me, 'payroll_close', { type: 'payroll', id: info.pid, label: info.pid }, `${slips.length} fiche(s), net total ${slips.reduce((t, x) => t + x.net, 0)} Ar`);
   return res.json({ ok: true });
 }
 
@@ -2090,6 +2175,7 @@ async function payrollReopen(req: any, res: any, me: any) {
   await sb.from(PAYROLL).delete().eq('data->>kind', 'slip').eq('data->>pid', info.pid);
   await sb.from(PAYROLL).delete().eq('id', `period-${info.pid}`);
   await audit(info.pid, 'reopen', me, `Réouverture. Motif : ${reason}`);
+  await auditLog(me, 'payroll_reopen', { type: 'payroll', id: info.pid, label: info.pid }, `Motif : ${reason}`);
   return res.json({ ok: true });
 }
 
@@ -2111,6 +2197,7 @@ async function payrollPay(req: any, res: any, me: any) {
     await sb.from(PAYROLL).upsert({ id: slip.id, data: { ...slip, paid: null }, updated_at: now });
     await sb.from(PAYROLL).upsert({ id: `period-${info.pid}`, data: { ...pd.data, status: 'closed' }, updated_at: now });
     await audit(info.pid, 'unpay', me, `Paiement annulé pour ${slip.name}. Motif : ${reason}`);
+    await auditLog(me, 'payroll_pay', { type: 'payroll', id: info.pid, label: String(slip.name || info.pid) }, `Paiement annulé. Motif : ${reason}`);
     return res.json({ ok: true });
   }
   const method = String(req.body?.method || '');
@@ -2125,6 +2212,7 @@ async function payrollPay(req: any, res: any, me: any) {
   const allPaid = all.every(r => (r.data.id === slip.id ? true : r.data.net <= 0 || !!r.data.paid));
   if (allPaid) await sb.from(PAYROLL).upsert({ id: `period-${info.pid}`, data: { ...pd.data, status: 'paid' }, updated_at: now });
   await audit(info.pid, 'pay', me, `${slip.name} : ${slip.net} Ar payé par ${method}${ref ? ` (réf. ${ref})` : ''}`);
+  await auditLog(me, 'payroll_pay', { type: 'payroll', id: info.pid, label: String(slip.name || info.pid) }, `${slip.net} Ar par ${method}${ref ? ` (réf. ${ref})` : ''}`);
   return res.json({ ok: true });
 }
 
@@ -2274,6 +2362,7 @@ async function maybePurge() {
     // Journal des erreurs : résolues gardées 30 jours, tout le reste 90 jours (la base gratuite est limitée à 500 Mo)
     await sb.from(ERRORS).delete().eq('status', 'resolved').lt('last_seen', new Date(Date.now() - 30 * 86400_000).toISOString());
     await sb.from(ERRORS).delete().lt('last_seen', new Date(Date.now() - 90 * 86400_000).toISOString());
+    await sb.from(AUDIT).delete().lt('updated_at', new Date(auditCutoffMs(Date.now())).toISOString()); // journal d'audit : 12 mois
     const { data: rows } = await sb.from(T.posts).select('id,data')
       .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).order('updated_at', { ascending: true }).limit(60);
     for (const r of rows || []) {
@@ -2371,6 +2460,7 @@ async function backupNow(_req: any, res: any, me: any) {
   if (last && Date.now() - new Date(last.taken_at).getTime() < 60_000) return res.status(429).json({ error: 'Une sauvegarde vient d\'être faite. Réessayez dans une minute.' });
   const { data, error } = await sb.rpc('df_take_backup');
   if (error) return res.status(500).json({ error: 'La sauvegarde a échoué.' });
+  await auditLog(me, 'backup_now', { type: 'backups', id: String(data ?? ''), label: 'Sauvegarde' }, '');
   return res.json({ ok: true, id: data });
 }
 async function errorUpdate(req: any, res: any, me: any) {
@@ -2805,6 +2895,7 @@ Deno.serve(async (request: Request) => {
     if (action === "backups" && req.method === "GET") return await backupsList(req, res, me);
     if (action === "backup-get" && req.method === "GET") return await backupGet(req, res, me);
     if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
+    if (action === "audit-list" && req.method === "GET") return await auditList(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
     if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);

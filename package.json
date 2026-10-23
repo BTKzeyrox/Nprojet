@@ -48,6 +48,7 @@
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
+    "check:audit": "npx --yes tsx scripts/check-audit.ts",
     "check:push": "npx --yes tsx scripts/check-push.ts",
     "check:push-store": "esbuild scripts/check-push-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-push-store.mjs && node node_modules/.cache/check-push-store.mjs",
     "check:invoices-page": "esbuild scripts/check-invoices-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-invoices-page.mjs && node node_modules/.cache/check-invoices-page.mjs",

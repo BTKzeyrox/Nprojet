@@ -7,6 +7,7 @@ import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type Mov
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
+import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
 import {
   User,
   PostSession,
@@ -989,6 +990,13 @@ class DeltaForceStore {
         const emps = this.users.filter(u => u.role === 'employee');
         const mine = me?.role === 'admin' ? emps : emps.filter(u => u.id === me?.id);
         return ok({ rows: mine.map((u, i) => ({ user_id: u.id, day, first_seen: `${day}T0${7 + (i % 3)}:${10 + i * 7}:00.000Z`, last_seen: `${day}T1${i % 4}:30:00.000Z`, online_sec: 3600 * (3 + (i % 4)) + i * 420 })) });
+      }
+      case 'audit-list': {
+        // Mode démo : lignes inventées, jamais d'appel réseau
+        const me0 = { id: DEMO_ADMIN_ID, name: 'Responsable' };
+        const ago = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+        const mk = (h: number, a: string, ty: string, label: string, detail: string) => buildAuditEntry(me0, a, { type: ty, id: `demo-${a}-${h}`, label }, detail, ago(h), `d${h}`);
+        return ok({ rows: [mk(1, 'invoice_issue', 'invoices', 'F-2026-0012', 'Client : Alice'), mk(3, 'invoice_pay', 'invoices', 'F-2026-0011', '150000 Ar'), mk(26, 'tariff_change', 'settings', 'Réglages', 'client_price_default_ar : 1000 → 1200'), mk(50, 'delete', 'clients', 'Client test', ''), mk(72, 'settings_change', 'settings', 'Réglages', 'day_shift_start'), mk(120, 'backup_now', 'backups', 'Sauvegarde', '')].filter(Boolean) });
       }
       case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
       case 'backup-now': {
@@ -2156,6 +2164,12 @@ class DeltaForceStore {
     const r = await this.api('backups');
     if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
     return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
+  }
+  // --- Journal d'audit (M7.2, admin) : lecture seule ; le serveur écrit les lignes ---
+  public async listAudit(): Promise<{ ok: boolean; error?: string; rows: AuditEntry[] }> {
+    const r = await this.api('audit-list?limit=1000');
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
+    return { ok: true, rows: cleanAuditRows(r.data?.rows) };
   }
   public async getBackup(id: number): Promise<{ ok: boolean; error?: string; backup?: { id: number; taken_at: string; data: unknown } }> {
     const r = await this.api(`backup-get?id=${encodeURIComponent(String(id))}`);

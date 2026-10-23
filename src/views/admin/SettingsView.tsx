@@ -5,6 +5,7 @@ import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
 import { BackupsSection } from '../../components/BackupsSection';
+import { AuditSection } from '../../components/AuditSection';
 import { askConfirm } from '../../components/ConfirmModal';
 import { useApp } from '../../context/AppContext';
 import { FontSizePicker } from '../../components/FontSizePicker';
@@ -521,6 +522,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'data' && <BackupsSection />}
+      {tab === 'data' && <AuditSection lang={lang} />}
 
       <RestoreSection />
 
