@@ -7,6 +7,7 @@ import { ALL_RULES } from './health/all';
 import { healthThresholds, type HealthAck, type HealthAlert } from './health/types';
 import { loadAcks, saveAcks, addAck, removeAck } from './health/acks';
 import { menuBadges } from './health/menu';
+import { loadWatchPrefs, saveWatchPrefs } from './health/watchPrefs';
 
 export interface HealthView { alerts: HealthAlert[]; hidden: HealthAlert[]; errors: { rule: string; message: string }[]; acks: HealthAck[]; computedAt: number }
 
@@ -25,7 +26,7 @@ export function getHealth(): HealthView {
   const me = db.getCurrentUser();
   if (me?.role !== 'admin') return { alerts: [], hidden: [], errors: [], acks: [], computedAt: Date.now() };
   if (cache && !dirty && Date.now() - cache.computedAt < 60_000) return cache;
-  const st: any = db.getSettings(), thresholds = healthThresholds(st.company);
+  const st: any = db.getSettings(), thresholds = healthThresholds({ watch: { ...(st.company?.watch || {}), ...loadWatchPrefs(me.id) } }); // réglages Surveillance de cet appareil par-dessus ceux de l'entreprise
   const ctx: HealthContext = {
     today: todayMada(), now: Date.now(), users: db.getUsers(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(),
     cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), advances: db.getAdvanceRequests(), settings: st, thresholds,
@@ -65,3 +66,7 @@ export function unack(id: string): void {
   saveAcks(adminId(), acksCache.list);
   emit();
 }
+
+/** Réglages « Surveillance » de cet appareil : enregistre, puis recalcule les alertes. */
+export function setWatchPrefs(p: Partial<import('./health/types').HealthThresholds>): void { saveWatchPrefs(adminId(), p); emit(); }
+export const getWatchPrefs = () => loadWatchPrefs(adminId());

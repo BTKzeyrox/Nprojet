@@ -16,6 +16,7 @@ import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyC
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
+import { WatchSettingsSection } from '../../components/WatchSettingsSection';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -228,6 +229,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && <NotificationsCard />}
+      {tab === 'general' && <WatchSettingsSection />}
       {tab === 'general' && <AiSettingsSection />}
 
       {tab === 'team' && (
