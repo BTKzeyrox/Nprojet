@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
-import { respond, helpReply, type Reply } from '../utils/assistant';
+import { respond, helpReply, pageLinks, type Reply } from '../utils/assistant';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
@@ -61,8 +61,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           const turns = msgs.slice(-6).map(m => ({ role: (m.who === 'me' ? 'user' : 'model') as 'user' | 'model', text: m.text || (m.reply ? [l === 'en' ? m.reply.title.en : m.reply.title.fr, ...m.reply.lines.slice(0, 3).map(x => (l === 'en' ? x.en : x.fr))].join(' ') : '') }));
           const r = await askAi(q, l, turns);
           reply = r.ok
-            ? { intent: 'ai', title: { fr: 'Réponse de l\'IA (générée par IA)', en: 'AI answer (AI-generated)' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: [], sources: { fr: 'IA externe (Gemini) sur le résumé du site sans noms : elle peut se tromper, vérifiez avant d\'agir.', en: 'External AI (Gemini) on the site summary without names: it can be wrong, check before acting.' } }
-            : { intent: 'ai_error', title: { fr: 'L\'IA n\'a pas pu répondre', en: 'The AI could not answer' }, lines: [r.error], actions: [], sources: { fr: 'IA externe (Gemini)', en: 'External AI (Gemini)' } };
+            ? { intent: 'ai', title: { fr: '', en: '' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: pageLinks(r.text, l), sources: { fr: '', en: '' } }
+            : { intent: 'ai_error', title: { fr: '', en: '' }, lines: [r.error], actions: [], sources: { fr: '', en: '' } };
         } else reply = { intent: 'ai_off', title: { fr: 'Je ne sais pas répondre à ça tout seul', en: 'I cannot answer that on my own' }, lines: [{ fr: 'Mes règles couvrent le résumé, les priorités, l\'équipe, les chiffres et les « et si ». Pour les questions libres, je peux demander à une IA externe : elle ne reçoit que ta question et un résumé sans noms.', en: 'My rules cover the summary, priorities, team, figures and "what if". For free-form questions I can ask an external AI: it only receives your question and a summary without names.' }, { fr: 'Elle est coupée sur cet appareil. Touche le bouton pour l\'activer (tu peux la couper dans Réglages > Général).', en: 'It is off on this device. Tap the button to turn it on (you can turn it off in Settings > General).' }], actions: [{ label: { fr: 'Activer l\'IA externe', en: 'Turn on the external AI' }, go: { view: ENABLE_AI } }], sources: { fr: 'règles du site', en: 'site rules' } };
       }
       push([{ id: `b${Date.now()}`, who: 'bot', reply, at: Date.now() }]);
@@ -83,7 +83,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
     if (isKnownView(g.view)) onNavigate?.(g.view);
   };
-  const quick = [t('Résumé du jour', 'Daily summary'), t('Quoi faire maintenant ?', 'What to do now?'), t('Et si le prix client +5 % ?', 'What if client price +5%?'), t('Aide', 'Help')];
+  const quick = [t('Résumé du jour', 'Daily summary'), t('Quoi faire maintenant ?', 'What to do now?'), t('Suggestions', 'Suggestions'), t('Et si le prix client +5 % ?', 'What if client price +5%?'), t('Aide', 'Help')];
   const bubbleBot = L ? 'bg-white text-slate-800 border-slate-200' : 'bg-[#16212e] text-slate-200 border-slate-700/80'; // mêmes couleurs que les messages reçus de la messagerie
   const area = L ? 'bg-[#e9eff8]' : 'bg-[#0a0f16]';
 
@@ -100,10 +100,10 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           <div key={m.id} className="ml-auto max-w-[85%] w-fit rounded-2xl rounded-br-md bg-emerald-700 text-white text-[15px] px-3.5 py-2 shadow-sm">{m.text}</div>
         ) : m.reply && (
           <div key={m.id} className={`max-w-[92%] w-fit rounded-2xl rounded-bl-md border px-3.5 py-2 space-y-1.5 text-[15px] shadow-sm ${bubbleBot}`}>
-            <div className="font-bold">{l === 'en' ? m.reply.title.en : m.reply.title.fr}</div>
+            {(l === 'en' ? m.reply.title.en : m.reply.title.fr) && <div className="font-bold">{l === 'en' ? m.reply.title.en : m.reply.title.fr}</div>}
             {m.reply.lines.map((x, j) => <p key={j}>{l === 'en' ? x.en : x.fr}</p>)}
             {m.reply.actions.length > 0 && <div className="flex flex-wrap gap-2 pt-1">{m.reply.actions.map((a, j) => <button key={j} type="button" onClick={() => go(a.go)} className="min-h-[40px] px-3 rounded-lg border border-sky-500/60 bg-sky-600/20 hover:bg-sky-600/30 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer">{l === 'en' ? a.label.en : a.label.fr}<ChevronRight className="w-4 h-4" /></button>)}</div>}
-            <p className={`text-[11px] ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Source : ', 'Source: ')}{l === 'en' ? m.reply.sources.en : m.reply.sources.fr}</p>
+            {(l === 'en' ? m.reply.sources.en : m.reply.sources.fr) && <p className={`text-[11px] ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Source : ', 'Source: ')}{l === 'en' ? m.reply.sources.en : m.reply.sources.fr}</p>}
           </div>
         ))}
         {busy && <div className={`w-fit rounded-2xl border px-3 py-2 text-sm ${bubbleBot}`} aria-label={t('L\'assistant écrit', 'Assistant is typing')}>…</div>}

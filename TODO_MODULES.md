@@ -504,3 +504,5 @@ Admin seulement (le serveur filtre, comme pour les finances) ; l'opérateur ne v
 - 2026-10-22 : **Module 2, M2.7 faite** : créances (balance âgée), liste « à relancer », texte de relance, alerte d'accueil. Suite : M2.8 (lien avec Finances et Statistiques).
 - 2026-10-23 : **Module 2, M2.8 faite** (version additive) : chiffres des factures dans Finances et dans le rapport (Excel/PDF). Suite : M2.9 (devis, facultatif) puis M2.10.
 - 2026-10-23 : **Module 2, M2.10 faite** : démo avec une facture dans chaque état. Module 2 terminé sauf M2.9 (devis, facultatif) et le déploiement serveur M2.4 (autre session).
+
+> M11.13 note : v5 — retry sur 5xx (2 essais, 700 ms), thinkingBudget 0 (2.5), repli de modèle sur 429/404/400, pages citées entre « » → boutons, suggestions via health.by_rule + advice.ts. Retour arrière : redéployer la v4 de df-assistant (aucune table touchée).

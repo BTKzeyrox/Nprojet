@@ -9,6 +9,8 @@ import { isLate } from './attendance';
 import { normalizeName } from './clients';
 import { periodRange } from './stats';
 import { computeFinance } from './financeStats';
+import { ADVICE, GENERIC_TIPS } from './advice';
+import { isKnownView } from './health/menu';
 
 export type Lang = 'fr' | 'en';
 export interface Bi { fr: string; en: string }
@@ -102,6 +104,40 @@ export function teamReply(i: SnapshotInput): Reply {
     lines: emps.map(u => { const n = count(u.id); return b(`• ${u.name} : ${n} mission${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''} ce mois`, `• ${u.name}: ${n} mission${n === 1 ? '' : 's'} validated this month`); }),
     actions: [{ label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources,
   };
+}
+
+
+// ---------- Suggestions de solutions (une piste par type d'alerte, jamais d'accusation) ----------
+export function suggestionsReply(i: SnapshotInput, alerts: HealthAlert[]): Reply {
+  const sources = b(`d'après ${alerts.length} alerte(s) de la Santé du site au ${dmy(i.today)}`, `based on ${alerts.length} Site health alert(s) on ${dmy(i.today)}`);
+  const groups = new Map<string, HealthAlert[]>();
+  for (const a of [...alerts].sort((x, y) => severityRank(x.severity) - severityRank(y.severity))) { if (a.severity === 'info') continue; const k = ADVICE[a.rule] ? a.rule : `page:${a.page}`; groups.set(k, [...(groups.get(k) || []), a]); }
+  const top = [...groups.entries()].slice(0, 4);
+  if (top.length === 0) {
+    return { intent: 'suggest', empty: true, title: b('Suggestions', 'Suggestions'), lines: [b('Rien d\'urgent à corriger pour le moment, bravo. Des idées pour garder le cap :', 'Nothing urgent to fix right now, well done. Ideas to keep on track:'), ...GENERIC_TIPS.map(g => b(`• ${g.fr}`, `• ${g.en}`))], actions: [], sources };
+  }
+  const lines: Bi[] = [], actions: Reply['actions'] = [];
+  top.forEach(([k, list], n) => {
+    const first = list[0], adv = ADVICE[k];
+    const count = list.length > 1 ? ` (${list.length})` : '';
+    lines.push(b(`${n + 1}. ${first.title_fr}${count}`, `${n + 1}. ${first.title_en}${count}`));
+    lines.push(adv ? b(`→ ${adv.fr}`, `→ ${adv.en}`) : b('→ Ouvre la page concernée et regarde le détail de l\'alerte.', '→ Open the page concerned and look at the alert details.'));
+    if (actions.length < 3 && isKnownView(first.go.view)) actions.push({ label: b(`Ouvrir : ${first.title_fr}`.slice(0, 48), `Open: ${first.title_en}`.slice(0, 48)), go: first.go });
+  });
+  return { intent: 'suggest', title: b('Mes suggestions', 'My suggestions'), lines, actions, sources };
+}
+
+// ---------- Liens vers les pages citées dans un texte (réponse de l'IA) ----------
+/** Les pages du site citées entre guillemets « … » dans un texte : au plus 3, sans doublon. Seuls les noms exacts des pages de l'admin comptent. */
+export function pageLinks(text: string, lang: Lang): { label: Bi; go: HealthGo }[] {
+  const out: { label: Bi; go: HealthGo }[] = [];
+  const quoted = [...String(text || '').matchAll(/[«"“]\s*([^»"”\n]{2,40}?)\s*[»"”]/g)].map(m => normalizeName(m[1]));
+  for (const q of quoted) {
+    const page = SITE_MAP.find(p => p.audience !== 'employee' && isKnownView(p.id) && [p.title.fr, p.title.en, ...p.title.fr.split('/'), ...p.title.en.split('/')].some(x => normalizeName(x) === q));
+    if (page && !out.some(o => o.go.view === page.id)) out.push({ label: b(`Ouvrir ${page.title.fr}`, `Open ${page.title.en}`), go: { view: page.id } });
+    if (out.length >= 3) break;
+  }
+  return out;
 }
 
 // ---------- Récap d'un employé ----------
@@ -202,7 +238,7 @@ const FIGURE_WORDS: Record<FigureId, string[]> = {
 };
 export type Intent =
   | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' }
-  | { kind: 'page'; id: string } | { kind: 'team' } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
+  | { kind: 'page'; id: string } | { kind: 'suggest' } | { kind: 'team' } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
 
 /** Cherche le pourcentage d'une phrase : « 5 % », « -10% », « de 5 pour cent ». Null si absent ou absurde (> 500). */
 export function parsePct(t: string): number | null {
@@ -225,6 +261,7 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
     return { kind: 'whatif', w };
   }
   if (/\b(aide|help|que sais tu|que peux tu|what can you)\b/.test(t)) return { kind: 'help' };
+  if (/\b(suggestion|suggestions|solution|solutions|conseil|conseils|conseille|conseilles|propose|proposes|idee|idees|suggest|advice|tips?|recommend)\b/.test(t) && !/\b(message|mail|rediger|ecris|write|draft)\b/.test(t)) return { kind: 'suggest' };
   if (/\b(quoi faire|que faire|what to do|todo|priorite|priority)\b/.test(t)) return { kind: 'todo' };
   if (/\b(resume|matin|morning|summary|recap du jour|point du jour)\b/.test(t)) return { kind: 'morning' };
   if (/\b(liste|lister|listez|montre|montrer|affiche|afficher|list|show|combien|how many|qui sont|who are)\b/.test(t) && /\b(employes?|operateurs?|equipe|boosters?|team|employees|staff|personnel)\b/.test(t)) return { kind: 'team' };
@@ -248,6 +285,7 @@ export function helpReply(): Reply {
       b('• « Résumé du jour » : ce qui compte aujourd\'hui, par priorité.', '• "Daily summary": what matters today, by priority.'),
       b('• « Quoi faire maintenant ? » : les 3 actions les plus utiles.', '• "What to do now?": the 3 most useful actions.'),
       b('• « Explique la page Clients » : à quoi elle sert et comment l\'utiliser.', '• "Explain the Clients page": what it is for and how to use it.'),
+      b('• « Suggestions » : des solutions simples pour chaque alerte en cours.', '• "Suggestions": simple solutions for each current alert.'),
       b('• « Liste les employés » : l\'équipe active et ses missions du mois.', '• "List the employees": the active team and their missions this month.'),
       b('• « Récap de Camille » : ses chiffres, sans jugement.', '• "Recap of Camille": their figures, without judgement.'),
       b('• « Pourquoi la marge ? » : la formule et les lignes du chiffre.', '• "Why the margin?": the formula and the lines behind the figure.'),
@@ -270,6 +308,7 @@ export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[]): 
     case 'todo': return todoReply(i, alerts);
     case 'help': return helpReply();
     case 'page': return explainPage(it.id);
+    case 'suggest': return suggestionsReply(i, alerts);
     case 'team': return teamReply(i);
     case 'employee': return employeeReply(i, it.id);
     case 'whatif': return whatIfReply(i, it.w);
