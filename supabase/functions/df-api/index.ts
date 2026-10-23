@@ -310,6 +310,97 @@ function cleanClientRef(v: unknown): { ok: true; id: string | null } | { ok: fal
 }
 // ===== END CLIENTS =====
 
+// ===== BEGIN HR (dossier du salarié : visible par l'admin et le salarié concerné seulement ; ce bloc est contrôlé par scripts/check-hr.ts) =====
+// BEGIN HRCLEAN
+const HR_CONTRACTS = ['permanent', 'fixed', 'trial', 'intern', 'freelance', 'other'];
+const HR_MAX_DOCS = 10;
+const HR_MAX_RATES = 50;
+const HR_MAX_MONEY = 1_000_000_000_000;
+const hrDate = (v: unknown): string | null => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return null;
+  return v >= '1990-01-01' && v <= '2100-12-31' ? v : null;
+};
+/** Vérifie et nettoie un dossier salarié. Vide ou absent = « pas de dossier » (hr: null). Un champ faux refuse tout le dossier. */
+function cleanHrFile(raw: any): { ok: true; hr: any } | { ok: false; reason: string } {
+  if (raw === undefined || raw === null || raw === '') return { ok: true, hr: null };
+  if (typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'hr' };
+  const text = (v: unknown, max: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+  const none = (v: unknown) => v === undefined || v === null || v === '';
+  const out: any = {};
+  const position = text(raw.position, 80);
+  if (position) out.position = position;
+  if (!none(raw.hire_date)) { const d = hrDate(raw.hire_date); if (!d) return { ok: false, reason: 'hire_date' }; out.hire_date = d; }
+  if (!none(raw.contract_type)) {
+    if (typeof raw.contract_type !== 'string' || !HR_CONTRACTS.includes(raw.contract_type)) return { ok: false, reason: 'contract_type' };
+    out.contract_type = raw.contract_type;
+  }
+  if (!none(raw.contract_end)) {
+    const d = hrDate(raw.contract_end);
+    if (!d || (out.hire_date && d < out.hire_date)) return { ok: false, reason: 'contract_end' };
+    out.contract_end = d;
+  }
+  if (!none(raw.trial_end)) {
+    const d = hrDate(raw.trial_end);
+    if (!d || (out.hire_date && d < out.hire_date)) return { ok: false, reason: 'trial_end' };
+    out.trial_end = d;
+  }
+  if (!none(raw.emergency)) {
+    const e = raw.emergency;
+    if (typeof e !== 'object' || Array.isArray(e)) return { ok: false, reason: 'emergency' };
+    const em: any = {};
+    const name = text(e.name, 80), phone = text(e.phone, 40), relation = text(e.relation, 40);
+    if (phone && !/^[0-9 +().-]{3,40}$/.test(phone)) return { ok: false, reason: 'emergency' };
+    if (phone && !name) return { ok: false, reason: 'emergency' }; // un numéro sans nom ne sert à rien en urgence
+    if (name) em.name = name;
+    if (phone) em.phone = phone;
+    if (relation) em.relation = relation;
+    if (Object.keys(em).length) out.emergency = em;
+  }
+  if (!none(raw.documents)) {
+    if (!Array.isArray(raw.documents) || raw.documents.length > HR_MAX_DOCS) return { ok: false, reason: 'documents' };
+    const seen = new Set<string>();
+    const docs: any[] = [];
+    for (const d of raw.documents) {
+      if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, reason: 'documents' };
+      const id = text(d.id, 80), name = text(d.name, 80), url = typeof d.url === 'string' ? d.url.trim() : '';
+      if (!id || !name || seen.has(id) || url.length > 500 || !/^https:\/\/[^\s<>"']+$/.test(url)) return { ok: false, reason: 'documents' };
+      seen.add(id);
+      const doc: any = { id, name, url };
+      if (typeof d.added_at === 'string' && !isNaN(Date.parse(d.added_at))) doc.added_at = new Date(d.added_at).toISOString();
+      docs.push(doc);
+    }
+    if (docs.length) out.documents = docs;
+  }
+  if (!none(raw.rate_history)) {
+    if (!Array.isArray(raw.rate_history) || raw.rate_history.length > HR_MAX_RATES) return { ok: false, reason: 'rate_history' };
+    const seen = new Set<string>();
+    const rows: any[] = [];
+    const money = (v: unknown): number | null => {
+      if (!(typeof v === 'number' || (typeof v === 'string' && v.trim() !== ''))) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 && n <= HR_MAX_MONEY ? Math.round(n) : null;
+    };
+    for (const r of raw.rate_history) {
+      if (!r || typeof r !== 'object' || Array.isArray(r)) return { ok: false, reason: 'rate_history' };
+      const id = text(r.id, 80), date = hrDate(r.date), to = money(r.to_ar);
+      if (!id || seen.has(id) || !date || to === null) return { ok: false, reason: 'rate_history' };
+      seen.add(id);
+      const row: any = { id, date, to_ar: to };
+      if (!none(r.from_ar)) { const f = money(r.from_ar); if (f === null) return { ok: false, reason: 'rate_history' }; row.from_ar = f; }
+      const reason = text(r.reason, 200);
+      if (reason) row.reason = reason;
+      rows.push(row);
+    }
+    rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+    if (rows.length) out.rate_history = rows;
+  }
+  return { ok: true, hr: Object.keys(out).length ? out : null };
+}
+// END HRCLEAN
+// ===== END HR =====
+
 // ===== BEGIN MISSIONS (date limite et priorité d'une mission : le serveur revérifie ; ce bloc est contrôlé par scripts/check-deadlines.ts) =====
 const MISSION_PRIORITIES = ['Normale', 'Haute', 'Urgente'];
 const isRealMissionDate = (s: unknown): boolean => {
@@ -1237,7 +1328,7 @@ async function chatRead(req: any, res: any, me: any) {
 }
 
 // ---------- state (lecture) ----------
-const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined });
+const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined, hr: undefined }); // `hr` (dossier du salarié, M5.1) : admin et salarié concerné seulement
 const stripPost = (p: any, me: any) =>
   me.role === 'admin' || p.employee_id === me.id
     ? withoutClientPrice(p, me)
@@ -1404,6 +1495,14 @@ async function sync(req: any, res: any, me: any) {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
         if (sentTpl !== undefined) toSave = { ...toSave, mission_templates: cleanMissionTemplates(sentTpl) };
+      }
+      if (admin && col === 'users') {
+        // Dossier du salarié (M5.1) : revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
+        const sentHr = (rec as any).hr === undefined ? existing?.hr : (rec as any).hr;
+        const hv = cleanHrFile(sentHr);
+        if (!hv.ok) { rejected.push({ col, id: rec.id, reason: 'hr_' + hv.reason }); continue; }
+        toSave = { ...toSave };
+        if (hv.hr) (toSave as any).hr = hv.hr; else delete (toSave as any).hr;
       }
       if (col === 'clients') {
         const v = cleanClient(rec, existing, me.id, now);
