@@ -67,15 +67,17 @@ const getRow = async (id: string): Promise<any | null> => {
 };
 const putRow = (id: string, data: any) => sb.from(RESTORE).upsert({ id, data, updated_at: new Date().toISOString() });
 
-async function issueCode(purpose: "verify" | "reset", email: string): Promise<Response> {
+async function issueCode(purpose: "verify" | "reset" | "backup", email: string): Promise<Response> {
   const prev = await getRow(`code-${purpose}`);
   if (prev?.sent_at && Date.now() - prev.sent_at < CODE_MIN_GAP_MS) {
     return json(429, { error: "Un code vient d'être envoyé. Attendez 1 minute avant d'en demander un autre." });
   }
   const code = String(randomInt(0, 1000000)).padStart(6, "0");
-  const title = purpose === "verify" ? "Vérification de votre adresse" : "Code de restauration du site";
+  const title = purpose === "verify" ? "Vérification de votre adresse" : purpose === "backup" ? "Code de restauration d'une sauvegarde" : "Code de restauration du site";
   const why = purpose === "verify"
     ? "Voici le code pour confirmer cette adresse comme adresse administrateur."
+    : purpose === "backup"
+    ? "Voici le code pour confirmer la <b>restauration d'une sauvegarde</b> : les données actuelles seront remplacées. Si ce n'est pas vous, ne le donnez à personne."
     : "Voici le code pour confirmer la <b>remise à zéro</b> du site. Si ce n'est pas vous, ne le donnez à personne.";
   const ok = await sendMail(email, `${title} : ${code}`,
     `<div style="font-family:Arial,sans-serif;max-width:420px"><h2>${title}</h2><p>${why}</p>` +
@@ -86,7 +88,7 @@ async function issueCode(purpose: "verify" | "reset", email: string): Promise<Re
 }
 
 // 5 essais, 10 minutes, usage unique
-async function checkCode(purpose: "verify" | "reset", code: unknown): Promise<{ ok: boolean; error?: string }> {
+async function checkCode(purpose: "verify" | "reset" | "backup", code: unknown): Promise<{ ok: boolean; error?: string }> {
   const id = `code-${purpose}`;
   const row = await getRow(id);
   if (!row) return { ok: false, error: "Aucun code en attente. Demandez un nouveau code." };
@@ -141,6 +143,27 @@ Deno.serve(async (request: Request) => {
       const adm = await getRow("admin-email");
       if (!adm?.email || !adm.verified) return json(400, { error: "Votre adresse Gmail doit être enregistrée et vérifiée." });
       return await issueCode("reset", adm.email);
+    }
+
+    // Restauration d'une sauvegarde (M7.3) : code par mail, mot RESTAURER ; la fonction SQL prend d'abord une sauvegarde de sécurité, puis remplace tout en une transaction.
+    if (action === "restore-backup-code") {
+      const adm = await getRow("admin-email");
+      if (!adm?.email || !adm.verified) return json(400, { error: "Votre adresse Gmail doit être enregistrée et vérifiée." });
+      return await issueCode("backup", adm.email);
+    }
+    if (action === "restore-backup-execute") {
+      if (String(body?.confirm || "") !== "RESTAURER") return json(400, { error: "Confirmation manquante." });
+      const bid = Number(body?.id);
+      if (!Number.isInteger(bid) || bid < 1) return json(400, { error: "Sauvegarde invalide." });
+      const adm = await getRow("admin-email");
+      if (!adm?.email || !adm.verified) return json(400, { error: "Votre adresse Gmail doit être enregistrée et vérifiée." });
+      const { data: exists } = await sb.from("df_backups").select("id").eq("id", bid).maybeSingle();
+      if (!exists) return json(404, { error: "Sauvegarde introuvable." });
+      const c = await checkCode("backup", body?.code);
+      if (!c.ok) return json(400, { error: c.error });
+      const { data, error } = await sb.rpc("df_restore_backup", { p_id: bid, p_by: String(me.id || ""), p_name: String(me.name || me.username || "") });
+      if (error) { console.error("restore backup error:", error.message); return json(500, { error: "La restauration a échoué. Rien n'a été changé." }); }
+      return json(200, { ok: true, safety_backup: data?.safety_backup ?? null, tables: data?.tables ?? 0, rows: data?.rows ?? 0 });
     }
 
     // Remise à zéro : efface boosters, sessions, historiques, avances, paies, messages.

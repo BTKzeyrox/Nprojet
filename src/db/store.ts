@@ -1313,6 +1313,8 @@ class DeltaForceStore {
   public restoreSetEmail(email: string) { return this.restoreCall('restore-email', { email }); }
   public restoreVerifyEmail(code: string) { return this.restoreCall('restore-email-verify', { code }); }
   public restoreSendCode() { return this.restoreCall('restore-send-code'); }
+  public restoreBackupCode() { return this.restoreCall('restore-backup-code'); }
+  public restoreBackupExecute(id: number, code: string) { return this.restoreCall('restore-backup-execute', { id, code, confirm: 'RESTAURER' }); }
   public restoreExecute(code: string) { return this.restoreCall('restore-execute', { code, confirm: 'RESTAURER' }); }
 
   // --- Journal des erreurs et signalements ---

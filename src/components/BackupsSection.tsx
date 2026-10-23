@@ -1,18 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Database, Download, RefreshCw } from 'lucide-react';
+import { Database, Download, RefreshCw, RotateCcw } from 'lucide-react';
 import { db } from '../db/store';
+import { askConfirm } from './ConfirmModal';
 
 type Row = { id: number; taken_at: string; tables: number; bytes: number };
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const fmtSize = (b: number) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(b / 1024))} Ko`);
 
-/** Sauvegardes de nuit : liste, sauvegarde immédiate, téléchargement (JSON). La restauration n'est pas encore là. */
+/** Sauvegardes de nuit : liste, sauvegarde immédiate, téléchargement (JSON), restauration (M7.3 : Gmail vérifié, mot RESTAURER, confirmation, code par mail, sauvegarde de sécurité automatique). */
 export const BackupsSection: React.FC = () => {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [verified, setVerified] = useState(false);
+  const [target, setTarget] = useState<Row | null>(null);
+  const [step, setStep] = useState<'warn' | 'code'>('warn');
+  const [word, setWord] = useState('');
+  const [code, setCode] = useState('');
 
   const load = useCallback(async () => {
     const r = await db.listBackups();
@@ -20,6 +26,27 @@ export const BackupsSection: React.FC = () => {
     else { setRows([]); setMsg({ text: r.error || 'Erreur.', ok: false }); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void db.restoreStatus().then(r => setVerified(!!(r.ok && r.data?.verified))); }, []);
+
+  const closeRestore = () => { setTarget(null); setStep('warn'); setWord(''); setCode(''); };
+  const askCode = async () => {
+    setBusy(true); setMsg(null);
+    const r = await db.restoreBackupCode();
+    setBusy(false);
+    if (!r.ok) return setMsg({ text: r.error || 'Erreur.', ok: false });
+    setStep('code'); setMsg({ text: 'Code envoyé sur votre Gmail.', ok: true });
+  };
+  const runRestore = async () => {
+    if (!target) return;
+    setBusy(true); setMsg(null);
+    const r = await db.restoreBackupExecute(target.id, code);
+    setBusy(false);
+    if (!r.ok) return setMsg({ text: r.error || 'La restauration a échoué.', ok: false });
+    closeRestore();
+    if (db.isDemo()) return setMsg({ text: 'Mode démo : restauration simulée, rien n\'a changé.', ok: true });
+    setMsg({ text: 'Sauvegarde restaurée. Une sauvegarde de sécurité a été prise juste avant. Rechargement…', ok: true });
+    setTimeout(() => window.location.reload(), 1500);
+  };
 
   const now = async () => {
     setBusy(true); setMsg(null);
@@ -77,7 +104,7 @@ export const BackupsSection: React.FC = () => {
       {rows && rows.length > 0 && (
         <ul className="divide-y divide-slate-800 border border-slate-800 rounded-xl overflow-hidden">
           {rows.map(r => (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
               <div className="min-w-0">
                 <div className="text-sm text-white">{fmtDate(r.taken_at)}</div>
                 <div className="text-[11px] text-slate-400">{fmtSize(r.bytes)}</div>
@@ -85,12 +112,40 @@ export const BackupsSection: React.FC = () => {
               <button type="button" disabled={downloading === r.id} onClick={() => download(r)} className="shrink-0 px-3 py-2 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
                 <Download className="w-3.5 h-3.5" /> Télécharger
               </button>
+              <button type="button" disabled={!verified || busy} onClick={() => { setTarget(r); setStep('warn'); setWord(''); setCode(''); setMsg(null); }} className="shrink-0 px-3 py-2 rounded-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <RotateCcw className="w-3.5 h-3.5" /> Restaurer
+              </button>
             </li>
           ))}
         </ul>
       )}
 
-      <p className="text-[11px] text-slate-500">La restauration depuis une sauvegarde n'est pas encore disponible.</p>
+      {!verified && <p className="text-[11px] text-amber-300">Pour restaurer, enregistrez et vérifiez votre Gmail dans « Restauration du site » plus bas.</p>}
+      {target && (
+        <div className="border border-red-700 bg-red-950/30 p-3 space-y-2 rounded-xl">
+          <p className="text-xs text-red-200 font-bold">Restaurer la sauvegarde du {fmtDate(target.taken_at)}</p>
+          {step === 'warn' && (
+            <>
+              <p className="text-[11px] text-slate-300">Les données actuelles seront remplacées par celles de cette sauvegarde (comptes, missions, finances, factures, stock…). Ce qui a été fait depuis sera perdu. Le journal d'audit est gardé. Une sauvegarde de sécurité est prise juste avant. Écrivez <b>RESTAURER</b> pour continuer.</p>
+              <input value={word} onChange={e => setWord(e.target.value)} placeholder="RESTAURER" autoCapitalize="characters" className="w-full bg-[#0d1622] border border-slate-600 p-2.5 text-white text-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={closeRestore} className="min-h-[44px] px-3 text-xs font-bold bg-slate-800 border border-slate-600 text-slate-200 cursor-pointer">Annuler</button>
+                <button type="button" disabled={word.trim() !== 'RESTAURER' || busy} onClick={() => askConfirm({ title: 'Dernière chance', message: 'Confirmation 2 sur 2 : les données actuelles seront remplacées par cette sauvegarde. Un code va être envoyé sur votre Gmail.', confirmLabel: 'Oui, envoyer le code', danger: true, onConfirm: askCode })} className="min-h-[44px] px-3 text-xs font-bold bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 cursor-pointer">Continuer</button>
+              </div>
+            </>
+          )}
+          {step === 'code' && (
+            <>
+              <p className="text-[11px] text-slate-300">Entrez le code à 6 chiffres reçu par mail. Il est valable 10 minutes.</p>
+              <input inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="Code à 6 chiffres" className="w-full bg-[#0d1622] border border-slate-600 p-2.5 text-white text-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={closeRestore} className="min-h-[44px] px-3 text-xs font-bold bg-slate-800 border border-slate-600 text-slate-200 cursor-pointer">Annuler</button>
+                <button type="button" disabled={code.length !== 6 || busy} onClick={runRestore} className="min-h-[44px] px-3 text-xs font-bold bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 cursor-pointer">Restaurer</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
       {msg && <div className={`text-sm ${msg.ok ? 'text-emerald-300' : 'text-red-300'}`}>{msg.text}</div>}
     </section>
   );
