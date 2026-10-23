@@ -39,6 +39,7 @@ const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m 
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
+const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => ({ default: m.MyPerformance })));
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
 const InvoicesView = lazy(() => import('./views/admin/InvoicesView').then(m => ({ default: m.InvoicesView })));
 const PurchasingPage = lazy(() => import('./views/admin/PurchasingPage').then(m => ({ default: m.PurchasingPage })));
@@ -466,6 +467,8 @@ export default function App() {
                 <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               ) : activeView === 'settings' ? (
                 <SettingsView personalOnly />
+              ) : activeView === 'my-performance' ? (
+                <MyPerformance />
               ) : (
                 /* Employee Dashboard managing sub-pages: 'grid' (missions), 'active-post', 'advances', 'chat' */
                 <EmployeeDashboard

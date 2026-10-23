@@ -86,13 +86,26 @@ export const SITE_MAP: SitePage[] = [
   },
   {
     id: 'performance', audience: 'admin', title: b('Performance', 'Performance'),
-    purpose: b('Comment chaque salarié travaille : missions faites, refusées, délais.', 'How each employee works: missions done, refused, timing.'),
-    howto: [b('Choisir la période (7 jours, 30 jours, tout).', 'Pick the period (7 days, 30 days, all).'), b('Comparer les salariés entre eux.', 'Compare employees with each other.'), b('Exporter en Excel ou en CSV.', 'Export to Excel or CSV.')],
-    rules: [b('Ce sont des indicateurs, pas des sanctions : le contexte reste à l\'admin.', 'These are indicators, not penalties: context stays with the admin.')],
-    conditions: ['options.badges_enabled'],
+    purpose: b('Comment chaque salarié travaille : missions faites, refusées, délais, puis un score sur 100 et des badges calculés.', 'How each employee works: missions done, refused, timing, then a score out of 100 and calculated badges.'),
+    howto: [b('Onglet Tableau : choisir la période (7 jours, 30 jours, tout) et exporter en Excel ou en CSV.', 'Table tab: pick the period (7 days, 30 days, all) and export to Excel or CSV.'), b('Onglet Scores et badges : le classement des 30 derniers jours ; toucher un salarié ouvre sa fiche.', 'Scores and badges tab: the ranking of the last 30 days; tap an employee to open the sheet.'), b('Lire le « pourquoi » de chaque score et de chaque badge avant de juger.', 'Read the “why” of each score and badge before judging.')],
+    rules: [b('Ce sont des indicateurs, pas des sanctions : le contexte reste à l\'admin.', 'These are indicators, not penalties: context stays with the admin.'), b('Rien n\'est saisi à la main : scores et badges sont calculés, aucun badge n\'est donné par faveur.', 'Nothing is typed by hand: scores and badges are calculated, no badge is given as a favour.'), b('Sous 10 missions jugées sur 30 jours, aucun score n\'est affiché ; le badge Qualité demande 20 missions.', 'Under 10 judged missions in 30 days no score is shown; the Quality badge needs 20 missions.'), b('Un salarié ne voit que son propre score et ses propres badges, jamais le classement ni les points d\'attention (sauf choix contraire dans Conditions).', 'An employee only sees their own score and badges, never the ranking or the points of attention (unless you choose otherwise in Conditions).')],
+    conditions: ['options.badges_enabled', 'options.employee_sees_badges', 'options.employee_sees_attention', 'leave.late_limit_time', 'leave.work_days_per_week'],
     figures: [
       { name: b('Taux d\'acceptation', 'Acceptance rate'), formula: b('Missions validées ÷ (validées + refusées), en %. Vide s\'il n\'y a aucune mission jugée.', 'Validated missions ÷ (validated + refused), in %. Empty if no mission was judged.') },
       { name: b('Délai moyen', 'Average time'), formula: b('Moyenne des durées des missions (début à fin, passage de minuit compris).', 'Average mission duration (start to end, midnight crossing included).') },
+      { name: b('Score de performance', 'Performance score'), formula: b('Sur 30 jours : qualité 40 % (missions validées ÷ jugées), volume 25 % (missions ÷ moyenne de l\'équipe), ponctualité 20 % (jours sans retard), régularité 15 % (jours actifs ÷ jours attendus). Une partie impossible à calculer est retirée et les autres poids sont recalculés à 100 %.', 'Over 30 days: quality 40 % (approved ÷ judged missions), volume 25 % (missions ÷ team average), punctuality 20 % (days without delay), consistency 15 % (active days ÷ expected days). A part that cannot be calculated is dropped and the other weights are recalculated to 100 %.') },
+      { name: b('Badges', 'Badges'), formula: b('Qualité, Ponctualité, Régularité, Rendement, Polyvalence (niveaux Bronze, Argent, Or) et Recrue prometteuse : chacun a un seuil, et la fiche dit pourquoi il est obtenu et ce qui manque pour le niveau suivant.', 'Quality, Punctuality, Consistency, Efficiency, Versatility (Bronze, Silver, Gold levels) and Promising rookie: each has a threshold, and the sheet says why it is earned and what is missing for the next level.') },
+      { name: b('Employé du mois', 'Employee of the month'), formula: b('Meilleur score du mois civil, à partir de 5 salariés actifs et avec assez de missions jugées ; ex æquo : tous sont cités.', 'Best score of the calendar month, from 5 active employees and with enough judged missions; ties: everyone is named.') },
+    ],
+  },
+  {
+    id: 'my-performance', audience: 'employee', title: b('Ma performance', 'My performance'),
+    purpose: b('Ton score sur 100 et tes badges, avec le pourquoi, pour voir où tu en es.', 'Your score out of 100 and your badges, with the why, to see where you stand.'),
+    howto: [b('Lire ton score sur 100 et la période qu\'il couvre.', 'Read your score out of 100 and the period it covers.'), b('Regarder tes badges et ce qui manque pour le niveau suivant.', 'Look at your badges and what is missing for the next level.'), b('Comparer avec les périodes d\'avant dans « Tendance ».', 'Compare with earlier periods in “Trend”.')],
+    rules: [b('Tu ne vois que ton score et tes badges : jamais ceux des autres, jamais de classement.', 'You only see your own score and badges: never anyone else\'s, never a ranking.'), b('Tout est calculé sur tes missions, rien n\'est donné à la main.', 'Everything is calculated from your missions, nothing is given by hand.'), b('Sous 10 missions jugées sur 30 jours, aucun score n\'est affiché.', 'Under 10 judged missions in 30 days, no score is shown.')],
+    conditions: ['options.badges_enabled', 'options.employee_sees_badges', 'options.employee_sees_attention'],
+    figures: [
+      { name: b('Score de performance', 'Performance score'), formula: b('Sur 30 jours : qualité 40 %, volume 25 %, ponctualité 20 %, régularité 15 %. Une partie impossible à calculer est retirée et les autres poids sont recalculés à 100 %.', 'Over 30 days: quality 40 %, volume 25 %, punctuality 20 %, consistency 15 %. A part that cannot be calculated is dropped and the other weights are recalculated to 100 %.') },
     ],
   },
   {

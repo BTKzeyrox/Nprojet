@@ -30,6 +30,7 @@ import {
   Receipt,
   Truck,
   HeartPulse,
+  Award,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -38,6 +39,7 @@ import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { useChatUnread } from '../utils/useChatUnread';
 import { getAdminAlerts } from '../utils/alertsDb';
+import { badgeAccess } from '../utils/usePerformance';
 
 interface SidebarProps {
   currentUser: User;
@@ -72,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   compact = false,
   onToggleCompact,
 }) => {
-  const { theme, t } = useApp();
+  const { theme, t, lang } = useApp();
   // Menu ouvert sur téléphone (moins de 768 px) : la page derrière ne défile plus. Dès 768 px (tablette, ordinateur : menu toujours visible,
   // ou agrandi par le bouton), la page garde son défilement : sinon elle restait figée.
   const [isWide, setIsWide] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
@@ -114,6 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
+    ...(currentUser.role === 'employee' && badgeAccess().enabled && badgeAccess().seesBadges ? [{ id: 'my-performance', label: lang === 'en' ? 'My performance' : 'Ma performance', icon: Award }] : []), // module 3 : son propre score et ses badges
     { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),

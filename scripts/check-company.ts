@@ -108,7 +108,8 @@ const emp = { id: 'e1', role: 'employee', name: 'Marie' }, adm = { id: 'a1', rol
   ok(!('company_log' in cut), 'employé : jamais le journal des changements');
   ok(cut.company.leave.leave_days_per_year === 30 && cut.company.leave.late_limit_time === '08:00' && cut.company.texts.internal_rules === 'Règlement visible', 'employé : reçoit les congés/présence et le règlement');
   ok(!/SECRET|vat_|tax|billing|payroll|identity|legal|payment_days|customer_terms|Société X|0340000000/.test(txt.replace(/"price_per_mission"/g, '')) , 'employé : rien d\'argent, de TVA, d\'identifiants ni de conditions client');
-  ok(Object.keys(cut.company).sort().join() === 'leave,texts' && Object.keys(cut.company.texts).join() === 'internal_rules', 'employé : seulement les sections « leave » et « texts.internal_rules »');
+  ok(Object.keys(cut.company).sort().join() === 'leave,options,texts' && Object.keys(cut.company.texts).join() === 'internal_rules', 'employé : seulement « leave », « texts.internal_rules » et 3 réglages Badges (module 3)');
+  ok(Object.keys(cut.company.options).sort().join() === 'badges_enabled,employee_sees_attention,employee_sees_badges' && Object.values(cut.company.options).every(v => typeof v === 'boolean'), 'employé : dans « options », seulement les 3 oui/non des badges (ni facture par client, ni devis)');
   ok(cut.price_per_mission === 1000 && cut.rules === 'ancien', 'employé : les autres réglages ne sont pas touchés par ce filtre');
   const sSet = clone(settings);
   ok(J(srv.stripCompany(sSet, adm)) === J(settings) && srv.stripCompany(sSet, adm) === sSet, 'admin : reçoit tout, journal compris');

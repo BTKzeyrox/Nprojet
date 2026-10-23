@@ -977,7 +977,9 @@ function cleanCompany(input, base = COMPANY_DEFAULTS) {
 const readCompany = (settingsCompany) => cleanCompany(settingsCompany).value;
 function companyForEmployee(c) {
   const full = readCompany(c);
-  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } };
+  // Les 3 réglages « Badges » (oui/non, rien d'argent) : sans eux le salarié ne peut pas savoir si sa page « Ma performance » est ouverte (module 3).
+  const { badges_enabled, employee_sees_badges, employee_sees_attention } = full.options;
+  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules }, options: { badges_enabled, employee_sees_badges, employee_sees_attention } };
 }
 function companyDiff(before, after) {
   const out = [];

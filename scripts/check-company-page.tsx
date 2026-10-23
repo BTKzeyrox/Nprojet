@@ -46,7 +46,7 @@ ok(cleanCompany({ tax: { vat_rate: 150 } }, after).errors.length === 1 && readCo
 // ---------- opérateur (démo) ----------
 db.enterDemo('employee');
 const empCompany: any = db.getSettings().company;
-ok(Object.keys(empCompany).sort().join() === 'leave,texts' && Object.keys(empCompany.texts).join() === 'internal_rules', 'opérateur : ne détient que « leave » et « texts.internal_rules » (comme avec le vrai serveur)');
+ok(Object.keys(empCompany).sort().join() === 'leave,options,texts' && Object.keys(empCompany.texts).join() === 'internal_rules' && Object.keys(empCompany.options).sort().join() === 'badges_enabled,employee_sees_attention,employee_sees_badges', 'opérateur : ne détient que « leave », « texts.internal_rules » et les 3 oui/non des badges (comme avec le vrai serveur)');
 for (const lang of ['fr', 'en'] as const) {
   const html = renderToString(<CompanyForEmployee lang={lang} />);
   ok(!bad(html) && html.includes(lang === 'en' ? 'Rules and leave' : 'Règlement et congés'), `${lang} opérateur : bloc affiché dans la bonne langue`);
