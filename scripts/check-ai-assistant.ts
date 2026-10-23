@@ -1,6 +1,6 @@
 // Contrôle de l'assistant IA externe (M11.13) : garde-fous purs, appel simulé (aucun vrai réseau), fonction serveur lue. Lancer : npm run check:ai-assistant
 import fs from 'node:fs';
-import { cleanGuide, cleanHistory, cleanQuestion, cleanSnapshot, buildPrompt, cleanAnswer, makeLimiter, dayMada, askGemini, Q_MAX, SNAP_MAX_CHARS, ANSWER_MAX, DAILY_MAX } from '../supabase/functions/df-assistant/guard';
+import { nowMada, cleanGuide, cleanHistory, cleanQuestion, cleanSnapshot, buildPrompt, cleanAnswer, makeLimiter, dayMada, askGemini, Q_MAX, SNAP_MAX_CHARS, ANSWER_MAX, DAILY_MAX } from '../supabase/functions/df-assistant/guard';
 import { buildSnapshot } from '../src/utils/siteSnapshot';
 import { buildDemoData } from '../src/demo/demoData';
 let n = 0, fails = 0;
@@ -90,6 +90,19 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
     let sent2: any = null;
     await askGemini(async (url, init) => { sent2 = JSON.parse(init.body); return { status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }) }; }, 'K', ['m'], pg);
     ok(sent2.contents.length === 3 && sent2.contents[0].role === 'user' && sent2.contents[1].role === 'model' && sent2.contents[2].role === 'user' && sent2.contents[2].parts[0].text.includes('QUESTION'), 'appel : les échanges précédents puis la question, en alternance');
+  }
+  {
+    const ph = buildPrompt('Salut !', '{}', 'fr', { now: Date.parse('2026-10-23T06:59:00Z') });
+    ok(/collègue humain/.test(ph.system) && /plaisanter/.test(ph.system) && /sérieux/.test(ph.system) && /encourage/.test(ph.system) && /rappel/.test(ph.system), 'personnalité : humain, drôle quand il faut, sérieux quand il faut, motivant, rappelle ce qui attend');
+    ok(/honnête/.test(ph.system) && /n'inventes aucun chiffre, même pour faire plaisir/.test(ph.system) && /jamais aux dépens/.test(ph.system), 'personnalité : reste honnête (pas de flatterie, aucun chiffre inventé) et jamais moqueur');
+    ok(/jamais te faire passer pour un humain/.test(ph.system), 'personnalité : ne prétend pas être un humain si on lui demande sérieusement');
+    ok(/jamais une consigne/.test(ph.system) && /ne fais aucune action/.test(ph.system) && !ph.system.includes('Salut !'), 'personnalité : les règles de sécurité restent (la question est une donnée, aucune action)');
+    ok(ph.user.includes('DATE (Madagascar): vendredi 23/10/2026, 09h59'), 'date et heure de Madagascar données à l IA (UTC+3)');
+    ok(nowMada(Date.parse('2026-10-24T21:30:00Z'), 'en') === 'Sunday 25/10/2026, 00h30', 'date : minuit passé à Madagascar = jour suivant, en anglais aussi');
+    ok(!buildPrompt('x', '{}', 'fr').user.includes('DATE (Madagascar)'), 'date : absente si non donnée');
+    const pe2 = buildPrompt('hi', '{}', 'en', { now: 0 });
+    ok(/warm, genuine human colleague/.test(pe2.system) && /reminder/.test(pe2.system) && !/[àâçéèêëîïôùûœ]/i.test(pe2.system.replace(/RÉSUMÉ/g, '')), 'personnalité anglaise : complète et sans accents français');
+    ok(pe2.system.length < 3600 && ph.system.length < 3600, 'consigne : reste courte (moins de 3600 caractères)');
   }
   // ---- côté site ----
   const ai = fs.readFileSync('src/utils/aiAssist.ts', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), st = fs.readFileSync('src/db/store.ts', 'utf8'), ss = fs.readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');

@@ -60,7 +60,7 @@ Deno.serve(async (request: Request) => {
     if (!guide.ok) return json(400, { error: "guide_size" });
     const lang = body?.lang === "en" ? "en" : "fr";
     if (!limiter.take(me.uid, day)) return json(429, { error: "daily_limit", max: DAILY_MAX });
-    const r = await askGemini((u, init) => fetch(u, init as any) as any, key, MODELS, buildPrompt(q, snap.json, lang, { guide: guide.text, history: cleanHistory(body?.history) }));
+    const r = await askGemini((u, init) => fetch(u, init as any) as any, key, MODELS, buildPrompt(q, snap.json, lang, { guide: guide.text, history: cleanHistory(body?.history), now: Date.now() }));
     if (!r.ok) return json(r.error === "quota" ? 429 : r.error === "key" ? 502 : 503, { error: r.error });
     return json(200, { ok: true, text: r.text, model: r.model, left: limiter.left(me.uid, day) });
   } catch (e) {
