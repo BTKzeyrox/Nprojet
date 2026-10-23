@@ -19,6 +19,7 @@ const T = {
   stock: "df_stock_moves",
   purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
   invoices: "df_invoices", // factures et avoirs (les compteurs de numéros ne sont JAMAIS une collection : uniquement des fonctions SQL)
+  leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
@@ -400,6 +401,119 @@ function cleanHrFile(raw: any): { ok: true; hr: any } | { ok: false; reason: str
 }
 // END HRCLEAN
 // ===== END HR =====
+
+// ===== BEGIN LEAVES (congés : le salarié ne crée et n'annule que SA demande, l'admin décide ; ce bloc est contrôlé par scripts/check-leaves.ts) =====
+// BEGIN LEAVECLEAN
+const LV_TYPES = ['paid', 'unpaid', 'sick', 'other'];
+const LV_STATUS = ['pending', 'approved', 'rejected', 'cancelled'];
+const LV_MAX_SPAN = 90;
+const lvDate = (v: unknown): string | null => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return null;
+  return v >= '2000-01-01' && v <= '2100-12-31' ? v : null;
+};
+const lvShift = (v: string, n: number): string => { const d = new Date(v + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+/** Jours ouvrés de `start` à `end` compris. perWeek = jours travaillés par semaine (Conditions) : 6 (défaut, dimanche = repos), 5 (samedi aussi), 7 (aucun repos) ; 0 ou faux = 6. Limité à l'année `year` si fourni. */
+function leaveWorkingDays(start: string, end: string, perWeek: number, year?: number): number {
+  const pw = perWeek === 5 || perWeek === 7 ? perWeek : 6;
+  let n = 0, d = start, guard = 0;
+  while (d <= end && guard++ < 400) {
+    const dow = new Date(d + 'T00:00:00Z').getUTCDay(); // 0 = dimanche, 6 = samedi
+    const off = pw === 7 ? false : pw === 6 ? dow === 0 : dow === 0 || dow === 6;
+    if (!off && (year === undefined || Number(d.slice(0, 4)) === year)) n++;
+    d = lvShift(d, 1);
+  }
+  return n;
+}
+/** Jours de congé PAYÉ déjà pris ou demandés (acceptés ou en attente) pendant l'année `year`, sans la demande `exceptId`. */
+function leavePaidUsed(others: any[], year: number, perWeek: number, exceptId: string): number {
+  let used = 0;
+  for (const o of others || []) {
+    if (!o || o.id === exceptId || o.type !== 'paid' || (o.status !== 'approved' && o.status !== 'pending')) continue;
+    if (!lvDate(o.start_date) || !lvDate(o.end_date)) continue;
+    used += leaveWorkingDays(o.start_date, o.end_date, perWeek, year);
+  }
+  return used;
+}
+/**
+ * Vérifie une demande de congé et applique le changement demandé. Le serveur ne fait jamais confiance au navigateur.
+ * actor : { id, name, admin } (admin = responsable). ctx : { today, allowance (jours par an, 0 = pas de solde), perWeek, others (les autres demandes du même salarié) }.
+ * Création : le salarié ne crée que SA demande « en attente » ; l'admin peut créer pour un salarié (en attente ou déjà acceptée). Dates, type et motif ne changent plus après la création.
+ * Changement d'état : en attente → acceptée / refusée (admin ; refus = motif de 3 caractères ou plus) ; en attente → annulée (le salarié ou l'admin) ;
+ * acceptée → annulée (le salarié seulement si le congé n'a pas commencé ; l'admin avec un motif). Refusée et annulée ne changent plus.
+ */
+function cleanLeave(rec: any, existing: any, actor: { id: string; name: string; admin: boolean }, now: string, ctx: { today: string; allowance: number; perWeek: number; others: any[] }): { ok: true; save: any } | { ok: false; reason: string } {
+  if (!rec || typeof rec !== 'object' || Array.isArray(rec) || typeof rec.id !== 'string' || !rec.id || rec.id.length > 80) return { ok: false, reason: 'id' };
+  const text = (v: unknown, max: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+  const status = typeof rec.status === 'string' && LV_STATUS.includes(rec.status) ? rec.status : null;
+  if (!status) return { ok: false, reason: 'status' };
+  if (!existing) {
+    const empId = actor.admin ? (typeof rec.employee_id === 'string' ? rec.employee_id : '') : actor.id;
+    if (!empId || empId.length > 80) return { ok: false, reason: 'employee' };
+    if (!actor.admin && rec.employee_id !== actor.id) return { ok: false, reason: 'employee' };
+    if (!actor.admin && status !== 'pending') return { ok: false, reason: 'status' };
+    if (actor.admin && status !== 'pending' && status !== 'approved') return { ok: false, reason: 'status' };
+    if (typeof rec.type !== 'string' || !LV_TYPES.includes(rec.type)) return { ok: false, reason: 'type' };
+    const start = lvDate(rec.start_date), end = lvDate(rec.end_date);
+    if (!start || !end || end < start) return { ok: false, reason: 'dates' };
+    if (lvShift(start, LV_MAX_SPAN) < end) return { ok: false, reason: 'span' };
+    if (start < lvShift(ctx.today, -30)) return { ok: false, reason: 'past' }; // au plus 30 jours en arrière (maladie déclarée en retard)
+    if (start > lvShift(ctx.today, 365)) return { ok: false, reason: 'future' };
+    const days = leaveWorkingDays(start, end, ctx.perWeek);
+    if (days < 1) return { ok: false, reason: 'no_working_day' };
+    for (const o of ctx.others || []) {
+      if (o && o.id !== rec.id && (o.status === 'pending' || o.status === 'approved') && lvDate(o.start_date) && lvDate(o.end_date) && o.start_date <= end && start <= o.end_date) return { ok: false, reason: 'overlap' };
+    }
+    if (rec.type === 'paid' && ctx.allowance > 0) {
+      for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) {
+        const want = leaveWorkingDays(start, end, ctx.perWeek, y);
+        if (want > 0 && leavePaidUsed(ctx.others, y, ctx.perWeek, rec.id) + want > ctx.allowance) return { ok: false, reason: 'balance' };
+      }
+    }
+    const reason = text(rec.reason, 300);
+    const save: any = { id: rec.id, employee_id: empId, employee_name: text(actor.admin ? (rec.employee_name || '') : actor.name, 80), type: rec.type, start_date: start, end_date: end, days, status, created_by: actor.id, created_at: now, updated_at: now };
+    if (reason) save.reason = reason;
+    if (status === 'approved') { save.decided_by = actor.id; save.decided_at = now; }
+    return { ok: true, save };
+  }
+  // Modification d'une demande qui existe : seul l'état peut changer.
+  if (!actor.admin && existing.employee_id !== actor.id) return { ok: false, reason: 'forbidden' };
+  if (status === existing.status) return { ok: true, save: existing }; // rien ne change (les autres champs envoyés sont ignorés)
+  const decision = text(rec.decision_reason, 300);
+  const from = existing.status;
+  const started = lvDate(existing.start_date) !== null && existing.start_date <= ctx.today;
+  let allowed = false;
+  if (from === 'pending' && status === 'approved') allowed = actor.admin;
+  else if (from === 'pending' && status === 'rejected') { allowed = actor.admin; if (allowed && decision.length < 3) return { ok: false, reason: 'decision_reason' }; }
+  else if (from === 'pending' && status === 'cancelled') allowed = true;
+  else if (from === 'approved' && status === 'cancelled') {
+    allowed = actor.admin || !started;
+    if (actor.admin && decision.length < 3) return { ok: false, reason: 'decision_reason' };
+  }
+  if (!allowed) return { ok: false, reason: 'transition' };
+  if (status === 'approved') {
+    const start = existing.start_date, end = existing.end_date;
+    for (const o of ctx.others || []) {
+      if (o && o.id !== existing.id && o.status === 'approved' && lvDate(o.start_date) && lvDate(o.end_date) && o.start_date <= end && start <= o.end_date) return { ok: false, reason: 'overlap' };
+    }
+    if (existing.type === 'paid' && ctx.allowance > 0) {
+      for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) {
+        const want = leaveWorkingDays(start, end, ctx.perWeek, y);
+        if (want > 0 && leavePaidUsed(ctx.others, y, ctx.perWeek, existing.id) + want > ctx.allowance) return { ok: false, reason: 'balance' };
+      }
+    }
+  }
+  const save: any = { ...existing, status, updated_at: now };
+  if (actor.admin && (status === 'approved' || status === 'rejected' || status === 'cancelled')) {
+    save.decided_by = actor.id; save.decided_at = now;
+    if (decision) save.decision_reason = decision; else delete save.decision_reason;
+  }
+  if (!actor.admin && status === 'cancelled') { save.decided_by = actor.id; save.decided_at = now; delete save.decision_reason; }
+  return { ok: true, save };
+}
+// END LEAVECLEAN
+// ===== END LEAVES =====
 
 // ===== BEGIN MISSIONS (date limite et priorité d'une mission : le serveur revérifie ; ce bloc est contrôlé par scripts/check-deadlines.ts) =====
 const MISSION_PRIORITIES = ['Normale', 'Haute', 'Urgente'];
@@ -1356,6 +1470,7 @@ async function state(req: any, res: any, me: any) {
     const scope = (q: any) => {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
+      if (col === 'leaves') return q.eq('data->>employee_id', me.id); // un salarié ne voit que ses demandes de congé
       if (col === 'news') {
         // Publications validées (ou anciennes, sans statut) + les siennes (en attente ou refusées)
         return /^[A-Za-z0-9_-]+$/.test(String(me.id))
@@ -1449,7 +1564,18 @@ async function sync(req: any, res: any, me: any) {
       const existing = row?.data as any | undefined;
       let toSave: any = rec;
 
-      if (col === 'messages' || col === 'groups') {
+      if (col === 'leaves') {
+        // Congés (M5.2) : tous les rôles passent par la même règle ; le salarié ne touche qu'à SA demande, l'admin décide
+        const empId = existing ? String(existing.employee_id || '') : (admin ? String(rec.employee_id || '') : me.id);
+        if (admin && !existing) {
+          const eu = await getUserRow(empId);
+          if (!eu || eu.role === 'admin') { rejected.push({ col, id: rec.id, reason: 'employee' }); continue; }
+          if (!rec.employee_name) rec.employee_name = eu.name;
+        }
+        const lv = cleanLeave(rec, existing, { id: me.id, name: String(me.name || ''), admin }, now, await leaveCtx(empId));
+        if (!lv.ok) { rejected.push({ col, id: rec.id, reason: lv.reason }); continue; }
+        toSave = lv.save;
+      } else if (col === 'messages' || col === 'groups') {
         const v = col === 'messages' ? await checkMessage(rec, existing, me, admin, now) : await checkGroup(rec, existing, me, admin, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: (v as any).reason || 'forbidden' }); continue; }
         toSave = v.save;
@@ -1702,6 +1828,17 @@ async function sync(req: any, res: any, me: any) {
 async function companyNow() {
   const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
   return readCompany((st?.data as any)?.company);
+}
+/** Ce qu'il faut savoir pour juger une demande de congé : date du jour (Madagascar), solde annuel et jours travaillés des Conditions, autres demandes du même salarié. */
+async function leaveCtx(employeeId: string) {
+  const company = await companyNow();
+  const { data: rows } = await sb.from(T.leaves).select('data').eq('data->>employee_id', employeeId);
+  return {
+    today: new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10),
+    allowance: Number((company as any)?.leave?.leave_days_per_year) || 0,
+    perWeek: Number((company as any)?.leave?.work_days_per_week) || 0,
+    others: (rows || []).map((r: any) => r.data),
+  };
 }
 const invoiceFail = (res: any, message: string) => { const f = invoiceErrorOf(message); return res.status(f.status).json({ error: f.error, ...(f.max !== undefined ? { max: f.max } : {}) }); };
 const newDocId = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -2654,6 +2791,7 @@ async function purgeEmployee(uid: string) {
     await sb.from(T.posts).delete().eq('data->>employee_id', uid);
   });
   await step('advances', async () => { await sb.from(T.advances).delete().eq('data->>employee_id', uid); });
+  await step('leaves', async () => { await sb.from(T.leaves).delete().eq('data->>employee_id', uid); });
   await step('securityLogs', async () => { await sb.from(T.securityLogs).delete().eq('data->>employee_id', uid); });
 
   // groupes créés par lui : on les supprime avec leurs messages ; les autres : on le retire des membres

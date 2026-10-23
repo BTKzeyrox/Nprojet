@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check:hr": "npx --yes tsx scripts/check-hr.ts",
+    "check:leaves": "npx --yes tsx scripts/check-leaves.ts",
     "check:payslip": "npx --yes tsx scripts/check-payslip.ts",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",
