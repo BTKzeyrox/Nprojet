@@ -1,12 +1,14 @@
 // Rapport du mois (S4.5) et données d'export Excel / PDF (S4.4). Sans écran, sans serveur : contrôlé par `npm run check:phase4`.
 // Contient des chiffres d'argent : à construire seulement pour l'admin.
-import type { CashEntry, ClientContract, PostSession, Product, SalaryAdvanceRequest, StockMove, User } from '../types';
+import type { CashEntry, ClientContract, Invoice, PostSession, Product, SalaryAdvanceRequest, StockMove, User } from '../types';
 import { comparableRanges, computeStats, periodLabel, variation, type StatsResult } from './stats';
 import { computeFinance, type FinanceStats } from './financeStats';
 import { forecastMonth, goalRows, monthFigures, type Forecast, type GoalRow } from './goals';
 import type { ClientRecord } from './clients';
 import { computeAlerts, type AlertItem, type AlertSettings } from './alerts';
 import { stockRows, stockValue, type StockRow } from './stock';
+import { agedSheetRows, invoiceFigures, invoiceSheetRows, type InvoiceFigures } from './invoiceStats';
+import { STATE_NAMES } from './invoices';
 
 export interface ReportInput {
   today: string; anchor: string; lang: 'fr' | 'en';
@@ -15,6 +17,7 @@ export interface ReportInput {
   posts: PostSession[]; contracts: ClientContract[]; users: User[]; advances: SalaryAdvanceRequest[];
   cash: CashEntry[]; products: Product[]; moves: StockMove[];
   clients?: ClientRecord[]; // fiches clients (admin)
+  invoices?: Invoice[]; // factures (module 2) : onglets « Factures » et « Créances » et lignes du résumé, seulement s'il y en a
 }
 
 export interface Report {
@@ -24,6 +27,8 @@ export interface Report {
   stock: { rows: StockRow[]; value: number };
   cashLines: CashEntry[];
   strengths: string[]; attention: string[];
+  inv: InvoiceFigures | null; // null = aucune facture (module 2 pas encore utilisé)
+  invoices: Invoice[]; cashAll: CashEntry[]; clientNames: Record<string, string>; range: { start: string; end: string }; today: string;
 }
 
 const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} Ar`;
@@ -45,6 +50,8 @@ export function buildReport(i: ReportInput): Report {
   const goals = sameMonthAsToday ? goalRows(s, monthNow) : [];
   const forecast = sameMonthAsToday ? forecastMonth(monthNow) : null;
   const alerts = sameMonthAsToday ? computeAlerts({ today: i.today, settings: s, cash: i.cash, posts: i.posts, contracts: i.contracts, advances: i.advances, products: i.products, moves: i.moves, clients: i.clients }) : [];
+  const invList = i.invoices || [];
+  const invRange = empty ? { start: rg.cur.start, end: '0000' } : { start: rg.cur.start, end: rg.curEff.end };
   const rows = stockRows(i.products, i.moves);
   const cashLines = i.cash.filter(e => e.date >= rg.cur.start && e.date <= (empty ? '0000' : rg.curEff.end)).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -85,6 +92,8 @@ export function buildReport(i: ReportInput): Report {
     stats, fin, finPrev, goals, forecast, alerts,
     stock: { rows, value: stockValue(rows) }, cashLines,
     strengths: strengths.slice(0, 3), attention: attention.slice(0, 3),
+    inv: invList.length ? invoiceFigures({ invoices: invList, cash: i.cash, posts: i.posts, contracts: i.contracts, clients: i.clients || [], prices: s, today: i.today, range: invRange }) : null,
+    invoices: invList, cashAll: i.cash, clientNames: Object.fromEntries((i.clients || []).map(c => [c.id, c.name])), range: invRange, today: i.today,
   };
 }
 
@@ -112,6 +121,7 @@ export function exportSheets(r: Report): SheetData[] {
     [t('Facturé (Ar)', 'Billed (Ar)'), fin.billed, finPrev.billed],
     [t('À encaisser (Ar)', 'To collect (Ar)'), fin.toCollect, finPrev.toCollect],
     [t('Trésorerie (Ar)', 'Cash on hand (Ar)'), fin.treasury, ''],
+    ...(r.inv ? [[t('Factures émises sur le mois (Ar)', 'Invoices issued in the month (Ar)'), r.inv.issued_total, ''], [t('Reste à payer sur les factures (Ar)', 'Left to pay on invoices (Ar)'), r.inv.to_collect, ''], [t('Dont en retard (Ar)', 'Of which overdue (Ar)'), r.inv.overdue, ''], [t('Missions validées pas encore facturées (Ar)', 'Approved missions not yet invoiced (Ar)'), r.inv.unbilled_total, '']] : []),
     [],
     [t('Points forts', 'Strengths'), ...r.strengths],
     [t('Points d\'attention', 'Points of attention'), ...r.attention],
@@ -143,6 +153,18 @@ export function exportSheets(r: Report): SheetData[] {
     [t('Marge par type', 'Margin by type'), t('Missions', 'Missions'), t('Facturé (Ar)', 'Billed (Ar)'), t('Salaires (Ar)', 'Salaries (Ar)'), t('Marge (Ar)', 'Margin (Ar)')],
     ...fin.byType.map(x => [x.type, x.done, x.billed, x.salaries, x.margin]),
   ] });
+  if (r.inv) {
+    const nm = (id: string) => r.clientNames[id] || r.invoices.find(v => v.client_id === id)?.client?.name || '';
+    const lab = (s: string) => { const x = STATE_NAMES[s as keyof typeof STATE_NAMES]; return x ? (r.lang === 'en' ? x.en : x.fr) : s; };
+    sheets.push({ name: t('Factures', 'Invoices'), rows: [
+      [t('Numéro', 'Number'), t('Client', 'Client'), t('Émission', 'Issued'), t('Échéance', 'Due'), t('Total (Ar)', 'Total (Ar)'), t('Payé (Ar)', 'Paid (Ar)'), t('Reste (Ar)', 'Left (Ar)'), t('État', 'State'), t('Jours de retard', 'Days late')],
+      ...invoiceSheetRows(r.invoices, r.cashAll, r.today, r.range, nm, lab),
+    ] });
+    sheets.push({ name: t('Créances', 'Receivables'), rows: [
+      [t('Client', 'Client'), t('Pas échu (Ar)', 'Not due (Ar)'), '1-30 j', '31-60 j', '61-90 j', '90+ j', t('Total (Ar)', 'Total (Ar)'), t('Factures', 'Invoices'), t('Plus gros retard (j)', 'Longest delay (d)')],
+      ...agedSheetRows(r.invoices, r.cashAll, r.today, nm),
+    ] });
+  }
   sheets.push({ name: 'Stock', rows: [
     [t('Produit', 'Product'), t('Quantité', 'Quantity'), t('Unité', 'Unit'), t('Valeur (Ar)', 'Value (Ar)'), t('Seuil', 'Threshold'), t('Bas', 'Low')],
     ...r.stock.rows.map(x => [x.product.name, x.qty, x.product.unit, x.value, x.product.alert_threshold, x.low ? t('oui', 'yes') : t('non', 'no')]),
@@ -206,7 +228,8 @@ ${row(t('Dépenses et salaires', 'Expenses and salaries'), ar(fin.totalOut), ar(
 ${row(t('Bénéfice net', 'Net profit'), ar(fin.profit), ar(finPrev.profit), delta(fin.profit, finPrev.profit))}
 ${row(t('Marge', 'Margin'), fin.marginPct === null ? '–' : `${fin.marginPct} %`, finPrev.marginPct === null ? '–' : `${finPrev.marginPct} %`, '')}
 ${row(t('À encaisser', 'To collect'), ar(fin.toCollect), ar(finPrev.toCollect), '')}
-${row(t('Trésorerie', 'Cash on hand'), ar(fin.treasury), '', '')}</table>
+${row(t('Trésorerie', 'Cash on hand'), ar(fin.treasury), '', '')}
+${r.inv ? row(t('Factures émises ce mois', 'Invoices issued this month'), ar(r.inv.issued_total), '', '') + row(t('Reste à payer sur les factures', 'Left to pay on invoices'), ar(r.inv.to_collect), '', '') + row(t('Dont en retard', 'Of which overdue'), ar(r.inv.overdue), '', '') : ''}</table>
 <div class="two"><div class="ok"><h2>${esc(t('3 points forts', '3 strengths'))}</h2><ul>${r.strengths.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
 <div class="warn"><h2>${esc(t('3 points d\'attention', '3 points of attention'))}</h2><ul>${r.attention.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>
 ${r.goals.length ? `<h2>${esc(t('Objectifs du mois', 'Monthly goals'))}</h2>${r.goals.map(goalLine).join('')}` : ''}

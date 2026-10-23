@@ -88,6 +88,11 @@ export function checkInvoiceDraft(d: InvoiceDraft): InvoiceResult {
 
 // ---------- États (calculés, jamais saisis) ----------
 export type InvoiceState = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'cancelled' | 'credit_note';
+/** Noms des états (écrans, Excel). */
+export const STATE_NAMES: Record<InvoiceState, { fr: string; en: string }> = {
+  draft: { fr: 'Brouillon', en: 'Draft' }, issued: { fr: 'Émise', en: 'Issued' }, partial: { fr: 'Partiellement payée', en: 'Partly paid' }, paid: { fr: 'Payée', en: 'Paid' },
+  overdue: { fr: 'En retard', en: 'Overdue' }, cancelled: { fr: 'Annulée', en: 'Cancelled' }, credit_note: { fr: 'Avoir', en: 'Credit note' },
+};
 export interface InvoiceInfo { state: InvoiceState; paid: number; balance: number; overdue: boolean; days_late: number }
 
 /** Argent reçu pour une facture : les lignes « entrée » des Finances qui la citent. */

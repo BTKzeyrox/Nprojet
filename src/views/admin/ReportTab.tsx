@@ -14,10 +14,10 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
   const admin = db.getCurrentUser()?.role === 'admin';
   const posts = db.getPosts(), cash = db.getCash();
   const settings = db.getSettings();
-  const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length + ':' + db.getClients().map(c => c.name + (c.active === false ? 0 : 1)).join(',');
+  const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length + ':' + db.getClients().map(c => c.name + (c.active === false ? 0 : 1)).join(',') + ':' + db.getInvoices().map(v => v.id + v.status + v.total_ar).join(',') + cash.reduce((n, e) => n + (e.invoice_id ? e.amount_ar : 0), 0);
   const report = useMemo(() => admin ? buildReport({
     today: todayMada(), anchor, lang, settings, companyName: readCompany(settings.company).identity.name, posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
-    cash, products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(),
+    cash, products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(), invoices: db.getInvoices(),
   }) : null, [admin, anchor, lang, settings, sig]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!report) return null;
   const html = reportHtml(report);

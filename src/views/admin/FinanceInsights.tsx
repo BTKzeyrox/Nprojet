@@ -4,6 +4,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { computeFinance } from '../../utils/financeStats';
 import { daysBetween, todayMada, type StatsGranularity } from '../../utils/stats';
 import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
+import { invoiceFigures } from '../../utils/invoiceStats';
 import { forecastMonth, monthFigures } from '../../utils/goals';
 import { actualUntil, forecastLine } from '../../utils/chartData';
 import { WhyFigure } from '../../components/WhyFigure';
@@ -30,6 +31,11 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
   const f = useMemo(
     () => computeFinance({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0, clients }, g, range, lang, t('Salaires', 'Salaries')),
     [cash, posts, contracts, clients, s, g, range.start, range.end, lang], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const invoices = db.getInvoices();
+  const inv = useMemo(
+    () => (invoices.length || clients.length ? invoiceFigures({ invoices, cash, posts, contracts, clients, prices: s, today: todayMada(), range: { start: r.start, end: r.end } }) : null),
+    [invoices, cash, posts, contracts, clients, s, r.start, r.end], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const ar = (n: number) => formatCurrencyAr(n);
   const short = (n: number) => compactNumber(n);
@@ -71,6 +77,18 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
         <div className="text-sm text-slate-300">
           {t('Meilleur client', 'Best client')} : {f.bestClient ? <b className="text-white">{f.bestClient.name} · {ar(f.bestClient.amount)}</b> : <span className="text-slate-500">{dash}</span>}
         </div>
+        {inv && (invoices.length > 0 || inv.unbilled_count > 0) && (
+          <div className="border-t border-slate-700 pt-3 space-y-2" data-testid="invoice-figures">
+            <h3 className="text-xs font-bold text-slate-300">{t('Factures (module Facturation)', 'Invoices (Invoicing module)')}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {tile(t('Émises sur la période', 'Issued in the period'), ar(inv.issued_total), 'text-white', t(`${inv.issued_count} facture(s)`, `${inv.issued_count} invoice(s)`))}
+              {tile(t('Reste à payer', 'Left to pay'), ar(inv.to_collect), 'text-amber-400', t(`${inv.open_count} facture(s) ouverte(s)`, `${inv.open_count} open invoice(s)`))}
+              {tile(t('Dont en retard', 'Of which overdue'), ar(inv.overdue), inv.overdue > 0 ? 'text-rose-400' : 'text-white')}
+              {tile(t('Pas encore facturé', 'Not yet invoiced'), ar(inv.unbilled_total), inv.unbilled_total > 0 ? 'text-sky-300' : 'text-white', t(`${inv.unbilled_count} mission(s) validée(s)`, `${inv.unbilled_count} approved mission(s)`))}
+            </div>
+            <p className="text-[11px] text-slate-500">{t('« À encaisser » plus haut = missions validées × prix client − argent reçu (sert aux marges). Les chiffres ci-dessus viennent des factures émises.', '“To collect” above = approved missions × client price − money received (used for margins). The figures here come from issued invoices.')}</p>
+          </div>
+        )}
         {noPrice && <p className="text-[11px] text-amber-300">{t('Le prix client vaut 0 : « À encaisser » et les marges restent à 0. Règle-le dans Réglages > Missions.', 'Client price is 0: “To collect” and margins stay at 0. Set it in Settings > Missions.')}</p>}
       </div>
 
