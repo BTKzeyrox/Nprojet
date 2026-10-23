@@ -3,7 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { timingSafeEqual, createHmac, createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
-import { cleanQuestion, cleanSnapshot, buildPrompt, askGemini, makeLimiter, dayMada, DAILY_MAX } from "./guard.ts";
+import { cleanQuestion, cleanSnapshot, cleanGuide, cleanHistory, buildPrompt, askGemini, makeLimiter, dayMada, DAILY_MAX } from "./guard.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -56,9 +56,11 @@ Deno.serve(async (request: Request) => {
     if (!q) return json(400, { error: "bad_question" });
     const snap = cleanSnapshot(body?.summary);
     if (!snap.ok) return json(400, { error: snap.why });
+    const guide = cleanGuide(body?.guide);
+    if (!guide.ok) return json(400, { error: "guide_size" });
     const lang = body?.lang === "en" ? "en" : "fr";
     if (!limiter.take(me.uid, day)) return json(429, { error: "daily_limit", max: DAILY_MAX });
-    const r = await askGemini((u, init) => fetch(u, init as any) as any, key, MODELS, buildPrompt(q, snap.json, lang));
+    const r = await askGemini((u, init) => fetch(u, init as any) as any, key, MODELS, buildPrompt(q, snap.json, lang, { guide: guide.text, history: cleanHistory(body?.history) }));
     if (!r.ok) return json(r.error === "quota" ? 429 : r.error === "key" ? 502 : 503, { error: r.error });
     return json(200, { ok: true, text: r.text, model: r.model, left: limiter.left(me.uid, day) });
   } catch (e) {

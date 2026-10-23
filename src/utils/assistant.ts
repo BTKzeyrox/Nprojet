@@ -89,6 +89,21 @@ export function explainPage(pageId: string): Reply {
   };
 }
 
+
+// ---------- Liste de l'équipe (calculée ici, aucun nom ne sort du navigateur) ----------
+export function teamReply(i: SnapshotInput): Reply {
+  const r = periodRange('month', i.today), inR = (d: string) => d >= r.start && d <= r.end;
+  const emps = i.users.filter(u => u.role === 'employee' && (u.status === undefined || u.status === 'active')).sort((a, c) => a.name.localeCompare(c.name));
+  const sources = b(`d'après la liste des employés actifs et les missions validées du ${dmy(r.start)} au ${dmy(r.end)}`, `based on the active employees list and missions validated from ${dmy(r.start)} to ${dmy(r.end)}`);
+  if (emps.length === 0) return { intent: 'team', empty: true, title: b('Équipe', 'Team'), lines: [b('Aucun employé actif pour le moment.', 'No active employee for now.')], actions: [{ label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources };
+  const count = (id: string) => i.posts.filter(p => p.employee_id === id && p.status === 'completed' && inR(p.date)).length;
+  return {
+    intent: 'team', title: b(`Équipe : ${emps.length} employé${emps.length > 1 ? 's' : ''} actif${emps.length > 1 ? 's' : ''}`, `Team: ${emps.length} active employee${emps.length > 1 ? 's' : ''}`),
+    lines: emps.map(u => { const n = count(u.id); return b(`• ${u.name} : ${n} mission${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''} ce mois`, `• ${u.name}: ${n} mission${n === 1 ? '' : 's'} validated this month`); }),
+    actions: [{ label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources,
+  };
+}
+
 // ---------- Récap d'un employé ----------
 export interface EmployeeRecap {
   found: boolean; name: string; status: string; badge: string | null;
@@ -187,7 +202,7 @@ const FIGURE_WORDS: Record<FigureId, string[]> = {
 };
 export type Intent =
   | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' }
-  | { kind: 'page'; id: string } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
+  | { kind: 'page'; id: string } | { kind: 'team' } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
 
 /** Cherche le pourcentage d'une phrase : « 5 % », « -10% », « de 5 pour cent ». Null si absent ou absurde (> 500). */
 export function parsePct(t: string): number | null {
@@ -212,6 +227,7 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
   if (/\b(aide|help|que sais tu|que peux tu|what can you)\b/.test(t)) return { kind: 'help' };
   if (/\b(quoi faire|que faire|what to do|todo|priorite|priority)\b/.test(t)) return { kind: 'todo' };
   if (/\b(resume|matin|morning|summary|recap du jour|point du jour)\b/.test(t)) return { kind: 'morning' };
+  if (/\b(liste|lister|listez|montre|montrer|affiche|afficher|list|show|combien|how many|qui sont|who are)\b/.test(t) && /\b(employes?|operateurs?|equipe|boosters?|team|employees|staff|personnel)\b/.test(t)) return { kind: 'team' };
   if (i) {
     const emps = i.users.filter(u => u.role === 'employee');
     const hits = emps.filter(u => { const n = normalizeName(u.name); return n.length >= 3 && (t.includes(n) || n.split(' ').some(part => part.length >= 3 && new RegExp(`\\b${part}\\b`).test(t))); });
@@ -232,6 +248,7 @@ export function helpReply(): Reply {
       b('• « Résumé du jour » : ce qui compte aujourd\'hui, par priorité.', '• "Daily summary": what matters today, by priority.'),
       b('• « Quoi faire maintenant ? » : les 3 actions les plus utiles.', '• "What to do now?": the 3 most useful actions.'),
       b('• « Explique la page Clients » : à quoi elle sert et comment l\'utiliser.', '• "Explain the Clients page": what it is for and how to use it.'),
+      b('• « Liste les employés » : l\'équipe active et ses missions du mois.', '• "List the employees": the active team and their missions this month.'),
       b('• « Récap de Camille » : ses chiffres, sans jugement.', '• "Recap of Camille": their figures, without judgement.'),
       b('• « Pourquoi la marge ? » : la formule et les lignes du chiffre.', '• "Why the margin?": the formula and the lines behind the figure.'),
       b('• « Et si je monte le prix client de 5 % ? » : un calcul simple.', '• "What if I raise the client price by 5%?": a simple calculation.'),
@@ -253,6 +270,7 @@ export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[]): 
     case 'todo': return todoReply(i, alerts);
     case 'help': return helpReply();
     case 'page': return explainPage(it.id);
+    case 'team': return teamReply(i);
     case 'employee': return employeeReply(i, it.id);
     case 'whatif': return whatIfReply(i, it.w);
     case 'figure': {

@@ -3,6 +3,7 @@
 import { db } from '../db/store';
 import { getSnapshot } from './snapshotDb';
 import type { Bi } from './assistant';
+import { SITE_MAP } from './siteKnowledge';
 
 const KEY = (uid: string) => `df_ai_optin_${uid}`;
 export const aiOptIn = (uid: string): boolean => { try { return localStorage.getItem(KEY(uid)) === '1'; } catch { return false; } };
@@ -21,10 +22,23 @@ export const AI_ERRORS: Record<string, Bi> = {
 export const aiErrorOf = (code: string): Bi => AI_ERRORS[code] || AI_ERRORS.unavailable;
 
 export type AiAnswer = { ok: true; text: string; left?: number } | { ok: false; error: Bi };
-export async function askAi(question: string, lang: 'fr' | 'en'): Promise<AiAnswer> {
+export interface AiTurn { role: 'user' | 'model'; text: string }
+/** Guide du site : à quoi sert chaque page de l'admin et comment s'en servir (texte public de la carte du site, aucune donnée de l'entreprise). 6000 caractères au plus. */
+export function siteGuide(lang: 'fr' | 'en'): string {
+  const pick = (x: { fr: string; en: string }) => (lang === 'en' ? x.en : x.fr);
+  const parts: string[] = [];
+  let used = 0;
+  for (const p of SITE_MAP.filter(x => x.audience !== 'employee')) {
+    const line = `${pick(p.title)}: ${pick(p.purpose)} ${p.howto.map(pick).join(' ')}`.replace(/\s+/g, ' ').trim();
+    if (used + line.length + 3 > 5800) break;
+    parts.push(line); used += line.length + 3;
+  }
+  return parts.join(' | ');
+}
+export async function askAi(question: string, lang: 'fr' | 'en', history: AiTurn[] = []): Promise<AiAnswer> {
   const snap = getSnapshot(); // null si pas admin
   if (!snap) return { ok: false, error: aiErrorOf('admin_only') };
-  const r = await db.aiCall('ask', { question, summary: snap, lang });
+  const r = await db.aiCall('ask', { question, summary: snap, lang, guide: siteGuide(lang), history: history.slice(-6) });
   if (r.ok && typeof r.data?.text === 'string') return { ok: true, text: r.data.text, left: r.data.left };
   return { ok: false, error: aiErrorOf(r.error || 'unavailable') };
 }

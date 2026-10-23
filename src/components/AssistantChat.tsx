@@ -51,7 +51,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       let reply = i ? respond(q, i, getHealth().alerts) : helpReply();
       if (reply.intent === 'unknown' && i) {
         if (aiOptIn(userId)) { // question libre : seulement si l'admin a activé l'IA externe (Réglages), sinon rien ne sort du site
-          const r = await askAi(q, l);
+          const turns = msgs.slice(-6).map(m => ({ role: (m.who === 'me' ? 'user' : 'model') as 'user' | 'model', text: m.text || (m.reply ? [l === 'en' ? m.reply.title.en : m.reply.title.fr, ...m.reply.lines.slice(0, 3).map(x => (l === 'en' ? x.en : x.fr))].join(' ') : '') }));
+          const r = await askAi(q, l, turns);
           reply = r.ok
             ? { intent: 'ai', title: { fr: 'Réponse de l\'IA (générée par IA)', en: 'AI answer (AI-generated)' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: [], sources: { fr: 'IA externe (Gemini) sur le résumé du site sans noms : elle peut se tromper, vérifiez avant d\'agir.', en: 'External AI (Gemini) on the site summary without names: it can be wrong, check before acting.' } }
             : { ...reply, lines: [...reply.lines, r.error] };
@@ -81,7 +82,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       <div className="px-2.5 py-2.5 bg-[#0b2a4a] text-white flex items-center gap-2 shrink-0 shadow-md relative z-10">
         <button type="button" onClick={onBack} className="md:hidden w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title={t('Retour', 'Back')}><ArrowLeft className="w-5 h-5" /></button>
         <span className="w-11 h-11 rounded-full bg-sky-600 flex items-center justify-center shrink-0"><Bot className="w-6 h-6 text-white" /></span>
-        <span className="min-w-0"><span className="block font-bold text-base leading-tight">{t('Assistant', 'Assistant')}</span><span className="block text-xs text-white/70">{t('Règles et calculs sur vos données · sans IA externe', 'Rules and calculations on your data · no external AI')}</span></span>
+        <span className="min-w-0"><span className="block font-bold text-base leading-tight">{t('Assistant', 'Assistant')}</span><span className="block text-xs text-white/70">{t('Règles et calculs sur vos données · IA externe facultative', 'Rules and calculations on your data · optional external AI')}</span></span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2" aria-live="polite">
         {msgs.length === 0 && <p className={`text-sm text-center py-6 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Posez une question ou touchez un bouton. Je ne devine pas, je montre toujours d\'où viennent les chiffres, et je ne fais rien tout seul.', 'Ask a question or tap a button. I do not guess, I always show where figures come from, and I never act on my own.')}</p>}

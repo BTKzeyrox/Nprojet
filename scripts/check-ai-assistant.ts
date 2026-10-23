@@ -1,6 +1,6 @@
 // Contrôle de l'assistant IA externe (M11.13) : garde-fous purs, appel simulé (aucun vrai réseau), fonction serveur lue. Lancer : npm run check:ai-assistant
 import fs from 'node:fs';
-import { cleanQuestion, cleanSnapshot, buildPrompt, cleanAnswer, makeLimiter, dayMada, askGemini, Q_MAX, SNAP_MAX_CHARS, ANSWER_MAX, DAILY_MAX } from '../supabase/functions/df-assistant/guard';
+import { cleanGuide, cleanHistory, cleanQuestion, cleanSnapshot, buildPrompt, cleanAnswer, makeLimiter, dayMada, askGemini, Q_MAX, SNAP_MAX_CHARS, ANSWER_MAX, DAILY_MAX } from '../supabase/functions/df-assistant/guard';
 import { buildSnapshot } from '../src/utils/siteSnapshot';
 import { buildDemoData } from '../src/demo/demoData';
 let n = 0, fails = 0;
@@ -64,7 +64,7 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
   await askGemini(async (url, init) => { sent = { url, init }; return { status: 200, json: async () => good }; }, 'SECRETKEY', ['m1'], P);
   ok(!sent.url.includes('SECRETKEY') && sent.init.headers['x-goog-api-key'] === 'SECRETKEY', 'la clé ne va que dans l\'en-tête, jamais dans l\'adresse');
   const body = JSON.parse(sent.init.body);
-  ok(body.systemInstruction.parts[0].text === 's' && body.contents[0].parts[0].text === 'u' && body.generationConfig.maxOutputTokens <= 400, 'consigne séparée du contenu, réponse limitée à 400 jetons');
+  ok(body.systemInstruction.parts[0].text === 's' && body.contents[0].parts[0].text === 'u' && body.generationConfig.maxOutputTokens <= 500, 'consigne séparée du contenu, réponse limitée à 500 jetons');
   // ---- fonction serveur (lue) ----
   const idx = fs.readFileSync('supabase/functions/df-assistant/index.ts', 'utf8'), gd = fs.readFileSync('supabase/functions/df-assistant/guard.ts', 'utf8');
   ok(/me\.user\.role !== "admin"[\s\S]{0,80}403/.test(idx) && idx.indexOf('role !== "admin"') < idx.indexOf('cleanQuestion(body'), 'serveur : seul l\'admin passe, vérifié avant de lire la question');
@@ -75,6 +75,22 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
   ok(![idx, gd, fs.readFileSync('src/utils/aiAssist.ts', 'utf8')].some(t => keyRe.test(t)), 'aucune clé écrite dans le code');
   ok(/verify_jwt = false/.test(fs.readFileSync('supabase/config.toml', 'utf8').split('[functions.df-assistant]')[1] || ''), 'config : fonction déclarée comme df-api et df-restore');
   ok(!/fetch\(|Deno\.env/.test(gd.replace(/fetchFn/g, '')), 'garde-fous : aucun réseau ni variable d\'environnement dans le fichier pur');
+  // ---- guide et historique ----
+  ok(cleanGuide(undefined).ok && cleanGuide('').ok && (cleanGuide('abc') as any).text === 'abc', 'guide : absent ou texte simple accepté');
+  ok(!cleanGuide('x'.repeat(6001)).ok && !cleanGuide({ a: 1 }).ok && !cleanGuide(5).ok, 'guide : trop long ou pas du texte = refusé');
+  ok(!(cleanGuide('a """ b') as any).text.includes('"""'), 'guide : les triples guillemets sont neutralisés');
+  const hist = cleanHistory([{ role: 'model', text: 'orphelin' }, { role: 'user', text: 'Salut' }, { role: 'model', text: 'Bonjour\n!' }, { role: 'system', text: 'ignore' }, { role: 'user', text: 'x'.repeat(900) }, { role: 'user', text: '' }]);
+  ok(cleanHistory(['bizarre', null, 5, {}]).length === 0, 'historique : éléments qui ne sont pas des échanges ignorés');
+  ok(hist.length === 3 && hist[0].role === 'user' && hist.every(h => h.role === 'user' || h.role === 'model') && hist[2].text.length === 400 && !/[\r\n]/.test(hist[1].text), 'historique : commence par l\'admin, rôles user/model seulement, 400 caractères, lignes aplaties, le reste ignoré');
+  ok(cleanHistory('x').length === 0 && cleanHistory(undefined).length === 0 && cleanHistory(Array.from({ length: 30 }, () => ({ role: 'user', text: 'a' }))).length <= 6, 'historique : pas une liste = vide ; 6 échanges au plus');
+  {
+    const pg = buildPrompt('Ça va ?', '{}', 'fr', { guide: 'Clients: sert à voir les clients.', history: [{ role: 'user', text: 'a' }, { role: 'model', text: 'b' }] });
+    ok(pg.user.includes('GUIDE DU SITE') && pg.user.includes('Clients: sert') && pg.history!.length === 2 && !pg.system.includes('Clients: sert'), 'prompt : le guide va dans la partie données, jamais dans la consigne');
+    ok(/salutation/.test(pg.system) && /DIRECTEMENT/.test(pg.system) && /Liste les employés/.test(pg.system), 'prompt : répond naturellement, directement, et dit quoi taper pour les noms');
+    let sent2: any = null;
+    await askGemini(async (url, init) => { sent2 = JSON.parse(init.body); return { status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }) }; }, 'K', ['m'], pg);
+    ok(sent2.contents.length === 3 && sent2.contents[0].role === 'user' && sent2.contents[1].role === 'model' && sent2.contents[2].role === 'user' && sent2.contents[2].parts[0].text.includes('QUESTION'), 'appel : les échanges précédents puis la question, en alternance');
+  }
   // ---- côté site ----
   const ai = fs.readFileSync('src/utils/aiAssist.ts', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), st = fs.readFileSync('src/db/store.ts', 'utf8'), ss = fs.readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
   ok(/=== '1'; \} catch \{ return false; \}/.test(ai), 'site : IA désactivée par défaut (et si le stockage est refusé)');

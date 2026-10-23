@@ -119,6 +119,17 @@ const t0 = Date.now(); for (const q of ['résumé du jour', 'quoi faire maintena
 ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() - t0} ms (limite 1500)`);
 
 
+// ---------- Liste de l'équipe (calculée ici) ----------
+{
+  const emp = demo.users.filter(u => u.role === 'employee' && (u.status === undefined || u.status === 'active'));
+  for (const q of ['Lister les employés', 'liste les employes', 'montre l\'équipe', 'combien d\'employés', 'list the employees', 'who are the staff']) ok(T(q, base()) === 'team', `équipe : « ${q} » est compris`);
+  const tr = respond('Lister les employés', base(), []);
+  ok(tr.intent === 'team' && tr.lines.length === emp.length && emp.every(u => tr.lines.some(l => l.fr.includes(u.name))) && tr.actions[0]?.go.view === 'employees' && clean(tr), 'équipe : tous les employés actifs, leurs missions du mois, bouton vers Employés, texte propre');
+  const none = respond('liste les employés', base({ users: demo.users.filter(u => u.role !== 'employee') }), []);
+  ok(none.empty === true && /Aucun employé/.test(none.lines[0].fr), 'équipe : sans employé il le dit');
+  ok(T('récap de ' + emp[0].name.split(' ')[0], base()) === 'employee', 'équipe : « récap de <prénom> » reste un récap d\'employé');
+}
+
 // ---------- Assemblage de l'écran : l'assistant est une conversation de la messagerie (M11.10 B) ----------
 {
   const chat = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), sb = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
