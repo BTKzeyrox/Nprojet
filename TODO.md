@@ -307,3 +307,4 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - 2026-10-23 : **M0 et M2 finalisés** à la demande de BTK (déjà testés par lui) : M0.1, M0.6 et M2.4 cochées. Reste seulement M2.9 (devis, facultatif). Aucun code touché.
 - M11.13 (suite) : fiabilité IA (2 tentatives si Gemini occupé, réflexion coupée, modèle de secours), réponses IA sans « générée par IA » ni source, boutons vers les pages citées, bouton « Suggestions » (solution par alerte, sans accusation). df-assistant v5 déployée (aucun changement de base).
 - M11 : récap employé imprimable (bouton dans l'assistant, page HTML autonome, check:assistant 120/120). Aucun changement serveur/base.
+- M11.12 (Achats/Fournisseurs) : 2 règles (bons de commande en retard, budgets dépassés), solutions dans l'assistant, check:health-suppliers 13/13. Reste M11.12 : factures, RH/congés, performance. Aucun changement serveur/base.

@@ -2,6 +2,8 @@
 export interface Bi { fr: string; en: string }
 const b = (fr: string, en: string): Bi => ({ fr, en });
 export const ADVICE: Record<string, Bi> = {
+  'po-late': b('Appelle le fournisseur pour avoir une date ferme, puis note la réception ou la nouvelle date dans « Achats ». Si ça se répète, compare avec un autre fournisseur.', 'Call the supplier to get a firm date, then record the receipt or the new date in "Purchasing". If it keeps happening, compare with another supplier.'),
+  'budget-over': b('Ouvre la catégorie dans « Statistiques » pour voir ce qui a pesé ; ensuite relève le plafond si la hausse est normale, ou reporte certains achats au mois prochain.', 'Open the category in "Statistics" to see what weighed in; then raise the cap if the increase is normal, or postpone some purchases to next month.'),
   'validation-wait': b('Valide ou refuse les missions en attente dans « Validations », en commençant par les plus anciennes : un employé attend sa paie.', 'Validate or refuse the waiting missions in "Validations", oldest first: an employee is waiting for pay.'),
   'active-no-end': b('Vérifie dans « Mission en cours » si l\'employé a oublié de terminer ; sinon libère la session.', 'Check in "Active mission" whether the employee forgot to finish; otherwise release the session.'),
   'no-client': b('Rattache ces missions à une fiche client pour que la facturation et les statistiques soient justes.', 'Link these missions to a client record so invoicing and statistics are right.'),

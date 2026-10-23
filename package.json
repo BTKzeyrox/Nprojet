@@ -26,6 +26,7 @@
     "check:health-ui": "npx --yes tsx scripts/check-health-ui.ts",
     "check:site-map": "npx --yes tsx scripts/check-site-map.ts",
     "check:site-snapshot": "npx --yes tsx scripts/check-site-snapshot.ts",
+    "check:health-suppliers": "npx --yes tsx scripts/check-health-suppliers.ts",
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:ai-assistant": "npx --yes tsx scripts/check-ai-assistant.ts",
