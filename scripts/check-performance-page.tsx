@@ -14,6 +14,8 @@ const { AppProvider } = await import('../src/context/AppContext');
 const { PerformanceScores } = await import('../src/views/admin/PerformanceScores');
 const { PerformancePage } = await import('../src/views/admin/PerformancePage');
 const { MyPerformance } = await import('../src/components/MyPerformance');
+const { PerformanceSettings, fromRaw } = await import('../src/components/PerformanceSettings');
+const { PERFORMANCE_DEFAULTS } = await import('../src/utils/performanceScore');
 const { performanceInput, badgeAccess, canSeeProfileBadges } = await import('../src/utils/usePerformance');
 const { computePerformance, rankByScore } = await import('../src/utils/performanceScore');
 
@@ -108,6 +110,38 @@ for (const lang of ['fr', 'en'] as const) {
   ok(!canSeeProfileBadges(a, b), 'fiche Profil : un collègue ne voit pas ceux d\'un autre');
   ok(canSeeProfileBadges(admin, a) && canSeeProfileBadges(admin, meUser), 'fiche Profil : le responsable voit ceux de tous les salariés');
   ok(!canSeeProfileBadges(admin, admin) && !canSeeProfileBadges(null, a), 'fiche Profil : pas pour un compte non salarié, pas sans connexion');
+}
+
+
+// ---------- Réglages > Performance (M3.4) ----------
+{
+  const html = show(<PerformanceSettings lang="fr" />, 'fr');
+  ok(!bad(html) && html.includes('Période du score') && html.includes('Seuils des badges') && html.includes('Poids des 4 parties'), 'Réglages Performance : sections présentes, rien de cassé');
+  ok(show(<PerformanceSettings lang="en" />, 'en').includes('Score period'), 'Réglages Performance : anglais');
+  ok((html.match(/min-h-\[44px\]/g) || []).length >= 20 && html.includes('<label for="perf-window_days"'), 'Réglages Performance : champs de 44 px avec étiquette');
+  const D = PERFORMANCE_DEFAULTS;
+  const raw = (over: Record<string, string> = {}) => ({ window_days: '30', score_min_missions: '10', quality_min_missions: '20', 'w.quality': '40', 'w.volume': '25', 'w.punctuality': '20', 'w.regularity': '15', 'quality_levels.0': '90', 'quality_levels.1': '95', 'quality_levels.2': '98', 'punctuality_levels.0': '90', 'punctuality_levels.1': '95', 'punctuality_levels.2': '100', 'streak_levels.0': '5', 'streak_levels.1': '10', 'streak_levels.2': '20', 'rendement_levels.0': '10', 'rendement_levels.1': '25', 'rendement_levels.2': '40', 'versatility_levels.0': '2', 'versatility_levels.1': '3', 'versatility_levels.2': '5', rookie_missions: '10', rookie_days: '90', month_min_team: '5', min_duration_min: '2', max_duration_min: '960', default_work_days: '6', ...over });
+  ok(JSON.stringify(fromRaw(raw(), 'fr').value) === JSON.stringify(D) && fromRaw(raw(), 'fr').errors.length === 0, 'saisie = valeurs de départ : aucune erreur, réglages identiques');
+  ok(fromRaw(raw({ window_days: '45' }), 'fr').value.window_days === 45, 'fenêtre 45 : acceptée');
+  ok(fromRaw(raw({ window_days: '3' }), 'fr').errors.length === 1, 'fenêtre 3 : refusée avec un message (pas corrigée en silence)');
+  ok(fromRaw(raw({ window_days: '' }), 'fr').errors.length === 1 && fromRaw(raw({ window_days: 'abc' }), 'fr').errors.length === 1, 'champ vide ou texte : refusé');
+  ok(fromRaw(raw({ window_days: '30.5' }), 'fr').errors.length === 1, 'nombre à virgule là où il faut un entier : refusé');
+  ok(fromRaw(raw({ 'w.quality': '0', 'w.volume': '0', 'w.punctuality': '0', 'w.regularity': '0' }), 'fr').errors.length === 1, 'poids tous à 0 : refusé');
+  ok(fromRaw(raw({ 'quality_levels.0': '96' }), 'fr').errors.some(e => e.includes('doivent monter')), 'niveaux qui ne montent pas : refusés avec le nom du badge');
+  ok(fromRaw(raw({ 'quality_levels.2': '101' }), 'fr').errors.length >= 1, 'seuil au-dessus de 100 % : refusé');
+  ok(fromRaw(raw({ min_duration_min: '60', max_duration_min: '60' }), 'fr').errors.length >= 1, 'durée courte ≥ durée longue : refusée');
+  ok(fromRaw(raw({ window_days: '3', 'w.quality': 'x' }), 'en').errors.length === 2 && fromRaw(raw({ window_days: '3' }), 'en').errors[0].includes('Score period'), 'erreurs en anglais, une par champ faux');
+  // un réglage enregistré change vraiment le calcul, pour le responsable comme pour le salarié
+  const s = db.getSettings() as any;
+  db.enterDemo('admin');
+  (db as any).updateSettings({ performance: { ...D, window_days: 60 } });
+  ok(computePerformance(performanceInput()).cfg.window_days === 60, 'réglage enregistré : le calcul utilise la fenêtre de 60 jours');
+  const emp = db.enterDemo('employee');
+  (db as any).updateSettings({ performance: { ...D, window_days: 60 } });
+  ok(computePerformance(performanceInput()).cfg.window_days === 60 && !!emp, 'le salarié calcule avec les mêmes réglages');
+  (db as any).updateSettings({ performance: undefined });
+  ok(computePerformance(performanceInput()).cfg.window_days === 30, 'sans réglage enregistré : valeurs de départ');
+  void s;
 }
 
 ok(calls === 0, `aucun appel réseau (${calls})`);

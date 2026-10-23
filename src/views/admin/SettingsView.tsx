@@ -13,6 +13,7 @@ import { TwoStepDialog } from '../../components/TwoStepDialog';
 import { setModeSwitchHidden, useModeSwitchHidden } from '../../utils/modeSwitch';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyConditions';
+import { PerformanceSettings } from '../../components/PerformanceSettings';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
@@ -64,7 +65,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'company' | 'data'>('general');
+  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'company' | 'performance' | 'data'>('general');
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,13 +206,14 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {saved && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-950 border-emerald-500/60 text-emerald-200'}`}>Réglages enregistrés.</div>}
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-700/60">
-        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['company', 'Conditions'], ['data', 'Données']] as const).map(([id, label]) => (
+        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['company', 'Conditions'], ['performance', 'Performance'], ['data', 'Données']] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px cursor-pointer whitespace-nowrap ${tab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>{label}</button>
         ))}
       </div>
 
 
       {tab === 'company' && <CompanyConditions lang={lang} />}
+      {tab === 'performance' && <PerformanceSettings lang={lang} />}
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">

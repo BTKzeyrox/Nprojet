@@ -863,6 +863,79 @@ function applyBudgets(saved: any, rec: any, existing: any): any {
 }
 // ===== END SUPPLIERS =====
 
+// ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
+interface PerformanceConfig {
+  window_days: number; // fenêtre du score
+  score_min_missions: number; // missions jugées (validées + refusées) minimum pour afficher un score
+  quality_min_missions: number; // idem pour le badge Qualité, le rendement et l'employé du mois
+  weights: { quality: number; volume: number; punctuality: number; regularity: number };
+  quality_levels: [number, number, number]; // % de missions validées : Bronze, Argent, Or
+  punctuality_levels: [number, number, number]; // % de jours sans retard
+  streak_levels: [number, number, number]; // jours de travail d'affilée
+  rendement_levels: [number, number, number]; // % de missions par heure au-dessus de l'équipe
+  versatility_levels: [number, number, number]; // types de mission différents
+  rookie_missions: number; // « Recrue prometteuse » : nombre de premières missions
+  rookie_days: number; // …et première mission il y a moins de N jours
+  month_min_team: number; // « Employé du mois » : salariés actifs minimum
+  min_duration_min: number; // durée plus courte = absurde, ignorée
+  max_duration_min: number; // durée plus longue = absurde, ignorée
+  default_work_days: number; // jours travaillés par semaine si les Conditions ne le disent pas
+}
+
+const PERFORMANCE_DEFAULTS: PerformanceConfig = {
+  window_days: 30, score_min_missions: 10, quality_min_missions: 20,
+  weights: { quality: 40, volume: 25, punctuality: 20, regularity: 15 },
+  quality_levels: [90, 95, 98], punctuality_levels: [90, 95, 100], streak_levels: [5, 10, 20],
+  rendement_levels: [10, 25, 40], versatility_levels: [2, 3, 5],
+  rookie_missions: 10, rookie_days: 90, month_min_team: 5,
+  min_duration_min: 2, max_duration_min: 960, default_work_days: 6,
+};
+
+const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+const intIn = (v: unknown, lo: number, hi: number, d: number) => (isNum(v) && v >= lo && v <= hi ? Math.round(v) : d);
+function levelsIn(v: unknown, lo: number, hi: number, d: [number, number, number]): [number, number, number] {
+  if (!Array.isArray(v) || v.length !== 3 || !v.every(x => isNum(x) && x >= lo && x <= hi)) return d;
+  const a = v.map(x => Math.round((x as number) * 10) / 10) as [number, number, number];
+  return a[0] < a[1] && a[1] < a[2] ? a : d; // les niveaux doivent monter : sinon on garde ceux de départ
+}
+
+/** Réglages reçus (du serveur ou du navigateur) → réglages sûrs : toute valeur invalide retombe sur celle de départ. */
+function cleanPerformanceConfig(raw: unknown): PerformanceConfig {
+  const d = PERFORMANCE_DEFAULTS;
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+  const w = (r.weights && typeof r.weights === 'object' ? r.weights : {}) as Record<string, unknown>;
+  const weights = {
+    quality: intIn(w.quality, 0, 100, d.weights.quality), volume: intIn(w.volume, 0, 100, d.weights.volume),
+    punctuality: intIn(w.punctuality, 0, 100, d.weights.punctuality), regularity: intIn(w.regularity, 0, 100, d.weights.regularity),
+  };
+  const sum = weights.quality + weights.volume + weights.punctuality + weights.regularity;
+  return {
+    window_days: intIn(r.window_days, 7, 90, d.window_days),
+    score_min_missions: intIn(r.score_min_missions, 1, 200, d.score_min_missions),
+    quality_min_missions: intIn(r.quality_min_missions, 1, 500, d.quality_min_missions),
+    weights: sum > 0 ? weights : d.weights, // des poids tous à zéro n'ont aucun sens
+    quality_levels: levelsIn(r.quality_levels, 1, 100, d.quality_levels),
+    punctuality_levels: levelsIn(r.punctuality_levels, 1, 100, d.punctuality_levels),
+    streak_levels: levelsIn(r.streak_levels, 1, 365, d.streak_levels),
+    rendement_levels: levelsIn(r.rendement_levels, 1, 500, d.rendement_levels),
+    versatility_levels: levelsIn(r.versatility_levels, 1, 50, d.versatility_levels),
+    rookie_missions: intIn(r.rookie_missions, 3, 100, d.rookie_missions),
+    rookie_days: intIn(r.rookie_days, 7, 365, d.rookie_days),
+    month_min_team: intIn(r.month_min_team, 2, 100, d.month_min_team),
+    min_duration_min: intIn(r.min_duration_min, 0, 60, d.min_duration_min),
+    max_duration_min: intIn(r.max_duration_min, 60, 1440, d.max_duration_min),
+    default_work_days: intIn(r.default_work_days, 1, 7, d.default_work_days),
+  };
+}
+
+/** Réglages écrits par l'admin : `performance` est revérifié champ par champ (valeur invalide = valeur de départ). Aucun réglage envoyé ni existant = rien n'est écrit. */
+function applyPerformance(saved: any, rec: any, existing: any): any {
+  const sent = rec && rec.performance !== undefined ? rec.performance : existing && existing.performance;
+  if (sent === undefined) return saved;
+  return { ...saved, performance: cleanPerformanceConfig(sent) };
+}
+// ===== END PERFORMANCE =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets"];
@@ -1618,7 +1691,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
