@@ -3,11 +3,12 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { SuppliersSection } from './SuppliersSection';
 import { PurchaseOrdersSection } from './PurchaseOrdersSection';
+import { InventorySection } from './InventorySection';
 
 // Page « Achats » (responsable seulement) : fournisseurs, bons de commande, inventaire.
 // Les sections s'ajoutent étape par étape (M4.1 fournisseurs, M4.2 bons, M4.3 inventaire).
 
-export type Tab = 'orders' | 'suppliers';
+export type Tab = 'orders' | 'suppliers' | 'inventory';
 
 export const PurchasingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) => { // `initialTab` : seulement pour le contrôle automatique
   const { lang } = useApp();
@@ -27,9 +28,11 @@ export const PurchasingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
       <div className="flex gap-1.5" role="tablist">
         {tabBtn('orders', 'Bons de commande', 'Purchase orders')}
         {tabBtn('suppliers', 'Fournisseurs', 'Suppliers')}
+        {tabBtn('inventory', 'Inventaire', 'Inventory')}
       </div>
       {tab === 'orders' && <PurchaseOrdersSection ver={ver} />}
       {tab === 'suppliers' && <SuppliersSection ver={ver} />}
+      {tab === 'inventory' && <InventorySection ver={ver} />}
     </div>
   );
 };

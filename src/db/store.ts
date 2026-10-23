@@ -4,7 +4,7 @@ import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type Tas
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
-import { canTransition, checkPurchaseDraft, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
+import { canTransition, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -798,6 +798,29 @@ class DeltaForceStore {
     this.purchases = this.purchases.map(x => x.id === id ? { ...x, lines: r.plan.lines, status: r.plan.status, updated_at: now } : x);
     this.notify();
     return { success: true, cashId };
+  }
+
+  /**
+   * Inventaire : `counts` = quantité comptée par produit (texte tel que saisi ; vide = pas compté). Pour chaque produit compté dont l'écart n'est pas nul,
+   * crée UN mouvement « ajustement » (raison « inventaire », avec la quantité comptée et celle que le stock indiquait). Tout est refusé si une quantité est fausse.
+   * Codes d'erreur : 'admin' | 'qty' (quantité illisible ou négative) | 'date' | 'none' (aucun écart à corriger) | 'product'.
+   */
+  public applyInventory(counts: Record<string, string | number>, date: string): { success: boolean; error?: string; adjusted?: number } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(`${date}T00:00:00Z`).getTime()) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return { success: false, error: 'date' };
+    if (Object.keys(counts).some(k => !this.products.some(p => p.id === k))) return { success: false, error: 'product' };
+    const rows = inventoryRows(this.products, this.stockMoves, counts);
+    if (rows.some(r => r.bad)) return { success: false, error: 'qty' };
+    const adj = inventoryAdjustments(rows);
+    if (!adj.length) return { success: false, error: 'none' };
+    const now = new Date().toISOString();
+    const moves: StockMove[] = adj.map((a, i) => ({
+      id: `mv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${i}`, product_id: a.product_id, type: 'adjust' as const, qty: a.qty, date, note: 'Inventaire',
+      reason: 'inventory' as const, counted_qty: a.counted, expected_qty: a.expected, created_by: this.currentUser!.id, created_at: now, updated_at: now,
+    }));
+    this.stockMoves = [...moves, ...this.stockMoves];
+    this.notify();
+    return { success: true, adjusted: moves.length };
   }
 
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }

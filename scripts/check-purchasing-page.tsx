@@ -16,7 +16,7 @@ const { PurchasingPage } = await import('../src/views/admin/PurchasingPage');
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
 const bad = (html: string) => /NaN|Infinity|undefined|\[object|\bnull\b/.test(html);
-const view = (lang: 'fr' | 'en', tab: 'orders' | 'suppliers' = 'suppliers') => { mem.delta_lang = lang; return renderToString(<AppProvider><PurchasingPage initialTab={tab} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' '); };
+const view = (lang: 'fr' | 'en', tab: 'orders' | 'suppliers' | 'inventory' = 'suppliers') => { mem.delta_lang = lang; return renderToString(<AppProvider><PurchasingPage initialTab={tab} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' '); };
 
 // ---------- démo admin : données cohérentes ----------
 db.enterDemo('admin');
@@ -108,10 +108,27 @@ ok(db.setPurchaseStatus(d4.id!, 'cancelled').success && db.setPurchaseStatus(d4.
 ok(db.deleteSupplier(a.id!).error === 'in_use', 'un fournisseur qui a des bons ne se supprime pas');
 ok(db.getPurchases().find(o => o.id === d3.id)!.status === 'received', 'bon sans prix reçu en entier : « Reçu »');
 
+
+// ---------- M4.3 : inventaire ----------
+const qtyOf = (pid: string) => db.getStockMoves().filter(m => m.product_id === pid).reduce((n, m) => n + (m.type === 'out' ? -m.qty : m.qty), 0);
+const e1 = qtyOf(P1.id), e2 = qtyOf(P2.id);
+const movesBefore = db.getStockMoves().length;
+ok(db.applyInventory({ [P1.id]: 'abc' }, '2026-10-10').error === 'qty' && db.applyInventory({ [P1.id]: '-3' }, '2026-10-10').error === 'qty', 'quantité comptée fausse ou négative : refusée');
+ok(db.applyInventory({ [P1.id]: String(e1) }, '2026-10-10').error === 'none', 'aucun écart : rien à ajuster');
+ok(db.applyInventory({ [P1.id]: '1' }, 'nope').error === 'date' && db.applyInventory({ ghost: '1' }, '2026-10-10').error === 'product' && db.applyInventory({}, '2026-10-10').error === 'none', 'date fausse, produit inconnu, rien compté : refusés');
+ok(db.getStockMoves().length === movesBefore, 'les refus n\'écrivent rien');
+ok(db.applyInventory({ [P1.id]: String(e1 + 3), [P2.id]: String(Math.max(0, e2 - 1)) }, '2026-10-10').adjusted === (e2 === 0 ? 1 : 2), 'comptage de 2 produits : un ajustement par écart');
+ok(qtyOf(P1.id) === e1 + 3 && qtyOf(P2.id) === Math.max(0, e2 - 1), 'le stock calculé est égal à ce qui a été compté');
+const inv1 = db.getStockMoves().find(m => m.product_id === P1.id && m.reason === 'inventory')!;
+ok(inv1.type === 'adjust' && inv1.qty === 3 && inv1.counted_qty === e1 + 3 && inv1.expected_qty === e1 && inv1.date === '2026-10-10', 'ajustement : écart +3, quantité comptée et attendue gardées');
+ok(db.applyInventory({ [P1.id]: '0' }, '2026-10-11').success && qtyOf(P1.id) === 0, 'compter 0 remet le stock à 0 (jamais négatif)');
+ok(db.applyInventory({ [P1.id]: '0' }, '2026-10-11').error === 'none', 'recompter la même chose : plus d\'écart');
+
 // ---------- opérateur : rien ----------
 db.enterDemo('employee');
 ok(db.getSuppliers().length === 0 && db.getPurchases().length === 0, 'démo opérateur : aucun fournisseur ni bon');
 ok(db.addSupplier({ name: 'Pirate' }).error === 'admin' && db.updateSupplier('x', { name: 'P' }).error === 'admin' && db.setSupplierActive('x', false).error === 'admin' && db.deleteSupplier('x').error === 'admin', 'opérateur : écritures refusées');
+ok(db.applyInventory({ x: '1' }, '2026-10-10').error === 'admin', 'opérateur : inventaire refusé');
 ok(db.addPurchase({ supplier_id: 'x', date: '2026-10-01', lines: [] }).error === 'admin' && db.updatePurchase('x', { supplier_id: 'x', date: '2026-10-01', lines: [] }).error === 'admin' && db.setPurchaseStatus('x', 'ordered').error === 'admin' && db.deletePurchase('x').error === 'admin' && db.receivePurchase('x', {}, { date: '2026-10-01' }).error === 'admin', 'opérateur : bons refusés');
 
 // ---------- écran ----------
@@ -138,6 +155,13 @@ for (const lang of ['fr', 'en'] as const) {
 }
 (db as any).purchases = [];
 ok(view('fr', 'orders').includes('Aucun bon de commande pour l&#x27;instant') && view('en', 'orders').includes('No purchase orders yet'), 'bons : liste vide, message clair FR et EN');
+{
+  const fr = view('fr', 'inventory'), en = view('en', 'inventory');
+  ok(!bad(fr) && !bad(en), 'inventaire : aucun NaN, « undefined » ni « null » affichés');
+  ok(fr.includes('Ajuster tous les écarts') && en.includes('Adjust all differences') && fr.includes('Historique des inventaires') && en.includes('Inventory history'), 'inventaire : boutons et historique FR et EN');
+  ok(db.getProducts().every(p => fr.includes(p.name.replace(/'/g, '&#x27;'))), 'inventaire : tous les produits listés');
+  ok(fr.includes('min-h-[44px]'), 'inventaire : cibles tactiles de 44 px');
+}
 ok(calls === 0, 'aucun appel réseau');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);
