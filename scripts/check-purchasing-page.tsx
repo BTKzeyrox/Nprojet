@@ -161,6 +161,32 @@ ok(computeAlerts({ ...alertBase, settings: {}, cash: [] }).every(a => a.id !== '
   ok(render('fr').includes('Aucun budget réglé') && render('en').includes('No budget set'), 'carte budgets : aucun budget, message clair FR et EN');
 }
 
+
+// ---------- M4.5 : statistiques d'achat ----------
+{
+  const { supplierRanking, topPurchased, poReceivedValue } = await import('../src/utils/purchasing');
+  const { StockTab } = await import('../src/views/admin/StockTab');
+  db.enterDemo('admin');
+  const range = { start: '2000-01-01', end: todayMada() };
+  const rk = supplierRanking(db.getSuppliers(), db.getPurchases(), db.getStockMoves(), range.start, range.end, todayMada());
+  const rec = db.getPurchases().find(o => o.status === 'received')!;
+  ok(rk.length >= 1 && rk[0].supplier.id === rec.supplier_id && rk[0].spentAr === poReceivedValue(rec) + db.getPurchases().filter(o => o.supplier_id === rec.supplier_id && o.status === 'ordered').reduce((n, o) => n + poReceivedValue(o), 0), 'classement : le fournisseur du bon reçu est en tête, valeur = quantités reçues × prix');
+  ok(rk.every(r => r.orders > 0) && rk.every((r, i) => i === 0 || rk[i - 1].spentAr >= r.spentAr), 'classement : du plus gros au plus petit, jamais un fournisseur sans bon');
+  ok(supplierRanking(db.getSuppliers(), db.getPurchases().filter(o => o.status === 'draft' || o.status === 'cancelled'), [], range.start, range.end, todayMada()).length === 0, 'brouillons et bons annulés : jamais comptés');
+  ok(supplierRanking(db.getSuppliers(), db.getPurchases(), db.getStockMoves(), '2000-01-01', '2000-12-31', todayMada()).length === 0, 'période sans bon : classement vide');
+  const late = rk.reduce((n, r) => n + r.late, 0);
+  ok(late >= 1, 'démo : au moins un bon en retard compté');
+  const tp = topPurchased(db.getProducts(), db.getStockMoves(), range.start, range.end, 5);
+  ok(tp.length > 0 && tp.length <= 5 && tp.every((x, i) => i === 0 || tp[i - 1].spentAr >= x.spentAr) && tp.every(x => x.avgUnitCost > 0 && x.lastUnitCost > 0), 'produits achetés le plus cher : au plus 5, du plus cher au moins cher, prix moyen et dernier prix');
+  const renderStock = (lang: 'fr' | 'en') => renderToString(<AppProvider><StockTab range={range} lang={lang} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' ');
+  mem.delta_lang = 'fr'; const fr = renderStock('fr'); mem.delta_lang = 'en'; const en = renderStock('en');
+  ok(!bad(fr) && !bad(en), 'Stock : aucun NaN, « undefined » ni « null » affichés');
+  ok(fr.includes('Fournisseurs (période)') && fr.includes('Produits achetés le plus cher') && en.includes('Suppliers (period)') && en.includes('Most expensive purchases'), 'Stock : les 2 cartes d\'achat FR et EN');
+  ok(fr.includes('Info Mat') && fr.includes('en retard'), 'Stock : le fournisseur du bon reçu est affiché, le retard aussi');
+  (db as any).purchases = [];
+  ok(renderStock('fr').includes('Aucun bon de commande commandé sur cette période'), 'Stock : sans bon, message clair');
+}
+
 // ---------- opérateur : rien ----------
 db.enterDemo('employee');
 ok(db.getSuppliers().length === 0 && db.getPurchases().length === 0, 'démo opérateur : aucun fournisseur ni bon');
