@@ -75,6 +75,7 @@ export interface CompanySettings {
   clients: { new_days: number; regular_missions: number; regular_months: number; strategic_top_pct: number; strategic_months: number; strategic_min_missions: number; inactive_days: number };
   options: { invoice_per: 'client_month' | 'mission'; quotes_enabled: boolean; employee_sees_badges: boolean; employee_sees_attention: boolean; mission_requires_client: boolean; badges_enabled: boolean };
   texts: { internal_rules: string; customer_terms: string };
+  watch: { validate_hours: number; active_no_end_hours: number; late_count: number; late_window_days: number; absent_streak_days: number; refusal_rate_pct: number; refusal_min_missions: number; min_periods: number; ignore_days: number; min_duration_minutes: number; advance_pending_days: number; inactive_days: number; strategic_silent_days: number; dormant_days: number; others_pct: number; backup_max_hours: number; error_hours: number }; // seuils de la Santé du site partagés par toute l'équipe d'admins ; 0 = valeur de départ
 }
 
 export interface CompanyLogEntry {

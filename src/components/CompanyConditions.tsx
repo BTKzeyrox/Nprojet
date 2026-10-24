@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, HelpCircle, Save, RotateCcw, History } from 
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
+import { WATCH_FIELDS } from '../utils/health/watchPrefs';
+import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
 import type { CompanySettings } from '../types';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
@@ -22,7 +24,9 @@ const SECTIONS: Sec[] = [
   { id: 'clients', fr: 'Clients (statuts)', en: 'Clients (statuses)', note: ['Ces seuils décident du statut calculé de chaque client (Nouveau, Régulier, Stratégique, Inactif). Les valeurs de départ conviennent à la plupart des entreprises.', 'These thresholds decide each client\'s calculated status (New, Regular, Strategic, Inactive). The starting values suit most companies.'] },
   { id: 'options', fr: 'Choix de fonctionnement', en: 'How the app works' },
   { id: 'texts', fr: 'Règlement et conditions', en: 'Rules and terms' },
+  { id: 'watch', fr: 'Surveillance (Santé du site)', en: 'Monitoring (Site health)', note: ['Seuils des alertes, partagés par tous les administrateurs. 0 ou vide = valeur de départ. Un appareil peut en changer pour lui seul dans Réglages > Surveillance.', 'Alert thresholds, shared by all administrators. 0 or empty = starting value. A device can override them for itself in Settings > Monitoring.'] },
 ];
+const WATCH_F: F[] = WATCH_FIELDS.map(w => ({ sec: 'watch' as const, key: w.key, kind: 'int' as const, fr: w.fr, en: w.en, unit: [w.unit.fr, w.unit.en] as [string, string], help: [`${w.fr} (en ${w.unit.fr}). 0 = valeur de départ.`, `${w.en} (in ${w.unit.en}). 0 = starting value.`] as [string, string], dflt: [`${HEALTH_THRESHOLDS_DEFAULT[w.key]} ${w.unit.fr}.`, `${HEALTH_THRESHOLDS_DEFAULT[w.key]} ${w.unit.en}.`] as [string, string] }));
 const FIELDS: F[] = [
   { sec: 'identity', key: 'name', kind: 'text', fr: 'Nom de l\'entreprise', en: 'Company name', help: ['Le nom affiché sur les rapports, et plus tard sur les factures.', 'The name shown on reports, and later on invoices.'], dflt: NOT_SURE },
   { sec: 'identity', key: 'address', kind: 'text', fr: 'Adresse', en: 'Address', help: ['L\'adresse de l\'entreprise.', 'The company address.'], dflt: NOT_SURE },
@@ -64,6 +68,7 @@ const FIELDS: F[] = [
   { sec: 'options', key: 'mission_requires_client', kind: 'bool', fr: 'Une mission a toujours un client', en: 'A mission always has a client', help: ['Pour le futur module des clients.', 'For the future clients module.'], dflt: ['Oui.', 'Yes.'] },
   { sec: 'texts', key: 'internal_rules', kind: 'area', fr: 'Règlement intérieur (visible par les opérateurs)', en: 'Internal rules (visible to operators)', help: ['Texte lu par les salariés dans leurs Réglages, en lecture seule.', 'Text read by employees in their Settings, read-only.'], dflt: NOT_SURE },
   { sec: 'texts', key: 'customer_terms', kind: 'area', fr: 'Conditions pour les clients', en: 'Terms for clients', help: ['Texte imprimé plus tard sur les devis et factures. Les opérateurs ne le voient pas.', 'Text printed later on quotes and invoices. Operators cannot see it.'], dflt: NOT_SURE },
+  ...WATCH_F,
 ];
 
 const inputCls = 'w-full min-h-[44px] bg-[#141e2a] border border-slate-600 p-2.5 text-white text-sm rounded-lg focus:border-emerald-500 focus:outline-none';
