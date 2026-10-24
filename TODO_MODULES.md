@@ -298,7 +298,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
 
 ## MODULE 8 — Tableau de bord de direction et contrôle final — taille S à M
 
-- [ ] **M8.1 — Page « Direction »** (M) : une seule page de synthèse (chiffre d'affaires du mois, bénéfice, créances en retard, top clients, top salariés, stock critique, alertes), sans nouveau calcul : elle réutilise les règles existantes.
+- [~] **M8.1 — Page « Direction »** (M) — **PRIS le 2026-10-24 (session « Go étape 1 de M8 », BTK). Ne pas refaire en parallèle.** Texte d'origine : une seule page de synthèse (chiffre d'affaires du mois, bénéfice, créances en retard, top clients, top salariés, stock critique, alertes), sans nouveau calcul : elle réutilise les règles existantes.
 - [ ] **M8.2 — Essai complet par BTK** (téléphone, clair et sombre, FR et EN, admin puis chaque rôle) ; liste des petits défauts.
 - [ ] **M8.3 — Vitesse et quota** : mesurer les calculs avec 2 ans de données ; aucun appel serveur en boucle.
 - [ ] **M8.4 — Documents et nettoyage** : `PROJET.md`, `HANDOVER.md`, `AI_STUDIO.md`, `TODO.md` ; aucune donnée de démo dans la vraie base.
