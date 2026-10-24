@@ -1,5 +1,6 @@
 import { evalFormula, parseFormula, showVal, isErr, type Val } from '../src/utils/sheetFormula';
 import * as S from '../src/utils/sheets';
+import { sheetHtml, excelRows, fileName } from '../src/utils/sheetExport';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ÉCHEC:', m); } };
@@ -128,6 +129,21 @@ for (const tp of S.TEMPLATES) { const t = S.fromTemplate(tp, '', NOW); ok(t.colu
   const rt = S.cleanSheet(JSON.parse(JSON.stringify(s)), NOW)!; ok(JSON.stringify(rt.rows) === JSON.stringify(s.rows), 'aller-retour sans perte');
 }
 // export
+{
+  let t = S.emptySheet('<b>Ventes & "co"</b>', NOW); t = S.addColumn(t, '<i>Nom</i>', 'text', NOW)!; t = S.addColumn(t, 'Qté', 'number', NOW)!; t = S.addColumn(t, 'Ok', 'check', NOW)!;
+  t = S.addRow(t, NOW, { [t.columns[0].id]: '<script>alert(1)</script>', [t.columns[1].id]: '5', [t.columns[2].id]: '1' })!;
+  t = S.addRow(t, NOW, { [t.columns[1].id]: '=1/0' })!;
+  const h = sheetHtml(t, TODAY, 'fr', 'Moi <x>');
+  ok(!/<script>alert|<b>Ventes|<i>Nom|<x>/.test(h) && h.includes('&lt;script&gt;'), 'export : tout est échappé');
+  ok(h.includes('#DIV/0!') && h.includes('Oui') && h.includes('24/10/2026') && !h.includes('window.print'), 'export : erreur, case, date, pas de bouton hors impression');
+  ok(sheetHtml(t, TODAY, 'en', 'x', { print: true }).includes('window.print'), 'export : bouton imprimer');
+  ok(sheetHtml(t, TODAY, 'fr', 'x', { word: true }).includes('urn:schemas-microsoft-com:office:word'), 'export : Word');
+  const er = excelRows(t, TODAY, 'fr'); ok(er[0].length === 3 && er[1][1] === 5 && er[2][1] === '#DIV/0!' && er[2][0] === '', 'export : lignes Excel');
+  ok(fileName('Ventes/été: 2026?', 'xlsx', TODAY) === 'Ventesété_2026_2026-10-24.xlsx' || fileName('Ventes/été: 2026?', 'xlsx', TODAY).endsWith('_2026-10-24.xlsx'), 'export : nom de fichier sûr');
+  ok(!/[\\/:?*]/.test(fileName('a/b\\c:d', 'doc', TODAY)), 'export : pas de caractère interdit');
+  const dm = S.demoSheets(NOW); ok(dm.length === 2 && S.activeRows(dm[0]).length === 4 && S.sheetProblems(dm[0]).length === 0 && S.sheetProblems(dm[1]).length === 0, 'démo : tableaux sans erreur');
+  const dc = S.computeSheet(dm[0], TODAY); ok(dc.grid[2][3] === 17500 && S.columnTotals(dc).find(x => x.col === dm[0].columns[3].id)!.sum === 40000, 'démo : formules et totaux');
+}
 { const m = S.exportMatrix(S.fromTemplate(S.TEMPLATES[2], '', NOW), TODAY); ok(m.header.length === 4 && m.rows.length === 0, 'export vide'); }
 
 // vitesse : 5000 lignes avec formules

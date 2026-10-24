@@ -43,6 +43,7 @@ const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ 
 const DirectionPage = lazy(() => import('./views/admin/DirectionPage').then(m => ({ default: m.DirectionPage })));
 const HrPage = lazy(() => import('./views/hr/HrPage').then(m => ({ default: m.HrPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
+const MySheets = lazy(() => import('./components/MySheets').then(m => ({ default: m.MySheets })));
 const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => ({ default: m.MyPerformance })));
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
 const InvoicesView = lazy(() => import('./views/admin/InvoicesView').then(m => ({ default: m.InvoicesView })));
@@ -482,6 +483,8 @@ export default function App() {
                 <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               ) : activeView === 'settings' ? (
                 <SettingsView personalOnly />
+              ) : activeView === 'sheets' ? (
+                <MySheets />
               ) : activeView === 'my-performance' ? (
                 <MyPerformance />
               ) : (

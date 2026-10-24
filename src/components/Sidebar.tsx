@@ -34,6 +34,7 @@ import {
   Truck,
   HeartPulse,
   Award,
+  Table2,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -126,6 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     ...(currentUser.role === 'employee' && badgeAccess().enabled && badgeAccess().seesBadges ? [{ id: 'my-performance', label: lang === 'en' ? 'My performance' : 'Ma performance', icon: Award }] : []), // module 3 : son propre score et ses badges
+    ...(currentUser.role === 'employee' ? [{ id: 'sheets', label: lang === 'en' ? 'My tables' : 'Mes tableaux', icon: Table2 }] : []), // module 12 : saisie type Excel
     { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),

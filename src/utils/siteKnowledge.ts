@@ -109,6 +109,15 @@ export const SITE_MAP: SitePage[] = [
     ],
   },
   {
+    id: 'sheets', audience: 'employee', title: b('Mes tableaux', 'My tables'),
+    purpose: b('Entrer et suivre tes données comme dans Excel, puis les télécharger en Excel, Word ou PDF.', 'Enter and track your data like in Excel, then download it as Excel, Word or PDF.'),
+    howto: [b('Choisir un modèle (vide, saisie de fiches, suivi de tâches) puis ajouter lignes et colonnes.', 'Pick a template (blank, record entry, task tracking) then add rows and columns.'), b('Écrire une formule avec « = », par exemple =SOMME(B1:B10).', 'Write a formula with “=”, for example =SUM(B1:B10).'), b('Cliquer sur Télécharger pour Excel, Word ou PDF.', 'Click Download for Excel, Word or PDF.')],
+    rules: [b('Ce que tu supprimes va à la corbeille 30 jours : tu peux le restaurer.', 'What you delete goes to the trash for 30 days: you can restore it.'), b('Limites : 20 tableaux, 200 colonnes, 5 000 lignes.', 'Limits: 20 tables, 200 columns, 5,000 rows.'), b('Une formule en erreur montre #DIV/0!, #REF! ou #NAME? sans rien casser.', 'A formula in error shows #DIV/0!, #REF! or #NAME? without breaking anything.')],
+    figures: [
+      { name: b('Formules', 'Formulas'), formula: b('SOMME, MOYENNE, MIN, MAX, NB, SI, ET, OU, ARRONDI, RECHERCHEV, SOMME.SI, NB.SI, AUJOURDHUI, JOURS, CONCAT, GAUCHE, DROITE et autres, en français ou en anglais.', 'SUM, AVERAGE, MIN, MAX, COUNT, IF, AND, OR, ROUND, VLOOKUP, SUMIF, COUNTIF, TODAY, DAYS, CONCAT, LEFT, RIGHT and others, in French or English.') },
+    ],
+  },
+  {
     id: 'stats', audience: 'admin', title: b('Statistiques', 'Statistics'),
     purpose: b('Les chiffres de l\'entreprise : missions, finances, stock et rapport du mois.', 'The company figures: missions, finance, stock and the monthly report.'),
     howto: [b('Choisir l\'onglet (Statistiques, Finances, Stock, Rapport) puis la période.', 'Pick the tab (Statistics, Finance, Stock, Report) then the period.'), b('Saisir les entrées et dépenses dans l\'onglet Finances.', 'Enter income and expenses in the Finance tab.'), b('Saisir les entrées, sorties et ajustements dans l\'onglet Stock.', 'Enter entries, exits and adjustments in the Stock tab.')],

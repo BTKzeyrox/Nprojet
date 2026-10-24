@@ -321,3 +321,18 @@ export function exportMatrix(s: Sheet, today: string, lang: 'fr' | 'en' = 'fr'):
     rows: c.grid.map(line => line.map((v, ci) => (c.cols[ci].type === 'check' && typeof v === 'boolean' ? (v ? yes : no) : v))),
   };
 }
+
+/** Tableaux d'exemple pour la démo : données fictives, avec totaux et une formule. */
+export function demoSheets(now: string, lang: 'fr' | 'en' = 'fr'): Sheet[] {
+  const fr = lang !== 'en';
+  let a = fromTemplate(TEMPLATES[1], fr ? 'Ventes de la semaine' : 'Sales of the week', now, lang);
+  const [d, n, q, m, r] = a.columns.map(c => c.id);
+  const data: [string, string, string, string][] = [['2026-10-19', 'Rakoto', '4', '=C1*2500'], ['2026-10-20', 'Rasoa', '2', '=C2*2500'], ['2026-10-21', 'Hery', '7', '=C3*2500'], ['2026-10-22', 'Lala', '3', '=C4*2500']];
+  for (const x of data) a = addRow(a, now, { [d]: x[0], [n]: x[1], [q]: x[2], [m]: x[3], [r]: '' })!;
+  a = addRule(a, { col: m, op: '>', value: '10000', color: 'green' }, now)!;
+  let b = fromTemplate(TEMPLATES[2], fr ? 'Mes tâches du jour' : 'My tasks of the day', now, lang);
+  const [t0, t1, t2, t3] = b.columns.map(c => c.id);
+  const st = fr ? ['À faire', 'En cours', 'Fait'] : ['À faire', 'En cours', 'Fait'];
+  for (const x of [['Préparer le rapport', '2026-10-23', st[2], '1'], ['Vérifier les comptes', '2026-10-24', st[1], ''], ['Appeler le client', '2026-10-25', st[0], '']]) b = addRow(b, now, { [t0]: x[0], [t1]: x[1], [t2]: x[2], [t3]: x[3] })!;
+  return [a, b];
+}
