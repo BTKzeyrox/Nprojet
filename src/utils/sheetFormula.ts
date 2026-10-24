@@ -10,7 +10,8 @@ export const isErr = (v: unknown): v is Err => !!v && typeof v === 'object' && '
 const E = (err: FormulaError): Err => ({ err });
 
 export const FORMULA_MAX_LEN = 500;
-export const FORMULA_MAX_DEPTH = 40;
+export const FORMULA_MAX_DEPTH = 40; // niveaux de parenthèses, de fonctions emboîtées et de signes en chaîne (les niveaux de priorité + - * / ne comptent pas)
+export const EVAL_MAX_DEPTH = 600; // profondeur de l'arbre calculé (une formule de 500 caractères au plus : une chaîne de 250 termes passe)
 export const EVAL_MAX_STEPS = 1_000_000;
 export const DEP_MAX_DEPTH = 400;
 export const RANGE_MAX_CELLS = 100_000;
@@ -65,15 +66,15 @@ function parse(toks: Tok[]): Node {
   const eat = (v: string) => { if (!isOp(v)) throw new Syntax(`« ${v} » attendu`); p++; };
   const guard = (d: number) => { if (d > FORMULA_MAX_DEPTH) throw new Syntax('formule trop imbriquée'); };
   const cmp = (d: number): Node => {
-    guard(d); let a = cat(d + 1);
-    while (peek() && peek().k === 'op' && ['=', '<>', '<', '>', '<=', '>='].includes((peek() as { v: string }).v)) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: cat(d + 1) }; }
+    guard(d); let a = cat(d);
+    while (peek() && peek().k === 'op' && ['=', '<>', '<', '>', '<=', '>='].includes((peek() as { v: string }).v)) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: cat(d) }; }
     return a;
   };
-  const cat = (d: number): Node => { guard(d); let a = add(d + 1); while (isOp('&')) { p++; a = { t: 'bin', op: '&', a, b: add(d + 1) }; } return a; };
-  const add = (d: number): Node => { guard(d); let a = mul(d + 1); while (isOp('+') || isOp('-')) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: mul(d + 1) }; } return a; };
-  const mul = (d: number): Node => { guard(d); let a = pow(d + 1); while (isOp('*') || isOp('/')) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: pow(d + 1) }; } return a; };
-  const pow = (d: number): Node => { guard(d); let a = unary(d + 1); while (isOp('^')) { p++; a = { t: 'bin', op: '^', a, b: unary(d + 1) }; } return a; };
-  const unary = (d: number): Node => { guard(d); if (isOp('-') || isOp('+')) { const op = (toks[p++] as { v: string }).v; return { t: 'un', op, a: unary(d + 1) }; } return primary(d + 1); };
+  const cat = (d: number): Node => { guard(d); let a = add(d); while (isOp('&')) { p++; a = { t: 'bin', op: '&', a, b: add(d) }; } return a; };
+  const add = (d: number): Node => { guard(d); let a = mul(d); while (isOp('+') || isOp('-')) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: mul(d) }; } return a; };
+  const mul = (d: number): Node => { guard(d); let a = pow(d); while (isOp('*') || isOp('/')) { const op = (toks[p++] as { v: string }).v; a = { t: 'bin', op, a, b: pow(d) }; } return a; };
+  const pow = (d: number): Node => { guard(d); let a = unary(d); while (isOp('^')) { p++; a = { t: 'bin', op: '^', a, b: unary(d) }; } return a; };
+  const unary = (d: number): Node => { guard(d); if (isOp('-') || isOp('+')) { const op = (toks[p++] as { v: string }).v; return { t: 'un', op, a: unary(d + 1) }; } return primary(d); };
   const primary = (d: number): Node => {
     guard(d);
     const t = toks[p++];
@@ -205,7 +206,7 @@ const roundHalfAway = (x: number, n: number): number => { const k = 10 ** n; con
 export function evalNode(node: Node, env: Env, depth = 0): Val {
   const ev = (n: Node): Val => evalNode(n, env, depth + 1);
   if (++env.steps.n > EVAL_MAX_STEPS) throw new Limit('trop d\'opérations');
-  if (depth > FORMULA_MAX_DEPTH + 5) return E('#LIMITE!');
+  if (depth > EVAL_MAX_DEPTH) return E('#LIMITE!');
   switch (node.t) {
     case 'num': return node.v;
     case 'str': return node.v;

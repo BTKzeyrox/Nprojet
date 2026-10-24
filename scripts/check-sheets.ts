@@ -42,6 +42,17 @@ eq('=B9', null); eq('=SOMME(B1:B2)+B3', 400.5);
 }
 ok(parseFormula('=' + '('.repeat(60) + '1' + ')'.repeat(60)) === null, 'imbrication limitée');
 ok(parseFormula('=' + '1+'.repeat(200) + '1') !== null, 'longue somme ok');
+// Profondeur : seuls les parenthèses, les fonctions emboîtées et les signes en chaîne comptent (40 niveaux) ; + - * / ne comptent pas
+const nest = (open: string, close: string, k: number, core = '1') => '=' + open.repeat(k) + core + close.repeat(k);
+ok(calc(nest('(', ')', 40)) === 1 && parseFormula(nest('(', ')', 41)) === null, 'parenthèses emboîtées : 40 niveaux passent, 41 refusés');
+ok(calc(nest('SOMME(', ')', 40)) === 1 && parseFormula(nest('SOMME(', ')', 41)) === null, 'fonctions emboîtées : 40 niveaux passent, 41 refusés');
+ok(calc(nest('SI(VRAI;', ';0)', 10)) === 1 && calc(nest('SI(VRAI;', ';0)', 40)) === 1 && parseFormula(nest('SI(VRAI;', ';0)', 41)) === null, 'SI emboîtés : 10 et 40 niveaux passent, 41 refusés');
+ok(calc('=SI(A1>0;SI(B1>0;SI(C1>0;SI(D1>0;SI(E1>0;1;2);3);4);5);6)') !== undefined && !isErr(calc('=SI(A1>0;SI(B1>0;SI(C1>0;SI(D1>0;SI(E1>0;1;2);3);4);5);6)')), 'une formule SI emboîtée de 5 niveaux avec des cellules se calcule');
+ok(calc('=1' + '+1'.repeat(200)) === 201 && calc('=1' + '*1'.repeat(200)) === 1 && calc('=1' + '&1'.repeat(100)) === '1'.repeat(101), '200 additions ou multiplications à la suite se calculent');
+ok(calc('=' + '('.repeat(40) + '1' + '+1'.repeat(100) + ')'.repeat(40)) === 101, '40 parenthèses ET 100 additions dans la même formule : 101');
+ok(calc('=' + '-'.repeat(40) + '1') === 1 && parseFormula('=' + '-'.repeat(41) + '1') === null, 'signes moins en chaîne : 40 passent, 41 refusés');
+ok(calc('=' + '1+'.repeat(249) + '1') === 250 && parseFormula('=' + '1+'.repeat(260) + '1') === null, 'la longueur reste limitée à 500 caractères : 250 termes passent, 261 refusés');
+{ const t0 = Date.now(); for (let i = 0; i < 200; i++) calc(nest('SOMME(', ')', 40)); ok(Date.now() - t0 < 2000, 'les formules très imbriquées se calculent vite (200 fois en moins de 2 s)'); }
 ok(parseFormula('=' + '1'.repeat(600)) === null, '500 caractères max');
 ok(parseFormula('=alert(1)') !== null && isErr(calc('=alert(1)')), 'pas de fonction étrangère');
 ok(parseFormula('=constructor') === null, 'nom inconnu refusé');
