@@ -32,7 +32,7 @@ const KIND_CLS = (L: boolean): Record<Row['kind'], string> => ({
 });
 const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-// Journal des erreurs : plantages, erreurs serveur et signalements des boosters, regroupés
+// Journal des erreurs : plantages, erreurs serveur et signalements des opérateurs, regroupés
 export const ErrorsLog: React.FC = () => {
   const L = useApp().theme === 'light';
   const [rows, setRows] = useState<Row[]>([]);

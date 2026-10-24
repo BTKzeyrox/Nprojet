@@ -181,7 +181,7 @@ export const PayrollAdmin: React.FC = () => {
         </details>
       )}
 
-      {/* Fiche d'un booster */}
+      {/* Fiche d'un opérateur */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/75 overflow-y-auto" onClick={() => setOpen(null)} role="dialog" aria-modal="true">
           <div className="rounded-3xl w-full max-w-2xl bg-[#0d1624] border border-slate-600 p-4 space-y-3 text-slate-100 my-auto" onClick={e => e.stopPropagation()}>

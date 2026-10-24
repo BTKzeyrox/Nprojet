@@ -9,7 +9,7 @@ import { getPresenceStatus, STATUS_LABEL, formatDuration } from '../../utils/pre
 interface Props {
   userId: string;
   onBack: () => void;
-  onGo: (view: string) => void; // ouvre une page en gardant ce booster en vue
+  onGo: (view: string) => void; // ouvre une page en gardant ce opérateur en vue
   onOpenCV: (u: User) => void;
 }
 
@@ -22,7 +22,7 @@ const ADV: Record<string, string> = { pending: 'En attente', approved: 'Accepté
 const card = 'bg-[#0f1722] border border-slate-700 p-3 sm:p-4 space-y-2';
 const h = 'font-tactical font-bold text-white text-sm';
 
-export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }) => {
+export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }) => {
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 

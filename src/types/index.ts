@@ -7,7 +7,7 @@ export interface PasswordResetRequest {
   phone: string;
   status: 'pending';
   created_at: string;
-  note?: string; // description facultative du booster
+  note?: string; // description facultative du opérateur
 }
 
 export interface AppSettings {
@@ -44,14 +44,14 @@ export interface AppSettings {
   badge_advance: boolean; // pastille « Avance à valider »
   badge_profile: boolean; // pastille « Profil à valider »
   badges_clickable: boolean; // un clic sur une pastille ouvre Validations
-  alert_idle_1_min: number; // 1re alerte « booster sans poste » (minutes)
+  alert_idle_1_min: number; // 1re alerte « opérateur sans poste » (minutes)
   alert_idle_2_min: number; // 2e alerte
   err_report_enabled: boolean; // envoi automatique des erreurs au journal
   err_max_per_session: number; // rapports automatiques maximum par session (quota d'appels)
-  err_hide_details: boolean; // cacher le détail technique aux boosters (ils voient seulement le numéro)
+  err_hide_details: boolean; // cacher le détail technique aux opérateurs (ils voient seulement le numéro)
   err_report_button: boolean; // bouton « Signaler un problème »
   retry_seconds: number; // délai entre deux tentatives quand la connexion est perdue
-  maintenance_on: boolean; // site en maintenance (les boosters sont refusés, l'admin entre)
+  maintenance_on: boolean; // site en maintenance (les opérateurs sont refusés, l'admin entre)
   maintenance_message: string;
   retention_days: number;
   grid_columns?: number; // colonnes de la grille des postes (2 à 10)
@@ -92,14 +92,14 @@ export interface ProfileChangeRequest {
   id: string;
   user_id: string;
   status: 'pending' | 'rejected';
-  reason?: string; // motif du refus (visible par le booster)
+  reason?: string; // motif du refus (visible par le opérateur)
   created_at: string;
   old: { name: string; username: string; phone: string; avatar_url: string };
   name: string;
   username: string;
   phone: string;
   avatar_url: string;
-  note?: string; // description facultative du booster
+  note?: string; // description facultative du opérateur
 }
 
 export type UserRole = 'admin' | 'employee' | 'accountant' | 'team_lead';
@@ -171,7 +171,7 @@ export interface PostSession {
   client_id?: string; // fiche client (module 1) : jamais envoyé à un opérateur ; copié depuis la mission
   notes?: string;
   tasks_done?: string[]; // identifiants des tâches cochées de la mission (module 6, M6.3)
-  start_notes?: string; // description facultative du booster au début de session
+  start_notes?: string; // description facultative du opérateur au début de session
   admin_notes?: string; // description facultative de l'admin à la validation
   demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
   created_at: string;
@@ -236,7 +236,7 @@ export interface ChatMessage {
   reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
 }
 
-// Groupe de discussion créé par l'admin ou un booster (recipient_id des messages = id du groupe, « grp_… »)
+// Groupe de discussion créé par l'admin ou un opérateur (recipient_id des messages = id du groupe, « grp_… »)
 export interface ChatGroup {
   id: string;
   name: string;
@@ -269,7 +269,7 @@ export interface ClientContract {
   target_rank: string;
   initial_score: number; // Début : modifiable par l'admin seulement
   current_score?: number; // Actuel du compte (mis à jour à la validation d'une fin de session)
-  account_proof_urls?: string[]; // Preuves du compte client (5 photos max) : l'admin les gère, les boosters les voient
+  account_proof_urls?: string[]; // Preuves du compte client (5 photos max) : l'admin les gère, les opérateurs les voient
   target_score: number;
   recommended_shift: ShiftType | 'any';
   estimated_reward_ar: number;
@@ -302,7 +302,7 @@ export interface SearchResultItem {
   clientName?: string;
 }
 
-// Demande d'inscription d'un nouveau booster (validée par l'admin)
+// Demande d'inscription d'un nouveau opérateur (validée par l'admin)
 export interface SignupRequest {
   id: string;
   name: string;
@@ -311,11 +311,11 @@ export interface SignupRequest {
   shift: ShiftType;
   status: 'pending';
   created_at: string;
-  note?: string; // description facultative du booster
+  note?: string; // description facultative du opérateur
 }
 
-// Présence d'un booster (signe de vie, temps de connexion du jour, file d'attente « sans poste »)
-// Arrivée d'un booster un jour donné (première connexion) et temps connecté
+// Présence d'un opérateur (signe de vie, temps de connexion du jour, file d'attente « sans poste »)
+// Arrivée d'un opérateur un jour donné (première connexion) et temps connecté
 export interface AttendanceRow {
   user_id: string;
   day: string;

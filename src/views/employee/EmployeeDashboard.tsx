@@ -1070,7 +1070,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             </div>
           </div>
 
-          {/* Quick Reply Chips for Fast Booster Reporting */}
+          {/* Quick Reply Chips for Fast Opérateur Reporting */}
           <div className="rounded-xl px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[

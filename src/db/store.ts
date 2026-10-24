@@ -173,8 +173,8 @@ class AppStore {
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
-  private presence: PresenceRow[] = []; // admin : tous les boosters
-  private myQueue: QueueInfo | null = null; // booster : sa place dans la file « sans poste »
+  private presence: PresenceRow[] = []; // admin : tous les opérateurs
+  private myQueue: QueueInfo | null = null; // opérateur : sa place dans la file « sans poste »
   private currentUser: User | null = null;
   private demo = false; // mode démo : données inventées, aucun appel au serveur
   private demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
@@ -489,7 +489,7 @@ class AppStore {
     }
     this.since = r.data.serverTime || this.since;
 
-    // Demandes de modification de profil (admin : toutes ; booster : la sienne)
+    // Demandes de modification de profil (admin : toutes ; opérateur : la sienne)
     if (Array.isArray(r.data.profileRequests)) {
       const nextPr = r.data.profileRequests as ProfileChangeRequest[];
       if (JSON.stringify(nextPr) !== JSON.stringify(this.profileRequests)) {
@@ -498,7 +498,7 @@ class AppStore {
       }
     }
 
-    // Présence (admin : tous les boosters) et file d'attente (booster : sa place)
+    // Présence (admin : tous les opérateurs) et file d'attente (opérateur : sa place)
     if (Array.isArray(r.data.reads)) {
       const nextReads = r.data.reads as ChatRead[];
       if (JSON.stringify(nextReads) !== JSON.stringify(this.reads)) { this.reads = nextReads; changedAny = true; }
@@ -1536,7 +1536,7 @@ class AppStore {
   }
 
   // Réglages généraux (valeurs par défaut si l'admin n'a rien changé)
-  // Admin : supprime les sessions et avances de démonstration, puis recalcule les totaux des boosters
+  // Admin : supprime les sessions et avances de démonstration, puis recalcule les totaux des opérateurs
   public removeDemoData(): number {
     const before = this.posts.length + this.advanceRequests.length;
     this.posts = this.posts.filter(p => !p.demo);
@@ -1690,7 +1690,7 @@ class AppStore {
     return [...this.profileRequests];
   }
 
-  // Booster : propose de nouvelles infos de profil (validation admin obligatoire)
+  // Opérateur : propose de nouvelles infos de profil (validation admin obligatoire)
   public async submitProfileRequest(p: { name: string; username: string; phone: string; avatarUrl?: string; note?: string }): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('profile-request', {
       method: 'POST',
@@ -1712,7 +1712,7 @@ class AppStore {
   }
 
   // Demandes de nouveau mot de passe en attente (admin)
-  // Public : un futur booster demande un compte (validation par l'admin ensuite)
+  // Public : un futur opérateur demande un compte (validation par l'admin ensuite)
   public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string; note?: string }): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('signup', { method: 'POST', body: JSON.stringify(p) });
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
@@ -1734,7 +1734,7 @@ class AppStore {
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
   }
 
-  // Arrivées du jour (admin : tous les boosters ; booster : la sienne)
+  // Arrivées du jour (admin : tous les opérateurs ; opérateur : la sienne)
   public async fetchAttendance(day: string): Promise<AttendanceRow[]> {
     const r = await this.api(`attendance?day=${encodeURIComponent(day)}`);
     return r.ok && Array.isArray(r.data?.rows) ? r.data.rows : [];
@@ -1748,7 +1748,7 @@ class AppStore {
     return this.myQueue;
   }
 
-  // Booster : « je n'ai pas de poste » (join = true) ou quitter la file (join = false)
+  // Opérateur : « je n'ai pas de poste » (join = true) ou quitter la file (join = false)
   public async setWaiting(join: boolean): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('queue', { method: 'POST', body: JSON.stringify({ join }) });
     if (r.ok) await this.pull(true);
@@ -2340,7 +2340,7 @@ class AppStore {
   }
 
   // --- USER PROFILE & SECURITY CONTROLS ---
-  // Admin : accès d'un booster selon son shift (auto / toute heure / bloqué)
+  // Admin : accès d'un opérateur selon son shift (auto / toute heure / bloqué)
   public setAccessMode(userId: string, mode: 'auto' | 'allow' | 'block'): { success: boolean } {
     const user = this.users.find(u => u.id === userId);
     if (!user || user.role !== 'employee') return { success: false };

@@ -13,23 +13,23 @@ interface TopBarProps {
   currentUser: User;
   onOpenMenu: () => void;
   onNavigate: (view: string) => void;
-  onOpenBooster: (userId: string) => void;
+  onOpenOperator: (userId: string) => void;
 }
 
 interface Hit {
   id: string;
   title: string;
   sub: string;
-  kind: 'page' | 'poste' | 'booster' | 'compte' | 'date';
+  kind: 'page' | 'poste' | 'operator' | 'compte' | 'date';
   go: () => void;
 }
 
-const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Mission', booster: 'Opérateur', compte: 'Compte', date: 'Date' };
+const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Mission', operator: 'Opérateur', compte: 'Compte', date: 'Date' };
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenBooster }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator }) => {
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -79,7 +79,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     if (isAdmin) {
       db.getUsers().filter(u => u.role === 'employee').forEach(u => {
         if (norm(u.name).includes(s) || norm(u.username).includes(s))
-          out.push({ id: `b-${u.id}`, title: u.name, sub: `@${u.username} · ${u.status === 'blocked' ? 'bloqué' : 'actif'}`, kind: 'booster', go: () => onOpenBooster(u.id) });
+          out.push({ id: `b-${u.id}`, title: u.name, sub: `@${u.username} · ${u.status === 'blocked' ? 'bloqué' : 'actif'}`, kind: 'operator', go: () => onOpenOperator(u.id) });
       });
     }
     const seenAcc = new Set<string>();
@@ -105,7 +105,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       if (`${day}/${m}`.includes(s) || d.includes(s)) out.push({ id: `d-${d}`, title: `${day}/${m}/${y}`, sub: 'Voir au calendrier', kind: 'date', go: () => { setNavTarget(`day-${d}`); onNavigate('calendar'); } });
     });
     return out.slice(0, 8);
-  }, [q, isAdmin, pages, home, onNavigate, onOpenBooster, db.getContracts().length, db.getUsers().length]);
+  }, [q, isAdmin, pages, home, onNavigate, onOpenOperator, db.getContracts().length, db.getUsers().length]);
 
   const pick = (h: Hit) => { setOpen(false); setQ(''); h.go(); };
   const notifs = buildNotifications(currentUser);
@@ -120,7 +120,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   }, [notifs.map(n => n.id).join('|')]);
 
   const toggleBell = () => setBellOpen(v => !v);
-  // Booster : les notifications passent en « vu » à la fermeture de la fenêtre
+  // Opérateur : les notifications passent en « vu » à la fermeture de la fenêtre
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !bellOpen && !isAdmin) {
@@ -129,7 +129,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     }
     wasOpen.current = bellOpen;
   }, [bellOpen]);
-  const icon = (k: Hit['kind']) => (k === 'booster' ? Users : k === 'poste' || k === 'compte' ? ClipboardList : k === 'date' ? Calendar : FileText);
+  const icon = (k: Hit['kind']) => (k === 'operator' ? Users : k === 'poste' || k === 'compte' ? ClipboardList : k === 'date' ? Calendar : FileText);
 
   return (
     <>

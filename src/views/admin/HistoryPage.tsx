@@ -38,18 +38,18 @@ export const buildHistory = (): Row[] => {
 
 const sel = 'h-9 px-2 bg-[#141e2a] border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500';
 
-export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBoosterId }) => {
+export const HistoryPage: React.FC<{ initialOperatorId?: string }> = ({ initialOperatorId }) => {
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | Kind>('all');
   const [status, setStatus] = useState<'all' | St>('all');
-  const [booster, setBooster] = useState<string>(initialBoosterId || 'all');
+  const [operator, setOperator] = useState<string>(initialOperatorId || 'all');
   const [period, setPeriod] = useState<'all' | '7' | '30'>('all');
   const [limit, setLimit] = useState(50);
 
   const all = buildHistory();
-  const boosters = db.getUsers().filter(u => u.role === 'employee');
+  const operators = db.getUsers().filter(u => u.role === 'employee');
 
   const rows = useMemo(() => {
     const s = norm(q.trim());
@@ -57,14 +57,14 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
     return all.filter(r =>
       (kind === 'all' || r.kind === kind) &&
       (status === 'all' || r.status === status) &&
-      (booster === 'all' || r.whoId === booster) &&
+      (operator === 'all' || r.whoId === operator) &&
       (!since || (new Date(r.date).getTime() || 0) >= since) &&
       (!s || norm(`${r.who} ${r.title} ${r.detail} ${r.motif} ${r.blob} ${KIND[r.kind]}`).includes(s))
     );
-  }, [all.length, q, kind, status, booster, period, db.getAdvanceRequests().map(a => a.status).join(), db.getPosts().map(p => p.status).join()]);
+  }, [all.length, q, kind, status, operator, period, db.getAdvanceRequests().map(a => a.status).join(), db.getPosts().map(p => p.status).join()]);
 
-  const reset = () => { setQ(''); setKind('all'); setStatus('all'); setBooster('all'); setPeriod('all'); setLimit(50); };
-  const filtered = q || kind !== 'all' || status !== 'all' || booster !== 'all' || period !== 'all';
+  const reset = () => { setQ(''); setKind('all'); setStatus('all'); setOperator('all'); setPeriod('all'); setLimit(50); };
+  const filtered = q || kind !== 'all' || status !== 'all' || operator !== 'all' || period !== 'all';
 
   return (
     <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
@@ -86,9 +86,9 @@ export const HistoryPage: React.FC<{ initialBoosterId?: string }> = ({ initialBo
           <select aria-label="Statut" className={sel} value={status} onChange={e => { setStatus(e.target.value as any); setLimit(50); }}>
             <option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="accepted">Accepté</option><option value="refused">Refusé</option>
           </select>
-          <select aria-label="Opérateur" className={sel} value={booster} onChange={e => { setBooster(e.target.value); setLimit(50); }}>
+          <select aria-label="Opérateur" className={sel} value={operator} onChange={e => { setOperator(e.target.value); setLimit(50); }}>
             <option value="all">Tous les opérateurs</option>
-            {boosters.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            {operators.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           <select aria-label="Période" className={sel} value={period} onChange={e => { setPeriod(e.target.value as any); setLimit(50); }}>
             <option value="all">Toute la période</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option>

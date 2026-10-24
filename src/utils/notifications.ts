@@ -31,7 +31,7 @@ export function healthNotifications(user: User, nowMs = Date.now()): Notif[] {
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi
 const ts = (s?: string) => (s ? new Date(s.replace(' ', 'T')).getTime() || 0 : 0);
 
-// Admin : tout ce qui attend une décision. Booster : réponses de l'admin (refus, avances).
+// Admin : tout ce qui attend une décision. Opérateur : réponses de l'admin (refus, avances).
 export const buildNotifications = (user: User): Notif[] => {
   const out: Notif[] = [];
   if (user.role === 'admin') {
@@ -47,7 +47,7 @@ export const buildNotifications = (user: User): Notif[] => {
       out.push({ id: `rst-${r.id}`, title: r.name, sub: 'Mot de passe oublié (urgent)', view: 'validations', filter: 'resets', nav: `val-rst-${r.id}`, at: r.created_at, tone: 'urgent' }));
     db.getProfileRequests().filter(r => r.status === 'pending').forEach(r =>
       out.push({ id: `prf-${r.id}`, title: r.old.name, sub: 'Changement de profil à valider', view: 'validations', filter: 'profiles', nav: `val-prf-${r.id}`, at: r.created_at, tone: 'info' }));
-    // Boosters sans poste : 1re puis 2e alerte (minutes réglables dans Réglages)
+    // Opérateurs sans poste : 1re puis 2e alerte (minutes réglables dans Réglages)
     const cfg = db.getSettings();
     const a1 = Math.max(1, Math.round(cfg.alert_idle_1_min || 15));
     const a2 = Math.max(a1 + 1, Math.round(cfg.alert_idle_2_min || 30));
@@ -94,7 +94,7 @@ export const markChatSeen = (user: User) => {
   window.dispatchEvent(new Event(SEEN_EVENT));
 };
 
-// « Vu » : gardé par utilisateur dans ce navigateur (le booster voit un compteur seulement pour du nouveau)
+// « Vu » : gardé par utilisateur dans ce navigateur (le opérateur voit un compteur seulement pour du nouveau)
 const key = (u: User) => `df_notif_seen_${u.id}`;
 export const getSeen = (u: User): string[] => {
   try { return JSON.parse(localStorage.getItem(key(u)) || '[]'); } catch { return []; }

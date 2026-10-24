@@ -54,8 +54,8 @@ interface SidebarProps {
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   canSwitchMode?: boolean; // vrai pour le responsable : peut passer en vue opérateur
-  boosterMode?: boolean;
-  onToggleBoosterMode?: () => void;
+  operatorMode?: boolean;
+  onToggleOperatorMode?: () => void;
   onReportProblem?: () => void; // ouvre « Signaler un problème »
   compact?: boolean; // bande d'icônes seulement
   onToggleCompact?: () => void; // ouvrir / fermer la bande
@@ -73,8 +73,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile,
   canSwitchMode = false,
-  boosterMode = false,
-  onToggleBoosterMode,
+  operatorMode = false,
+  onToggleOperatorMode,
   compact = false,
   onToggleCompact,
 }) => {
@@ -267,19 +267,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 4. Bas : vue opérateur, signaler un problème, déconnexion */}
         <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          {canSwitchMode && onToggleBoosterMode && (
+          {canSwitchMode && onToggleOperatorMode && (
             <button
               type="button"
               onClick={() => {
-                onToggleBoosterMode();
+                onToggleOperatorMode();
                 if (onCloseMobile) onCloseMobile();
               }}
               className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
-                boosterMode ? 'df-sb-warn' : 'df-sb-btn'
+                operatorMode ? 'df-sb-warn' : 'df-sb-btn'
               }`}
             >
               <Eye className="w-4 h-4" />
-              <span className="df-sb-text">{boosterMode ? 'Retour responsable' : 'Vue opérateur'}</span>
+              <span className="df-sb-text">{operatorMode ? 'Retour responsable' : 'Vue opérateur'}</span>
             </button>
           )}
 

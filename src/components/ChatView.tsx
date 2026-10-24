@@ -35,7 +35,7 @@ const readAsDataUrl = (file: File): Promise<string> =>
     r.readAsDataURL(file);
   });
 
-// Un « fil » : groupe général, groupe créé par quelqu'un, discussion 1 à 1, ou (vue admin) discussion entre deux boosters
+// Un « fil » : groupe général, groupe créé par quelqu'un, discussion 1 à 1, ou (vue admin) discussion entre deux opérateurs
 type Thread = {
   id: string;
   kind: 'all' | 'user' | 'group' | 'pair';
@@ -187,7 +187,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       const u = users.find(x => x.id === id);
       if (u && id !== currentUser.id) list.push({ id, kind: 'user', title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u });
     });
-    // Vue admin : discussions entre deux boosters (l'admin voit tout)
+    // Vue admin : discussions entre deux opérateurs (l'admin voit tout)
     if (isAdmin) {
       const pairs = new Map<string, string>();
       messages.forEach(m => {

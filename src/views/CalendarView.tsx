@@ -66,7 +66,7 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   return <Circle className={c} />;
 };
 
-// Statut d'un jour pour un booster
+// Statut d'un jour pour un opérateur
 function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
   // Congé ACCEPTÉ (M5.2) : le jour n'est ni une absence ni un retard, sauf si une mission a vraiment été travaillée ce jour-là
   if (onLeave && !shifts.some(s => s.status !== 'rejected' && s.status !== 'force_released')) return 'leave';
@@ -155,13 +155,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
     return () => window.removeEventListener(NAV_TARGET_EVENT, apply);
   }, []);
 
-  const boosters = useMemo(() => users.filter(u => u.role === 'employee'), [users]);
+  const operators = useMemo(() => users.filter(u => u.role === 'employee'), [users]);
   const clientNames = useMemo(
     () => Array.from(new Set(posts.map(p => p.client_name))).sort((a, b) => a.localeCompare(b)),
     [posts]
   );
 
-  // Première activité de chaque booster (début du suivi des absences)
+  // Première activité de chaque opérateur (début du suivi des absences)
   const firstActivity = useMemo(() => {
     const map: Record<string, string> = {};
     posts.forEach(p => {
@@ -170,23 +170,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
     return map;
   }, [posts]);
 
-  // Jours du mois pour un booster (avec filtre de compte client)
-  const buildDays = (boosterId: string) => {
-    const mine = posts.filter(p => p.employee_id === boosterId);
+  // Jours du mois pour un opérateur (avec filtre de compte client)
+  const buildDays = (operatorId: string) => {
+    const mine = posts.filter(p => p.employee_id === operatorId);
     return Array.from({ length: daysInMonth }).map((_, i) => {
       const dateStr = toDateStr(year, month, i + 1);
       const allShifts = mine.filter(p => p.date === dateStr);
       const shifts = clientFilter === 'all' ? allShifts : allShifts.filter(p => p.client_name === clientFilter);
-      const status = dayStatus(allShifts, dateStr, firstActivity[boosterId] || null, today, cfg, leaveOn(leaves, boosterId, dateStr) !== null);
+      const status = dayStatus(allShifts, dateStr, firstActivity[operatorId] || null, today, cfg, leaveOn(leaves, operatorId, dateStr) !== null);
       const gained = shifts.reduce((acc, s) => acc + Math.max(0, (s.final_score ?? s.current_score) - s.initial_score), 0);
       return { day: i + 1, dateStr, shifts, status, gained };
     });
   };
 
-  // Liste filtrée des boosters (admin)
+  // Liste filtrée des opérateurs (admin)
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return boosters.filter(u => {
+    return operators.filter(u => {
       if (q && !(u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))) return false;
       if (shiftFilter !== 'all' && u.shift !== shiftFilter) return false;
       if (clientFilter !== 'all') {
@@ -200,9 +200,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boosters, posts, search, shiftFilter, statusFilter, clientFilter, year, month]);
+  }, [operators, posts, search, shiftFilter, statusFilter, clientFilter, year, month]);
 
-  // Booster affiché : choix, sinon premier de la liste
+  // Opérateur affiché : choix, sinon premier de la liste
   const activeId = isAdmin ? (list.some(u => u.id === selectedId) ? selectedId : list[0]?.id || '') : currentUser?.id || '';
   const activeUser = users.find(u => u.id === activeId) || null;
   const days = activeId ? buildDays(activeId) : [];
@@ -283,7 +283,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           <aside className={`${card} p-4 space-y-3 lg:self-start lg:sticky lg:top-2`}>
             <div className={`flex items-center gap-2 font-bold text-sm ${txt}`}>
               <Users className="w-4 h-4 text-blue-500" /> Opérateurs
-              <span className={`ml-auto text-xs font-semibold ${sub}`}>{list.length}/{boosters.length}</span>
+              <span className={`ml-auto text-xs font-semibold ${sub}`}>{list.length}/{operators.length}</span>
             </div>
 
             <div className="relative">

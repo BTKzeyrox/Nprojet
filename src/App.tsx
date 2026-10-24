@@ -39,7 +39,7 @@ let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir 
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
-const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
+const OperatorPage = lazy(() => import('./views/admin/OperatorPage').then(m => ({ default: m.OperatorPage })));
 const DirectionPage = lazy(() => import('./views/admin/DirectionPage').then(m => ({ default: m.DirectionPage })));
 const HrPage = lazy(() => import('./views/hr/HrPage').then(m => ({ default: m.HrPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
@@ -78,7 +78,7 @@ export default function App() {
   }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('feed');
-  const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
+  const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
@@ -142,10 +142,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--sbw', sbWidth);
   }, [sbWidth]);
-  // Admin : peut jouer son propre rôle de booster, puis revenir en admin
-  const [boosterMode, setBoosterMode] = useState(false);
+  // Admin : peut jouer son propre rôle de opérateur, puis revenir en admin
+  const [operatorMode, setOperatorMode] = useState(false);
   const modeSwitchHidden = useModeSwitchHidden();
-  useEffect(() => { if (modeSwitchHidden) setBoosterMode(false); }, [modeSwitchHidden]);
+  useEffect(() => { if (modeSwitchHidden) setOperatorMode(false); }, [modeSwitchHidden]);
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -215,13 +215,13 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setIsWelcomeAnimating(true);
-    // Accueil d'abord : admin = vue générale, booster = grille des postes. Menu fermé.
+    // Accueil d'abord : admin = vue générale, opérateur = grille des postes. Menu fermé.
     setActiveView('feed');
     setIsMobileSidebarOpen(false);
   };
 
   const handleLogout = () => {
-    setBoosterMode(false);
+    setOperatorMode(false);
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
@@ -327,11 +327,11 @@ export default function App() {
     );
   }
 
-  // Utilisateur « vu » par l'interface : en mode booster, l'admin est traité comme un booster
+  // Utilisateur « vu » par l'interface : en mode opérateur, l'admin est traité comme un opérateur
   const realIsAdmin = currentUser.role === 'admin';
-  const viewUser: User = realIsAdmin && boosterMode ? { ...currentUser, role: 'employee' } : currentUser;
-  const toggleBoosterMode = () => {
-    setBoosterMode(v => !v);
+  const viewUser: User = realIsAdmin && operatorMode ? { ...currentUser, role: 'employee' } : currentUser;
+  const toggleOperatorMode = () => {
+    setOperatorMode(v => !v);
     setActiveView('feed');
   };
 
@@ -347,15 +347,15 @@ export default function App() {
       <Sidebar
         currentUser={viewUser}
         canSwitchMode={realIsAdmin && !modeSwitchHidden}
-        boosterMode={boosterMode}
-        onToggleBoosterMode={toggleBoosterMode}
+        operatorMode={operatorMode}
+        onToggleOperatorMode={toggleOperatorMode}
         activeView={activeView}
         onNavigate={view => {
           if (view === 'profile') {
             setCvModalUser(currentUser);
             return;
           }
-          setFocusBoosterId(null);
+          setFocusOperatorId(null);
           setActiveView(view);
         }}
         onLogout={requestLogout}
@@ -379,8 +379,8 @@ export default function App() {
         <TopBar
           currentUser={viewUser}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
-          onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
-          onOpenBooster={id => { setFocusBoosterId(id); setActiveView('booster'); }}
+          onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
+          onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}
         />
 
         {/* Dynamic Page Content Based on activeView */}
@@ -432,11 +432,11 @@ export default function App() {
               ) : activeView === 'stats' ? (
                 <StatsPage onNavigate={view => setActiveView(view)} onOpenEmployee={handleOpenEmployeeCV} />
               ) : activeView === 'history' ? (
-                <HistoryPage initialBoosterId={focusBoosterId || undefined} />
-              ) : activeView === 'booster' && focusBoosterId ? (
-                <BoosterPage
-                  userId={focusBoosterId}
-                  onBack={() => { setFocusBoosterId(null); setActiveView('dashboard'); }}
+                <HistoryPage initialOperatorId={focusOperatorId || undefined} />
+              ) : activeView === 'operator' && focusOperatorId ? (
+                <OperatorPage
+                  userId={focusOperatorId}
+                  onBack={() => { setFocusOperatorId(null); setActiveView('dashboard'); }}
                   onGo={view => setActiveView(view)}
                   onOpenCV={handleOpenEmployeeCV}
                 />
@@ -444,10 +444,10 @@ export default function App() {
                 <CalendarView
                   currentUser={viewUser}
                   onSelectDay={handleSelectDay}
-                  initialUserId={focusBoosterId || undefined}
+                  initialUserId={focusOperatorId || undefined}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
+                <ChatView currentUser={viewUser} initialThreadId={focusOperatorId || undefined} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : (
                 /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
@@ -514,7 +514,7 @@ export default function App() {
           isAdmin={viewUser.role === 'admin'}
           currentUser={viewUser}
           activeView={activeView}
-          onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
+          onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
         />
       </div>
@@ -526,8 +526,8 @@ export default function App() {
           onDone={() => {
             const u = db.getCurrentUser();
             if (u) setCurrentUser({ ...u });
-            setFocusBoosterId(null);
-            setActiveView('grid'); // photo enregistrée : on arrive sur l'accueil du booster
+            setFocusOperatorId(null);
+            setActiveView('grid'); // photo enregistrée : on arrive sur l'accueil du opérateur
           }}
           onLogout={handleLogout}
         />

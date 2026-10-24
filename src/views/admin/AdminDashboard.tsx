@@ -122,7 +122,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Admin Comprehensive Post Modal State (view, manage, validate, edit all fields)
   const [selectedAdminContract, setSelectedAdminContract] = useState<ClientContract | null>(null);
   const [activeSessionForModal, setActiveSessionForModal] = useState<PostSession | null>(null);
-  const [assignedBoosterId, setAssignedBoosterId] = useState<string>('');
+  const [assignedOperatorId, setAssignedOperatorId] = useState<string>('');
   const [assignSuccessMsg, setAssignSuccessMsg] = useState<string | null>(null);
   const [assignErrorMsg, setAssignErrorMsg] = useState<string | null>(null);
 
@@ -300,7 +300,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         account_tag: editAccountTag.trim(),
         target_score: editTargetScore,
         current_score: editCurrentScore,
-        employee_id: assignedBoosterId,
+        employee_id: assignedOperatorId,
         shift_type: editShift === 'night' ? 'night' : 'day',
         notes: editNotes.trim(),
       });
@@ -489,7 +489,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   if (activeSubTab === 'grid' || activeSubTab === 'dashboard') {
     const adminUser = currentUser || users.find(u => u.role === 'admin') || users[0];
-    const availableBoosters = users.filter(u => u.role === 'employee' && u.status === 'active');
+    const availableOperators = users.filter(u => u.role === 'employee' && u.status === 'active');
 
     return (
       <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
@@ -515,7 +515,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditAccountProofs(contract.account_proof_urls || []);
             setEditGameMode(contract.game_mode);
             setEditShift(contract.recommended_shift);
-            setAssignedBoosterId(session ? session.employee_id : (availableBoosters[0]?.id || ''));
+            setAssignedOperatorId(session ? session.employee_id : (availableOperators[0]?.id || ''));
             setEditNotes(session?.notes || '');
             setEditDescription(contract.description || '');
             setEditProofMode(contract.proof_mode || 'type');
@@ -819,12 +819,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Opérateur Assigné</label>
                       <select
-                        value={assignedBoosterId}
-                        onChange={e => setAssignedBoosterId(e.target.value)}
+                        value={assignedOperatorId}
+                        onChange={e => setAssignedOperatorId(e.target.value)}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white"
                       >
                         <option value="">-- Aucun / Libre --</option>
-                        {availableBoosters.map(b => (
+                        {availableOperators.map(b => (
                           <option key={b.id} value={b.id}>
                             {b.name} ({b.shift === 'day' ? 'Jour' : 'Nuit'})
                           </option>
@@ -833,7 +833,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Preuves du compte client : 5 photos max, visibles par les boosters */}
+                  {/* Preuves du compte client : 5 photos max, visibles par les opérateurs */}
                   <div className="bg-[#0d1622] border border-slate-700 rounded-lg p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-300 uppercase font-bold flex items-center gap-1.5">
@@ -961,29 +961,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="button"
                         onClick={() => {
                           setAssignErrorMsg(null);
-                          const booster = users.find(u => u.id === assignedBoosterId) || availableBoosters[0];
-                          if (!booster) {
+                          const operator = users.find(u => u.id === assignedOperatorId) || availableOperators[0];
+                          if (!operator) {
                             setAssignErrorMsg('Veuillez sélectionner un opérateur.');
                             return;
                           }
                           const res = db.startPost({
-                            employeeId: booster.id,
+                            employeeId: operator.id,
                             clientName: editClientName,
                             accountTag: editAccountTag,
                             targetScore: editTargetScore,
                             initialScore: editInitialScore,
                             proofUrl: generateProofPlaceholder({
-                              operatorName: booster.name,
+                              operatorName: operator.name,
                               score: editInitialScore,
                               clientTag: `${editClientName} #${editAccountTag}`,
                             }),
                             shiftType: editShift === 'night' ? 'night' : 'day',
-                            notes: `Mission donnée directement par le responsable à ${booster.name}`,
+                            notes: `Mission donnée directement par le responsable à ${operator.name}`,
                             status: 'active',
                             autoReplaceExisting: true,
                           });
                           if (res.success) {
-                            setAssignSuccessMsg(`Mission activée avec succès pour ${booster.name} !`);
+                            setAssignSuccessMsg(`Mission activée avec succès pour ${operator.name} !`);
                             setTimeout(() => setSelectedAdminContract(null), 1200);
                           } else {
                             setAssignErrorMsg(res.error || 'Erreur lors de l\'activation.');
@@ -1106,7 +1106,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {isValidations && (
         <>
-      {/* Inscriptions de nouveaux boosters en attente */}
+      {/* Inscriptions de nouveaux opérateurs en attente */}
       {(valFilter === 'all' || valFilter === 'signups') && signups.length > 0 && (
         <div className="bg-[#0d1a14] border-2 border-emerald-500 p-3 sm:p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -1696,7 +1696,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* SECTION 3: CONNECTED EMPLOYEES & LIVE FEED */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Connected Boosters List */}
+        {/* Connected Opérateurs List */}
         <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-6 shadow-xl lg:col-span-1">
           {waitingQueue.length > 0 && (
             <div className="mb-4 bg-[#1a150a] border-2 border-amber-500 p-3 space-y-2">

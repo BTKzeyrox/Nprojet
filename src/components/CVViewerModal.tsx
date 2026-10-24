@@ -42,7 +42,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   const camRef = useRef<HTMLInputElement>(null);
   const galRef = useRef<HTMLInputElement>(null);
 
-  // Booster qui modifie son propre profil : tout passe par une demande validée par l'admin
+  // Opérateur qui modifie son propre profil : tout passe par une demande validée par l'admin
   const [fName, setFName] = useState('');
   const [fUser, setFUser] = useState('');
   const [fPhone, setFPhone] = useState('');
@@ -65,9 +65,9 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
 
   const me = db.getCurrentUser();
   const live = db.getUsers().find(u => u.id === user.id) || user;
-  const isSelfBooster = !!me && me.id === live.id && me.role === 'employee';
+  const isSelfOperator = !!me && me.id === live.id && me.role === 'employee';
   const canEdit = !!me && me.role === 'admin';
-  const myReq = isSelfBooster ? db.getProfileRequests().find(r => r.user_id === live.id) : undefined;
+  const myReq = isSelfOperator ? db.getProfileRequests().find(r => r.user_id === live.id) : undefined;
   const pending = myReq && myReq.status === 'pending' ? myReq : undefined;
   const refused = myReq && myReq.status === 'rejected' ? myReq : undefined;
 
@@ -174,7 +174,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
           </>
         )}
 
-        {isSelfBooster && (
+        {isSelfOperator && (
           <div className="space-y-2">
             {refused && !pending && (
               <div className="rounded-xl p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">

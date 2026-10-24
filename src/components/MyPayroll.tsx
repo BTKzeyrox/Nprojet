@@ -12,7 +12,7 @@ export interface AdvanceRoom {
   cap_pct: number; max: number | null; used: number; available: number | null;
 }
 
-// Plafond d'avance possible pour le booster connecté (lu sur le serveur)
+// Plafond d'avance possible pour le opérateur connecté (lu sur le serveur)
 export const useAdvanceRoom = (active: boolean): AdvanceRoom | null => {
   const [room, setRoom] = useState<AdvanceRoom | null>(null);
   useEffect(() => {

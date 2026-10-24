@@ -5,7 +5,7 @@ import { formatCurrencyAr } from '../utils/formatUtils';
 
 interface Props {
   advances: SalaryAdvanceRequest[];
-  showBooster?: boolean; // admin : filtre par booster
+  showOperator?: boolean; // admin : filtre par opérateur
 }
 
 type StatusFilter = 'all' | AdvanceStatus;
@@ -25,12 +25,12 @@ const monthLabel = (ym: string) => {
   return `${MONTHS[(m || 1) - 1]} ${y}`;
 };
 
-// Historique des avances : recherche + filtres (statut, mois, booster, montant) + totaux
-export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false }) => {
+// Historique des avances : recherche + filtres (statut, mois, opérateur, montant) + totaux
+export const AdvanceHistory: React.FC<Props> = ({ advances, showOperator = false }) => {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [month, setMonth] = useState('all');
-  const [booster, setBooster] = useState('all');
+  const [operator, setOperator] = useState('all');
   const [min, setMin] = useState('');
   const [max, setMax] = useState('');
 
@@ -38,7 +38,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
     () => Array.from(new Set(advances.map(a => a.request_date.slice(0, 7)))).sort().reverse(),
     [advances]
   );
-  const boosters = useMemo(
+  const operators = useMemo(
     () => Array.from(new Set(advances.map(a => a.employee_name))).sort((a, b) => a.localeCompare(b)),
     [advances]
   );
@@ -51,17 +51,17 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
       .filter(a => {
         if (status !== 'all' && a.status !== status) return false;
         if (month !== 'all' && !a.request_date.startsWith(month)) return false;
-        if (booster !== 'all' && a.employee_name !== booster) return false;
+        if (operator !== 'all' && a.employee_name !== operator) return false;
         if (a.amount_ar < lo || a.amount_ar > hi) return false;
         if (query && !`${a.employee_name} ${a.reason} ${a.admin_notes || ''}`.toLowerCase().includes(query)) return false;
         return true;
       })
       .sort((a, b) => b.request_date.localeCompare(a.request_date) || b.id.localeCompare(a.id));
-  }, [advances, q, status, month, booster, min, max]);
+  }, [advances, q, status, month, operator, min, max]);
 
   const sum = (s: AdvanceStatus) => list.filter(a => a.status === s).reduce((t, a) => t + a.amount_ar, 0);
   const count = (s: AdvanceStatus) => advances.filter(a => a.status === s).length;
-  const filtersOn = q || status !== 'all' || month !== 'all' || booster !== 'all' || min || max;
+  const filtersOn = q || status !== 'all' || month !== 'all' || operator !== 'all' || min || max;
 
   const chip = (active: boolean) =>
     `px-2.5 py-1 text-xs font-semibold border cursor-pointer ${
@@ -83,7 +83,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
           type="text"
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder={showBooster ? 'Rechercher un opérateur, un motif…' : 'Rechercher un motif…'}
+          placeholder={showOperator ? 'Rechercher un opérateur, un motif…' : 'Rechercher un motif…'}
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
@@ -106,23 +106,23 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
         ))}
       </div>
 
-      {/* Mois, booster, montant */}
-      <div className={`grid gap-2 ${showBooster ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
+      {/* Mois, opérateur, montant */}
+      <div className={`grid gap-2 ${showOperator ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'}`}>
         <select value={month} onChange={e => setMonth(e.target.value)} className={field}>
           <option value="all">Tous les mois</option>
           {months.map(m => (<option key={m} value={m}>{monthLabel(m)}</option>))}
         </select>
-        {showBooster && (
-          <select value={booster} onChange={e => setBooster(e.target.value)} className={field}>
+        {showOperator && (
+          <select value={operator} onChange={e => setOperator(e.target.value)} className={field}>
             <option value="all">Tous les opérateurs</option>
-            {boosters.map(b => (<option key={b} value={b}>{b}</option>))}
+            {operators.map(b => (<option key={b} value={b}>{b}</option>))}
           </select>
         )}
         <input type="text" inputMode="numeric" value={min} onChange={e => setMin(e.target.value.replace(/[^\d]/g, ''))} placeholder="Montant min (Ar)" className={field} />
         <input type="text" inputMode="numeric" value={max} onChange={e => setMax(e.target.value.replace(/[^\d]/g, ''))} placeholder="Montant max (Ar)" className={field} />
       </div>
       {filtersOn && (
-        <button type="button" onClick={() => { setQ(''); setStatus('all'); setMonth('all'); setBooster('all'); setMin(''); setMax(''); }} className="text-xs text-slate-300 hover:text-white border border-slate-700 px-3 py-1.5">
+        <button type="button" onClick={() => { setQ(''); setStatus('all'); setMonth('all'); setOperator('all'); setMin(''); setMax(''); }} className="text-xs text-slate-300 hover:text-white border border-slate-700 px-3 py-1.5">
           Réinitialiser les filtres
         </button>
       )}
@@ -148,7 +148,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
             <div key={a.id} data-nav={`adv-${a.id}`} className="rounded-2xl bg-[#131c28] border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  {showBooster && <span className="text-white font-semibold text-sm break-words">{a.employee_name}</span>}
+                  {showOperator && <span className="text-white font-semibold text-sm break-words">{a.employee_name}</span>}
                   <span className="text-base font-bold text-amber-400">{formatCurrencyAr(a.amount_ar)}</span>
                   <span className={`rounded-full inline-flex items-center gap-1 px-2 py-0.5 border text-[10px] font-bold uppercase ${STATUS[a.status].cls}`}>
                     <StatusIcon s={a.status} /> {STATUS[a.status].label}

@@ -131,7 +131,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     };
   }, []);
 
-  // Ce qui attend la décision de l'admin pour un booster
+  // Ce qui attend la décision de l'admin pour un opérateur
   const pendingOf = (empId: string) => {
     const items: { key: string; label: string; filter: ValFilter; n: number }[] = [];
     if (cfg.badge_start) items.push({ key: 'start', label: 'Début de mission à valider', filter: 'starts', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_start').length });
@@ -413,7 +413,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           <span className="text-emerald-400">{employees.length} opérateur(s)</span>
         </div>
 
-        {/* Téléphone : une carte par booster, gros boutons avec texte */}
+        {/* Téléphone : une carte par opérateur, gros boutons avec texte */}
         <div className="md:hidden divide-y divide-slate-800/80">
           {employees.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-500">Aucun employé ne correspond aux filtres sélectionnés.</div>
@@ -772,7 +772,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {/* HISTORIQUE DES AVANCES : recherche + filtres */}
       <div className="bg-[#0f1722] border rounded-2xl border-slate-800 p-4 sm:p-6 shadow-xl">
-        <AdvanceHistory advances={advances} showBooster />
+        <AdvanceHistory advances={advances} showOperator />
       </div>
 
         </>

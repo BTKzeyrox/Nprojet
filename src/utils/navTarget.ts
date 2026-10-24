@@ -10,7 +10,7 @@ export const setNavTarget = (nav: string) => {
 };
 export const peekNavTarget = () => target;
 
-// Messagerie : discussion à ouvrir ('all' = groupe, sinon identifiant du booster)
+// Messagerie : discussion à ouvrir ('all' = groupe, sinon identifiant du opérateur)
 export const CHAT_THREAD_EVENT = 'df-chat-thread';
 export const setChatThread = (id: string) => { thread = id; window.dispatchEvent(new Event(CHAT_THREAD_EVENT)); };
 export const takeChatThread = () => { const t = thread; thread = null; return t; };

@@ -8,7 +8,7 @@ import { askConfirm } from './ConfirmModal';
 import { ScoreInput } from './ScoreInput';
 import { compressProofImage } from '../utils/imageUtils';
 
-// Boutons « Modifier » et « Annuler » directement sur la carte d'un poste en attente de validation (booster)
+// Boutons « Modifier » et « Annuler » directement sur la carte d'un poste en attente de validation (opérateur)
 export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () => void }> = ({ post, onGoToPost }) => {
   const [editing, setEditing] = useState(false);
   useLockBodyScroll(editing);

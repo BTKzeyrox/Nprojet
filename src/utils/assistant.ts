@@ -286,7 +286,7 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
   if (/\b(suggestion|suggestions|solution|solutions|conseil|conseils|conseille|conseilles|propose|proposes|idee|idees|suggest|advice|tips?|recommend)\b/.test(t) && !/\b(message|mail|rediger|ecris|write|draft)\b/.test(t)) return { kind: 'suggest' };
   if (/\b(quoi faire|que faire|what to do|todo|priorite|priority)\b/.test(t)) return { kind: 'todo' };
   if (/\b(resume|matin|morning|summary|recap du jour|point du jour)\b/.test(t)) return { kind: 'morning' };
-  if (/\b(liste|lister|listez|montre|montrer|affiche|afficher|list|show|combien|how many|qui sont|who are)\b/.test(t) && /\b(employes?|operateurs?|equipe|boosters?|team|employees|staff|personnel)\b/.test(t)) return { kind: 'team' };
+  if (/\b(liste|lister|listez|montre|montrer|affiche|afficher|list|show|combien|how many|qui sont|who are)\b/.test(t) && /\b(employes?|operateurs?|equipe|operators?|team|employees|staff|personnel)\b/.test(t)) return { kind: 'team' };
   if (i) {
     const emps = i.users.filter(u => u.role === 'employee');
     const hits = emps.filter(u => { const n = normalizeName(u.name); return n.length >= 3 && (t.includes(n) || n.split(' ').some(part => part.length >= 3 && new RegExp(`\\b${part}\\b`).test(t))); });
