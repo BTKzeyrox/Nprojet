@@ -1,18 +1,13 @@
 import React from 'react';
 import { BadgeCheck, Hourglass, Eye, Boxes } from 'lucide-react';
-import type { Bilingual, ClientBadge, ClientBadgeId, ClientBadgeConfig, ClientPerformance } from '../utils/clientBadges';
+import { CLIENT_BADGE_NAMES, type Bilingual, type ClientBadge, type ClientBadgeId, type ClientBadgeConfig, type ClientPerformance } from '../utils/clientBadges';
 import { ScoreRing } from './PerformanceBadges';
 
 // Badges et score de relation des clients (module 3, M3.6). Réservé au responsable : la page Clients n'est jamais ouverte à un salarié.
 // Chaque badge dit POURQUOI (texte « why » des règles pures).
 const pick = (b: Bilingual, lang: string) => (lang === 'en' ? b.en : b.fr);
 
-export const CLIENT_BADGE_NAMES: Record<ClientBadgeId, Bilingual> = {
-  good_payer: { fr: 'Bon payeur', en: 'Good payer' },
-  slow_payer: { fr: 'Payeur lent', en: 'Slow payer' },
-  watch: { fr: 'À surveiller', en: 'To watch' },
-  big_volume: { fr: 'Gros volume', en: 'High volume' },
-};
+export { CLIENT_BADGE_NAMES };
 const ICONS: Record<ClientBadgeId, React.ElementType> = { good_payer: BadgeCheck, slow_payer: Hourglass, watch: Eye, big_volume: Boxes };
 const TONES: Record<ClientBadgeId, string> = {
   good_payer: 'bg-emerald-900/50 text-emerald-100 border-emerald-600/60',

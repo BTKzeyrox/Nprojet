@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { badgeAccess } from '../../utils/usePerformance';
+import { badgeAccess, usePerformance } from '../../utils/usePerformance';
+import { scoreCellsFor } from '../../utils/performanceExport';
 import { PerformanceScores } from './PerformanceScores';
 import { db } from '../../db/store';
 import { buildPerformance, totalRow, fmtDuration, exportPerformanceExcel, exportPerformanceCsv, type PerfPeriod, type PerfRow } from '../../utils/performance';
@@ -14,6 +15,7 @@ export const PerformancePage: React.FC = () => {
   const { lang } = useApp();
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [tab, setTab] = useState<'table' | 'scores'>('table');
+  const perf = usePerformance();
   const [period, setPeriod] = useState<PerfPeriod>('30');
   const [busy, setBusy] = useState(false);
 
@@ -22,9 +24,11 @@ export const PerformancePage: React.FC = () => {
   const total = useMemo(() => totalRow(rows), [rows]);
   const empty = total.done + total.rejected + total.open === 0;
 
+  // Les colonnes Score / Badges s'ajoutent à l'export quand les badges sont activés (le score porte toujours sur la fenêtre des Réglages, pas sur la période choisie)
+  const scoreExport = () => (badgeAccess().enabled ? { scores: scoreCellsFor(perf.res, lang), windowDays: perf.res.cfg.window_days, lang } : undefined);
   const onExcel = async () => {
     setBusy(true);
-    try { await exportPerformanceExcel(rows, period); } catch { /* le navigateur a refusé le téléchargement */ }
+    try { await exportPerformanceExcel(rows, period, scoreExport()); } catch { /* le navigateur a refusé le téléchargement */ }
     setBusy(false);
   };
 
@@ -65,7 +69,7 @@ export const PerformancePage: React.FC = () => {
           <button type="button" disabled={busy || rows.length === 0} onClick={onExcel} className="px-3 py-1.5 border bg-[#141e2a] border-slate-700 text-slate-200 hover:border-emerald-500 cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-40">
             <Download className="w-3.5 h-3.5" />Excel (.xlsx)
           </button>
-          <button type="button" disabled={rows.length === 0} onClick={() => exportPerformanceCsv(rows, period)} className="px-3 py-1.5 border bg-[#141e2a] border-slate-700 text-slate-200 hover:border-emerald-500 cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-40">
+          <button type="button" disabled={rows.length === 0} onClick={() => exportPerformanceCsv(rows, period, scoreExport())} className="px-3 py-1.5 border bg-[#141e2a] border-slate-700 text-slate-200 hover:border-emerald-500 cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-40">
             <Download className="w-3.5 h-3.5" />CSV
           </button>
         </div>

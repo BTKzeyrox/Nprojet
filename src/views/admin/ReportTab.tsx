@@ -1,3 +1,6 @@
+import { badgeAccess, performanceInput } from '../../utils/usePerformance';
+import { computePerformance } from '../../utils/performanceScore';
+import { clientBadgesFromDb } from '../../utils/clientBadgesDb';
 import React, { useMemo, useRef, useState } from 'react';
 import { Download, Printer } from 'lucide-react';
 import { db } from '../../db/store';
@@ -18,6 +21,7 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
   const report = useMemo(() => admin ? buildReport({
     today: todayMada(), anchor, lang, settings, companyName: readCompany(settings.company).identity.name, posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
     cash, products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(), invoices: db.getInvoices(),
+    ...(badgeAccess().enabled ? { performance: computePerformance(performanceInput()), clientBadges: clientBadgesFromDb() } : {}), // module 3
   }) : null, [admin, anchor, lang, settings, sig]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!report) return null;
   const html = reportHtml(report);

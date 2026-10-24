@@ -201,6 +201,30 @@ for (const lang of ['fr', 'en'] as const) {
   (db as any).updateSettings({ performance: undefined });
 }
 
+
+// ---------- rapport mensuel et export avec scores et badges (M3.8) ----------
+{
+  db.enterDemo('admin');
+  const { buildReport, exportSheets, reportHtml } = await import('../src/utils/report');
+  const { clientBadgesFromDb } = await import('../src/utils/clientBadgesDb');
+  const { readCompany } = await import('../src/utils/companyRules');
+  const st = db.getSettings();
+  const mk = (withBadges: boolean, lang: 'fr' | 'en') => buildReport({
+    today: todayMada(), anchor: todayMada(), lang, settings: st as any, companyName: readCompany(st.company).identity.name, posts: db.getPosts(), contracts: db.getContracts(), users: db.getUsers(),
+    advances: db.getAdvanceRequests(), cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(), invoices: db.getInvoices(),
+    ...(withBadges ? { performance: computePerformance(performanceInput()), clientBadges: clientBadgesFromDb() } : {}),
+  });
+  const withB = mk(true, 'fr'), without = mk(false, 'fr');
+  ok(without.perf === null && !exportSheets(without).some(sh => sh.name === 'Performance équipe') && !reportHtml(without).includes('Performance de l&#39;équipe'), 'rapport sans badges (désactivés) : ni feuille ni section');
+  ok(!!withB.perf && exportSheets(withB).some(sh => sh.name === 'Performance équipe') && exportSheets(withB).some(sh => sh.name === 'Clients à surveiller'), 'rapport avec badges : feuilles « Performance équipe » et « Clients à surveiller »');
+  const html = reportHtml(withB);
+  ok(html.includes('Performance de l&#39;équipe') && html.includes('Clients à surveiller') && !bad(html), 'rapport imprimable : section Performance et clients à surveiller, rien de cassé');
+  ok(exportSheets(withB).every(sh => sh.name.length <= 31 && !bad(JSON.stringify(sh.rows))), 'rapport : noms d\'onglets ≤ 31 caractères, aucun NaN');
+  const enHtml = reportHtml(mk(true, 'en'));
+  ok(enHtml.includes('Team performance') && enHtml.includes('Clients to watch'), 'rapport (anglais) : sections traduites');
+  ok(!/<script/i.test(html), 'rapport imprimable : aucun script');
+}
+
 ok(calls === 0, `aucun appel réseau (${calls})`);
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

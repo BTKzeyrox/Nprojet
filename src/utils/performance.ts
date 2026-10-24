@@ -1,5 +1,6 @@
 import { db } from '../db/store';
 import type { PostSession } from '../types';
+import { performanceAoa, type ScoreCells } from './performanceExport';
 
 // Statistiques de performance par opérateur (lecture du store, aucun appel serveur).
 export type PerfPeriod = '7' | '30' | 'all';
@@ -81,8 +82,6 @@ export const totalRow = (rows: PerfRow[]): PerfRow => {
   };
 };
 
-const HEAD = ['Opérateur', 'Terminées', 'Refusées', 'En cours', 'Taux d’acceptation (%)', 'Délai moyen (min)'];
-const toCells = (r: PerfRow) => [r.name, r.done, r.rejected, r.open, r.rate ?? '', r.avgMin ?? ''];
 
 const save = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -97,22 +96,25 @@ const save = (blob: Blob, filename: string) => {
 
 const stamp = (period: PerfPeriod) => `${period === 'all' ? 'tout' : period + 'j'}-${new Date().toISOString().slice(0, 10)}`;
 
-export async function exportPerformanceExcel(rows: PerfRow[], period: PerfPeriod): Promise<void> {
+/** `scores` (facultatif) ajoute les colonnes Score, Tendance, Badges et Points d'attention (module 3). */
+export interface ScoreExport { scores: Map<string, ScoreCells>; windowDays: number; lang: string }
+
+export async function exportPerformanceExcel(rows: PerfRow[], period: PerfPeriod, sc?: ScoreExport): Promise<void> {
   const XLSX = await import('xlsx');
-  const aoa = [HEAD, ...rows.map(toCells), toCells(totalRow(rows))];
+  const aoa = performanceAoa(rows, totalRow(rows), sc ? sc.scores : null, sc ? sc.windowDays : 30, sc ? sc.lang : 'fr');
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{ wch: 24 }, { wch: 11 }, { wch: 11 }, { wch: 10 }, { wch: 22 }, { wch: 18 }];
+  ws['!cols'] = [{ wch: 24 }, { wch: 11 }, { wch: 11 }, { wch: 10 }, { wch: 22 }, { wch: 18 }, ...(sc ? [{ wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 18 }] : [])];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Performance');
   XLSX.writeFile(wb, `performance-${stamp(period)}.xlsx`);
 }
 
-export function exportPerformanceCsv(rows: PerfRow[], period: PerfPeriod): void {
+export function exportPerformanceCsv(rows: PerfRow[], period: PerfPeriod, sc?: ScoreExport): void {
   const esc = (v: string | number) => {
     const s = String(v);
     return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const lines = [HEAD, ...rows.map(toCells), toCells(totalRow(rows))].map(l => l.map(esc).join(';'));
+  const lines = performanceAoa(rows, totalRow(rows), sc ? sc.scores : null, sc ? sc.windowDays : 30, sc ? sc.lang : 'fr').map(l => l.map(esc).join(';'));
   // BOM + « ; » : s'ouvre correctement dans Excel en français
   save(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), `performance-${stamp(period)}.csv`);
 }

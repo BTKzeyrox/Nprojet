@@ -40,6 +40,12 @@ export const CLIENT_BADGE_DEFAULTS: ClientBadgeConfig = {
 };
 
 export type ClientBadgeId = 'good_payer' | 'slow_payer' | 'watch' | 'big_volume';
+export const CLIENT_BADGE_NAMES: Record<ClientBadgeId, Bilingual> = {
+  good_payer: { fr: 'Bon payeur', en: 'Good payer' },
+  slow_payer: { fr: 'Payeur lent', en: 'Slow payer' },
+  watch: { fr: 'À surveiller', en: 'To watch' },
+  big_volume: { fr: 'Gros volume', en: 'High volume' },
+};
 export interface ClientBadge { id: ClientBadgeId; attention: boolean; why: Bilingual }
 export interface ClientAttention { code: ClientBadgeId; fr: string; en: string }
 

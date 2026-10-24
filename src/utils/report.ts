@@ -10,6 +10,10 @@ import { stockRows, stockValue, type StockRow } from './stock';
 import { agedSheetRows, invoiceFigures, invoiceSheetRows, type InvoiceFigures } from './invoiceStats';
 import { STATE_NAMES } from './invoices';
 
+import { performanceSheets, reportPerformance, type ReportPerformance } from './performanceExport';
+import type { PerformanceResult } from './performanceScore';
+import type { ClientBadgeResult } from './clientBadges';
+
 export interface ReportInput {
   today: string; anchor: string; lang: 'fr' | 'en';
   settings: AlertSettings;
@@ -18,6 +22,8 @@ export interface ReportInput {
   cash: CashEntry[]; products: Product[]; moves: StockMove[];
   clients?: ClientRecord[]; // fiches clients (admin)
   invoices?: Invoice[]; // factures (module 2) : onglets « Factures » et « Créances » et lignes du résumé, seulement s'il y en a
+  performance?: PerformanceResult; // scores et badges des salariés (module 3) : section « Performance » du rapport
+  clientBadges?: ClientBadgeResult; // badges des clients (module 3) : « Clients à surveiller »
 }
 
 export interface Report {
@@ -27,6 +33,7 @@ export interface Report {
   stock: { rows: StockRow[]; value: number };
   cashLines: CashEntry[];
   strengths: string[]; attention: string[];
+  perf: ReportPerformance | null; // null = badges désactivés ou rien à montrer
   inv: InvoiceFigures | null; // null = aucune facture (module 2 pas encore utilisé)
   invoices: Invoice[]; cashAll: CashEntry[]; clientNames: Record<string, string>; range: { start: string; end: string }; today: string;
 }
@@ -92,6 +99,7 @@ export function buildReport(i: ReportInput): Report {
     stats, fin, finPrev, goals, forecast, alerts,
     stock: { rows, value: stockValue(rows) }, cashLines,
     strengths: strengths.slice(0, 3), attention: attention.slice(0, 3),
+    perf: reportPerformance(i.performance, i.clientBadges, i.lang),
     inv: invList.length ? invoiceFigures({ invoices: invList, cash: i.cash, posts: i.posts, contracts: i.contracts, clients: i.clients || [], prices: s, today: i.today, range: invRange }) : null,
     invoices: invList, cashAll: i.cash, clientNames: Object.fromEntries((i.clients || []).map(c => [c.id, c.name])), range: invRange, today: i.today,
   };
@@ -177,6 +185,7 @@ export function exportSheets(r: Report): SheetData[] {
     [],
     r.forecast ? [t('Prévision fin de mois (linéaire)', 'End-of-month forecast (linear)'), t('Missions', 'Missions'), r.forecast.missions, t('Bénéfice (Ar)', 'Profit (Ar)'), r.forecast.profit] : [t('Prévision fin de mois', 'End-of-month forecast'), t('pas assez de jours écoulés', 'not enough days elapsed')],
   ] });
+  sheets.push(...performanceSheets(r.perf, r.lang));
   sheets.push({ name: t('Alertes', 'Alerts'), rows: [[t('Alerte', 'Alert')], ...(r.alerts.length ? r.alerts.map(a => [r.lang === 'en' ? a.en : a.fr]) : [[t('Aucune alerte', 'No alert')]])] });
   return sheets;
 }
@@ -240,6 +249,9 @@ ${r.forecast ? `<h2>${esc(t('Prévision de fin de mois', 'End-of-month forecast'
 <table><tr><th>${esc(t('Nom', 'Name'))}</th><th class="n">${esc(t('Missions', 'Missions'))}</th><th class="n">${esc(t('Gagné', 'Earned'))}</th></tr>${st.team.ranking.slice(0, 5).map(x => `<tr><td>${esc(x.name)}</td><td class="n">${x.done}</td><td class="n">${esc(ar(x.earned))}</td></tr>`).join('') || `<tr><td colspan="3">–</td></tr>`}</table>
 <h2>${esc(t('Marge par type de mission', 'Margin by mission type'))}</h2>
 <table><tr><th>${esc(t('Type', 'Type'))}</th><th class="n">${esc(t('Missions', 'Missions'))}</th><th class="n">${esc(t('Marge', 'Margin'))}</th></tr>${fin.byType.map(x => `<tr><td>${esc(x.type)}</td><td class="n">${x.done}</td><td class="n">${esc(ar(x.margin))}${x.marginPct !== null ? ` (${x.marginPct} %)` : ''}</td></tr>`).join('') || `<tr><td colspan="3">–</td></tr>`}</table>
+${r.perf && r.perf.employees.length ? `<h2>${esc(t('Performance de l\'équipe', 'Team performance'))}</h2>
+<table><tr><th>${esc(t('Salarié', 'Employee'))}</th><th class="n">${esc(t(`Score (${r.perf.windowDays} j)`, `Score (${r.perf.windowDays} d)`))}</th><th>${esc(t('Badges', 'Badges'))}</th></tr>${r.perf.employees.slice(0, 10).map(x => `<tr><td>${esc(x.name)}</td><td class="n">${x.score === null ? '–' : x.score}</td><td>${esc(x.badges || '–')}</td></tr>`).join('')}</table>${r.perf.employees.length > 10 ? `<p class="note">${esc(t(`+ ${r.perf.employees.length - 10} autres dans l'export Excel.`, `+ ${r.perf.employees.length - 10} more in the Excel export.`))}</p>` : ''}` : ''}
+${r.perf && r.perf.clients.length ? `<h2>${esc(t('Clients à surveiller', 'Clients to watch'))}</h2><ul>${r.perf.clients.map(c => `<li><b>${esc(c.name)}</b> — ${esc(c.badges)} : ${esc(c.attention)}</li>`).join('')}</ul>` : ''}
 ${r.alerts.length ? `<h2>${esc(t('Alertes', 'Alerts'))}</h2><ul>${r.alerts.map(a => `<li>${esc(r.lang === 'en' ? a.en : a.fr)}</li>`).join('')}</ul>` : ''}
 <p class="note">${esc(t('Document confidentiel : il contient des chiffres d\'argent. Généré par Gestion Pro.', 'Confidential: contains money figures. Generated by Gestion Pro.'))}</p>
 </body></html>`;
