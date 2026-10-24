@@ -1701,6 +1701,7 @@ class DeltaForceStore {
   }
 
   public getSignupRequests(): SignupRequest[] {
+    if (this.demo) return []; // démo : pas d'inscription ni de décision à prendre
     return [...this.signups];
   }
 
@@ -1737,6 +1738,7 @@ class DeltaForceStore {
   }
 
   public getPasswordResets(): PasswordResetRequest[] {
+    if (this.demo) return []; // démo : pas de mot de passe oublié
     return [...this.resets];
   }
 

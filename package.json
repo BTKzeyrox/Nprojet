@@ -51,6 +51,7 @@
     "check:company": "npx --yes tsx scripts/check-company.ts",
     "check:purchasing": "npx --yes tsx scripts/check-purchasing.ts",
     "check:purchasing-page": "esbuild scripts/check-purchasing-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-purchasing-page.mjs && node node_modules/.cache/check-purchasing-page.mjs",
+    "check:demo-simple": "esbuild scripts/check-demo-simple.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-demo-simple.mjs && node node_modules/.cache/check-demo-simple.mjs",
     "check:quotes-page": "esbuild scripts/check-quotes-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-quotes-page.mjs && node node_modules/.cache/check-quotes-page.mjs",
     "check:quotes": "npx --yes tsx scripts/check-quotes.ts",
     "check:purchasing-server": "npx --yes tsx scripts/check-purchasing-server.ts",

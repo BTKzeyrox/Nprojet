@@ -162,7 +162,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <FontSizePicker />
       </section>
 
-      <NotificationsCard />
+      {!db.isDemo() && <NotificationsCard />}
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
@@ -230,9 +230,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'general' && <ModeSwitchSection />}
-      {tab === 'general' && <NotificationsCard />}
+      {tab === 'general' && !db.isDemo() && <NotificationsCard />}
       {tab === 'general' && <WatchSettingsSection />}
-      {tab === 'general' && <AiSettingsSection />}
+      {tab === 'general' && !db.isDemo() && <AiSettingsSection />}
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
@@ -525,10 +525,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       </section>
       )}
 
-      {tab === 'data' && <BackupsSection />}
-      {tab === 'data' && <AuditSection lang={lang} />}
+      {/* Démo : sauvegardes, restauration, remise à zéro et journal d'audit sont cachés (rien de réel à sauvegarder ni à effacer) */}
+      {tab === 'data' && !db.isDemo() && <BackupsSection />}
+      {tab === 'data' && !db.isDemo() && <AuditSection lang={lang} />}
 
-      <RestoreSection />
+      {!db.isDemo() && <RestoreSection />}
 
       <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer

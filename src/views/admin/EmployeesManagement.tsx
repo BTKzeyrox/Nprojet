@@ -207,11 +207,12 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       setAddUserError('Identifiant manquant.');
       return;
     }
-    if (!newPassword) {
+    const demoMode = db.isDemo(); // démo : le champ mot de passe est caché, un mot de passe inventé est utilisé
+    if (!demoMode && !newPassword) {
       setAddUserError('Mot de passe manquant.');
       return;
     }
-    if (newPassword.length < 6) {
+    if (!demoMode && newPassword.length < 6) {
       setAddUserError('Le mot de passe doit avoir au moins 6 caractères.');
       return;
     }
@@ -234,7 +235,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       status: 'active',
       avatar_url: '',
       performance_badge: 'Standard',
-    }, newPassword);
+    }, demoMode ? 'demo-password' : newPassword);
 
     if (!created.success) {
       setAddUserError(created.error || 'Création impossible.');
@@ -812,7 +813,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
-              <div>
+              {!db.isDemo() && <div>
                 <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe (optionnel)</label>
                 <input
                   type="text"
@@ -824,7 +825,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   placeholder="laisser vide = inchangé"
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
-              </div>
+              </div>}
 
               {editingUser && (editingUser.role === 'employee' || editingUser.role === 'team_lead') && (
               <div>
@@ -908,7 +909,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
-              <div>
+              {!db.isDemo() && <div>
                 <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
                 <input
                   type="text"
@@ -919,7 +920,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   placeholder="à communiquer à l'employé"
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
-              </div>
+              </div>}
 
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
