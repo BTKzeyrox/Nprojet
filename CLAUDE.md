@@ -1,6 +1,6 @@
 # ⛔ LIS D'ABORD `LIRE_EN_PREMIER.md`
 
-Ordre : `LIRE_EN_PREMIER.md` → `AI_STUDIO.md` → `HANDOVER.md`. État : `PROJET.md`, `TODO.md`.
+Ordre : `LIRE_EN_PREMIER.md` → **`GUIDE_SITE.md`** (le site expliqué sans lire le code) → `AI_STUDIO.md` → `HANDOVER.md`. État : `PROJET.md`, `TODO.md`.
 
 Règles minimales :
 1. Ne remets pas Firebase, Express, `server.ts`, `api/`, ni de variables d'environnement.

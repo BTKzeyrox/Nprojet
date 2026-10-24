@@ -1,7 +1,7 @@
 # PROJET.md — Le projet en un coup d'œil
 
 But : savoir vite **ce qui existe, ce qui marche, comment c'est protégé et que faire en cas de panne**.
-Pour travailler sur le code : `LIRE_EN_PREMIER.md`, puis `AI_STUDIO.md`, puis `HANDOVER.md`. Liste à faire : `TODO.md`.
+Pour comprendre le site sans lire le code : **`GUIDE_SITE.md`**. Pour travailler sur le code : `LIRE_EN_PREMIER.md`, puis `GUIDE_SITE.md`, `AI_STUDIO.md`, `HANDOVER.md`. Liste à faire : `TODO.md`.
 Mis à jour : 2026-10-24. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
 
 ## 1. À propos

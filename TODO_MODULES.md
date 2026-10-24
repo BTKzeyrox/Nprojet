@@ -497,6 +497,56 @@ But : à Madagascar la connexion est souvent coupée. Le site doit **s'ouvrir sa
 
 **Risques de ce module :** perte de données (donc : file sur disque, jamais de suppression silencieuse) ; doublons (donc : numéro d'action) ; ancienne version du site avec un serveur plus récent (donc : mise à jour sûre) ; **argent et données de l'entreprise sur un téléphone perdu** (donc : décision 2) ; heure fausse du téléphone (décision 5) ; stockage plein sur un petit téléphone ; quota (aucune boucle d'envoi rapide). **Ordre :** M13.1 → M13.2 → M13.3 → M13.4 → M13.5 → M13.6 → M13.7 (accord) → M13.8.
 
+## MODULE 14 — Comptabilité complète — taille XL (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M14 »**
+
+But : que le Comptable (et le responsable) puissent tenir une vraie comptabilité dans le site. **Déjà là, ne pas refaire** : factures, avoirs, devis, paiements reçus, dépenses par catégorie, TVA **par facture** (taux réglable), créances et relances, budgets par catégorie, paie et bulletins, rôle Comptable, sauvegardes, journal d'audit, exports Excel. **Manque (confirmé par recherche dans le code, 2026-10-24)** : plan comptable, journaux, écritures à partie double, grand livre, balance, compte de résultat, bilan, TVA collectée et déclaration, clôture, rapprochement bancaire, export pour le comptable. **Dépend de M2, M4, M5. À faire valider par un expert-comptable malgache : sans cela, ce n'est pas fiable.**
+
+- [ ] **M14.0 — Décisions de BTK et avis d'un expert-comptable** (S) : plan comptable à utiliser (plan comptable général malgache, à confirmer), taux de TVA, début et fin de l'exercice, devise, **quelles pièces donnent une écriture**, qui a le droit de clôturer. Accès du Comptable aux dépenses et aux finances (décision en attente depuis M7).
+- [ ] **M14.1 — Règles pures et tests** (L) : comptes, journaux (ventes, achats, banque, caisse, opérations diverses), écriture à partie double (**débit = crédit, toujours**), arrondis, dates, période clôturée ; `npm run check:accounting` avec cas piégés (vide, zéro, négatifs, gros nombres, centimes, date fausse, écriture déséquilibrée).
+- [ ] **M14.2 — Écritures automatiques** (L) : facture (vente et TVA), avoir (écriture inverse), paiement reçu, dépense, achat, paie (salaires, avances). **Une écriture validée ne se modifie jamais : on la contre-passe** (même principe que facture et avoir).
+- [ ] **M14.3 — Table et serveur (AVEC accord de BTK)** (M) : table des écritures, numéro d'écriture attribué **par une fonction SQL**, sauvegarde avant, bloc `ACCOUNTING` dans `df-api` qui **revérifie l'équilibre**, droits (responsable et Comptable), retour en arrière écrit.
+- [ ] **M14.4 — Écrans** (L) : Journal, Grand livre, Balance, Compte de résultat, Bilan ; filtre par période ; chaque ligne renvoie à la pièce d'origine (« d'où vient cette écriture ») ; clair/sombre, FR/EN, téléphone.
+- [ ] **M14.5 — TVA** (M) : TVA collectée et déductible par période, total à déclarer, brouillon de déclaration imprimable ; réglages dans Conditions.
+- [ ] **M14.6 — Clôture d'exercice** (M) : verrouiller une période, report à nouveau, rouvrir seulement avec un motif et une trace dans le journal d'audit.
+- [ ] **M14.7 — Rapprochement bancaire et Mobile Money** (M) : import d'un relevé (CSV) avec aperçu et erreurs ligne par ligne, correspondance avec les paiements, écarts signalés.
+- [ ] **M14.8 — Export pour le comptable** (S) : Excel et CSV standard (journal, grand livre, balance), nom et date.
+- [ ] **M14.9 — Démo, anglais, carte du site, Santé du site, guide** (S) : alertes (écriture déséquilibrée, période non clôturée, TVA non déclarée), fiche dans la carte du site, `GUIDE_SITE.md` à jour.
+- [ ] **M14.10 — Relecture par un expert-comptable et essai de BTK** (téléphone, responsable puis Comptable).
+
+## MODULE 15 — Management complet — taille L (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M15 »**
+
+But : planifier et piloter l'équipe. **Déjà là, ne pas refaire** : Chef d'équipe (valide les débuts et fins de son équipe), page Direction, performance et badges, objectifs du mois de l'entreprise, évaluations avec objectifs par salarié, congés, modèles de mission, date limite et priorité, budgets par catégorie, rapport du mois (Excel et PDF à la demande). **Manque (confirmé)** : missions récurrentes, planning des équipes, objectifs suivis par équipe, budget prévu contre réel pour toute l'entreprise, rapport envoyé automatiquement, validation à plusieurs niveaux, plusieurs sites.
+
+- [ ] **M15.1 — Missions récurrentes** (M) : un modèle de mission + une fréquence (chaque jour, semaine, mois) ; le serveur crée les missions à l'heure prévue (tâche planifiée comme la sauvegarde de nuit) ; jamais de doublon si le serveur tourne deux fois ; arrêt et reprise.
+- [ ] **M15.2 — Planning des équipes** (L) : semaine par salarié, vacations Jour/Nuit, **les congés acceptés sont pris en compte**, conflits signalés ; table (accord de BTK + sauvegarde).
+- [ ] **M15.3 — Objectifs par salarié et par équipe** (M) : objectif, valeur prévue, valeur réelle (calculée, jamais saisie), lien avec les évaluations (M5.4).
+- [ ] **M15.4 — Budget prévu contre réel** (M) : revenus, dépenses et paie par mois, écart ; **réutilise les budgets par catégorie du module 4**.
+- [ ] **M15.5 — Rapport automatique** (M) : hebdomadaire ou mensuel, en notification et en PDF dans le site ; envoi par e-mail seulement si BTK fournit un service (clé dans le coffre-fort Supabase, jamais dans le dépôt).
+- [ ] **M15.6 — Validation à plusieurs niveaux** (M) : au-dessus d'un montant réglable, la décision revient au responsable ; s'appuie sur le Chef d'équipe existant ; calcul fait **par le serveur**.
+- [ ] **M15.7 — Plusieurs sites ou agences** (L) : champ « site » sur les comptes et missions, filtres, droits par site (à décider avec M17).
+- [ ] **M15.8 — Démo, anglais, carte du site, Santé du site, guide** (S).
+- [ ] **M15.9 — Essai de BTK** (téléphone, responsable, Chef d'équipe, opérateur).
+
+## MODULE 16 — Facilité et sécurité — taille L (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M16 »**
+
+But : rendre le site facile à adopter et plus sûr. **Le mode sans internet est le module 13 (en cours par une autre session) : ne pas le refaire ici.** **Déjà là, ne pas refaire** : assistant du site, carte du site, « Pourquoi ce chiffre ? », sauvegarde Excel, sauvegardes de nuit et restauration, journal d'audit, notifications push, mot de passe `scrypt`. **Manque (confirmé)** : import Excel ou CSV, visite guidée, blocage après trop d'essais (aujourd'hui 0,5 s entre deux essais), double vérification, export complet restaurable, rappels WhatsApp ou SMS.
+
+- [ ] **M16.1 — Import Excel et CSV** (M) : clients, salariés, produits, tableaux ; **aperçu et erreurs ligne par ligne, rien d'écrit avant la validation de BTK** ; modèle de fichier téléchargeable.
+- [ ] **M16.2 — Visite guidée et aide** (S) : au premier lancement, par rôle ; réutilise les fiches de la carte du site.
+- [ ] **M16.3 — Blocage après trop d'essais** (M) : délai croissant, par compte et par adresse, trace dans le journal de sécurité ; ne bloque jamais le seul responsable sans moyen de reprise (décision de BTK).
+- [ ] **M16.4 — Double vérification (2FA)** (M) : facultative, par application (code à 6 chiffres), pour le responsable et le Comptable ; codes de secours.
+- [ ] **M16.5 — Export complet des données** (S) : tout le contenu d'un site dans un fichier, et sa reprise.
+- [ ] **M16.6 — Rappels WhatsApp et SMS** (M) : d'abord un **lien WhatsApp avec message prérempli** (gratuit, le responsable appuie sur « envoyer ») ; envoi automatique seulement si BTK choisit un service payant (clé hors dépôt).
+- [ ] **M16.7 — Démo, anglais, carte du site, Santé du site, guide** (S).
+- [ ] **M16.8 — Essai de BTK**.
+
+## MODULE 17 — Plusieurs entreprises sur le même site — taille XL (**étude d'abord**, proposé le 2026-10-24)
+
+But : vendre le site à plusieurs entreprises sans un hébergement par client. Aujourd'hui **un site = une entreprise**. Ce chantier touche **toutes les tables et tous les droits** : à étudier avant de coder.
+
+- [ ] **M17.1 — Étude écrite** (S) : champ d'entreprise sur chaque table, droits à la lecture et à l'écriture, comptes, sauvegardes séparées, coût d'hébergement partagé, risques de fuite entre entreprises, plan de reprise des données existantes. **Aucun code avant l'accord de BTK sur cette étude.**
+- [ ] **M17.2 à M17.n** : étapes à écrire après l'étude.
+
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
@@ -509,6 +559,7 @@ But : à Madagascar la connexion est souvent coupée. Le site doit **s'ouvrir sa
 8. **Module 9** (détection automatique, **absorbé par le module 11 « Admin IA Pro »**) — les règles de retard et d'absence peuvent venir tôt, après le module 0.
 9. **Module 10, niveau A** (assistant à règles dans la messagerie) — après les modules 3 et 9, car il s'appuie sur leurs calculs ; puis A+1 (modèles de messages), puis A+2 (rédaction par IA, clé gratuite) et le niveau B (IA externe) seulement si BTK le veut.
 10. **Module 8** (direction et contrôle final).
+11. **Modules 14 à 17** (proposés le 2026-10-24, en attente de « GO » de BTK ; le module 13 est le mode hors ligne d'une autre session) : M14 comptabilité d'abord (c'est ce qui rassure un client sérieux, à valider par un expert-comptable), puis M16 facilité et sécurité, M15 management complet, et M17 (plusieurs entreprises, étude d'abord).
 
 ## Risques à surveiller
 
@@ -561,3 +612,4 @@ But : à Madagascar la connexion est souvent coupée. Le site doit **s'ouvrir sa
 - 2026-10-24 : **Module 13, décision 1 : BTK choisit l'option B** (l'admin modifie missions, stock, clients, Actualités et messages hors ligne ; factures en brouillon ; paiements, paie, avances, comptes et mots de passe en ligne seulement). Décision 2 à confirmer.
 - 2026-10-24 : **Module 13 : M13.1 fait** (décisions 1 et 2 de BTK : option B, code de verrouillage, copie admin 24 h ; 3 à 7 = défauts) ; **M13.2 faite** (`src/utils/offline.ts`, `check:offline` 97/97, rien branché). Suite : M13.3 (copie locale IndexedDB ; à décider : chiffrer la copie de l'admin avec une clé tirée du code).
 - 2026-10-24 : **Module 13, M13.3 faite** : copie locale chiffrée (`src/utils/offlineVault.ts`, `check:offline-vault` 65/65), décision de BTK : option A. Rien branché. Suite : M13.4 (service worker : l'appli s'ouvre sans réseau).
+- 2026-10-24 : **Guide du site créé : `GUIDE_SITE.md`** (but, rôles, une fiche par page, parcours d'une mission, circulation des données, modules et fichiers, recettes, problèmes et solutions, limites, feuille de route ; parties automatiques par `npm run guide`, contrôle `npm run check:guide`). **Nouveaux modules ajoutés au plan, en attente de « GO » : M14 comptabilité complète, M15 management complet, M16 facilité et sécurité, M17 plusieurs entreprises (étude d'abord).** Le numéro M13 est pris par le mode hors ligne (autre session). Rien n'est codé pour M14 à M17.

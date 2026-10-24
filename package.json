@@ -14,6 +14,8 @@
     "check:reviews": "npx --yes tsx scripts/check-reviews.ts",
     "check:direction": "esbuild scripts/check-direction.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-direction.mjs && node node_modules/.cache/check-direction.mjs",
     "check:direction-page": "esbuild scripts/check-direction-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-direction-page.mjs && node node_modules/.cache/check-direction-page.mjs",
+    "guide": "npx --yes tsx scripts/make-guide.ts write",
+    "check:guide": "npx --yes tsx scripts/make-guide.ts check",
     "check:payslip": "npx --yes tsx scripts/check-payslip.ts",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",

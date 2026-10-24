@@ -1,7 +1,7 @@
 # ⛔ LIS CE FICHIER EN PREMIER (avant AI_STUDIO.md et HANDOVER.md)
 
-Ordre de lecture : **1. `LIRE_EN_PREMIER.md`** (ce fichier) → **2. `AI_STUDIO.md`** → **3. `HANDOVER.md`**.
-Ne modifie rien et ne propose rien avant d'avoir lu les trois.
+Ordre de lecture : **1. `LIRE_EN_PREMIER.md`** (ce fichier) → **2. `GUIDE_SITE.md`** (le site expliqué page par page, les rôles, les modules, les recettes et les pièges : **tu n'as pas besoin de lire le code pour comprendre le site**) → **3. `AI_STUDIO.md`** → **4. `HANDOVER.md`** (en partie périmé : voir le guide §8).
+Ne modifie rien et ne propose rien avant d'avoir lu ces quatre fichiers.
 
 > **Ce dépôt est-il une COPIE du projet DF-boosting (nouveau projet, nouveaux comptes) ?** Si oui, lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Ce dépôt (`Nprojet`, appli « Gestion Pro ») est cette copie : ses liens sont ci-dessous. N'utilise jamais ceux de l'ancien projet.
 
@@ -20,6 +20,7 @@ Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 12. **Écrire sur GitHub : avec le token de BTK et le terminal (`git`), jamais avec le connecteur git.** Le connecteur ne sert qu'à lire. Le token ne s'écrit jamais dans un fichier ni dans l'adresse du dépôt (le passer à la commande seulement).
 13. **Une étape à la fois : une étape finie = un commit + un push + le TODO mis à jour dans le même commit.** Jamais plusieurs étapes d'un coup dans un seul gros commit.
 14. **« GO M1 » (ou M2, M3…) = tout le module, étape par étape.** Tu fais la première étape non cochée (ex. M1.3), tu pousses avec le TODO à jour, puis tu enchaînes avec l'étape suivante **sans attendre BTK**, jusqu'à la fin du module. Tu ne t'arrêtes que pour : une action qui efface des données (règle 10), un vrai doute qui change le résultat, ou un essai que seul BTK peut faire (écran, téléphone).
+15. **Chaque étape met `GUIDE_SITE.md` à jour dans le même commit** : lancer `npm run guide` (parties automatiques), compléter à la main les parties écrites (rôles, parcours, modules, pièges, limites), puis `npm run check:guide` doit passer. Une page, une règle, une table ou un piège nouveau qui n'est pas dans le guide = étape non finie.
 
 ## Le token GitHub (classique) : comment l'avoir
 - **Lien pour créer le token** (la case `repo` est déjà cochée) :

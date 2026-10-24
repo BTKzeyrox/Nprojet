@@ -27,4 +27,4 @@ npm run build    # doit passer avant tout envoi
 Aucune variable d'environnement sur Vercel : le serveur et ses secrets sont dans Supabase.
 
 ## Pour les IA
-Lire dans l'ordre : `LIRE_EN_PREMIER.md` → `AI_STUDIO.md` → `HANDOVER.md`. État et liste à faire : `PROJET.md`, `TODO.md`.
+Lire dans l'ordre : `LIRE_EN_PREMIER.md` → **`GUIDE_SITE.md`** (le site expliqué page par page, sans lire le code) → `AI_STUDIO.md` → `HANDOVER.md`. État et liste à faire : `PROJET.md`, `TODO.md`.
