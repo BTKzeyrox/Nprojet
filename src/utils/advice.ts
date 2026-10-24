@@ -2,6 +2,7 @@
 export interface Bi { fr: string; en: string }
 const b = (fr: string, en: string): Bi => ({ fr, en });
 export const ADVICE: Record<string, Bi> = {
+  'volume-drop': b('Prends des nouvelles avec bienveillance : congé, panne, moins de missions confiées ? Si c\'est un manque de travail, vérifie la répartition dans « Calendrier » avant de t\'inquiéter.', 'Check in kindly: leave, a breakdown, fewer missions assigned? If it is a lack of work, check the split in "Calendar" before worrying.'),
   'overdue': b('Commence par la plus ancienne : ouvre « Factures », touche la relance (le message est déjà prêt) et propose une date de paiement. Un appel poli marche souvent mieux qu\'un second message.', 'Start with the oldest one: open "Invoices", use the reminder (the message is already prepared) and suggest a payment date. A polite call often works better than a second message.'),
   'draft-old': b('Ouvre « Factures » : si la mission est faite, émets la facture maintenant pour être payé plus tôt ; sinon supprime le brouillon pour garder la liste claire.', 'Open "Invoices": if the job is done, issue the invoice now to get paid sooner; otherwise delete the draft to keep the list clear.'),
   'po-late': b('Appelle le fournisseur pour avoir une date ferme, puis note la réception ou la nouvelle date dans « Achats ». Si ça se répète, compare avec un autre fournisseur.', 'Call the supplier to get a firm date, then record the receipt or the new date in "Purchasing". If it keeps happening, compare with another supplier.'),
