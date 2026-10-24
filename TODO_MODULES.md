@@ -527,7 +527,7 @@ But : planifier et piloter l'équipe. **Déjà là, ne pas refaire** : Chef d'é
 - [ ] **M15.8 — Démo, anglais, carte du site, Santé du site, guide** (S).
 - [ ] **M15.9 — Essai de BTK** (téléphone, responsable, Chef d'équipe, opérateur).
 
-## MODULE 16 — Facilité et sécurité — taille L (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M16 »**
+## MODULE 16 — Facilité et sécurité — taille L (demande de BTK, 2026-10-24) — **PRIS le 2026-10-25 (« Go m16 » de BTK) par la session « Go m16 ». Ne pas refaire en parallèle.**
 
 But : rendre le site facile à adopter et plus sûr. **Le mode sans internet est le module 13 (en cours par une autre session) : ne pas le refaire ici.** **Déjà là, ne pas refaire** : assistant du site, carte du site, « Pourquoi ce chiffre ? », sauvegarde Excel, sauvegardes de nuit et restauration, journal d'audit, notifications push, mot de passe `scrypt`. **Manque (confirmé)** : import Excel ou CSV, visite guidée, blocage après trop d'essais (aujourd'hui 0,5 s entre deux essais), double vérification, export complet restaurable, rappels WhatsApp ou SMS.
 
