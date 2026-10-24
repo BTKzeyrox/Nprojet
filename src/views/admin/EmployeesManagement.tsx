@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { badgeAccess, usePerformance } from '../../utils/usePerformance';
 import { BadgeChips } from '../../components/PerformanceBadges';
+import { ImportDialog } from '../../components/ImportDialog';
 import {
   Users,
   UserCheck,
@@ -24,6 +25,7 @@ import {
   Sun,
   Moon,
   X,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { User, ShiftType, SalaryAdvanceRequest, PostSession, PresenceRow, ProfileChangeRequest, AppSettings } from '../../types';
 import { Avatar } from '../../components/Avatar';
@@ -91,6 +93,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
   // Add User Modal
   const [showAddModal, setShowAddModal] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
@@ -310,13 +313,24 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Ajouter un Opérateur</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Ajouter un Opérateur</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setImporting(true)}
+            className="w-full sm:w-auto px-4 py-2 min-h-[44px] border border-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>{lang === 'en' ? 'Import (Excel, CSV)' : 'Importer (Excel, CSV)'}</span>
+          </button>
+        </div>
+        {importing && <ImportDialog kind="employees" onClose={() => setImporting(false)} />}
       </div>
 
       {staff.length > 0 && (

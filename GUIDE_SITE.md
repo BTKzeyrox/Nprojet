@@ -90,6 +90,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le statut n'est jamais saisi : il se calcule avec les missions validées.
   - Un client qui a des missions n'est jamais supprimé, seulement archivé.
   - Les clients sont visibles de l'admin seulement.
+  - Import Excel ou CSV : aperçu ligne par ligne, rien n'est écrit avant « Importer » ; les noms déjà présents sont ignorés.
 - **Chiffres et formules** :
   - Prospect : Aucune mission validée.
   - Nouveau : Première mission il y a moins de N jours (60 par défaut).
@@ -168,6 +169,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Limites : 20 tableaux, 200 colonnes, 5 000 lignes.
   - Une formule en erreur montre #DIV/0!, #REF! ou #NAME? sans rien casser.
   - Le responsable lit les tableaux de l'équipe sans pouvoir les modifier.
+  - Importer un fichier Excel ou CSV crée un nouveau tableau (aperçu avant création) : colonnes nombre et date devinées, 5 000 lignes au plus.
 - **Chiffres et formules** :
   - Formules : SOMME, MOYENNE, MIN, MAX, NB, SI, ET, OU, ARRONDI, RECHERCHEV, SOMME.SI, NB.SI, AUJOURDHUI, JOURS, CONCAT, GAUCHE, DROITE et autres, en français ou en anglais.
 - **Dans le code** : `src/components/MySheets.tsx`
@@ -180,6 +182,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Finances et Stock sont réservés à l'admin : le serveur refuse tout autre accès.
   - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
   - Les avances sont déjà dans les salaires : elles ne sont pas comptées deux fois.
+  - Stock : import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
 - **Chiffres et formules** :
   - Facturé : Missions validées × prix client.
   - Encaissé : Somme des paiements reçus.
@@ -216,6 +219,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Accès « auto » : la connexion n'est permise que pendant la vacation, avec une marge avant et après.
   - Supprimer un profil est définitif.
+  - Import Excel ou CSV : tous les comptes sont des opérateurs ; un mot de passe provisoire est montré une seule fois à la fin (100 comptes au plus).
 - **Dans le code** : `src/views/admin/EmployeesManagement.tsx`
 
 ### Mon profil  `profile`
@@ -427,6 +431,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M8.1 Direction** | Une page de synthèse du mois, **sans nouveau calcul** | `src/utils/direction.ts` | aucune | `npm run check:direction` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
+| **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne ; le reste (visite guidée, blocage, 2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts` | aucune (réutilise les règles de saisie ; le serveur revérifie) | `npm run check:import`, `npm run check:import-page` |
 
 Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la version, le commit et le retour en arrière). Exemples : M5.1 et M5.2 en v26, M5.4 en v29 (sauvegarde n° 35), Mes tableaux en v31.
 
@@ -483,6 +488,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `hrFile.ts` | Dossier du salarié (module 5, M5.1) : règles pures, sans écran ni serveur. |
 | `i18n.ts` | — |
 | `imageUtils.ts` | Justificatif de remplacement (image SVG générée localement, sans service externe). |
+| `importFile.ts` | Import Excel et CSV (module 16, M16.1) : lire un fichier choisi par le responsable et le rendre en tableau de textes. |
+| `importRules.ts` | Import Excel et CSV (module 16, M16.1) : règles pures, sans écran, sans serveur, sans réseau, sans lecture de fichier. |
 | `invoiceDoc.ts` | Facture, avoir et reçu imprimables (A4), même méthode que le bulletin de paie : page claire isolée, tout échappé, « Imprimer » puis « Enregistrer en PDF ». |
 | `invoiceStats.ts` | Chiffres de facturation pour Finances, Statistiques et le rapport du mois (module 2, M2.8). Pur : sans écran, sans serveur. Contrôlé par `npm run check:invoice-stats`. |
 | `invoices.ts` | Facturation : règles pures (sans écran, sans serveur). Utilisées par l'écran « Facturation » et par `npm run check:invoices`. |
@@ -616,6 +623,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:guide` | (plusieurs contrôles) |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
+| `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |
+| `npm run check:import-page` | Essai de l'import Excel et CSV côté site (module 16, M16.1), sans écran réel ni réseau : boutons dans les 4 pages (FR et EN), |
 | `npm run check:clients-server` | Contrôle de la sécurité des clients dans le serveur df-api (module 1, étape M1.3), sans réseau. |
 | `npm run check:missions-link` | Contrôle de M1.5 (missions liées aux clients), sans réseau : règles pures, store en démo, accord avec le serveur, rendu FR et EN, branchement des formulaires. |
 | `npm run check:invoices-sql` | (plusieurs contrôles) |
@@ -726,7 +735,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 **Ce que le site ne fait pas (confirmé le 2026-10-24)** :
 - Pas de vraie comptabilité : pas de plan comptable, journal, grand livre, bilan, déclaration de TVA, rapprochement bancaire. La TVA se calcule **facture par facture** (taux réglable) sans total « TVA collectée ».
 - Pas de missions récurrentes ni de planning des équipes.
-- Pas d'import de fichiers Excel ou CSV (seulement des exports).
+- Import Excel ou CSV (M16.1) : clients, produits, salariés et tableaux libres, avec aperçu avant écriture. Pas encore : factures, missions, quantités de stock (à ajouter par des entrées).
 - Pas de mode sans internet **pour l'instant** : c'est le module M13 (en cours, par une autre session ; règles et copie locale chiffrée déjà écrites, rien n'est branché dans les écrans).
 - Pas de double vérification (2FA) ; blocage de mot de passe limité à 0,5 s entre deux essais.
 - Pas de plusieurs entreprises sur le même site (étude M17 proposée).

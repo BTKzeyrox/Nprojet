@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Copy, Download, FileText, Paintbrush, Plus, Redo2, Search, Table2, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Copy, Download, FileSpreadsheet, FileText, Paintbrush, Plus, Redo2, Search, Table2, Trash2, Undo2, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { todayMada } from '../utils/stats';
@@ -8,6 +8,7 @@ import { FUNCTION_NAMES, isErr, isFormula, showVal } from '../utils/sheetFormula
 import { loadSheets, clearLocal, hasLocal } from '../utils/sheetsStore';
 import { downloadExcel, downloadWord, printSheet } from '../utils/sheetExport';
 import { showToast } from './ToastHost';
+import { ImportDialog } from './ImportDialog';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
 let demoSeeded = false; // démo : les exemples ne reviennent pas après avoir été supprimés
@@ -57,6 +58,7 @@ export const MySheets: React.FC = () => {
     return db.isDemo() && !demoSeeded ? S.demoSheets(new Date().toISOString(), lang === 'en' ? 'en' : 'fr') : [];
   });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const [hist, setHist] = useState<S.History | null>(null);
   const [view, setView] = useState<S.View>({});
   const [panel, setPanel] = useState<'' | 'trash' | 'rules' | 'chart' | 'help' | 'export'>('');
@@ -109,6 +111,7 @@ export const MySheets: React.FC = () => {
   if (!cur || !comp) {
     return (
       <div className={`${box} space-y-4 max-w-3xl mx-auto`}>
+        {importing && !ro && <ImportDialog kind="sheet" onClose={() => setImporting(false)} onSheet={addSheet} />}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h2 className="font-tactical font-black text-white text-base sm:text-lg flex items-center gap-2"><Table2 className="w-5 h-5" />{ro ? t('Tableaux de l\'équipe', 'Team tables') : t('Mes tableaux', 'My tables')}</h2>
         </div>
@@ -116,7 +119,7 @@ export const MySheets: React.FC = () => {
         {!saveOk && <p className="text-xs text-red-300">{t('Cet appareil refuse l\'enregistrement (plein ou navigation privée). Télécharge ton travail avant de quitter.', 'This device refuses saving (full or private browsing). Download your work before leaving.')}</p>}
         {!ro && <div>
           <p className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
-          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}</div>
+          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={() => setImporting(true)}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
         </div>}
         {list.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (
           <ul className="space-y-2">{list.map(s => (

@@ -531,7 +531,7 @@ But : planifier et piloter l'équipe. **Déjà là, ne pas refaire** : Chef d'é
 
 But : rendre le site facile à adopter et plus sûr. **Le mode sans internet est le module 13 (en cours par une autre session) : ne pas le refaire ici.** **Déjà là, ne pas refaire** : assistant du site, carte du site, « Pourquoi ce chiffre ? », sauvegarde Excel, sauvegardes de nuit et restauration, journal d'audit, notifications push, mot de passe `scrypt`. **Manque (confirmé)** : import Excel ou CSV, visite guidée, blocage après trop d'essais (aujourd'hui 0,5 s entre deux essais), double vérification, export complet restaurable, rappels WhatsApp ou SMS.
 
-- [ ] **M16.1 — Import Excel et CSV** (M) : clients, salariés, produits, tableaux ; **aperçu et erreurs ligne par ligne, rien d'écrit avant la validation de BTK** ; modèle de fichier téléchargeable.
+- [x] **M16.1 — Import Excel et CSV** (M) — fait le 2026-10-25 (`src/utils/importRules.ts`, `importFile.ts`, `src/components/ImportDialog.tsx`, contrôles `check:import` et `check:import-page`) : clients, salariés, produits, tableaux ; **aperçu et erreurs ligne par ligne, rien d'écrit avant la validation de BTK** ; modèle de fichier téléchargeable.
 - [ ] **M16.2 — Visite guidée et aide** (S) : au premier lancement, par rôle ; réutilise les fiches de la carte du site.
 - [ ] **M16.3 — Blocage après trop d'essais** (M) : délai croissant, par compte et par adresse, trace dans le journal de sécurité ; ne bloque jamais le seul responsable sans moyen de reprise (décision de BTK).
 - [ ] **M16.4 — Double vérification (2FA)** (M) : facultative, par application (code à 6 chiffres), pour le responsable et le Comptable ; codes de secours.

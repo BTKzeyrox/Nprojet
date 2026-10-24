@@ -18,6 +18,8 @@
     "check:guide": "npx --yes tsx scripts/make-guide.ts check",
     "check:payslip": "npx --yes tsx scripts/check-payslip.ts",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
+    "check:import": "npx --yes tsx scripts/check-import.ts",
+    "check:import-page": "esbuild scripts/check-import-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-import-page.mjs && node node_modules/.cache/check-import-page.mjs",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",
     "check:missions-link": "esbuild scripts/check-missions-link.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-missions-link.mjs && node node_modules/.cache/check-missions-link.mjs",
     "check:invoices-sql": "node scripts/check-invoices-sql.mjs",

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { History, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { FileSpreadsheet, History, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ImportDialog } from '../../components/ImportDialog';
 import { db } from '../../db/store';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
@@ -25,6 +26,7 @@ const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [pEdit, setPEdit] = useState<ProductEditor | null>(null);
+  const [importing, setImporting] = useState(false);
   const [mEdit, setMEdit] = useState<MoveEditor | null>(null);
   const [error, setError] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null); // produit à supprimer
@@ -97,7 +99,10 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
           {tile(t('Sorties (période)', 'Exits (period)'), `${num(period.qtyOut)}`, 'text-amber-400')}
         </div>
         <p className="text-[11px] text-slate-500">{t('Valeur = quantité × prix d\'achat. La quantité se calcule avec les entrées, sorties et ajustements : on ne la saisit jamais.', 'Value = quantity × purchase price. The quantity is calculated from entries, exits and adjustments: it is never typed in.')}</p>
-        <button type="button" onClick={newProduct} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau produit', 'New product')}</button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button type="button" onClick={newProduct} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau produit', 'New product')}</button>
+          <button type="button" onClick={() => setImporting(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
+        </div>
       </div>
 
       {error && !pEdit && !mEdit && <div role="alert" className="text-sm text-rose-300">{error}</div>}
@@ -218,6 +223,8 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
           )}
         </div>
       )}
+
+      {importing && <ImportDialog kind="products" onClose={() => setImporting(false)} />}
 
       {pEdit && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" onClick={() => setPEdit(null)} {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
