@@ -17,7 +17,7 @@ const { todayMada } = await import('../src/utils/stats');
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
 const bad = (html: string) => /NaN|Infinity|undefined|\[object|\bnull\b/.test(html);
-const view = (lang: 'fr' | 'en', tab: 'leaves' | 'dossiers') => { mem.delta_lang = lang; return renderToString(<AppProvider><HrPage currentUser={db.getCurrentUser() as any} initialTab={tab} /></AppProvider>).replace(/<!-- -->/g, ''); };
+const view = (lang: 'fr' | 'en', tab: 'leaves' | 'dossiers' | 'reviews') => { mem.delta_lang = lang; return renderToString(<AppProvider><HrPage currentUser={db.getCurrentUser() as any} initialTab={tab} /></AppProvider>).replace(/<!-- -->/g, ''); };
 const shift = (d: string, k: number) => new Date(Date.parse(d + 'T00:00:00Z') + k * 86400000).toISOString().slice(0, 10);
 const nextMonday = (from: string) => { let d = shift(from, 1); while (new Date(d + 'T00:00:00Z').getUTCDay() !== 1) d = shift(d, 1); return d; };
 
@@ -28,7 +28,7 @@ ok(db.getLeaves().length === 5 && ['pending', 'approved', 'rejected'].every(s =>
 ok(db.getLeaves().every(l => people.some(p => p.id === l.employee_id) && l.days >= 1 && l.start_date <= l.end_date), 'démo : chaque congé a un vrai salarié et des dates cohérentes');
 ok(people.filter(u => u.hr).length === 5 && people.every(u => !u.hr || checkOk(u.hr)), 'démo : 5 dossiers, tous valides');
 function checkOk(hr: any) { return (db as any).constructor && true && hr.position !== undefined; }
-for (const lang of ['fr', 'en'] as const) for (const tab of ['leaves', 'dossiers'] as const) {
+for (const lang of ['fr', 'en'] as const) for (const tab of ['leaves', 'dossiers', 'reviews'] as const) {
   const html = view(lang, tab);
   ok(html.length > 500 && !bad(html), `admin ${lang} ${tab} : la page s'affiche, sans NaN ni undefined`);
 }
@@ -50,6 +50,16 @@ const r2 = db.requestLeave({ employee_id: emp.id, type: 'sick', start_date: mon,
 ok(r2.success && db.getLeaves().find(l => l.id === r2.id)?.status === 'approved', 'admin : congé enregistré déjà accepté');
 const co = (db.getSettings() as any).company;
 ok(db.decideLeave('nope', 'approved').error === 'missing' && !!co, 'congé inconnu : refusé');
+
+// ---------- évaluations (admin) ----------
+ok(db.getReviews().length === 2 && db.getReviews().some(r => r.status === 'shared') && db.getReviews().some(r => r.status === 'draft'), 'démo : 2 fiches (une partagée, un brouillon)');
+const rv = db.saveReview({ employee_id: 'demo_u4', period_start: shift(today, -89), period_end: today, status: 'draft', objectives: [{ id: 'a', text: 'Objectif test' }], comments: 'Ok', improvements: 'Privé' });
+ok(rv.success && db.getReviews().find(r => r.id === rv.id)?.status === 'draft', 'admin : brouillon créé');
+ok(db.saveReview({ employee_id: 'demo_u4', period_start: today, period_end: shift(today, -5), status: 'draft', objectives: [] }).error === 'period' && db.saveReview({ employee_id: '', period_start: today, period_end: today, status: 'draft', objectives: [] }).error === 'employee', 'admin : période fausse ou salarié absent refusés');
+ok(db.saveReview({ id: rv.id, period_start: shift(today, -89), period_end: today, status: 'shared', objectives: [{ id: 'a', text: 'Objectif test' }], rating: 9 }).error === 'rating', 'admin : note 9 refusée');
+ok(db.saveReview({ id: rv.id, period_start: shift(today, -89), period_end: today, status: 'shared', objectives: [{ id: 'a', text: 'Objectif test' }], comments: 'Ok', improvements: 'Privé', rating: 4 }).success && db.getReviews().find(r => r.id === rv.id)?.status === 'shared', 'admin : partage de la fiche');
+ok(db.saveReview({ id: rv.id, period_start: shift(today, -89), period_end: today, status: 'draft', objectives: [] }).error === 'transition', 'admin : une fiche partagée ne redevient pas brouillon');
+ok(db.deleteReview(rv.id!).success && !db.getReviews().some(r => r.id === rv.id), 'admin : suppression');
 
 // dossiers
 ok(db.setUserHr(emp.id, { position: 'Chef', hire_date: '2025-02-30' }).error === 'hire_date', 'dossier : date impossible refusée');
@@ -74,7 +84,13 @@ ok(db.requestLeave({ type: 'paid', start_date: shift(today, -90), end_date: shif
 ok(db.decideLeave(q1.id!, 'approved').error === 'transition', 'salarié : ne peut pas accepter sa propre demande');
 ok(db.decideLeave(q1.id!, 'cancelled').success && db.getLeaves().find(l => l.id === q1.id)?.status === 'cancelled', 'salarié : annule sa demande en attente');
 ok(db.decideLeave(q1.id!, 'approved').error === 'transition', 'salarié : une demande annulée ne se rouvre pas');
-for (const lang of ['fr', 'en'] as const) for (const tab of ['leaves', 'dossiers'] as const) {
+// ---------- évaluations (salarié) ----------
+ok(db.getReviews().length === 1 && db.getReviews()[0].employee_id === me.id && db.getReviews()[0].status === 'shared', 'salarié : seulement SA fiche partagée (pas le brouillon des autres)');
+ok(!('improvements' in db.getReviews()[0]), 'salarié : jamais les points à améliorer');
+ok(db.saveReview({ employee_id: me.id, period_start: today, period_end: today, status: 'draft', objectives: [] }).error === 'forbidden' && db.deleteReview(db.getReviews()[0].id).error === 'forbidden', 'salarié : ne crée ni ne supprime une fiche');
+ok(db.acknowledgeReview(db.getReviews()[0].id).success && db.acknowledgeReview('nope').error === 'id', 'salarié : accuse lecture (déjà lue : rien ne change)');
+ok(!view('fr', 'reviews').includes('Prévenir plus tôt') && view('fr', 'reviews').includes('Garder 90 %'), 'salarié : la page ne montre pas les points à améliorer');
+for (const lang of ['fr', 'en'] as const) for (const tab of ['leaves', 'dossiers', 'reviews'] as const) {
   const html = view(lang, tab);
   ok(html.length > 300 && !bad(html), `salarié ${lang} ${tab} : la page s'affiche, sans NaN ni undefined`);
 }

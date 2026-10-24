@@ -2,6 +2,7 @@
 // Règles pures : aucun écran, aucun serveur, aucune table. Tout est CALCULÉ (rien n'est donné à la main) et toujours EXPLIQUÉ (« pourquoi »).
 // Décisions : voir TODO_MODULES.md, étape M3.1. Dates = textes « AAAA-MM-JJ » (jour de Madagascar), calculs en UTC.
 import type { ClientContract, PostSession, User } from '../types';
+import { workingDays } from './leaves';
 import { addDays, daysBetween } from './stats';
 
 export interface Bilingual { fr: string; en: string }
@@ -108,6 +109,7 @@ export interface PerformanceInput {
   cfg?: unknown; // réglages (nettoyés par cleanPerformanceConfig)
   lateLimitTime?: string; // « HH:MM » : heure limite de retard des Conditions ; vide = ponctualité non calculée
   workDaysPerWeek?: number; // jours travaillés par semaine des Conditions ; 0 ou vide = valeur de départ
+  leaves?: { id?: string; employee_id: string; start_date: string; end_date: string; status: string }[]; // congés (M5.2) : les jours de congé ACCEPTÉ sortent des jours attendus (régularité)
 }
 
 export interface PerformanceResult {
@@ -195,7 +197,7 @@ function metricsFor(rows: Row[], user: User, range: Range, cfg: PerformanceConfi
 
 interface Evaluated { user: User; m: Metrics; components: Components; score: number | null; enough: boolean }
 
-function evaluate(rowsByEmp: Map<string, Row[]>, employees: User[], range: Range, cfg: PerformanceConfig, lateLimit: string, workDays: number): { list: Evaluated[]; team: PerformanceResult['team']; teamPerHour: number | null } {
+function evaluate(rowsByEmp: Map<string, Row[]>, employees: User[], range: Range, cfg: PerformanceConfig, lateLimit: string, workDays: number, leaves: PerformanceInput['leaves'] = []): { list: Evaluated[]; team: PerformanceResult['team']; teamPerHour: number | null } {
   const sundayFree = workDays !== 7;
   const metrics = employees.map(u => ({ user: u, m: metricsFor(rowsByEmp.get(u.id) || [], u, range, cfg, lateLimit, sundayFree) }));
   const workers = metrics.filter(x => x.m.done > 0);
@@ -204,6 +206,16 @@ function evaluate(rowsByEmp: Map<string, Row[]>, employees: User[], range: Range
   const teamPerHour = teamHours > 0 ? workers.reduce((t, x) => t + x.m.timedDone, 0) / teamHours : null;
   const expected = Math.max(1, Math.round((range.days * workDays) / 7));
   const w = cfg.weights;
+  // Jours de congé accepté dans la fenêtre : ils ne sont pas des jours « attendus » pour CE salarié (jamais plus que tous les jours attendus moins un)
+  const leaveDaysOf = (id: string): number => {
+    let n = 0;
+    for (const l of leaves || []) {
+      if (l.employee_id !== id || l.status !== 'approved' || !DATE_RE.test(String(l.start_date)) || !DATE_RE.test(String(l.end_date))) continue;
+      const s = l.start_date > range.start ? l.start_date : range.start, e = l.end_date < range.end ? l.end_date : range.end;
+      if (s <= e) n += workingDays(s, e, workDays);
+    }
+    return Math.min(n, expected - 1);
+  };
 
   const list: Evaluated[] = metrics.map(({ user, m }) => {
     const enough = m.decided >= cfg.score_min_missions;
@@ -211,7 +223,7 @@ function evaluate(rowsByEmp: Map<string, Row[]>, employees: User[], range: Range
       quality: m.rate,
       volume: workers.length >= 2 && avgDone && avgDone > 0 ? Math.max(0, Math.min(100, (100 * m.done) / (1.2 * avgDone))) : null,
       punctuality: m.workedDays >= 5 ? (100 * (m.workedDays - m.lateDays)) / m.workedDays : null,
-      regularity: Math.max(0, Math.min(100, (100 * m.activeDays) / expected)),
+      regularity: Math.max(0, Math.min(100, (100 * m.activeDays) / Math.max(1, expected - leaveDaysOf(user.id)))),
     };
     let score: number | null = null;
     if (enough) {
@@ -298,7 +310,7 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
   for (const r of rows) { const l = rowsByEmp.get(r.emp); if (l) l.push(r); else rowsByEmp.set(r.emp, [r]); }
 
   // 3 fenêtres : la plus récente d'abord (score), puis les deux d'avant (tendance sur 90 jours)
-  const ev = [0, 1, 2].map(k => evaluate(rowsByEmp, employees, rangeOf(addDays(today, -k * cfg.window_days), cfg.window_days), cfg, lateLimit, workDays));
+  const ev = [0, 1, 2].map(k => evaluate(rowsByEmp, employees, rangeOf(addDays(today, -k * cfg.window_days), cfg.window_days), cfg, lateLimit, workDays, input.leaves));
   const prevById = new Map(ev[1].list.map(x => [x.user.id, x]));
   const out = new Map<string, EmployeePerformance>();
   const last7 = (id: string) => (rowsByEmp.get(id) || []).filter(r => r.status === 'completed' && r.date >= addDays(today, -6) && r.date <= today).length;

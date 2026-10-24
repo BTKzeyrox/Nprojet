@@ -18,7 +18,7 @@ export function performanceInput(): PerformanceInput {
   const leave = readCompany(settings.company).leave;
   return {
     users: db.getUsers(), posts: db.getPosts(), contracts: db.getContracts(), today: todayMada(),
-    cfg: performanceConfigOf(settings), lateLimitTime: leave.late_limit_time, workDaysPerWeek: leave.work_days_per_week,
+    cfg: performanceConfigOf(settings), lateLimitTime: leave.late_limit_time, workDaysPerWeek: leave.work_days_per_week, leaves: db.getLeaves(),
   };
 }
 
@@ -29,7 +29,7 @@ function signature(input: PerformanceInput): string {
   for (const p of input.posts) { feed(p.id); feed(p.status); feed(p.date); feed(p.start_time || ''); feed(p.end_time || ''); feed(p.employee_id); }
   for (const u of input.users) { feed(u.id); feed(u.role); feed(u.status); feed(u.shift || ''); }
   for (const c of input.contracts) { feed(String(c.post_number ?? '')); feed(c.client_name || ''); feed(c.post_type || ''); }
-  return `${input.today}|${input.posts.length}|${input.users.length}|${input.lateLimitTime}|${input.workDaysPerWeek}|${JSON.stringify(input.cfg ?? null)}|${h}`;
+  return `${input.today}|${input.posts.length}|${input.users.length}|${input.lateLimitTime}|${input.workDaysPerWeek}|${(input.leaves || []).map(l => (l.id || '') + l.status + l.start_date + l.end_date).join(',')}|${JSON.stringify(input.cfg ?? null)}|${h}`;
 }
 
 /** Score, badges et tendance de chaque salarié actif, recalculés quand les données changent. */

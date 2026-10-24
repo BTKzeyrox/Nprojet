@@ -5,6 +5,7 @@ import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, Invoic
 
 import { clientPriceForPost } from '../utils/clientPrice';
 import { workingDays, type Leave } from '../utils/leaves';
+import type { Review } from '../utils/reviews';
 import type { HrFile } from '../utils/hrFile';
 import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
 
@@ -62,6 +63,7 @@ const MISSIONS: { title: string; type: string; desc: string }[] = [
 export interface DemoData {
   users: User[];
   leaves: Leave[];
+  reviews: Review[];
   contracts: ClientContract[];
   posts: PostSession[];
   advances: SalaryAdvanceRequest[];
@@ -338,6 +340,24 @@ function buildDemoLeaves(): Leave[] {
   ];
 }
 
+/** Deux fiches d'évaluation inventées : une partagée (déjà lue), un brouillon. Scores fictifs. */
+function buildDemoReviews(): Review[] {
+  const at = iso(daysAgo(20), 10), snap = { score: 78, components: { quality: 92, volume: 71, punctuality: 85, regularity: 64 }, badges: [{ id: 'quality', level: 2 as const }], done: 24, decided: 26, rate: 92, taken_at: at };
+  return [
+    {
+      id: 'demo_rv1', employee_id: 'demo_u1', employee_name: 'Camille Durand', period_start: ymd(daysAgo(110)), period_end: ymd(daysAgo(21)), status: 'shared',
+      objectives: [{ id: 'demo_o1', text: 'Garder 90 % de missions validées', done: true }, { id: 'demo_o2', text: 'Prendre 2 missions de type différent' }],
+      strengths: 'Travail très soigné, preuves toujours claires.', comments: 'Bon trimestre. Objectif : élargir les types de missions.', improvements: 'Prévenir plus tôt en cas de retard.', rating: 4, snapshot: snap,
+      shared_at: at, acknowledged_at: iso(daysAgo(18), 9), acknowledged_by: 'demo_u1', created_by: DEMO_ADMIN_ID, created_at: at, updated_at: at,
+    },
+    {
+      id: 'demo_rv2', employee_id: 'demo_u2', employee_name: 'Noé Lambert', period_start: ymd(daysAgo(110)), period_end: ymd(daysAgo(21)), status: 'draft',
+      objectives: [{ id: 'demo_o3', text: 'Réduire les refus à moins de 5 %' }], comments: "À discuter à l'entretien.", improvements: 'Relire les consignes avant de commencer.',
+      snapshot: { ...snap, score: 64, components: { quality: 80, volume: 60, punctuality: 70, regularity: 55 }, badges: [], done: 18, decided: 22, rate: 82 }, created_by: DEMO_ADMIN_ID, created_at: at, updated_at: at,
+    },
+  ];
+}
+
 function buildDemoClients(): Client[] {
   const at = iso(daysAgo(240), 9);
   const mk = (id: string, name: string, contact: string, phone: string, extra: Partial<Client> = {}): Client => ({
@@ -532,5 +552,5 @@ export function buildDemoData(): DemoData {
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
   const buy = buildDemoPurchasing(products, stock, inv.cash);
   const quotes = buildDemoQuotes(clients, inv.invoices);
-  return { users, leaves: buildDemoLeaves(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
+  return { users, leaves: buildDemoLeaves(), reviews: buildDemoReviews(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
 }

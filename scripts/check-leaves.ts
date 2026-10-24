@@ -2,6 +2,7 @@
 // Lancer : npm run check:leaves
 import fs from 'node:fs';
 import { transformSync } from 'esbuild';
+import { computePerformance } from '../src/utils/performanceScore';
 import { checkLeave, workingDays, leaveOn, leaveBalance, paidUsed, leaveReasonText, type Leave } from '../src/utils/leaves';
 
 let fails = 0, n = 0;
@@ -138,6 +139,25 @@ ok(/await step\('leaves', async \(\) => \{ await sb\.from\(T\.leaves\)\.delete\(
 ok(!/col === 'leaves'[^\n]*\n[^\n]*ok = true/.test(server), 'aucune ouverture de suppression de congé pour un salarié (le chemin générique refuse)');
 const mig = read('supabase/migrations/20261023_create_df_leaves.sql');
 ok(/enable row level security/.test(mig) && /revoke all on public\.df_leaves from anon, authenticated/.test(mig) && /drop table public\.df_leaves/.test(mig), 'migration : RLS, aucun accès public, retour en arrière écrit');
+
+// --- score de performance : un congé accepté ne baisse pas la régularité ---
+{
+  const day = (back: number) => new Date(Date.parse(`${TODAY}T00:00:00Z`) - back * 86400000).toISOString().slice(0, 10);
+  const user = { id: 'u1', name: 'Marie', username: 'u1', role: 'employee', status: 'active', shift: 'day' } as any;
+  const post = (i: number) => ({ id: 'p' + i, employee_id: 'u1', employee_name: 'Marie', client_name: 'M', account_tag: '', target_score: 10, initial_score: 0, current_score: 10, remaining_score: 0, status: 'completed', shift_type: 'day', date: day(1 + i), start_time: '08:05:00', end_time: '10:30:00', start_proof_url: '', end_proof_url: '', calculated_ar: 5000, created_at: `${day(1 + i)}T05:00:00Z`, updated_at: `${day(1 + i)}T07:30:00Z` });
+  const posts = Array.from({ length: 10 }, (_, i) => post(i)) as any; // 10 jours de suite, puis rien : 20 jours « manqués » dans la fenêtre de 30 jours
+  const base = { users: [user], posts, contracts: [], today: TODAY, lateLimitTime: '', workDaysPerWeek: 6 };
+  const reg = (leaves?: any[]) => computePerformance({ ...base, leaves } as any).employees.get('u1')!.components.regularity as number;
+  const r0 = reg(undefined);
+  const lv = (status: string) => [{ id: 'z', employee_id: 'u1', start_date: day(29), end_date: day(12), status }];
+  ok(reg(lv('approved')) > r0, 'régularité : un congé accepté sur des jours sans mission la fait monter');
+  ok(reg(lv('pending')) === r0 && reg(lv('rejected')) === r0 && reg(lv('cancelled')) === r0, 'régularité : demande en attente, refusée ou annulée : aucun effet');
+  ok(reg([{ id: 'z', employee_id: 'u2', start_date: day(29), end_date: day(12), status: 'approved' }]) === r0, 'régularité : le congé d\'un autre salarié ne change rien');
+  ok(reg([{ id: 'z', employee_id: 'u1', start_date: day(400), end_date: day(380), status: 'approved' }]) === r0, 'régularité : un congé hors de la fenêtre ne change rien');
+  const full = reg([{ id: 'z', employee_id: 'u1', start_date: day(400), end_date: day(-400), status: 'approved' }]);
+  ok(Number.isFinite(full) && full >= 0 && full <= 100, 'régularité : un congé qui couvre tout reste entre 0 et 100 (jamais de division par zéro)');
+  ok(reg([{ id: 'z', employee_id: 'u1', start_date: 'faux', end_date: day(12), status: 'approved' }]) === r0, 'régularité : congé avec une date fausse ignoré');
+}
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

@@ -12,6 +12,7 @@ import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_CO
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
+import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
 import { checkHrFile, type HrFile } from '../utils/hrFile';
 import { todayMada as madaToday } from '../utils/stats';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
@@ -53,7 +54,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'reviews'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -115,6 +116,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
+  reviews: (a, b) => String(b.period_end || '').localeCompare(String(a.period_end || '')) || String(a.id).localeCompare(String(b.id)),
   leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
@@ -162,6 +164,7 @@ class DeltaForceStore {
   private quotes: Quote[] = []; // devis (admin et Comptable)
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
+  private reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
   private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
@@ -205,7 +208,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(),
     };
   }
 
@@ -229,6 +232,7 @@ class DeltaForceStore {
       case 'suppliers': return this.suppliers;
       case 'purchases': return this.purchases;
       case 'leaves': return this.leaves;
+      case 'reviews': return this.reviews;
     }
   }
 
@@ -252,6 +256,7 @@ class DeltaForceStore {
       case 'suppliers': this.suppliers = value; break;
       case 'purchases': this.purchases = value; break;
       case 'leaves': this.leaves = value; break;
+      case 'reviews': this.reviews = value; break;
     }
   }
 
@@ -740,6 +745,46 @@ class DeltaForceStore {
       const { hr: _old, ...rest } = x;
       return (v.hr ? { ...rest, hr: v.hr } : rest) as User;
     });
+    this.notify();
+    return { success: true };
+  }
+
+  // Évaluations (M5.4). Mêmes règles que le serveur (`checkReview`). Le responsable écrit ; le salarié lit ses fiches partagées et accuse lecture.
+  public getReviews(): Review[] { return [...this.reviews]; }
+  public saveReview(d: { id?: string; employee_id?: string; period_start: string; period_end: string; status: 'draft' | 'shared'; objectives: { id: string; text: string; done?: boolean }[]; strengths?: string; comments?: string; improvements?: string; rating?: number | null; snapshot?: Review['snapshot'] }): { success: boolean; error?: string; id?: string } {
+    const me = this.currentUser;
+    if (!me || me.role !== 'admin') return { success: false, error: 'forbidden' };
+    const old = d.id ? this.reviews.find(r => r.id === d.id) : undefined;
+    if (d.id && !old) return { success: false, error: 'id' };
+    const empId = old ? old.employee_id : String(d.employee_id || '');
+    const emp = this.users.find(u => u.id === empId);
+    if (!emp || emp.role === 'admin') return { success: false, error: 'employee' };
+    const id = old ? old.id : `rv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+    const rec = { ...(old || {}), ...d, id, employee_id: empId, employee_name: emp.name, rating: d.rating ?? undefined };
+    const v = checkReview(rec, old, { id: me.id, admin: true }, now);
+    if (!v.ok) return { success: false, error: v.reason };
+    this.reviews = old ? this.reviews.map(r => (r.id === id ? (v.save as Review) : r)) : [v.save as Review, ...this.reviews];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Le salarié marque sa fiche partagée comme lue. */
+  public acknowledgeReview(id: string): { success: boolean; error?: string } {
+    const me = this.currentUser;
+    if (!me) return { success: false, error: 'forbidden' };
+    const old = this.reviews.find(r => r.id === id);
+    if (!old) return { success: false, error: 'id' };
+    const now = new Date().toISOString();
+    const v = checkReview({ ...old, acknowledged_at: now }, old, { id: me.id, admin: me.role === 'admin' }, now);
+    if (!v.ok) return { success: false, error: v.reason };
+    this.reviews = this.reviews.map(r => (r.id === id ? (v.save as Review) : r));
+    this.notify();
+    return { success: true };
+  }
+  public deleteReview(id: string): { success: boolean; error?: string } {
+    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'forbidden' };
+    if (!this.reviews.some(r => r.id === id)) return { success: false, error: 'id' };
+    this.reviews = this.reviews.filter(r => r.id !== id);
     this.notify();
     return { success: true };
   }
@@ -1443,6 +1488,7 @@ class DeltaForceStore {
     this.quotes = role === 'admin' ? d.quotes : [];
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
+    this.reviews = role === 'admin' ? d.reviews : d.reviews.filter(r => r.employee_id === 'demo_u1' && r.status === 'shared').map(r => forEmployeeReview(r) as Review);
     this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
