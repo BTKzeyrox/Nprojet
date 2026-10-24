@@ -24,7 +24,6 @@
     "check:health": "npx --yes tsx scripts/check-health.ts",
     "check:health-lot1": "npx --yes tsx scripts/check-health-lot1.ts",
     "check:badges": "npx --yes tsx scripts/check-badges.ts",
-    "check:module3": "npm run check:badges && npm run check:performance-config && npm run check:client-badges && npm run check:recognition && npm run check:performance-export && npm run check:performance-page && npm run check:company && npm run check:site-map",
     "check:performance-export": "npx --yes tsx scripts/check-performance-export.ts",
     "check:recognition": "npx --yes tsx scripts/check-recognition.ts",
     "check:client-badges": "npx --yes tsx scripts/check-client-badges.ts",
