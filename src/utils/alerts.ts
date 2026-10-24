@@ -10,7 +10,8 @@ import type { StatsTab } from './statsNav';
 import { receivablesAlert, toChase } from './receivables';
 import { budgetRows } from './purchasing';
 import type { Invoice } from '../types';
-import { canonicalClientName, clientMissionsFromPosts, clientReceived, type ClientRecord } from './clients';
+import { canonicalClientName, clientMissionsFromPosts, clientReceived, summarizeClients, type ClientRecord } from './clients';
+import { clientBadgeAlert, computeClientBadges } from './clientBadges';
 
 export type AlertLevel = 'danger' | 'warn';
 export interface AlertItem {
@@ -150,6 +151,15 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     for (const c of i.clients || []) names[c.id] = c.name;
     const ra = receivablesAlert(toChase(i.invoices, i.cash, i.today, names));
     if (ra) out.push({ id: 'invoices_overdue', level: ra.level, go: 'invoices', fr: ra.fr, en: ra.en });
+  }
+
+  // 8. Clients à surveiller (module 3) : facture en retard de plus de 60 jours, ou payeur lent
+  if (i.invoices && i.invoices.length && i.clients && i.clients.length) {
+    const prices = { client_price_default_ar: s.client_price_default_ar, client_prices_by_type: s.client_prices_by_type };
+    const missions = clientMissionsFromPosts(i.posts, i.contracts, i.clients, prices);
+    const summaries = summarizeClients(i.clients, missions, i.today);
+    const ca = clientBadgeAlert(computeClientBadges({ clients: i.clients, summaries, missions, invoices: i.invoices, cash: i.cash, today: i.today }));
+    if (ca) out.push({ id: 'clients_watch', level: ca.level, go: 'clients', fr: `${ca.fr}.`, en: `${ca.en}.` });
   }
 
   const order = { danger: 0, warn: 1 } as const;

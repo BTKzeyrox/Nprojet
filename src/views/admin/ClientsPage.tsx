@@ -13,6 +13,8 @@ import {
 } from '../../utils/clients';
 import type { Client } from '../../types';
 import { MissionsToLink } from './MissionsToLink';
+import { computeClientBadges } from '../../utils/clientBadges';
+import { ClientBadgeChips, ClientRelationCard } from '../../components/ClientBadges';
 
 // Page « Clients » (responsable seulement) : liste, fiche, création, modification, archivage.
 // Le statut (Nouveau, Régulier, Stratégique, Inactif…) n'est JAMAIS saisi : il se calcule avec les missions validées (src/utils/clients.ts)
@@ -43,7 +45,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState<ClientStatus | 'all' | 'archived'>('all');
+  const [status, setStatus] = useState<ClientStatus | 'all' | 'archived' | 'attention'>('all');
   const [sort, setSort] = useState<ClientSort>('status');
   const [openId, setOpenId] = useState<string | null>(initialOpen ?? null); // `initialOpen` : seulement pour le contrôle automatique
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -59,13 +61,18 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
     const prices = { client_price_default_ar: settings.client_price_default_ar, client_prices_by_type: settings.client_prices_by_type };
     const missions = clientMissionsFromPosts(db.getPosts(), db.getContracts(), clients, prices);
     const summaries = summarizeClients(clients, missions, today, clientThresholds(company));
-    return { clients, summaries, money: clientReceived(db.getCash(), clients), company, types: settings.post_types || [] };
+    const perf = computeClientBadges({ clients, summaries, missions, invoices: db.getInvoices(), cash: db.getCash(), today }); // badges et score de relation (module 3)
+    return { clients, summaries, perf, money: clientReceived(db.getCash(), clients), company, types: settings.post_types || [] };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ver, today]);
-  const { clients, summaries, money, company, types } = data;
+  const { clients, summaries, perf, money, company, types } = data;
 
   const counts = useMemo(() => countByStatus(clients, summaries), [clients, summaries]);
-  const rows = useMemo(() => filterClients(clients, summaries, { q, status, sort }), [clients, summaries, q, status, sort]);
+  const attentionCount = useMemo(() => clients.filter(c => c.active !== false && (perf.clients.get(c.id)?.attention.length || 0) > 0).length, [clients, perf]);
+  const rows = useMemo(() => {
+    if (status !== 'attention') return filterClients(clients, summaries, { q, status, sort });
+    return filterClients(clients, summaries, { q, status: 'all', sort }).filter(c => (perf.clients.get(c.id)?.attention.length || 0) > 0);
+  }, [clients, summaries, perf, q, status, sort]);
   const revenue12 = useMemo(() => clients.filter(c => c.active !== false).reduce((n, c) => n + (summaries.get(c.id)?.revenue_12m || 0), 0), [clients, summaries]);
   const ar = (n: number) => formatCurrencyAr(n);
   const lbl = (s: ClientStatus) => (lang === 'en' ? CLIENT_STATUS_LABEL[s].en : CLIENT_STATUS_LABEL[s].fr);
@@ -129,6 +136,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
         </label>
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('Filtrer par statut', 'Filter by status')}>
           <button type="button" role="tab" aria-selected={status === 'all'} onClick={() => setStatus('all')} className={chip(status === 'all')}>{t('Tous', 'All')} ({counts.all})</button>
+          {attentionCount > 0 && <button type="button" role="tab" aria-selected={status === 'attention'} onClick={() => setStatus('attention')} className={chip(status === 'attention')}>{t('Points d\'attention', 'Needs attention')} ({attentionCount})</button>}
           {STATUS_ORDER.map(s => (
             <button key={s} type="button" role="tab" aria-selected={status === s} onClick={() => setStatus(s)} className={chip(status === s)}>{lbl(s)} ({counts[s]})</button>
           ))}
@@ -165,6 +173,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                         {s.revenue_12m > 0 ? ` · ${ar(s.revenue_12m)} ${t('sur 12 mois', 'over 12 months')}` : ''}
                         {s.days_since_last !== null ? ` · ${since(s.days_since_last)}` : ''}
                       </div>
+                      {(perf.clients.get(c.id)?.badges.length || 0) > 0 && <div className="mt-1"><ClientBadgeChips badges={perf.clients.get(c.id)!.badges} lang={lang} /></div>}
                     </div>
                     <div className="flex flex-wrap justify-end gap-1 max-w-[45%]">
                       {s.statuses.map(st => <span key={st} className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${TONE[st]}`}>{lbl(st)}</span>)}
@@ -201,6 +210,8 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                         {Object.entries(c.price_by_type || {}).map(([k, v]) => <div key={k} className="text-slate-300">· {k} : <b>{ar(v)}</b></div>)}
                         {s.first_date && <div>{t('Première mission', 'First mission')} : <b>{fmtDate(s.first_date)}</b></div>}
                       </div>
+
+                      {perf.clients.get(c.id) && <ClientRelationCard p={perf.clients.get(c.id)!} cfg={perf.cfg} lang={lang} />}
 
                       <div className="rounded-lg bg-slate-900/60 border border-slate-800 p-2 space-y-1">
                         {s.statuses.map(st => <div key={st} className="text-[12px] text-slate-300"><span className={`inline-block text-[11px] font-semibold rounded-full px-2 py-0.5 mr-1.5 ${TONE[st]}`}>{lbl(st)}</span>{lang === 'en' ? CLIENT_STATUS_LABEL[st].help_en : CLIENT_STATUS_LABEL[st].help_fr}</div>)}

@@ -14,6 +14,10 @@ const { AppProvider } = await import('../src/context/AppContext');
 const { PerformanceScores } = await import('../src/views/admin/PerformanceScores');
 const { PerformancePage } = await import('../src/views/admin/PerformancePage');
 const { MyPerformance } = await import('../src/components/MyPerformance');
+const { ClientsPage } = await import('../src/views/admin/ClientsPage');
+const { computeClientBadges } = await import('../src/utils/clientBadges');
+const { summarizeClients, clientMissionsFromPosts } = await import('../src/utils/clients');
+const { todayMada } = await import('../src/utils/stats');
 const { PerformanceSettings, fromRaw } = await import('../src/components/PerformanceSettings');
 const { PERFORMANCE_DEFAULTS } = await import('../src/utils/performanceScore');
 const { performanceInput, badgeAccess, canSeeProfileBadges } = await import('../src/utils/usePerformance');
@@ -142,6 +146,35 @@ for (const lang of ['fr', 'en'] as const) {
   (db as any).updateSettings({ performance: undefined });
   ok(computePerformance(performanceInput()).cfg.window_days === 30, 'sans réglage enregistré : valeurs de départ');
   void s;
+}
+
+
+// ---------- badges et score de relation des clients (M3.6), démo responsable ----------
+{
+  db.enterDemo('admin');
+  const showClients = (lang: 'fr' | 'en', open?: string) => show(<ClientsPage initialOpen={open} />, lang);
+  const cls = db.getClients(), st = db.getSettings() as any;
+  const ms = clientMissionsFromPosts(db.getPosts(), db.getContracts(), cls, { client_price_default_ar: st.client_price_default_ar, client_prices_by_type: st.client_prices_by_type });
+  const pf = computeClientBadges({ clients: cls, summaries: summarizeClients(cls, ms, todayMada()), missions: ms, invoices: db.getInvoices(), cash: db.getCash(), today: todayMada() });
+  const withAttention = cls.filter(c => (pf.clients.get(c.id)?.attention.length || 0) > 0);
+  const watch = cls.find(c => pf.clients.get(c.id)!.badges.some(b => b.id === 'watch'));
+  ok(!!watch && withAttention.length >= 1, `démo clients : ${withAttention.length} client(s) avec point d'attention`);
+  const fr = showClients('fr'), en = showClients('en');
+  ok(fr.includes('À surveiller') && fr.includes('Gros volume'), 'clients : badges « À surveiller » et « Gros volume » dans la liste');
+  ok(en.includes('To watch') && en.includes('High volume'), 'clients (anglais) : badges traduits');
+  ok(fr.includes(`Points d'attention (${withAttention.length})`) && en.includes(`Needs attention (${withAttention.length})`), 'clients : filtre « Points d\'attention » avec le bon nombre');
+  ok(!bad(fr + en), 'clients : aucun NaN ni « undefined » affichés');
+  const open = showClients('fr', watch!.id);
+  ok(open.includes('Score de relation') && open.includes('Ponctualité de paiement') && open.includes('Régularité des commandes'), 'fiche client ouverte : score de relation et ses 3 parties');
+  ok(/Facture FA-[^ ]+ en retard de \d+ jours/.test(open), 'fiche client ouverte : « À surveiller » dit pourquoi (facture, jours de retard)');
+  ok(showClients('en', watch!.id).includes('Relationship score'), 'fiche client ouverte (anglais) : score de relation');
+  // l'alerte d'accueil
+  const { getAdminAlerts } = await import('../src/utils/alertsDb');
+  const al = getAdminAlerts().find(a => a.id === 'clients_watch');
+  ok(!!al && al.go === 'clients' && /à surveiller/.test(al.fr) && /to watch/.test(al.en), 'accueil : alerte « clients à surveiller » qui ouvre la page Clients');
+  // un salarié n'a ni clients ni alerte
+  db.enterDemo('employee');
+  ok(getAdminAlerts().length === 0 && db.getClients().length === 0, 'opérateur : aucune alerte d\'admin, aucun client');
 }
 
 ok(calls === 0, `aucun appel réseau (${calls})`);
