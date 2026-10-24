@@ -2,7 +2,7 @@
 
 But : savoir vite **ce qui existe, ce qui marche, comment c'est protégé et que faire en cas de panne**.
 Pour travailler sur le code : `LIRE_EN_PREMIER.md`, puis `AI_STUDIO.md`, puis `HANDOVER.md`. Liste à faire : `TODO.md`.
-Mis à jour : 2026-10-20. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
+Mis à jour : 2026-10-24. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
 
 ## 1. À propos
 - **Gestion Pro** : gestion du travail à la tâche. Le responsable crée des missions, les opérateurs les font et envoient des preuves, le responsable valide. Projet de démonstration pour le CV de BTK (copie de DF-boosting, qui reste en lecture seule).
@@ -20,8 +20,8 @@ Mis à jour : 2026-10-20. « Non testé à l'écran » = le code compile, mais B
 | Photos | Cloudinary (secours : Supabase Storage) |
 | Porte d'entrée du site vers le serveur | `src/db/store.ts` |
 
-## 3. Les deux rôles
-- **Admin** : voit tout, crée missions et comptes, valide ou refuse, règle l'appli.
+## 3. Les rôles
+- **Admin** : voit tout, crée missions et comptes, valide ou refuse, règle l'appli. Deux rôles intermédiaires existent aussi (module 7, jamais essayés avec un vrai compte) : **Comptable** (argent et factures, menu réduit) et **Chef d'équipe** (valide les missions de son équipe).
 - **Opérateur (`employee`)** : prend une mission, envoie ses preuves, publie, écrit. Ne modifie que ses propres données.
 
 ## 4. Pages et fonctions qui existent
@@ -32,6 +32,15 @@ Mis à jour : 2026-10-20. « Non testé à l'écran » = le code compile, mais B
 **Autres** : inscription depuis la page de connexion ; tirer pour actualiser ; pastille rouge de messages non lus ; cloche de notifications ; messagerie avec aperçu avant envoi d'un fichier (option Compresser) ; réactions et « écrit… » côté serveur.
 **Statistiques (admin)** : chiffres comparés à la période d'avant, graphiques SVG interactifs, finances (prix client, paiements reçus, dépenses, bénéfice, marge, à encaisser, trésorerie), stock (entrées, sorties, voyant rouge), objectifs du mois, alertes, prévision de fin de mois, rapport mensuel (3 points forts, 3 points d'attention) avec export Excel et PDF. Mode démo 100 % local avec chiffres inventés.
 **Dans le code mais plus dans le menu** : montants en Ar du calendrier (à supprimer ou garder : voir `TODO.md`).
+
+## 4 bis. Modules ajoutés depuis (état au 2026-10-24)
+- **Conditions de l'entreprise** (M0) : identité, TVA, facturation, paie, congés, seuils des statuts clients, règlement, **seuils de Surveillance** partagés. Tout facultatif.
+- **Clients** (M1) : fiche, statut calculé (Nouveau, Régulier, Stratégique, Inactif), missions liées. **Factures, reçus, créances, relances et devis** (M2) : numérotation par le serveur, PDF, lien avec les Finances.
+- **Performance et badges** (M3) : score 0-100 calculé et expliqué, badges, employé du mois ; l'opérateur ne voit que le sien.
+- **Achats** (M4) : fournisseurs, bons de commande avec réception partielle, inventaire, budgets par catégorie. **Ressources humaines** (M5) : dossier du salarié, congés, bulletin de paie imprimable, évaluations. **Missions avancées** (M6) : date limite, modèles, liste de tâches, notifications.
+- **Droits et traçabilité** (M7) : rôles Comptable et Chef d'équipe, **journal d'audit** (qui a fait quoi), **restauration depuis une sauvegarde**.
+- **Direction** (M8.1) : synthèse du mois.
+- **Admin IA Pro** (M11, admin seulement) : **Santé du site** (alertes calculées dans le navigateur, avec « Ouvrir », « Vérifié », « Ignorer » partagés entre appareils, seuils réglables), pastilles dans le menu, **cloche** (alertes urgentes + résumé du jour après 08:00), **carte du site**, **assistant** dans la messagerie (résumé, « quoi faire », suggestions, « pourquoi ce chiffre ? », récap d'un employé imprimable, modèles de messages) et **IA externe facultative** (Gemini, coupée par défaut, 20 questions par jour, ne reçoit qu'un résumé sans noms). L'assistant ne fait aucune action : il écrit du texte et ouvre des pages.
 
 ## 5. Données gardées et supprimées
 - **Seules les photos de preuve sont effacées automatiquement, après 7 jours** (réglable).
@@ -61,11 +70,11 @@ Mis à jour : 2026-10-20. « Non testé à l'écran » = le code compile, mais B
 - **Procédure** : 1) Journal des erreurs ; 2) si tout est en panne, mode maintenance ; 3) voir le dernier déploiement sur Vercel (revenir à une version précédente) ; 4) journaux de `df-api` sur Supabase ; 5) retour arrière du serveur en redéployant `df-api` avec un commit précédent (voir `HANDOVER.md`).
 
 ## 8. Limites connues
-- **Sauvegardes** : de nuit et à la demande (voir § 5) ; le bouton « Restaurer depuis une sauvegarde » n'existe pas encore (décision de BTK attendue).
-- **Quota** : 500 000 appels serveur par mois. Le site tient jusqu'à ≈ 27 opérateurs connectés 10 h par jour ; au-delà il faut réduire les appels (solutions dans `HANDOVER.md` § 3 octies).
+- **Sauvegardes** : de nuit et à la demande (voir § 5) ; le bouton « Restaurer depuis une sauvegarde » existe (Réglages > Données, `df-restore`) ; il a été testé sans rien changer, pas sur de vraies données perdues.
+- **Quota** : 500 000 appels serveur par mois. Mesure du 2026-10-24 : 180 rechargements par heure et par personne en activité (90 après 2 min sans action, 60 après 10 min, 0 onglet caché). Le site tient jusqu'à ≈ 27 opérateurs connectés 10 h par jour ; au-delà il faut réduire les appels (solutions dans `HANDOVER.md` § 3 octies).
 - Supabase gratuit se met en pause après 7 jours sans activité.
 - Si Supabase tombe, les rapports d'erreur ne partent pas (ils restent dans le téléphone).
-- Pas de notification en dehors du site.
+- Notifications hors du site : seulement celles des missions (module 6, navigateur). La cloche de la Santé du site et le résumé de 08:00 ne marchent que **application ouverte**.
 
 ## 9. Non testé à l'écran par BTK
 Presque tout ce qui est récent, dont **toute la page Statistiques** (finances, stock, objectifs, alertes, rapport, Excel, impression, graphiques) et l'essai avec un compte opérateur : publier avec photo, valider/refuser, commentaires avec PDF, envoi de fichiers dans la messagerie, tirer pour actualiser, passage FR/EN, nouveaux écrans (tableau de bord, bulles de notification, formes arrondies), connexion admin, écran de secours, mode maintenance. Seule la page de connexion a été vue en capture.

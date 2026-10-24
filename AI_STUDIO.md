@@ -17,7 +17,7 @@ Ce document explique **Gestion Pro** (dépôt `BTKzeyrox/Nprojet`) pour qu'un as
 - Français et anglais, thème clair/sombre, taille de police réglable.
 
 ## 2. Les rôles
-- **admin** : voit tout, valide/refuse, gère les comptes, règle l'appli.
+- **admin** : voit tout, valide/refuse, gère les comptes, règle l'appli. (Depuis le module 7 il existe aussi **accountant** — argent et factures — et **team_lead** — valide son équipe ; voir `src/utils/roles.ts`.)
 - **employee** (affiché « opérateur ») : voit et prend des missions, envoie ses preuves, publie, écrit. Ne modifie que ses propres données.
 
 Correspondance avec le code (noms internes gardés) : mission = `ClientContract` (`client_name` = titre, `post_type` = un des 5 types) ; session de mission = `PostSession` (`pending_start | active | pending_end | completed | rejected`) ; store = `DeltaForceStore` (`db`).
@@ -125,3 +125,10 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Vie privée : l'opérateur ne voit que son score ; détail du score et points d'attention seulement si `employee_sees_attention`. `companyForEmployee` envoie 3 oui/non des badges (site **et** `df-api`) : à redéployer.
 - Réglages : `src/components/PerformanceSettings.tsx` (Réglages > Performance), stockés dans `df_settings` > `performance` ; bloc `PERFORMANCE` de `df-api` (copie de `cleanPerformanceConfig`, comparée par `npm run check:performance-config`). **Déployé** (`df-api` v26 = `2fd5db6`, 2026-10-23).
 - Module 3 terminé : clients `src/utils/clientBadges.ts` + `src/components/ClientBadges.tsx` ; reconnaissance `src/utils/recognition.ts` + `BadgeCongrats.tsx` ; export `src/utils/performanceExport.ts`. Contrôle global : `npm run check:module3`. Essai par BTK : `ESSAI_BTK.md`.
+
+## Module 11 — Admin IA Pro (état au 2026-10-24)
+- **Santé du site** : `src/utils/health/` (registre, règles par page dans `rules/`, seuils `types.ts`, marques « Ignorer / Vérifié » `acks.ts`, partagées via `settings.health_acks` et revérifiées par le bloc `HEALTH_ACKS` de `df-api`) ; `src/utils/healthDb.ts` (calcul dans le navigateur, admin seulement, cache 60 s) ; page `src/views/admin/HealthPage.tsx` ; seuils réglables dans Conditions > Surveillance (`company.watch`) et par appareil (Réglages > Surveillance).
+- **Assistant** (admin seulement, dans la messagerie) : règles et calculs sans réseau (`assistant.ts`, `siteSnapshot.ts`, `siteKnowledge.ts`, `messageTemplates.ts`, `advice.ts`) ; l'assistant ne fait AUCUNE action. **IA externe facultative** : fonction `df-assistant` (Gemini), coupée par défaut sur chaque appareil, 20 questions/jour/admin, ne reçoit que la question et un résumé sans noms, n'écrit rien en base, jamais de clé dans le dépôt.
+- **Cloche** : `healthNotif.ts` (alertes urgentes + résumé du jour après 08:00, application ouverte seulement).
+- **Contrôles** : `check:health*`, `check:assistant`, `check:ai-assistant`, `check:templates`, `check:site-map`, `check:site-snapshot`, `check:monitoring-final`, `check:watch-shared`, `check:health-acks-shared`, `check:health-notif`, `check:speed`.
+- **Règles à respecter** : toute nouvelle page ou règle → sa solution dans `advice.ts` et sa fiche dans la carte du site (`check:site-map` échoue sinon). Un nouveau minuteur ou appel serveur en boucle fait échouer `check:speed` : ne l'ajoute pas sans en parler à BTK (quota Supabase).

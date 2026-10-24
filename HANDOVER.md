@@ -1,7 +1,7 @@
 # HANDOVER.md : Gestion Pro (nouveau projet)
 
 À lire après `LIRE_EN_PREMIER.md` et `NOUVEAU_PROJET.md`.
-Dernière mise à jour : 2026-10-10. Propriétaire : BTK (français, mots simples, réponses COURTES).
+Dernière mise à jour : 2026-10-24 (voir § 11 pour l'état des modules et du serveur). Propriétaire : BTK (français, mots simples, réponses COURTES).
 
 > Ce dépôt est une COPIE de `BTKzeyrox/DF-boosting` (site de jeu Delta Force). L'ancien projet reste intact là-bas, en lecture seule : **ne jamais y écrire**. L'ancien HANDOVER (histoire de l'ancien site) a été retiré de ce dépôt. Il reste dans `DF-boosting` et dans l'historique git de ce dépôt.
 
@@ -132,3 +132,14 @@ Détail et décisions : `TODO_STATISTIQUES.md` (phases 1 à 5, graphiques C1 à 
 - **Vérifié le 2026-10-20 (lecture seule sur `nprojet`)** : aucune ligne de démo dans la vraie base ; aucun prix client ni objectif réglé ; `df_posts` vide ; `df_cash` contient **4 lignes d'essai de BTK** (créées le 2026-10-20 à 00 h 23 heure de Madagascar : 150 000 Ar de « Iol », 20 000 Ar, deux « Achats » de 2 822 828 et 20 000 Ar) ; `df_contracts` contient 10 missions d'exemple (`contract-1` à `contract-10`, clients fictifs « Société Aina »…, sans prix). **Rien n'a été supprimé** : à supprimer seulement sur demande précise de BTK (règle n° 6, § 0).
 - **Reste** : essai à l'écran par BTK (S5.1 et C4), décision sur les 4 lignes d'essai et les 10 missions d'exemple, révoquer le token GitHub (https://github.com/settings/tokens), changer `admin123`.
 
+
+## 11. Modules 0 à 11 : état au 2026-10-24
+Plan détaillé et décisions : `TODO_MODULES.md` ; journal : `TODO.md` ; vue d'ensemble : `PROJET.md` § 4 bis.
+- **Terminés côté code et en ligne** : M0 Conditions, M1 Clients, M2 Factures et devis, M3 Performance, M4 Achats, M5 RH (dossier, congés, bulletin, évaluations), M6 Missions avancées, M7 Rôles / audit / restauration, M8.1 Direction, M8.3 Vitesse et quota (`check:speed`), M11 Admin IA Pro (M11.1 à M11.14).
+- **Reste, à faire par BTK** : M8.2 essai complet sur téléphone (guide `ESSAI_BTK.md`) ; essais du module 5 ; essai de l'assistant, de la cloche et des seuils partagés ; jamais essayé avec un vrai compte Comptable ni Chef d'équipe.
+- **Serveur (Supabase `nprojet`, `fvkusbdhetxleimtdzqm`)** : `df-api` **v29** = commit `fcdb007` (retour v28 = `de4739b`, v27 = `bafb412`, v26 = `2fd5db6`) ; `df-restore` v4 = `6348488` ; `df-assistant` v5 (code collé dans la fonction : `supabase/functions/df-assistant/`). une trentaine de tables `df_*` (dont `df_audit`, `df_quotes`, `df_leaves`, `df_reviews`, `df_invoices`, `df_counters`, `df_suppliers`, `df_purchase_orders`, `df_push_*`). Dernière sauvegarde de sécurité prise avant un changement : n° 35.
+- **Comment on déploie `df-api`** : le fichier en ligne est un petit `index.ts` qui importe le dépôt à un commit précis (`import "https://raw.githubusercontent.com/BTKzeyrox/Nprojet/<commit>/supabase/functions/df-api/index.ts";`). Marche à suivre : 1) accord écrit de BTK ; 2) `select public.df_take_backup();` ; 3) pousser le commit ; 4) `git diff <commit en ligne> <nouveau> -- supabase/functions/df-api/index.ts` ne doit montrer QUE le changement voulu ; 5) redéployer avec le nouveau commit ; 6) écrire dans `TODO.md` le retour arrière (= redéployer l'ancien commit). Une table nouvelle = migration relue par BTK dans `supabase/migrations/`.
+- **Secrets** : `GEMINI_API_KEY` (IA externe) est un secret de la fonction `df-assistant`, ajouté par BTK dans le tableau de bord Supabase. Aucune clé, aucun mot de passe ni token dans le dépôt.
+- **Vraie base, vérifié le 2026-10-24 (lecture seule)** : aucune ligne de démo (aucun identifiant `demo_…`, aucun texte « Données de démonstration »). Il reste seulement les lignes d'essai de BTK (2 comptes, 10 missions, 2 clients, 4 lignes d'argent, 10 messages, 2 actualités) : à garder ou supprimer sur **confirmation précise de BTK**. Le mode démo (`?demo=admin`, `?demo=employee`) travaille en mémoire dans le navigateur et n'écrit jamais dans la base.
+- **Contrôles** : `npm run check:<nom>` (liste dans `package.json`) doivent tous réussir avant un push ; seul `check:invoices-sql` échoue encore (cause : une autre session, à regarder).
+- **Pour l'assistant et la Santé du site** (module 11) : règles pures dans `src/utils/health/` (une règle par fichier de `rules/`, chacune avec sa solution dans `src/utils/advice.ts`) ; assistant `src/utils/assistant.ts` + `src/components/AssistantChat.tsx` ; cloche `src/utils/healthNotif.ts` ; IA externe `src/utils/aiAssist.ts` + `supabase/functions/df-assistant/`. Pour un nouveau module : ajouter ses règles Santé (M11.12), sa fiche dans `src/utils/siteKnowledge.ts` et ses solutions dans `advice.ts`.
