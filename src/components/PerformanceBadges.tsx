@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, Flame, Layers, Minus, ShieldCheck, Sprout, TrendingDown, TrendingUp, Zap, TriangleAlert } from 'lucide-react';
+import { BADGE_NAMES } from '../utils/recognition';
 import {
   LEVEL_NAMES, type Attention, type Badge, type BadgeId, type BadgeLevel, type Bilingual, type EmployeePerformance, type PerformanceConfig,
 } from '../utils/performanceScore';
@@ -9,14 +10,7 @@ import {
 
 const pick = (b: Bilingual, lang: string) => (lang === 'en' ? b.en : b.fr);
 
-export const BADGE_NAMES: Record<BadgeId, Bilingual> = {
-  quality: { fr: 'Qualité', en: 'Quality' },
-  punctuality: { fr: 'Ponctualité', en: 'Punctuality' },
-  regularity: { fr: 'Régularité', en: 'Consistency' },
-  rendement: { fr: 'Rendement', en: 'Efficiency' },
-  versatility: { fr: 'Polyvalence', en: 'Versatility' },
-  rookie: { fr: 'Recrue prometteuse', en: 'Promising rookie' },
-};
+export { BADGE_NAMES };
 const BADGE_ICONS: Record<BadgeId, React.ElementType> = { quality: ShieldCheck, punctuality: Clock, regularity: Flame, rendement: Zap, versatility: Layers, rookie: Sprout };
 const LEVEL_TONE: Record<BadgeLevel, string> = {
   1: 'bg-orange-900/50 text-orange-100 border-orange-600/60',

@@ -177,6 +177,30 @@ for (const lang of ['fr', 'en'] as const) {
   ok(getAdminAlerts().length === 0 && db.getClients().length === 0, 'opérateur : aucune alerte d\'admin, aucun client');
 }
 
+
+// ---------- publication « Employé du mois » (M3.7) ----------
+{
+  db.enterDemo('admin');
+  const html0 = show(<PerformanceScores />, 'fr');
+  ok(!html0.includes('Publier dans Actualités'), 'employé du mois : pas de bouton tant qu\'il n\'y a pas de gagnant (équipe trop petite)');
+  (db as any).updateSettings({ performance: { quality_min_missions: 1, month_min_team: 2 } });
+  const { employeeOfMonthPost } = await import('../src/utils/recognition');
+  const { previousMonth } = await import('../src/utils/usePerformance');
+  const inp = performanceInput();
+  const eom = (await import('../src/utils/performanceScore')).employeeOfMonth(inp, previousMonth(inp.today));
+  const html1 = show(<PerformanceScores />, 'fr');
+  ok(eom.winners.length > 0 && html1.includes('Publier dans Actualités') && html1.includes(eom.winners[0].name), 'employé du mois : le mois fini a un gagnant et un bouton « Publier dans Actualités »');
+  ok((html1.match(/Publier dans Actualités/g) || []).length === 1, 'employé du mois : pas de bouton pour le mois en cours (pas fini)');
+  const post = employeeOfMonthPost(previousMonth(inp.today), eom.winners, 'fr')!;
+  ok(!/\d+\s*\/\s*100|\d+ Ar/.test(post.text), 'publication : ni score ni argent');
+  const before = db.getNews().length;
+  const out = db.publishNews({ title: post.title, text: post.text });
+  ok(out.success && db.getNews().length === before + 1, 'publication : le responsable la publie en un clic');
+  ok(show(<PerformanceScores />, 'fr').includes('Déjà publié dans Actualités') && !show(<PerformanceScores />, 'fr').includes('Publier dans Actualités'), 'employé du mois : après publication, « Déjà publié » (pas de doublon)');
+  ok(show(<PerformanceScores />, 'en').includes('Already published') || !show(<PerformanceScores />, 'en').includes('Publish in News'), 'employé du mois (anglais) : pas de second bouton');
+  (db as any).updateSettings({ performance: undefined });
+}
+
 ok(calls === 0, `aucun appel réseau (${calls})`);
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

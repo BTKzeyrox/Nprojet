@@ -18,6 +18,7 @@ import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { ToastHost } from './components/ToastHost';
+import { BadgeCongrats } from './components/BadgeCongrats';
 import { DemoBanner } from './components/DemoBanner';
 import { useModeSwitchHidden } from './utils/modeSwitch';
 import { LoginView } from './views/LoginView';
@@ -566,6 +567,7 @@ export default function App() {
       />
 
       <ToastHost />
+      {currentUser.role === 'employee' && <BadgeCongrats />}
       {typeof location !== 'undefined' && /[?&]diag=1/.test(location.search) && <DiagPanel />}
       <DemoBanner />
       {/* SMOOTH ANIMATED LOGOUT TRANSITION */}

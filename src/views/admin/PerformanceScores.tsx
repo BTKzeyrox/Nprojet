@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Trophy, TriangleAlert } from 'lucide-react';
+import { ChevronDown, ChevronRight, Megaphone, Trophy, TriangleAlert } from 'lucide-react';
+import { db } from '../../db/store';
+import { askConfirm } from '../../components/ConfirmModal';
+import { showToast } from '../../components/ToastHost';
+import { employeeOfMonthPost } from '../../utils/recognition';
 import { useApp } from '../../context/AppContext';
 import { usePerformance, previousMonth } from '../../utils/usePerformance';
 import { employeeOfMonth, rankByScore, type EmployeeOfMonth } from '../../utils/performanceScore';
@@ -30,6 +34,21 @@ export const PerformanceScores: React.FC = () => {
     ? t(`Il faut au moins ${res.cfg.month_min_team} salariés actifs (il y en a ${res.team.size}).`, `At least ${res.cfg.month_min_team} active employees are needed (there are ${res.team.size}).`)
     : t(`Personne n'a assez de missions jugées (au moins ${res.cfg.quality_min_missions}).`, `Nobody has enough judged missions (at least ${res.cfg.quality_min_missions}).`));
 
+  const [published, setPublished] = useState(0); // force l'affichage « déjà publié » juste après la publication
+  const publish = (ym: string, r: EmployeeOfMonth) => {
+    const post = employeeOfMonthPost(ym, r.winners, 'fr');
+    if (!post) return;
+    askConfirm({
+      title: t('Publier dans Actualités ?', 'Publish in News?'),
+      message: `${post.title}\n\n${post.text}\n\n${t('Tout le monde verra cette publication. Le score n\'y est pas écrit.', 'Everyone will see this post. The score is not written in it.')}`,
+      confirmLabel: t('Publier', 'Publish'),
+      onConfirm: () => {
+        const out = db.publishNews({ title: post.title, text: post.text });
+        if (out.success) { setPublished(n => n + 1); showToast(t('Publié dans Actualités.', 'Published in News.'), 'success'); } else showToast(out.error || t('Publication impossible.', 'Could not publish.'), 'error');
+      },
+    });
+  };
+  void published;
   if (!res.team.size) return <div className="text-sm text-slate-400 font-mono p-4">{t('Aucun salarié actif pour l\'instant.', 'No active employee yet.')}</div>;
 
   return (
@@ -43,6 +62,13 @@ export const PerformanceScores: React.FC = () => {
               {m.result.winners.length ? (
                 <div className="text-slate-100 mt-0.5">{m.result.winners.map(w => `${w.name} (${w.score}/100)`).join(', ')}{m.result.winners.length > 1 ? t(' — ex æquo', ' — tied') : ''}</div>
               ) : <div className="text-slate-400 mt-0.5">{reason(m.result)}</div>}
+              {m.result.winners.length > 0 && !m.running && (() => {
+                const post = employeeOfMonthPost(m.ym, m.result.winners, 'fr');
+                const done = !!post && db.getNews().some(n => n.title === post.title && n.status !== 'rejected');
+                return done
+                  ? <div className="text-[11px] text-emerald-400 mt-1">{t('Déjà publié dans Actualités.', 'Already published in News.')}</div>
+                  : <button type="button" onClick={() => publish(m.ym, m.result)} className="mt-1.5 min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-xs font-bold inline-flex items-center gap-1.5 hover:border-emerald-500 cursor-pointer"><Megaphone className="w-4 h-4" aria-hidden="true" />{t('Publier dans Actualités', 'Publish in News')}</button>;
+              })()}
             </li>
           ))}
         </ul>
