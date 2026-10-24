@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
-import { Lock, Unlock, Download, Printer, Plus, Wallet, X, BadgeCheck, MinusCircle } from 'lucide-react';
+import { Lock, Unlock, Download, FileText, Printer, Plus, Wallet, X, BadgeCheck, MinusCircle } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { askReason } from './ReasonModal';
 import { dayMada } from '../utils/presence';
 import { formatCurrencyAr } from '../utils/formatUtils';
-import { Slip, pidLabel, fmtDay, fmtScore, printSlip, downloadCsv, companyForSlip } from '../utils/payslip';
+import { downloadSlipExcel, downloadPdfFromHtml } from '../utils/exportDoc';
+import { Slip, pidLabel, fmtDay, fmtScore, printSlip, slipHtml, downloadCsv, companyForSlip } from '../utils/payslip';
 import { useApp } from '../context/AppContext';
 
 const p2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
@@ -41,6 +42,7 @@ const AUDIT_LABEL: Record<string, string> = { close: 'Clôture', reopen: 'Réouv
 const inp = 'w-full rounded-xl bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const sum = (a: { amount: number }[]) => a.reduce((t, x) => t + (x.amount || 0), 0);
 
+const exportSlipPdf = (s: Slip, lang: string) => downloadPdfFromHtml(slipHtml(s, { lang: lang === 'en' ? 'en' : 'fr', company: companyForSlip(db.getSettings().company) }), `bulletin-${s.username || s.user_id}-${s.period_end}`).catch(() => { alert(lang === 'en' ? 'PDF export failed.' : 'Export PDF impossible.'); });
 export const PayrollAdmin: React.FC = () => {
   const { lang } = useApp();
   const mode0 = db.getSettings().pay_period === 'half' ? 'half' : 'month';
@@ -218,6 +220,8 @@ export const PayrollAdmin: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => printSlip(open, { lang, company: companyForSlip(db.getSettings().company) })} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
+<button type="button" onClick={() => void exportSlipPdf(open, lang)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
+<button type="button" onClick={() => void downloadSlipExcel(open, lang === 'en' ? 'en' : 'fr')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Download className="w-4 h-4" />Excel</button>
               {isClosed && open.paid && (
                 <button type="button" className="rounded-full px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
               )}

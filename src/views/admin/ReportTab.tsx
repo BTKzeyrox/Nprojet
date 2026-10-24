@@ -2,7 +2,8 @@ import { badgeAccess, performanceInput } from '../../utils/usePerformance';
 import { computePerformance } from '../../utils/performanceScore';
 import { clientBadgesFromDb } from '../../utils/clientBadgesDb';
 import React, { useMemo, useRef, useState } from 'react';
-import { Download, Printer } from 'lucide-react';
+import { downloadPdfFromHtml } from '../../utils/exportDoc';
+import { Download, FileText, Printer } from 'lucide-react';
 import { db } from '../../db/store';
 import { buildReport, downloadReportExcel, reportHtml } from '../../utils/report';
 import { readCompany } from '../../utils/companyRules';
@@ -28,6 +29,7 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
 
   const print = () => { setErr(null); const w = frame.current?.contentWindow; if (!w) { setErr(t('Le rapport n\'est pas prêt.', 'The report is not ready.')); return; } try { w.focus(); w.print(); } catch { setErr(t('Impression impossible ici. Essaie depuis un autre navigateur.', 'Printing is not possible here. Try another browser.')); } };
   const excel = async () => { setErr(null); setBusy(true); try { await downloadReportExcel(report, anchor); } catch { setErr(t('Export Excel impossible.', 'Excel export failed.')); } finally { setBusy(false); } };
+  const pdf = async () => { setErr(null); setBusy(true); try { await downloadPdfFromHtml(html, `rapport-${anchor.slice(0, 7)}`); } catch { setErr(t('Export PDF impossible.', 'PDF export failed.')); } finally { setBusy(false); } };
   const btn = 'min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-100 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50';
 
   return (
@@ -35,11 +37,12 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Rapport du mois', 'Monthly report')} · {report.month}</h2>
         <p className="text-[11px] text-slate-400">{t('Le mois choisi en haut de la page. Il contient des chiffres d\'argent : ne le partage qu\'avec des personnes de confiance.', 'The month chosen at the top of the page. It contains money figures: share it only with people you trust.')}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" className={btn} onClick={print}><Printer className="w-4 h-4" />{t('Imprimer / PDF', 'Print / PDF')}</button>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button type="button" className={btn} onClick={print}><Printer className="w-4 h-4" />{t('Imprimer', 'Print')}</button>
+          <button type="button" className={btn} onClick={() => void pdf()} disabled={busy}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
           <button type="button" className={btn} onClick={() => void excel()} disabled={busy}><Download className="w-4 h-4" />{busy ? t('Export…', 'Exporting…') : 'Excel (.xlsx)'}</button>
         </div>
-        <p className="text-[11px] text-slate-500">{t('Pour un PDF : « Imprimer », puis choisis « Enregistrer au format PDF » comme imprimante.', 'For a PDF: “Print”, then choose “Save as PDF” as the printer.')}</p>
+        <p className="text-[11px] text-slate-500">{t('« Télécharger PDF » donne une image de la page (texte non sélectionnable). Pour un PDF avec texte : « Imprimer », puis « Enregistrer au format PDF ».', '“Download PDF” gives a picture of the page (text not selectable). For a text PDF: “Print”, then “Save as PDF”.')}</p>
         {err && <p className="text-xs text-rose-400" role="alert">{err}</p>}
       </div>
       <iframe ref={frame} title={t('Rapport mensuel', 'Monthly report')} srcDoc={html} sandbox="allow-same-origin allow-modals" className="w-full rounded-xl border border-slate-700 bg-white" style={{ height: 'min(1400px, 150vh)' }} />
