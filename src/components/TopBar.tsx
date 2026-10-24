@@ -3,6 +3,7 @@ import { Bell, Menu, Search, Shield, Users, ClipboardList, Calendar, FileText } 
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
+import { subscribeHealth } from '../utils/healthDb';
 import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
@@ -39,6 +40,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const bellBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
+  useEffect(() => subscribeHealth(() => force(n => n + 1)), []); // cloche : la Santé se calcule au repos, on se réaffiche quand elle est prête
   useEffect(() => { const t = setInterval(() => force(n => n + 1), 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     const on = () => force(n => n + 1);

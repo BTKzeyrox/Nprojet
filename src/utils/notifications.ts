@@ -3,7 +3,7 @@ import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
 import { getQueue, getFreePosts } from './presence';
 import type { ValFilter } from './navIntent';
-import { getHealth } from './healthDb';
+import { getHealthSoft } from './healthDb';
 import { todayMada } from './stats';
 import { planHealthNotifs } from './healthNotif';
 
@@ -25,7 +25,7 @@ export const healthNotifOn = (uid: string): boolean => { try { return localStora
 export const setHealthNotif = (uid: string, on: boolean): void => { try { localStorage.setItem(HEALTH_NOTIF_KEY(uid), on ? '1' : '0'); } catch { /* stockage indisponible */ } };
 export function healthNotifications(user: User, nowMs = Date.now()): Notif[] {
   if (user.role !== 'admin' || !healthNotifOn(user.id)) return [];
-  try { return planHealthNotifs(getHealth().alerts, todayMada(), nowMs, getSeen(user)); } catch { return []; } // la cloche ne doit jamais tomber à cause de la Santé du site
+  try { return planHealthNotifs(getHealthSoft().alerts, todayMada(), nowMs, getSeen(user)); } catch { return []; } // la cloche ne doit jamais tomber à cause de la Santé du site
 }
 
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi

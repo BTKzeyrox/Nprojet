@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
-import { getMenuBadges } from '../utils/healthDb';
+import { getMenuBadges, subscribeHealth } from '../utils/healthDb';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { useChatUnread } from '../utils/useChatUnread';
@@ -88,6 +88,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     on();
     return () => mq.removeEventListener('change', on);
   }, []);
+  const [, setHealthTick] = React.useState(0);
+  React.useEffect(() => subscribeHealth(() => setHealthTick(n => n + 1)), []); // le calcul des pastilles se fait au repos : on se réaffiche quand il est prêt
   useLockBodyScroll(!!isOpenMobile && !isWide);
   const isAdmin = currentUser.role === 'admin';
   const isAccountant = currentUser.role === 'accountant';

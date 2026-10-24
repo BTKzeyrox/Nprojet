@@ -56,9 +56,31 @@ export function getHealth(): HealthView {
   return cache;
 }
 
-/** Pastilles du menu : { entrée du menu: { count, urgent } } et total (à voir + urgent). */
+/**
+ * Version « douce » pour ce qui s'affiche à chaque rendu (pastilles du menu, cloche) : ne calcule JAMAIS pendant l'affichage.
+ * Le calcul complet coûte 0,4 s sur 2 ans de données (plus sur un vieux téléphone) : fait dans un rendu, il gelait la page et le clic sur le menu
+ * semblait ne rien faire (il fallait cliquer deux fois). Ici on rend la dernière valeur connue (vide au tout début) et on recalcule un peu plus tard,
+ * quand le navigateur est au repos, puis on prévient les écrans abonnés.
+ */
+let softTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleSoft = (): void => {
+  if (softTimer) return;
+  softTimer = setTimeout(() => {
+    const run = () => { softTimer = null; try { getHealth(); } catch { /* ignoré : réessai au prochain affichage */ } listeners.forEach(l => { try { l(); } catch { /* ignoré */ } }); };
+    const ric = (globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    if (typeof ric === 'function') ric(run, { timeout: 3000 }); else run();
+  }, 1200);
+};
+export function getHealthSoft(): HealthView {
+  const me = db.getCurrentUser();
+  if (me?.role !== 'admin') return { alerts: [], hidden: [], errors: [], acks: [], computedAt: Date.now() };
+  if (!cache || dirty || Date.now() - cache.computedAt >= 60_000) scheduleSoft();
+  return cache || { alerts: [], hidden: [], errors: [], acks: [], computedAt: 0 };
+}
+
+/** Pastilles du menu : { entrée du menu: { count, urgent } } et total (à voir + urgent). Ne bloque jamais l'affichage (voir getHealthSoft). */
 export function getMenuBadges(): { byItem: Record<string, { count: number; urgent: boolean }>; total: number; urgent: number } {
-  const h = getHealth();
+  const h = getHealthSoft();
   const total = h.alerts.filter(a => a.severity !== 'info').length, urgent = h.alerts.filter(a => a.severity === 'urgent').length;
   return { byItem: menuBadges(h.alerts), total, urgent };
 }
