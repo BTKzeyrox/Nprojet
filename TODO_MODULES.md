@@ -269,7 +269,7 @@ Visible **par l'admin seulement**. Le statut du module 1 et ces badges se compl�
   - **Employé :** il ne reçoit pas l'identité de l'entreprise (règle du module 0) : son bulletin a simplement un en-tête vide, sans erreur.
   - **Contrôles :** nouveau `npm run check:payslip` (**34/34** : libellés FR/EN, formats, cohérence du net, plafond des retenues, NaN, aperçu, écart, vide, payé, monnaie, employé sans identité, 7 tests de sécurité) ; **35/35** scripts `check:*`, `tsc` et `build` sans erreur.
   - **Pas vérifié :** l'impression réelle (navigateur, téléphone, « Enregistrer en PDF »), le logo chargé depuis Cloudinary dans le cadre caché, et le rendu d'un vrai bulletin du serveur. Aucune migration, aucun déploiement de `df-api`.
-- [ ] **M5.4 — Évaluation périodique** (S) : fiche d'entretien (objectifs, commentaires), alimentée par les scores du module 3.
+- [~] **M5.4 — Évaluation périodique** (S) — **PRIS le 2026-10-24 (session M6, « Go m5 » de BTK) : ne pas refaire en parallèle ; M5.5 ensuite.** Texte d'origine : fiche d'entretien (objectifs, commentaires), alimentée par les scores du module 3.
 - [ ] **M5.5 — Démo, anglais, contrôle** (S).
 
 ---
