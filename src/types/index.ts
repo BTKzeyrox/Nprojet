@@ -19,6 +19,7 @@ export interface AppSettings {
   goal_missions?: number; // objectif du mois : missions validées (0 ou vide = pas d'objectif)
   goal_profit_ar?: number; // objectif du mois : bénéfice net en Ar (admin seulement : jamais envoyé aux employés)
   goal_max_expenses_ar?: number; // plafond de dépenses du mois en Ar (admin seulement)
+  signup_open?: boolean; // « Créer un compte » : false = l'admin a fermé les inscriptions (le serveur refuse les nouvelles demandes) ; absent = ouvertes
   alert_unpaid_days?: number; // alerte « client qui n'a pas payé depuis X jours » (30 par défaut)
   alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
   day_shift_start: string; // HH:MM

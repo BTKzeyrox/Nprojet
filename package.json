@@ -83,6 +83,7 @@
     "check:invoice-doc": "npx --yes tsx scripts/check-invoice-doc.ts",
     "check:receivables": "npx --yes tsx scripts/check-receivables.ts",
     "check:invoice-stats": "esbuild scripts/check-invoice-stats.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-invoice-stats.mjs && node node_modules/.cache/check-invoice-stats.mjs",
+    "check:signup-setting": "npx --yes tsx scripts/check-signup-setting.ts",
     "check:tasks": "npx --yes tsx scripts/check-tasks.ts",
     "check:tasks-store": "esbuild scripts/check-tasks-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-tasks-store.mjs && node node_modules/.cache/check-tasks-store.mjs",
     "check:templates-store": "esbuild scripts/check-templates-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-templates-store.mjs && node node_modules/.cache/check-templates-store.mjs",

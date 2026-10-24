@@ -16,6 +16,7 @@ import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyC
 import { PerformanceSettings } from '../../components/PerformanceSettings';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
+import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
 
@@ -231,6 +232,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && !db.isDemo() && <NotificationsCard />}
+      {tab === 'general' && !db.isDemo() && <SignupSettings />}
       {tab === 'general' && <WatchSettingsSection />}
       {tab === 'general' && !db.isDemo() && <AiSettingsSection />}
 

@@ -2447,6 +2447,9 @@ async function signup(req: any, res: any) {
   const digits = phone.replace(/\D/g, '');
   if (digits.length > 3 && digits.length !== 12) return res.status(400).json({ error: 'Téléphone incomplet. Format : 261 34 12 345 67' });
   const phoneClean = digits.length === 12 ? `${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 10)} ${digits.slice(10, 12)}` : '';
+  // Réglage de l'admin (Réglages > Inscriptions) : « fermées » = plus aucune nouvelle demande. Absent ou autre valeur = ouvertes.
+  const { data: stSignup } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  if (stSignup?.data?.signup_open === false) return res.status(403).json({ error: "Les inscriptions sont fermées pour le moment. Contacte l'administrateur.", closed: true });
   await sleep(400);
   const { data: cred } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
   if (cred) return res.status(409).json({ error: "Ce pseudo n'est pas disponible. Choisissez-en un autre." });
