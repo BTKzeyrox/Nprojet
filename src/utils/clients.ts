@@ -239,7 +239,7 @@ export function checkClientDraft(d: ClientDraft): ClientDraftResult {
  * Les missions sans client (anciennes, texte libre) ne comptent pour aucun client : elles restent visibles dans Finances comme avant.
  */
 /**
- * La mission (contrat) d'une session : par numéro de poste quand la session en a un, sinon par titre identique. Premier trouvé.
+ * La mission (contrat) d'une session : par numéro de mission quand la session en a un, sinon par titre identique. Premier trouvé.
  * Même règle pour les chiffres des clients et pour figer l'histoire quand une mission change de client (M1.5).
  */
 export function matchContract<C extends Pick<ClientContract, 'post_number' | 'client_name'>>(p: Pick<PostSession, 'post_number' | 'client_name'>, contracts: C[]): C | undefined {
@@ -346,7 +346,7 @@ export interface MissionToLink {
 
 /**
  * Anciennes missions sans client, regroupées par nom (le texte libre `client_name` de la mission). L'admin confirme UNE ligne à la fois.
- * Un poste « sans compte » (sans nom) n'est pas une mission à rattacher. Seuls les clients actifs sont proposés.
+ * Une mission « sans compte » (sans nom) n'est pas une mission à rattacher. Seuls les clients actifs sont proposés.
  */
 export function missionsToLink(
   contracts: Pick<ClientContract, 'id' | 'client_name' | 'client_id' | 'no_account'>[],

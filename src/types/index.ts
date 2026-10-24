@@ -44,7 +44,7 @@ export interface AppSettings {
   badge_advance: boolean; // pastille « Avance à valider »
   badge_profile: boolean; // pastille « Profil à valider »
   badges_clickable: boolean; // un clic sur une pastille ouvre Validations
-  alert_idle_1_min: number; // 1re alerte « opérateur sans poste » (minutes)
+  alert_idle_1_min: number; // 1re alerte « opérateur sans mission » (minutes)
   alert_idle_2_min: number; // 2e alerte
   err_report_enabled: boolean; // envoi automatique des erreurs au journal
   err_max_per_session: number; // rapports automatiques maximum par session (quota d'appels)
@@ -54,7 +54,7 @@ export interface AppSettings {
   maintenance_on: boolean; // site en maintenance (les opérateurs sont refusés, l'admin entre)
   maintenance_message: string;
   retention_days: number;
-  grid_columns?: number; // colonnes de la grille des postes (2 à 10)
+  grid_columns?: number; // colonnes de la grille des missions (2 à 10)
   rules: string;
   post_types: string[];
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
@@ -257,14 +257,14 @@ export interface ChatRead {
 
 export interface ClientContract {
   id: string;
-  post_number: number; // numéro du poste (1 à 100)
+  post_number: number; // numéro de la mission
   client_name: string;
   account_tag: string;
   game_mode: string;
-  description?: string; // Description du poste (ex: no read, no card...)
-  post_type?: string; // Type de poste (ex: NO R/C, YES R/C, RED 9CASE)
+  description?: string; // Description de la mission
+  post_type?: string; // Type de mission (un des types des réglages)
   proof_mode?: 'type' | 'none' | 'photo' | 'note' | 'both'; // Justificatif demandé à la fin (avancé) : « type » = selon le type de mission
-  no_account?: boolean; // Poste sans compte : grisé, non réservable, rempli par l'admin
+  no_account?: boolean; // Mission sans compte : grisé, non réservable, rempli par l'admin
   current_rank: string;
   target_rank: string;
   initial_score: number; // Début : modifiable par l'admin seulement
@@ -314,7 +314,7 @@ export interface SignupRequest {
   note?: string; // description facultative du opérateur
 }
 
-// Présence d'un opérateur (signe de vie, temps de connexion du jour, file d'attente « sans poste »)
+// Présence d'un opérateur (signe de vie, temps de connexion du jour, file d'attente « sans mission »)
 // Arrivée d'un opérateur un jour donné (première connexion) et temps connecté
 export interface AttendanceRow {
   user_id: string;

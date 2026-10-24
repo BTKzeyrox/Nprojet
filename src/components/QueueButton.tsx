@@ -3,7 +3,7 @@ import { Hourglass } from 'lucide-react';
 import { db } from '../db/store';
 import { hasOpenPost } from '../utils/presence';
 
-// Opérateur : « Je n'ai pas de poste » -> entre dans la file d'attente vue par l'admin
+// Opérateur : « Je n'ai pas de mission » -> entre dans la file d'attente vue par l'admin
 export const QueueButton: React.FC<{ userId: string }> = ({ userId }) => {
   const [, force] = useState(0);
   const [busy, setBusy] = useState(false);

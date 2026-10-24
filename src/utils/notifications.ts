@@ -47,7 +47,7 @@ export const buildNotifications = (user: User): Notif[] => {
       out.push({ id: `rst-${r.id}`, title: r.name, sub: 'Mot de passe oublié (urgent)', view: 'validations', filter: 'resets', nav: `val-rst-${r.id}`, at: r.created_at, tone: 'urgent' }));
     db.getProfileRequests().filter(r => r.status === 'pending').forEach(r =>
       out.push({ id: `prf-${r.id}`, title: r.old.name, sub: 'Changement de profil à valider', view: 'validations', filter: 'profiles', nav: `val-prf-${r.id}`, at: r.created_at, tone: 'info' }));
-    // Opérateurs sans poste : 1re puis 2e alerte (minutes réglables dans Réglages)
+    // Opérateurs sans mission : 1re puis 2e alerte (minutes réglables dans Réglages)
     const cfg = db.getSettings();
     const a1 = Math.max(1, Math.round(cfg.alert_idle_1_min || 15));
     const a2 = Math.max(a1 + 1, Math.round(cfg.alert_idle_2_min || 30));
@@ -58,11 +58,11 @@ export const buildNotifications = (user: User): Notif[] => {
     db.getSecurityLogs().filter(l => !l.resolved).forEach(l =>
       out.push({ id: `sec-${l.id}`, title: l.employee_name, sub: 'Alerte de sécurité', view: 'security', nav: `sec-${l.id}`, at: l.timestamp, tone: 'urgent' }));
   } else {
-    // Premier de la file et un poste vient de se libérer
+    // Premier de la file et une mission vient de se libérer
     const q = db.getMyQueue();
     const free = q && q.position === 1 ? getFreePosts(db.getContracts(), db.getPosts()) : [];
     if (q && free.length > 0)
-      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Une mission est libre', sub: `${free[0].client_name} (mission ${free[0].post_number}) : à toi en premier`, view: 'grid', nav: `poste-${free[0].post_number}`, at: new Date().toISOString(), tone: 'ok' });
+      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Une mission est libre', sub: `${free[0].client_name} (mission ${free[0].post_number}) : à toi en premier`, view: 'grid', nav: `mission-${free[0].post_number}`, at: new Date().toISOString(), tone: 'ok' });
     db.getPosts().filter(p => p.employee_id === user.id && p.status === 'rejected').forEach(p =>
       out.push({ id: `rej-${p.id}-${p.updated_at}`, title: `${p.client_name} refusé`, sub: p.rejection_reason ? `Motif : ${p.rejection_reason}` : 'Soumission refusée', view: 'active-post', at: p.updated_at || p.date, tone: 'bad' }));
     db.getAdvanceRequests().filter(a => a.employee_id === user.id && a.status !== 'pending').forEach(a =>

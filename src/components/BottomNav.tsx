@@ -63,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
     { id: 'calendar', label: 'Calendrier', icon: Calendar },
     isAdmin
       ? { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: pending }
-      : { id: 'active-post', label: 'Mon poste', icon: ClipboardList },
+      : { id: 'active-post', label: 'Ma mission', icon: ClipboardList },
   ];
   // Comptable : ses pages seulement (Actualités, Messages, Facturation, Clients)
   const accountantItems: typeof items = [

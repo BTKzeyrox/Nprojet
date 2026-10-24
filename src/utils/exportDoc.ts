@@ -67,7 +67,7 @@ export function slipRows(s: Slip, lang: 'fr' | 'en' = 'fr'): Rows {
     [t('Bulletin de paie', 'Payslip'), s.name || s.username],
     [t('Période', 'Period'), `${s.period_start} → ${s.period_end}`],
     [],
-    [t('Date', 'Date'), t('Client', 'Client'), t('Poste', 'Post'), t('Points', 'Points'), t('Taux', 'Rate'), t('Montant (Ar)', 'Amount (Ar)')],
+    [t('Date', 'Date'), t('Client', 'Client'), t('Mission', 'Mission'), t('Points', 'Points'), t('Taux', 'Rate'), t('Montant (Ar)', 'Amount (Ar)')],
     ...s.lines.map(l => [l.date, l.client, l.post_number ?? '', l.score, l.rate, l.amount]),
     [],
     [t('Gagné', 'Earned'), '', '', '', '', s.gross],

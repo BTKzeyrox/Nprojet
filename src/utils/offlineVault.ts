@@ -68,7 +68,7 @@ export function idbKV(dbName = 'df_offline', storeName = 'kv'): KV {
 export const ADMIN_COLLECTIONS = ['users', 'posts', 'contracts', 'messages', 'groups', 'settings', 'news', 'products', 'stock', 'clients', 'sheets'] as const;
 /** Collections JAMAIS gardées pour un opérateur (il ne les reçoit déjà pas ; ceinture et bretelles). */
 export const OPERATOR_DENIED = ['securityLogs', 'advances', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases'] as const;
-/** Réglages gardés pour l'ADMIN : horaires, postes, modèles, règlement, affichage. Pas de prix, paie, objectifs, budgets, société, journal. */
+/** Réglages gardés pour l'ADMIN : horaires, types de mission, modèles, règlement, affichage. Pas de prix, paie, objectifs, budgets, société, journal. */
 export const ADMIN_SETTINGS_KEYS = ['id', 'day_shift_start', 'day_shift_end', 'night_shift_start', 'night_shift_end', 'late_tolerance_min', 'access_before_min', 'access_after_min', 'show_activity_column',
   'badge_start', 'badge_end', 'badge_advance', 'badge_profile', 'badges_clickable', 'alert_idle_1_min', 'alert_idle_2_min', 'retry_seconds', 'grid_columns', 'rules', 'post_types', 'mission_templates', 'performance'] as const;
 /** Champs gardés pour les comptes (pas de téléphone, de mot de passe, de jeton, de salaire) : l'admin ne modifie aucun compte hors ligne. */

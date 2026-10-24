@@ -51,7 +51,7 @@ export const getQueue = (users: User[], posts: PostSession[], presence: Presence
     .sort((a, b) => String(a.waitingSince).localeCompare(String(b.waitingSince)))
     .map((x, i) => ({ ...x, position: i + 1, minutes: Math.floor((now - new Date(x.waitingSince as string).getTime()) / 60000) }));
 
-// Postes libres : avec compte, et aucune session en cours dessus
+// Missions libres : avec compte, et aucune session en cours dessus
 export const getFreePosts = (contracts: ClientContract[], posts: PostSession[]) =>
   contracts.filter(c => !c.no_account && !posts.some(p => p.client_name === c.client_name && OPEN.includes(p.status)));
 

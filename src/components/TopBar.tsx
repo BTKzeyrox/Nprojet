@@ -20,11 +20,11 @@ interface Hit {
   id: string;
   title: string;
   sub: string;
-  kind: 'page' | 'poste' | 'operator' | 'compte' | 'date';
+  kind: 'page' | 'mission' | 'operator' | 'compte' | 'date';
   go: () => void;
 }
 
-const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Mission', operator: 'Opérateur', compte: 'Compte', date: 'Date' };
+const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', mission: 'Mission', operator: 'Opérateur', compte: 'Compte', date: 'Date' };
 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -83,20 +83,20 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       });
     }
     const seenAcc = new Set<string>();
-    // « p1 », « p01 », « poste 1 », « poste 01 », « #1 » : on va exactement à ce poste (pas aux postes 10 à 19)
-    const pm = s.match(/^(?:poste|p|#)\s*0*(\d{1,3})$/);
+    // « p1 », « p01 », « mission 1 », « mission 01 », « #1 » : on va exactement à cette mission (pas aux missions 10 à 19)
+    const pm = s.match(/^(?:mission|poste|p|#)\s*0*(\d{1,3})$/);
     const exactNum = pm ? Number(pm[1]) : null;
-    const goPoste = (n: number) => () => { setNavTarget(`poste-${n}`); onNavigate(home); };
+    const goMission = (n: number) => () => { setNavTarget(`mission-${n}`); onNavigate(home); };
     db.getContracts().forEach(c => {
       const byNumber = exactNum !== null ? c.post_number === exactNum : norm(`mission ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s);
       if (norm(c.client_name).includes(s) || byNumber) {
-        const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Mission ${c.post_number}`, kind: 'poste', go: goPoste(c.post_number) };
+        const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Mission ${c.post_number}`, kind: 'mission', go: goMission(c.post_number) };
         if (exactNum !== null && c.post_number === exactNum) out.unshift(hit);
         else out.push(hit);
       }
       if (c.account_tag && norm(c.account_tag).includes(s) && !seenAcc.has(c.account_tag)) {
         seenAcc.add(c.account_tag);
-        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Mission de ${c.client_name}`, kind: 'compte', go: goPoste(c.post_number) });
+        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Mission de ${c.client_name}`, kind: 'compte', go: goMission(c.post_number) });
       }
     });
     const dates = Array.from(new Set(db.getPosts().map(p => p.date)));
@@ -129,7 +129,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     }
     wasOpen.current = bellOpen;
   }, [bellOpen]);
-  const icon = (k: Hit['kind']) => (k === 'operator' ? Users : k === 'poste' || k === 'compte' ? ClipboardList : k === 'date' ? Calendar : FileText);
+  const icon = (k: Hit['kind']) => (k === 'operator' ? Users : k === 'mission' || k === 'compte' ? ClipboardList : k === 'date' ? Calendar : FileText);
 
   return (
     <>

@@ -138,7 +138,7 @@ export const volumeChange: HealthRule = {
         title_fr: down ? `${name} fait beaucoup moins de missions` : `${name} fait beaucoup plus de missions`, title_en: down ? `${name} is doing far fewer missions` : `${name} is doing far more missions`,
         why_fr: `${cur} missions ces 7 derniers jours, contre ${Math.round(cmp.baseline * 10) / 10} en général par semaine (médiane de ${cmp.periods} semaines).`,
         why_en: `${cur} missions over the last 7 days, versus ${Math.round(cmp.baseline * 10) / 10} usually per week (median of ${cmp.periods} weeks).`,
-        todo_fr: down ? 'En parler avec le salarié : congé, difficulté, manque de postes ?' : 'Vérifier que les missions sont réelles (preuves, temps passé) ; sinon, le féliciter.',
+        todo_fr: down ? 'En parler avec le salarié : congé, difficulté, manque de missions ?' : 'Vérifier que les missions sont réelles (preuves, temps passé) ; sinon, le féliciter.',
         todo_en: down ? 'Talk to the employee: leave, difficulty, lack of posts?' : 'Check the missions are genuine (proofs, time spent); otherwise, congratulate them.',
         since: shiftDay(ctx.today, -W), value: cur, go: { view: 'calendar' },
       } as HealthAlert);

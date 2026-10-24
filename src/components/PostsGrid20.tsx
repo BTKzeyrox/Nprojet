@@ -71,11 +71,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [filterShift, setFilterShift] = useState<'all' | 'day' | 'night' | 'urgent'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'free'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // Arrivée depuis la recherche ou une notification : on enlève les filtres pour que le poste soit visible
+  // Arrivée depuis la recherche ou une notification : on enlève les filtres pour que la mission soit visible
   useEffect(() => {
     const apply = () => {
       const t = peekNavTarget();
-      if (t && t.startsWith('poste-')) { setFilterShift('all'); setFilterStatus('all'); setSearchQuery(''); }
+      if (t && t.startsWith('mission-')) { setFilterShift('all'); setFilterStatus('all'); setSearchQuery(''); }
     };
     apply();
     window.addEventListener(NAV_TARGET_EVENT, apply);
@@ -85,7 +85,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
   const isLight = theme === 'light';
 
-  // Admin : ajout d'un poste
+  // Admin : ajout d'une mission
   const [showAdd, setShowAdd] = useState(false);
   useLockBodyScroll(showAdd);
   const [addName, setAddName] = useState('');
@@ -192,7 +192,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     return true;
   });
 
-  // Reste et Objectif d'un poste (mêmes formules que sur la carte)
+  // Reste et Objectif d'une mission (mêmes formules que sur la carte)
   const restOf = (c: ClientContract) => {
     const session = liveBy.get(c.client_name);
     const objective = Math.max(1, c.target_score - c.initial_score);
@@ -433,7 +433,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     return (
                       <article
                         key={contract.id}
-                        data-nav={`poste-${contract.post_number}`}
+                        data-nav={`mission-${contract.post_number}`}
                         className={`rounded-xl border p-3 space-y-2 shadow-sm ${noAccount ? 'opacity-60 ' : ''}${
                           isLight ? 'bg-white border-slate-200' : 'bg-[#101b2b] border-slate-700/70'
                         } ${isMine ? 'ring-2 ring-emerald-500/50' : ''}`}

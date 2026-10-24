@@ -16,7 +16,7 @@ export const clientGone: HealthRule = {
   run: (ctx) => {
     if (!ctx.clients.length) return [];
     const ids = new Set(ctx.clients.map(c => c.id));
-    const f = [...ctx.contracts.filter(c => c.client_id && !ids.has(c.client_id)).map(c => c.client_name || `poste ${c.post_number}`), ...ctx.posts.filter(p => p.client_id && !ids.has(p.client_id)).map(p => p.client_name || p.id)];
+    const f = [...ctx.contracts.filter(c => c.client_id && !ids.has(c.client_id)).map(c => c.client_name || `mission ${c.post_number}`), ...ctx.posts.filter(p => p.client_id && !ids.has(p.client_id)).map(p => p.client_name || p.id)];
     if (!f.length) return [];
     const n = f.length;
     return [mk('client-gone', 'watch',
@@ -52,7 +52,7 @@ export const badAmounts: HealthRule = {
   },
 };
 
-/** Même salarié, même jour, même poste et même heure de début : doublon de session. */
+/** Même salarié, même jour, même mission et même heure de début : doublon de session. */
 export const duplicateSessions: HealthRule = {
   id: 'data.duplicate-sessions', page: 'data',
   run: (ctx) => {
@@ -62,7 +62,7 @@ export const duplicateSessions: HealthRule = {
     if (!d.length) return [];
     const n = d.length;
     return [mk('duplicate-sessions', 'watch',
-      [`${n} ${plural(n, 'session en double', 'sessions en double')}`, 'Même salarié, même jour, même poste et même heure de début : la paie peut compter deux fois.', 'Garder une seule session.'],
+      [`${n} ${plural(n, 'session en double', 'sessions en double')}`, 'Même salarié, même jour, même mission et même heure de début : la paie peut compter deux fois.', 'Garder une seule session.'],
       [`${n} duplicated ${plural(n, 'session', 'sessions')}`, 'Same employee, day, post and start time: payroll may count it twice.', 'Keep a single session.'], n, d.map(([k]) => k.split('|')[1]).sort()[0])];
   },
 };

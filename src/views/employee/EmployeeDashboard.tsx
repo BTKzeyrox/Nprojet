@@ -89,7 +89,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     db.getActiveOrPendingPost(currentUser.id)
   );
 
-  // Home View Mode: By default 'grid' (Postes en grille) as requested!
+  // Home View Mode: By default 'grid' (missions en grille) as requested!
   const [homeViewMode, setHomeViewMode] = useState<'grid' | 'details'>(
     activeSubTab === 'active-post' ? 'details' : 'grid'
   );
@@ -127,7 +127,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [clientName, setClientName] = useState('');
   const [accountTag, setAccountTag] = useState('');
   const [targetScore, setTargetScore] = useState<number>(25000000);
-  // Objectif = points à gagner (cible - départ du poste)
+  // Objectif = points à gagner (cible - départ de la mission)
   const [objective, setObjective] = useState<number>(0);
   // Début (admin) et Actuel du compte, affichés en lecture seule
   const [accountStart, setAccountStart] = useState<number>(0);
@@ -577,11 +577,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         </div>
       </div>
 
-      {/* ACCUEIL SUB-VIEW: POSTES EN GRILLE (PAR DÉFAUT) OU DÉTAILS DU POSTE */}
+      {/* ACCUEIL SUB-VIEW: MISSIONS EN GRILLE (PAR DÉFAUT) OU DÉTAILS DE LA MISSION */}
       {(activeSubTab === 'grid' || activeSubTab === 'active-post') && (
         <div className="space-y-4">
           
-          {/* View Toggle Bar (Postes en Grille vs Mon Poste en Cours) */}
+          {/* View Toggle Bar (Missions en grille vs Ma mission en cours) */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-[#131c28] p-3 rounded-xl border border-slate-800 text-xs font-mono">
             <div className="flex items-center gap-2">
               <button
@@ -620,7 +620,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             )}
           </div>
 
-          {/* ================= MODE 1: GRILLE DES POSTES CLIENTS (PAR DÉFAUT) ================= */}
+          {/* ================= MODE 1: GRILLE DES MISSIONS CLIENTS (PAR DÉFAUT) ================= */}
           {homeViewMode === 'grid' && (
             <div className="space-y-4">
               <PostsGrid20

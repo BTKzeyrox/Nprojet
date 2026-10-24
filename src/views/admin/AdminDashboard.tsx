@@ -530,7 +530,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onNavigateToActivePost={() => onNavigateTab && onNavigateTab('sessions')}
         />
 
-        {/* MODAL GESTION DU POSTE CLIENT POUR L'ADMIN (MODIFICATION COMPLETE & VALIDATION) */}
+        {/* MODAL GESTION DE LA MISSION CLIENT POUR L'ADMIN (MODIFICATION COMPLETE & VALIDATION) */}
         {selectedAdminContract && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in">
             <div className="bg-[#0f1722] border border-emerald-500/50 w-full max-w-2xl rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4 my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col">
@@ -596,7 +596,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
 
               <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs font-mono">
-                {/* 1. SECTION VALIDATION SI POSTE EN ATTENTE (PENDING_START OU PENDING_END) */}
+                {/* 1. SECTION VALIDATION SI MISSION EN ATTENTE (PENDING_START OU PENDING_END) */}
                 {activeSessionForModal &&
                   (activeSessionForModal.status === 'pending_start' || activeSessionForModal.status === 'pending_end') && (
                     <div className="bg-[#181108] border-2 border-amber-500/70 rounded-xl p-4 space-y-3 shadow-lg shadow-amber-950/30">
@@ -697,7 +697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   )}
 
-                {/* 2. SECTION MODIFICATION COMPLETE DU POSTE (ADMIN EXCLUSIF) */}
+                {/* 2. SECTION MODIFICATION COMPLETE DE LA MISSION (ADMIN EXCLUSIF) */}
                 <div className="bg-[#141e2a] border border-slate-700 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
                     <div className="flex items-center gap-2">
@@ -927,7 +927,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         askConfirm({
                           title: `Supprimer la mission ${label} ?`,
                           message: activeSessionForModal
-                            ? 'Une mission est en cours sur ce poste : impossible de la supprimer.'
+                            ? 'Une session est en cours sur cette mission : impossible de la supprimer.'
                             : 'La mission sera supprimée. Cette action est définitive.',
                           confirmLabel: 'Supprimer',
                           danger: true,

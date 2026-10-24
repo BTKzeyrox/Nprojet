@@ -135,9 +135,9 @@ export const SITE_MAP: SitePage[] = [
   },
   {
     id: 'grid', audience: 'employee', title: b('Missions', 'Missions'),
-    purpose: b('La liste des postes disponibles pour l\'employé.', 'The list of posts available to the employee.'),
-    howto: [b('Choisir un poste libre.', 'Pick a free post.'), b('Le réserver et commencer la mission à l\'heure.', 'Reserve it and start the mission on time.'), b('Envoyer les preuves demandées à la fin.', 'Send the requested proofs at the end.')],
-    rules: [b('Un poste « sans compte » est grisé : il n\'est pas réservable.', 'A "no account" post is greyed out: it cannot be reserved.'), b('Un employé ne voit jamais les prix clients ni les fiches clients.', 'An employee never sees client prices or client records.')],
+    purpose: b('La liste des missions disponibles pour l\'opérateur.', 'The list of missions available to the operator.'),
+    howto: [b('Choisir une mission libre.', 'Pick a free mission.'), b('Le réserver et commencer la mission à l\'heure.', 'Reserve it and start the mission on time.'), b('Envoyer les preuves demandées à la fin.', 'Send the requested proofs at the end.')],
+    rules: [b('Une mission « sans compte » est grisée : elle n\'est pas réservable.', 'A "no account" mission is greyed out: it cannot be reserved.'), b('Un employé ne voit jamais les prix clients ni les fiches clients.', 'An employee never sees client prices or client records.')],
     figures: [],
   },
   {

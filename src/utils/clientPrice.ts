@@ -16,7 +16,7 @@ export function clientPriceForType(type: string | undefined, s: PriceSettings): 
   return valid(s.client_price_default_ar) ? Math.round(s.client_price_default_ar) : 0;
 }
 
-/** Prix client d'une mission (poste) : son prix propre, sinon celui du type, sinon le prix par défaut. */
+/** Prix client d'une mission : son prix propre, sinon celui du type, sinon le prix par défaut. */
 export function clientPriceForContract(c: Pick<ClientContract, 'client_price_ar' | 'post_type'> | undefined, s: PriceSettings): number {
   if (c && valid(c.client_price_ar)) return Math.round(c.client_price_ar);
   return clientPriceForType(c?.post_type, s);

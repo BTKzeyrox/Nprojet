@@ -174,7 +174,7 @@ class AppStore {
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
   private presence: PresenceRow[] = []; // admin : tous les opérateurs
-  private myQueue: QueueInfo | null = null; // opérateur : sa place dans la file « sans poste »
+  private myQueue: QueueInfo | null = null; // opérateur : sa place dans la file « sans mission »
   private currentUser: User | null = null;
   private demo = false; // mode démo : données inventées, aucun appel au serveur
   private demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
@@ -530,7 +530,7 @@ class AppStore {
       }
     }
 
-    // Premier démarrage : l'admin remplit les 20 postes
+    // Premier démarrage : l'admin remplit les 20 missions
     if (r.data.me?.role === 'admin' && this.contracts.length === 0 && (cols.contracts?.ids || []).length === 0) {
       this.contracts = [...AVAILABLE_CLIENT_CONTRACTS];
       this.notify();
@@ -1748,7 +1748,7 @@ class AppStore {
     return this.myQueue;
   }
 
-  // Opérateur : « je n'ai pas de poste » (join = true) ou quitter la file (join = false)
+  // Opérateur : « je n'ai pas de mission » (join = true) ou quitter la file (join = false)
   public async setWaiting(join: boolean): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('queue', { method: 'POST', body: JSON.stringify({ join }) });
     if (r.ok) await this.pull(true);
@@ -1779,7 +1779,7 @@ class AppStore {
 
   public static readonly MAX_CONTRACTS = 100;
 
-  // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
+  // Admin : ajoute une mission (sans nom de compte = mission « sans compte », grisée)
   public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; tasks?: { id: string; text: string }[]; tasks_required?: boolean; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
     if (this.contracts.length >= AppStore.MAX_CONTRACTS) {
       return { success: false, error: `Maximum ${AppStore.MAX_CONTRACTS} missions.` };
@@ -1832,7 +1832,7 @@ class AppStore {
     return { success: true };
   }
 
-  // Admin : retire un poste (refusé si une session est en cours dessus)
+  // Admin : retire une mission (refusé si une session est en cours dessus)
   public removeContract(id: string): { success: boolean; error?: string } {
     const c = this.contracts.find(x => x.id === id);
     if (!c) return { success: false, error: 'Mission introuvable.' };
@@ -1849,7 +1849,7 @@ class AppStore {
 
   /**
    * Lie une mission à une fiche client (ou enlève le lien avec `null`). Admin seulement ; le serveur revérifie que la fiche existe.
-   * L'histoire reste figée : les sessions de cette mission (trouvées par numéro de poste, sinon par titre) qui n'ont pas encore de client prennent le client d'AVANT le changement
+   * L'histoire reste figée : les sessions de cette mission (trouvées par numéro de mission, sinon par titre) qui n'ont pas encore de client prennent le client d'AVANT le changement
    * (ou le nouveau client si la mission n'en avait pas). Une session déjà liée ne change jamais.
    */
   private applyContractClient(c: ClientContract, next: string | null): number {
@@ -2062,7 +2062,7 @@ class AppStore {
       return { success: false, error: 'Access denied. Account is blocked.' };
     }
 
-    // 1. Anti-Multi-Poste Check or Auto-Replace:
+    // 1. Anti-Multi-Mission Check or Auto-Replace:
     const existingActive = this.getActiveOrPendingPost(params.employeeId);
     if (existingActive) {
       if (params.autoReplaceExisting) {

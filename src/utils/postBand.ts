@@ -1,4 +1,4 @@
-// Couleur d'une carte de poste selon le « Reste » (score qu'il reste à faire)
+// Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire)
 // moins de 20M = rouge, moins de 50M = orange, sinon aucune couleur (carte normale)
 export type PostBand = 'red' | 'orange' | 'normal';
 

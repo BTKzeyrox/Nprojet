@@ -215,7 +215,7 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setIsWelcomeAnimating(true);
-    // Accueil d'abord : admin = vue générale, opérateur = grille des postes. Menu fermé.
+    // Accueil d'abord : admin = vue générale, opérateur = grille des missions. Menu fermé.
     setActiveView('feed');
     setIsMobileSidebarOpen(false);
   };

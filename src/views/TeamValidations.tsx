@@ -49,7 +49,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-sm text-white font-semibold truncate">{p.employee_name}</div>
-                  <div className="text-[12px] text-slate-300 truncate">{p.client_name}{p.post_number ? ` · poste ${p.post_number}` : ''}</div>
+                  <div className="text-[12px] text-slate-300 truncate">{p.client_name}{p.post_number ? ` · mission ${p.post_number}` : ''}</div>
                 </div>
                 <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${end ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{end ? 'Fin' : 'Départ'}</span>
               </div>

@@ -193,10 +193,10 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 
 ### Missions  `grid`
 - **Qui** : opérateur
-- **À quoi ça sert** : La liste des postes disponibles pour l'employé.
-- **Comment l'utiliser** : 1. Choisir un poste libre. 2. Le réserver et commencer la mission à l'heure. 3. Envoyer les preuves demandées à la fin.
+- **À quoi ça sert** : La liste des missions disponibles pour l'opérateur.
+- **Comment l'utiliser** : 1. Choisir une mission libre. 2. Le réserver et commencer la mission à l'heure. 3. Envoyer les preuves demandées à la fin.
 - **Règles** :
-  - Un poste « sans compte » est grisé : il n'est pas réservable.
+  - Une mission « sans compte » est grisée : elle n'est pas réservable.
   - Un employé ne voit jamais les prix clients ni les fiches clients.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/components/PostsGrid20.tsx`
 
@@ -504,7 +504,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `performanceExport.ts` | Export des scores et des badges (module 3, M3.8) : tableau Excel/CSV de la page Performance et section du rapport mensuel. |
 | `performanceScore.ts` | Performance des salariés (module 3, partie A) : score 0-100, badges à niveaux, tendance, points d'attention, employé du mois. |
 | `phoneUtils.ts` | Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 » |
-| `postBand.ts` | Couleur d'une carte de poste selon le « Reste » (score qu'il reste à faire) |
+| `postBand.ts` | Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
