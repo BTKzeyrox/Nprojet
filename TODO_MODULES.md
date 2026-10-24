@@ -497,7 +497,7 @@ But : à Madagascar la connexion est souvent coupée. Le site doit **s'ouvrir sa
 
 **Risques de ce module :** perte de données (donc : file sur disque, jamais de suppression silencieuse) ; doublons (donc : numéro d'action) ; ancienne version du site avec un serveur plus récent (donc : mise à jour sûre) ; **argent et données de l'entreprise sur un téléphone perdu** (donc : décision 2) ; heure fausse du téléphone (décision 5) ; stockage plein sur un petit téléphone ; quota (aucune boucle d'envoi rapide). **Ordre :** M13.1 → M13.2 → M13.3 → M13.4 → M13.5 → M13.6 → M13.7 (accord) → M13.8.
 
-## MODULE 14 — Comptabilité complète — taille XL (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M14 »**
+## MODULE 14 — Comptabilité complète — taille XL (demande de BTK, 2026-10-24) — **PRIS le 2026-10-24 (« Go m14 » de BTK) par la session « Go m14 ». Ne pas refaire en parallèle.**
 
 But : que le Comptable (et le responsable) puissent tenir une vraie comptabilité dans le site. **Déjà là, ne pas refaire** : factures, avoirs, devis, paiements reçus, dépenses par catégorie, TVA **par facture** (taux réglable), créances et relances, budgets par catégorie, paie et bulletins, rôle Comptable, sauvegardes, journal d'audit, exports Excel. **Manque (confirmé par recherche dans le code, 2026-10-24)** : plan comptable, journaux, écritures à partie double, grand livre, balance, compte de résultat, bilan, TVA collectée et déclaration, clôture, rapprochement bancaire, export pour le comptable. **Dépend de M2, M4, M5. À faire valider par un expert-comptable malgache : sans cela, ce n'est pas fiable.**
 
