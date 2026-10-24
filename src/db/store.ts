@@ -11,6 +11,9 @@ import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type Invoi
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
+import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
+import { checkHrFile, type HrFile } from '../utils/hrFile';
+import { todayMada as madaToday } from '../utils/stats';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
 import {
   User,
@@ -50,7 +53,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -112,6 +115,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
+  leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
@@ -158,6 +162,7 @@ class DeltaForceStore {
   private quotes: Quote[] = []; // devis (admin et Comptable)
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
+  private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
@@ -200,7 +205,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(),
     };
   }
 
@@ -223,6 +228,7 @@ class DeltaForceStore {
       case 'quotes': return this.quotes;
       case 'suppliers': return this.suppliers;
       case 'purchases': return this.purchases;
+      case 'leaves': return this.leaves;
     }
   }
 
@@ -245,6 +251,7 @@ class DeltaForceStore {
       case 'quotes': this.quotes = value; break;
       case 'suppliers': this.suppliers = value; break;
       case 'purchases': this.purchases = value; break;
+      case 'leaves': this.leaves = value; break;
     }
   }
 
@@ -673,6 +680,66 @@ class DeltaForceStore {
     if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
     if (this.contracts.some(c => c.client_id === id) || this.posts.some(p => p.client_id === id)) return { success: false, error: 'in_use' };
     this.clients = this.clients.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  // Congés (M5.2). Mêmes règles que le serveur (`checkLeave`) : le site refuse avant d'envoyer, le serveur revérifie quand même.
+  // Codes d'erreur : ceux de `leaveReasonText` ('dates', 'overlap', 'balance'…) + 'login' | 'missing'.
+  public getLeaves(): Leave[] { return [...this.leaves]; }
+  private leaveCtx(employeeId: string) {
+    const co = readCompany(this.getSettings().company);
+    return { today: madaToday(), allowance: Number(co.leave.leave_days_per_year) || 0, perWeek: Number(co.leave.work_days_per_week) || 0, others: this.leaves.filter(l => l.employee_id === employeeId) };
+  }
+  public requestLeave(d: { employee_id?: string; type: LeaveType; start_date: string; end_date: string; reason?: string; approved?: boolean }): { success: boolean; error?: string; id?: string } {
+    const me = this.currentUser;
+    if (!me) return { success: false, error: 'login' };
+    const admin = me.role === 'admin';
+    const empId = admin ? String(d.employee_id || '') : me.id;
+    const emp = this.users.find(u => u.id === empId);
+    if (!emp || emp.role === 'admin') return { success: false, error: 'employee' };
+    const now = new Date().toISOString();
+    const id = `lv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const rec = { id, employee_id: empId, employee_name: emp.name, type: d.type, start_date: d.start_date, end_date: d.end_date, reason: d.reason || '', status: admin && d.approved ? 'approved' : 'pending' };
+    const v = checkLeave(rec, undefined, { id: me.id, name: me.name, admin }, now, this.leaveCtx(empId));
+    if (!v.ok) return { success: false, error: v.reason };
+    this.leaves = [v.save as Leave, ...this.leaves];
+    this.notify();
+    return { success: true, id };
+  }
+  /** Accepter, refuser ou annuler. Refus et annulation par l'admin : motif de 3 caractères ou plus. Le salarié ne peut qu'annuler. */
+  public decideLeave(id: string, status: 'approved' | 'rejected' | 'cancelled', reason?: string): { success: boolean; error?: string } {
+    const me = this.currentUser;
+    if (!me) return { success: false, error: 'login' };
+    const old = this.leaves.find(l => l.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    const v = checkLeave({ ...old, status, decision_reason: reason || '' }, old, { id: me.id, name: me.name, admin: me.role === 'admin' }, new Date().toISOString(), this.leaveCtx(old.employee_id));
+    if (!v.ok) return { success: false, error: v.reason };
+    this.leaves = this.leaves.map(l => (l.id === id ? (v.save as Leave) : l));
+    this.notify();
+    return { success: true };
+  }
+  /** Supprime une demande (responsable seulement ; le salarié annule, il ne supprime pas). */
+  public deleteLeave(id: string): { success: boolean; error?: string } {
+    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
+    if (!this.leaves.some(l => l.id === id)) return { success: false, error: 'missing' };
+    this.leaves = this.leaves.filter(l => l.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  // Dossier du salarié (M5.1) : responsable seulement en écriture ; le salarié lit le sien. Le serveur revérifie (bloc HR).
+  public setUserHr(userId: string, hr: HrFile | null): { success: boolean; error?: string } {
+    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
+    const u = this.users.find(x => x.id === userId);
+    if (!u || u.role === 'admin') return { success: false, error: 'missing' };
+    const v = checkHrFile(hr);
+    if (!v.ok) return { success: false, error: v.reason };
+    this.users = this.users.map(x => {
+      if (x.id !== userId) return x;
+      const { hr: _old, ...rest } = x;
+      return (v.hr ? { ...rest, hr: v.hr } : rest) as User;
+    });
     this.notify();
     return { success: true };
   }
@@ -1363,7 +1430,7 @@ class DeltaForceStore {
     const d = buildDemoData();
     // Les fiches clients ne sont pas visibles par un opérateur : ni les fiches, ni le lien client_id sur les missions (comme le vrai serveur)
     const strip = <T extends object>(x: T): T => { const { client_id, ...rest } = x as any; return rest as T; };
-    this.users = d.users; this.contracts = role === 'admin' ? d.contracts : d.contracts.map(strip); this.posts = role === 'admin' ? d.posts : d.posts.map(strip); this.advanceRequests = d.advances;
+    this.users = role === 'admin' ? d.users : d.users.map(u => (u.id === 'demo_u1' ? u : { ...u, hr: undefined })); this.contracts = role === 'admin' ? d.contracts : d.contracts.map(strip); this.posts = role === 'admin' ? d.posts : d.posts.map(strip); this.advanceRequests = d.advances;
     this.clients = role === 'admin' ? d.clients : [];
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
@@ -1376,6 +1443,7 @@ class DeltaForceStore {
     this.quotes = role === 'admin' ? d.quotes : [];
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
+    this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();

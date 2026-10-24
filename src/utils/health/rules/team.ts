@@ -1,8 +1,9 @@
 // Contrôles de la page Équipe (module 11, lot 1) : absences, retards, refus, inactivité. Règles pures.
-// Limites écrites : les congés (module 5) n'existent pas encore, donc un jour sans mission compte comme absence (dimanche = repos).
+// Dimanche = repos. Un jour de congé ACCEPTÉ (module 5) ne compte pas comme absence ; une demande en attente ou refusée ne change rien.
 import { alertId, hasEnough, type HealthContext, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
 import { isLate } from '../../attendance';
+import { leaveOn } from '../../leaves';
 import { dayDiff, isEmployee, isSunday, isWorked, shiftDay } from './common';
 
 const settingsOf = (ctx: HealthContext) => ({
@@ -30,6 +31,7 @@ export const absentStreak: HealthRule = {
       let streak = 0, day = shiftDay(ctx.today, -1), start = '';
       for (let i = 0; i < 60 && day >= first; i++, day = shiftDay(day, -1)) {
         if (isSunday(day)) continue; // dimanche = repos : ne casse pas la série et ne compte pas
+        if (leaveOn(ctx.leaves, u.id, day)) continue; // congé accepté : idem
         if (worked.has(day)) break;
         streak++; start = day;
       }
@@ -38,8 +40,8 @@ export const absentStreak: HealthRule = {
       out.push({
         id: alertId('team', 'absent-streak', u.id), page: 'team', rule: 'absent-streak', severity: streak >= 5 ? 'urgent' : 'watch',
         title_fr: `${u.name} est absent depuis ${streak} jours`, title_en: `${u.name} has been absent for ${streak} days`,
-        why_fr: `Aucune mission depuis le ${start.split('-').reverse().join('/')} (${streak} jours ouvrables, dimanches exclus). Les congés ne sont pas encore pris en compte.`,
-        why_en: `No mission since ${start} (${streak} working days, Sundays excluded). Leave is not taken into account yet.`,
+        why_fr: `Aucune mission depuis le ${start.split('-').reverse().join('/')} (${streak} jours ouvrables, dimanches exclus). Les jours de congé accepté sont exclus.`,
+        why_en: `No mission since ${start} (${streak} working days, Sundays excluded). Approved leave days are excluded.`,
         todo_fr: 'Prendre des nouvelles du salarié.', todo_en: 'Check in with the employee.',
         since: start, value: streak, go: { view: 'calendar' },
       });
@@ -106,6 +108,7 @@ export const inactiveWorker: HealthRule = {
       if (!hasEnough(worked.size, 5)) continue;
       const last = [...worked].sort().pop() as string, gap = dayDiff(last, ctx.today);
       if (gap < N) continue;
+      if (leaveOn(ctx.leaves, u.id, ctx.today)) continue; // en congé accepté aujourd'hui : pas inactif
       out.push({
         id: alertId('team', 'inactive', u.id), page: 'team', rule: 'inactive', severity: 'info',
         title_fr: `${u.name} n'a plus de mission depuis ${gap} jours`, title_en: `${u.name} has had no missions for ${gap} days`,

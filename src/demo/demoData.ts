@@ -4,6 +4,8 @@ import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, Invoic
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
 
 import { clientPriceForPost } from '../utils/clientPrice';
+import { workingDays, type Leave } from '../utils/leaves';
+import type { HrFile } from '../utils/hrFile';
 import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
 
 export const DEMO_ADMIN_ID = 'demo_admin';
@@ -59,6 +61,7 @@ const MISSIONS: { title: string; type: string; desc: string }[] = [
 
 export interface DemoData {
   users: User[];
+  leaves: Leave[];
   contracts: ClientContract[];
   posts: PostSession[];
   advances: SalaryAdvanceRequest[];
@@ -304,6 +307,37 @@ function buildDemoInvoices(posts: PostSession[], contracts: ClientContract[], cl
   return { invoices: out, cash: outCash };
 }
 
+/** Dossiers de salariés inventés (module 5) : contacts et documents fictifs. Dates relatives à aujourd'hui. */
+const DEMO_HR: Record<string, HrFile> = {
+  demo_u1: {
+    position: 'Agent de saisie', hire_date: ymd(daysAgo(800)), contract_type: 'permanent',
+    emergency: { name: 'Sophie Durand', phone: '034 00 000 01', relation: 'Sœur' },
+    documents: [{ id: 'demo_hd1', name: 'Contrat (démo)', url: 'https://example.com/contrat-demo.pdf' }],
+    rate_history: [{ id: 'demo_hr1', date: ymd(daysAgo(800)), to_ar: 4000 }, { id: 'demo_hr2', date: ymd(daysAgo(300)), from_ar: 4000, to_ar: 5000, reason: 'Passage à 5 000 Ar la mission' }],
+  },
+  demo_u2: { position: 'Contrôle qualité', hire_date: ymd(daysAgo(400)), contract_type: 'fixed', contract_end: ymd(daysAgo(-45)), emergency: { name: 'Paul Lambert', phone: '034 00 000 02', relation: 'Père' } },
+  demo_u3: { position: 'Assistante administrative', hire_date: ymd(daysAgo(70)), contract_type: 'trial', trial_end: ymd(daysAgo(-10)), emergency: { name: 'Anne Moreau', phone: '034 00 000 03', relation: 'Mère' } },
+  demo_u4: { position: 'Support niveau 1 (nuit)', hire_date: ymd(daysAgo(200)), contract_type: 'permanent' },
+  demo_u5: { position: 'Saisie et web', hire_date: ymd(daysAgo(120)), contract_type: 'intern', contract_end: ymd(daysAgo(-90)) },
+};
+
+/** Demandes de congé inventées : une acceptée à venir, une maladie passée, une en attente, une refusée, un congé en cours. */
+function buildDemoLeaves(): Leave[] {
+  const mk = (id: string, emp: string, name: string, type: Leave['type'], from: number, len: number, status: Leave['status'], extra: Partial<Leave> = {}): Leave => {
+    const start = ymd(daysAgo(-from)), end = ymd(daysAgo(-(from + len - 1)));
+    const at = iso(daysAgo(Math.max(from, 0) + 3), 10);
+    return { id, employee_id: emp, employee_name: name, type, start_date: start, end_date: end, days: workingDays(start, end, 5), status, created_by: emp, created_at: at, updated_at: at, ...extra };
+  };
+  const dec = { decided_by: DEMO_ADMIN_ID, decided_at: iso(daysAgo(2), 11) };
+  return [
+    mk('demo_lv1', 'demo_u1', 'Camille Durand', 'paid', 12, 5, 'approved', { reason: 'Voyage en famille', ...dec }),
+    mk('demo_lv2', 'demo_u1', 'Camille Durand', 'sick', -25, 2, 'approved', { reason: 'Grippe', ...dec }),
+    mk('demo_lv3', 'demo_u2', 'Noé Lambert', 'paid', 20, 3, 'pending', { reason: 'Mariage d\'un cousin' }),
+    mk('demo_lv4', 'demo_u3', 'Inès Moreau', 'paid', -15, 3, 'rejected', { reason: 'Démarche personnelle', decision_reason: 'Période de forte charge : à reporter', ...dec }),
+    mk('demo_lv5', 'demo_u5', 'Léa Roux', 'unpaid', -1, 4, 'approved', { reason: 'Examen', ...dec }),
+  ];
+}
+
 function buildDemoClients(): Client[] {
   const at = iso(daysAgo(240), 9);
   const mk = (id: string, name: string, contact: string, phone: string, extra: Partial<Client> = {}): Client => ({
@@ -333,6 +367,7 @@ export function buildDemoData(): DemoData {
       id: p.id, username: p.username, name: p.name, role: 'employee', status: 'active', shift: p.shift, is_online: i < 3,
       avatar_url: '', phone: '', performance_badge: i === 0 ? 'Top Booster' : i === 1 ? 'Elite' : 'Standard',
       total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0,
+      ...(DEMO_HR[p.id] ? { hr: DEMO_HR[p.id] } : {}),
     })),
   ];
 
@@ -497,5 +532,5 @@ export function buildDemoData(): DemoData {
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
   const buy = buildDemoPurchasing(products, stock, inv.cash);
   const quotes = buildDemoQuotes(clients, inv.invoices);
-  return { users, contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
+  return { users, leaves: buildDemoLeaves(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
 }

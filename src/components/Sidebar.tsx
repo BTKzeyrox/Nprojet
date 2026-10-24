@@ -4,6 +4,7 @@ import { viewAllowedFor } from '../utils/roles';
 import { teamPendingPosts } from '../utils/teamLead';
 import React from 'react';
 import {
+  Briefcase,
   Layers,
   Newspaper,
   ClipboardList,
@@ -117,6 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     isAdmin
       ? { id: 'employees', label: t('nav_employees'), icon: Users }
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
+    { id: 'hr', label: isAdmin ? 'Ressources humaines' : 'Mon dossier et congés', icon: Briefcase },
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     ...(currentUser.role === 'employee' && badgeAccess().enabled && badgeAccess().seesBadges ? [{ id: 'my-performance', label: lang === 'en' ? 'My performance' : 'Ma performance', icon: Award }] : []), // module 3 : son propre score et ses badges

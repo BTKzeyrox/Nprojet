@@ -129,6 +129,7 @@ export interface User {
   total_score_boosted: number;
   total_earnings_ar: number;
   pending_advance_ar: number;
+  hr?: import('../utils/hrFile').HrFile; // dossier du salarié (M5.1) : admin et salarié concerné seulement
 }
 
 export type PostStatus = 
@@ -279,7 +280,7 @@ export interface ClientContract {
   region_server: string;
 }
 
-export type DayStatus = 'objective_reached' | 'late' | 'absent' | 'no_post' | 'test' | 'in_progress';
+export type DayStatus = 'objective_reached' | 'late' | 'absent' | 'no_post' | 'test' | 'in_progress' | 'leave';
 
 export interface DayCalendarRecord {
   date: string; // YYYY-MM-DD

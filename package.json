@@ -7,6 +7,8 @@
     "dev": "vite",
     "check:hr": "npx --yes tsx scripts/check-hr.ts",
     "check:leaves": "npx --yes tsx scripts/check-leaves.ts",
+    "check:health-hr": "npx --yes tsx scripts/check-health-hr.ts",
+    "check:hr-page": "esbuild scripts/check-hr-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-hr-page.mjs && node node_modules/.cache/check-hr-page.mjs",
     "check:payslip": "npx --yes tsx scripts/check-payslip.ts",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:clients-server": "npx --yes tsx scripts/check-clients-server.ts",

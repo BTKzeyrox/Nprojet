@@ -1,5 +1,6 @@
 // Registre et moteur d'alertes (module 11) : exécute les règles de chaque page, ne garde que des alertes valides,
 // sans doublon, triées, et applique « Ignorer / Vérifié ». Aucune règle ne peut faire tomber les autres.
+import type { Leave } from '../leaves';
 import type { AppSettings, CashEntry, Client, ClientContract, PostSession, Product, PurchaseOrder, Invoice, SalaryAdvanceRequest, StockMove, User } from '../../types';
 import { HEALTH_PAGES, severityRank, type HealthAck, type HealthAlert, type HealthPage, type HealthSeverity, type HealthThresholds } from './types';
 
@@ -10,6 +11,7 @@ export interface HealthContext {
   users: User[]; posts: PostSession[]; contracts: ClientContract[]; clients: Client[];
   cash: CashEntry[]; products: Product[]; moves: StockMove[]; advances: SalaryAdvanceRequest[];
   settings: Partial<AppSettings>;
+  leaves?: Leave[]; // congés (M5.2) : un congé accepté n'est ni une absence ni une inactivité
   thresholds: HealthThresholds;
   /** Lectures serveur faites par l'admin (listes qui existent déjà). `undefined` ou `null` = pas chargé : les règles « système » se taisent. */
   purchases?: PurchaseOrder[] | null;

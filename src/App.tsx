@@ -40,6 +40,7 @@ const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.F
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
+const HrPage = lazy(() => import('./views/hr/HrPage').then(m => ({ default: m.HrPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => ({ default: m.MyPerformance })));
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
@@ -410,6 +411,8 @@ export default function App() {
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
+              ) : activeView === 'hr' ? (
+                <HrPage currentUser={viewUser} />
               ) : activeView === 'advances' ? (
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'performance' ? (
@@ -470,6 +473,8 @@ export default function App() {
                   currentUser={viewUser}
                   onSelectDay={handleSelectDay}
                 />
+              ) : activeView === 'hr' ? (
+                <HrPage currentUser={viewUser} />
               ) : activeView === 'chat' ? (
                 <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               ) : activeView === 'settings' ? (

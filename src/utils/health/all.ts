@@ -4,5 +4,6 @@ import { LOT1_RULES } from './rules/lot1';
 import { LOT2_RULES } from './rules/lot2';
 import { LOT3_RULES } from './rules/lot3';
 import { STATS_RULES } from './rules/stats';
+import { HR_RULES } from './rules/hr';
 
-export const ALL_RULES: HealthRule[] = [...LOT1_RULES, ...LOT2_RULES, ...LOT3_RULES, ...STATS_RULES];
+export const ALL_RULES: HealthRule[] = [...LOT1_RULES, ...LOT2_RULES, ...LOT3_RULES, ...STATS_RULES, ...HR_RULES];

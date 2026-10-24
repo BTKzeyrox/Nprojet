@@ -168,6 +168,18 @@ export const SITE_MAP: SitePage[] = [
     figures: [{ name: b('En retard', 'Late'), formula: b('Début de la session après l\'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n\'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.', 'Session start after the shift start + the tolerance (15 min by default); exactly at the tolerance is not late. Day shift at 08:00, night shift at 20:00 by default.') }],
   },
   {
+    id: 'hr', audience: 'both', title: b('Ressources humaines / Mon dossier et congés', 'Human resources / My file and leave'),
+    purpose: b('Le responsable garde le dossier de chaque salarié et décide des congés ; le salarié lit son dossier et demande ses congés.', 'The manager keeps each employee file and decides on leave; the employee reads their file and requests leave.'),
+    howto: [b('Salarié : onglet Congés, choisir le type et les dates, envoyer la demande.', 'Employee: Leave tab, choose the type and dates, send the request.'), b('Responsable : accepter, ou refuser avec un motif ; un congé accepté apparaît au calendrier.', 'Manager: approve, or refuse with a reason; an approved leave shows on the calendar.'), b('Responsable : onglet Dossiers pour remplir poste, contrat, contact d\'urgence et documents.', 'Manager: Files tab to fill in position, contract, emergency contact and documents.')],
+    rules: [b('Le dossier est visible par le responsable et par le salarié concerné seulement.', 'The file is visible to the manager and the employee concerned only.'), b('Les jours de congé sont des jours ouvrés, calculés par le serveur ; le dimanche est un repos (le samedi aussi si 5 jours par semaine sont réglés).', 'Leave days are working days, computed by the server; Sunday is a rest day (Saturday too if 5 days a week is set).'), b('Un congé payé ne dépasse pas le solde de l\'année ; deux demandes ne se chevauchent pas ; un salarié annule sa demande tant que le congé n\'a pas commencé.', 'Paid leave cannot exceed the year balance; two requests cannot overlap; an employee can cancel a request until the leave has started.'), b('Un congé accepté n\'est plus compté comme jour manqué ni comme absence.', 'An approved leave is no longer counted as a missed day or an absence.')],
+    conditions: ['leave.leave_days_per_year', 'leave.work_days_per_week'],
+    figures: [
+      { name: b('Jours ouvrés d\'une demande', 'Working days of a request'), formula: b('Jours du début à la fin inclus, sans les jours de repos (dimanche ; samedi aussi à 5 jours par semaine).', 'Days from start to end included, without rest days (Sunday; Saturday too at 5 days a week).') },
+      { name: b('Solde de congé payé', 'Paid leave balance'), formula: b('Jours par an (Conditions) moins les congés payés acceptés et en attente de l\'année. Vide si le réglage est à 0.', 'Days per year (Conditions) minus the year\'s approved and pending paid leave. Empty if the setting is 0.') },
+      { name: b('Ancienneté', 'Seniority'), formula: b('Mois pleins depuis la date d\'embauche (le jour du mois compte).', 'Full months since the hire date (the day of the month counts).') },
+    ],
+  },
+  {
     id: 'advances', audience: 'both', title: b('Paie / Ma paie', 'Payroll / My pay'),
     purpose: b('La paie des salariés, les avances et les bulletins.', 'Employee pay, advances and payslips.'),
     howto: [b('L\'employé demande une avance ; l\'admin accepte ou refuse.', 'The employee requests an advance; the admin accepts or refuses.'), b('À la clôture d\'une période, les bulletins sont calculés.', 'When a period is closed, payslips are computed.'), b('L\'admin marque chaque bulletin payé (mode et référence).', 'The admin marks each payslip paid (method and reference).')],

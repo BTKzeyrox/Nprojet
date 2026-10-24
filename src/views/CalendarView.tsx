@@ -20,8 +20,8 @@ import {
   CalendarX,
   ListChecks,
   HandCoins,
-  X,
-} from 'lucide-react';
+  X, CalendarOff } from 'lucide-react';
+import { leaveOn } from '../utils/leaves';
 import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings } from '../types';
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
@@ -51,6 +51,7 @@ const STATUS_META: Record<DayStatus, { label: string; color: string }> = {
   in_progress: { label: 'En cours', color: 'text-cyan-400' },
   test: { label: 'Test / QA', color: 'text-purple-400' },
   absent: { label: 'Absent', color: 'text-red-400' },
+  leave: { label: 'En congé', color: 'text-sky-400' },
   no_post: { label: 'Pas de mission', color: 'text-slate-400' },
 };
 
@@ -61,11 +62,14 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   if (status === 'late') return <Clock className={c} />;
   if (status === 'test') return <FlaskConical className={c} />;
   if (status === 'absent') return <XCircle className={c} />;
+  if (status === 'leave') return <CalendarOff className={c} />;
   return <Circle className={c} />;
 };
 
 // Statut d'un jour pour un booster
-function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings): DayStatus {
+function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
+  // Congé ACCEPTÉ (M5.2) : le jour n'est ni une absence ni un retard, sauf si une mission a vraiment été travaillée ce jour-là
+  if (onLeave && !shifts.some(s => s.status !== 'rejected' && s.status !== 'force_released')) return 'leave';
   if (shifts.length > 0) {
     const hasInProgress = shifts.some(s => s.status === 'active' || s.status === 'pending_start' || s.status === 'pending_end');
     const isTest = shifts.some(s => s.client_name.toLowerCase().includes('test') || s.account_tag.toLowerCase().includes('qa'));
@@ -96,6 +100,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [advances, setAdvances] = useState<SalaryAdvanceRequest[]>(db.getAdvanceRequests());
+  const [leaves, setLeaves] = useState(db.getLeaves());
 
   const [search, setSearch] = useState('');
   const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
@@ -108,6 +113,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       setPosts(db.getPosts());
       setUsers(db.getUsers());
       setAdvances(db.getAdvanceRequests());
+      setLeaves(db.getLeaves());
     });
   }, []);
 
@@ -171,7 +177,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       const dateStr = toDateStr(year, month, i + 1);
       const allShifts = mine.filter(p => p.date === dateStr);
       const shifts = clientFilter === 'all' ? allShifts : allShifts.filter(p => p.client_name === clientFilter);
-      const status = dayStatus(allShifts, dateStr, firstActivity[boosterId] || null, today, cfg);
+      const status = dayStatus(allShifts, dateStr, firstActivity[boosterId] || null, today, cfg, leaveOn(leaves, boosterId, dateStr) !== null);
       const gained = shifts.reduce((acc, s) => acc + Math.max(0, (s.final_score ?? s.current_score) - s.initial_score), 0);
       return { day: i + 1, dateStr, shifts, status, gained };
     });
@@ -255,6 +261,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
     in_progress: L ? 'bg-cyan-50 border-cyan-200' : 'bg-cyan-500/10 border-cyan-500/25',
     test: L ? 'bg-purple-50 border-purple-200' : 'bg-purple-500/10 border-purple-500/25',
     absent: L ? 'bg-red-50 border-red-200' : 'bg-red-500/10 border-red-500/25',
+    leave: L ? 'bg-sky-50 border-sky-200' : 'bg-sky-500/10 border-sky-500/25',
     no_post: L ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.03] border-slate-700/50',
   };
 
@@ -300,7 +307,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Statut du mois</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setStatusFilter('all')} className={pill(statusFilter === 'all')}>Tous</button>
-                  {(['objective_reached', 'late', 'absent', 'in_progress', 'test'] as DayStatus[]).map(st => (
+                  {(['objective_reached', 'late', 'absent', 'leave', 'in_progress', 'test'] as DayStatus[]).map(st => (
                     <button key={st} onClick={() => setStatusFilter(st)} className={pill(statusFilter === st)}><StatusIcon status={st} className="w-3.5 h-3.5" /> {STATUS_META[st].label}</button>
                   ))}
                 </div>
