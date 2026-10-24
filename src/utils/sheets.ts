@@ -9,8 +9,14 @@ export interface CondRule { id: string; col: string; op: '>' | '<' | '=' | '<>' 
 export interface Sheet {
   id: string; title: string; columns: Column[]; rows: Row[]; rules: CondRule[];
   created_at: string; updated_at: string; deleted_at?: string | null;
+  owner_id?: string; owner_name?: string; // posés par le serveur (le propriétaire ne change jamais)
 }
 
+/** Taille maximale d'un tableau une fois écrit en texte (caractères) : au-delà, le serveur refuse. */
+export const SHEET_MAX_CHARS = 1_500_000;
+/** Nombre maximal d'enregistrements par personne, corbeille comprise. */
+export const SHEETS_MAX_RECORDS = 60;
+export const sheetChars = (s: unknown): number => { try { return JSON.stringify(s).length; } catch { return Infinity; } };
 export const LIMITS = { sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50, trashDays: 30, history: 50 };
 const COLORS = ['red', 'green', 'amber', 'blue'];
 const OPS = ['>', '<', '=', '<>', 'contains', 'empty'];
@@ -67,13 +73,15 @@ export function cleanSheet(raw: unknown, now = new Date().toISOString()): Sheet 
     if (!q || typeof q !== 'object') continue;
     const x = q as Record<string, unknown>;
     if (!seen.has(clip(x.col, 60)) || !OPS.includes(x.op as string) || !COLORS.includes(x.color as string)) continue;
-    rules.push({ id: clip(x.id, 60) || newId('r'), col: clip(x.col, 60), op: x.op as CondRule['op'], value: clip(x.value, 100), color: x.color as CondRule['color'] });
+    rules.push({ id: clip(x.id, 60) || `r${rules.length + 1}`, col: clip(x.col, 60), op: x.op as CondRule['op'], value: clip(x.value, 100), color: x.color as CondRule['color'] });
   }
   const s: Sheet = {
     id: r.id, title: clip(r.title, LIMITS.title) || 'Sans titre', columns, rows, rules,
     created_at: clip(r.created_at, 40) || now, updated_at: clip(r.updated_at, 40) || now,
   };
   if (typeof r.deleted_at === 'string') s.deleted_at = r.deleted_at.slice(0, 40);
+  if (typeof r.owner_id === 'string' && r.owner_id) s.owner_id = r.owner_id.slice(0, 60);
+  if (typeof r.owner_name === 'string' && r.owner_name) s.owner_name = r.owner_name.slice(0, 80);
   return s;
 }
 

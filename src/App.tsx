@@ -413,6 +413,8 @@ export default function App() {
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
+              ) : activeView === 'sheets' ? (
+                <MySheets />
               ) : activeView === 'direction' ? (
                 <DirectionPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'hr' ? (

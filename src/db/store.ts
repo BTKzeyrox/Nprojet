@@ -12,6 +12,7 @@ import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_CO
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
+import { demoSheets, type Sheet } from '../utils/sheets';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
 import { checkHrFile, type HrFile } from '../utils/hrFile';
 import { todayMada as madaToday } from '../utils/stats';
@@ -54,7 +55,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqa
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'reviews'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'reviews', 'sheets'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -117,6 +118,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   reviews: (a, b) => String(b.period_end || '').localeCompare(String(a.period_end || '')) || String(a.id).localeCompare(String(b.id)),
+  sheets: (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')) || String(a.id).localeCompare(String(b.id)),
   leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
@@ -164,6 +166,7 @@ class DeltaForceStore {
   private quotes: Quote[] = []; // devis (admin et Comptable)
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
+  private sheets: Sheet[] = []; // « Mes tableaux » (module 12) : un opérateur ne reçoit que les siens ; l'admin lit tous (lecture seule)
   private reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
   private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
@@ -208,7 +211,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(),
     };
   }
 
@@ -233,6 +236,7 @@ class DeltaForceStore {
       case 'purchases': return this.purchases;
       case 'leaves': return this.leaves;
       case 'reviews': return this.reviews;
+      case 'sheets': return this.sheets;
     }
   }
 
@@ -257,6 +261,7 @@ class DeltaForceStore {
       case 'purchases': this.purchases = value; break;
       case 'leaves': this.leaves = value; break;
       case 'reviews': this.reviews = value; break;
+      case 'sheets': this.sheets = value; break;
     }
   }
 
@@ -749,6 +754,18 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // « Mes tableaux » (module 12). Le serveur revérifie tout (bloc SHEETS) ; ici on range seulement les tableaux de la personne connectée.
+  public getSheets(): Sheet[] { return [...this.sheets]; }
+  /** Remplace les tableaux de la personne connectée par cette liste (les autres, vus par l'admin, ne bougent pas). Le lien avec le serveur se fait tout seul. */
+  public putMySheets(list: Sheet[]): void {
+    const me = this.currentUser;
+    if (!me || me.role !== 'employee') return;
+    const mine = list.map(x => ({ ...x, owner_id: me.id, owner_name: me.name }));
+    const ids = new Set(mine.map(x => x.id));
+    this.sheets = [...mine, ...this.sheets.filter(x => x.owner_id !== me.id && !ids.has(x.id))];
+    this.sheets.sort(SORTERS.sheets as any);
+    this.notify();
+  }
   // Évaluations (M5.4). Mêmes règles que le serveur (`checkReview`). Le responsable écrit ; le salarié lit ses fiches partagées et accuse lecture.
   public getReviews(): Review[] { return [...this.reviews]; }
   public saveReview(d: { id?: string; employee_id?: string; period_start: string; period_end: string; status: 'draft' | 'shared'; objectives: { id: string; text: string; done?: boolean }[]; strengths?: string; comments?: string; improvements?: string; rating?: number | null; snapshot?: Review['snapshot'] }): { success: boolean; error?: string; id?: string } {
@@ -1489,6 +1506,7 @@ class DeltaForceStore {
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
     this.reviews = role === 'admin' ? d.reviews : d.reviews.filter(r => r.employee_id === 'demo_u1' && r.status === 'shared').map(r => forEmployeeReview(r) as Review);
+    this.sheets = role === 'admin' ? demoSheets(new Date().toISOString()).map(x => ({ ...x, owner_id: 'demo_u1', owner_name: 'Camille Durand' })) : []; // l'opérateur démo reçoit ses exemples à l'ouverture de la page
     this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;

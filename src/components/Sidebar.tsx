@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     ...(currentUser.role === 'employee' && badgeAccess().enabled && badgeAccess().seesBadges ? [{ id: 'my-performance', label: lang === 'en' ? 'My performance' : 'Ma performance', icon: Award }] : []), // module 3 : son propre score et ses badges
-    ...(currentUser.role === 'employee' ? [{ id: 'sheets', label: lang === 'en' ? 'My tables' : 'Mes tableaux', icon: Table2 }] : []), // module 12 : saisie type Excel
+    ...(currentUser.role === 'employee' ? [{ id: 'sheets', label: lang === 'en' ? 'My tables' : 'Mes tableaux', icon: Table2 }] : isAdmin ? [{ id: 'sheets', label: lang === 'en' ? 'Team tables' : 'Tableaux de l\'équipe', icon: Table2 }] : []), // module 12 : saisie type Excel (l'admin lit celles de l'équipe)
     { id: 'advances', label: isAdmin ? 'Paie' : 'Ma paie', icon: Wallet },
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),

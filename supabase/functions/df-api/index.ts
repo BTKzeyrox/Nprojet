@@ -20,6 +20,7 @@ const T = {
   purchases: "df_purchase_orders", // après les produits et les fournisseurs : un bon ne se crée que si tout ce qu'il cite existe
   invoices: "df_invoices", // factures et avoirs (les compteurs de numéros ne sont JAMAIS une collection : uniquement des fonctions SQL)
   reviews: "df_reviews", // fiches d'évaluation (M5.4) : le salarié ne reçoit que SES fiches partagées, sans « points à améliorer »
+  sheets: "df_sheets", // « Mes tableaux » (M12.4) : l'opérateur écrit et lit les siens, l'admin lit tous (lecture seule)
   leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
   quotes: "df_quotes", // devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture)
 } as const;
@@ -597,6 +598,83 @@ function cleanLeave(rec: any, existing: any, actor: { id: string; name: string; 
 }
 // END LEAVECLEAN
 // ===== END LEAVES =====
+
+// ===== BEGIN SHEETS (« Mes tableaux » : l'opérateur écrit et lit SES tableaux, l'admin lit tous ; ce bloc est contrôlé par scripts/check-sheets-shared.ts, copie de src/utils/sheets.ts) =====
+const SHEET_MAX_CHARS = 1_500_000;
+const SHEETS_MAX_RECORDS = 60;
+const SHEET_LIMITS = { sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50 };
+const SHEET_COLORS = ["red", "green", "amber", "blue"];
+const SHEET_OPS = [">", "<", "=", "<>", "contains", "empty"];
+const SHEET_TYPES = ["text", "number", "date", "list", "check"];
+const sheetClip = (v: unknown, n: number): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "").slice(0, n);
+const sheetChars = (s: unknown): number => { try { return JSON.stringify(s).length; } catch { return Infinity; } };
+function cleanSheet(raw: unknown, now: string): any | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.id !== "string" || !r.id || r.id.length > 60) return null;
+  const columns: any[] = [];
+  const seen = new Set<string>();
+  for (const c of Array.isArray(r.columns) ? r.columns.slice(0, SHEET_LIMITS.columns) : []) {
+    if (!c || typeof c !== "object") continue;
+    const x = c as Record<string, unknown>;
+    const id = sheetClip(x.id, 60);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const type = SHEET_TYPES.includes(x.type as string) ? (x.type as string) : "text";
+    const col: any = { id, name: sheetClip(x.name, SHEET_LIMITS.colName) || "Colonne", type };
+    if (type === "list") col.options = (Array.isArray(x.options) ? x.options : []).map((o: unknown) => sheetClip(o, 60)).filter(Boolean).slice(0, SHEET_LIMITS.options);
+    if (x.required === true) col.required = true;
+    if (x.unique === true) col.unique = true;
+    if (typeof x.deleted_at === "string") col.deleted_at = x.deleted_at.slice(0, 40);
+    columns.push(col);
+  }
+  const rows: any[] = [];
+  const rowIds = new Set<string>();
+  for (const w of Array.isArray(r.rows) ? r.rows.slice(0, SHEET_LIMITS.rows) : []) {
+    if (!w || typeof w !== "object") continue;
+    const x = w as Record<string, unknown>;
+    const id = sheetClip(x.id, 60);
+    if (!id || rowIds.has(id)) continue;
+    rowIds.add(id);
+    const cells: Record<string, string> = {};
+    if (x.cells && typeof x.cells === "object") for (const c of columns) { const v = (x.cells as Record<string, unknown>)[c.id]; const t = sheetClip(v, SHEET_LIMITS.cellLen); if (t !== "") cells[c.id] = t; }
+    const row: any = { id, cells };
+    if (typeof x.deleted_at === "string") row.deleted_at = x.deleted_at.slice(0, 40);
+    rows.push(row);
+  }
+  const rules: any[] = [];
+  for (const q of Array.isArray(r.rules) ? r.rules.slice(0, SHEET_LIMITS.rules) : []) {
+    if (!q || typeof q !== "object") continue;
+    const x = q as Record<string, unknown>;
+    if (!seen.has(sheetClip(x.col, 60)) || !SHEET_OPS.includes(x.op as string) || !SHEET_COLORS.includes(x.color as string)) continue;
+    rules.push({ id: sheetClip(x.id, 60) || `r${rules.length + 1}`, col: sheetClip(x.col, 60), op: x.op, value: sheetClip(x.value, 100), color: x.color });
+  }
+  const s: any = {
+    id: r.id, title: sheetClip(r.title, SHEET_LIMITS.title) || "Sans titre", columns, rows, rules,
+    created_at: sheetClip(r.created_at, 40) || now, updated_at: sheetClip(r.updated_at, 40) || now,
+  };
+  if (typeof r.deleted_at === "string") s.deleted_at = r.deleted_at.slice(0, 40);
+  if (typeof r.owner_id === "string" && r.owner_id) s.owner_id = r.owner_id.slice(0, 60);
+  if (typeof r.owner_name === "string" && r.owner_name) s.owner_name = r.owner_name.slice(0, 80);
+  return s;
+}
+/** Écriture d'un tableau : opérateur seulement, jamais celui d'un autre ; le propriétaire est celui qui écrit. `counts` = ses tableaux déjà au serveur (hors celui-ci). */
+function cleanSheetWrite(rec: any, existing: any, me: { id: string; name: string; role: string }, now: string, counts: { active: number; total: number }): { ok: true; save: any } | { ok: false; reason: string } {
+  if (me.role !== "employee") return { ok: false, reason: "forbidden" };
+  if (existing && existing.owner_id !== me.id) return { ok: false, reason: "forbidden" };
+  const s = cleanSheet(rec, now);
+  if (!s) return { ok: false, reason: "format" };
+  s.owner_id = me.id;
+  s.owner_name = String(me.name || "").slice(0, 80);
+  if (existing && typeof existing.created_at === "string") s.created_at = existing.created_at;
+  if (sheetChars(s) > SHEET_MAX_CHARS) return { ok: false, reason: "size" };
+  if (!existing) {
+    if (counts.total >= SHEETS_MAX_RECORDS) return { ok: false, reason: "limit" };
+    if (!s.deleted_at && counts.active >= SHEET_LIMITS.sheetsPerPerson) return { ok: false, reason: "limit" };
+  } else if (!s.deleted_at && existing.deleted_at && counts.active >= SHEET_LIMITS.sheetsPerPerson) return { ok: false, reason: "limit" };
+  return { ok: true, save: s };
+}
+// ===== END SHEETS =====
 
 // ===== BEGIN REVIEWS (évaluations : le responsable écrit, le salarié lit les fiches partagées et accuse lecture ; ce bloc est contrôlé par scripts/check-reviews.ts) =====
 // BEGIN REVIEWCLEAN
@@ -1754,7 +1832,7 @@ async function state(req: any, res: any, me: any) {
   }
 
   for (const col of COLS) {
-    if (!canReadCol(me.role, col)) { out[col] = { changed: [], ids: [] }; continue; } // journal de sécurité et finances : jamais envoyés à un employé
+    if (!canReadCol(me.role, col) || (col === 'sheets' && !admin && !isOperator(me.role))) { out[col] = { changed: [], ids: [] }; continue; } // Comptable et Chef d'équipe : aucun tableau // journal de sécurité et finances : jamais envoyés à un employé
     if (col === 'groups') {
       const sinceMs = new Date(since).getTime();
       out[col] = { changed: myGroups.filter((r: any) => new Date(r.updated_at).getTime() >= sinceMs).map((r: any) => r.data), ids: myGroups.map((r: any) => r.id) };
@@ -1764,6 +1842,7 @@ async function state(req: any, res: any, me: any) {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
       if (col === 'leaves') return q.eq('data->>employee_id', me.id); // un salarié ne voit que ses demandes de congé
+      if (col === 'sheets') return q.eq('data->>owner_id', me.id); // un opérateur ne voit que SES tableaux
       if (col === 'reviews') return q.eq('data->>employee_id', me.id).eq('data->>status', 'shared'); // un salarié ne voit que SES fiches PARTAGÉES
       if (col === 'news') {
         // Publications validées (ou anciennes, sans statut) + les siennes (en attente ou refusées)
@@ -1859,7 +1938,15 @@ async function sync(req: any, res: any, me: any) {
       const existing = row?.data as any | undefined;
       let toSave: any = rec;
 
-      if (col === 'reviews') {
+      if (col === 'sheets') {
+        // Tableaux (M12.4) : l'opérateur écrit ses tableaux ; l'admin (lecture seule) et les autres rôles sont refusés
+        const { data: mine } = await sb.from(T.sheets).select('id, data').eq('data->>owner_id', me.id);
+        const others = (mine || []).filter((x: any) => x.id !== rec.id);
+        const counts = { active: others.filter((x: any) => !x.data.deleted_at).length, total: others.length };
+        const sv = cleanSheetWrite(rec, existing, { id: me.id, name: String(me.name || ''), role: me.role }, now, counts);
+        if (!sv.ok) { rejected.push({ col, id: rec.id, reason: sv.reason }); continue; }
+        toSave = sv.save;
+      } else if (col === 'reviews') {
         // Évaluations (M5.4) : le responsable écrit ; le salarié ne fait qu'accuser lecture de sa fiche partagée
         if (admin && !existing) {
           const eu = await getUserRow(String(rec.employee_id || ''));
@@ -2063,6 +2150,13 @@ async function sync(req: any, res: any, me: any) {
     }
 
     for (const id of deletes) {
+      if (col === 'sheets') {
+        // Tableaux : seul le propriétaire (opérateur) supprime ; l'admin lit seulement
+        const { data: srow } = await sb.from(T.sheets).select('data').eq('id', id).maybeSingle();
+        if (srow && !(me.role === 'employee' && (srow.data as any).owner_id === me.id)) { rejected.push({ col, id, reason: 'forbidden' }); continue; }
+        await sb.from(T.sheets).delete().eq('id', id);
+        continue;
+      }
       // Journal d'audit : le nom de ce qu'on supprime est lu AVANT (la ligne disparaît ensuite). Les messages ne sont pas notés.
       const auditDel = (admin || isMoneyRole(me.role)) && col !== 'messages' ? (await sb.from(T[col]).select('data').eq('id', id).maybeSingle()).data : null;
       if (!admin && !(isMoneyRole(me.role) && MONEY_COLS.includes(col))) {
@@ -3152,6 +3246,7 @@ async function purgeEmployee(uid: string) {
   });
   await step('advances', async () => { await sb.from(T.advances).delete().eq('data->>employee_id', uid); });
   await step('leaves', async () => { await sb.from(T.leaves).delete().eq('data->>employee_id', uid); });
+  await step('sheets', async () => { await sb.from(T.sheets).delete().eq('data->>owner_id', uid); });
   await step('reviews', async () => { await sb.from(T.reviews).delete().eq('data->>employee_id', uid); });
   await step('securityLogs', async () => { await sb.from(T.securityLogs).delete().eq('data->>employee_id', uid); });
 

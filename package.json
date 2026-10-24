@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check:sheets-shared": "npx --yes tsx scripts/check-sheets-shared.ts",
     "check:sheets": "npx --yes tsx scripts/check-sheets.ts",
     "check:hr": "npx --yes tsx scripts/check-hr.ts",
     "check:leaves": "npx --yes tsx scripts/check-leaves.ts",
