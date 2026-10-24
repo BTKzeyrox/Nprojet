@@ -225,6 +225,32 @@ for (const lang of ['fr', 'en'] as const) {
   ok(!/<script/i.test(html), 'rapport imprimable : aucun script');
 }
 
+
+// ---------- anglais : aucun texte français sur les écrans du module 3 (M3.9) ----------
+{
+  db.enterDemo('admin');
+  // les noms de la démo (personnes, clients, missions, types) sont des DONNÉES, pas des textes de l'écran : on les retire avant de chercher du français
+  const st0 = db.getSettings() as any;
+  const names = [...db.getUsers().map(u => u.name), ...db.getClients().map(c => c.name), ...db.getClients().map(c => (c as any).note), ...db.getContracts().map((c: any) => c.client_name), ...((st0.post_types || []) as any[]).map(x => (typeof x === 'string' ? x : x?.name)), ...((st0.post_types || []) as any[]).map(x => String(typeof x === 'string' ? x : x?.name || '').toUpperCase())].filter(Boolean).sort((a, b) => String(b).length - String(a).length);
+  const accent = /[àâçéèêëîïôùûœ]/i;
+  const leak = (html: string) => { let h = html; for (const nm of names) h = h.split(String(nm)).join(''); return accent.test(h) ? (h.match(/.{0,40}[àâçéèêëîïôùûœ].{0,30}/i) || [''])[0] : ''; };
+  const watch = db.getClients().find(c => c.name === 'Cabinet Horizon');
+  const screens: [string, string][] = [
+    ['Scores et badges (responsable)', show(<PerformanceScores />, 'en')],
+    ['Réglages Performance', show(<PerformanceSettings lang="en" />, 'en')],
+    ['Clients : liste', show(<ClientsPage />, 'en')],
+    ['Clients : fiche ouverte', show(<ClientsPage initialOpen={watch?.id} />, 'en')],
+  ];
+  db.enterDemo('employee');
+  screens.push(['Ma performance (opérateur)', show(<MyPerformance />, 'en')]);
+  for (const [name, html] of screens) ok(leak(html) === '', `anglais : ${name} sans français${leak(html) ? ' — vu : « ' + leak(html) + ' »' : ''}`);
+  // la même chose avec le détail du score ouvert à l'opérateur
+  (db.getSettings() as any).company.options.employee_sees_attention = true;
+  const htmlOpen = show(<MyPerformance />, 'en');
+  ok(leak(htmlOpen) === '', `anglais : Ma performance avec détail du score ouvert sans français${leak(htmlOpen) ? ' — vu : « ' + leak(htmlOpen) + ' »' : ''}`);
+  (db.getSettings() as any).company.options.employee_sees_attention = false;
+}
+
 ok(calls === 0, `aucun appel réseau (${calls})`);
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
