@@ -59,6 +59,7 @@ export interface AppSettings {
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
   performance?: import('../utils/performanceScore').PerformanceConfig; // Réglages de la performance (module 3) : le serveur revérifie tout
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
+  health_acks?: unknown[]; // marques « Ignorer / Vérifié » de la Santé du site, partagées entre appareils (admin seulement ; le serveur les revérifie)
   budgets?: Record<string, number>; // plafond mensuel par catégorie de dépense, en Ar (module 4) : admin seulement, jamais envoyé à un opérateur
   company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
 }

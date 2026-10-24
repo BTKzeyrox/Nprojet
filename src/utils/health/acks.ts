@@ -32,3 +32,13 @@ export function loadAcks(adminId: string): HealthAck[] {
 export function saveAcks(adminId: string, list: HealthAck[]): boolean {
   try { localStorage.setItem(KEY(adminId), JSON.stringify(list.slice(-MAX_ACKS))); return true; } catch { return false; }
 }
+
+/** Liste de marques venue d'ailleurs (serveur, autre appareil) : valides seulement, une par alerte (la plus récente), 300 au plus. `null` si ce n'est pas une liste. Copie exacte côté serveur (bloc HEALTH_ACKS). */
+export function cleanAckList(raw: unknown): HealthAck[] | null {
+  if (!Array.isArray(raw)) return null;
+  const byId = new Map<string, HealthAck>();
+  for (const x of raw) { const c = cleanAck(x); if (!c) continue; const o = byId.get(c.id); if (!o || o.at <= c.at) byId.set(c.id, c); }
+  return [...byId.values()].sort((p, q) => p.at.localeCompare(q.at)).slice(-MAX_ACKS);
+}
+/** Réunit deux listes : pour une même alerte, la marque la plus récente gagne. */
+export const mergeAcks = (a: HealthAck[], b: HealthAck[]): HealthAck[] => cleanAckList([...a, ...b]) || [];

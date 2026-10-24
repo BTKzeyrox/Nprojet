@@ -38,6 +38,7 @@
     "check:health-performance": "npx --yes tsx scripts/check-health-performance.ts",
     "check:health-notif": "npx --yes tsx scripts/check-health-notif.ts",
     "check:watch-shared": "npx --yes tsx scripts/check-watch-shared.ts",
+    "check:health-acks-shared": "npx --yes tsx scripts/check-health-acks-shared.ts",
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:ai-assistant": "npx --yes tsx scripts/check-ai-assistant.ts",

@@ -945,6 +945,33 @@ function applyBudgets(saved: any, rec: any, existing: any): any {
 }
 // ===== END SUPPLIERS =====
 
+// ===== BEGIN HEALTH_ACKS (marques « Ignorer / Vérifié » de la Santé du site, partagées entre appareils : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-health-acks-shared.ts et copie src/utils/health/acks.ts + registry.ts) =====
+const HEALTH_ACK_MAX = 300;
+function cleanHealthAck(a: any): any | null {
+  if (!a || typeof a.id !== "string" || !/^[a-z]+:[a-z0-9_-]+(:[a-z0-9_-]+)?$/.test(a.id)) return null;
+  if (a.status !== "ignored" && a.status !== "checked") return null;
+  if (!["info", "watch", "urgent"].includes(a.severity_at)) return null;
+  if (typeof a.at !== "string" || Number.isNaN(Date.parse(a.at))) return null;
+  if (a.until !== undefined && a.until !== null && !(typeof a.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.until))) return null;
+  if (a.value_at !== undefined && !(typeof a.value_at === "number" && Number.isFinite(a.value_at))) return null;
+  return { id: a.id, status: a.status, reason: String(a.reason || "").trim().slice(0, 200), at: a.at, ...(a.until ? { until: a.until } : {}), severity_at: a.severity_at, ...(a.value_at !== undefined ? { value_at: a.value_at } : {}) };
+}
+function cleanHealthAckList(raw: any): any[] | null {
+  if (!Array.isArray(raw)) return null;
+  const byId = new Map<string, any>();
+  for (const x of raw) { const c = cleanHealthAck(x); if (!c) continue; const o = byId.get(c.id); if (!o || o.at <= c.at) byId.set(c.id, c); }
+  return [...byId.values()].sort((p, q) => p.at.localeCompare(q.at)).slice(-HEALTH_ACK_MAX);
+}
+/** Réglages écrits par l'admin : les marques sont revérifiées ; absentes ou pas une liste (ancien site) = l'existant est gardé. */
+function applyHealthAcks(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const sent = rec ? cleanHealthAckList(rec.health_acks) : null;
+  const list = sent !== null ? sent : cleanHealthAckList(existing && existing.health_acks);
+  if (list) out.health_acks = list; else delete out.health_acks; // une liste vide est gardée : elle dit « tout a été remis », les autres appareils la suivent
+  return out;
+}
+// ===== END HEALTH_ACKS =====
+
 // ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
 interface PerformanceConfig {
   window_days: number; // fenêtre du score
@@ -1020,7 +1047,7 @@ function applyPerformance(saved: any, rec: any, existing: any): any {
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -1172,7 +1199,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
-const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates"];
+const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
 const auditCut = (v: unknown, n: number) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 function buildAuditEntry(me: any, action: string, target: any, detail: unknown, at: string, rand: string): any | null {
   if (!AUDIT_ACTIONS.includes(action)) return null;
@@ -1782,7 +1809,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
