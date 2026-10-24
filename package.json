@@ -19,6 +19,7 @@
     "check:health": "npx --yes tsx scripts/check-health.ts",
     "check:health-lot1": "npx --yes tsx scripts/check-health-lot1.ts",
     "check:badges": "npx --yes tsx scripts/check-badges.ts",
+    "check:client-badges": "npx --yes tsx scripts/check-client-badges.ts",
     "check:performance-config": "npx --yes tsx scripts/check-performance-config.ts",
     "check:performance-page": "esbuild scripts/check-performance-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-performance-page.mjs && node node_modules/.cache/check-performance-page.mjs",
     "check:health-lot2": "npx --yes tsx scripts/check-health-lot2.ts",
