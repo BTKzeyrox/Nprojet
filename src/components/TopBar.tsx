@@ -206,7 +206,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                     return (
                       <button
                         key={n.id}
-                        onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
+                        onClick={() => { setBellOpen(false); if (n.id.startsWith('summary-')) markSeen(currentUser, [n.id]); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
                         className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl border cursor-pointer ${fresh ? (L ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/15 border-blue-400/40') : (L ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-white/5 border-white/10 hover:bg-white/10')}`}
                       >
                         <span className={`mt-0.5 w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${tone}`}>

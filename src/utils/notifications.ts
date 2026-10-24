@@ -3,6 +3,9 @@ import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
 import { getQueue, getFreePosts } from './presence';
 import type { ValFilter } from './navIntent';
+import { getHealth } from './healthDb';
+import { todayMada } from './stats';
+import { planHealthNotifs } from './healthNotif';
 
 export interface Notif {
   id: string;
@@ -14,6 +17,15 @@ export interface Notif {
   filter?: ValFilter; // filtre de la page Validations à activer au clic
   nav?: string; // élément exact à atteindre (data-nav) : défilement + clignotement
   thread?: string; // messagerie : discussion à ouvrir ('all' = groupe)
+}
+
+// Cloche de l'admin : alertes URGENTES de la Santé du site + résumé du jour (règles pures dans healthNotif.ts). Réglable sur l'appareil (par défaut : oui).
+const HEALTH_NOTIF_KEY = (uid: string) => `df_notif_health_${uid}`;
+export const healthNotifOn = (uid: string): boolean => { try { return localStorage.getItem(HEALTH_NOTIF_KEY(uid)) !== '0'; } catch { return true; } };
+export const setHealthNotif = (uid: string, on: boolean): void => { try { localStorage.setItem(HEALTH_NOTIF_KEY(uid), on ? '1' : '0'); } catch { /* stockage indisponible */ } };
+export function healthNotifications(user: User, nowMs = Date.now()): Notif[] {
+  if (user.role !== 'admin' || !healthNotifOn(user.id)) return [];
+  try { return planHealthNotifs(getHealth().alerts, todayMada(), nowMs, getSeen(user)); } catch { return []; } // la cloche ne doit jamais tomber à cause de la Santé du site
 }
 
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi
@@ -56,6 +68,7 @@ export const buildNotifications = (user: User): Notif[] => {
     db.getAdvanceRequests().filter(a => a.employee_id === user.id && a.status !== 'pending').forEach(a =>
       out.push({ id: `advr-${a.id}-${a.status}`, title: `Avance ${formatCurrencyAr(a.amount_ar)} ${a.status === 'approved' ? 'acceptée' : 'refusée'}`, sub: a.admin_notes ? `Motif : ${a.admin_notes}` : '', view: 'advances', nav: `adv-${a.id}`, at: a.request_date, tone: a.status === 'approved' ? 'ok' : 'bad' }));
   }
+  if (user.role === 'admin') out.push(...healthNotifications(user));
   // Messagerie : messages reçus (privés ou groupe) des 3 derniers jours, pas encore lus
   const seen = getSeen(user);
   const since = Date.now() - 3 * 24 * 3600 * 1000;

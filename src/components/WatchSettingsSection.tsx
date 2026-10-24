@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { db } from '../db/store';
 import { WATCH_FIELDS, checkWatchInput } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT, type HealthThresholds } from '../utils/health/types';
 import { getWatchPrefs, setWatchPrefs } from '../utils/healthDb';
+import { healthNotifOn, setHealthNotif } from '../utils/notifications';
 
 /** Réglages > Général : « Surveillance » (seuils de la Santé du site). Réglés sur cet appareil ; vide = valeur de départ. */
 export const WatchSettingsSection: React.FC = () => {
@@ -11,7 +13,9 @@ export const WatchSettingsSection: React.FC = () => {
   const t = (fr: string, en: string) => (l === 'en' ? en : fr);
   const [vals, setVals] = useState<Partial<HealthThresholds>>(() => getWatchPrefs());
   const [errs, setErrs] = useState<Record<string, string>>({});
+  const uid = db.getCurrentUser()?.id || '';
   const [open, setOpen] = useState(false);
+  const [notifOn, setNotifOn] = useState(() => (uid ? healthNotifOn(uid) : true));
   const change = (key: keyof HealthThresholds, text: string) => {
     const r = checkWatchInput(key, text);
     if (!r.ok) { setErrs(e => ({ ...e, [key]: r.why[l] })); return; }
@@ -28,6 +32,7 @@ export const WatchSettingsSection: React.FC = () => {
       </button>
       {open && <>
         <p className="text-[11px] text-slate-400">{t('Chaque case montre la valeur de départ. Laissez vide pour la garder. Réglé sur cet appareil seulement ; les alertes sont recalculées tout de suite.', 'Each box shows the default value. Leave it empty to keep it. Set on this device only; alerts are recomputed right away.')}</p>
+        <label className="flex items-center gap-2 min-h-[44px] text-sm text-slate-200 cursor-pointer"><input type="checkbox" checked={notifOn} onChange={e => { setNotifOn(e.target.checked); if (uid) setHealthNotif(uid, e.target.checked); }} className="w-5 h-5" />{t('Cloche : alertes urgentes et résumé du jour (après 08:00)', 'Bell: urgent alerts and daily summary (after 08:00)')}</label>
         <div className="space-y-2">
           {WATCH_FIELDS.map(f => (
             <label key={f.key} className="block text-xs text-slate-300 space-y-1">
