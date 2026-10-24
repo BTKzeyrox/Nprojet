@@ -40,6 +40,7 @@ const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.F
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
+const DirectionPage = lazy(() => import('./views/admin/DirectionPage').then(m => ({ default: m.DirectionPage })));
 const HrPage = lazy(() => import('./views/hr/HrPage').then(m => ({ default: m.HrPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => ({ default: m.MyPerformance })));
@@ -411,6 +412,8 @@ export default function App() {
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
+              ) : activeView === 'direction' ? (
+                <DirectionPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'hr' ? (
                 <HrPage currentUser={viewUser} />
               ) : activeView === 'advances' ? (
