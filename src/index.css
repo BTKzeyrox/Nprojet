@@ -855,3 +855,37 @@ aside.df-sb button:has(svg.lucide-message-square) .df-sb-badge { background-colo
   .chart-bar, .chart-area { animation: none; }
   .chart-line { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
 }
+
+/* =====================================================================
+   FINITIONS (2026-10-24) : thème clair net et coins arrondis partout
+   Dernier bloc : il l'emporte sur les anciennes règles « grises » du thème clair.
+   ===================================================================== */
+/* Thème clair : les anciens fonds foncés à transparence (slate-800/900…) donnaient un gris terne sur ordinateur. */
+html.theme-light [class^="bg-slate-8"], html.theme-light [class*=" bg-slate-8"],
+html.theme-light [class^="bg-slate-9"], html.theme-light [class*=" bg-slate-9"],
+html.theme-light [class^="bg-gray-8"], html.theme-light [class*=" bg-gray-8"],
+html.theme-light [class^="bg-gray-9"], html.theme-light [class*=" bg-gray-9"],
+html.theme-light [class^="bg-zinc-9"], html.theme-light [class*=" bg-zinc-9"] { background-color: #f8fafc; }
+html.theme-light .bg-slate-700, html.theme-light [class*="bg-slate-700/"] { background-color: #e2e8f0; }
+html.theme-light [class^="border-slate-6"], html.theme-light [class*=" border-slate-6"],
+html.theme-light [class^="border-slate-7"], html.theme-light [class*=" border-slate-7"],
+html.theme-light [class^="border-slate-8"], html.theme-light [class*=" border-slate-8"],
+html.theme-light [class^="border-slate-9"], html.theme-light [class*=" border-slate-9"] { border-color: #dbe3ee; }
+html.theme-light [class*="bg-[#"]:not(button):not(a) { border-color: #dbe3ee; }
+/* Un bouton ne devient jamais sombre au survol dans le thème clair. */
+@media (hover: hover) {
+  html.theme-light button[class*="hover:bg-[#"]:hover, html.theme-light a[class*="hover:bg-[#"]:hover,
+  html.theme-light button[class*="hover:bg-slate-"]:hover { background-color: #e8eef6 !important; }
+}
+/* Coins arrondis : tout cadre (bouton, champ, pastille, carte) qui a un contour mais aucun arrondi en reçoit un. */
+button[class~="border"]:not([class*="rounded"]), a[class~="border"]:not([class*="rounded"]),
+button[class~="border-2"]:not([class*="rounded"]), a[class~="border-2"]:not([class*="rounded"]),
+label[class~="border"]:not([class*="rounded"]), select[class~="border"]:not([class*="rounded"]),
+input[class~="border"]:not([class*="rounded"]):not([type="checkbox"]):not([type="radio"]), textarea[class~="border"]:not([class*="rounded"]) { border-radius: 10px; }
+span[class~="border"]:not([class*="rounded"]) { border-radius: 8px; }
+div[class~="border"]:not([class*="rounded"]), div[class~="border-2"]:not([class*="rounded"]), li[class~="border"]:not([class*="rounded"]), section[class~="border"]:not([class*="rounded"]) { border-radius: 12px; }
+/* Les boutons de formulaire sans contour mais avec fond ont aussi un arrondi */
+button[class*="bg-"][class*="px-"]:not([class*="rounded"]):not([class*="w-full"]):not([class*="border-b"]) { border-radius: 10px; }
+html .df-edge-urgent { border-left-color: #e11d48 !important; }
+html .df-edge-watch { border-left-color: #f59e0b !important; }
+html .df-edge-info { border-left-color: #0ea5e9 !important; }

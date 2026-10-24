@@ -24,7 +24,9 @@ const SEV: Record<HealthSeverity, { fr: string; en: string; cls: string }> = {
 };
 const STATE_CLS = { ok: 'border-emerald-700/60 text-emerald-300', watch: 'border-amber-600/70 text-amber-300', urgent: 'border-rose-600/70 text-rose-300' } as const;
 const box = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
-const btn = 'min-h-[44px] px-3 rounded-lg border border-slate-600 bg-slate-800/70 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5';
+const btn = 'min-h-[44px] px-3 rounded-xl border border-slate-600 bg-[#141e2a] hover:border-slate-400 text-slate-100 text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5';
+// Liseré de couleur à gauche de chaque alerte selon la gravité
+const SEV_EDGE: Record<HealthSeverity, string> = { urgent: 'df-edge-urgent', watch: 'df-edge-watch', info: 'df-edge-info' };
 const sinceTxt = (d: string | null, l: 'fr' | 'en') => (d ? (l === 'en' ? `since ${d}` : `depuis le ${d.split('-').reverse().join('/')}`) : '');
 
 export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
@@ -58,7 +60,7 @@ export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ 
   };
 
   const card = (a: HealthAlert) => (
-    <li key={a.id} className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 space-y-2">
+    <li key={a.id} className={`rounded-xl border border-slate-700 border-l-4 ${SEV_EDGE[a.severity]} bg-[#0f1722] p-3 sm:p-4 space-y-2`}>
       <div className="flex items-start gap-2">
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${SEV[a.severity].cls}`}>{SEV[a.severity][l]}</span>
         <div className="min-w-0 flex-1">
@@ -74,9 +76,9 @@ export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ 
         <button type="button" className={btn} onClick={() => { setAsking({ id: a.id, status: 'ignored' }); setReason(''); }}><EyeOff className="w-4 h-4" />{t('Ignorer', 'Ignore')}</button>
       </div>
       {asking?.id === a.id && (
-        <div className="rounded-lg border border-slate-600 bg-slate-950/60 p-2 space-y-2">
+        <div className="rounded-xl border border-slate-600 bg-[#141e2a] p-3 space-y-2">
           <label className="text-xs text-slate-300 block" htmlFor={`why-${a.id}`}>{asking.status === 'ignored' ? t('Pourquoi ignorer ? (facultatif)', 'Why ignore? (optional)') : t('Qu\'as-tu vérifié ? (facultatif)', 'What did you check? (optional)')}</label>
-          <input id={`why-${a.id}`} value={reason} maxLength={200} onChange={e => setReason(e.target.value)} className="w-full min-h-[44px] rounded-lg bg-slate-900 border border-slate-600 px-3 text-sm text-white" />
+          <input id={`why-${a.id}`} value={reason} maxLength={200} onChange={e => setReason(e.target.value)} className="w-full min-h-[44px] rounded-xl bg-[#141e2a] border border-slate-600 px-3 text-sm text-white" />
           <p className="text-[11px] text-slate-400">{asking.status === 'ignored' ? t('L\'alerte revient si le problème s\'aggrave, ou après 14 jours. Marque gardée sur cet appareil.', 'The alert returns if the problem gets worse, or after 14 days. Mark kept on this device.') : t('L\'alerte revient seulement si le problème s\'aggrave. Marque gardée sur cet appareil.', 'The alert returns only if the problem gets worse. Mark kept on this device.')}</p>
           <div className="flex gap-2">
             <button type="button" className={btn} onClick={() => confirmAck(a)}>{t('Confirmer', 'Confirm')}</button>
@@ -102,9 +104,9 @@ export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ 
           <span className="px-2 py-1 rounded-full bg-sky-600/15 text-sky-300 border border-sky-600/50">{info} info</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5" role="tablist" aria-label={t('Pages', 'Pages')}>
-          <button type="button" role="tab" aria-selected={filter === 'all'} onClick={() => setFilter('all')} className={`min-h-[44px] rounded-lg border text-xs font-semibold ${filter === 'all' ? 'bg-emerald-700 border-emerald-500 text-white' : 'border-slate-700 text-slate-300 bg-slate-900/60'}`}>{t('Toutes', 'All')}</button>
+          <button type="button" role="tab" aria-selected={filter === 'all'} onClick={() => setFilter('all')} className={`min-h-[44px] rounded-xl border text-xs font-semibold ${filter === 'all' ? 'bg-emerald-700 border-emerald-500 text-white' : 'border-slate-700 text-slate-300 bg-[#141e2a]'}`}>{t('Toutes', 'All')}</button>
           {LIVE_PAGES.map(p => (
-            <button key={p} type="button" role="tab" aria-selected={filter === p} onClick={() => setFilter(p)} className={`min-h-[44px] rounded-lg border text-xs font-semibold px-1 ${filter === p ? 'bg-emerald-700 border-emerald-500 text-white' : `bg-slate-900/60 ${STATE_CLS[states[p]]}`}`}>
+            <button key={p} type="button" role="tab" aria-selected={filter === p} onClick={() => setFilter(p)} className={`min-h-[44px] rounded-xl border text-xs font-semibold px-1 ${filter === p ? 'bg-emerald-700 border-emerald-500 text-white' : `bg-[#141e2a] ${STATE_CLS[states[p]]}`}`}>
               {PAGE_LABEL[p][l]} · {states[p] === 'ok' ? 'OK' : states[p] === 'urgent' ? t('Urgent', 'Urgent') : t('À voir', 'To check')}
             </button>
           ))}
@@ -127,7 +129,7 @@ export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ 
               {h.hidden.map(a => {
                 const ack = h.acks.find(x => x.id === a.id);
                 return (
-                  <li key={a.id} className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 flex items-start gap-2">
+                  <li key={a.id} className="rounded-xl border border-slate-700 bg-[#0f1722] p-3 flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-200 break-words">{l === 'en' ? a.title_en : a.title_fr}</p>
                       {ack && <p className="text-[11px] text-slate-400 break-words">{ack.status === 'ignored' ? t('Ignorée', 'Ignored') : t('Vérifiée', 'Checked')}{ack.reason ? ` : ${ack.reason}` : ''}</p>}
