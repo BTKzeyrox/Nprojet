@@ -513,7 +513,7 @@ But : que le Comptable (et le responsable) puissent tenir une vraie comptabilit�
 - [ ] **M14.9 — Démo, anglais, carte du site, Santé du site, guide** (S) : alertes (écriture déséquilibrée, période non clôturée, TVA non déclarée), fiche dans la carte du site, `GUIDE_SITE.md` à jour.
 - [ ] **M14.10 — Relecture par un expert-comptable et essai de BTK** (téléphone, responsable puis Comptable).
 
-## MODULE 15 — Management complet — taille L (demande de BTK, 2026-10-24) — **proposé, en attente de « GO M15 »**
+## MODULE 15 — Management complet — taille L (demande de BTK, 2026-10-24) — **PRIS le 2026-10-25 (« Go m15 » de BTK) par la session « Go m15 ». Ne pas refaire en parallèle.**
 
 But : planifier et piloter l'équipe. **Déjà là, ne pas refaire** : Chef d'équipe (valide les débuts et fins de son équipe), page Direction, performance et badges, objectifs du mois de l'entreprise, évaluations avec objectifs par salarié, congés, modèles de mission, date limite et priorité, budgets par catégorie, rapport du mois (Excel et PDF à la demande). **Manque (confirmé)** : missions récurrentes, planning des équipes, objectifs suivis par équipe, budget prévu contre réel pour toute l'entreprise, rapport envoyé automatiquement, validation à plusieurs niveaux, plusieurs sites.
 
