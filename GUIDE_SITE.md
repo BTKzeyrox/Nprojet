@@ -8,7 +8,7 @@
 
 ## 1. Le site en deux minutes
 
-**Gestion Pro** est un site (téléphone d'abord, aussi ordinateur) pour une entreprise qui **paie son équipe à la mission** et doit **valider le travail sur preuves**, puis tenir ses clients, factures, argent, stock et achats. C'est une copie du projet DF-boosting (nouveau nom, nouveaux comptes, nouveau serveur) ; l'original `DF-boosting` est en lecture seule.
+**Gestion Pro** est un site (téléphone d'abord, aussi ordinateur) pour une entreprise qui **paie son équipe à la mission** et doit **valider le travail sur preuves**, puis tenir ses clients, factures, argent, stock et achats.
 
 - **Un site = une entreprise.** Il n'y a pas de gestion de plusieurs entreprises sur le même site.
 - **Pour qui** : une équipe de 5 à 50 personnes (saisie de données, contrôle, administratif, support, tâches web). Le responsable gère tout ; les opérateurs font les missions.
@@ -435,7 +435,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 - Une facture émise **ne se supprime jamais** : on l'annule par un **avoir**.
 - Les chiffres de la démo restent locaux ; aucun chiffre inventé dans la vraie base.
 - Le salarié ne reçoit **jamais** les points faibles le concernant (« points à améliorer » d'une évaluation, points d'attention de la performance).
-- La paie est à la **mission** (tarif figé à la validation) ; l'ancienne règle du jeu « 1 million de score = 1 000 Ar » est retirée.
+- La paie est à la **mission** (tarif figé à la validation).
 - Un module à la fois ; une étape = un commit + le plan à jour.
 
 ---
@@ -507,7 +507,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `postBand.ts` | Couleur d'une carte de poste selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
-| `presence.ts` | Un booster est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
+| `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
@@ -706,7 +706,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | Plusieurs sessions d'IA travaillent en même temps | Marquer l'étape « PRIS » dans `TODO_MODULES.md` avant de commencer, faire `git pull --rebase` avant chaque push. Les conflits arrivent surtout dans `TODO_MODULES.md`, `src/db/store.ts`, `src/demo/demoData.ts`, `src/utils/healthDb.ts` : garder les deux côtés. |
 | Une alerte de la Santé du site sans solution écrite | `check:assistant` échoue : ajouter la phrase dans `src/utils/advice.ts` (une entrée par nom d'alerte). |
 | Une fiche de la carte du site trop longue ou incomplète | `check:site-map` échoue (3 lignes de mode d'emploi, longueurs maximales, anglais sans français). |
-| `HANDOVER.md` parle encore du chinois, du jeu « Delta Force » et d'une paie à 1 million de score | Ces parties sont périmées : se fier à ce guide et à `PROJET.md`. |
+| `HANDOVER.md` parle encore du chinois | Cette partie est périmée : se fier à ce guide et à `PROJET.md`. |
 | Tests de dates faux la nuit | Lancer les contrôles avec `TZ=Indian/Antananarivo` (jour de Madagascar). |
 | Quota gratuit Supabase (≈ 500 000 appels par mois) | Calculs faits dans le navigateur de l'admin, pas de nouvel appel en boucle, synchro toutes les 20 s seulement. |
 | Fenêtre plein écran qui se coupe dans une page `fixed` | Toujours `createPortal(…, document.body)`. |
@@ -737,7 +737,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 - L'historique de tarifs d'un salarié (dossier) est **informatif** : la paie utilise les tarifs globaux des réglages.
 - Le Chef d'équipe ne décide pas des congés (seul le responsable).
 
-**Avant de vendre le site** : le plan gratuit de Vercel n'autorise pas l'usage commercial (plan payant : environ 20 $ par mois), et la base payante de Supabase coûte de l'ordre de 25 $ par mois (à vérifier). Un site = une entreprise : chaque client demande donc son propre hébergement. Vérifier aussi qu'on a le droit de revendre le code (copie de DF-boosting).
+**Avant de vendre le site** : le plan gratuit de Vercel n'autorise pas l'usage commercial (plan payant : environ 20 $ par mois), et la base payante de Supabase coûte de l'ordre de 25 $ par mois (à vérifier). Un site = une entreprise : chaque client demande donc son propre hébergement. Vérifier aussi les licences du code et des bibliothèques utilisées.
 
 ---
 

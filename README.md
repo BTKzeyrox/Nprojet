@@ -2,7 +2,7 @@
 
 Application web de **gestion du travail à la tâche** : le responsable (admin) crée des missions, les opérateurs les prennent, envoient leurs preuves (photos, fichiers), et le responsable valide ou refuse. Avec fil d'actualités, messagerie, calendrier de présence et équipe.
 
-Projet de démonstration (portfolio / CV de BTK). Copie transformée de `BTKzeyrox/DF-boosting` (original en lecture seule, ne jamais y écrire).
+Projet de démonstration (portfolio / CV de BTK).
 
 ## Les deux rôles
 - **Admin (responsable)** : crée les missions et les comptes, valide ou refuse les débuts/fins de mission, les inscriptions et les publications, règle l'appli.

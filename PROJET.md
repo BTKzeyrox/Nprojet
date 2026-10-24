@@ -5,7 +5,7 @@ Pour comprendre le site sans lire le code : **`GUIDE_SITE.md`**. Pour travailler
 Mis à jour : 2026-10-24. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
 
 ## 1. À propos
-- **Gestion Pro** : gestion du travail à la tâche. Le responsable crée des missions, les opérateurs les font et envoient des preuves, le responsable valide. Projet de démonstration pour le CV de BTK (copie de DF-boosting, qui reste en lecture seule).
+- **Gestion Pro** : gestion du travail à la tâche. Le responsable crée des missions, les opérateurs les font et envoient des preuves, le responsable valide. Projet de démonstration pour le CV de BTK.
 - Propriétaire : **BTK**. Réponses en français, mots simples.
 - Budget : **0 Ar** (offres gratuites Supabase, Vercel, Cloudinary).
 - Langues : français et anglais. Thème clair/sombre, taille de police réglable. Installable sur téléphone.

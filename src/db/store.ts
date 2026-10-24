@@ -51,7 +51,7 @@ import { clientPriceForContract } from '../utils/clientPrice';
 
 const TOKEN_KEY = 'df_session_token_v2';
 // Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://fvkusbdhetxleimtdzqm.supabase.co').replace(/\/+$/, '');
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
@@ -148,7 +148,7 @@ const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority
   priority: 'Priorité inconnue.',
 };
 
-class DeltaForceStore {
+class AppStore {
   private users: User[] = [];
   private posts: PostSession[] = [];
   private contracts: ClientContract[] = [];
@@ -1781,8 +1781,8 @@ class DeltaForceStore {
 
   // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
   public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; tasks?: { id: string; text: string }[]; tasks_required?: boolean; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
-    if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
-      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} missions.` };
+    if (this.contracts.length >= AppStore.MAX_CONTRACTS) {
+      return { success: false, error: `Maximum ${AppStore.MAX_CONTRACTS} missions.` };
     }
     const name = p.client_name.trim();
     // Client de la mission (module 1) : `requireClient` vient du réglage « Une mission a toujours un client » (les formulaires le passent ; sans lui, rien n'est exigé)
@@ -2526,7 +2526,7 @@ class DeltaForceStore {
   public canEditMessage(msg: ChatMessage, userId: string): boolean {
     if (!this.isOwnMessage(msg, userId)) return false;
     if (!msg.message && msg.attachment_url && msg.attachment_kind) return !!msg.message; // une photo sans texte : rien à modifier
-    return !msg.sent_ms || Date.now() - msg.sent_ms <= DeltaForceStore.EDIT_WINDOW_MS;
+    return !msg.sent_ms || Date.now() - msg.sent_ms <= AppStore.EDIT_WINDOW_MS;
   }
 
   // Réaction emoji sur un message : une seule par personne ; le même emoji une 2e fois la retire
@@ -2834,4 +2834,4 @@ class DeltaForceStore {
   }
 }
 
-export const db = new DeltaForceStore();
+export const db = new AppStore();

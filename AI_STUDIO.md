@@ -9,7 +9,7 @@
 Ce document explique **Gestion Pro** (dépôt `BTKzeyrox/Nprojet`) pour qu'un assistant puisse travailler seul sans casser le site. État détaillé : `HANDOVER.md`, `PROJET.md`, `TODO.md`.
 
 ## 1. Le projet
-**Gestion Pro** : gestion du travail à la tâche (projet de démonstration pour le CV de BTK). Ce n'est plus un site de jeu : plus de « Delta Force », « booster », « poste ».
+**Gestion Pro** : gestion du travail à la tâche (projet de démonstration pour le CV de BTK).
 - **Missions** : le responsable en crée (tableau À faire / En cours / À valider), 5 types de mission, guides « Comment faire ? ».
 - Un opérateur prend une mission, envoie ses preuves (photos, fichiers) au début et à la fin ; l'admin valide ou refuse (motif obligatoire).
 - **Actualités** (publications avec fichiers, validation par l'admin), **messagerie** (privé, groupes, fichiers, compression optionnelle), **calendrier** de présence, équipe, historique, journal des erreurs, réglages.
@@ -20,7 +20,7 @@ Ce document explique **Gestion Pro** (dépôt `BTKzeyrox/Nprojet`) pour qu'un as
 - **admin** : voit tout, valide/refuse, gère les comptes, règle l'appli. (Depuis le module 7 il existe aussi **accountant** — argent et factures — et **team_lead** — valide son équipe ; voir `src/utils/roles.ts`.)
 - **employee** (affiché « opérateur ») : voit et prend des missions, envoie ses preuves, publie, écrit. Ne modifie que ses propres données.
 
-Correspondance avec le code (noms internes gardés) : mission = `ClientContract` (`client_name` = titre, `post_type` = un des 5 types) ; session de mission = `PostSession` (`pending_start | active | pending_end | completed | rejected`) ; store = `DeltaForceStore` (`db`).
+Correspondance avec le code (noms internes gardés) : mission = `ClientContract` (`client_name` = titre, `post_type` = un des 5 types) ; session de mission = `PostSession` (`pending_start | active | pending_end | completed | rejected`) ; store = `AppStore` (`db`).
 
 ## 3. Où est quoi
 | Élément | Où |

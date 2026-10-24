@@ -1,5 +1,5 @@
 -- =====================================================================
--- DF-boosting : structure de la base Supabase (SANS AUCUNE DONNÉE)
+-- Gestion Pro : structure de la base Supabase (SANS AUCUNE DONNÉE)
 -- À lancer UNE fois dans un projet Supabase neuf (SQL Editor, ou connecteur Supabase).
 -- Peut être relancé sans danger : « if not exists » partout.
 -- Toutes les tables sont fermées au public (RLS activé, aucun droit pour anon/authenticated) :

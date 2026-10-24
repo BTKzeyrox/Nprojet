@@ -1,7 +1,7 @@
 import { db } from '../db/store';
 import { ClientContract, PostSession, PresenceRow, User } from '../types';
 
-// Un booster est « en ligne » s'il a donné signe de vie il y a moins de 90 s
+// Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s
 export const ONLINE_MS = 90_000;
 const OPEN = ['pending_start', 'active', 'pending_end'];
 
@@ -23,7 +23,7 @@ export const STATUS_DOT: Record<PresenceStatus, string> = {
 export const hasOpenPost = (userId: string, posts: PostSession[]) =>
   posts.some(p => p.employee_id === userId && OPEN.includes(p.status));
 
-// Règle : une session en cours = « En poste » même si le booster a quitté le site.
+// Règle : une session en cours = « En poste » même si l'opérateur a quitté le site.
 export const getPresenceStatus = (
   user: User,
   posts: PostSession[],
