@@ -332,6 +332,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Une sauvegarde de nuit est faite automatiquement et gardée environ 14 jours.
   - Les changements des Conditions sont notés dans un historique.
   - Un employé ne reçoit que le règlement et les règles de congés et de présence.
+  - La visite guidée s'ouvre à la première connexion sur un appareil ; « Revoir la visite guidée » la relance.
 - **Dans le code** : `src/views/admin/SettingsView.tsx`, `src/components/CompanyConditions.tsx`
 <!-- /AUTO:pages -->
 
@@ -432,7 +433,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1) et écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2) ; rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | aucune pour l'instant | `npm run check:accounting`, `npm run check:accounting-entries` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
-| **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne ; le reste (visite guidée, blocage, 2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts` | aucune (réutilise les règles de saisie ; le serveur revérifie) | `npm run check:import`, `npm run check:import-page` |
+| **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne. M16.2 faite : visite guidée par rôle à la première connexion sur un appareil (textes pris dans la carte du site), à revoir dans Réglages. Le reste (blocage, 2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts`, `src/utils/tour.ts`, `src/components/TourGuide.tsx` | aucune (la visite est gardée sur l'appareil ; l'import réutilise les règles de saisie, le serveur revérifie) | `npm run check:import`, `npm run check:import-page`, `npm run check:tour` |
 
 Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la version, le commit et le retour en arrière). Exemples : M5.1 et M5.2 en v26, M5.4 en v29 (sauvegarde n° 35), Mes tableaux en v31.
 
@@ -542,6 +543,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamLead.ts` | Sessions en attente (début ou fin) des opérateurs de l'équipe du Chef d'équipe, les plus anciennes d'abord. Rien d'autre : jamais un autre groupe. |
+| `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
@@ -629,6 +631,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |
+| `npm run check:tour` | Contrôle de la visite guidée (module 16, M16.2) : étapes par rôle, pages permises, textes FR/EN, « déjà vue » par personne, carte Réglages. Sans réseau. |
 | `npm run check:import-page` | Essai de l'import Excel et CSV côté site (module 16, M16.1), sans écran réel ni réseau : boutons dans les 4 pages (FR et EN), |
 | `npm run check:clients-server` | Contrôle de la sécurité des clients dans le serveur df-api (module 1, étape M1.3), sans réseau. |
 | `npm run check:missions-link` | Contrôle de M1.5 (missions liées aux clients), sans réseau : règles pures, store en démo, accord avec le serveur, rendu FR et EN, branchement des formulaires. |
@@ -746,7 +749,6 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 - Pas de plusieurs entreprises sur le même site (étude M17 proposée).
 - Pas d'envoi WhatsApp ou SMS ; l'adresse e-mail d'un client ouvre seulement le logiciel de mail.
 - Pas d'envoi automatique du rapport mensuel (Excel et PDF à la demande).
-- Pas de visite guidée au premier lancement.
 - Le Comptable n'a pas accès aux statistiques ni aux dépenses.
 - L'historique de tarifs d'un salarié (dossier) est **informatif** : la paie utilise les tarifs globaux des réglages.
 - Le Chef d'équipe ne décide pas des congés (seul le responsable).

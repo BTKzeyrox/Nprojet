@@ -16,6 +16,7 @@ import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyC
 import { PerformanceSettings } from '../../components/PerformanceSettings';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
+import { TourReplayCard } from '../../components/TourGuide';
 import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
@@ -165,6 +166,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {!db.isDemo() && <NotificationsCard />}
 
+      <TourReplayCard />
+
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
@@ -232,6 +235,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && !db.isDemo() && <NotificationsCard />}
+      {tab === 'general' && <TourReplayCard />}
       {tab === 'general' && !db.isDemo() && <SignupSettings />}
       {tab === 'general' && <WatchSettingsSection />}
       {tab === 'general' && !db.isDemo() && <AiSettingsSection />}

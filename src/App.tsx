@@ -17,6 +17,7 @@ import { PageSkeleton } from './components/PageSkeleton';
 import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
+import { TourGuide } from './components/TourGuide';
 import { ToastHost } from './components/ToastHost';
 import { BadgeCongrats } from './components/BadgeCongrats';
 import { DemoBanner } from './components/DemoBanner';
@@ -343,6 +344,9 @@ export default function App() {
         : 'text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
     }`}>
       
+      {/* Visite guidée (M16.2) : première connexion sur cet appareil, par rôle ; se revoit dans Réglages */}
+      <TourGuide userId={currentUser.id} role={currentUser.role} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} />
+
       {/* Modern Tactical Sidebar */}
       <Sidebar
         currentUser={viewUser}
