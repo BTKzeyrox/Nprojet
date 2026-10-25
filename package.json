@@ -86,6 +86,7 @@
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
     "check:team-lead": "npx --yes tsx scripts/check-team-lead.ts",
     "check:audit": "npx --yes tsx scripts/check-audit.ts",
+    "check:login-guard": "npx --yes tsx scripts/check-login-guard.ts",
     "check:module3": "npm run check:badges --silent && npm run check:performance-config --silent && npm run check:performance-page --silent && npm run check:client-badges --silent && npm run check:recognition --silent && npm run check:performance-export --silent",
     "check:roles": "npx --yes tsx scripts/check-roles.ts",
     "check:backup-restore": "npx --yes tsx scripts/check-backup-restore.ts",

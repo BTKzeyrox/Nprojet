@@ -433,7 +433,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1) et écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2) ; rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | aucune pour l'instant | `npm run check:accounting`, `npm run check:accounting-entries` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
-| **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne. M16.2 faite : visite guidée par rôle à la première connexion sur un appareil (textes pris dans la carte du site), à revoir dans Réglages. Le reste (blocage, 2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts`, `src/utils/tour.ts`, `src/components/TourGuide.tsx` | aucune (la visite est gardée sur l'appareil ; l'import réutilise les règles de saisie, le serveur revérifie) | `npm run check:import`, `npm run check:import-page`, `npm run check:tour` |
+| **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne. M16.2 faite : visite guidée par rôle à la première connexion sur un appareil (textes pris dans la carte du site), à revoir dans Réglages. M16.3 faite : après 5 mots de passe ratés sur un compte (ou 20 depuis une même adresse), la connexion est refusée pendant 1 minute, puis 2, 4… jusqu'à 30 minutes (5 minutes pour le responsable) ; jamais définitif, un bon mot de passe ne passe pas pendant le délai ; le début de chaque délai est écrit dans le journal d'audit. Le reste (2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts`, `src/utils/tour.ts`, `src/components/TourGuide.tsx`, `src/utils/loginGuard.ts` | `df_login_attempts` (compteurs d'essais, serveur seulement ; la visite est gardée sur l'appareil ; l'import réutilise les règles de saisie, le serveur revérifie) | `npm run check:import`, `npm run check:import-page`, `npm run check:tour`, `npm run check:login-guard` |
 
 Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la version, le commit et le retour en arrière). Exemples : M5.1 et M5.2 en v26, M5.4 en v29 (sauvegarde n° 35), Mes tableaux en v31.
 
@@ -499,6 +499,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `invoices.ts` | Facturation : règles pures (sans écran, sans serveur). Utilisées par l'écran « Facturation » et par `npm run check:invoices`. |
 | `keyboard.ts` | Clavier virtuel ouvert ? (iPhone : la vue visible rétrécit et la page est poussée vers le haut) |
 | `leaves.ts` | Congés et absences (module 5, M5.2) : règles pures, sans écran ni serveur. |
+| `loginGuard.ts` | Blocage après trop d'essais de connexion (module 16, M16.3) : règles pures, sans écran, sans serveur, sans réseau. |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
@@ -508,6 +509,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
 | `notifications.ts` | — |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
+| `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `payslip.ts` | — |
 | `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
@@ -541,6 +543,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `stats.ts` | Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques. |
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
+| `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamLead.ts` | Sessions en attente (début ou fin) des opérateurs de l'équipe du Chef d'équipe, les plus anciennes d'abord. Rien d'autre : jamais un autre groupe. |
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
@@ -645,6 +648,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:badges` | Contrôle des règles de performance des salariés (module 3, partie A) : score, badges, niveaux, échantillon minimum, tendance, employé du mois. |
 | `npm run check:offline` | Contrôle des règles du mode hors ligne (module 13, M13.2), sans réseau. Lancer : npm run check:offline |
 | `npm run check:offline-vault` | Contrôle de la copie locale chiffrée du mode hors ligne (module 13, M13.3), sans réseau. Lancer : npm run check:offline-vault |
+| `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |
 | `npm run check:client-badges` | Contrôle des badges et du score des clients (module 3, M3.5), sans réseau. |
@@ -692,6 +696,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:deadlines` | Contrôle de la date limite et de la priorité (M6.1). Lancer : npm run check:deadlines |
 | `npm run check:team-lead` | Contrôle du Chef d'équipe (M7.1 d) : équipe, droit de décision, décision sur une session (site = serveur), protections du serveur. Lancer : npm run check:team-lead |
 | `npm run check:audit` | Contrôle du journal d'audit (M7.2) : règles du site, copie serveur identique, protections du serveur, migration. Lancer : npm run check:audit |
+| `npm run check:login-guard` | Contrôle M16.3 : blocage après trop d'essais. Règles, copie serveur identique, série d'essais simulée, panne = on laisse passer. |
 | `npm run check:module3` | (plusieurs contrôles) |
 | `npm run check:roles` | Contrôle des rôles (M7.1) : règles du site, copie serveur identique, protections du serveur. Lancer : npm run check:roles |
 | `npm run check:backup-restore` | Contrôle M7.3 : restauration d'une sauvegarde (fonction SQL, route df-restore, écran). Lancer : npm run check:backup-restore |

@@ -1374,7 +1374,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
@@ -1633,6 +1633,104 @@ const authNotice = async (uname: string, password: string): Promise<string | nul
   return null;
 };
 
+// ===== BEGIN LOGINGUARD (blocage après trop d'essais de connexion ; ce bloc est contrôlé par scripts/check-login-guard.ts) =====
+const GUARD = {
+  windowSec: 900, // 15 min sans nouvel essai raté : le compteur est oublié
+  account: { free: 5, baseSec: 60, maxSec: 1800, adminMaxSec: 300 },
+  ip: { free: 20, baseSec: 60, maxSec: 1800 },
+};
+type GuardKind = 'account' | 'ip';
+interface Attempt { fails: number; locks: number; last_at: number; locked_until: number }
+
+const nat = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(Math.floor(v), 8_640_000_000_000_000) : 0);
+const EMPTY: Attempt = { fails: 0, locks: 0, last_at: 0, locked_until: 0 };
+
+/** Ce qui vient de la base est nettoyé : une ligne abîmée = aucun compteur (jamais de blocage par erreur). */
+function cleanAttempt(raw: unknown): Attempt | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const r = raw as Record<string, unknown>;
+  return { fails: Math.min(nat(r.fails), 1000), locks: Math.min(nat(r.locks), 100), last_at: nat(r.last_at), locked_until: nat(r.locked_until) };
+}
+
+/** Secondes d'attente restantes (0 = pas de délai). */
+function lockLeftSec(a: Attempt | undefined, nowMs: number): number {
+  const c = cleanAttempt(a);
+  if (!c || c.locked_until <= nowMs) return 0;
+  return Math.ceil((c.locked_until - nowMs) / 1000);
+}
+
+/** Un essai raté de plus : met le compteur à jour et dit si un délai commence maintenant. */
+function afterFailure(prev: Attempt | undefined, nowMs: number, kind: GuardKind, adminAccount = false): { next: Attempt; lockedNow: boolean; lockSec: number } {
+  let p: Attempt = cleanAttempt(prev) || EMPTY;
+  if (nowMs - Math.max(p.last_at, p.locked_until) > GUARD.windowSec * 1000) p = EMPTY; // plus rien depuis longtemps : on oublie
+  if (p.locked_until > nowMs) return { next: p, lockedNow: false, lockSec: 0 }; // déjà en délai : on ne le rallonge pas
+  const spec = GUARD[kind];
+  const fails = p.fails + 1;
+  if (fails < spec.free) return { next: { fails, locks: p.locks, last_at: nowMs, locked_until: 0 }, lockedNow: false, lockSec: 0 };
+  const locks = Math.min(p.locks + 1, 100);
+  const cap = kind === 'account' && adminAccount ? GUARD.account.adminMaxSec : spec.maxSec;
+  const lockSec = Math.min(cap, spec.baseSec * 2 ** Math.min(locks - 1, 20));
+  return { next: { fails: 0, locks, last_at: nowMs, locked_until: nowMs + lockSec * 1000 }, lockedNow: true, lockSec };
+}
+
+/** Faut-il refuser l'essai avant même de regarder le mot de passe ? On attend le délai le plus long des deux (compte, adresse). */
+function guardDecision(account: Attempt | undefined, ip: Attempt | undefined, nowMs: number): { blocked: boolean; waitSec: number } {
+  const waitSec = Math.max(lockLeftSec(account, nowMs), lockLeftSec(ip, nowMs));
+  return { blocked: waitSec > 0, waitSec };
+}
+
+/** Phrase montrée à la personne (la même, que le compte existe ou non : on ne dit rien de plus à un inconnu). */
+function retryMessage(waitSec: number): string {
+  const s = Math.max(1, Math.ceil(waitSec));
+  if (s < 60) return `Trop d'essais. Réessayez dans ${s} seconde${s > 1 ? 's' : ''}.`;
+  const m = Math.ceil(s / 60);
+  return `Trop d'essais. Réessayez dans ${m} minute${m > 1 ? 's' : ''}.`;
+}
+
+/** Clés de la table : une pour le compte tapé, une pour l'adresse. Une adresse qui n'a pas la forme d'une adresse IP n'est pas comptée. */
+function guardKeys(username: string, ip: string): { account: string; ip: string | null } {
+  const u = String(username ?? '').trim().toLowerCase().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 60); // même écriture que la recherche du compte : « a dmin » n'est pas « admin »
+  const addr = String(ip ?? '').trim();
+  return { account: `a:${u || '_'}`, ip: /^[0-9a-fA-F:.]{3,45}$/.test(addr) ? `i:${addr}` : null };
+}
+// ===== END LOGINGUARD =====
+
+const LOGIN_ATTEMPTS = "df_login_attempts";
+/** Lit un compteur. En cas d'erreur (table absente, base lente) : AUCUN compteur : une panne du blocage ne doit jamais empêcher quelqu'un de se connecter. */
+async function guardRead(key: string | null): Promise<Attempt | undefined> {
+  if (!key) return undefined;
+  const { data, error } = await sb.from(LOGIN_ATTEMPTS).select("data").eq("id", key).maybeSingle();
+  if (error) { console.error("login guard:", error.message); return undefined; }
+  return cleanAttempt(data?.data);
+}
+async function guardCheck(uname: string, ip: string): Promise<{ blocked: boolean; waitSec: number }> {
+  try {
+    const k = guardKeys(uname, ip);
+    const [a, i] = await Promise.all([guardRead(k.account), guardRead(k.ip)]);
+    return guardDecision(a, i, Date.now());
+  } catch (err) { console.error("login guard:", err); return { blocked: false, waitSec: 0 }; }
+}
+/** Un essai raté : on met à jour le compteur du compte et celui de l'adresse ; quand un délai commence, une ligne est écrite dans le journal d'audit. Ne plante jamais. */
+async function guardFail(uname: string, ip: string, adminAccount: boolean) {
+  try {
+    const k = guardKeys(uname, ip);
+    const now = Date.now();
+    const list: [string | null, GuardKind][] = [[k.account, "account"], [k.ip, "ip"]];
+    for (const [key, kind] of list) {
+      if (!key) continue;
+      const r = afterFailure(await guardRead(key), now, kind, adminAccount);
+      const { error } = await sb.from(LOGIN_ATTEMPTS).upsert({ id: key, data: r.next, updated_at: new Date().toISOString() });
+      if (error) { console.error("login guard:", error.message); continue; }
+      if (r.lockedNow) await auditLog({ id: "system", name: "Système" }, "login_locked", { type: "login", id: key, label: key.slice(2) }, `Délai de ${r.lockSec} s après des essais ratés`);
+    }
+    if (Math.random() < 0.05) await sb.from(LOGIN_ATTEMPTS).delete().lt("updated_at", new Date(Date.now() - 2 * 86400000).toISOString());
+  } catch (err) { console.error("login guard:", err); }
+}
+/** Bon mot de passe : le compteur du compte repart à zéro (celui de l'adresse s'éteint tout seul). */
+async function guardClear(uname: string) {
+  try { await sb.from(LOGIN_ATTEMPTS).delete().eq("id", guardKeys(uname, "").account); } catch (err) { console.error("login guard:", err); }
+}
+
 async function login(req: any, res: any) {
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
@@ -1641,12 +1739,21 @@ async function login(req: any, res: any) {
   if (!SECRET) return res.status(500).json({ error: 'Serveur mal configuré (SESSION_SECRET manquant).' });
   const uname = username.trim().toLowerCase();
 
+  // M16.3 : trop d'essais ratés (par compte ou par adresse) = un délai, sans même regarder le mot de passe. Même réponse que le compte existe ou non.
+  const ip = String(req.headers?.ip || '');
+  const gd = await guardCheck(uname, ip);
+  if (gd.blocked) return res.status(429).json({ error: retryMessage(gd.waitSec), code: 'locked', retry_after: gd.waitSec });
+
   const { data: cred } = await sb.from('df_credentials').select('*').eq('username', uname).maybeSingle();
   if (!cred || !checkPw(password, cred.password_hash)) {
     await sleep(500);
+    let adminAccount = false;
+    if (cred) { try { adminAccount = (await getUserRow(cred.user_id))?.role === 'admin'; } catch { /* on compte comme un compte ordinaire */ } }
+    await guardFail(uname, ip, adminAccount);
     const notice = await authNotice(uname, password);
     return res.status(401).json({ error: notice || 'Pseudo ou mot de passe incorrect.' });
   }
+  await guardClear(uname);
   const user = await getUserRow(cred.user_id);
   if (!user) return res.status(401).json({ error: 'Compte introuvable.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Compte bloqué par l\'administrateur.' });
