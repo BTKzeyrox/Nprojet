@@ -34,6 +34,7 @@
     "check:badges": "npx --yes tsx scripts/check-badges.ts",
     "check:offline": "npx --yes tsx scripts/check-offline.ts",
     "check:offline-vault": "npx --yes tsx scripts/check-offline-vault.ts",
+    "check:offline-shell": "npm run -s build && npx --yes tsx scripts/check-offline-shell.ts",
     "check:performance-export": "npx --yes tsx scripts/check-performance-export.ts",
     "check:recognition": "npx --yes tsx scripts/check-recognition.ts",
     "check:client-badges": "npx --yes tsx scripts/check-client-badges.ts",

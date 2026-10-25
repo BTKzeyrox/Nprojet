@@ -29,7 +29,7 @@ ok(!bad(fr) && !bad(en), 'carte : pas de NaN / undefined / null');
 
 const sw = readFileSync('public/sw.js', 'utf8');
 ok(/addEventListener\('push'/.test(sw) && /addEventListener\('notificationclick'/.test(sw) && /showNotification/.test(sw), 'service worker : reçoit et affiche les notifications');
-ok(!/caches\.|fetch\(/.test(sw), 'service worker : ne met rien en cache et ne touche pas au réseau');
+ok(/NETWORK_ONLY = \['\/version\.json'/.test(sw) && /method !== 'GET' \|\| !sameOrigin/.test(sw), "service worker : met en cache l'appli (module 13) mais JAMAIS version.json, ni un autre site, ni autre chose que GET (comportement contrôlé par check:offline-shell)");
 const st = readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
 ok((st.match(/<NotificationsCard \/>/g) || []).length === 2, 'Réglages : carte présente pour l\'employé et pour le responsable');
 const api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
