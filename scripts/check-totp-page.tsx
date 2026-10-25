@@ -1,0 +1,21 @@
+// Contrôle M16.4 (écrans) : la carte « Sécurité en deux étapes » ne montre rien tant que le serveur n'a pas dit « oui » et ne fait aucun appel pendant l'affichage ; le mode démo n'appelle jamais le serveur.
+import React from 'react';
+import { renderToString } from 'react-dom/server';
+const g = globalThis as any;
+g.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+g.addEventListener = () => {}; g.removeEventListener = () => {}; g.window = g; g.document = { hidden: false, documentElement: {}, addEventListener() {}, removeEventListener() {} };
+let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
+const { AppProvider } = await import('../src/context/AppContext');
+const { TwoStepCard } = await import('../src/components/TwoStepCard');
+const { db } = await import('../src/db/store');
+let n = 0, fails = 0;
+const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC ' + m); } else console.log('OK    ' + m); };
+const html = renderToString(<AppProvider><TwoStepCard /></AppProvider>);
+ok(html === '', 'carte vide tant que le serveur n\'a pas confirmé le rôle');
+ok(calls === 0, 'aucun appel réseau pendant l\'affichage');
+(db as any).demo = true;
+const r = await db.totpStart('x');
+ok(!r.ok && /démo/i.test(r.error || '') && calls === 0, 'mode démo : refus local, aucun appel serveur');
+ok(!(await db.totpStatus()).ok && !(await db.totpEnable('123456')).ok && !(await db.totpDisable('a', 'b')).ok && !(await db.totpReset('u')).ok && calls === 0, 'mode démo : aucune route de double étape n\'appelle le serveur');
+console.log(`${n - fails}/${n} contrôles OK`);
+process.exit(fails ? 1 : 0);

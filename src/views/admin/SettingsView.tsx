@@ -18,6 +18,7 @@ import { MissionTemplatesSection } from '../../components/MissionTemplatesSectio
 import { RecurringMissionsSection } from '../../components/RecurringMissionsSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
 import { TourReplayCard } from '../../components/TourGuide';
+import { TwoStepCard } from '../../components/TwoStepCard';
 import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
@@ -168,6 +169,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {!db.isDemo() && <NotificationsCard />}
 
+      <TwoStepCard />
       <TourReplayCard />
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
@@ -237,6 +239,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && !db.isDemo() && <NotificationsCard />}
+      {tab === 'general' && <TwoStepCard />}
       {tab === 'general' && <TourReplayCard />}
       {tab === 'general' && !db.isDemo() && <SignupSettings />}
       {tab === 'general' && <WatchSettingsSection />}

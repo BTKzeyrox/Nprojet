@@ -68,7 +68,7 @@ t('login : contrôle avant mot de passe', iCheck > 0 && iCheck < iPw);
 t('login : 429 + code locked', /status\(429\)\.json\(\{ error: retryMessage/.test(lg) && lg.includes("code: 'locked'"));
 t('login : compteur effacé après succès', lg.indexOf('guardClear(') > iPw);
 t('login : échec compté', lg.includes('guardFail(uname, ip, adminAccount)'));
-const helpers = src.slice(src.indexOf('async function guardRead'), src.indexOf('async function login(req'));
+const helpers = src.slice(src.indexOf('async function guardRead'), src.indexOf('// ===== BEGIN TOTP'));
 t('pannes : try/catch partout', (helpers.match(/try \{/g) || []).length >= 3 && helpers.includes('blocked: false'));
 t('lecture en erreur = aucun compteur', /if \(error\) \{[^}]*return undefined;/.test(helpers));
 t('aucun mot de passe écrit dans la table', !/password/i.test(helpers));

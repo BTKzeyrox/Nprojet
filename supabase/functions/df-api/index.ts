@@ -1567,7 +1567,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
@@ -1924,6 +1924,205 @@ async function guardClear(uname: string) {
   try { await sb.from(LOGIN_ATTEMPTS).delete().eq("id", guardKeys(uname, "").account); } catch (err) { console.error("login guard:", err); }
 }
 
+// ===== BEGIN TOTP (sécurité en deux étapes ; ce bloc est contrôlé par scripts/check-totp.ts) =====
+const TOTP = { stepSec: 30, digits: 6, window: 1, secretBytes: 20, backupCount: 8, backupLen: 10 };
+const TOTP_ROLES = ['admin', 'accountant'] as const;
+/** La sécurité en deux étapes est proposée seulement à ces rôles (les opérateurs et chefs d'équipe n'y ont pas accès). */
+const canUseTotp = (role: unknown): boolean => role === 'admin' || role === 'accountant';
+
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(bytes: Uint8Array): string {
+  let bits = 0, value = 0, out = '';
+  for (const b of bytes) {
+    value = (value << 8) | b; bits += 8;
+    while (bits >= 5) { out += B32[(value >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+
+/** Texte → octets. Espaces, tirets et minuscules acceptés ; un caractère hors alphabet = null. */
+function base32Decode(text: string): Uint8Array | null {
+  const s = String(text ?? '').toUpperCase().replace(/[\s-]/g, '').replace(/=+$/, '');
+  if (!s || s.length > 128) return null;
+  let bits = 0, value = 0; const out: number[] = [];
+  for (const ch of s) {
+    const i = B32.indexOf(ch);
+    if (i < 0) return null;
+    value = (value << 5) | i; bits += 5;
+    if (bits >= 8) { out.push((value >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  return new Uint8Array(out);
+}
+
+/** Un secret tout neuf (20 octets au hasard fournis par l'appelant : crypto.getRandomValues). */
+const secretFromBytes = (bytes: Uint8Array): string => base32Encode(bytes.slice(0, TOTP.secretBytes));
+/** Secret écrit par groupes de 4 pour être recopié à la main. */
+const prettySecret = (s: string): string => String(s).replace(/(.{4})/g, '$1 ').trim();
+
+const stepOf = (nowMs: number): number => Math.floor(nowMs / 1000 / TOTP.stepSec);
+
+async function hmacSha1(key: Uint8Array, msg: Uint8Array): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey('raw', key as BufferSource, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, msg as BufferSource));
+}
+
+/** Le code à 6 chiffres d'un pas de 30 secondes (HOTP, RFC 4226). */
+async function codeAtStep(secret: string, step: number): Promise<string> {
+  const key = base32Decode(secret);
+  if (!key || !key.length) return '';
+  const msg = new Uint8Array(8);
+  let s = Math.max(0, Math.floor(step));
+  for (let i = 7; i >= 0; i--) { msg[i] = s & 255; s = Math.floor(s / 256); }
+  const h = await hmacSha1(key, msg);
+  const o = h[h.length - 1] & 15;
+  const bin = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(bin % 10 ** TOTP.digits).padStart(TOTP.digits, '0');
+}
+
+/** « 123 456 », « 123456 » : seulement 6 chiffres sont acceptés ; sinon null. */
+function cleanCode(raw: unknown): string | null {
+  const s = String(raw ?? '').replace(/[\s-]/g, '');
+  return /^\d{6}$/.test(s) ? s : null;
+}
+
+/** Le code est-il bon à cet instant (±30 s pour les horloges un peu décalées) ? Rend le pas trouvé, ou null.
+ *  `lastStep` = dernier pas déjà utilisé : un même code ne sert qu'une fois (on ne peut pas le rejouer). */
+async function verifyTotp(secret: string, raw: unknown, nowMs: number, lastStep = 0): Promise<number | null> {
+  const code = cleanCode(raw);
+  if (!code) return null;
+  const now = stepOf(nowMs);
+  let found: number | null = null;
+  for (let d = -TOTP.window; d <= TOTP.window; d++) {
+    const st = now + d;
+    if (st <= lastStep) continue;
+    if ((await codeAtStep(secret, st)) === code && found === null) found = st; // on teste tous les pas : même durée quel que soit le résultat
+  }
+  return found;
+}
+
+/** Lien que les applis d'authentification savent lire (pour le bouton « Ouvrir dans l'appli » et le QR code). */
+function otpauthUri(secret: string, account: string, issuer = 'Gestion Pro'): string {
+  const a = encodeURIComponent(String(account).slice(0, 60) || 'compte');
+  const i = encodeURIComponent(issuer);
+  return `otpauth://totp/${i}:${a}?secret=${secret}&issuer=${i}&algorithm=SHA1&digits=${TOTP.digits}&period=${TOTP.stepSec}`;
+}
+
+// ---- Codes de secours : 8 codes à usage unique, pour le téléphone perdu. Seule leur empreinte est gardée. ----
+const BACKUP_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // sans i, l, o, 0, 1 (faciles à confondre)
+function backupCodeFromBytes(bytes: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < TOTP.backupLen; i++) s += BACKUP_ALPHABET[bytes[i] % BACKUP_ALPHABET.length];
+  return s.slice(0, 5) + '-' + s.slice(5);
+}
+/** Ce que la personne tape (majuscules, espaces, tiret ou non) → forme normale ; sinon null. */
+function cleanBackupCode(raw: unknown): string | null {
+  const s = String(raw ?? '').toLowerCase().replace(/[\s-]/g, '');
+  return new RegExp(`^[${BACKUP_ALPHABET}]{${TOTP.backupLen}}$`).test(s) ? s : null;
+}
+/** Empreinte d'un code de secours (SHA-256 avec l'identifiant du compte) : le code lui-même n'est jamais gardé. */
+async function backupHash(userId: string, code: string): Promise<string> {
+  const d = new TextEncoder().encode(`gp-backup:${userId}:${cleanBackupCode(code) ?? ''}`);
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', d)), b => b.toString(16).padStart(2, '0')).join('');
+}
+// ===== END TOTP =====
+
+const TOTP_TABLE = "df_totp";
+interface TotpRow { secret: string; enabled: boolean; last_step: number; backup: string[]; created_at: string }
+/** Lit la ligne d'un compte. Panne de lecture = on lève une erreur : on ne laisse JAMAIS passer un compte protégé par erreur. */
+async function totpGet(uid: string): Promise<TotpRow | null> {
+  const { data, error } = await sb.from(TOTP_TABLE).select("data").eq("id", uid).maybeSingle();
+  if (error) throw new Error("totp: " + error.message);
+  const d: any = data?.data;
+  if (!d || typeof d.secret !== "string") return null;
+  return { secret: d.secret, enabled: d.enabled === true, last_step: nat(d.last_step), backup: Array.isArray(d.backup) ? d.backup.filter((x: any) => typeof x === "string").slice(0, 20) : [], created_at: String(d.created_at || "") };
+}
+async function totpPut(uid: string, row: TotpRow) {
+  const { error } = await sb.from(TOTP_TABLE).upsert({ id: uid, data: row, updated_at: new Date().toISOString() });
+  if (error) throw new Error("totp: " + error.message);
+}
+const totpRandom = (n: number) => crypto.getRandomValues(new Uint8Array(n));
+/** Vérifie un code à 6 chiffres OU un code de secours. Rend {ok, row} (row à enregistrer si ok). */
+async function totpCheck(uid: string, row: TotpRow, raw: unknown): Promise<{ ok: boolean; row: TotpRow }> {
+  const step = await verifyTotp(row.secret, raw, Date.now(), row.last_step);
+  if (step !== null) return { ok: true, row: { ...row, last_step: step } };
+  const bc = cleanBackupCode(raw);
+  if (bc) {
+    const h = await backupHash(uid, bc);
+    if (row.backup.includes(h)) return { ok: true, row: { ...row, backup: row.backup.filter(x => x !== h) } };
+  }
+  return { ok: false, row };
+}
+async function newBackupCodes(uid: string): Promise<{ codes: string[]; hashes: string[] }> {
+  const codes: string[] = [], hashes: string[] = [];
+  for (let i = 0; i < TOTP.backupCount; i++) { const c = backupCodeFromBytes(totpRandom(TOTP.backupLen)); codes.push(c); hashes.push(await backupHash(uid, c)); }
+  return { codes, hashes };
+}
+async function passwordOk(uid: string, password: unknown): Promise<boolean> {
+  const { data: c } = await sb.from("df_credentials").select("password_hash").eq("user_id", uid).maybeSingle();
+  return !!c && typeof password === "string" && checkPw(password, c.password_hash);
+}
+
+// Routes avec session. Un seul compte à la fois, rien n'est jamais renvoyé du secret après l'activation.
+async function totpStatus(_req: any, res: any, me: any) {
+  if (!canUseTotp(me.role)) return res.json({ eligible: false, enabled: false, backup_left: 0 });
+  try { const r = await totpGet(me.id); return res.json({ eligible: true, enabled: !!r?.enabled, backup_left: r?.enabled ? r.backup.length : 0 }); }
+  catch (e) { console.error(e); return res.status(500).json({ error: "Lecture impossible, réessaie." }); }
+}
+async function totpStart(req: any, res: any, me: any) {
+  if (!canUseTotp(me.role)) return res.status(403).json({ error: "Non permis pour ce rôle." });
+  if (!(await passwordOk(me.id, req.body?.password))) return res.status(401).json({ error: "Mot de passe incorrect." });
+  const cur = await totpGet(me.id);
+  if (cur?.enabled) return res.status(400).json({ error: "La double étape est déjà active." });
+  const secret = secretFromBytes(totpRandom(TOTP.secretBytes));
+  await totpPut(me.id, { secret, enabled: false, last_step: 0, backup: [], created_at: new Date().toISOString() });
+  return res.json({ secret, uri: otpauthUri(secret, String(me.username || me.name || "compte")) });
+}
+async function totpEnable(req: any, res: any, me: any) {
+  if (!canUseTotp(me.role)) return res.status(403).json({ error: "Non permis pour ce rôle." });
+  const row = await totpGet(me.id);
+  if (!row) return res.status(400).json({ error: "Commence par « Activer »." });
+  if (row.enabled) return res.status(400).json({ error: "La double étape est déjà active." });
+  const step = await verifyTotp(row.secret, req.body?.code, Date.now(), 0);
+  if (step === null) return res.status(400).json({ error: "Code incorrect. Vérifie l'heure du téléphone et réessaie." });
+  const bk = await newBackupCodes(me.id);
+  await totpPut(me.id, { ...row, enabled: true, last_step: step, backup: bk.hashes });
+  await auditLog(me, "totp_on", { type: "users", id: me.id, label: auditLabelOf(await getUserRow(me.id)) }, "Double étape activée");
+  return res.json({ ok: true, backup_codes: bk.codes });
+}
+async function totpDisable(req: any, res: any, me: any) {
+  const row = await totpGet(me.id);
+  if (!row?.enabled) return res.status(400).json({ error: "La double étape n'est pas active." });
+  if (!(await passwordOk(me.id, req.body?.password))) return res.status(401).json({ error: "Mot de passe incorrect." });
+  const chk = await totpCheck(me.id, row, req.body?.code);
+  if (!chk.ok) return res.status(401).json({ error: "Code incorrect." });
+  await sb.from(TOTP_TABLE).delete().eq("id", me.id);
+  await auditLog(me, "totp_off", { type: "users", id: me.id, label: auditLabelOf(await getUserRow(me.id)) }, "Double étape désactivée");
+  return res.json({ ok: true });
+}
+async function totpNewBackup(req: any, res: any, me: any) {
+  const row = await totpGet(me.id);
+  if (!row?.enabled) return res.status(400).json({ error: "La double étape n'est pas active." });
+  if (!(await passwordOk(me.id, req.body?.password))) return res.status(401).json({ error: "Mot de passe incorrect." });
+  const chk = await totpCheck(me.id, row, req.body?.code);
+  if (!chk.ok) return res.status(401).json({ error: "Code incorrect." });
+  const bk = await newBackupCodes(me.id);
+  await totpPut(me.id, { ...chk.row, backup: bk.hashes });
+  return res.json({ ok: true, backup_codes: bk.codes });
+}
+/** Le responsable remet à zéro la double étape d'un AUTRE compte (téléphone perdu d'un Comptable). Jamais la sienne. */
+async function totpReset(req: any, res: any, me: any) {
+  if (me.role !== "admin") return res.status(403).json({ error: "Réservé au responsable." });
+  const id = String(req.body?.userId || "");
+  if (!id || id === me.id) return res.status(400).json({ error: "Choisis un autre compte." });
+  const u = await getUserRow(id);
+  if (!u) return res.status(404).json({ error: "Compte introuvable." });
+  await sb.from(TOTP_TABLE).delete().eq("id", id);
+  await auditLog(me, "totp_reset", { type: "users", id, label: auditLabelOf(u) }, "Double étape remise à zéro par le responsable");
+  return res.json({ ok: true });
+}
+
 async function login(req: any, res: any) {
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
@@ -1945,6 +2144,20 @@ async function login(req: any, res: any) {
     await guardFail(uname, ip, adminAccount);
     const notice = await authNotice(uname, password);
     return res.status(401).json({ error: notice || 'Pseudo ou mot de passe incorrect.' });
+  }
+  // M16.4 : double étape (facultative). Mot de passe bon + code absent = on le demande (pas compté comme un essai raté) ; code faux = compté comme un raté.
+  let totpRow: TotpRow | null = null;
+  try { totpRow = await totpGet(cred.user_id); }
+  catch (e) { console.error(e); return res.status(503).json({ error: 'Vérification impossible pour le moment, réessaie dans un instant.' }); } // jamais « on laisse passer » : le compte est protégé
+  if (totpRow?.enabled) {
+    if (!String(req.body?.code ?? '').trim()) return res.status(401).json({ error: 'Entre le code à 6 chiffres de ton application (ou un code de secours).', code: 'totp_required' });
+    const chk = await totpCheck(cred.user_id, totpRow, req.body?.code);
+    if (!chk.ok) {
+      await sleep(500);
+      await guardFail(uname, ip, (await getUserRow(cred.user_id))?.role === 'admin');
+      return res.status(401).json({ error: 'Code incorrect.', code: 'totp_required' });
+    }
+    try { await totpPut(cred.user_id, chk.row); } catch (e) { console.error(e); return res.status(503).json({ error: 'Vérification impossible pour le moment, réessaie dans un instant.' }); }
   }
   await guardClear(uname);
   const user = await getUserRow(cred.user_id);
@@ -2519,6 +2732,7 @@ async function sync(req: any, res: any, me: any) {
         if (u?.role === 'admin') { rejected.push({ col, id, reason: 'admin' }); continue; }
         await purgeEmployee(id); // efface aussi toutes ses données (missions, messages, publications, fichiers…)
         await sb.from('df_credentials').delete().eq('user_id', id);
+        await sb.from('df_totp').delete().eq('id', id);
         await sb.from(PRESENCE).delete().eq('user_id', id);
         await sb.from(PUSH_SUBS).delete().eq('data->>user_id', id); // plus de notifications pour un compte supprimé
       }
@@ -3959,6 +4173,12 @@ Deno.serve(async (request: Request) => {
     if (action === "news-withdraw" && req.method === "POST") return await newsWithdraw(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
+    if (action === "totp-status" && req.method === "GET") return await totpStatus(req, res, me);
+    if (action === "totp-start" && req.method === "POST") return await totpStart(req, res, me);
+    if (action === "totp-enable" && req.method === "POST") return await totpEnable(req, res, me);
+    if (action === "totp-disable" && req.method === "POST") return await totpDisable(req, res, me);
+    if (action === "totp-new-backup" && req.method === "POST") return await totpNewBackup(req, res, me);
+    if (action === "totp-reset" && req.method === "POST") return await totpReset(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);

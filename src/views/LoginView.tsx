@@ -145,6 +145,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Double étape (M16.4) : le serveur demande un code après le bon mot de passe
+  const [needCode, setNeedCode] = useState(false);
+  const [loginCode, setLoginCode] = useState('');
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -155,9 +158,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     setIsLoading(true);
-    const result = await db.login(username.trim(), password);
+    const result = await db.login(username.trim(), password, needCode ? loginCode : undefined);
     setIsLoading(false);
 
+    if (result.needsCode) { setNeedCode(true); setErrorMsg(needCode ? (result.error || null) : null); return; } // double étape : on demande le code
     if (!result.success || !result.user) {
       setErrorMsg(result.error || (lang === 'en' ? 'Authentication failed' : "Erreur d'authentification"));
       return;
@@ -249,6 +253,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     {eyeBtn(showPassword, () => setShowPassword(!showPassword))}
                   </div>
                 </div>
+                {needCode && (
+                  <div>
+                    <label className={labelCls}>Code de sécurité</label>
+                    <div className="relative">
+                      <Shield className={iconCls} style={{ color: C.ico }} />
+                      <input type="text" inputMode="text" value={loginCode} onChange={e => setLoginCode(e.target.value)} autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="one-time-code" placeholder="6 chiffres, ou code de secours" className={fieldCls} style={fieldStyle} />
+                    </div>
+                    <p className="text-[12px] mt-1" style={{ color: C.sub }}>Ouvre ton application d'authentification. Téléphone perdu : tape un code de secours.</p>
+                  </div>
+                )}
                 <button type="button" onClick={() => setForgotOpen(true)} className="block ml-auto text-[13px] font-semibold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
                   Mot de passe oublié ?
                 </button>

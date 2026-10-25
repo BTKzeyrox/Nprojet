@@ -1282,9 +1282,9 @@ class AppStore {
   }
 
   // --- AUTHENTICATION ---
-  public async login(username: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> {
-    const r = await this.api('login', { method: 'POST', body: JSON.stringify({ username, password }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.' };
+  public async login(username: string, password: string, code?: string): Promise<{ success: boolean; error?: string; user?: User; needsCode?: boolean }> {
+    const r = await this.api('login', { method: 'POST', body: JSON.stringify(code ? { username, password, code } : { username, password }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.', needsCode: r.data?.code === 'totp_required' };
     this.stopPolling();
     this.resetLocal();
     this.token = r.data.token;
@@ -1295,6 +1295,19 @@ class AppStore {
     this.emit();
     return { success: true, user: this.currentUser as User };
   }
+
+  // --- SÉCURITÉ EN DEUX ÉTAPES (M16.4) : le serveur garde le secret ; ici seulement des appels. Pas disponible en mode démo. ---
+  private async totpCall(path: string, body?: unknown): Promise<{ ok: boolean; error?: string; data: any }> {
+    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.', data: {} };
+    const r = await this.api(path, body === undefined ? undefined : { method: 'POST', body: JSON.stringify(body) });
+    return { ok: r.ok, error: r.ok ? undefined : (r.data?.error || 'Erreur, réessaie.'), data: r.data || {} };
+  }
+  public totpStatus() { return this.totpCall('totp-status'); }
+  public totpStart(password: string) { return this.totpCall('totp-start', { password }); }
+  public totpEnable(code: string) { return this.totpCall('totp-enable', { code }); }
+  public totpDisable(password: string, code: string) { return this.totpCall('totp-disable', { password, code }); }
+  public totpNewBackup(password: string, code: string) { return this.totpCall('totp-new-backup', { password, code }); }
+  public totpReset(userId: string) { return this.totpCall('totp-reset', { userId }); }
 
   // Faux serveur du mode démo : répond comme le vrai, mais ne modifie que les données fictives en mémoire.
   private demoApi(path: string, init?: RequestInit): { ok: boolean; status: number; data: any } {
