@@ -3,12 +3,19 @@
 // PRINCIPES : une pièce = UNE écriture, à identifiant fixe (`je-<type>-<id>`) : générer deux fois ne crée jamais de doublon. On ne modifie jamais une écriture : on la contre-passe.
 // Ce qui n'est pas une pièce comptable ne donne rien : un brouillon de facture, un bon de commande (il crée déjà sa propre dépense : sinon double compte), une avance refusée ou en attente.
 // Les choix ci-dessous sont les valeurs PAR DÉFAUT de M14.0 ; ils doivent être validés par BTK et un expert-comptable.
-import type { CashEntry, Invoice, SalaryAdvanceRequest } from '../types';
 import { cleanEntry, entryIdFor, type Entry, type EntryLine, type Journal } from './accounting';
 
-/** Fiche de paie telle que le serveur la garde (table de paie) : seuls les champs utiles ici. */
+// Le bloc « BEGIN ACCOUNTINGBUILD … END ACCOUNTINGBUILD » a une copie exacte dans le bloc ACCOUNTING de `df-api` (au mot `export` près) : `npm run check:accounting-server`.
+// Il utilise `cleanEntry` et `entryIdFor` du bloc ACCOUNTINGCORE et ne doit rien importer d'autre.
+// BEGIN ACCOUNTINGBUILD
+/** Ce dont on a besoin d'une facture, d'une ligne d'argent, d'une avance : les vrais types du site les contiennent (typage structurel). */
+export interface InvoiceLike { id: string; type?: string; number?: string; status: string; client?: { name?: string } | null; issue_date: string; subtotal_ar: number; tax_ar: number; total_ar: number }
+export interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string }
+export interface AdvanceLike { id: string; status: string; amount_ar: number; request_date: string }
+
+/** Fiche de paie telle que le serveur la garde (table de paie) : seuls les champs utiles ici. Le NOM du salarié n'est jamais utilisé : le Comptable ne doit pas voir la paie de chacun. */
 export interface SlipLike {
-  id: string; name: string; period_end: string;
+  id: string; period_end: string;
   net: number; advance_deducted?: number;
   paid?: { at: string; method?: string } | null;
 }
@@ -33,7 +40,7 @@ const finish = (raw: Entry): BuildResult => { const r = cleanEntry(raw); return 
 const SKIP = (reason: string): BuildResult => ({ ok: false, reason });
 
 /** Facture émise : le client nous doit le total (411), on constate la vente (706) et la TVA collectée (4457). Brouillon : rien. Facture ensuite annulée : garde son écriture, l'avoir la contre-passe. */
-export function entryForInvoice(inv: Invoice): BuildResult {
+export function entryForInvoice(inv: InvoiceLike): BuildResult {
   if (inv.type === 'credit_note') return SKIP('credit_note');
   if (inv.status !== 'issued' && inv.status !== 'cancelled') return SKIP('draft');
   const { subtotal_ar: sub, tax_ar: tax, total_ar: total } = inv;
@@ -47,7 +54,7 @@ export function entryForInvoice(inv: Invoice): BuildResult {
 }
 
 /** Avoir : exactement l'inverse de la facture qu'il annule (mêmes montants, débit et crédit échangés). */
-export function entryForCreditNote(inv: Invoice): BuildResult {
+export function entryForCreditNote(inv: InvoiceLike): BuildResult {
   if (inv.type !== 'credit_note') return SKIP('not_credit_note');
   if (inv.status !== 'issued') return SKIP('draft');
   const { subtotal_ar: sub, tax_ar: tax, total_ar: total } = inv;
@@ -62,7 +69,7 @@ export function entryForCreditNote(inv: Invoice): BuildResult {
 }
 
 /** Ligne d'argent des Finances : entrée (paiement d'une facture → solde du client ; paiement client sans facture → client ; autre entrée → produits divers) ou dépense (charge selon la catégorie). */
-export function entryForCash(c: CashEntry): BuildResult {
+export function entryForCash(c: CashLike): BuildResult {
   if (!isAmt(c.amount_ar)) return SKIP('amount');
   const cash = cashAccountFor(c.payment_method);
   if (c.kind === 'in') {
@@ -76,43 +83,44 @@ export function entryForCash(c: CashEntry): BuildResult {
 }
 
 /** Clôture d'une fiche de paie : charge de personnel (641) = net dû (421) + avances reprises (425). Daté du dernier jour de la période. Net et avances à zéro : rien. */
-export function entryForSlipClose(s: SlipLike): BuildResult {
+export function entryForSlipClose(s: SlipLike, key: (id: string) => string = x => x): BuildResult {
   const net = Number.isInteger(s.net) && s.net > 0 ? s.net : 0, adv = Number.isInteger(s.advance_deducted) && (s.advance_deducted as number) > 0 ? (s.advance_deducted as number) : 0;
   if (net + adv === 0) return SKIP('zero');
   const lines = [L('641', net + adv, 0)];
   if (net > 0) lines.push(L('421', 0, net));
   if (adv > 0) lines.push(L('425', 0, adv));
-  return finish({ id: entryIdFor({ type: 'slip_close', id: s.id }), date: s.period_end, journal: 'PA', label: `Paie ${s.name || ''}`.trim(), lines, source: { type: 'slip_close', id: s.id } });
+  return finish({ id: entryIdFor({ type: 'slip_close', id: key(s.id) }), date: s.period_end, journal: 'PA', label: `Paie ${String(s.period_end).slice(0, 7)}`, lines, source: { type: 'slip_close', id: key(s.id) } });
 }
 
 /** Paiement d'une fiche de paie : on solde la dette envers le salarié (421) par la trésorerie du mode de paiement. Pas payée ou net à zéro : rien. */
-export function entryForSlipPaid(s: SlipLike): BuildResult {
+export function entryForSlipPaid(s: SlipLike, key: (id: string) => string = x => x): BuildResult {
   if (!s.paid || !s.paid.at) return SKIP('not_paid');
   if (!isAmt(s.net)) return SKIP('zero');
   const cash = cashAccountFor(s.paid.method);
-  return finish({ id: entryIdFor({ type: 'slip_paid', id: s.id }), date: s.paid.at, journal: cash.journal, label: `Paiement de la paie ${s.name || ''}`.trim(), lines: [L('421', s.net, 0), L(cash.account, 0, s.net)], source: { type: 'slip_paid', id: s.id } });
+  return finish({ id: entryIdFor({ type: 'slip_paid', id: key(s.id) }), date: s.paid.at, journal: cash.journal, label: `Paiement de la paie ${String(s.period_end).slice(0, 7)}`, lines: [L('421', s.net, 0), L(cash.account, 0, s.net)], source: { type: 'slip_paid', id: key(s.id) } });
 }
 
 /** Avance accordée (statut « approuvée ») : le salarié nous doit ce montant (425), sorti de la caisse (valeur par défaut). Elle est reprise ensuite sur la paie. En attente ou refusée : rien. */
-export function entryForAdvance(a: SalaryAdvanceRequest): BuildResult {
+export function entryForAdvance(a: AdvanceLike, key: (id: string) => string = x => x): BuildResult {
   if (a.status !== 'approved') return SKIP('not_approved');
   if (!isAmt(a.amount_ar)) return SKIP('amount');
-  return finish({ id: entryIdFor({ type: 'advance', id: a.id }), date: a.request_date, journal: 'CA', label: `Avance ${a.employee_name || ''}`.trim(), lines: [L('425', a.amount_ar, 0), L('531', 0, a.amount_ar)], source: { type: 'advance', id: a.id } });
+  return finish({ id: entryIdFor({ type: 'advance', id: key(a.id) }), date: a.request_date, journal: 'CA', label: 'Avance au personnel', lines: [L('425', a.amount_ar, 0), L('531', 0, a.amount_ar)], source: { type: 'advance', id: key(a.id) } });
 }
 
-export interface Sources { invoices: Invoice[]; cash: CashEntry[]; slips: SlipLike[]; advances: SalaryAdvanceRequest[] }
+export interface Sources { invoices: InvoiceLike[]; cash: CashLike[]; slips: SlipLike[]; advances: AdvanceLike[] }
 export interface Built { entries: Entry[]; skipped: { type: string; id: string; reason: string }[] }
 /** Les « rien à écrire » normaux (brouillon, avance en attente…) ne comptent pas comme des problèmes : ils ne sont pas dans `skipped`. */
 const NORMAL_SKIPS = new Set(['draft', 'not_paid', 'not_approved', 'credit_note', 'not_credit_note']);
 
 /** Toutes les écritures automatiques, triées par date puis identifiant (même résultat quel que soit l'ordre des pièces). `skipped` = pièces refusées (totaux incohérents, montant faux, date fausse…) à corriger. */
-export function buildEntries(src: Sources): Built {
+export function buildEntries(src: Sources, key: (id: string) => string = x => x): Built {
   const out: Entry[] = [], skipped: Built['skipped'] = [];
   const add = (type: string, id: string, r: BuildResult) => { if (r.ok) out.push(r.entry); else if (!NORMAL_SKIPS.has(r.reason)) skipped.push({ type, id, reason: r.reason }); };
   for (const i of src.invoices || []) add(i.type === 'credit_note' ? 'credit_note' : 'invoice', i.id, i.type === 'credit_note' ? entryForCreditNote(i) : entryForInvoice(i));
   for (const c of src.cash || []) add('cash', c.id, entryForCash(c));
-  for (const s of src.slips || []) { add('slip_close', s.id, entryForSlipClose(s)); add('slip_paid', s.id, entryForSlipPaid(s)); }
-  for (const a of src.advances || []) add('advance', a.id, entryForAdvance(a));
+  for (const s of src.slips || []) { add('slip_close', s.id, entryForSlipClose(s, key)); add('slip_paid', s.id, entryForSlipPaid(s, key)); }
+  for (const a of src.advances || []) add('advance', a.id, entryForAdvance(a, key));
   out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return { entries: out, skipped };
 }
+// END ACCOUNTINGBUILD

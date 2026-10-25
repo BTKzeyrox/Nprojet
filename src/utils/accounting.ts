@@ -3,8 +3,10 @@
 // Tous les montants sont des Ariary ENTIERS (pas de centimes). Dates = textes « AAAA-MM-JJ » (jour de Madagascar).
 // ATTENTION : le plan comptable ci-dessous est un plan MINIMAL de départ, numéroté comme le plan comptable général (classes 1 à 7).
 // Il doit être VALIDÉ par un expert-comptable malgache avant tout usage officiel (voir TODO_MODULES.md, M14.0 et M14.10).
-// `cleanEntry` aura une copie exacte dans le bloc ACCOUNTING de `supabase/functions/df-api/index.ts` (étape M14.3) : même méthode que les autres modules.
+// Le bloc « BEGIN ACCOUNTINGCORE … END ACCOUNTINGCORE » a une copie exacte dans le bloc ACCOUNTING de `supabase/functions/df-api/index.ts` (au mot `export` près) : `npm run check:accounting-server` compare les deux.
+// Il ne doit utiliser ni import ni constante extérieure.
 
+// BEGIN ACCOUNTINGCORE
 export type Journal = 'VT' | 'AC' | 'BQ' | 'CA' | 'MM' | 'PA' | 'OD';
 export interface Account { code: string; fr: string; en: string; kind: 'asset' | 'liability' | 'equity' | 'expense' | 'income' }
 export interface EntryLine { account: string; debit: number; credit: number; label?: string }
@@ -119,6 +121,7 @@ export function reverseEntry(e: Entry, date: string, id: string): Entry {
     ...(e.source ? { source: e.source } : {}), reversal_of: e.id,
   };
 }
+// END ACCOUNTINGCORE
 
 // ---------- Lectures : grand livre, balance, résultat, bilan, TVA ----------
 const inRange = (d: string, from?: string, to?: string) => (!from || d >= from) && (!to || d <= to);

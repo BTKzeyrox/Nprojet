@@ -23,6 +23,7 @@ const T = {
   sheets: "df_sheets", // « Mes tableaux » (M12.4) : l'opérateur écrit et lit les siens, l'admin lit tous (lecture seule)
   leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
   shifts: "df_shifts", // planning des équipes (M15.2) : le responsable écrit, le salarié ne voit que SON planning
+  entries: "df_entries", // écritures comptables (M14.3) : JAMAIS écrites par la synchro, seulement par les routes accounting-* ; lecture responsable et Comptable
   quotes: "df_quotes", // devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture)
 } as const;
 type Col = keyof typeof T;
@@ -31,7 +32,7 @@ const COLS = Object.keys(T) as Col[];
 // ===== BEGIN ROLES (rôles : admin, Comptable, Chef d'équipe, opérateur ; ce bloc est contrôlé par scripts/check-roles.ts) =====
 const ROLES = ["admin", "accountant", "team_lead", "employee"];
 const CREATABLE_ROLES = ["employee", "accountant", "team_lead"];
-const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
+const MONEY_COLS: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes", "entries"];
 const READ_ADMIN_COLS: string[] = ["securityLogs", ...MONEY_COLS];
 const isRole = (v: unknown): boolean => typeof v === "string" && ROLES.includes(v);
 const isCreatableRole = (v: unknown): boolean => typeof v === "string" && CREATABLE_ROLES.includes(v);
@@ -41,7 +42,7 @@ const isOperator = (role: unknown): boolean => roleOf(role) === "employee";
 const canReadCol = (role: unknown, col: string): boolean => role === "admin" || (isMoneyRole(role) ? MONEY_COLS.includes(col) || !READ_ADMIN_COLS.includes(col) : !READ_ADMIN_COLS.includes(col));
 const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_COLS.includes(col) || isMoneyRole(role);
 const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
-const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay"];
+const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay", "accounting-sync", "accounting-post"];
 const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
 const cleanTeam = (v: unknown): string => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
 const sameTeam = (a: any, b: any): boolean => { const x = cleanTeam(a && a.team).toLowerCase(), y = cleanTeam(b && b.team).toLowerCase(); return !!x && x === y; };
@@ -81,9 +82,9 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
-const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
+const ADMIN_ONLY_READ: string[] = ["securityLogs", "cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes", "entries"];
 // Collections qu'un employé ne peut JAMAIS écrire ni supprimer (le journal de sécurité reste écrivable pour ses propres lignes).
-const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes"];
+const ADMIN_ONLY_WRITE: string[] = ["cash", "products", "stock", "clients", "suppliers", "purchases", "invoices", "quotes", "entries"];
 
 /** Vérifie et nettoie une ligne d'argent envoyée par l'admin. Le serveur ne fait jamais confiance au navigateur. */
 function cleanCash(rec: any, existing: any, meId: string, now: string): { ok: true; save: any } | { ok: false; reason: string } {
@@ -775,6 +776,316 @@ function cleanReview(rec: any, existing: any, actor: { id: string; admin: boolea
 }
 // END REVIEWCLEAN
 // ===== END REVIEWS =====
+
+// ===== BEGIN ACCOUNTING (comptabilité : écritures à partie double ; ce bloc est contrôlé par scripts/check-accounting-server.ts) =====
+const ACCT = (() => {
+// BEGIN ACCOUNTINGCORE
+type Journal = 'VT' | 'AC' | 'BQ' | 'CA' | 'MM' | 'PA' | 'OD';
+interface Account { code: string; fr: string; en: string; kind: 'asset' | 'liability' | 'equity' | 'expense' | 'income' }
+interface EntryLine { account: string; debit: number; credit: number; label?: string }
+interface EntrySource { type: string; id: string } // d'où vient l'écriture : facture, avoir, paiement, dépense, paie…
+interface Entry {
+  id: string; // déterministe pour une écriture automatique : `je-<type>-<id>` (jamais de doublon)
+  number?: string; // numéro d'écriture attribué par le serveur (jamais par le navigateur)
+  date: string;
+  journal: Journal;
+  ref?: string; // numéro de la pièce (facture, reçu…)
+  label: string;
+  lines: EntryLine[];
+  source?: EntrySource;
+  reversal_of?: string; // contre-passation : identifiant de l'écriture annulée
+  reversed_by?: string;
+  created_by?: string; created_at?: string; updated_at?: string;
+}
+
+const JOURNALS: Record<Journal, [string, string]> = {
+  VT: ['Ventes', 'Sales'], AC: ['Achats', 'Purchases'], BQ: ['Banque', 'Bank'], CA: ['Caisse', 'Cash'], MM: ['Mobile Money', 'Mobile Money'], PA: ['Paie', 'Payroll'], OD: ['Opérations diverses', 'Miscellaneous'],
+};
+
+/** Plan minimal de départ (à valider par un expert-comptable). Les comptes de classe 4 et 5 sont les seuls qui peuvent changer de côté (solde débiteur ou créditeur). */
+const PLAN: Account[] = [
+  { code: '101', fr: 'Capital', en: 'Capital', kind: 'equity' },
+  { code: '110', fr: 'Report à nouveau', en: 'Retained earnings', kind: 'equity' },
+  { code: '401', fr: 'Fournisseurs', en: 'Suppliers', kind: 'liability' },
+  { code: '411', fr: 'Clients', en: 'Customers', kind: 'asset' },
+  { code: '421', fr: 'Personnel : rémunérations dues', en: 'Staff: pay due', kind: 'liability' },
+  { code: '425', fr: 'Personnel : avances et acomptes', en: 'Staff: advances', kind: 'asset' },
+  { code: '4456', fr: 'TVA déductible', en: 'Deductible VAT', kind: 'asset' },
+  { code: '4457', fr: 'TVA collectée', en: 'Collected VAT', kind: 'liability' },
+  { code: '512', fr: 'Banque', en: 'Bank', kind: 'asset' },
+  { code: '514', fr: 'Mobile Money', en: 'Mobile Money', kind: 'asset' },
+  { code: '531', fr: 'Caisse', en: 'Cash on hand', kind: 'asset' },
+  { code: '601', fr: 'Achats', en: 'Purchases', kind: 'expense' },
+  { code: '606', fr: 'Fournitures et petit matériel', en: 'Supplies and small equipment', kind: 'expense' },
+  { code: '613', fr: 'Loyers', en: 'Rent', kind: 'expense' },
+  { code: '624', fr: 'Transports', en: 'Transport', kind: 'expense' },
+  { code: '626', fr: 'Internet et télécommunications', en: 'Internet and telecoms', kind: 'expense' },
+  { code: '641', fr: 'Rémunérations du personnel', en: 'Staff pay', kind: 'expense' },
+  { code: '658', fr: 'Charges diverses', en: 'Other expenses', kind: 'expense' },
+  { code: '706', fr: 'Prestations de services', en: 'Services revenue', kind: 'income' },
+  { code: '758', fr: 'Produits divers', en: 'Other income', kind: 'income' },
+];
+const PLAN_BY_CODE = new Map(PLAN.map(a => [a.code, a]));
+const accountOf = (code: string): Account | undefined => PLAN_BY_CODE.get(code);
+const classOf = (code: string): number => Number(String(code)[0]);
+
+const MAX_AMOUNT = 1_000_000_000_000;
+const MAX_LINES = 40;
+const isDate = (v: unknown): v is string => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(v + 'T00:00:00Z');
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= '2000-01-01' && v <= '2100-12-31';
+};
+const isAmount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= MAX_AMOUNT;
+const clean = (v: unknown, max: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+
+const totals = (lines: EntryLine[]) => ({ debit: lines.reduce((t, l) => t + (l.debit || 0), 0), credit: lines.reduce((t, l) => t + (l.credit || 0), 0) });
+
+/**
+ * Vérifie une écriture. `closedThrough` = dernier jour d'une période CLOSE (« » = aucune) : on n'écrit plus à cette date ni avant.
+ * Refus : id/date/journal/libellé faux, moins de 2 lignes ou plus de 40, compte hors plan, montant non entier ou négatif ou énorme, ligne qui est à la fois débit et crédit,
+ * ligne à zéro, écriture déséquilibrée, période close. Renvoie l'écriture NETTOYÉE (texte sans chevrons, lignes sans champ inconnu).
+ */
+function cleanEntry(raw: any, closedThrough = ''): { ok: true; entry: Entry } | { ok: false; reason: string } {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'entry' };
+  const id = clean(raw.id, 120);
+  if (!id) return { ok: false, reason: 'id' };
+  if (!isDate(raw.date)) return { ok: false, reason: 'date' };
+  if (closedThrough && raw.date <= closedThrough) return { ok: false, reason: 'closed' };
+  if (typeof raw.journal !== 'string' || !(raw.journal in JOURNALS)) return { ok: false, reason: 'journal' };
+  const label = clean(raw.label, 200);
+  if (!label) return { ok: false, reason: 'label' };
+  if (!Array.isArray(raw.lines) || raw.lines.length < 2 || raw.lines.length > MAX_LINES) return { ok: false, reason: 'lines' };
+  const lines: EntryLine[] = [];
+  for (const l of raw.lines) {
+    if (!l || typeof l !== 'object' || Array.isArray(l)) return { ok: false, reason: 'lines' };
+    const account = typeof l.account === 'string' ? l.account : '';
+    if (!PLAN_BY_CODE.has(account)) return { ok: false, reason: 'account' };
+    const debit = l.debit === undefined || l.debit === null ? 0 : l.debit, credit = l.credit === undefined || l.credit === null ? 0 : l.credit;
+    if (!isAmount(debit) || !isAmount(credit)) return { ok: false, reason: 'amount' };
+    if ((debit > 0) === (credit > 0)) return { ok: false, reason: 'line' }; // ni les deux, ni aucun
+    const line: EntryLine = { account, debit, credit };
+    const ll = clean(l.label, 120);
+    if (ll) line.label = ll;
+    lines.push(line);
+  }
+  const t = totals(lines);
+  if (t.debit !== t.credit) return { ok: false, reason: 'unbalanced' };
+  if (t.debit > MAX_AMOUNT) return { ok: false, reason: 'amount' };
+  const entry: Entry = { id, date: raw.date, journal: raw.journal as Journal, label, lines };
+  const ref = clean(raw.ref, 80);
+  if (ref) entry.ref = ref;
+  if (raw.source && typeof raw.source === 'object' && !Array.isArray(raw.source)) {
+    const st = clean(raw.source.type, 40), si = clean(raw.source.id, 120);
+    if (st && si) entry.source = { type: st, id: si };
+  }
+  if (typeof raw.reversal_of === 'string' && raw.reversal_of) entry.reversal_of = clean(raw.reversal_of, 120);
+  return { ok: true, entry };
+}
+
+/** Identifiant d'une écriture automatique : toujours le même pour la même pièce, donc jamais de doublon si on la génère deux fois. */
+const entryIdFor = (source: EntrySource): string => `je-${source.type}-${source.id}`;
+
+/** Contre-passation : même écriture, débit et crédit échangés, à la date donnée. L'originale n'est jamais modifiée (le serveur ajoute `reversed_by`). */
+function reverseEntry(e: Entry, date: string, id: string): Entry {
+  return {
+    id, date, journal: e.journal, ref: e.ref, label: `Annulation : ${e.label}`.slice(0, 200),
+    lines: e.lines.map(l => ({ account: l.account, debit: l.credit, credit: l.debit, ...(l.label ? { label: l.label } : {}) })),
+    ...(e.source ? { source: e.source } : {}), reversal_of: e.id,
+  };
+}
+// END ACCOUNTINGCORE
+// BEGIN ACCOUNTINGBUILD
+/** Ce dont on a besoin d'une facture, d'une ligne d'argent, d'une avance : les vrais types du site les contiennent (typage structurel). */
+interface InvoiceLike { id: string; type?: string; number?: string; status: string; client?: { name?: string } | null; issue_date: string; subtotal_ar: number; tax_ar: number; total_ar: number }
+interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string }
+interface AdvanceLike { id: string; status: string; amount_ar: number; request_date: string }
+
+/** Fiche de paie telle que le serveur la garde (table de paie) : seuls les champs utiles ici. Le NOM du salarié n'est jamais utilisé : le Comptable ne doit pas voir la paie de chacun. */
+interface SlipLike {
+  id: string; period_end: string;
+  net: number; advance_deducted?: number;
+  paid?: { at: string; method?: string } | null;
+}
+
+const norm = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/** Compte et journal de trésorerie selon le mode de paiement écrit à la main (« espèces », « virement », « MVola »…). Vide ou inconnu = caisse (valeur par défaut, à valider). */
+function cashAccountFor(method: unknown): { account: string; journal: Journal } {
+  const m = norm(method);
+  if (/mobile|mvola|orange|airtel|money|momo/.test(m)) return { account: '514', journal: 'MM' };
+  if (/virement|banque|bank|cheque|carte|transfer|rib|swift/.test(m)) return { account: '512', journal: 'BQ' };
+  return { account: '531', journal: 'CA' };
+}
+
+/** Compte de charge selon la catégorie de dépense des Finances. Catégorie inconnue = charges diverses. */
+const EXPENSE_ACCOUNT: Record<string, string> = { Achats: '601', Loyer: '613', Internet: '626', Matériel: '606', Transport: '624', Autres: '658' };
+const expenseAccountFor = (category: unknown): string => EXPENSE_ACCOUNT[String(category ?? '')] || '658';
+
+type BuildResult = { ok: true; entry: Entry } | { ok: false; reason: string };
+const isAmt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0;
+const L = (account: string, debit: number, credit: number): EntryLine => ({ account, debit, credit });
+const finish = (raw: Entry): BuildResult => { const r = cleanEntry(raw); return r.ok ? { ok: true, entry: r.entry } : { ok: false, reason: r.reason }; };
+const SKIP = (reason: string): BuildResult => ({ ok: false, reason });
+
+/** Facture émise : le client nous doit le total (411), on constate la vente (706) et la TVA collectée (4457). Brouillon : rien. Facture ensuite annulée : garde son écriture, l'avoir la contre-passe. */
+function entryForInvoice(inv: InvoiceLike): BuildResult {
+  if (inv.type === 'credit_note') return SKIP('credit_note');
+  if (inv.status !== 'issued' && inv.status !== 'cancelled') return SKIP('draft');
+  const { subtotal_ar: sub, tax_ar: tax, total_ar: total } = inv;
+  if (!Number.isInteger(total) || total < 0) return SKIP('totals');
+  if (total === 0) return SKIP('zero');
+  if (!Number.isInteger(sub) || !Number.isInteger(tax) || sub < 0 || tax < 0 || sub + tax !== total) return SKIP('totals');
+  const lines = [L('411', total, 0)];
+  if (sub > 0) lines.push(L('706', 0, sub));
+  if (tax > 0) lines.push(L('4457', 0, tax));
+  return finish({ id: entryIdFor({ type: 'invoice', id: inv.id }), date: inv.issue_date, journal: 'VT', ref: inv.number, label: `Facture ${inv.number || ''} ${inv.client?.name || ''}`.trim(), lines, source: { type: 'invoice', id: inv.id } });
+}
+
+/** Avoir : exactement l'inverse de la facture qu'il annule (mêmes montants, débit et crédit échangés). */
+function entryForCreditNote(inv: InvoiceLike): BuildResult {
+  if (inv.type !== 'credit_note') return SKIP('not_credit_note');
+  if (inv.status !== 'issued') return SKIP('draft');
+  const { subtotal_ar: sub, tax_ar: tax, total_ar: total } = inv;
+  if (!Number.isInteger(total) || total < 0) return SKIP('totals');
+  if (total === 0) return SKIP('zero');
+  if (!Number.isInteger(sub) || !Number.isInteger(tax) || sub < 0 || tax < 0 || sub + tax !== total) return SKIP('totals');
+  const lines: EntryLine[] = [];
+  if (sub > 0) lines.push(L('706', sub, 0));
+  if (tax > 0) lines.push(L('4457', tax, 0));
+  lines.push(L('411', 0, total));
+  return finish({ id: entryIdFor({ type: 'credit_note', id: inv.id }), date: inv.issue_date, journal: 'VT', ref: inv.number, label: `Avoir ${inv.number || ''} ${inv.client?.name || ''}`.trim(), lines, source: { type: 'credit_note', id: inv.id } });
+}
+
+/** Ligne d'argent des Finances : entrée (paiement d'une facture → solde du client ; paiement client sans facture → client ; autre entrée → produits divers) ou dépense (charge selon la catégorie). */
+function entryForCash(c: CashLike): BuildResult {
+  if (!isAmt(c.amount_ar)) return SKIP('amount');
+  const cash = cashAccountFor(c.payment_method);
+  if (c.kind === 'in') {
+    const credit = c.invoice_id || c.category === 'Paiement client' ? '411' : '758';
+    return finish({ id: entryIdFor({ type: 'receipt', id: c.id }), date: c.date, journal: cash.journal, ref: c.receipt_no, label: `${c.invoice_id ? 'Paiement de facture' : c.category || 'Entrée'}${c.client_name ? ` ${c.client_name}` : ''}`.trim(), lines: [L(cash.account, c.amount_ar, 0), L(credit, 0, c.amount_ar)], source: { type: 'receipt', id: c.id } });
+  }
+  if (c.kind === 'out') {
+    return finish({ id: entryIdFor({ type: 'expense', id: c.id }), date: c.date, journal: cash.journal, label: `${c.category || 'Dépense'}${c.note ? ` : ${c.note}` : ''}`, lines: [L(expenseAccountFor(c.category), c.amount_ar, 0), L(cash.account, 0, c.amount_ar)], source: { type: 'expense', id: c.id } });
+  }
+  return SKIP('kind');
+}
+
+/** Clôture d'une fiche de paie : charge de personnel (641) = net dû (421) + avances reprises (425). Daté du dernier jour de la période. Net et avances à zéro : rien. */
+function entryForSlipClose(s: SlipLike, key: (id: string) => string = x => x): BuildResult {
+  const net = Number.isInteger(s.net) && s.net > 0 ? s.net : 0, adv = Number.isInteger(s.advance_deducted) && (s.advance_deducted as number) > 0 ? (s.advance_deducted as number) : 0;
+  if (net + adv === 0) return SKIP('zero');
+  const lines = [L('641', net + adv, 0)];
+  if (net > 0) lines.push(L('421', 0, net));
+  if (adv > 0) lines.push(L('425', 0, adv));
+  return finish({ id: entryIdFor({ type: 'slip_close', id: key(s.id) }), date: s.period_end, journal: 'PA', label: `Paie ${String(s.period_end).slice(0, 7)}`, lines, source: { type: 'slip_close', id: key(s.id) } });
+}
+
+/** Paiement d'une fiche de paie : on solde la dette envers le salarié (421) par la trésorerie du mode de paiement. Pas payée ou net à zéro : rien. */
+function entryForSlipPaid(s: SlipLike, key: (id: string) => string = x => x): BuildResult {
+  if (!s.paid || !s.paid.at) return SKIP('not_paid');
+  if (!isAmt(s.net)) return SKIP('zero');
+  const cash = cashAccountFor(s.paid.method);
+  return finish({ id: entryIdFor({ type: 'slip_paid', id: key(s.id) }), date: s.paid.at, journal: cash.journal, label: `Paiement de la paie ${String(s.period_end).slice(0, 7)}`, lines: [L('421', s.net, 0), L(cash.account, 0, s.net)], source: { type: 'slip_paid', id: key(s.id) } });
+}
+
+/** Avance accordée (statut « approuvée ») : le salarié nous doit ce montant (425), sorti de la caisse (valeur par défaut). Elle est reprise ensuite sur la paie. En attente ou refusée : rien. */
+function entryForAdvance(a: AdvanceLike, key: (id: string) => string = x => x): BuildResult {
+  if (a.status !== 'approved') return SKIP('not_approved');
+  if (!isAmt(a.amount_ar)) return SKIP('amount');
+  return finish({ id: entryIdFor({ type: 'advance', id: key(a.id) }), date: a.request_date, journal: 'CA', label: 'Avance au personnel', lines: [L('425', a.amount_ar, 0), L('531', 0, a.amount_ar)], source: { type: 'advance', id: key(a.id) } });
+}
+
+interface Sources { invoices: InvoiceLike[]; cash: CashLike[]; slips: SlipLike[]; advances: AdvanceLike[] }
+interface Built { entries: Entry[]; skipped: { type: string; id: string; reason: string }[] }
+/** Les « rien à écrire » normaux (brouillon, avance en attente…) ne comptent pas comme des problèmes : ils ne sont pas dans `skipped`. */
+const NORMAL_SKIPS = new Set(['draft', 'not_paid', 'not_approved', 'credit_note', 'not_credit_note']);
+
+/** Toutes les écritures automatiques, triées par date puis identifiant (même résultat quel que soit l'ordre des pièces). `skipped` = pièces refusées (totaux incohérents, montant faux, date fausse…) à corriger. */
+function buildEntries(src: Sources, key: (id: string) => string = x => x): Built {
+  const out: Entry[] = [], skipped: Built['skipped'] = [];
+  const add = (type: string, id: string, r: BuildResult) => { if (r.ok) out.push(r.entry); else if (!NORMAL_SKIPS.has(r.reason)) skipped.push({ type, id, reason: r.reason }); };
+  for (const i of src.invoices || []) add(i.type === 'credit_note' ? 'credit_note' : 'invoice', i.id, i.type === 'credit_note' ? entryForCreditNote(i) : entryForInvoice(i));
+  for (const c of src.cash || []) add('cash', c.id, entryForCash(c));
+  for (const s of src.slips || []) { add('slip_close', s.id, entryForSlipClose(s, key)); add('slip_paid', s.id, entryForSlipPaid(s, key)); }
+  for (const a of src.advances || []) add('advance', a.id, entryForAdvance(a, key));
+  out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return { entries: out, skipped };
+}
+// END ACCOUNTINGBUILD
+return { cleanEntry, reverseEntry, buildEntries };
+})();
+
+/** Clé opaque d'une pièce de paie ou d'avance : le Comptable lit les écritures mais ne doit pas pouvoir remonter à un salarié (l'identifiant d'une fiche contient celui du salarié). */
+async function acctKey(id: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`df-acct:${id}`));
+  return Array.from(new Uint8Array(d)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const acctFail = (res: any, msg: string, code = 400) => res.status(code).json({ error: msg });
+
+/** Génère les écritures de toutes les pièces (factures, avoirs, argent, paie, avances). Idempotent : une écriture qui existe déjà n'est ni refaite ni modifiée. Réservé à l'admin et au Comptable. */
+async function accountingSync(_req: any, res: any, me: any) {
+  const [invoices, cash, slipRows, advRows] = await Promise.all([
+    fetchAll((a, b) => sb.from(T.invoices).select('id, data').order('id', { ascending: true }).range(a, b)),
+    fetchAll((a, b) => sb.from(T.cash).select('id, data').order('id', { ascending: true }).range(a, b)),
+    fetchAll((a, b) => sb.from(PAYROLL).select('id, data').eq('data->>kind', 'slip').order('id', { ascending: true }).range(a, b)),
+    fetchAll((a, b) => sb.from(T.advances).select('id, data').eq('data->>status', 'approved').order('id', { ascending: true }).range(a, b)),
+  ]);
+  const keys = new Map<string, string>();
+  for (const r of [...slipRows, ...advRows]) keys.set(String(r.data?.id ?? r.id), await acctKey(String(r.data?.id ?? r.id)));
+  const built = ACCT.buildEntries({
+    invoices: invoices.map((r: any) => r.data), cash: cash.map((r: any) => r.data),
+    slips: slipRows.map((r: any) => r.data), advances: advRows.map((r: any) => r.data),
+  }, (id: string) => keys.get(id) || id);
+  let created = 0, existing = 0;
+  for (let i = 0; i < built.entries.length; i += 200) {
+    const { data, error } = await sb.rpc('df_post_entries', { p_entries: built.entries.slice(i, i + 200), p_by: me.id });
+    if (error) return acctFail(res, "Impossible d'enregistrer les écritures : " + error.message, 500);
+    created += Number(data?.created) || 0; existing += Number(data?.existing) || 0;
+  }
+  await auditLog(me, 'accounting_sync', { type: 'entries', id: 'sync', label: 'Écritures' }, `${created} créée(s), ${existing} déjà là, ${built.skipped.length} pièce(s) refusée(s)`);
+  // les pièces refusées de paie ou d'avance sont citées par leur clé opaque, jamais par l'identifiant du salarié
+  const skipped = built.skipped.map((x: any) => ({ type: x.type, id: /^(slip|advance)/.test(x.type) ? (keys.get(x.id) || 'x') : x.id, reason: x.reason }));
+  return res.json({ ok: true, created, existing, total: built.entries.length, skipped });
+}
+
+/** Saisie manuelle d'une écriture (capital, report à nouveau, opérations diverses…). Vérifiée comme toutes les autres. Réservé à l'admin et au Comptable. */
+async function accountingPost(req: any, res: any, me: any) {
+  const b = req.body || {};
+  const id = `je-manual-${newDocId('m')}`;
+  const v = ACCT.cleanEntry({ id, date: b.date, journal: b.journal, ref: b.ref, label: b.label, lines: b.lines, source: { type: 'manual', id } });
+  if (!v.ok) return acctFail(res, `Écriture refusée (${v.reason}).`, 400);
+  const { data, error } = await sb.rpc('df_post_entries', { p_entries: [v.entry], p_by: me.id });
+  if (error) return acctFail(res, "Impossible d'enregistrer l'écriture : " + error.message, 500);
+  await auditLog(me, 'accounting_post', { type: 'entries', id, label: v.entry.label }, `${v.entry.date} ${v.entry.journal}`);
+  return res.json({ ok: true, id, created: Number(data?.created) || 0 });
+}
+
+/** Contre-passation (annulation) : réservée à l'admin. Motif de 3 caractères au moins, date jamais avant l'écriture. L'originale n'est jamais modifiée sauf la marque « annulée par ». */
+async function accountingReverse(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || ''), reason = String(req.body?.reason || '').replace(/[<>]/g, '').trim().slice(0, 150), date = String(req.body?.date || '');
+  if (!id) return acctFail(res, 'Écriture manquante.');
+  if (reason.length < 3) return acctFail(res, "Écris un motif (3 caractères au moins).");
+  const { data: row } = await sb.from(T.entries).select('data').eq('id', id).maybeSingle();
+  if (!row) return acctFail(res, "Cette écriture n'existe pas.", 404);
+  const orig = row.data as any;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < orig.date) return acctFail(res, "Date incorrecte (pas avant l'écriture annulée).");
+  const rev = ACCT.reverseEntry(orig, date, `${id}-rev`);
+  rev.label = `${rev.label} (${reason})`.slice(0, 200);
+  const v = ACCT.cleanEntry(rev);
+  if (!v.ok) return acctFail(res, `Annulation refusée (${v.reason}).`);
+  const { data, error } = await sb.rpc('df_reverse_entry', { p_id: id, p_rev: v.entry, p_by: me.id });
+  if (error) {
+    const m = String(error.message || '');
+    if (m.includes('already_reversed')) return acctFail(res, 'Cette écriture est déjà annulée.', 409);
+    if (m.includes('is_reversal')) return acctFail(res, "Une annulation ne s'annule pas : saisis une nouvelle écriture.", 409);
+    if (m.includes('not_found')) return acctFail(res, "Cette écriture n'existe pas.", 404);
+    return acctFail(res, "Impossible d'annuler l'écriture : " + m, 500);
+  }
+  await auditLog(me, 'accounting_reverse', { type: 'entries', id, label: orig.label }, reason);
+  return res.json({ ok: true, ...data });
+}
+// ===== END ACCOUNTING =====
 
 // ===== BEGIN MISSIONS (date limite et priorité d'une mission : le serveur revérifie ; ce bloc est contrôlé par scripts/check-deadlines.ts) =====
 const MISSION_PRIORITIES = ['Normale', 'Haute', 'Urgente'];
@@ -1617,7 +1928,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
@@ -2488,6 +2799,13 @@ async function sync(req: any, res: any, me: any) {
     if (!ch) continue;
     const upserts: any[] = Array.isArray(ch.upserts) ? ch.upserts : [];
     const deletes: string[] = Array.isArray(ch.deletes) ? ch.deletes : [];
+
+    if (col === 'entries') {
+      // Écritures comptables (M14.3) : la synchro n'écrit ni ne supprime JAMAIS une écriture, quel que soit le rôle. Seules les routes accounting-* le font (vérification, numéro attribué par SQL).
+      for (const r of upserts) rejected.push({ col, id: String((r && r.id) || ''), reason: 'forbidden' });
+      for (const id of deletes) rejected.push({ col, id: String(id), reason: 'forbidden' });
+      continue;
+    }
 
     if (!admin && ADMIN_ONLY_WRITE.includes(col) && !canWriteMoneyCol(me.role, col)) {
       // Finances : un employé ne peut rien écrire ni supprimer, quoi qu'il envoie
@@ -4295,6 +4613,9 @@ Deno.serve(async (request: Request) => {
     if (action === "invoice-issue" && req.method === "POST") return await invoiceIssue(req, res, me);
     if (action === "invoice-cancel" && req.method === "POST") return await invoiceCancel(req, res, me);
     if (action === "invoice-pay" && req.method === "POST") return await invoicePay(req, res, me);
+    if (action === "accounting-sync" && req.method === "POST") return await accountingSync(req, res, me);
+    if (action === "accounting-post" && req.method === "POST") return await accountingPost(req, res, me);
+    if (action === "accounting-reverse" && req.method === "POST") return await accountingReverse(req, res, me);
     if (action === "payroll-period" && req.method === "POST") return await payrollPeriod(req, res, me);
     if (action === "payroll-close" && req.method === "POST") return await payrollClose(req, res, me);
     if (action === "payroll-reopen" && req.method === "POST") return await payrollReopen(req, res, me);

@@ -7,7 +7,7 @@ export type Role = typeof ROLES[number];
 export const CREATABLE_ROLES = ['employee', 'accountant', 'team_lead'] as const;
 
 /** Collections d'argent et de stock : lues et écrites par l'admin et le Comptable seulement. */
-export const MONEY_COLS = ['cash', 'products', 'stock', 'clients', 'suppliers', 'purchases', 'invoices', 'quotes'];
+export const MONEY_COLS = ['cash', 'products', 'stock', 'clients', 'suppliers', 'purchases', 'invoices', 'quotes', 'entries'];
 /** Collections jamais envoyées à un non-admin : journal de sécurité + argent. */
 export const READ_ADMIN_COLS = ['securityLogs', ...MONEY_COLS];
 
@@ -24,7 +24,7 @@ export const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_
 /** Prix client et objectifs d'argent : admin et Comptable. */
 export const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
 /** Routes (hors collections) réservées à l'admin et au Comptable. */
-export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay'];
+export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay', 'accounting-sync', 'accounting-post'];
 export const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
 /** Nom d'équipe : texte court, sans retour à la ligne ; vide = pas d'équipe. */
 export const cleanTeam = (v: unknown): string => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);

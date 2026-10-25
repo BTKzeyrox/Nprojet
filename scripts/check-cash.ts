@@ -61,7 +61,10 @@ ok((src.match(/df_cash/g) || []).length === 1, 'aucune autre route du serveur ne
 // Seule exception : la garde « fournisseur utilisé » (module 4), dans la suppression admin d'un fournisseur ; elle lit seulement l'existence d'une ligne.
 const guardLine = "for (const t of [T.purchases, T.stock, T.cash]) {";
 ok(src.split(guardLine).length - 1 === 1, 'garde « fournisseur utilisé » : la seule lecture de T.cash hors state et sync');
-ok((src.split(guardLine).join('').match(/T\.cash/g) || []).length === 0, 'aucun autre accès direct T.cash en dehors de state et sync');
+// Seconde exception (module 14, M14.3) : la génération des écritures comptables lit la caisse EN LECTURE SEULE, dans la route accounting-sync (admin et Comptable seulement, jamais d'écriture).
+const acctLine = "fetchAll((a, b) => sb.from(T.cash).select('id, data').order('id', { ascending: true }).range(a, b)),";
+ok(src.split(acctLine).length - 1 === 1 && /async function accountingSync\([\s\S]*?acctLine/.test(src.replace(acctLine, 'acctLine')), 'écritures comptables : la seule autre lecture de T.cash, en lecture seule, dans accountingSync');
+ok((src.split(guardLine).join('').split(acctLine).join('').match(/T\.cash/g) || []).length === 0, 'aucun autre accès direct T.cash en dehors de state, sync, la garde fournisseur et la comptabilité');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

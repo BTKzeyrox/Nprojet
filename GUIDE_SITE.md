@@ -404,6 +404,7 @@ Tables df_* (Supabase Postgres, aucun accès public : tout passe par df-api)
 | `sheets` | `df_sheets` | « Mes tableaux » (M12.4) : l'opérateur écrit et lit les siens, l'admin lit tous (lecture seule) |
 | `leaves` | `df_leaves` | demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout |
 | `shifts` | `df_shifts` | planning des équipes (M15.2) : le responsable écrit, le salarié ne voit que SON planning |
+| `entries` | `df_entries` | écritures comptables (M14.3) : JAMAIS écrites par la synchro, seulement par les routes accounting-* ; lecture responsable et Comptable |
 | `quotes` | `df_quotes` | devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture) |
 <!-- /AUTO:tables -->
 
@@ -412,7 +413,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -434,7 +435,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M6 Missions avancées** | Date limite et priorité, modèles, liste de tâches, notifications push | `src/utils/deadlines.ts`, `src/utils/missionTemplates.ts`, `src/utils/taskList.ts`, `src/utils/pushRules.ts` | dans `df_posts` | `npm run check:deadlines`, `npm run check:templates`, `npm run check:tasks`, `npm run check:push` |
 | **M7 Droits et traçabilité** | Quatre rôles, Chef d'équipe, journal d'audit, restauration | `src/utils/roles.ts`, `src/utils/auditRules.ts`, `src/utils/postDecision.ts`, `src/utils/teamLead.ts` | journal dans `df_security_logs` | `npm run check:roles`, `npm run check:audit`, `npm run check:team-lead` |
 | **M8.1 Direction** | Une page de synthèse du mois, **sans nouveau calcul** | `src/utils/direction.ts` | aucune | `npm run check:direction` |
-| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1) et écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2) ; rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | aucune pour l'instant | `npm run check:accounting`, `npm run check:accounting-entries` |
+| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures (M14.1), écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2), table et serveur (M14.3, code écrit : migration et déploiement à faire) ; pas encore d'écran.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | `df_entries` (créée en M14.3) | `npm run check:accounting`, `npm run check:accounting-entries`, `npm run check:accounting-server` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
 | **M15.1 Missions récurrentes** (M15 en cours) | Une règle crée une mission toute seule (chaque jour, jours de la semaine ou jour du mois) à l'heure de Madagascar, jamais en double ; arrêt et reprise sans rattrapage. Réglages > Missions. | `src/utils/recurring.ts` | aucune table : règles dans les réglages (`recurring_missions`, admin seulement) ; tâche planifiée `df-recurring-due` toutes les 15 min → route `recurring-due` | `npm run check:recurring` |
@@ -517,6 +518,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `notifications.ts` | — |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
 | `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
+| `offlineSync.ts` | Pont entre le magasin de données et la file d'actions hors ligne (module 13, M13.5) : règles pures, sans réseau, sans stockage. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `payslip.ts` | — |
 | `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
@@ -641,6 +643,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:guide` | (plusieurs contrôles) |
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
+| `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |
@@ -658,6 +661,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:badges` | Contrôle des règles de performance des salariés (module 3, partie A) : score, badges, niveaux, échantillon minimum, tendance, employé du mois. |
 | `npm run check:offline` | Contrôle des règles du mode hors ligne (module 13, M13.2), sans réseau. Lancer : npm run check:offline |
 | `npm run check:offline-vault` | Contrôle de la copie locale chiffrée du mode hors ligne (module 13, M13.3), sans réseau. Lancer : npm run check:offline-vault |
+| `npm run check:offline-sync` | Contrôle du pont magasin ↔ file d'actions hors ligne (module 13, M13.5), sans réseau. Lancer : npm run check:offline-sync |
+| `npm run check:offline-store` | Contrôle du mode hors ligne branché sur le VRAI magasin de données (module 13, M13.5), sans réseau réel. |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |
