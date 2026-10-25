@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Database, Download, RefreshCw, RotateCcw } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
+import { checkBackupFile, EXPORT_ERROR_TEXT, EXPORT_LIMITS, exportFileName } from '../utils/exportFile';
 
 type Row = { id: number; taken_at: string; tables: number; bytes: number };
 
@@ -56,6 +57,44 @@ export const BackupsSection: React.FC = () => {
     setBusy(false);
   };
 
+  // M16.5 : « Exporter toutes les données » = une sauvegarde toute fraîche, téléchargée en un clic (même fichier que « Télécharger »).
+  const exportAll = async () => {
+    setBusy(true); setMsg(null);
+    const made = await db.backupNow(); // refus « une sauvegarde vient d'être faite » : on prend alors la plus récente
+    const list = await db.listBackups();
+    const row = list.ok ? list.rows[0] : undefined;
+    if (!row || (!made.ok && Date.now() - new Date(row.taken_at).getTime() > 5 * 60_000)) { setBusy(false); return setMsg({ text: made.error || list.error || 'Export impossible.', ok: false }); }
+    const r = await db.getBackup(row.id);
+    setBusy(false);
+    if (!r.ok || !r.backup) return setMsg({ text: r.error || 'Export impossible.', ok: false });
+    const blob = new Blob([JSON.stringify(r.backup.data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = exportFileName(new Date());
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMsg({ text: 'Export téléchargé. Gardez-le comme un mot de passe : il contient tous les comptes.', ok: true });
+    await load();
+  };
+  // M16.5 : « Importer un fichier d'export » : contrôlé ici puis par le serveur ; ajouté à la liste, rien n'est remplacé.
+  const importFile = async (file: File | undefined) => {
+    if (!file) return;
+    setMsg(null);
+    if (file.size > EXPORT_LIMITS.fileBytes) return setMsg({ text: EXPORT_ERROR_TEXT.too_big, ok: false });
+    let parsed: unknown;
+    try { parsed = JSON.parse(await file.text()); } catch { return setMsg({ text: EXPORT_ERROR_TEXT.not_json, ok: false }); }
+    const c = checkBackupFile(parsed);
+    if (!c.ok) return setMsg({ text: EXPORT_ERROR_TEXT[c.error || 'not_object'] || EXPORT_ERROR_TEXT.not_object, ok: false });
+    askConfirm({ title: 'Ajouter ce fichier ?', message: `${c.tables.length} tables, ${c.totalRows} lignes. Il sera ajouté à la liste des sauvegardes. Rien n'est remplacé : pour l'utiliser, appuyez ensuite sur « Restaurer ».`, confirmLabel: 'Ajouter', onConfirm: async () => {
+      setBusy(true);
+      const r = await db.backupImport(parsed);
+      setBusy(false);
+      if (!r.ok) return setMsg({ text: (r.code && EXPORT_ERROR_TEXT[r.code]) || r.error || 'Fichier refusé.', ok: false });
+      setMsg({ text: 'Fichier ajouté à la liste. Rien n\'a été remplacé. Gardé 14 jours comme les autres sauvegardes.', ok: true });
+      await load();
+    } });
+  };
+
   const download = async (row: Row) => {
     setDownloading(row.id); setMsg(null);
     const r = await db.getBackup(row.id);
@@ -100,6 +139,11 @@ export const BackupsSection: React.FC = () => {
       <button type="button" disabled={busy} onClick={now} className="w-full min-h-[46px] px-4 rounded-full bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
         <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /> Sauvegarder maintenant
       </button>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button type="button" disabled={busy} onClick={exportAll} className="min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
+        {!db.isDemo() && <label className={`min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}><Database className="w-4 h-4" /> Importer un fichier d'export<input type="file" accept=".json,application/json" className="sr-only" onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} /></label>}
+      </div>
 
       {rows && rows.length > 0 && (
         <ul className="divide-y divide-slate-800 border border-slate-800 rounded-xl overflow-hidden">

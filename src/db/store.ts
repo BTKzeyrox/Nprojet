@@ -2650,6 +2650,13 @@ class AppStore {
     return r.ok ? { ok: true, sent: Number(r.data?.sent) || 0 } : { ok: false, sent: 0, error: r.data?.error || 'Erreur.' };
   }
 
+  /** M16.5 : ajoute un fichier d'export à la liste des sauvegardes (ne change aucune donnée ; l'utiliser passe par « Restaurer »). */
+  public async backupImport(data: unknown): Promise<{ ok: boolean; error?: string; code?: string; tables?: number; rows?: number }> {
+    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
+    const r = await this.api('backup-import', { method: 'POST', body: JSON.stringify({ data }) });
+    return r.ok ? { ok: true, tables: Number(r.data?.tables) || 0, rows: Number(r.data?.rows) || 0 } : { ok: false, error: r.data?.error || 'Erreur.', code: r.data?.code };
+  }
+
   public async backupNow(): Promise<{ ok: boolean; error?: string }> {
     const r = await this.api('backup-now', { method: 'POST', body: '{}' });
     return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };

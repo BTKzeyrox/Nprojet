@@ -1567,7 +1567,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
@@ -3680,6 +3680,53 @@ async function backupGet(req: any, res: any, me: any) {
   if (!data) return res.status(404).json({ error: 'Sauvegarde introuvable.' });
   return res.json({ backup: data });
 }
+// ===== BEGIN BACKUPFILE (contrôle d'un fichier de sauvegarde importé ; ce bloc est contrôlé par scripts/check-export.ts) =====
+const EXPORT_LIMITS = { fileBytes: 25 * 1024 * 1024, tables: 80, rowsPerTable: 200_000, rowsTotal: 500_000 };
+/** Tables qui ne reviennent jamais d'un fichier (état du moment, pas des données). */
+const EXPORT_NEVER = ['df_backups', 'df_restore', 'df_presence', 'df_errors'];
+interface BackupFileCheck { ok: boolean; error?: string; tables: { name: string; rows: number }[]; totalRows: number }
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Le contenu lu dans le fichier ressemble-t-il à une sauvegarde de Gestion Pro ? Ne regarde pas dans les lignes (la base les contrôle à la restauration, tout ou rien). */
+function checkBackupFile(raw: unknown): BackupFileCheck {
+  const bad = (error: string): BackupFileCheck => ({ ok: false, error, tables: [], totalRows: 0 });
+  if (!isObj(raw)) return bad('not_object');
+  const names = Object.keys(raw);
+  if (!names.length || names.length > EXPORT_LIMITS.tables) return bad('tables_count');
+  const tables: { name: string; rows: number }[] = [];
+  let total = 0;
+  for (const name of names) {
+    if (!/^df_[a-z][a-z0-9_]{0,40}$/.test(name)) return bad('table_name');
+    if (EXPORT_NEVER.includes(name)) return bad('table_forbidden');
+    const rows = raw[name];
+    if (!Array.isArray(rows)) return bad('table_not_list');
+    if (rows.length > EXPORT_LIMITS.rowsPerTable) return bad('too_many_rows');
+    for (const r of rows) if (!isObj(r)) return bad('row_not_object');
+    total += rows.length;
+    if (total > EXPORT_LIMITS.rowsTotal) return bad('too_many_rows');
+    tables.push({ name, rows: rows.length });
+  }
+  const users = raw['df_users'];
+  if (!Array.isArray(users) || users.length < 1) return bad('no_users');
+  return { ok: true, tables, totalRows: total };
+}
+// ===== END BACKUPFILE =====
+
+/** M16.5 : un fichier d'export est AJOUTÉ à la liste des sauvegardes. Aucune table n'est touchée : pour l'utiliser, l'admin passe par « Restaurer » (garde-fous de M7.3). */
+async function backupImport(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const data = req.body?.data;
+  const chk = checkBackupFile(data);
+  if (!chk.ok) return res.status(400).json({ error: 'Fichier refusé.', code: chk.error });
+  const { data: last } = await sb.from('df_backups').select('taken_at').order('taken_at', { ascending: false }).limit(1).maybeSingle();
+  if (last && Date.now() - new Date(last.taken_at).getTime() < 60_000) return res.status(429).json({ error: 'Une sauvegarde vient d\'être faite. Réessayez dans une minute.' });
+  const bytes = JSON.stringify(data).length;
+  const { data: row, error } = await sb.from('df_backups').insert({ taken_at: new Date().toISOString(), tables: chk.tables.length, bytes, data }).select('id').maybeSingle();
+  if (error) return res.status(500).json({ error: 'Le fichier n\'a pas pu être ajouté.' });
+  await auditLog(me, 'backup_import', { type: 'backups', id: String(row?.id ?? ''), label: 'Fichier importé' }, `${chk.tables.length} tables, ${chk.totalRows} lignes`);
+  return res.json({ ok: true, id: row?.id, tables: chk.tables.length, rows: chk.totalRows });
+}
 async function backupNow(_req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   // Une seule sauvegarde manuelle par minute (évite de remplir la base par erreur)
@@ -4153,6 +4200,7 @@ Deno.serve(async (request: Request) => {
     if (action === "error-update" && req.method === "POST") return await errorUpdate(req, res, me);
     if (action === "backups" && req.method === "GET") return await backupsList(req, res, me);
     if (action === "backup-get" && req.method === "GET") return await backupGet(req, res, me);
+    if (action === "backup-import" && req.method === "POST") return await backupImport(req, res, me);
     if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
     if (action === "audit-list" && req.method === "GET") return await auditList(req, res, me);
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);

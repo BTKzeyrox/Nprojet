@@ -1,0 +1,43 @@
+// Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans.
+import { readFileSync } from 'node:fs';
+import { transformSync } from 'esbuild';
+import * as X from '../src/utils/exportFile';
+import { AUDIT_ACTIONS, auditLabel } from '../src/utils/auditRules';
+let ok = 0, bad = 0;
+const t = (n: string, c: boolean) => { if (c) ok++; else { bad++; console.error('✗', n); } };
+const good = { df_users: [{ id: 'u1', data: {}, updated_at: 'x' }], df_clients: [], df_credentials: [{ user_id: 'u1', username: 'a', password_hash: 'h' }] };
+const chk = (v: unknown) => X.checkBackupFile(v);
+t('fichier valide', chk(good).ok && chk(good).totalRows === 2 && chk(good).tables.length === 3);
+t('pas un objet', !chk([]).ok && !chk(null).ok && !chk('x').ok && !chk(5).ok);
+t('objet vide', chk({}).error === 'tables_count');
+t('nom de table inconnu', chk({ ...good, users: [] }).error === 'table_name' && chk({ ...good, 'df_x; drop table df_users': [] }).error === 'table_name' && chk({ ...good, DF_users: [] }).error === 'table_name');
+t('tables interdites', chk({ ...good, df_backups: [] }).error === 'table_forbidden' && chk({ ...good, df_restore: [] }).error === 'table_forbidden');
+t('table pas une liste', chk({ ...good, df_clients: {} }).error === 'table_not_list');
+t('ligne pas un objet', chk({ ...good, df_clients: [1] }).error === 'row_not_object' && chk({ ...good, df_clients: [[]] }).error === 'row_not_object' && chk({ ...good, df_clients: [null] }).error === 'row_not_object');
+t('aucun compte', chk({ df_clients: [] }).error === 'no_users' && chk({ df_users: [] }).error === 'no_users');
+const many = { df_users: Array.from({ length: X.EXPORT_LIMITS.rowsPerTable + 1 }, () => ({})) };
+t('trop de lignes', chk(many).error === 'too_many_rows');
+const tables: any = { df_users: [{}] }; for (let i = 0; i <= X.EXPORT_LIMITS.tables; i++) tables['df_t' + i] = [];
+t('trop de tables', chk(tables).error === 'tables_count');
+t('textes d\'erreur pour chaque code', ['not_json', 'too_big', 'not_object', 'tables_count', 'table_name', 'table_forbidden', 'table_not_list', 'row_not_object', 'too_many_rows', 'no_users'].every(k => !!X.EXPORT_ERROR_TEXT[k]));
+t('nom de fichier', X.exportFileName(new Date(2026, 9, 25, 14, 5)) === 'gestion-pro-export-2026-10-25-1405.json');
+// copie serveur
+const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+const m = src.match(/\/\/ ===== BEGIN BACKUPFILE[^\n]*\n([\s\S]*?)\/\/ ===== END BACKUPFILE =====/);
+t('bloc serveur trouvé', !!m);
+const norm = (x: string) => x.replace(/\s+/g, ' ').trim();
+const mine = readFileSync('src/utils/exportFile.ts', 'utf8');
+const rules = mine.slice(mine.indexOf('export const EXPORT_LIMITS'), mine.indexOf('export const EXPORT_ERROR_TEXT'));
+t('copie serveur = texte du site (règles, sans textes ni nom de fichier)', norm(m?.[1] || '') === norm(rules.replace(/export /g, '')));
+const g: any = {}; new Function('g', transformSync((m?.[1] || '') + '\n;g.c = checkBackupFile;', { loader: 'ts' }).code)(g);
+t('copie serveur : mêmes réponses', JSON.stringify(g.c(good)) === JSON.stringify(chk(good)) && g.c({ ...good, df_backups: [] }).error === 'table_forbidden' && g.c([]).error === 'not_object');
+// route
+const r = src.slice(src.indexOf('async function backupImport'), src.indexOf('async function backupNow'));
+t('route backup-import branchée', src.includes('action === "backup-import" && req.method === "POST"') || src.includes("action === 'backup-import' && req.method === 'POST'"));
+t('admin seulement', /me\.role !== 'admin'/.test(r));
+t('fichier revérifié par le serveur', /checkBackupFile\(/.test(r));
+t('une seule entrée par minute', /60_000/.test(r));
+t('n\'écrase rien : insertion dans df_backups seulement', /from\('df_backups'\)\.insert\(/.test(r) && !/\.delete\(|\.upsert\(|\.update\(/.test(r) && !/df_restore_backup|df_take_backup/.test(r));
+t('audit backup_import', /auditLog\(me, 'backup_import'/.test(r) && (AUDIT_ACTIONS as readonly string[]).includes('backup_import') && /const AUDIT_ACTIONS = \[[^\]]*"backup_import"/.test(src) && auditLabel('backup_import', 'fr') !== 'backup_import' && auditLabel('backup_import', 'en').length > 3);
+console.log(`${ok}/${ok + bad} contrôles OK`);
+process.exit(bad ? 1 : 0);
