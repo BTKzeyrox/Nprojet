@@ -403,6 +403,7 @@ Tables df_* (Supabase Postgres, aucun accès public : tout passe par df-api)
 | `reviews` | `df_reviews` | fiches d'évaluation (M5.4) : le salarié ne reçoit que SES fiches partagées, sans « points à améliorer » |
 | `sheets` | `df_sheets` | « Mes tableaux » (M12.4) : l'opérateur écrit et lit les siens, l'admin lit tous (lecture seule) |
 | `leaves` | `df_leaves` | demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout |
+| `shifts` | `df_shifts` | planning des équipes (M15.2) : le responsable écrit, le salarié ne voit que SON planning |
 | `quotes` | `df_quotes` | devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture) |
 <!-- /AUTO:tables -->
 
@@ -523,6 +524,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `performanceExport.ts` | Export des scores et des badges (module 3, M3.8) : tableau Excel/CSV de la page Performance et section du rapport mensuel. |
 | `performanceScore.ts` | Performance des salariés (module 3, partie A) : score 0-100, badges à niveaux, tendance, points d'attention, employé du mois. |
 | `phoneUtils.ts` | Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 » |
+| `planning.ts` | Planning des équipes (module 15, M15.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:planning`. |
 | `postBand.ts` | Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
@@ -679,6 +681,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |
 | `npm run check:recurring` | Contrôle des missions récurrentes (M15.1). Lancer : npm run check:recurring |
+| `npm run check:planning` | Contrôle du planning des équipes (M15.2). Lancer : npm run check:planning |
 | `npm run check:ai-assistant` | Contrôle de l'assistant IA externe (M11.13) : garde-fous purs, appel simulé (aucun vrai réseau), fonction serveur lue. Lancer : npm run check:ai-assistant |
 | `npm run check:monitoring-final` | Contrôle final de la surveillance (M11.14) : réglages « Surveillance », alertes de la démo, vitesse avec 2 ans de données, opérateur sans accès, anglais. Lancer : npm run check:monitoring-final |
 | `npm run check:cash` | Contrôle de la sécurité des finances dans le serveur df-api (sans réseau). |

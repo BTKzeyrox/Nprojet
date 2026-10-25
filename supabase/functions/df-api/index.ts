@@ -22,6 +22,7 @@ const T = {
   reviews: "df_reviews", // fiches d'évaluation (M5.4) : le salarié ne reçoit que SES fiches partagées, sans « points à améliorer »
   sheets: "df_sheets", // « Mes tableaux » (M12.4) : l'opérateur écrit et lit les siens, l'admin lit tous (lecture seule)
   leaves: "df_leaves", // demandes de congé (M5.2) : le salarié ne voit que les siennes, l'admin voit tout
+  shifts: "df_shifts", // planning des équipes (M15.2) : le responsable écrit, le salarié ne voit que SON planning
   quotes: "df_quotes", // devis (module 2, M2.9) : après les clients et les factures (un devis cite un client et, une fois facturé, une facture)
 } as const;
 type Col = keyof typeof T;
@@ -1416,6 +1417,55 @@ const RECURRING_MESSAGE: Record<RecurringError, string> = {
 const newRecurringId = (existing: RecurringRule[]): string => { let id = `rr-${Date.now().toString(36)}`; for (let k = 2; existing.some((r) => r.id === id); k++) id = `rr-${Date.now().toString(36)}-${k}`; return id; };
 // ===== END RECURRING =====
 
+// ===== BEGIN SHIFTS (planning des équipes, M15.2 : copie exacte du bloc de src/utils/planning.ts ; contrôlé par scripts/check-planning.ts) =====
+const SH_KINDS = ['day', 'night', 'off'];
+const SH_NOTE_MAX = 120;
+const SH_WINDOW_DAYS = 400; // on ne planifie pas plus de 400 jours avant ou après aujourd'hui
+const shClean = (v: unknown, max: number): string => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
+const shIsDate = (s: unknown): boolean => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  if (y < 2000 || y > 2100) return false;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+};
+const shAddDays = (ymd: string, n: number): string => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+
+/** Identifiant d'une entrée : toujours le même pour un salarié et un jour. */
+const shiftId = (employeeId: string, ymd: string): string => `sh-${employeeId}-${ymd.replace(/-/g, '')}`;
+
+type ShiftError = 'employee' | 'date' | 'kind' | 'note' | 'id' | 'format';
+/** Vérifie une entrée saisie. */
+function checkShift(d: { [k: string]: unknown }): { ok: true; value: { id: string; employee_id: string; date: string; kind: string; note?: string } } | { ok: false; error: ShiftError } {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, error: 'format' };
+  if (Object.keys(d).some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return { ok: false, error: 'format' };
+  for (const k of ['id', 'employee_id', 'date', 'kind', 'note']) { const v = d[k]; if (v !== undefined && v !== null && typeof v !== 'string') return { ok: false, error: 'format' }; }
+  const emp = typeof d.employee_id === 'string' ? d.employee_id.trim() : '';
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(emp)) return { ok: false, error: 'employee' };
+  if (!shIsDate(d.date)) return { ok: false, error: 'date' };
+  const date = d.date as string;
+  if (typeof d.kind !== 'string' || !SH_KINDS.includes(d.kind)) return { ok: false, error: 'kind' };
+  const id = shiftId(emp, date);
+  if (d.id !== undefined && d.id !== null && d.id !== id) return { ok: false, error: 'id' };
+  const note = shClean(d.note ?? '', SH_NOTE_MAX);
+  const value: { id: string; employee_id: string; date: string; kind: string; note?: string } = { id, employee_id: emp, date, kind: d.kind };
+  if (note) value.note = note;
+  return { ok: true, value };
+}
+
+/** Revérification serveur d'une entrée reçue. `ctx.today` = date du jour à Madagascar. Garde la date de création de l'entrée existante. */
+function cleanShift(rec: any, existing: any, actorId: string, now: string, ctx: { today: string }): { ok: true; save: any } | { ok: false; reason: string } {
+  const v = checkShift(rec);
+  if (!v.ok) return { ok: false, reason: v.error };
+  if (!shIsDate(ctx && ctx.today)) return { ok: false, reason: 'format' };
+  if (v.value.date < shAddDays(ctx.today, -SH_WINDOW_DAYS) || v.value.date > shAddDays(ctx.today, SH_WINDOW_DAYS)) return { ok: false, reason: 'window' };
+  if (existing && (existing.employee_id !== v.value.employee_id || existing.date !== v.value.date)) return { ok: false, reason: 'id' };
+  const save: any = { id: v.value.id, employee_id: v.value.employee_id, date: v.value.date, kind: v.value.kind, created_at: existing && typeof existing.created_at === 'string' ? existing.created_at : now, updated_at: now, updated_by: String(actorId).slice(0, 60) };
+  if (v.value.note) save.note = v.value.note;
+  return { ok: true, save };
+}
+// ===== END SHIFTS =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
 const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "recurring_missions", "mission_templates", "budgets", "health_acks"];
@@ -2355,6 +2405,7 @@ async function state(req: any, res: any, me: any) {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
       if (col === 'leaves') return q.eq('data->>employee_id', me.id); // un salarié ne voit que ses demandes de congé
+      if (col === 'shifts') return q.eq('data->>employee_id', me.id); // un salarié ne voit que SON planning
       if (col === 'sheets') return q.eq('data->>owner_id', me.id); // un opérateur ne voit que SES tableaux
       if (col === 'reviews') return q.eq('data->>employee_id', me.id).eq('data->>status', 'shared'); // un salarié ne voit que SES fiches PARTAGÉES
       if (col === 'news') {
@@ -2480,6 +2531,16 @@ async function sync(req: any, res: any, me: any) {
         const lv = cleanLeave(rec, existing, { id: me.id, name: String(me.name || ''), admin }, now, await leaveCtx(empId));
         if (!lv.ok) { rejected.push({ col, id: rec.id, reason: lv.reason }); continue; }
         toSave = lv.save;
+      } else if (col === 'shifts') {
+        // Planning (M15.2) : seul le responsable écrit ; l'entrée est revérifiée (identifiant calculé, date proche) ; le salarié doit exister
+        if (!admin) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
+        const sh = cleanShift(rec, existing, String(me.id), now, { today: madagascarDate(Date.now()) });
+        if (!sh.ok) { rejected.push({ col, id: rec.id, reason: sh.reason }); continue; }
+        if (!existing) {
+          const eu = await getUserRow(String(sh.save.employee_id));
+          if (!eu || eu.role === 'admin') { rejected.push({ col, id: rec.id, reason: 'employee' }); continue; }
+        }
+        toSave = sh.save;
       } else if (col === 'messages' || col === 'groups') {
         const v = col === 'messages' ? await checkMessage(rec, existing, me, admin, now) : await checkGroup(rec, existing, me, admin, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: (v as any).reason || 'forbidden' }); continue; }
@@ -3810,6 +3871,7 @@ async function purgeEmployee(uid: string) {
   });
   await step('advances', async () => { await sb.from(T.advances).delete().eq('data->>employee_id', uid); });
   await step('leaves', async () => { await sb.from(T.leaves).delete().eq('data->>employee_id', uid); });
+  await step('shifts', async () => { await sb.from(T.shifts).delete().eq('data->>employee_id', uid); });
   await step('sheets', async () => { await sb.from(T.sheets).delete().eq('data->>owner_id', uid); });
   await step('reviews', async () => { await sb.from(T.reviews).delete().eq('data->>employee_id', uid); });
   await step('securityLogs', async () => { await sb.from(T.securityLogs).delete().eq('data->>employee_id', uid); });
