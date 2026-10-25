@@ -429,7 +429,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M6 Missions avancées** | Date limite et priorité, modèles, liste de tâches, notifications push | `src/utils/deadlines.ts`, `src/utils/missionTemplates.ts`, `src/utils/taskList.ts`, `src/utils/pushRules.ts` | dans `df_posts` | `npm run check:deadlines`, `npm run check:templates`, `npm run check:tasks`, `npm run check:push` |
 | **M7 Droits et traçabilité** | Quatre rôles, Chef d'équipe, journal d'audit, restauration | `src/utils/roles.ts`, `src/utils/auditRules.ts`, `src/utils/postDecision.ts`, `src/utils/teamLead.ts` | journal dans `df_security_logs` | `npm run check:roles`, `npm run check:audit`, `npm run check:team-lead` |
 | **M8.1 Direction** | Une page de synthèse du mois, **sans nouveau calcul** | `src/utils/direction.ts` | aucune | `npm run check:direction` |
-| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1), rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts` | aucune pour l'instant | `npm run check:accounting` |
+| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1) et écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2) ; rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | aucune pour l'instant | `npm run check:accounting`, `npm run check:accounting-entries` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
 | **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne ; le reste (visite guidée, blocage, 2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts` | aucune (réutilise les règles de saisie ; le serveur revérifie) | `npm run check:import`, `npm run check:import-page` |
@@ -456,6 +456,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | Fichier | Rôle |
 |---|---|
 | `accounting.ts` | Comptabilité (module 14, M14.1) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:accounting`. |
+| `accountingEntries.ts` | Écritures AUTOMATIQUES (module 14, M14.2) : règles pures qui transforment chaque pièce du site en écriture comptable. Sans écran, sans serveur, sans table. |
 | `advice.ts` | Solutions proposées (suggestions) pour chaque règle de la Santé du site. Texte fixe, FR/EN, jamais d'accusation : ce sont des pistes que l'admin juge lui-même. |
 | `aiAssist.ts` | Assistant IA externe (niveau B, M11.13) côté site. ADMIN SEULEMENT, DÉSACTIVÉ PAR DÉFAUT (case dans Réglages, réglée sur cet appareil). |
 | `alerts.ts` | Alertes de l'accueil admin (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
@@ -624,6 +625,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:direction-page` | Essai de la page « Direction » (M8.1), sans écran réel ni réseau : démo admin, FR et EN, rôles. Lancer : npm run check:direction-page |
 | `npm run check:guide` | (plusieurs contrôles) |
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
+| `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |
