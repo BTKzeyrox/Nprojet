@@ -538,7 +538,14 @@ But : rendre le site facile à adopter et plus sûr. **Le mode sans internet est
 - [x] **M16.5 — Export complet des données** (S) — code fait le 2026-10-25 (`src/utils/exportFile.ts`, bloc `BACKUPFILE` et route `backup-import` de `df-api`, boutons dans Réglages > Sauvegardes, contrôle `check:export`) : « Exporter toutes les données » = sauvegarde fraîche téléchargée ; « Importer un fichier d'export » = contrôlé puis AJOUTÉ à la liste des sauvegardes (aucune table touchée) ; la reprise passe ensuite par « Restaurer » (garde-fous de M7.3 : Gmail vérifié, mot RESTAURER, 2 confirmations, code par mail, sauvegarde de sécurité). Aucune nouvelle table.
 - [x] **M16.6 — Rappels WhatsApp et SMS** (M) — première partie faite le 2026-10-25 (`src/utils/messageLinks.ts`, boutons « Envoyer par WhatsApp » et « par SMS » dans Factures > À relancer, contrôle `check:message-links`) : lien WhatsApp (wa.me) et lien SMS avec le message de relance déjà écrit, le responsable appuie sur « envoyer » ; gratuit, aucune clé, aucun serveur. **Envoi automatique : NON fait, volontairement** (il demande un service payant : à faire seulement si BTK en choisit un ; clé hors dépôt).
 - [x] **M16.7 — Démo, anglais, carte du site, Santé du site, guide** (S) — fait le 2026-10-25 : règle « Système » `login-locks` (délais de connexion des dernières 24 h, lus dans le journal d'audit ; conseil dans l'assistant ; `check:health-system` 28/28), cartes de la carte du site (Réglages, Factures, clients, tableaux, salariés), guide (modules, fichiers, contrôles, limites §9), démo : import et visite marchent, double étape et import de fichier d'export cachés ou refusés en démo, aucun appel serveur (`check:totp-page`), textes FR et EN.
-- [ ] **M16.8 — Essai de BTK**.
+- [ ] **M16.8 — Essai de BTK** (à faire par BTK, sur son téléphone, avec le vrai site ; dans cet ordre, 15 minutes) :
+  1. **Import** : Clients > Importer (Excel, CSV) > télécharger le modèle, le remplir avec 2 clients, importer, vérifier la liste.
+  2. **Visite guidée** : Réglages > Aide > Revoir la visite guidée.
+  3. **Double étape** (garde une autre session responsable ouverte) : Réglages > Sécurité en deux étapes > Activer ; ajouter la clé dans Google ou Microsoft Authenticator ; valider ; noter les 8 codes de secours ; se déconnecter ; se reconnecter avec le code.
+  4. **Blocage** : sur un pseudo qui n'existe pas, taper 5 mauvais mots de passe de suite : le message « Trop d'essais. Réessayez dans 1 minute » doit apparaître.
+  5. **Export** : Réglages > Sauvegardes > Exporter toutes les données, puis Importer ce même fichier (une ligne de plus dans la liste ; NE PAS appuyer sur Restaurer pour ce test).
+  6. **WhatsApp** : Factures > À relancer > Envoyer par WhatsApp : le message doit s'ouvrir déjà écrit.
+  Après l'essai : cocher ici, noter ce qui ne va pas dans TODO.md. À faire aussi : supprimer le jeton GitHub (https://github.com/settings/tokens) et changer le mot de passe `admin123`.
 
 ## MODULE 17 — Plusieurs entreprises sur le même site — taille XL (**étude d'abord**, proposé le 2026-10-24)
 
