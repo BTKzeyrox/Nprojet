@@ -14,6 +14,7 @@ import {
 } from '../../utils/invoices';
 import { parseAmount } from '../../utils/finance';
 import { chaseText, toChase } from '../../utils/receivables';
+import { smsLink, whatsappLink } from '../../utils/messageLinks';
 import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
 import { downloadInvoiceExcel, downloadPdfFromHtml } from '../../utils/exportDoc';
 import type { Invoice } from '../../types';
@@ -245,6 +246,19 @@ export const InvoicesView: React.FC = () => {
                 <ul className="text-xs text-slate-300 space-y-0.5">{r.invoices.map(i => <li key={i.id}>{i.number} · {t('échue le', 'due')} {fmtDate(i.due_date)} · {ar(i.balance)} · {i.days_late} {t('j de retard', 'd late')}</li>)}</ul>
                 <textarea readOnly value={text} rows={8} className={`${field} py-2 font-mono text-xs`} aria-label={t('Texte de relance', 'Reminder text')} />
                 <button type="button" onClick={() => copy(r.client_id, text)} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{copied === r.client_id ? t('Copié !', 'Copied!') : t('Copier le texte', 'Copy the text')}</button>
+                {(() => {
+                  const phone = clients.find(c => c.id === r.client_id)?.phone;
+                  const wa = whatsappLink(phone, text), sms = smsLink(phone, text);
+                  return (
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        <a href={wa.url} target="_blank" rel="noopener noreferrer" className={`${btn} bg-emerald-700 border-emerald-600 text-white text-center`}>{t('Envoyer par WhatsApp', 'Send by WhatsApp')}</a>
+                        <a href={sms.url} className={`${btn} bg-slate-800 border-slate-600 text-white text-center`}>{t('Envoyer par SMS', 'Send by SMS')}</a>
+                      </div>
+                      <p className="text-[11px] text-slate-400">{wa.hasPhone ? t('Le message s\'ouvre déjà écrit : tu appuies sur « envoyer ».', 'The message opens already written: you press "send".') : t('Pas de numéro valide pour ce client : tu choisis le contact dans WhatsApp ou SMS (ou ajoute le numéro dans Clients).', 'No valid number for this client: pick the contact in WhatsApp or SMS (or add the number in Clients).')}{wa.truncated ? ' ' + t('Texte raccourci pour le lien : utilise « Copier le texte » pour le message complet.', 'Text shortened for the link: use "Copy the text" for the full message.') : ''}</p>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
