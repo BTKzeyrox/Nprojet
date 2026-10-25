@@ -17,7 +17,7 @@
 - **Coût** : tout tourne sur des offres gratuites (Vercel pour le site, Supabase pour la base et le serveur, Cloudinary pour les photos). Voir §9 pour ce qui change en usage commercial.
 - **Mode démo** : le site s'ouvre avec des chiffres inventés, sans aucun appel au serveur. La démo cache ce qui est simulé (IA externe, notifications téléphone, mot de passe, sauvegardes).
 
-Ce qui est fait : les modules **M0 à M12** du plan (`TODO_MODULES.md`) plus **M8.1** (page Direction). Ce qui reste : essais de BTK (M8.2, M12.6), vitesse (M8.3), nettoyage (M8.4) et les modules proposés M14 à M17 et le mode hors ligne M13 (§10).
+Ce qui est fait : les modules **M0 à M12** du plan (`TODO_MODULES.md`) plus **M8.1** (page Direction). Ce qui reste : essais de BTK (M8.2, M12.6), vitesse (M8.3), nettoyage (M8.4) et le module **M15** (en cours : **M15.1 missions récurrentes** faite), les modules proposés M14, M16 et M17 et le mode hors ligne M13 (§10).
 
 ---
 
@@ -408,7 +408,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -433,6 +433,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures faites (M14.1) et écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2) ; rien de branché : pas de table, pas d'écran, pas de serveur.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | aucune pour l'instant | `npm run check:accounting`, `npm run check:accounting-entries` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
+| **M15.1 Missions récurrentes** (M15 en cours) | Une règle crée une mission toute seule (chaque jour, jours de la semaine ou jour du mois) à l'heure de Madagascar, jamais en double ; arrêt et reprise sans rattrapage. Réglages > Missions. | `src/utils/recurring.ts` | aucune table : règles dans les réglages (`recurring_missions`, admin seulement) ; tâche planifiée `df-recurring-due` toutes les 15 min → route `recurring-due` | `npm run check:recurring` |
 | **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne. M16.2 faite : visite guidée par rôle à la première connexion sur un appareil (textes pris dans la carte du site), à revoir dans Réglages. M16.3 faite : après 5 mots de passe ratés sur un compte (ou 20 depuis une même adresse), la connexion est refusée pendant 1 minute, puis 2, 4… jusqu'à 30 minutes (5 minutes pour le responsable) ; jamais définitif, un bon mot de passe ne passe pas pendant le délai ; le début de chaque délai est écrit dans le journal d'audit. Le reste (2FA, export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts`, `src/utils/tour.ts`, `src/components/TourGuide.tsx`, `src/utils/loginGuard.ts` | `df_login_attempts` (compteurs d'essais, serveur seulement ; la visite est gardée sur l'appareil ; l'import réutilise les règles de saisie, le serveur revérifie) | `npm run check:import`, `npm run check:import-page`, `npm run check:tour`, `npm run check:login-guard` |
 
 Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la version, le commit et le retour en arrière). Exemples : M5.1 et M5.2 en v26, M5.4 en v29 (sauvegarde n° 35), Mes tableaux en v31.
@@ -528,6 +529,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `quotes.ts` | Règles des DEVIS (module 2, M2.9). Fonctions pures, sans écran ni serveur. Copiées dans le bloc QUOTES de supabase/functions/df-api/index.ts |
 | `receivables.ts` | Créances et relances (module 2, M2.7) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:receivables`. |
 | `recognition.ts` | Reconnaissance (module 3, M3.7) : règles pures. Contrôlé par `npm run check:recognition`. |
+| `recurring.ts` | Missions récurrentes (module 15, M15.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:recurring`. |
 | `report.ts` | Rapport du mois (S4.5) et données d'export Excel / PDF (S4.4). Sans écran, sans serveur : contrôlé par `npm run check:phase4`. |
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
@@ -670,6 +672,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |
+| `npm run check:recurring` | Contrôle des missions récurrentes (M15.1). Lancer : npm run check:recurring |
 | `npm run check:ai-assistant` | Contrôle de l'assistant IA externe (M11.13) : garde-fous purs, appel simulé (aucun vrai réseau), fonction serveur lue. Lancer : npm run check:ai-assistant |
 | `npm run check:monitoring-final` | Contrôle final de la surveillance (M11.14) : réglages « Surveillance », alertes de la démo, vitesse avec 2 ans de données, opérateur sans accès, anglais. Lancer : npm run check:monitoring-final |
 | `npm run check:cash` | Contrôle de la sécurité des finances dans le serveur df-api (sans réseau). |

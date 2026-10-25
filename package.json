@@ -57,6 +57,7 @@
     "check:speed": "npx --yes tsx scripts/check-speed.ts",
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
+    "check:recurring": "npx --yes tsx scripts/check-recurring.ts",
     "check:ai-assistant": "npx --yes tsx scripts/check-ai-assistant.ts",
     "check:monitoring-final": "npx --yes tsx scripts/check-monitoring-final.ts",
     "check:cash": "npx --yes tsx scripts/check-cash.ts",

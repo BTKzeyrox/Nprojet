@@ -2,6 +2,7 @@ import { checkDraft, type CashDraft } from '../utils/finance';
 import { checkDeadline } from '../utils/deadlines';
 import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
+import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type RecurringDraft, type RecurringRule } from '../utils/recurring';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { todayMada } from '../utils/stats';
@@ -1583,6 +1584,40 @@ class AppStore {
     const list = this.getMissionTemplates();
     if (!list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
     this.updateSettings({ mission_templates: list.filter(t => t.id !== id) });
+    return { success: true };
+  }
+
+  /** Missions récurrentes (M15.1) : règles gardées dans les réglages, sans nouvelle table. Le serveur crée les missions à l'heure prévue. */
+  public getRecurringRules(): RecurringRule[] { return cleanRecurring(this.getSettings().recurring_missions); }
+
+  /** Crée (sans `id`) ou modifie (avec `id`) une règle. Admin seulement. */
+  public saveRecurringRule(d: RecurringDraft): { success: boolean; error?: string; rule?: RecurringRule } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getRecurringRules();
+    const id = typeof d?.id === 'string' ? d.id : '';
+    if (id && !list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
+    const v = checkRecurring(d, list.filter(r => r.id !== id));
+    if (!v.ok) return { success: false, error: RECURRING_MESSAGE[v.error] };
+    const rule = { ...v.value, id: id || newRecurringId(list) };
+    this.updateSettings({ recurring_missions: id ? list.map(r => (r.id === id ? rule : r)) : [...list, rule] });
+    return { success: true, rule };
+  }
+
+  /** Arrête ou relance une règle. Rien n'est rattrapé à la reprise : seule la prochaine occurrence est créée. */
+  public setRecurringActive(id: string, active: boolean): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getRecurringRules();
+    if (!list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
+    this.updateSettings({ recurring_missions: list.map(r => (r.id === id ? { ...r, active } : r)) });
+    return { success: true };
+  }
+
+  /** Supprime une règle. Les missions déjà créées ne changent pas. */
+  public removeRecurringRule(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getRecurringRules();
+    if (!list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
+    this.updateSettings({ recurring_missions: list.filter(r => r.id !== id) });
     return { success: true };
   }
 
