@@ -26,6 +26,19 @@ ok(!!find(run(ctx({ backups: [{ taken_at: 'pas une date' }] })), 'system:backup-
 ok(!find(run(ctx({ backups: [{ taken_at: ago(-2) }] })), 'system:backup-missing'), 'sauvegarde : date légèrement dans le futur (horloge) = rien');
 ok(!!find(run(ctx({ backups: [{ taken_at: ago(30) }], thresholds: { ...HEALTH_THRESHOLDS_DEFAULT, backup_max_hours: 24 } })), 'system:backup-missing') && !find(run(ctx({ backups: [{ taken_at: ago(30) }], thresholds: { ...HEALTH_THRESHOLDS_DEFAULT, backup_max_hours: 48 } })), 'system:backup-missing'), 'sauvegarde : le seuil est réglable');
 
+// Délais de connexion (M16.7)
+const L = (id: string, extra: any = {}) => ({ action: 'login_locked', at: ago(2), target_id: id, target_label: id.slice(2), ...extra });
+ok(!find(run(ctx({ audit: null })), 'system:login-locks') && !find(run(ctx({ audit: [] })), 'system:login-locks'), 'délais : liste non chargée ou vide = on se tait');
+a = find(run(ctx({ audit: [L('a:fanja'), L('i:41.0.0.1')] })), 'system:login-locks');
+ok(!!a && a.severity === 'watch' && a.value === 2 && /1 compte et 1 adresse/.test(a.why_fr) && /fanja/.test(a.why_fr) && a.go.view === 'settings' && alertProblem(a) === null, 'délais : 2 en 24 h = à voir, 1 compte et 1 adresse, texte propre');
+ok(!find(run(ctx({ audit: [L('a:fanja', { at: ago(30) })] })), 'system:login-locks'), 'délais : il y a 30 h = rien');
+ok(!find(run(ctx({ audit: [{ action: 'delete', at: ago(1) } as any] })), 'system:login-locks'), 'délais : une autre action du journal = rien');
+ok(find(run(ctx({ audit: Array.from({ length: 10 }, (_, i) => L('a:u' + i)) })), 'system:login-locks')?.severity === 'urgent', 'délais : 10 = urgent');
+ok(find(run(ctx({ audit: ['i:1.1.1.1', 'i:2.2.2.2', 'i:3.3.3.3'].map(i => L(i)) })), 'system:login-locks')?.severity === 'urgent', 'délais : 3 adresses différentes = urgent');
+ok(!find(run(ctx({ audit: [L('a:x', { at: 'bizarre' }), null as any, 5 as any] })), 'system:login-locks'), 'délais : lignes abîmées ignorées, sans plantage');
+a = find(run(ctx({ audit: [L('a:x')] })), 'system:login-locks');
+ok(!!a && /1 délai de connexion/.test(a.title_fr) && /1 sign-in delay /.test(a.title_en), 'délais : singulier FR et EN');
+
 // Erreurs
 const E = (id: string, extra: any = {}) => ({ id, kind: 'error', message: 'Cannot read x', count: 3, last_seen: ago(2), status: 'open', ...extra });
 a = find(run(ctx({ errors: [E('e1'), E('e2', { message: 'Autre', count: 1 })] })), 'system:recent-errors');

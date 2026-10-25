@@ -56,4 +56,29 @@ export const recentErrors: HealthRule = {
   },
 };
 
-export const SYSTEM_RULES: HealthRule[] = [backupMissing, recentErrors];
+/** Délais de connexion après trop d'essais ratés (M16.3), dans les dernières 24 h : quelqu'un devine peut-être un mot de passe. */
+export const loginLocks: HealthRule = {
+  id: 'system.login-locks', page: 'system',
+  run: (ctx) => {
+    if (!Array.isArray(ctx.audit)) return [];
+    const from = ctx.now - 24 * 3600_000;
+    const rows = ctx.audit.filter(r => r && r.action === 'login_locked' && Number.isFinite(Date.parse(String(r.at))) && Date.parse(String(r.at)) >= from && Date.parse(String(r.at)) <= ctx.now + 3600_000);
+    if (!rows.length) return [];
+    const ids = rows.map(r => String(r.target_id || ''));
+    const accounts = new Set(ids.filter(i => i.startsWith('a:'))), addrs = new Set(ids.filter(i => i.startsWith('i:')));
+    const n = rows.length;
+    const first = [...accounts][0]?.slice(2).replace(/\s+/g, ' ').slice(0, 40);
+    const since = dayOf(Math.min(...rows.map(r => Date.parse(String(r.at)))));
+    return [{
+      id: alertId('system', 'login-locks'), page: 'system', rule: 'login-locks', severity: n >= 10 || addrs.size >= 3 ? 'urgent' : 'watch',
+      title_fr: `${n} ${plural(n, 'délai de connexion', 'délais de connexion')} en 24 h après des mots de passe ratés`, title_en: `${n} sign-in ${plural(n, 'delay', 'delays')} in 24 h after wrong passwords`,
+      why_fr: `${accounts.size} ${plural(accounts.size, 'compte', 'comptes')} et ${addrs.size} ${plural(addrs.size, 'adresse', 'adresses')} touchés${first ? ` (par exemple « ${first} »)` : ''}. Soit quelqu'un a oublié son mot de passe, soit quelqu'un essaie de le deviner.`,
+      why_en: `${accounts.size} ${plural(accounts.size, 'account', 'accounts')} and ${addrs.size} ${plural(addrs.size, 'address', 'addresses')} affected${first ? ` (for example "${first}")` : ''}. Either someone forgot a password, or someone is trying to guess one.`,
+      todo_fr: 'Ouvrir le journal d\'audit (Réglages > Données) : si le compte est un vrai salarié, l\'aider à retrouver son mot de passe ; sinon changer le mot de passe du compte visé et activer la double étape.',
+      todo_en: 'Open the audit log (Settings > Data): if it is a real employee, help them recover the password; otherwise change the targeted account\'s password and turn on two-step sign-in.',
+      since, value: n, go: { view: 'settings' },
+    } as HealthAlert];
+  },
+};
+
+export const SYSTEM_RULES: HealthRule[] = [backupMissing, recentErrors, loginLocks];

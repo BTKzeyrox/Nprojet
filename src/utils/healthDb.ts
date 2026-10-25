@@ -11,7 +11,7 @@ import { loadWatchPrefs, saveWatchPrefs } from './health/watchPrefs';
 
 export interface HealthView { alerts: HealthAlert[]; hidden: HealthAlert[]; errors: { rule: string; message: string }[]; acks: HealthAck[]; computedAt: number }
 
-let external: { backups: HealthContext['backups']; errors: HealthContext['errors'] } = { backups: null, errors: null };
+let external: { backups: HealthContext['backups']; errors: HealthContext['errors']; audit: HealthContext['audit'] } = { backups: null, errors: null, audit: null };
 let cache: HealthView | null = null, dirty = true;
 const listeners = new Set<() => void>();
 db.subscribe(() => { dirty = true; }); // abonné dès le chargement du fichier : passe avant les écrans qui se réaffichent
@@ -47,7 +47,7 @@ export function getHealth(): HealthView {
   const ctx: HealthContext = {
     today: todayMada(), now: Date.now(), users: db.getUsers(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(),
     cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), advances: db.getAdvanceRequests(), purchases: db.getPurchases(), invoices: db.getInvoices(), leaves: db.getLeaves(), settings: st, thresholds,
-    backups: external.backups, errors: external.errors,
+    backups: external.backups, errors: external.errors, audit: external.audit,
   };
   const run = runHealth(ctx, ALL_RULES);
   const split = applyAcks(run.alerts, acks(), ctx.today, thresholds.ignore_days);
@@ -89,8 +89,8 @@ export function getMenuBadges(): { byItem: Record<string, { count: number; urgen
 export async function loadHealthExternal(): Promise<void> {
   if (db.getCurrentUser()?.role !== 'admin') return;
   try {
-    const [b, e] = await Promise.all([db.listBackups(), db.fetchErrors('open')]);
-    external = { backups: b.ok ? b.rows : null, errors: Array.isArray(e) ? e : null };
+    const [b, e, au] = await Promise.all([db.listBackups(), db.fetchErrors('open'), db.listAudit()]);
+    external = { backups: b.ok ? b.rows : null, errors: Array.isArray(e) ? e : null, audit: au.ok ? au.rows : null };
   } catch { /* hors ligne : on garde les anciennes listes ; sans liste, les règles « système » se taisent */ }
   emit();
 }

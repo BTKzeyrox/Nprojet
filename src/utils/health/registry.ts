@@ -17,6 +17,8 @@ export interface HealthContext {
   purchases?: PurchaseOrder[] | null;
   invoices?: Invoice[] | null;
   backups?: { taken_at: string }[] | null;
+  /** Journal d'audit (M16.7) : sert à repérer les délais de connexion après trop d'essais. */
+  audit?: { at?: string; action?: string; target_id?: string; target_label?: string }[] | null;
   errors?: { id?: string; kind?: string; message?: string; count?: number; last_seen?: string; status?: string }[] | null;
 }
 
