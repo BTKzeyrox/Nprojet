@@ -101,6 +101,8 @@ export interface OfflineOp {
   payload: unknown;
   created_at: string; // heure du TÉLÉPHONE (ISO) : seulement une note
   base_updated_at?: string; // date de la version du serveur sur laquelle la personne a travaillé
+  base_hash?: string; // empreinte de la version du serveur sur laquelle la personne a travaillé (absente = élément créé hors ligne)
+  review_note?: string; // raison écrite par le serveur quand il refuse (affichée dans « À revoir »)
   tries: number; next_try_at?: string;
   state: OpState; review_code?: ReviewCode;
   bytes: number; photo_bytes?: number; // taille de l'action ; taille de la photo (route « upload »)

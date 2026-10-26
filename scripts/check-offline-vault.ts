@@ -1,7 +1,7 @@
 // Contrôle de la copie locale chiffrée du mode hors ligne (module 13, M13.3), sans réseau. Lancer : npm run check:offline-vault
 // Le chiffrement est RÉEL (AES-GCM, PBKDF2) ; on réduit seulement le nombre de tours pour que l'essai soit rapide.
 import {
-  memoryKV, createVault, unlockVault, putCopy, getCopy, putQueue, getQueue, pendingCount, wipeVault, wipeAllVaults, changePin, filterForDevice,
+  memoryKV, createVault, unlockVault, putCopy, getCopy, putQueue, getQueue, pendingCount, wipeVault, wipeAllVaults, wipeCopyOnly, changePin, filterForDevice,
   ADMIN_COLLECTIONS, ADMIN_SETTINGS_KEYS, USER_FIELDS, OPERATOR_DENIED, type KV, type Vault,
 } from '../src/utils/offlineVault';
 import type { OfflineOp, Queue } from '../src/utils/offline';
@@ -108,10 +108,15 @@ const must = async (kv: KV, uid: string, role: 'admin' | 'employee', pin?: strin
   const v = await must(kv, 'ad', 'admin', '4827'); await putCopy(v, state(), NOW); await putQueue(v, [op()]);
   ok((await unlockVault(kv, 'ad', 'admin', '4827', at(23 * H))).status === 'ok', 'copie admin de 23 h : encore bonne');
   const e = await unlockVault(kv, 'ad', 'admin', '4827', at(25 * H));
-  ok(e.status === 'expired' && kv.raw.size === 0, 'copie admin de 25 h : expirée, TOUT est effacé');
+  ok(e.status === 'ok' && (e as any).copy_expired === true && !kv.raw.has('copy:ad') && kv.raw.has('queue:ad') && kv.raw.has('meta:ad'), 'copie admin de 25 h : les DONNÉES sont effacées, mais la file d\'actions reste (rien n\'est perdu en silence)');
+  ok(await pendingCount((e as any).vault) === 1 && (await getCopy((e as any).vault)).status === 'none', 'après expiration : l\'action en attente est toujours lisible, plus de copie');
+  const again = await unlockVault(kv, 'ad', 'admin', '4827', at(26 * H));
+  ok(again.status === 'ok' && (again as any).copy_expired === undefined, 'la copie effacée n\'est signalée qu\'une fois');
   const kv2 = memoryKV();
-  const v2 = await must(kv2, 'op', 'employee'); await putCopy(v2, state(), NOW);
-  ok((await unlockVault(kv2, 'op', 'employee', undefined, at(6 * D))).status === 'ok' && (await unlockVault(kv2, 'op', 'employee', undefined, at(8 * D))).status === 'expired', 'opérateur : bonne à 6 jours, expirée à 8 jours');
+  const v2 = await must(kv2, 'op', 'employee'); await putCopy(v2, state(), NOW); await putQueue(v2, [op()]);
+  ok((await unlockVault(kv2, 'op', 'employee', undefined, at(6 * D))).status === 'ok' && (await unlockVault(kv2, 'op', 'employee', undefined, at(6 * D)) as any).copy_expired === undefined, 'opérateur : copie bonne à 6 jours');
+  const o8 = await unlockVault(kv2, 'op', 'employee', undefined, at(8 * D));
+  ok(o8.status === 'ok' && (o8 as any).copy_expired === true && !kv2.raw.has('copy:op') && await pendingCount((o8 as any).vault) === 1, 'opérateur : copie expirée à 8 jours, mais son action en attente est gardée');
   const kv3 = memoryKV();
   const v3 = await must(kv3, 'ad', 'admin', '4827');
   ok((await unlockVault(kv3, 'ad', 'admin', '4827', at(30 * D))).status === 'ok', 'copie jamais enregistrée (pas d\'heure) : pas d\'expiration inventée');
@@ -179,6 +184,11 @@ const must = async (kv: KV, uid: string, role: 'admin' | 'employee', pin?: strin
   await kv.set('autre:truc', 1);
   await wipeVault(kv, 'ad');
   ok(![...kv.raw.keys()].some(k => k.endsWith(':ad')) && kv.raw.has('meta:op') && kv.raw.has('autre:truc'), 'effacer une personne : seulement la sienne');
+  await putCopy(b, state(), NOW); await putQueue(b, [op()]);
+  await wipeCopyOnly(kv, 'op');
+  ok(!kv.raw.has('copy:op') && kv.raw.has('queue:op') && (kv.raw.get('meta:op') as any).saved_at === null && await pendingCount(b) === 1, 'déconnexion avec des actions en attente : la copie des données est effacée, la file reste');
+  await wipeCopyOnly(kv, 'inconnu');
+  ok(!kv.raw.has('copy:inconnu') && !kv.raw.has('meta:inconnu'), 'effacer la copie d\'une personne inconnue : sans effet, sans plantage');
   await wipeAllVaults(kv);
   ok(kv.raw.size === 1 && kv.raw.has('autre:truc'), 'tout effacer : copies, files et compteurs, mais pas les autres données de l\'appareil');
 }

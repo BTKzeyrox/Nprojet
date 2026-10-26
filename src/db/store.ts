@@ -1,4 +1,7 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
+import { OfflineController, type OfflineHost, type OfflineStatus, type WriterLock } from './offlineController';
+import type { KV } from '../utils/offlineVault';
+import type { Arrays, Changes, SyncedJson } from '../utils/offlineSync';
 import { checkDeadline } from '../utils/deadlines';
 import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
@@ -149,7 +152,7 @@ const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority
   priority: 'Priorité inconnue.',
 };
 
-class AppStore {
+export class AppStore {
   private users: User[] = [];
   private posts: PostSession[] = [];
   private contracts: ClientContract[] = [];
@@ -196,7 +199,23 @@ class AppStore {
   private onActivity: (() => void) | null = null;
   private readyPromise: Promise<void>;
 
-  constructor() {
+  // Mode hors ligne (module 13, M13.5) : copie locale et file d'actions durables. Le magasin reste le seul à envoyer au serveur.
+  private offline: OfflineController;
+  private lastPullStatus = 200;
+
+  constructor(opts: { offlineKV?: KV; offlineDelayMs?: number; offlineLock?: WriterLock } = {}) {
+    const host: OfflineHost = {
+      isDemo: () => this.demo,
+      getArrays: () => { const o: Arrays = {}; for (const c of COLS) o[c] = this.arr(c); return o; },
+      setArrays: a => { for (const c of COLS) if (a[c]) this.setArr(c, a[c]); },
+      getSynced: () => this.synced as unknown as SyncedJson,
+      setSynced: sj => { for (const c of COLS) this.synced[c] = sj[c] ? new Map(sj[c]) : new Map(); },
+      setCurrentUser: u => { this.currentUser = u; },
+      diff: () => this.diff().changes as Changes,
+      flushSoon: () => { this.dirty = true; if (this.token) { if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = setTimeout(() => void this.flush(), 300); } },
+      emit: () => this.emit(),
+    };
+    this.offline = new OfflineController(host, { kv: opts.offlineKV, queueDelayMs: opts.offlineDelayMs, lock: opts.offlineLock });
     try {
       this.token = localStorage.getItem(TOKEN_KEY);
     } catch {
@@ -317,8 +336,8 @@ class AppStore {
     this.connListeners.forEach(f => f(down));
   }
   public retryNow() {
-    void this.pull(true);
-    void this.flush();
+    // D'ABORD envoyer, ENSUITE recharger : les deux en même temps pouvaient retirer du téléphone un élément pas encore envoyé, puis l'envoyer comme une suppression.
+    void this.flush().finally(() => { void this.pull(true); });
   }
 
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
@@ -353,6 +372,7 @@ class AppStore {
   }
 
   private expireSession() {
+    void this.offline.onSessionExpired(); // fige les actions en attente AVANT de vider les données : elles sont gardées pour la prochaine connexion
     this.token = null;
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
     this.stopPolling();
@@ -362,7 +382,12 @@ class AppStore {
 
   private async restore() {
     const ok = await this.pull(true);
-    if (ok) this.startPolling();
+    if (ok) { this.startPolling(); return; }
+    // Pas de réseau (ou serveur en panne) : on ouvre l'appli avec la dernière copie gardée sur l'appareil, au lieu de renvoyer à la connexion.
+    // La synchro reprend toute seule dès que la connexion revient.
+    if (this.token && (this.lastPullStatus === 0 || this.lastPullStatus >= 500)) {
+      if (await this.offline.openOffline()) this.startPolling();
+    }
   }
 
   // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
@@ -454,6 +479,7 @@ class AppStore {
     const tokenAtStart = this.token;
     const seqAtStart = this.mutationSeq;
     const r = await this.api(`state?since=${encodeURIComponent(this.since)}`);
+    this.lastPullStatus = r.status;
     if (!r.ok) return false;
     // Déconnecté (ou reconnecté autrement) pendant la requête : on ignore la réponse
     if (this.token !== tokenAtStart) return false;
@@ -470,7 +496,8 @@ class AppStore {
       const idSet = new Set<string>(c.ids || []);
       let list = this.arr(col);
       const before = list.length;
-      list = list.filter(x => idSet.has(x.id));
+      // Un élément que le serveur n'a JAMAIS reçu (créé sur l'appareil, pas encore envoyé) reste, même si la liste du serveur ne le contient pas : il part au prochain envoi.
+      list = list.filter(x => idSet.has(x.id) || !this.synced[col].has(x.id));
       let changed = list.length !== before;
       for (const rec of c.changed || []) {
         const json = JSON.stringify(rec);
@@ -545,6 +572,7 @@ class AppStore {
       if (prev !== JSON.stringify(me)) changedAny = true;
     }
     if (changedAny) this.emit();
+    if (!this.demo) { await this.offline.attach(this.currentUser); this.offline.onServerState(); } // copie locale et actions en attente (module 13)
     return true;
   }
 
@@ -1216,6 +1244,7 @@ class AppStore {
   // Appelé après chaque modification locale : envoie au serveur après un court délai
   private notify() {
     this.mutationSeq++;
+    if (!this.demo) this.offline.onLocalChange();
     if (this.token) {
       this.dirty = true;
       if (this.syncTimer) clearTimeout(this.syncTimer);
@@ -1260,8 +1289,10 @@ class AppStore {
         sent[col].sets.forEach((json, id) => this.synced[col].set(id, json));
         sent[col].deletes.forEach(id => this.synced[col].delete(id));
       }
+      if (!this.demo) this.offline.onLocalChange(); // ce qui vient de partir sort de la file gardée sur l'appareil
       if (r.data.rejected?.length) {
-        // Certaines modifications refusées par le serveur : on recharge l'état officiel
+        // Certaines modifications refusées par le serveur : ce que la personne avait fait est gardé dans « À revoir » (raison du serveur), PUIS on recharge l'état officiel
+        this.offline.onRejected(r.data.rejected, (col, id) => this.arr(col as Col).find(x => x.id === id));
         this.dirty = false;
         this.since = '';
         this.syncing = false;
@@ -1286,6 +1317,7 @@ class AppStore {
     const r = await this.api('login', { method: 'POST', body: JSON.stringify(code ? { username, password, code } : { username, password }) });
     if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.', needsCode: r.data?.code === 'totp_required' };
     this.stopPolling();
+    void this.offline.onSessionExpired(); // une autre personne se connecte : les actions en attente de la précédente sont gardées
     this.resetLocal();
     this.token = r.data.token;
     try { localStorage.setItem(TOKEN_KEY, r.data.token); } catch { /* ignore */ }
@@ -1533,12 +1565,22 @@ class AppStore {
     if (this.token) {
       fetch(`${API_BASE}/logout`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
     }
+    void this.offline.beforeLogout(); // fige les actions en attente (synchrone) avant de vider les données ; efface la copie ; garde ce qui n'est pas encore parti
     this.token = null;
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
     this.stopPolling();
     this.resetLocal();
     this.emit();
   }
+
+  /** Arrêt brutal de CE magasin (essais : simule la fermeture d'un onglet). Rien n'est écrit. */
+  public __dispose(): void { this.stopPolling(); if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = null; this.token = null; this.offline.dispose(); }
+
+  /** État du mode hors ligne pour l'écran (module 13) : actions en attente, éléments « À revoir », copie locale. */
+  public getOfflineStatus(): OfflineStatus { return this.offline.status(); }
+  public offlineRequeue(id: string): boolean { return this.offline.requeue(id); }
+  public offlineDiscard(id: string): boolean { return this.offline.discard(id); }
+  public offlineCopyText(id: string, lang: string): string | null { return this.offline.copyText(id, lang); }
 
   public async setPassword(userId: string, password: string, currentPassword?: string): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('set-password', { method: 'POST', body: JSON.stringify({ userId, password, currentPassword }) });

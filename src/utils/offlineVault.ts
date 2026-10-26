@@ -1,7 +1,7 @@
 // Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions,
 // pour qu'elles survivent à un rechargement, à la fermeture de l'onglet ou à un téléphone qui tue l'appli.
 // Décisions de BTK (2026-10-24) : option A = la copie de l'ADMIN est CHIFFRÉE avec son code de verrouillage (AES-GCM, clé tirée du code par PBKDF2) ;
-// copie admin 24 h, opérateur 7 jours ; effacée à la déconnexion ; rien d'argent pour l'admin (liste ci-dessous).
+// copie admin 24 h, opérateur 7 jours (puis la copie des DONNÉES est effacée, jamais la file d'actions) ; effacée à la déconnexion ; rien d'argent pour l'admin (liste ci-dessous).
 // Ce fichier ne touche ni au magasin de données ni à un écran : il fournit la « chambre forte » (`Vault`). Contrôlé par `npm run check:offline-vault`.
 // Le branchement dans l'appli (relire au démarrage, enregistrer à chaque changement) se fait avec la file d'attente (M13.5).
 //
@@ -170,8 +170,8 @@ export async function createVault(kv: KV, userId: string, role: Role, pin: strin
 }
 
 export type UnlockResult =
-  | { status: 'ok'; vault: Vault }
-  | { status: 'none' | 'locked' | 'expired' | 'wrong_user' | 'newer_version' | 'corrupt' }
+  | { status: 'ok'; vault: Vault; copy_expired?: boolean }
+  | { status: 'none' | 'locked' | 'wrong_user' | 'newer_version' | 'corrupt' }
   | { status: 'wrong_pin'; wait_seconds: number }
   | { status: 'wait'; wait_seconds: number };
 
@@ -182,8 +182,10 @@ export async function unlockVault(kv: KV, userId: string, role: Role, pin: strin
   if (typeof meta !== 'object') return { status: 'corrupt' }; // fiche illisible : l'écran propose d'effacer et de recommencer (jamais effacée sans demande)
   if (meta.user_id !== userId || meta.role !== role) return { status: 'wrong_user' };
   if (typeof meta.v !== 'number' || meta.v > VERSION) return { status: 'newer_version' }; // écrite par une version plus récente : on n'y touche pas
-  if (meta.saved_at && copyExpired(meta.saved_at, role, nowIso, limits)) { await wipeVault(kv, userId); return { status: 'expired' }; }
-  if (!meta.enc) return { status: 'ok', vault: { kv, userId, role, key: null, enc: false } };
+  // Copie des DONNÉES trop vieille : on l'efface (sécurité), mais la FILE D'ACTIONS reste : rien de ce que la personne a fait n'est perdu en silence.
+  const expired = !!meta.saved_at && copyExpired(meta.saved_at, role, nowIso, limits);
+  if (expired) { await kv.del(k('copy', userId)); await kv.set(k('meta', userId), { ...meta, saved_at: null }); }
+  if (!meta.enc) return { status: 'ok', vault: { kv, userId, role, key: null, enc: false }, copy_expired: expired || undefined };
   if (!pin) return { status: 'locked' };
   const fails = ((await kv.get(k('fail', userId))) as Fails | undefined) || { count: 0, last_at: nowIso };
   const need = lockDelaySeconds(fails.count);
@@ -198,11 +200,17 @@ export async function unlockVault(kv: KV, userId: string, role: Role, pin: strin
     return { status: 'wrong_pin', wait_seconds: lockDelaySeconds(next.count) };
   }
   await kv.del(k('fail', userId));
-  return { status: 'ok', vault: { kv, userId, role, key, enc: true } };
+  return { status: 'ok', vault: { kv, userId, role, key, enc: true }, copy_expired: expired || undefined };
 }
 
 /** Efface TOUT ce qui concerne cette personne (déconnexion). */
 export async function wipeVault(kv: KV, userId: string): Promise<void> { for (const kind of ['meta', 'copy', 'queue', 'fail']) await kv.del(k(kind, userId)); }
+/** Efface seulement la copie des DONNÉES (déconnexion avec des actions encore en attente : la file d'actions et la fiche restent). */
+export async function wipeCopyOnly(kv: KV, userId: string): Promise<void> {
+  await kv.del(k('copy', userId));
+  const meta = (await kv.get(k('meta', userId))) as Meta | undefined;
+  if (meta && typeof meta === 'object') await kv.set(k('meta', userId), { ...meta, saved_at: null });
+}
 /** Efface tout (appareil partagé, déconnexion complète). */
 export async function wipeAllVaults(kv: KV): Promise<void> { for (const key of await kv.keys()) if (/^(meta|copy|queue|fail):/.test(key)) await kv.del(key); }
 

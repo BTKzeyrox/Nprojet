@@ -35,6 +35,8 @@
     "check:badges": "npx --yes tsx scripts/check-badges.ts",
     "check:offline": "npx --yes tsx scripts/check-offline.ts",
     "check:offline-vault": "npx --yes tsx scripts/check-offline-vault.ts",
+    "check:offline-sync": "npx --yes tsx scripts/check-offline-sync.ts",
+    "check:offline-store": "esbuild scripts/check-offline-store.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-offline-store.mjs && node node_modules/.cache/check-offline-store.mjs",
     "check:offline-shell": "npm run -s build && npx --yes tsx scripts/check-offline-shell.ts",
     "check:performance-export": "npx --yes tsx scripts/check-performance-export.ts",
     "check:recognition": "npx --yes tsx scripts/check-recognition.ts",

@@ -34,6 +34,16 @@ Dès qu'un défaut est trouvé, note-le dans le tableau en bas (page, ce que tu 
 - Opérateur : le menu « Ma performance » doit **s'ouvrir** (le serveur v26 envoie les 3 réglages oui/non). Si tu vois « Cette page n'est pas activée », dis-le : cela veut dire que ces réglages n'arrivent pas.
 - Dans Réglages > Conditions, mets « le salarié voit ses badges » sur Non : au prochain rafraîchissement de l'opérateur, la page doit se fermer et le menu disparaître.
 
+## Mode hors ligne (module 13) : à essayer sur ton téléphone, compte OPÉRATEUR
+**Ce qui existe aujourd'hui** : l'appli s'ouvre sans réseau, et ce que l'opérateur écrit (messages, missions…) est gardé puis envoyé au retour du réseau. **Pas encore** : les photos, les décisions de l'admin, Actualités, ni l'écran « N actions en attente » (ça viendra). Rien n'est affiché pour te dire que des actions attendent : tu le verras seulement à l'arrivée sur l'autre téléphone.
+1. Connecte-toi **avec réseau** comme opérateur. Attends 10 secondes (l'appli garde ses fichiers et une copie des données).
+2. **Mode avion.** Écris un **message** dans la messagerie. Il reste affiché.
+3. **Ferme complètement l'appli** (retire-la des applications récentes) et **rouvre-la, toujours en mode avion**. Tu dois **rester connecté** (pas d'écran de connexion), voir tes anciens messages **et le message que tu viens d'écrire**.
+4. **Coupe le mode avion.** Dans la minute, le message doit arriver chez les autres (regarde sur un 2e appareil ou en admin). **Il ne doit arriver qu'une fois.**
+5. Si tu vois « Connexion perdue » en rouge un moment, c'est normal ; il disparaît quand le réseau revient.
+6. **Déconnexion avec une action en attente** : en mode avion, écris un message puis déconnecte-toi, remets le réseau, reconnecte-toi : le message doit être envoyé.
+7. **Défauts à signaler** : message perdu, message envoyé deux fois, écran de connexion alors que tu étais connecté, appli lente au démarrage.
+
 ## Les autres modules (essai rapide, mêmes règles : clair/sombre, FR/EN, debout/couché)
 Pour chaque module, fais les actions principales décrites dans sa case de `TODO_MODULES.md` : Conditions (M0), Clients (M1), Factures et devis (M2), Fournisseurs et stock (M4), Dossier salarié et congés (M5), Missions avancées (M6), Audit et sauvegarde (M7), Assistant (M11). Les cases disent ce qui n'a **jamais** été essayé avec de vraies données.
 
