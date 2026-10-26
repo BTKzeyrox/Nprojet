@@ -22,6 +22,8 @@ export const DEMO_TEAM_GOALS: TeamGoal[] = [
   { id: 'tg-demo2', name: 'Qualité de l\'équipe', scope: 'team', metric: 'rate', target: 90, month: '' },
   { id: 'tg-demo3', name: 'Camille : 12 missions', scope: 'employee', employee_id: 'demo_u1', metric: 'done', target: 12, month: '' },
 ];
+/** Plan mensuel inventé (M15.4) : revenus et paie prévus par mois. */
+export const DEMO_MONTHLY_PLAN = { revenue_ar: 2000000, payroll_ar: 800000 };
 export const DEMO_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 20000 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 /** Conditions inventées pour la démo (rien de réel : ni numéro fiscal, ni adresse vraie). Locales, jamais envoyées. */

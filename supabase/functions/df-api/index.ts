@@ -1834,9 +1834,33 @@ function cleanTeamGoals(list: unknown): TeamGoalValue[] {
 }
 // ===== END TEAMGOALS =====
 
+// ===== BEGIN BUDGETPLAN (budget prévu contre réel, M15.4 : copie exacte du bloc de src/utils/budgetPlan.ts ; contrôlé par scripts/check-budget-plan.ts) =====
+const BP_MAX_AR = 10000000000; // 10 milliards d'Ar par mois : au-delà, c'est une faute de frappe
+const bpAmount = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= BP_MAX_AR ? Math.round(v) : null);
+
+type MonthlyPlanError = 'revenue' | 'payroll' | 'format';
+/** Vérifie le plan saisi : deux montants entiers en Ar par mois, de 0 (pas de prévu) à 10 milliards. */
+function checkMonthlyPlan(d: { [k: string]: unknown }): { ok: true; value: { revenue_ar: number; payroll_ar: number } } | { ok: false; error: MonthlyPlanError } {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, error: 'format' };
+  if (Object.keys(d).some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return { ok: false, error: 'format' };
+  const revenue = d.revenue_ar === undefined || d.revenue_ar === null ? 0 : bpAmount(d.revenue_ar);
+  if (revenue === null) return { ok: false, error: 'revenue' };
+  const payroll = d.payroll_ar === undefined || d.payroll_ar === null ? 0 : bpAmount(d.payroll_ar);
+  if (payroll === null) return { ok: false, error: 'payroll' };
+  return { ok: true, value: { revenue_ar: revenue, payroll_ar: payroll } };
+}
+
+/** Nettoie le plan reçu (réglages) : un montant faux devient 0, jamais d'erreur. */
+function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: number } {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { revenue_ar: 0, payroll_ar: 0 };
+  const r = raw as { [k: string]: unknown };
+  return { revenue_ar: bpAmount(r.revenue_ar) ?? 0, payroll_ar: bpAmount(r.payroll_ar) ?? 0 };
+}
+// ===== END BUDGETPLAN =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2968,6 +2992,9 @@ async function sync(req: any, res: any, me: any) {
         // Objectifs par salarié et par équipe (M15.3) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentGoals = (rec as any).team_goals === undefined ? (existing as any)?.team_goals : (rec as any).team_goals;
         if (sentGoals !== undefined) toSave = { ...toSave, team_goals: cleanTeamGoals(sentGoals) };
+        // Budget prévu contre réel (M15.4) : plan mensuel revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
+        const sentPlan = (rec as any).monthly_plan === undefined ? (existing as any)?.monthly_plan : (rec as any).monthly_plan;
+        if (sentPlan !== undefined) toSave = { ...toSave, monthly_plan: cleanMonthlyPlan(sentPlan) };
       }
       if (admin && col === 'users') {
         // Dossier du salarié (M5.1) : revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas

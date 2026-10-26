@@ -1,6 +1,7 @@
 import type { MissionTemplate } from '../utils/missionTemplates';
 import type { RecurringRule } from '../utils/recurring';
 import type { TeamGoal } from '../utils/teamGoals';
+import type { MonthlyPlan } from '../utils/budgetPlan';
 export interface PasswordResetRequest {
   id: string;
   user_id: string;
@@ -59,6 +60,7 @@ export interface AppSettings {
   grid_columns?: number; // colonnes de la grille des missions (2 à 10)
   rules: string;
   post_types: string[];
+  monthly_plan?: MonthlyPlan; // revenus et paie prévus par mois (module 15, M15.4) ; admin seulement
   team_goals?: TeamGoal[]; // objectifs par salarié et par équipe (module 15, M15.3) ; admin seulement
   recurring_missions?: RecurringRule[]; // missions récurrentes (module 15, M15.1) ; admin seulement
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
