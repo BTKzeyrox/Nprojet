@@ -2659,6 +2659,7 @@ export class AppStore {
     attachmentName?: string;
     attachmentKind?: 'image' | 'file';
     replyTo?: ChatMessage; // message cité
+    albumId?: string; // photos envoyées ensemble
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
     if (!sender || (!params.message.trim() && !params.attachmentUrl)) return { success: false };
@@ -2682,6 +2683,7 @@ export class AppStore {
       ...(params.attachmentUrl
         ? { attachment_url: params.attachmentUrl, attachment_name: params.attachmentName || 'fichier', attachment_kind: params.attachmentKind || 'file' }
         : {}),
+      ...(params.albumId && params.attachmentUrl ? { album_id: String(params.albumId).slice(0, 40) } : {}),
     };
 
     this.messages.push(newMsg);

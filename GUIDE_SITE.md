@@ -235,7 +235,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Messagerie  `chat`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Discussions entre personnes et groupes, comme une messagerie classique.
-- **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier. 3. Modifier ou épingler ses propres messages.
+- **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier ou plusieurs photos (album : 4 cases, la 4e avec « +N »). 3. Modifier ou épingler ses propres messages.
 - **Règles** :
   - On ne modifie que ses propres messages, même l'admin.
   - Supprimer pour tous : l'auteur ou l'admin ; une trace reste dans la discussion.

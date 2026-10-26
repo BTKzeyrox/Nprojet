@@ -230,6 +230,7 @@ export interface ChatMessage {
   attachment_url?: string;
   attachment_name?: string;
   attachment_kind?: 'image' | 'file';
+  album_id?: string; // photos envoyées ensemble (album)
   edited_at?: string; // message modifié après envoi
   pinned?: boolean; // épinglé en haut de la conversation
   pinned_at?: string;

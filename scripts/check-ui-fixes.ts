@@ -28,5 +28,11 @@ t('réponses : repliées par défaut, un bouton Afficher / Masquer par commentai
 t('réponses : « Répondre » prend le curseur dans le geste du doigt (clavier du téléphone)', /flushSync\(\(\) => \{ setReply\(/.test(feed) && /el\.focus\(\{ preventScroll: true \}\)/.test(feed) && /enterKeyHint="send"/.test(feed));
 t('réponses : le commentaire cité s\'affiche au-dessus du champ', /reply\.excerpt/.test(feed) && /Réponse à <b>\{reply\.name\}/.test(feed));
 t('réponses : sa propre réponse est dépliée après l\'envoi', /setShownReplies\(prev => new Set\(prev\)\.add\(reply\.parentId\)\)/.test(feed));
+// Albums de photos (comme WhatsApp)
+t('photos : on peut choisir plusieurs photos à la fois', /type="file" multiple/.test(chat) && /Array\.from\(e\.target\.files/.test(chat));
+t('photos : un album = un album_id commun, envoyé photo par photo', /album_id\?: string/.test(types) && /album_id: String\(params\.albumId\)/.test(store) && /albumId = files\.length > 1/.test(chat));
+t('photos : citation sur la 1re photo, texte sur la dernière', /noText: i < files\.length - 1, noReply: i > 0/.test(chat));
+t('photos : grille de 4 cases au plus, la 4e floue avec « +N »', /album\.slice\(0, 4\)/.test(chat) && /blur-\[3px\]/.test(chat) && /\+\{album\.length - 4\}/.test(chat));
+t('photos : les photos suivantes d\'un album ne font pas de bulle à part', /prevM\.album_id === msg\.album_id && prevM\.sender_id === msg\.sender_id\) return null/.test(chat));
 console.log(`${ok}/${ok + bad} contrôles OK`);
 process.exit(bad ? 1 : 0);

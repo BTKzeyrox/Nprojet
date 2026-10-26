@@ -314,7 +314,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   };
 
   const lastSent = useRef<{ key: string; at: number }>({ key: '', at: 0 });
-  const send = (extra?: { url: string; name: string; kind: 'image' | 'file' }) => {
+  const send = (extra?: { url: string; name: string; kind: 'image' | 'file'; albumId?: string; noText?: boolean; noReply?: boolean }) => {
     if (current.readOnly) return;
     if (editingId) {
       const r = db.editMessage(editingId, currentUser.id, text);
@@ -331,48 +331,67 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     lastSent.current = { key, at: Date.now() };
     db.sendMessage({
       senderId: currentUser.id,
-      message: text,
+      message: extra?.noText ? '' : text,
       recipientId: current.id === 'all' ? 'all' : current.id,
       attachmentUrl: extra?.url,
       attachmentName: extra?.name,
       attachmentKind: extra?.kind,
-      replyTo: replyTo || undefined,
+      replyTo: extra?.noReply ? undefined : (replyTo || undefined),
+      albumId: extra?.albumId,
     });
-    setText('');
+    if (!extra?.noText) setText('');
     setReplyTo(null);
     setSendPulse(true);
     window.setTimeout(() => setSendPulse(false), 320);
   };
 
   // Fichier choisi : on l'affiche d'abord avec l'option « Compresser » (activée par défaut), puis on l'envoie
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [compress, setCompress] = useState(true);
-  const pendingUrl = useMemo(() => (pendingFile && pendingFile.type.startsWith('image/') ? URL.createObjectURL(pendingFile) : ''), [pendingFile]);
-  useEffect(() => () => { if (pendingUrl) URL.revokeObjectURL(pendingUrl); }, [pendingUrl]);
+  const pendingFile = pendingFiles[0] || null;
+  const pendingUrls = useMemo(() => pendingFiles.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : '')), [pendingFiles]);
+  useEffect(() => () => { pendingUrls.forEach(u => { if (u) URL.revokeObjectURL(u); }); }, [pendingUrls]);
+  const MAX_PHOTOS = 30;
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const list = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    if (list.length === 0) return;
     setError(null);
-    if (file.size > MAX_BYTES) return setError('Fichier trop gros (10 Mo maximum).');
-    if (!OK_TYPES.includes(file.type)) return setError('Type non accepté : photo, PDF ou texte seulement.');
+    let picked = list;
+    if (list.length > 1) {
+      // Plusieurs fichiers : seulement des photos (comme WhatsApp)
+      picked = list.filter(f => f.type.startsWith('image/'));
+      if (picked.length < list.length) setError('Plusieurs fichiers : seules les photos sont gardées.');
+      if (picked.length > MAX_PHOTOS) { picked = picked.slice(0, MAX_PHOTOS); setError(`${MAX_PHOTOS} photos maximum à la fois.`); }
+    }
+    const good = picked.filter(f => f.size <= MAX_BYTES && OK_TYPES.includes(f.type));
+    if (good.length < picked.length) setError(good.length === 0 ? (picked[0].size > MAX_BYTES ? 'Fichier trop gros (10 Mo maximum).' : 'Type non accepté : photo, PDF ou texte seulement.') : 'Certains fichiers trop gros ou non acceptés ont été ignorés.');
+    if (good.length === 0) return;
     setCompress(true);
-    setPendingFile(file);
+    setPendingFiles(good);
   };
   const sendPendingFile = async () => {
-    const file = pendingFile;
-    if (!file) return;
+    const files = pendingFiles;
+    if (files.length === 0) return;
     setError(null);
     setBusy(true);
+    const albumId = files.length > 1 ? `alb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` : undefined;
+    let done = 0;
     try {
-      const isImage = file.type.startsWith('image/') && file.type !== 'image/gif';
-      const dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
-      const url = await db.uploadFile(dataUrl);
-      if (!url) setError('Envoi impossible. Réessaie.');
-      else { send({ url, name: file.name, kind: file.type.startsWith('image/') ? 'image' : 'file' }); setPendingFile(null); }
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isImage = file.type.startsWith('image/') && file.type !== 'image/gif';
+        const dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+        const url = await db.uploadFile(dataUrl);
+        if (!url) { setError('Envoi impossible. Réessaie.'); break; }
+        // La citation part avec la première photo, le texte avec la dernière
+        send({ url, name: file.name, kind: file.type.startsWith('image/') ? 'image' : 'file', albumId, noText: i < files.length - 1, noReply: i > 0 });
+        done++;
+      }
     } catch {
       setError('Envoi impossible. Réessaie.');
     } finally {
+      setPendingFiles(done >= files.length ? [] : files.slice(done));
       setBusy(false);
     }
   };
@@ -476,7 +495,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const renderThread = (t: Thread, archivedRow = false) => {
     const last = lastOf(t);
     const who = last && !last.deleted_at && t.kind !== 'user' && t.kind !== 'pair' ? `${last.sender_id === currentUser.id ? 'Moi' : last.sender_name.split(' ')[0]} : ` : last && last.sender_id === currentUser.id && !last.deleted_at && t.kind === 'user' ? 'Moi : ' : '';
-    const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (last.message || (last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
+    const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (last.message || (last.attachment_kind === 'image' ? (last.album_id ? 'Photos' : 'Photo') : last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
     const unread = t.id === current.id && convVisible ? 0 : unreadOf(t);
     const palette = ['border-l-rose-500', 'border-l-amber-500', 'border-l-emerald-500', 'border-l-sky-500', 'border-l-violet-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-orange-500'];
     const hash = Array.from(t.id).reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -646,6 +665,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             const gone = !!msg.deleted_at;
             const sameSender = i > 0 && !newDay && visible[i - 1].sender_id === msg.sender_id && !visible[i - 1].deleted_at;
             const readers = isMe && !gone ? readersOf(msg) : [];
+            const prevM = i > 0 ? visible[i - 1] : null;
+            const isAlbumImg = (m: ChatMessage) => !!m.album_id && m.attachment_kind === 'image' && !!m.attachment_url && !m.deleted_at;
+            if (isAlbumImg(msg) && prevM && isAlbumImg(prevM) && prevM.album_id === msg.album_id && prevM.sender_id === msg.sender_id) return null;
+            const album: ChatMessage[] = [];
+            if (isAlbumImg(msg)) { for (let k = i; k < visible.length && isAlbumImg(visible[k]) && visible[k].album_id === msg.album_id && visible[k].sender_id === msg.sender_id; k++) album.push(visible[k]); }
+            const isAlbum = album.length > 1;
+            const albumCaption = isAlbum ? (album.find(m => m.message)?.message || '') : '';
             const totalOthers = current.kind === 'group' && current.group ? current.group.members.filter(id => id !== currentUser.id).length : 0;
             return (
               <React.Fragment key={msg.id}>
@@ -706,18 +732,29 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               </button>
                             );
                           })()}
-                          {msg.attachment_url && msg.attachment_kind === 'image' && (
+                          {isAlbum && (
+                            <div className={`grid gap-0.5 w-60 sm:w-64 ${msg.reply_to ? 'mt-1' : ''} ${album.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                              {album.slice(0, 4).map((m, k) => (
+                                <button key={m.id} type="button" onClick={() => setViewer({ url: m.attachment_url!, msg: m })} className={`relative block overflow-hidden cursor-zoom-in bg-slate-200 ${album.length === 3 && k === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${k === 0 ? 'rounded-tl-xl' : ''} ${k === 1 || (album.length === 3 && k === 0) ? 'rounded-tr-xl' : ''} ${k === 2 && album.length > 2 ? 'rounded-bl-xl' : ''} ${k === Math.min(album.length, 4) - 1 ? 'rounded-br-xl' : ''}`} title="Agrandir">
+                                  <img src={m.attachment_url} alt={m.attachment_name || 'photo'} className={`w-full h-full object-cover ${k === 3 && album.length > 4 ? 'blur-[3px] scale-110' : ''}`} loading="lazy" />
+                                  {k === 3 && album.length > 4 && <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white text-2xl font-bold">+{album.length - 4}</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {isAlbum && albumCaption && <span className="block whitespace-pre-line mt-1 px-1">{albumCaption}</span>}
+                          {!isAlbum && msg.attachment_url && msg.attachment_kind === 'image' && (
                             <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className={`block cursor-zoom-in ${msg.message || msg.reply_to ? 'mb-1' : ''}`} title="Agrandir">
                               <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full rounded-xl" loading="lazy" />
                             </button>
                           )}
-                          {msg.attachment_url && msg.attachment_kind !== 'image' && (
+                          {!isAlbum && msg.attachment_url && msg.attachment_kind !== 'image' && (
                             <button type="button" onClick={() => setFileViewer(msg)} className={`flex items-center gap-1.5 min-h-[40px] font-semibold text-left cursor-pointer ${!msg.message && !msg.reply_to ? `px-3 py-2 rounded-2xl border ${L ? 'border-slate-300' : 'border-slate-600'}` : 'mb-1 underline'}`}>
                               <FileText className="w-4 h-4 shrink-0" />
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
                           )}
-                          {msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
+                          {!isAlbum && msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
                         </>
                       )}
                     </div>
@@ -799,31 +836,35 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           {pendingFile && (
             <div className={`px-3 pt-3 ${L ? 'bg-white' : 'bg-[#0f1b2d]'} border-t ${P.div}`}>
               <div className={`rounded-2xl border p-3 flex items-center gap-3 ${L ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/15'}`}>
-                {pendingFile.type.startsWith('image/') ? (
-                  <img src={pendingUrl || undefined} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                {pendingFiles.length > 1 ? (
+                  <div className="flex -space-x-3 shrink-0">
+                    {pendingFiles.slice(0, 3).map((f, i) => <img key={i} src={pendingUrls[i] || undefined} alt="" className="w-12 h-12 rounded-lg object-cover border-2 border-white" />)}
+                  </div>
+                ) : pendingFile.type.startsWith('image/') ? (
+                  <img src={pendingUrls[0] || undefined} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
                 ) : (
                   <span className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"><Paperclip className="w-6 h-6" /></span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFile.name}</p>
-                  <p className={`text-xs ${P.sub}`}>{sizeLabel(pendingFile.size)}</p>
+                  <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFiles.length > 1 ? `${pendingFiles.length} photos` : pendingFile.name}</p>
+                  <p className={`text-xs ${P.sub}`}>{sizeLabel(pendingFiles.reduce((n, f) => n + f.size, 0))}</p>
                   {pendingFile.type.startsWith('image/') && pendingFile.type !== 'image/gif' && (
                     <label className="mt-1 flex items-center gap-2 text-xs cursor-pointer">
                       <input type="checkbox" checked={compress} onChange={e => setCompress(e.target.checked)} className="w-4 h-4 accent-blue-600" />
-                      <span className={P.title}>Compresser la photo <span className={P.sub}>{compress ? '(plus léger, recommandé)' : '(taille originale)'}</span></span>
+                      <span className={P.title}>Compresser {pendingFiles.length > 1 ? 'les photos' : 'la photo'} <span className={P.sub}>{compress ? '(plus léger, recommandé)' : '(taille originale)'}</span></span>
                     </label>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
-                  <button type="button" disabled={busy} onClick={() => setPendingFile(null)} className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
                 </div>
               </div>
             </div>
           )}
           <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-3 pb-3 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
-              <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
+              <input ref={fileRef} type="file" multiple accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
               <button
                 type="button"
                 disabled={busy || !!editingId}
