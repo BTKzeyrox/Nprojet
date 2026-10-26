@@ -207,6 +207,21 @@ export function vatSummary(entries: Entry[], from?: string, to?: string) {
   return { collected, deductible, due: collected - deductible };
 }
 
+export interface VatMonth { month: string; collected: number; deductible: number; due: number }
+/**
+ * TVA mois par mois (les mois sans TVA n'apparaissent pas) et total de la période. Total = somme des mois. `due` négatif = crédit de TVA.
+ * La TVA DÉDUCTIBLE n'est pas générée automatiquement (les dépenses n'ont pas de champ TVA) : elle vient des écritures SAISIES à la main sur le compte 4456.
+ */
+export function vatByMonth(entries: Entry[], from?: string, to?: string): { months: VatMonth[]; total: { collected: number; deductible: number; due: number } } {
+  const keys = new Set<string>();
+  for (const e of entries) if (inRange(e.date, from, to) && e.lines.some(l => l.account === '4457' || l.account === '4456')) keys.add(e.date.slice(0, 7));
+  const months = [...keys].sort().map(m => {
+    const lo = from && from > `${m}-01` ? from : `${m}-01`, hi = to && to < `${m}-31` ? to : `${m}-31`;
+    return { month: m, ...vatSummary(entries, lo, hi) };
+  });
+  return { months, total: vatSummary(entries, from, to) };
+}
+
 /** Exercice (année civile par défaut) qui contient une date : { start, end }. `startMonth` 1 à 12 (1 = janvier). */
 export function fiscalYearOf(date: string, startMonth = 1): { start: string; end: string } | null {
   if (!isDate(date) || !Number.isInteger(startMonth) || startMonth < 1 || startMonth > 12) return null;

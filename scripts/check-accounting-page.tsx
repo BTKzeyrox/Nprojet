@@ -25,11 +25,13 @@ const view = (lang: 'fr' | 'en', tab: any) => { mem.delta_lang = lang; return re
   const start = db.getEntries();
   ok(start.length > 5 && start.every(e => /^EC-\d{4}-\d{4}$/.test(e.number || '')) && new Set(start.map(e => e.number)).size === start.length, `démo : ${start.length} écritures, numéros uniques EC-AAAA-0001`);
   ok(trialBalance(start).balanced && balanceSheet(start, '2100-12-31').balanced, 'démo : balance et bilan équilibrés');
-  for (const lang of ['fr', 'en'] as const) for (const tab of ['journal', 'ledger', 'balance', 'result', 'sheet']) { const h = view(lang, tab); ok(h.length > 800 && !bad(h), `admin ${lang} ${tab} : la page s'affiche sans NaN ni undefined`); }
+  for (const lang of ['fr', 'en'] as const) for (const tab of ['journal', 'ledger', 'balance', 'result', 'sheet', 'vat']) { const h = view(lang, tab); ok(h.length > 800 && !bad(h), `admin ${lang} ${tab} : la page s'affiche sans NaN ni undefined`); }
   const fr = view('fr', 'journal'), en = view('en', 'journal');
   ok(fr.includes('Générer les écritures') && fr.includes('Saisir une écriture') && en.includes('Generate the entries') && !/Générer|Saisir|Journal des/.test(en.replace('Journal', '')), 'boutons en français et en anglais, sans français dans la version anglaise');
   ok(fr.includes('plan comptable') || fr.includes('Plan comptable'), 'avertissement : plan comptable à faire valider');
   ok(view('fr', 'balance').includes('Balance équilibrée') && view('fr', 'sheet').includes('Bilan équilibré'), 'balance et bilan annoncent qu\'ils sont équilibrés');
+
+  ok(view('fr', 'vat').includes('TVA à payer') && view('en', 'vat').includes('VAT to pay') && view('fr', 'vat').includes('Télécharger le brouillon'), 'onglet TVA : total à payer et téléchargement du brouillon, FR et EN');
 
   // génération : jamais de doublon
   let r = await db.accountingSync();

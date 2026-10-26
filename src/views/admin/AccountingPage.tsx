@@ -5,7 +5,8 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { todayMada } from '../../utils/stats';
-import { JOURNALS, PLAN, accountOf, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, type Entry, type Journal } from '../../utils/accounting';
+import { JOURNALS, PLAN, accountOf, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
+import { downloadVatExcel } from '../../utils/exportDoc';
 
 // Comptabilité (M14.4). Responsable et Comptable : journal, grand livre, balance, résultat, bilan, saisie d'une écriture. Annuler une écriture : responsable seulement.
 // Le site LIT les écritures ; elles s'écrivent par les routes accounting-* (le serveur revérifie, numérote et note tout dans le journal d'audit).
@@ -16,7 +17,7 @@ const btn = 'min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200
 const lbl = 'block text-[11px] font-semibold text-slate-400 mb-1';
 const num = (n: number) => n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ');
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
-export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet';
+export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet' | 'vat';
 type Preset = 'month' | 'year' | 'all' | 'custom';
 interface Draft { date: string; journal: Journal; label: string; ref: string; lines: { account: string; debit: string; credit: string }[] }
 
@@ -96,6 +97,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
   const is = useMemo(() => incomeStatement(entries, range.from, range.to), [entries, range]);
   const bs = useMemo(() => balanceSheet(entries, asOf), [entries, asOf]);
   const lg = useMemo(() => ledger(entries, account, range.from, range.to), [entries, account, range]);
+  const vat = useMemo(() => vatByMonth(entries, range.from, range.to), [entries, range]);
 
   return (
     <div className="space-y-3 max-w-5xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -111,7 +113,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist">
-        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}
+        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}{tabBtn('vat', 'TVA', 'VAT')}
       </div>
 
       {tab !== 'sheet' && (
@@ -236,6 +238,20 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
         </div>
       )}
 
+      {tab === 'vat' && (
+        <div className={card}>
+          <p className="text-sm font-bold text-white">{t('TVA de la période', 'VAT for the period')}</p>
+          {vat.months.length === 0 ? <p className="text-sm text-slate-400">{t('Aucune TVA sur cette période (aucune facture avec TVA, aucune écriture sur 4456 ou 4457).', 'No VAT in this period (no invoice with VAT, no entry on 4456 or 4457).')}</p> : (
+            <div className="overflow-x-auto"><table className="w-full"><thead><tr><th className={`${th} text-left`}>{t('Mois', 'Month')}</th><th className={th}>{t('Collectée', 'Collected')}</th><th className={th}>{t('Déductible', 'Deductible')}</th><th className={th}>{t('À payer', 'Due')}</th></tr></thead>
+              <tbody>{vat.months.map(m => (<tr key={m.month} className="border-t border-slate-800"><td className={tdl}>{m.month.split('-').reverse().join('/')}</td><td className={td}>{num(m.collected)}</td><td className={td}>{num(m.deductible)}</td><td className={td}>{num(m.due)}</td></tr>))}
+                <tr className="border-t-2 border-slate-600 font-bold"><td className={tdl}>{t('Total', 'Total')}</td><td className={td}>{num(vat.total.collected)}</td><td className={td}>{num(vat.total.deductible)}</td><td className={td}>{num(vat.total.due)}</td></tr></tbody></table></div>
+          )}
+          <p className={`text-base font-bold ${vat.total.due < 0 ? 'text-sky-300' : 'text-white'}`}>{vat.total.due < 0 ? t('Crédit de TVA', 'VAT credit') : t('TVA à payer', 'VAT to pay')} : {num(Math.abs(vat.total.due))} Ar</p>
+          <button type="button" className={btn} onClick={() => downloadVatExcel(vat, `${range.from || ''} → ${range.to || ''}`.trim(), lang === 'en' ? 'en' : 'fr')} disabled={vat.months.length === 0}>{t('Télécharger le brouillon (Excel)', 'Download the draft (Excel)')}</button>
+          <p className="text-[11px] text-slate-500">{t('La TVA collectée vient des factures et des avoirs. La TVA déductible n\'est PAS générée toute seule (les dépenses n\'ont pas de champ TVA) : saisis tes achats avec TVA par « Saisir une écriture » (modèle « Achat avec TVA »). Brouillon à valider par un expert-comptable avant toute déclaration.', 'Collected VAT comes from invoices and credit notes. Deductible VAT is NOT generated automatically (expenses have no VAT field): enter your purchases with VAT via "Enter an entry" (template "Purchase with VAT"). Draft to be validated by an accountant before any return.')}</p>
+        </div>
+      )}
+
       {draft && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
           <div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto bg-[#0f1722] border border-slate-700 rounded-t-2xl sm:rounded-2xl p-4 space-y-3" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -256,7 +272,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
                 <button type="button" className={`${btn} px-0`} disabled={draft.lines.length <= 2} onClick={() => setDraft({ ...draft, lines: draft.lines.filter((_, j) => j !== i) })} aria-label={t('Retirer la ligne', 'Remove the line')}><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
-            {draft.lines.length < 40 && <button type="button" className={btn} onClick={() => setDraft({ ...draft, lines: [...draft.lines, { account: '512', debit: '', credit: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
+            <div className="flex flex-wrap gap-2">{draft.lines.length < 40 && <button type="button" className={btn} onClick={() => setDraft({ ...draft, lines: [...draft.lines, { account: '512', debit: '', credit: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}<button type="button" className={btn} onClick={() => setDraft({ ...draft, journal: 'AC', label: draft.label || 'Achat avec TVA', lines: [{ account: '601', debit: '', credit: '' }, { account: '4456', debit: '', credit: '' }, { account: '401', debit: '', credit: '' }] })}>{t('Modèle : achat avec TVA', 'Template: purchase with VAT')}</button></div>
             <p className={`text-sm font-semibold ${dTot.debit === dTot.credit && dTot.debit > 0 ? 'text-emerald-400' : 'text-amber-300'}`}>{t('Débits', 'Debits')} {num(dTot.debit)} · {t('Crédits', 'Credits')} {num(dTot.credit)} {dTot.debit === dTot.credit && dTot.debit > 0 ? '✓' : `· ${t('écart', 'gap')} ${num(Math.abs(dTot.debit - dTot.credit))}`}</p>
             {formErr && <p className="text-sm text-red-400" role="alert">{(() => { const m = /\(([a-z_]+)\)/.exec(formErr); return m ? entryReasonText(m[1], lang === 'en' ? 'en' : 'fr') : formErr; })()}</p>}
             <div className="flex gap-2"><button type="button" className={`${btn} flex-1 bg-emerald-700 border-emerald-500 text-white`} onClick={save}>{t('Enregistrer', 'Save')}</button><button type="button" className={`${btn} flex-1`} onClick={() => setDraft(null)}>{t('Annuler', 'Cancel')}</button></div>

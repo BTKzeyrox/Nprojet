@@ -263,9 +263,11 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le numéro d'écriture (EC-2026-0001) est donné par le serveur, dans l'ordre des dates.
   - Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.
   - Le plan comptable est un plan minimal de départ, à valider par un expert-comptable.
+  - La TVA collectée vient des factures ; la TVA déductible vient des achats saisis à la main (modèle « Achat avec TVA »), car les dépenses n'ont pas de champ TVA.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
+  - TVA à payer : TVA collectée (compte 4457) moins TVA déductible (compte 4456) de la période ; négatif = crédit de TVA.
   - Bilan : Actif = soldes débiteurs ; passif = soldes créditeurs + résultat cumulé jusqu'à la date.
 - **Dans le code** : `src/views/admin/AccountingPage.tsx`
 

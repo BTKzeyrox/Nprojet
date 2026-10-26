@@ -1,5 +1,6 @@
 // Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting
-import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, assignNumbers, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
+import { vatRows } from '../src/utils/exportDoc';
+import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, assignNumbers, vatByMonth, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
@@ -128,6 +129,23 @@ ok(entryReasonText('unbalanced').includes('déséquilibrée') && entryReasonText
   const b2 = assignNumbers([mk2('n', '2026-05-01')], [mk2('x', '2026-01-01', 'EC-2026-0007'), mk2('y', '2025-01-01', 'EC-2025-0100')]);
   ok(b2[0].number === 'EC-2026-0008', 'numéros : à la suite des numéros existants de la même année');
   ok(assignNumbers([], []).length === 0 && assignNumbers([mk2('q', '2026-01-01')], [mk2('w', '2026-01-01', 'sans numéro')])[0].number === 'EC-2026-0001', 'numéros : rien à numéroter, ou un numéro existant illisible, ne plante pas');
+}
+
+// TVA mois par mois
+{
+  const v = vatByMonth(set);
+  ok(v.months.map(m => `${m.month}:${m.collected}/${m.deductible}/${m.due}`).join() === '2026-03:200000/0/200000,2026-04:0/40000/-40000', 'TVA par mois : mars 200 000 à payer, avril 40 000 de crédit');
+  ok(v.total.collected === 200000 && v.total.deductible === 40000 && v.total.due === 160000 && v.months.reduce((t, m) => t + m.due, 0) === v.total.due, 'TVA : le total est la somme des mois');
+  const ap = vatByMonth(set, '2026-04-01', '2026-04-30');
+  ok(ap.months.length === 1 && ap.months[0].month === '2026-04' && ap.total.due === -40000, 'TVA : un seul mois demandé');
+  const cut = vatByMonth(set, '2026-03-26');
+  ok(cut.months.length === 1 && cut.months[0].month === '2026-04' && cut.total.collected === 0, 'TVA : une période qui commence après la facture ne la compte pas');
+  ok(vatByMonth([]).months.length === 0 && vatByMonth([]).total.due === 0 && vatByMonth(set, '2030-01-01').months.length === 0, 'TVA : aucune écriture ou période vide = rien, pas de plantage');
+  const back = vatByMonth([g.entry, rev]);
+  ok(back.months.length === 1 && back.total.collected === 0 && back.total.due === 0, 'TVA : une facture annulée par contre-passation ne laisse aucune TVA');
+  const rows = vatRows(v, '2026', 'fr');
+  ok(rows[3].join('|').startsWith('Mois|TVA collectée') && rows.some(r => r[0] === 'Total' && r[1] === 200000 && r[3] === 160000) && rows[rows.length - 1].join('|') === 'TVA à payer|||160000', 'Excel : brouillon avec en-têtes, mois, total, TVA à payer');
+  ok(vatRows(ap, '2026-04', 'en').some(r => r[0] === 'VAT credit' && r[3] === 40000) && vatRows(ap, '2026-04', 'en')[0][0] === 'VAT return draft', 'Excel en anglais : crédit de TVA en positif');
 }
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);

@@ -99,4 +99,20 @@ export function invoiceRows(inv: Invoice, lang: 'fr' | 'en' = 'fr'): Rows {
 }
 export const downloadInvoiceExcel = (inv: Invoice, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: lang === 'en' ? 'Invoice' : 'Facture', rows: invoiceRows(inv, lang) }], `${inv.type === 'credit_note' ? 'avoir' : 'facture'}-${inv.number || inv.id}`);
 
+/** Brouillon de déclaration de TVA (Excel) : mois par mois puis total. À faire valider par un expert-comptable avant toute déclaration officielle. */
+export function vatRows(rep: { months: { month: string; collected: number; deductible: number; due: number }[]; total: { collected: number; deductible: number; due: number } }, period: string, lang: 'fr' | 'en' = 'fr'): Rows {
+  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  return [
+    [t('Brouillon de déclaration de TVA', 'VAT return draft'), period],
+    [t('À valider par un expert-comptable avant toute déclaration officielle.', 'To be validated by an accountant before any official return.')],
+    [],
+    [t('Mois', 'Month'), t('TVA collectée (Ar)', 'Collected VAT (Ar)'), t('TVA déductible (Ar)', 'Deductible VAT (Ar)'), t('TVA à payer (Ar)', 'VAT due (Ar)')],
+    ...rep.months.map(m => [m.month, m.collected, m.deductible, m.due]),
+    [],
+    [t('Total', 'Total'), rep.total.collected, rep.total.deductible, rep.total.due],
+    [rep.total.due < 0 ? t('Crédit de TVA', 'VAT credit') : t('TVA à payer', 'VAT to pay'), '', '', Math.abs(rep.total.due)],
+  ];
+}
+export const downloadVatExcel = (rep: Parameters<typeof vatRows>[0], period: string, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: 'TVA', rows: vatRows(rep, period, lang) }], `tva-${safeFileName(period)}.xlsx`);
+
 export { saveBlob };
