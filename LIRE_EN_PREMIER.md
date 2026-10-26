@@ -5,6 +5,8 @@ Ne modifie rien et ne propose rien avant d'avoir lu ces quatre fichiers.
 
 > **Tu installes une nouvelle copie de ce site pour un autre projet (nouveau dépôt, nouveaux comptes) ?** Lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Sinon, tu n'en as pas besoin. Les liens de ce dépôt (`Nprojet`, appli « Gestion Pro ») sont ci-dessous.
 
+> **À quoi sert le site ? Pour qui ? D'autres usages ?** Réponses prêtes dans **`A_PROPOS.md`**.
+
 ## Les règles de BTK (à respecter tout le temps)
 1. **Pas de code, pas de modification sans le mot « GO ».** Même un petit changement. Un fichier de texte (doc) demandé clairement est permis ; tout le reste attend le GO.
 2. **Toujours un récap court avant de commencer** : ce que tu as compris, le plan en quelques lignes, ce qui n'est pas clair. Puis tu **attends « GO »**.
