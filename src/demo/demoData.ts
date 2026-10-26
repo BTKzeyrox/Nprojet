@@ -6,6 +6,7 @@ import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, Invoic
 import { clientPriceForPost } from '../utils/clientPrice';
 import { workingDays, type Leave } from '../utils/leaves';
 import { mondayOf, planAddDays, type Shift } from '../utils/planning';
+import type { TeamGoal } from '../utils/teamGoals';
 import type { Review } from '../utils/reviews';
 import type { HrFile } from '../utils/hrFile';
 import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
@@ -15,6 +16,12 @@ export const DEMO_ADMIN_ID = 'demo_admin';
 // Objectifs et seuils inventés pour la démo (objectifs du mois, alertes)
 export const DEMO_GOALS = { goal_missions: 120, goal_profit_ar: 400000, goal_max_expenses_ar: 900000, alert_unpaid_days: 30, alert_low_cash_ar: 0 };
 /** Budgets mensuels inventés pour la démo (module 4) : Achats serré pour montrer une barre qui se remplit. Admin seulement. */
+/** Objectifs inventés (M15.3) : deux pour l'équipe, un pour Camille. Chaque mois ; la valeur réelle est calculée à partir des missions de la démo. */
+export const DEMO_TEAM_GOALS: TeamGoal[] = [
+  { id: 'tg-demo1', name: 'Missions validées du mois', scope: 'team', metric: 'done', target: 40, month: '' },
+  { id: 'tg-demo2', name: 'Qualité de l\'équipe', scope: 'team', metric: 'rate', target: 90, month: '' },
+  { id: 'tg-demo3', name: 'Camille : 12 missions', scope: 'employee', employee_id: 'demo_u1', metric: 'done', target: 12, month: '' },
+];
 export const DEMO_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 20000 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 /** Conditions inventées pour la démo (rien de réel : ni numéro fiscal, ni adresse vraie). Locales, jamais envoyées. */

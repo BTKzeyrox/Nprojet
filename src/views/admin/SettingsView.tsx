@@ -121,6 +121,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     if (s.err_max_per_session < 0 || s.err_max_per_session > 20) return setError('Rapports par session : entre 0 et 20.');
     if (s.retry_seconds < 5) return setError('Le délai entre deux tentatives doit être de 5 secondes ou plus.');
     const { company: _keepCompany, company_log: _keepLog, ...general } = s; // les Conditions ont leur propre bouton : jamais de vieille copie renvoyée ici
+    delete (general as { team_goals?: unknown }).team_goals; // les objectifs s'enregistrent tout de suite aussi
     delete (general as { recurring_missions?: unknown }).recurring_missions; // les règles récurrentes s'enregistrent tout de suite aussi
     delete (general as { mission_templates?: unknown }).mission_templates; // les modèles de mission s'enregistrent tout de suite (jamais écrasés par une vieille copie)
     db.updateSettings({

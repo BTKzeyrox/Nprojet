@@ -6,6 +6,7 @@ import { todayMada } from '../../utils/stats';
 import { usePerformance } from '../../utils/usePerformance';
 import { LEVEL_NAMES } from '../../utils/performanceScore';
 import { reviewReasonText, snapshotOf, type Review, type ReviewObjective, type ReviewSnapshot } from '../../utils/reviews';
+import { reviewGoalLines, TEAM_GOAL_METRIC_LABEL, TEAM_GOAL_STATUS_LABEL, type TeamGoalMetric } from '../../utils/teamGoals';
 import { field, card, btn } from './DossiersSection';
 
 // Évaluation périodique (M5.4). Responsable : crée la fiche (photo des scores du module 3), la partage. Salarié : lit ses fiches partagées et accuse lecture.
@@ -77,6 +78,19 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
           </div>
         ))}
         {form.objectives.length < 10 && <button type="button" className={btn} onClick={() => set({ objectives: [...form.objectives, { id: uid(), text: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter un objectif', 'Add an objective')}</button>}
+        {form.employee_id && (() => {
+          const lines = reviewGoalLines(db.getTeamGoals(), db.getPosts(), form.employee_id, form.period_start, form.period_end, today);
+          if (!lines.length) return null;
+          return (
+            <div className="rounded-lg border border-slate-700 p-2.5 space-y-1">
+              <p className={lbl}>{t('Objectifs du site sur la période (calculés)', 'Site goals over the period (computed)')}</p>
+              <ul className="text-xs text-slate-200 space-y-0.5">
+                {lines.map(l => { const u = TEAM_GOAL_METRIC_LABEL[l.goal.metric as TeamGoalMetric].unit; return (<li key={`${l.month}-${l.goal.id}`}>{l.month} · {l.goal.name} : {l.actual === null ? '—' : `${l.actual}${u}`} / {l.goal.target}{u} ({TEAM_GOAL_STATUS_LABEL[l.status][lang === 'en' ? 'en' : 'fr']})</li>); })}
+              </ul>
+              <p className="text-[11px] text-slate-500">{t('Pour t\'aider à rédiger. Rien de ceci n\'est enregistré dans la fiche ni envoyé au salarié.', 'To help you write. None of this is saved in the review or sent to the employee.')}</p>
+            </div>
+          );
+        })()}
         <div><label className={lbl}>{t('Points forts (vus par le salarié)', 'Strengths (seen by the employee)')}</label><textarea className={`${field} py-2 min-h-[80px]`} maxLength={1000} value={form.strengths} onChange={e => set({ strengths: e.target.value })} /></div>
         <div><label className={lbl}>{t('Commentaires (vus par le salarié)', 'Comments (seen by the employee)')}</label><textarea className={`${field} py-2 min-h-[80px]`} maxLength={2000} value={form.comments} onChange={e => set({ comments: e.target.value })} /></div>
         <div><label className={lbl}>{t('Points à améliorer — note PRIVÉE, jamais montrée au salarié', 'Points to improve — PRIVATE note, never shown to the employee')}</label><textarea className={`${field} py-2 min-h-[80px]`} maxLength={1000} value={form.improvements} onChange={e => set({ improvements: e.target.value })} /></div>

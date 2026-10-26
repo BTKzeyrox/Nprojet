@@ -62,6 +62,8 @@
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:recurring": "npx --yes tsx scripts/check-recurring.ts",
     "check:planning": "npx --yes tsx scripts/check-planning.ts",
+    "check:team-goals": "npx --yes tsx scripts/check-team-goals.ts",
+    "check:team-goals-page": "esbuild scripts/check-team-goals-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-team-goals-page.mjs && node node_modules/.cache/check-team-goals-page.mjs",
     "check:planning-page": "esbuild scripts/check-planning-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-planning-page.mjs && node node_modules/.cache/check-planning-page.mjs",
     "check:ai-assistant": "npx --yes tsx scripts/check-ai-assistant.ts",
     "check:monitoring-final": "npx --yes tsx scripts/check-monitoring-final.ts",

@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { badgeAccess, usePerformance } from '../../utils/usePerformance';
 import { scoreCellsFor } from '../../utils/performanceExport';
 import { PerformanceScores } from './PerformanceScores';
+import { TeamGoalsSection } from './TeamGoalsSection';
 import { db } from '../../db/store';
 import { buildPerformance, totalRow, fmtDuration, exportPerformanceExcel, exportPerformanceCsv, type PerfPeriod, type PerfRow } from '../../utils/performance';
 
@@ -14,7 +15,7 @@ export const PerformancePage: React.FC = () => {
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const { lang } = useApp();
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  const [tab, setTab] = useState<'table' | 'scores'>('table');
+  const [tab, setTab] = useState<'table' | 'scores' | 'goals'>('table');
   const perf = usePerformance();
   const [period, setPeriod] = useState<PerfPeriod>('30');
   const [busy, setBusy] = useState(false);
@@ -44,7 +45,7 @@ export const PerformancePage: React.FC = () => {
     </tr>
   );
 
-  const tabBtn = (k: 'table' | 'scores', label: string) => (
+  const tabBtn = (k: 'table' | 'scores' | 'goals', label: string) => (
     <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`min-h-[44px] px-4 text-sm font-bold border cursor-pointer ${tab === k ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'}`}>{label}</button>
   );
   const scoresOn = badgeAccess().enabled;
@@ -54,8 +55,9 @@ export const PerformancePage: React.FC = () => {
       <div role="tablist" className="flex gap-1.5">
         {tabBtn('table', t('Tableau', 'Table'))}
         {tabBtn('scores', t('Scores et badges', 'Scores and badges'))}
+        {tabBtn('goals', t('Objectifs', 'Goals'))}
       </div>
-      {tab === 'scores' ? (scoresOn ? <PerformanceScores /> : <div className="text-sm text-slate-400 p-4">{t('Les badges de performance sont désactivés (Réglages > Conditions > Choix de fonctionnement).', 'Performance badges are turned off (Settings > Conditions > How the app works).')}</div>) : (<>
+      {tab === 'goals' ? <TeamGoalsSection /> : tab === 'scores' ? (scoresOn ? <PerformanceScores /> : <div className="text-sm text-slate-400 p-4">{t('Les badges de performance sont désactivés (Réglages > Conditions > Choix de fonctionnement).', 'Performance badges are turned off (Settings > Conditions > How the app works).')}</div>) : (<>
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-tactical font-black text-white text-base sm:text-lg">Performance</h2>

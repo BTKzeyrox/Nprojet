@@ -1777,9 +1777,66 @@ function cleanShift(rec: any, existing: any, actorId: string, now: string, ctx: 
 }
 // ===== END SHIFTS =====
 
+// ===== BEGIN TEAMGOALS (objectifs par salarié et par équipe, M15.3 : copie exacte du bloc de src/utils/teamGoals.ts ; contrôlé par scripts/check-team-goals.ts) =====
+const TG_MAX = 40;
+const TG_NAME_MAX = 60;
+const TG_METRICS = ['done', 'rate'];
+const TG_SCOPES = ['team', 'employee'];
+const tgClean = (v: unknown, max: number): string => String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
+
+type TeamGoalError = 'name' | 'duplicate' | 'limit' | 'scope' | 'employee' | 'metric' | 'target' | 'month' | 'format';
+type TeamGoalValue = { id: string; name: string; scope: string; employee_id?: string; metric: string; target: number; month: string };
+/** Vérifie un objectif saisi. `others` = les autres objectifs (deux noms identiques refusés, 40 au plus). `month` vide = chaque mois. */
+function checkTeamGoal(d: { [k: string]: unknown }, others: Array<{ id: string; name: string }>): { ok: true; value: TeamGoalValue } | { ok: false; error: TeamGoalError } {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, error: 'format' };
+  if (Object.keys(d).some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return { ok: false, error: 'format' };
+  for (const k of ['id', 'name', 'scope', 'employee_id', 'metric', 'month']) { const v = d[k]; if (v !== undefined && v !== null && typeof v !== 'string') return { ok: false, error: 'format' }; }
+  const id = tgClean(d.id ?? '', 40);
+  if (id && !/^[A-Za-z0-9_-]+$/.test(id)) return { ok: false, error: 'format' };
+  const name = tgClean(d.name ?? '', TG_NAME_MAX);
+  if (!name) return { ok: false, error: 'name' };
+  if (others.some((o) => o.id !== id && o.name.trim().toLowerCase() === name.toLowerCase())) return { ok: false, error: 'duplicate' };
+  if (!id && others.length >= TG_MAX) return { ok: false, error: 'limit' };
+  const scope = d.scope;
+  if (typeof scope !== 'string' || !TG_SCOPES.includes(scope)) return { ok: false, error: 'scope' };
+  let employee = '';
+  if (scope === 'employee') {
+    employee = typeof d.employee_id === 'string' ? d.employee_id.trim() : '';
+    if (!/^[A-Za-z0-9_-]{1,60}$/.test(employee)) return { ok: false, error: 'employee' };
+  }
+  const metric = d.metric;
+  if (typeof metric !== 'string' || !TG_METRICS.includes(metric)) return { ok: false, error: 'metric' };
+  const target = d.target;
+  if (typeof target !== 'number' || !Number.isInteger(target) || target < 1 || target > (metric === 'rate' ? 100 : 100000)) return { ok: false, error: 'target' };
+  const month = d.month === undefined || d.month === null ? '' : d.month;
+  if (month !== '') {
+    const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month as string);
+    if (!m || Number(m[1]) < 2000 || Number(m[1]) > 2100) return { ok: false, error: 'month' };
+  }
+  const value: TeamGoalValue = { id, name, scope, metric, target, month: month as string };
+  if (scope === 'employee') value.employee_id = employee;
+  return { ok: true, value };
+}
+
+/** Nettoie une liste reçue (réglages) : les objectifs faux sont ignorés, jamais d'erreur. */
+function cleanTeamGoals(list: unknown): TeamGoalValue[] {
+  if (!Array.isArray(list)) return [];
+  const out: TeamGoalValue[] = [];
+  for (const raw of list) {
+    if (out.length >= TG_MAX) break;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const id = (raw as { [k: string]: unknown }).id;
+    if (typeof id !== 'string' || !id) continue;
+    const v = checkTeamGoal(raw as { [k: string]: unknown }, out);
+    if (v.ok && !out.some((o) => o.id === v.value.id)) out.push(v.value);
+  }
+  return out;
+}
+// ===== END TEAMGOALS =====
+
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2908,6 +2965,9 @@ async function sync(req: any, res: any, me: any) {
         // Missions récurrentes (M15.1) : revérifiées ; un vieux site qui ne les envoie pas ne les efface pas
         const sentRec = (rec as any).recurring_missions === undefined ? (existing as any)?.recurring_missions : (rec as any).recurring_missions;
         if (sentRec !== undefined) toSave = { ...toSave, recurring_missions: cleanRecurring(sentRec) };
+        // Objectifs par salarié et par équipe (M15.3) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
+        const sentGoals = (rec as any).team_goals === undefined ? (existing as any)?.team_goals : (rec as any).team_goals;
+        if (sentGoals !== undefined) toSave = { ...toSave, team_goals: cleanTeamGoals(sentGoals) };
       }
       if (admin && col === 'users') {
         // Dossier du salarié (M5.1) : revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas

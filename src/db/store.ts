@@ -6,13 +6,14 @@ import { checkDeadline } from '../utils/deadlines';
 import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
 import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type RecurringDraft, type RecurringRule } from '../utils/recurring';
+import { checkTeamGoal, cleanTeamGoals, newTeamGoalId, TEAM_GOAL_ERROR_MESSAGE, type TeamGoal } from '../utils/teamGoals';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
 import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
 import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_TEAM_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
@@ -1576,7 +1577,7 @@ export class AppStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS, team_goals: DEMO_TEAM_GOALS } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
@@ -1673,6 +1674,29 @@ export class AppStore {
     const list = this.getMissionTemplates();
     if (!list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
     this.updateSettings({ mission_templates: list.filter(t => t.id !== id) });
+    return { success: true };
+  }
+
+  /** Objectifs par salarié et par équipe (M15.3) : dans les réglages, sans nouvelle table. La valeur réelle est calculée, jamais saisie. Admin seulement. */
+  public getTeamGoals(): TeamGoal[] { return cleanTeamGoals(this.getSettings().team_goals) as TeamGoal[]; }
+  /** Crée (sans `id`) ou modifie (avec `id`) un objectif. */
+  public saveTeamGoal(d: { [k: string]: unknown }): { success: boolean; error?: string; goal?: TeamGoal } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getTeamGoals();
+    const id = typeof d?.id === 'string' ? d.id : '';
+    if (id && !list.some(g => g.id === id)) return { success: false, error: 'Objectif introuvable.' };
+    const v = checkTeamGoal(d, list.filter(g => g.id !== id));
+    if (!v.ok) return { success: false, error: TEAM_GOAL_ERROR_MESSAGE[v.error] };
+    if (v.value.scope === 'employee' && !this.users.some(u => u.id === v.value.employee_id && u.role !== 'admin')) return { success: false, error: TEAM_GOAL_ERROR_MESSAGE.employee };
+    const goal = { ...v.value, id: id || newTeamGoalId(list) } as TeamGoal;
+    this.updateSettings({ team_goals: id ? list.map(g => (g.id === id ? goal : g)) : [...list, goal] });
+    return { success: true, goal };
+  }
+  public removeTeamGoal(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getTeamGoals();
+    if (!list.some(g => g.id === id)) return { success: false, error: 'Objectif introuvable.' };
+    this.updateSettings({ team_goals: list.filter(g => g.id !== id) });
     return { success: true };
   }
 
