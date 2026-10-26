@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Camera, Image as ImageIcon, Sun, Moon, Phone } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Sun, Moon, Phone, MessageCircle } from 'lucide-react';
 import { User } from '../types';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { compressImageToDataUrl } from '../utils/imageUtils';
@@ -14,6 +14,8 @@ interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  /** Bouton « Message » : ouvre la discussion privée avec cette personne (absent sur son propre profil). */
+  onMessage?: (u: User) => void;
 }
 
 /** Score et badges calculés (module 3). Montré au responsable et à la personne elle-même, JAMAIS à un collègue (D8). */
@@ -35,7 +37,7 @@ const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, se
 };
 
 // Fenêtre « Profil » : photo, nom, shift, téléphone (plus de CV ni de pièce d'identité)
-export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user }) => {
+export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage }) => {
   useLockBodyScroll(isOpen);
   const [, force] = useState(0);
   const [error, setError] = useState('');
@@ -150,6 +152,12 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
             </div>
           )}
         </div>
+
+        {onMessage && !!me && me.id !== live.id && live.status !== 'blocked' && (
+          <button type="button" onClick={() => onMessage(live)} className="rounded-xl w-full min-h-[44px] px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer flex items-center justify-center gap-2">
+            <MessageCircle className="w-4 h-4" /> Message
+          </button>
+        )}
 
         {canEdit && (
           <>

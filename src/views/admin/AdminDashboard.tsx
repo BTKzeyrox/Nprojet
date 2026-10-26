@@ -208,7 +208,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, []);
 
   // Handlers for post actions
-  const handleValidate = (postId: string, confirmed = false, note = '') => {
+  // Une décision à la fois par mission : un deuxième clic pendant l'envoi est ignoré (sinon la fenêtre revenait en boucle)
+  const decidingRef = React.useRef<Set<string>>(new Set());
+  const handleValidate = async (postId: string, confirmed = false, note = '') => {
     if (!confirmed) {
       askReason({
         title: 'Valider cette session ?',
@@ -219,8 +221,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
       return;
     }
-    const res = db.validatePost(postId, note);
-    if (!res.success) {
+    if (decidingRef.current.has(postId)) return;
+    decidingRef.current.add(postId);
+    // La décision est prise par le SERVEUR (paie et prix client calculés là-bas), puis l'état officiel est rechargé : plus de validation « perdue »
+    let res: { ok: boolean; error?: string };
+    try { res = await db.decidePost(postId, true, undefined, note); } finally { decidingRef.current.delete(postId); }
+    if (!res.ok) {
       showToast(res.error || 'Erreur lors de la validation', 'error');
     } else {
       showToast('Mission validée avec succès !', 'success');
@@ -320,15 +326,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setRejectReason('Photo illisible / Incohérence constatée');
   };
 
-  const handleConfirmReject = (e: React.FormEvent) => {
+  const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingPostId) return;
     if (!rejectReason.trim()) {
       showToast('Un motif de rejet est obligatoire.', 'error');
       return;
     }
-    const res = db.rejectPost(rejectingPostId, rejectReason);
-    if (!res.success) {
+    const id = rejectingPostId;
+    if (decidingRef.current.has(id)) return;
+    decidingRef.current.add(id);
+    let res: { ok: boolean; error?: string };
+    try { res = await db.decidePost(id, false, rejectReason); } finally { decidingRef.current.delete(id); }
+    if (!res.ok) {
       showToast(res.error || 'Erreur de rejet', 'error');
     } else {
       showToast('Soumission rejetée avec notification à l\'opérateur.', 'info');

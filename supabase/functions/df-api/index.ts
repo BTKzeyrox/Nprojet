@@ -3251,6 +3251,7 @@ async function postDecide(req: any, res: any, me: any) {
     const msg: Record<string, string> = { missing: 'Mission introuvable.', not_pending: "Cette mission n'est plus en attente.", reason: 'Un motif de refus est obligatoire.' };
     return res.status(plan.error === 'reason' ? 400 : 409).json({ error: msg[plan.error] || 'Décision impossible.' });
   }
+  if (approve) { const note = String(b.note ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 300); if (note) plan.post = { ...plan.post, admin_notes: note }; } // mot facultatif du responsable pour l'opérateur
   await sb.from(T.posts).upsert({ id, data: plan.post, updated_at: now });
   if (plan.contract && cRow) await sb.from(T.contracts).upsert({ id: cRow.id, data: plan.contract, updated_at: now });
   if (plan.employee) await sb.from(T.users).upsert({ id: plan.employee.id, data: plan.employee, updated_at: now });

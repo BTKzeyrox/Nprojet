@@ -337,7 +337,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <div className="relative">
                     <Lock className={iconCls} style={{ color: C.ico }} />
                     <input type={fgShow ? 'text' : 'password'} value={fgPass2} onChange={e => setFgPass2(e.target.value)} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
-                    {eyeBtn(fgShow, () => setFgShow(v => !v))}
                   </div>
                 </div>
                 <div>
@@ -388,6 +387,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
                 </div>
                 <div>
+                  <label className={labelCls}>Vacation</label>
+                  <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Vacation">
+                    {([['day', 'Jour', Sun], ['night', 'Nuit', Moon]] as const).map(([v, label, Icon]) => (
+                      <button key={v} type="button" role="radio" aria-checked={sgShift === v} onClick={() => setSgShift(v)} className="min-h-[48px] rounded-2xl border-2 font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2" style={sgShift === v ? { background: btnGrad, color: '#ffffff', borderColor: 'transparent' } : { backgroundColor: C.field, borderColor: C.line, color: C.text }}>
+                        <Icon className="w-4 h-4" />{label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[12px] mt-1" style={{ color: C.sub }}>Les heures de chaque vacation sont fixées par le responsable.</p>
+                </div>
+                <div>
                   <label className={labelCls}>Mot de passe (6 caractères min.)</label>
                   <div className="relative">
                     <Lock className={iconCls} style={{ color: C.ico }} />
@@ -400,7 +410,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <div className="relative">
                     <Lock className={iconCls} style={{ color: C.ico }} />
                     <input type={sgShow ? 'text' : 'password'} value={sgPass2} onChange={e => setSgPass2(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password" className={`${fieldCls} pr-12`} style={fieldStyle} />
-                    {eyeBtn(sgShow, () => setSgShow(v => !v))}
                   </div>
                 </div>
                 <div>

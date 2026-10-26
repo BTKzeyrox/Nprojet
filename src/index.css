@@ -889,3 +889,8 @@ button[class*="bg-"][class*="px-"]:not([class*="rounded"]):not([class*="w-full"]
 html .df-edge-urgent { border-left-color: #e11d48 !important; }
 html .df-edge-watch { border-left-color: #f59e0b !important; }
 html .df-edge-info { border-left-color: #0ea5e9 !important; }
+
+/* Un seul bouton « afficher / masquer le mot de passe » : on cache celui que Edge ajoute tout seul (il faisait doublon avec celui du site) */
+input::-ms-reveal,
+input::-ms-clear { display: none; }
+input[type="password"]::-webkit-credentials-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; position: absolute; right: 0; }

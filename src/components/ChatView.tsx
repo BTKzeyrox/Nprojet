@@ -18,7 +18,7 @@ import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
-import { EmojiPicker, ReactionChips, TypingDots } from './Reactions';
+import { TypingDots } from './Reactions';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
@@ -102,7 +102,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   // Arrivée depuis une notification : on ouvre directement la discussion concernée
   useEffect(() => {
-    const open = () => { const t = takeChatThread(); if (t) { setThreadId(t); setShowList(false); } };
+    const open = () => { const t = takeChatThread(); if (t) { if (t !== 'all' && !t.startsWith('grp_') && !t.startsWith('pair:')) setPickedUsers(p => (p.includes(t) ? p : [...p, t])); setThreadId(t); setShowList(false); } }; // « Message » depuis un profil : la discussion s'ouvre même sans message avant
     open();
     window.addEventListener(CHAT_THREAD_EVENT, open);
     return () => window.removeEventListener(CHAT_THREAD_EVENT, open);
@@ -538,7 +538,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const W = 256;
-    const H = menuActions.length * 44 + 10 + 56; // + la rangée d'emoji
+    const H = menuActions.length * 44 + 10;
     const mine = menuMsg?.sender_id === currentUser.id;
     let left = mine ? menuRect.right - W : menuRect.left;
     left = Math.max(8, Math.min(left, vw - W - 8));
@@ -721,9 +721,6 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         </>
                       )}
                     </div>
-                    {!gone && msg.reactions && (
-                      <ReactionChips reactions={msg.reactions} meId={currentUser.id} onToggle={e => db.reactMessage(msg.id, currentUser.id, e)} dark={!L} align={isMe ? 'end' : 'start'} />
-                    )}
                     {/* Petits détails sous la bulle (pas dans la bulle) */}
                     {!gone && (
                       <div className={`flex items-center gap-1 mt-0.5 px-1 text-[10px] ${P.sub}`}>
@@ -904,15 +901,6 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {menuMsg && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/15" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
           <div className="fixed" style={popStyle()} onClick={e => e.stopPropagation()}>
-          {!menuMsg.deleted_at && (
-            <div className="mb-2 flex" style={{ justifyContent: menuMsg.sender_id === currentUser.id ? 'flex-end' : 'flex-start' }}>
-              <EmojiPicker
-                dark={!L}
-                mine={Object.entries(menuMsg.reactions || {}).find(([, ids]) => ids.includes(currentUser.id))?.[0]}
-                onPick={e => { db.reactMessage(menuMsg.id, currentUser.id, e); setMenuMsg(null); }}
-              />
-            </div>
-          )}
           <div className={`rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`}>
             {menuActions.map(a => {
               const I = a.icon;

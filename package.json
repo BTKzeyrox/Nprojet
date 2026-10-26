@@ -93,6 +93,8 @@
     "check:audit": "npx --yes tsx scripts/check-audit.ts",
     "check:login-guard": "npx --yes tsx scripts/check-login-guard.ts",
     "check:totp": "npx --yes tsx scripts/check-totp.ts",
+    "check:ui-fixes": "npx --yes tsx scripts/check-ui-fixes.ts",
+    "check:admin-decide": "npx --yes tsx scripts/check-admin-decide.ts",
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",
     "check:export": "npx --yes tsx scripts/check-export.ts",
     "check:totp-page": "esbuild scripts/check-totp-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-totp-page.mjs && node node_modules/.cache/check-totp-page.mjs",

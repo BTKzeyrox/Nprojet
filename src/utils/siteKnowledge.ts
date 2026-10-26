@@ -23,7 +23,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'feed', audience: 'both', title: b('Actualités', 'News'),
     purpose: b('Les annonces de l\'équipe : ce qu\'il faut savoir avant de travailler.', 'Team announcements: what to know before working.'),
     howto: [b('Lire les publications, les plus récentes en premier.', 'Read the posts, newest first.'), b('Un employé peut proposer une publication.', 'An employee can propose a post.'), b('L\'admin accepte ou refuse, avec un motif.', 'The admin accepts or refuses, with a reason.')],
-    rules: [b('Une publication d\'employé n\'est visible de tous qu\'après acceptation par l\'admin.', 'An employee post is visible to everyone only after admin approval.')],
+    rules: [b('Une publication d\'employé n\'est visible de tous qu\'après acceptation par l\'admin.', 'An employee post is visible to everyone only after admin approval.'), b('Les derniers commentaires se voient sous la publication ; toucher un nom ouvre son profil, avec le bouton « Message ».', 'The latest comments show under the post; tap a name to open the profile, with a "Message" button.')],
     figures: [],
   },
   {
@@ -164,7 +164,7 @@ export const SITE_MAP: SitePage[] = [
   {
     id: 'chat', audience: 'both', title: b('Messagerie', 'Messages'),
     purpose: b('Discussions entre personnes et groupes, comme une messagerie classique.', 'Conversations between people and groups, like a regular messenger.'),
-    howto: [b('Choisir une discussion ou un groupe.', 'Pick a conversation or a group.'), b('Écrire, joindre un fichier, réagir avec un emoji.', 'Write, attach a file, react with an emoji.'), b('Modifier ou épingler ses propres messages.', 'Edit or pin your own messages.')],
+    howto: [b('Choisir une discussion ou un groupe.', 'Pick a conversation or a group.'), b('Écrire et joindre un fichier.', 'Write and attach a file.'), b('Modifier ou épingler ses propres messages.', 'Edit or pin your own messages.')],
     rules: [b('On ne modifie que ses propres messages, même l\'admin.', 'You only edit your own messages, even the admin.'), b('Supprimer pour tous : l\'auteur ou l\'admin ; une trace reste dans la discussion.', 'Delete for everyone: the author or the admin; a trace stays in the conversation.'), b('Une seule réaction par personne et par message.', 'One reaction per person per message.')],
     figures: [],
   },

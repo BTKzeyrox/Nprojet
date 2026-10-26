@@ -2650,11 +2650,11 @@ export class AppStore {
     return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
   }
   // --- Chef d'équipe (M7.1 d) : valider ou refuser la session d'un opérateur de son équipe. La paie et le prix client sont calculés par le serveur, jamais ici. ---
-  public async decidePost(id: string, approve: boolean, reason?: string): Promise<{ ok: boolean; error?: string }> {
+  public async decidePost(id: string, approve: boolean, reason?: string, note?: string): Promise<{ ok: boolean; error?: string }> {
     const me = this.currentUser;
     if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return { ok: false, error: 'Réservé au chef d\'équipe.' };
-    if (this.demo) { const r = approve ? this.validatePost(id) : this.rejectPost(id, reason || ''); return r.success ? { ok: true } : { ok: false, error: r.error }; }
-    const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason }) });
+    if (this.demo) { const r = approve ? this.validatePost(id, note) : this.rejectPost(id, reason || ''); return r.success ? { ok: true } : { ok: false, error: r.error }; }
+    const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason, note: approve ? note : undefined }) });
     if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
     this.since = ''; await this.pull(true);
     return { ok: true };

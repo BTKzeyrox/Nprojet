@@ -47,6 +47,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Un employé peut proposer une publication. 3. L'admin accepte ou refuse, avec un motif.
 - **Règles** :
   - Une publication d'employé n'est visible de tous qu'après acceptation par l'admin.
+  - Les derniers commentaires se voient sous la publication ; toucher un nom ouvre son profil, avec le bouton « Message ».
 - **Dans le code** : `src/views/FeedView.tsx`
 
 ### Tableau de bord  `dashboard`
@@ -234,7 +235,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Messagerie  `chat`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Discussions entre personnes et groupes, comme une messagerie classique.
-- **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire, joindre un fichier, réagir avec un emoji. 3. Modifier ou épingler ses propres messages.
+- **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier. 3. Modifier ou épingler ses propres messages.
 - **Règles** :
   - On ne modifie que ses propres messages, même l'admin.
   - Supprimer pour tous : l'auteur ou l'admin ; une trace reste dans la discussion.
@@ -715,6 +716,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:audit` | Contrôle du journal d'audit (M7.2) : règles du site, copie serveur identique, protections du serveur, migration. Lancer : npm run check:audit |
 | `npm run check:login-guard` | Contrôle M16.3 : blocage après trop d'essais. Règles, copie serveur identique, série d'essais simulée, panne = on laisse passer. |
 | `npm run check:totp` | Contrôle M16.4 (partie règles) : TOTP contre les vecteurs officiels RFC 6238, secours, copie serveur. Le branchement serveur est contrôlé plus bas (ajouté avec le bloc). |
+| `npm run check:ui-fixes` | Contrôle des corrections du 2026-10-26 : commentaires visibles dans l'actualité, profil cliquable avec « Message », un seul œil sur les mots de passe, vacation à l'inscription, messagerie sans emoji. |
+| `npm run check:admin-decide` | Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
 | `npm run check:totp-page` | Contrôle M16.4 (écrans) : la carte « Sécurité en deux étapes » ne montre rien tant que le serveur n'a pas dit « oui » et ne fait aucun appel pendant l'affichage ; le mode démo n'appelle jamais le serveur. |

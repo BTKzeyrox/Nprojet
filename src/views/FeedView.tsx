@@ -56,6 +56,7 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('fr-FR');
 };
 
+const PREVIEW_COMMENTS = 2; // commentaires montrés sous la publication sans rien ouvrir
 const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: boolean; onAsk: ReturnType<typeof useConfirm>['ask']; onOpenProfile?: (u: User) => void }> = ({ post, me, isAdmin, light, onAsk, onOpenProfile }) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -134,11 +135,11 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       <header className="flex items-center gap-3">
         {post.author_role === 'employee'
           ? <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(x => x.id === post.author_id)?.avatar_url} name={post.author_name || '?'} className="w-10 h-10 rounded-full" /></button>
-          : <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">GP</div>}
+          : <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">GP</div></button>}
         <div className="min-w-0 flex-1">
           {post.author_role === 'employee'
             ? <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Opérateur'}</button>
-            : <div className="font-bold text-sm truncate">{post.author_name || 'Responsable'}</div>}
+            : <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Responsable'}</button>}
           <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}</div>
         </div>
         {!isAdmin && post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
@@ -225,10 +226,11 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
 
       {msg && <div className="text-xs text-amber-600">{msg}</div>}
 
-      {published && open && (
+      {published && (open || post.comments.length > 0) && (
         <div className="space-y-3 pt-1">
-          {post.comments.length === 0 && <div className={`text-xs ${muted}`}>Aucun commentaire pour le moment.</div>}
-          {post.comments.map(c => {
+          {open && post.comments.length === 0 && <div className={`text-xs ${muted}`}>Aucun commentaire pour le moment.</div>}
+          {!open && post.comments.length > PREVIEW_COMMENTS && <button type="button" onClick={() => setOpen(true)} className={`text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>Voir les {post.comments.length} commentaires</button>}
+          {(open ? post.comments : post.comments.slice(-PREVIEW_COMMENTS)).map(c => {
             const u = users.find(x => x.id === c.user_id);
             const mine = c.user_id === me.id;
             return (
@@ -236,9 +238,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                 <button type="button" onClick={() => openProfile(c.user_id)} className="shrink-0 cursor-pointer self-start" title="Voir le profil"><Avatar src={u?.avatar_url} name={c.user_name || '?'} className="w-8 h-8 rounded-full" /></button>
                 <div className={`flex-1 min-w-0 rounded-xl px-3 py-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
                   <div className="flex items-center gap-2">
-                    {c.role === 'admin'
-                      ? <span className="text-xs font-bold truncate">Responsable</span>
-                      : <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.user_name}</button>}
+                    <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.role === 'admin' ? 'Responsable' : c.user_name}</button>
                     <span className={`text-[11px] ${muted}`}>{timeAgo(c.created_at)}</span>
                     {(isAdmin || mine) && (
                       <button type="button" title="Supprimer" onClick={() => void run(() => db.deleteCommentNews(post.id, c.id))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -267,7 +267,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               </div>
             );
           })}
-          {cItems.length > 0 && (
+          {open && cItems.length > 0 && (
             <ul className="space-y-1.5">
               {cItems.map(it => (
                 <li key={it.key} className={`flex items-center gap-2.5 rounded-lg p-1.5 pr-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
@@ -283,7 +283,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               ))}
             </ul>
           )}
-          <div className="flex gap-2">
+          {open && <div className="flex gap-2">
             <input ref={cFile} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void pickComment(e)} />
             <button type="button" disabled={busy || cPrep} onClick={() => cFile.current?.click()} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} aria-label="Joindre une photo ou un fichier">
               {cPrep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
@@ -299,7 +299,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
               {cProg ? `${cProg.d}/${cProg.t}` : <Send className="w-4 h-4" />}
             </button>
-          </div>
+          </div>}
         </div>
       )}
       {lb && <LightboxModal isOpen onClose={() => setLb(null)} imageUrl={lb.url} gallery={lb.gallery} names={lb.names} title={post.title || 'Publication'} />}

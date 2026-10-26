@@ -30,7 +30,7 @@ import { ScrollButtons } from './components/ScrollButtons';
 import { DiagPanel } from './components/DiagPanel';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
-import { NAV_TARGET_EVENT, peekNavTarget, flashNav } from './utils/navTarget';
+import { NAV_TARGET_EVENT, peekNavTarget, flashNav, setChatThread } from './utils/navTarget';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
@@ -549,6 +549,7 @@ export default function App() {
             isOpen={cvModalUser !== null}
             onClose={() => setCvModalUser(null)}
             user={cvModalUser}
+            onMessage={u => { setCvModalUser(null); setChatThread(u.id); setActiveView('chat'); }}
           />
         </Suspense>
       )}
