@@ -4338,7 +4338,7 @@ async function purgeEmployee(uid: string) {
 }
 
 async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'comment-react' | 'share', req: any, res: any, me: any) {
-  const { id, text, commentId, files, emoji } = req.body || {};
+  const { id, text, commentId, files, emoji, parentId, replyToName } = req.body || {};
   if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
   const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
   if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
@@ -4356,7 +4356,15 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
     const cf = cleanFiles(files, me.id);
     if (!clean && !cf.length) return res.status(400).json({ error: 'Écris un commentaire ou joins un fichier.' });
     if (d.comments.length >= NEWS_MAX_COMMENTS) return res.status(400).json({ error: 'Trop de commentaires sur cette publication.' });
-    d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, ...(cf.length ? { files: cf } : {}), created_at: new Date().toISOString() });
+    // Réponse (comme Facebook) : 2 niveaux au plus. Répondre à une réponse se range sous le même commentaire de premier niveau.
+    let parent: any = null;
+    if (parentId !== undefined && parentId !== null && parentId !== '') {
+      const target = d.comments.find((x: any) => x.id === String(parentId));
+      if (!target) return res.status(404).json({ error: 'Le commentaire auquel tu réponds n\'existe plus.' });
+      parent = target.parent_id ? d.comments.find((x: any) => x.id === target.parent_id) || target : target;
+    }
+    const replyName = String(replyToName ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 80);
+    d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, ...(cf.length ? { files: cf } : {}), ...(parent ? { parent_id: parent.id, ...(replyName ? { reply_to_name: replyName } : {}) } : {}), created_at: new Date().toISOString() });
   } else if (kind === 'comment-react') {
     if (!REACTION_EMOJIS.includes(String(emoji))) return res.status(400).json({ error: 'Réaction inconnue.' });
     const idx = d.comments.findIndex((x: any) => x.id === commentId);
@@ -4375,8 +4383,9 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
     const c = d.comments.find((x: any) => x.id === commentId);
     if (!c) return res.status(404).json({ error: 'Commentaire introuvable.' });
     if (me.role !== 'admin' && c.user_id !== me.id) return res.status(403).json({ error: 'Tu ne peux pas supprimer ce commentaire.' });
-    await dropFiles(Array.isArray(c.files) ? c.files : []);
-    d.comments = d.comments.filter((x: any) => x.id !== commentId);
+    const gone = d.comments.filter((x: any) => x.id === commentId || x.parent_id === commentId); // un commentaire part avec ses réponses
+    for (const g of gone) await dropFiles(Array.isArray(g.files) ? g.files : []);
+    d.comments = d.comments.filter((x: any) => x.id !== commentId && x.parent_id !== commentId);
   } else {
     d.shares += 1;
   }

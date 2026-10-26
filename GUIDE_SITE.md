@@ -47,7 +47,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Un employé peut proposer une publication. 3. L'admin accepte ou refuse, avec un motif.
 - **Règles** :
   - Une publication d'employé n'est visible de tous qu'après acceptation par l'admin.
-  - Les derniers commentaires se voient sous la publication ; toucher un nom ouvre son profil, avec le bouton « Message ».
+  - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire (comme Facebook) ; toucher un nom ouvre son profil, avec « Message ».
 - **Dans le code** : `src/views/FeedView.tsx`
 
 ### Tableau de bord  `dashboard`

@@ -23,7 +23,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'feed', audience: 'both', title: b('Actualités', 'News'),
     purpose: b('Les annonces de l\'équipe : ce qu\'il faut savoir avant de travailler.', 'Team announcements: what to know before working.'),
     howto: [b('Lire les publications, les plus récentes en premier.', 'Read the posts, newest first.'), b('Un employé peut proposer une publication.', 'An employee can propose a post.'), b('L\'admin accepte ou refuse, avec un motif.', 'The admin accepts or refuses, with a reason.')],
-    rules: [b('Une publication d\'employé n\'est visible de tous qu\'après acceptation par l\'admin.', 'An employee post is visible to everyone only after admin approval.'), b('Les derniers commentaires se voient sous la publication ; toucher un nom ouvre son profil, avec le bouton « Message ».', 'The latest comments show under the post; tap a name to open the profile, with a "Message" button.')],
+    rules: [b('Une publication d\'employé n\'est visible de tous qu\'après acceptation par l\'admin.', 'An employee post is visible to everyone only after admin approval.'), b('Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire (comme Facebook) ; toucher un nom ouvre son profil, avec « Message ».', 'The latest comments show under the post; "Reply" answers a comment (like Facebook); tap a name to open the profile, with "Message".')],
     figures: [],
   },
   {

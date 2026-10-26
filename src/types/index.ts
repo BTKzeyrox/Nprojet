@@ -350,6 +350,8 @@ export interface NewsComment {
   text: string;
   files?: NewsAttachment[];
   reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
+  parent_id?: string; // réponse : identifiant du commentaire de premier niveau (2 niveaux au plus, comme Facebook)
+  reply_to_name?: string; // nom de la personne à qui on répond (affiché « @nom »)
   created_at: string;
 }
 

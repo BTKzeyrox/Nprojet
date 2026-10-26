@@ -1261,7 +1261,7 @@ export class AppStore {
     }
     return r;
   }
-  public commentNews(id: string, text: string, files?: NewsAttachment[]) { return this.newsCall('news-comment', { id, text, files: files || [] }); }
+  public commentNews(id: string, text: string, files?: NewsAttachment[], reply?: { parentId: string; replyToName: string }) { return this.newsCall('news-comment', { id, text, files: files || [], ...(reply ? { parentId: reply.parentId, replyToName: reply.replyToName } : {}) }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }
 
@@ -1423,12 +1423,13 @@ export class AppStore {
         const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
         const text = String(body.text || '').trim().slice(0, 1000);
         if (!text && !(body.files || []).length) return fail('Écris un commentaire.');
-        n.comments = [...n.comments, { id: `demo_nc${Date.now()}`, user_id: me.id, user_name: me.name, role: me.role, text, files: body.files || [], created_at: nowIso }];
+        const par = body.parentId ? n.comments.find(x => x.id === body.parentId) : undefined;
+        n.comments = [...n.comments, { id: `demo_nc${Date.now()}`, user_id: me.id, user_name: me.name, role: me.role, text, files: body.files || [], ...(par ? { parent_id: par.parent_id || par.id, reply_to_name: String(body.replyToName || '').slice(0, 80) } : {}), created_at: nowIso }];
         return keep(n);
       }
       case 'news-comment-delete': {
         const n = post(body.id); if (!n) return fail('Publication introuvable.');
-        n.comments = n.comments.filter(c => c.id !== body.commentId);
+        n.comments = n.comments.filter(c => c.id !== body.commentId && c.parent_id !== body.commentId); // les réponses partent avec leur commentaire
         return keep(n);
       }
       case 'news-share': {

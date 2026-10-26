@@ -8,7 +8,7 @@ import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
-import type { NewsAttachment, NewsPost, User } from '../types';
+import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -68,6 +68,8 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const [cPrep, setCPrep] = useState(false);
   const [cProg, setCProg] = useState<{ d: number; t: number } | null>(null);
   const cFile = useRef<HTMLInputElement>(null);
+  const cInput = useRef<HTMLInputElement>(null);
+  const [reply, setReply] = useState<{ parentId: string; name: string } | null>(null); // réponse en cours : à quel commentaire, et à qui
   const status = post.status || 'published';
   const published = status === 'published';
   const mine = post.author_id === me.id;
@@ -78,6 +80,8 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const card = light ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100';
   const muted = light ? 'text-slate-500' : 'text-slate-400';
   const users = db.getUsers();
+  const tops = post.comments.filter(c => !c.parent_id || !post.comments.some(x => x.id === c.parent_id)); // commentaires de premier niveau (une réponse orpheline remonte)
+  const startReply = (c: NewsComment) => { setReply({ parentId: c.parent_id || c.id, name: c.role === 'admin' ? 'Responsable' : c.user_name }); setOpen(true); setTimeout(() => cInput.current?.focus(), 50); };
   const openProfile = (id: string) => { const u = users.find(x => x.id === id); if (u && onOpenProfile) onOpenProfile(u); };
 
   const run = async (fn: () => Promise<{ success: boolean; error?: string }>) => {
@@ -122,13 +126,53 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     const up = await uploadAttachments(cItems, (d, t) => setCProg({ d, t }));
     setCProg(null);
     if (!up.ok) { setMsg(up.error); setBusy(false); return; }
-    const r = await db.commentNews(post.id, v, up.files);
+    const r = await db.commentNews(post.id, v, up.files, reply ? { parentId: reply.parentId, replyToName: reply.name } : undefined);
     if (!r.success) { setMsg(r.error || 'Action impossible.'); setBusy(false); return; }
-    setText(''); setCItems([]);
+    setText(''); setCItems([]); setReply(null);
     setBusy(false);
   };
 
   const btn = `flex-1 min-w-0 flex items-center justify-center gap-1 px-1.5 py-2 text-xs font-semibold whitespace-nowrap rounded-lg transition-colors disabled:opacity-50 ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`;
+
+  // Un commentaire (ou une réponse) : « Répondre » ouvre la zone d'écriture avec le nom de la personne
+  const renderComment = (c: NewsComment, isReply: boolean) => {
+            const u = users.find(x => x.id === c.user_id);
+            const mine = c.user_id === me.id;
+            return (
+              <div key={c.id} className={`flex gap-2.5 ${isReply ? 'ml-10' : ''}`}>
+                <button type="button" onClick={() => openProfile(c.user_id)} className="shrink-0 cursor-pointer self-start" title="Voir le profil"><Avatar src={u?.avatar_url} name={c.user_name || '?'} className={`${isReply ? 'w-6 h-6' : 'w-8 h-8'} rounded-full`} /></button>
+                <div className={`flex-1 min-w-0 rounded-xl px-3 py-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.role === 'admin' ? 'Responsable' : c.user_name}</button>
+                    <span className={`text-[11px] ${muted}`}>{timeAgo(c.created_at)}</span>
+                    {(isAdmin || mine) && (
+                      <button type="button" title="Supprimer" onClick={() => void run(() => db.deleteCommentNews(post.id, c.id))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                    )}
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap break-words">{c.reply_to_name && <span className="font-semibold text-emerald-600">@{c.reply_to_name} </span>}{c.text}</p>
+                  {(c.files || []).length > 0 && (() => {
+                    const cImgs = (c.files || []).filter(f => f.kind === 'image');
+                    const cOthers = (c.files || []).filter(f => f.kind !== 'image');
+                    return (
+                      <div className="mt-1.5 space-y-1.5">
+                        {cImgs.length > 0 && (
+                          <ImageCarousel compact images={cImgs} onOpen={url => setLb({ url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} />
+                        )}
+                        {cOthers.map(f => (
+                          <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${light ? 'bg-white hover:bg-slate-50' : 'bg-white/5 hover:bg-white/10'}`}>
+                            <FileText className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span className="truncate flex-1 min-w-0">{f.name}</span>
+                            {f.size ? <span className={`shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {open || !isReply ? <button type="button" onClick={() => startReply(c)} className={`mt-1 text-[11px] font-semibold cursor-pointer ${muted}`}>Répondre</button> : null}
+                </div>
+              </div>
+            );
+  };
 
   return (
     <article className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
@@ -230,40 +274,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
         <div className="space-y-3 pt-1">
           {open && post.comments.length === 0 && <div className={`text-xs ${muted}`}>Aucun commentaire pour le moment.</div>}
           {!open && post.comments.length > PREVIEW_COMMENTS && <button type="button" onClick={() => setOpen(true)} className={`text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>Voir les {post.comments.length} commentaires</button>}
-          {(open ? post.comments : post.comments.slice(-PREVIEW_COMMENTS)).map(c => {
-            const u = users.find(x => x.id === c.user_id);
-            const mine = c.user_id === me.id;
+          {(open ? tops : tops.slice(-PREVIEW_COMMENTS)).map(c => {
+            const replies = post.comments.filter(r => r.parent_id === c.id);
             return (
-              <div key={c.id} className="flex gap-2.5">
-                <button type="button" onClick={() => openProfile(c.user_id)} className="shrink-0 cursor-pointer self-start" title="Voir le profil"><Avatar src={u?.avatar_url} name={c.user_name || '?'} className="w-8 h-8 rounded-full" /></button>
-                <div className={`flex-1 min-w-0 rounded-xl px-3 py-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`}>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.role === 'admin' ? 'Responsable' : c.user_name}</button>
-                    <span className={`text-[11px] ${muted}`}>{timeAgo(c.created_at)}</span>
-                    {(isAdmin || mine) && (
-                      <button type="button" title="Supprimer" onClick={() => void run(() => db.deleteCommentNews(post.id, c.id))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
-                    )}
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap break-words">{c.text}</p>
-                  {(c.files || []).length > 0 && (() => {
-                    const cImgs = (c.files || []).filter(f => f.kind === 'image');
-                    const cOthers = (c.files || []).filter(f => f.kind !== 'image');
-                    return (
-                      <div className="mt-1.5 space-y-1.5">
-                        {cImgs.length > 0 && (
-                          <ImageCarousel compact images={cImgs} onOpen={url => setLb({ url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} />
-                        )}
-                        {cOthers.map(f => (
-                          <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${light ? 'bg-white hover:bg-slate-50' : 'bg-white/5 hover:bg-white/10'}`}>
-                            <FileText className="w-4 h-4 shrink-0 text-emerald-600" />
-                            <span className="truncate flex-1 min-w-0">{f.name}</span>
-                            {f.size ? <span className={`shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
+              <div key={c.id} className="space-y-2">
+                {renderComment(c, false)}
+                {open ? replies.map(r => renderComment(r, true)) : replies.length > 0 && <button type="button" onClick={() => setOpen(true)} className={`ml-10 text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>Voir {replies.length} {replies.length > 1 ? 'réponses' : 'réponse'}</button>}
               </div>
             );
           })}
@@ -283,17 +299,24 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               ))}
             </ul>
           )}
+          {open && reply && (
+            <div className={`flex items-center justify-between gap-2 text-xs rounded-lg px-2.5 py-1.5 ${light ? 'bg-slate-100 text-slate-700' : 'bg-white/5 text-slate-200'}`}>
+              <span className="truncate">Réponse à <b>{reply.name}</b></span>
+              <button type="button" onClick={() => setReply(null)} className="shrink-0 p-1 cursor-pointer" aria-label="Annuler la réponse"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
           {open && <div className="flex gap-2">
             <input ref={cFile} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void pickComment(e)} />
             <button type="button" disabled={busy || cPrep} onClick={() => cFile.current?.click()} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} aria-label="Joindre une photo ou un fichier">
               {cPrep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </button>
             <input
+              ref={cInput}
               value={text}
               maxLength={500}
               onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') void send(); }}
-              placeholder="Écrire un commentaire…"
+              placeholder={reply ? `Répondre à ${reply.name}…` : 'Écrire un commentaire…'}
               className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`}
             />
             <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
