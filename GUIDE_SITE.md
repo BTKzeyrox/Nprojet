@@ -254,6 +254,21 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Réglages liés** (Réglages > Conditions) : `leave.late_limit_time`
 - **Dans le code** : `src/views/CalendarView.tsx`
 
+### Comptabilité  `accounting`
+- **Qui** : responsable
+- **À quoi ça sert** : Le journal des écritures (partie double), le grand livre, la balance, le résultat et le bilan. Les écritures viennent des factures, paiements, dépenses, paies et avances.
+- **Comment l'utiliser** : 1. Appuie sur « Générer les écritures » : chaque pièce sans écriture en reçoit une, jamais de doublon. 2. Choisis la période, puis le Journal, le Grand livre, la Balance, le Résultat ou le Bilan. 3. Pour corriger : annule l'écriture (écriture inverse) puis saisis la bonne.
+- **Règles** :
+  - Une écriture a toujours autant de débit que de crédit ; une écriture enregistrée ne se modifie jamais.
+  - Le numéro d'écriture (EC-2026-0001) est donné par le serveur, dans l'ordre des dates.
+  - Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.
+  - Le plan comptable est un plan minimal de départ, à valider par un expert-comptable.
+- **Chiffres et formules** :
+  - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
+  - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
+  - Bilan : Actif = soldes débiteurs ; passif = soldes créditeurs + résultat cumulé jusqu'à la date.
+- **Dans le code** : `src/views/admin/AccountingPage.tsx`
+
 ### Direction  `direction`
 - **Qui** : responsable
 - **À quoi ça sert** : Une page de synthèse du mois en cours : argent, créances en retard, meilleurs clients et salariés, stock critique, alertes.
@@ -437,7 +452,7 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M6 Missions avancées** | Date limite et priorité, modèles, liste de tâches, notifications push | `src/utils/deadlines.ts`, `src/utils/missionTemplates.ts`, `src/utils/taskList.ts`, `src/utils/pushRules.ts` | dans `df_posts` | `npm run check:deadlines`, `npm run check:templates`, `npm run check:tasks`, `npm run check:push` |
 | **M7 Droits et traçabilité** | Quatre rôles, Chef d'équipe, journal d'audit, restauration | `src/utils/roles.ts`, `src/utils/auditRules.ts`, `src/utils/postDecision.ts`, `src/utils/teamLead.ts` | journal dans `df_security_logs` | `npm run check:roles`, `npm run check:audit`, `npm run check:team-lead` |
 | **M8.1 Direction** | Une page de synthèse du mois, **sans nouveau calcul** | `src/utils/direction.ts` | aucune | `npm run check:direction` |
-| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures (M14.1), écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2), table `df_entries` et serveur en ligne depuis `df-api` v37 (M14.3) ; pas encore d'écran (M14.4), aucune écriture générée.** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts` | `df_entries` | `npm run check:accounting`, `npm run check:accounting-entries`, `npm run check:accounting-server` |
+| **M14 Comptabilité** (en cours) | Plan comptable minimal, écritures à partie double, grand livre, balance, résultat, bilan, TVA. **Règles pures (M14.1), écritures automatiques depuis factures, avoirs, argent, paie et avances (M14.2), table `df_entries` et serveur en ligne depuis `df-api` v37 (M14.3) ; page « Comptabilité » faite (M14.4) : journal, grand livre, balance, résultat, bilan, saisie et annulation. Aucune écriture n'est générée tant que personne n'appuie sur « Générer ». Restent la TVA (M14.5), la clôture (M14.6), le rapprochement (M14.7), l'export (M14.8).** À valider par un expert-comptable. | `src/utils/accounting.ts`, `src/utils/accountingEntries.ts`, `src/views/admin/AccountingPage.tsx` | `df_entries` | `npm run check:accounting`, `npm run check:accounting-entries`, `npm run check:accounting-server`, `npm run check:accounting-page` |
 | **M11 Admin IA Pro** | Santé du site (alertes automatiques par page), assistant sans IA externe, « Pourquoi ce chiffre ? », carte du site, IA externe facultative (désactivée par défaut) | `src/utils/health/`, `src/utils/assistant.ts`, `src/utils/siteKnowledge.ts`, `src/utils/siteSnapshot.ts`, `src/utils/advice.ts`, `src/utils/aiAssist.ts` | aucune (calcul dans le navigateur de l'admin) | `npm run check:health`, `npm run check:assistant`, `npm run check:site-map` |
 | **M12 Mes tableaux** | Tableur simple pour saisir à la place d'Excel : formules sûres, tri, filtre, corbeille, exports | `src/utils/sheets.ts`, `src/utils/sheetFormula.ts`, `src/utils/sheetExport.ts` | `df_sheets` | `npm run check:sheets` |
 | **M15.1 Missions récurrentes** (M15 en cours) | Une règle crée une mission toute seule (chaque jour, jours de la semaine ou jour du mois) à l'heure de Madagascar, jamais en double ; arrêt et reprise sans rattrapage. Réglages > Missions. | `src/utils/recurring.ts` | aucune table : règles dans les réglages (`recurring_missions`, admin seulement) ; tâche planifiée `df-recurring-due` toutes les 15 min → route `recurring-due` | `npm run check:recurring` |
@@ -653,6 +668,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
+| `npm run check:accounting-page` | Essai de la page Comptabilité (M14.4), sans écran réel ni réseau : démo, génération, saisie, annulation, FR et EN, rôles. Lancer : npm run check:accounting-page |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |

@@ -57,6 +57,6 @@ ok(/if \(col === 'sheets'\) \{\n        \/\/ Tableaux : seul le propriétaire/.t
 ok(/step\('sheets'/.test(src), 'serveur : un compte supprimé emporte ses tableaux');
 ok(fs.existsSync(new URL('../supabase/migrations/20261024_create_df_sheets.sql', import.meta.url)) && /revoke all on public\.df_sheets from anon, authenticated/.test(fs.readFileSync(new URL('../supabase/migrations/20261024_create_df_sheets.sql', import.meta.url), 'utf8')), 'migration : table sans aucun accès public');
 const store = fs.readFileSync(new URL('../src/db/store.ts', import.meta.url), 'utf8');
-ok(/'reviews', 'sheets'\] as const/.test(store), 'site : collection « sheets » synchronisée');
+ok(/const COLS = \[[^\]]*'sheets'[^\]]*\] as const/.test(store), 'site : collection « sheets » synchronisée');
 console.log(fails ? `\n${fails} échec(s) sur ${n}` : `\n${n}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

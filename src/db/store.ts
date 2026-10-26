@@ -22,6 +22,8 @@ import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
 import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
 import { demoSheets, type Sheet } from '../utils/sheets';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
+import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, type Entry } from '../utils/accounting';
+import { buildEntries } from '../utils/accountingEntries';
 import { checkHrFile, type HrFile } from '../utils/hrFile';
 import { todayMada as madaToday } from '../utils/stats';
 import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
@@ -63,7 +65,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://fvkusbdhetxl
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'shifts', 'reviews', 'sheets'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'shifts', 'reviews', 'sheets', 'entries'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -125,6 +127,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
   suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
   quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
+  entries: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.number || b.id).localeCompare(String(a.number || a.id)),
   reviews: (a, b) => String(b.period_end || '').localeCompare(String(a.period_end || '')) || String(a.id).localeCompare(String(b.id)),
   sheets: (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')) || String(a.id).localeCompare(String(b.id)),
   leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
@@ -176,6 +179,7 @@ export class AppStore {
   private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
   private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
   private sheets: Sheet[] = []; // « Mes tableaux » (module 12) : un opérateur ne reçoit que les siens ; l'admin lit tous (lecture seule)
+  private entries: Entry[] = []; // écritures comptables (M14) : responsable et Comptable seulement ; JAMAIS écrites par la synchro (routes accounting-*)
   private reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
   private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
   private shifts: Shift[] = []; // planning des équipes (M15.2) : le responsable voit et écrit tout, un salarié ne reçoit que SON planning
@@ -237,7 +241,7 @@ export class AppStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(), shifts: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(), shifts: new Map(), entries: new Map(),
     };
   }
 
@@ -263,6 +267,7 @@ export class AppStore {
       case 'leaves': return this.leaves;
       case 'shifts': return this.shifts;
       case 'reviews': return this.reviews;
+      case 'entries': return this.entries;
       case 'sheets': return this.sheets;
     }
   }
@@ -289,6 +294,7 @@ export class AppStore {
       case 'leaves': this.leaves = value; break;
       case 'shifts': this.shifts = Array.isArray(value) ? value : []; break; // un serveur plus ancien n'envoie pas encore le planning
       case 'reviews': this.reviews = value; break;
+      case 'entries': this.entries = value; break;
       case 'sheets': this.sheets = value; break;
     }
   }
@@ -679,6 +685,11 @@ export class AppStore {
   }
   public issueInvoice(id: string) { return this.invoiceCall('invoice-issue', { id }); }
   public cancelInvoice(id: string) { return this.invoiceCall('invoice-cancel', { id }); }
+  // Comptabilité (M14) : le site LIT les écritures ; elles ne s'écrivent que par ces trois routes (le serveur revérifie, attribue le numéro et note tout dans le journal d'audit).
+  public getEntries(): Entry[] { return [...this.entries]; }
+  public accountingSync() { return this.invoiceCall('accounting-sync', {}); }
+  public postEntry(d: { date: string; journal: string; label: string; ref?: string; lines: { account: string; debit: number; credit: number }[] }) { return this.invoiceCall('accounting-post', d); }
+  public reverseEntryById(id: string, date: string, reason: string) { return this.invoiceCall('accounting-reverse', { id, date, reason }); }
   public payInvoice(id: string, p: { amount: number; date: string; method?: string; note?: string }) { return this.invoiceCall('invoice-pay', { id, ...p }); }
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
@@ -1550,6 +1561,41 @@ export class AppStore {
         this.emit();
         return ok();
       }
+      case 'accounting-sync': {
+        if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
+        const built = buildEntries({ invoices: this.invoices, cash: this.cash, slips: [], advances: this.advanceRequests });
+        const have = new Set(this.entries.map(e => e.id));
+        const fresh = built.entries.filter(e => !have.has(e.id));
+        this.entries = [...assignNumbers(fresh, this.entries), ...this.entries];
+        this.emit();
+        return ok({ ok: true, created: fresh.length, existing: built.entries.length - fresh.length, total: built.entries.length, skipped: built.skipped });
+      }
+      case 'accounting-post': {
+        if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
+        const id = `je-manual-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        const v = cleanEntry({ id, date: body.date, journal: body.journal, ref: body.ref, label: body.label, lines: body.lines, source: { type: 'manual', id } });
+        if (!v.ok) return fail(`Écriture refusée (${v.reason}).`);
+        this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries];
+        this.emit();
+        return ok({ ok: true, id, created: 1 });
+      }
+      case 'accounting-reverse': {
+        if (me?.role !== 'admin') return fail('Réservé à l\'administrateur.');
+        const orig = this.entries.find(e => e.id === body.id);
+        const reason = String(body.reason || '').replace(/[<>]/g, '').trim().slice(0, 150), date = String(body.date || '');
+        if (!orig) return fail('Cette écriture n\'existe pas.');
+        if (reason.length < 3) return fail('Écris un motif (3 caractères au moins).');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < orig.date) return fail('Date incorrecte (pas avant l\'écriture annulée).');
+        if (orig.reversal_of) return fail('Une annulation ne s\'annule pas : saisis une nouvelle écriture.');
+        if (orig.reversed_by) return fail('Cette écriture est déjà annulée.');
+        const rev = reverseAccounting(orig, date, `${orig.id}-rev`);
+        rev.label = `${rev.label} (${reason})`.slice(0, 200);
+        const v = cleanEntry(rev);
+        if (!v.ok) return fail(`Annulation refusée (${v.reason}).`);
+        this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries.map(e => (e.id === orig.id ? { ...e, reversed_by: rev.id } : e))];
+        this.emit();
+        return ok({ ok: true });
+      }
       case 'invoice-issue': {
         const inv = this.invoices.find(x => x.id === body.id);
         if (!inv || inv.status !== 'draft') return fail('Cette facture n\'est plus un brouillon.');
@@ -1614,6 +1660,7 @@ export class AppStore {
     this.quotes = role === 'admin' ? d.quotes : [];
     this.suppliers = role === 'admin' ? d.suppliers : [];
     this.purchases = role === 'admin' ? d.purchases : [];
+    this.entries = role === 'admin' ? d.entries : [];
     this.reviews = role === 'admin' ? d.reviews : d.reviews.filter(r => r.employee_id === 'demo_u1' && r.status === 'shared').map(r => forEmployeeReview(r) as Review);
     this.sheets = role === 'admin' ? demoSheets(new Date().toISOString()).map(x => ({ ...x, owner_id: 'demo_u1', owner_name: 'Camille Durand' })) : []; // l'opérateur démo reçoit ses exemples à l'ouverture de la page
     this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo

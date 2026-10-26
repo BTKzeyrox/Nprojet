@@ -123,6 +123,17 @@ export function reverseEntry(e: Entry, date: string, id: string): Entry {
 }
 // END ACCOUNTINGCORE
 
+/** Numérotation LOCALE (démo et prévisualisation), identique à celle du serveur : par année de l'écriture, dans l'ordre des dates puis des identifiants, à la suite des numéros existants (EC-AAAA-0001). */
+export function assignNumbers(fresh: Entry[], existing: Entry[]): Entry[] {
+  const max = new Map<number, number>();
+  for (const e of existing) { const m = /^EC-(\d{4})-(\d+)$/.exec(e.number || ''); if (m) max.set(+m[1], Math.max(max.get(+m[1]) || 0, +m[2])); }
+  return [...fresh].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map(e => {
+    const y = Number(e.date.slice(0, 4)), n = (max.get(y) || 0) + 1;
+    max.set(y, n);
+    return { ...e, number: `EC-${y}-${String(n).padStart(4, '0')}` };
+  });
+}
+
 // ---------- Lectures : grand livre, balance, résultat, bilan, TVA ----------
 const inRange = (d: string, from?: string, to?: string) => (!from || d >= from) && (!to || d <= to);
 const byDate = (a: Entry, b: Entry) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);

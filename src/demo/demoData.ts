@@ -8,6 +8,8 @@ import { workingDays, type Leave } from '../utils/leaves';
 import { mondayOf, planAddDays, type Shift } from '../utils/planning';
 import type { TeamGoal } from '../utils/teamGoals';
 import type { Review } from '../utils/reviews';
+import { assignNumbers, cleanEntry, type Entry } from '../utils/accounting';
+import { buildEntries } from '../utils/accountingEntries';
 import type { HrFile } from '../utils/hrFile';
 import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
 
@@ -74,6 +76,7 @@ export interface DemoData {
   users: User[];
   leaves: Leave[];
   shifts: Shift[];
+  entries: Entry[];
   reviews: Review[];
   contracts: ClientContract[];
   posts: PostSession[];
@@ -384,6 +387,13 @@ function buildDemoReviews(): Review[] {
   ];
 }
 
+/** Écritures de démonstration : celles que « Générer les écritures » produirait avec les factures, l'argent et les avances de la démo, plus un capital de départ saisi à la main. */
+function buildDemoEntries(invoices: Invoice[], cash: CashEntry[], advances: SalaryAdvanceRequest[]): Entry[] {
+  const built = buildEntries({ invoices, cash, slips: [], advances }).entries;
+  const cap = cleanEntry({ id: 'je-manual-demo-capital', date: ymd(daysAgo(300)), journal: 'OD', label: 'Capital de départ (démo)', lines: [{ account: '512', debit: 5000000, credit: 0 }, { account: '101', debit: 0, credit: 5000000 }], source: { type: 'manual', id: 'demo-capital' } });
+  return assignNumbers(cap.ok ? [...built, cap.entry] : built, []).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.id < b.id ? 1 : -1));
+}
+
 function buildDemoClients(): Client[] {
   const at = iso(daysAgo(240), 9);
   const mk = (id: string, name: string, contact: string, phone: string, extra: Partial<Client> = {}): Client => ({
@@ -578,5 +588,5 @@ export function buildDemoData(): DemoData {
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
   const buy = buildDemoPurchasing(products, stock, inv.cash);
   const quotes = buildDemoQuotes(clients, inv.invoices);
-  return { users, leaves: buildDemoLeaves(), shifts: buildDemoShifts(users), reviews: buildDemoReviews(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
+  return { users, entries: buildDemoEntries(inv.invoices, buy.cash, advances), leaves: buildDemoLeaves(), shifts: buildDemoShifts(users), reviews: buildDemoReviews(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
 }

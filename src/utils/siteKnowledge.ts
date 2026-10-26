@@ -177,6 +177,18 @@ export const SITE_MAP: SitePage[] = [
     figures: [{ name: b('En retard', 'Late'), formula: b('Début de la session après l\'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n\'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.', 'Session start after the shift start + the tolerance (15 min by default); exactly at the tolerance is not late. Day shift at 08:00, night shift at 20:00 by default.') }],
   },
   {
+    id: 'accounting', audience: 'admin', title: b('Comptabilité', 'Accounting'),
+    purpose: b('Le journal des écritures (partie double), le grand livre, la balance, le résultat et le bilan. Les écritures viennent des factures, paiements, dépenses, paies et avances.', 'The journal of entries (double entry), ledger, trial balance, income statement and balance sheet. Entries come from invoices, payments, expenses, payroll and advances.'),
+    howto: [b('Appuie sur « Générer les écritures » : chaque pièce sans écriture en reçoit une, jamais de doublon.', 'Tap "Generate the entries": every document without an entry gets one, never duplicates.'), b('Choisis la période, puis le Journal, le Grand livre, la Balance, le Résultat ou le Bilan.', 'Choose the period, then Journal, Ledger, Trial balance, Income or Balance sheet.'), b('Pour corriger : annule l\'écriture (écriture inverse) puis saisis la bonne.', 'To correct: reverse the entry (opposite entry), then enter the right one.')],
+    rules: [b('Une écriture a toujours autant de débit que de crédit ; une écriture enregistrée ne se modifie jamais.', 'An entry always has as much debit as credit; a saved entry is never edited.'), b('Le numéro d\'écriture (EC-2026-0001) est donné par le serveur, dans l\'ordre des dates.', 'The entry number (EC-2026-0001) is given by the server, in date order.'), b('Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.', 'The accountant reads and enters; only the manager reverses. Payroll entries show no name.'), b('Le plan comptable est un plan minimal de départ, à valider par un expert-comptable.', 'The chart of accounts is a minimal starting plan, to be validated by an accountant.')],
+    conditions: [],
+    figures: [
+      { name: b('Résultat', 'Result'), formula: b('Produits (comptes 7) moins charges (comptes 6) de la période.', 'Income (accounts 7) minus expenses (accounts 6) of the period.') },
+      { name: b('Balance', 'Trial balance'), formula: b('Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.', 'For each account, total debits, total credits and balance; total debits equal total credits.') },
+      { name: b('Bilan', 'Balance sheet'), formula: b('Actif = soldes débiteurs ; passif = soldes créditeurs + résultat cumulé jusqu\'à la date.', 'Assets = debit balances; liabilities = credit balances + cumulative result up to the date.') },
+    ],
+  },
+  {
     id: 'direction', audience: 'admin', title: b('Direction', 'Management'),
     purpose: b('Une page de synthèse du mois en cours : argent, créances en retard, meilleurs clients et salariés, stock critique, alertes.', 'A summary page for the current month: money, overdue receivables, top clients and employees, critical stock, alerts.'),
     howto: [b('Lis les cartes de haut en bas : chacune résume une page du site.', 'Read the cards top to bottom: each one summarises a page of the site.'), b('Touche « Voir… » sous une carte pour ouvrir la page qui détaille.', 'Tap "See…" under a card to open the page that gives the details.'), b('Un chiffre qui te surprend : ouvre la page d\'origine, c\'est le même chiffre.', 'A figure that surprises you: open the source page, it is the same figure.')],

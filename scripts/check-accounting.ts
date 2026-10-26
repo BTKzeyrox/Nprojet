@@ -1,5 +1,5 @@
 // Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting
-import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
+import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, assignNumbers, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
@@ -119,6 +119,16 @@ ok(JSON.stringify(fiscalYearOf('2026-02-10', 7)) === '{"start":"2025-07-01","end
 ok(JSON.stringify(fiscalYearOf('2028-03-05', 3)) === '{"start":"2028-03-01","end":"2029-02-28"}' && fiscalYearOf('2026-13-01') === null && fiscalYearOf('2026-10-24', 13) === null && fiscalYearOf('2026-10-24', 0) === null, 'exercice : année bissextile, date et mois faux = null');
 ok(isDate('2028-02-29') && !isDate('2027-02-29') && !isDate('1999-12-31') && !isDate('2101-01-01'), 'dates : bissextile, bornes 2000 à 2100');
 ok(entryReasonText('unbalanced').includes('déséquilibrée') && entryReasonText('unbalanced', 'en').includes('Unbalanced') && entryReasonText('zzz') === 'Écriture refusée.', 'messages FR/EN');
+
+// numérotation locale = celle du serveur
+{
+  const mk2 = (id: string, date: string, number?: string) => ({ id, date, journal: 'OD', label: id, lines: [], number }) as any;
+  const a = assignNumbers([mk2('b', '2026-03-02'), mk2('a', '2026-03-02'), mk2('z', '2025-12-31'), mk2('c', '2026-01-05')], []);
+  ok(a.map(e => `${e.id}:${e.number}`).join() === 'z:EC-2025-0001,c:EC-2026-0001,a:EC-2026-0002,b:EC-2026-0003', 'numéros : dans l\'ordre des dates puis des identifiants, une suite par année');
+  const b2 = assignNumbers([mk2('n', '2026-05-01')], [mk2('x', '2026-01-01', 'EC-2026-0007'), mk2('y', '2025-01-01', 'EC-2025-0100')]);
+  ok(b2[0].number === 'EC-2026-0008', 'numéros : à la suite des numéros existants de la même année');
+  ok(assignNumbers([], []).length === 0 && assignNumbers([mk2('q', '2026-01-01')], [mk2('w', '2026-01-01', 'sans numéro')])[0].number === 'EC-2026-0001', 'numéros : rien à numéroter, ou un numéro existant illisible, ne plante pas');
+}
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

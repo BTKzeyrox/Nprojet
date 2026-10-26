@@ -43,6 +43,7 @@ const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.F
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const OperatorPage = lazy(() => import('./views/admin/OperatorPage').then(m => ({ default: m.OperatorPage })));
+const AccountingPage = lazy(() => import('./views/admin/AccountingPage').then(m => ({ default: m.AccountingPage })));
 const DirectionPage = lazy(() => import('./views/admin/DirectionPage').then(m => ({ default: m.DirectionPage })));
 const HrPage = lazy(() => import('./views/hr/HrPage').then(m => ({ default: m.HrPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
@@ -407,6 +408,7 @@ export default function App() {
           ) : viewUser.role === 'accountant' ? (
             /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
             activeView === 'clients' ? <ClientsPage />
+              : activeView === 'accounting' ? <AccountingPage />
               : activeView === 'purchasing' ? <PurchasingPage />
               : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               : activeView === 'settings' ? <SettingsView personalOnly />
@@ -424,6 +426,8 @@ export default function App() {
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : activeView === 'sheets' ? (
                 <MySheets />
+              ) : activeView === 'accounting' ? (
+                <AccountingPage />
               ) : activeView === 'direction' ? (
                 <DirectionPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'hr' ? (
