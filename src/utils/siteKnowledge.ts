@@ -165,7 +165,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'chat', audience: 'both', title: b('Messagerie', 'Messages'),
     purpose: b('Discussions entre personnes et groupes, comme une messagerie classique.', 'Conversations between people and groups, like a regular messenger.'),
     howto: [b('Choisir une discussion ou un groupe.', 'Pick a conversation or a group.'), b('Écrire et joindre un fichier ou plusieurs photos (album : 4 cases, la 4e avec « +N »).', 'Write and attach a file or several photos (album: 4 tiles, the 4th shows “+N”).'), b('Modifier ou épingler ses propres messages.', 'Edit or pin your own messages.')],
-    rules: [b('On ne modifie que ses propres messages, même l\'admin.', 'You only edit your own messages, even the admin.'), b('Supprimer pour tous : l\'auteur ou l\'admin ; une trace reste dans la discussion.', 'Delete for everyone: the author or the admin; a trace stays in the conversation.'), b('Une seule réaction par personne et par message.', 'One reaction per person per message.')],
+    rules: [b('On ne modifie que ses propres messages, même l\'admin.', 'You only edit your own messages, even the admin.'), b('Supprimer pour tous : l\'auteur ou l\'admin ; le message disparaît sans trace.', 'Delete for everyone: the author or the admin; the message vanishes without a trace.'), b('Une seule réaction par personne et par message.', 'One reaction per person per message.')],
     figures: [],
   },
   {

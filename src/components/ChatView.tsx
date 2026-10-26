@@ -208,7 +208,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     return best;
   };
   const lastOf = (t: Thread) => {
-    const l = messages.filter(m => inThread(m, t) && !hidden.has(m.id));
+    const l = messages.filter(m => inThread(m, t) && !hidden.has(m.id) && !m.deleted_at);
     return l[l.length - 1];
   };
   const sorted = useMemo(() => {
@@ -226,7 +226,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const current = threads.find(t => t.id === threadId) || threads[0];
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
   const convVisible = !showList || (typeof window !== 'undefined' && window.innerWidth >= 768);
-  const visible = messages.filter(m => inThread(m, current) && !hidden.has(m.id));
+  const visible = messages.filter(m => inThread(m, current) && !hidden.has(m.id) && !m.deleted_at); // un message supprimé disparaît sans trace
   const typingNames = typingRows
     .filter(r => (current.kind === 'user' ? r.user_id === current.id && r.to === currentUser.id : current.kind === 'group' || current.kind === 'all' ? r.to === current.id : false))
     .map(r => nameOf(r.user_id).split(' ')[0]);
@@ -435,7 +435,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     setMenuMsg(null);
     askConfirm({
       title: 'Supprimer ce message pour tout le monde ?',
-      message: 'Il sera remplacé par « Ce message a été supprimé » pour tous les membres de la conversation.',
+      message: 'Il disparaîtra pour tous les membres de la conversation, sans laisser de trace.',
       confirmLabel: 'Supprimer pour tous',
       danger: true,
       onConfirm: () => {

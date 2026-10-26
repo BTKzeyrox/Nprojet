@@ -238,7 +238,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier ou plusieurs photos (album : 4 cases, la 4e avec « +N »). 3. Modifier ou épingler ses propres messages.
 - **Règles** :
   - On ne modifie que ses propres messages, même l'admin.
-  - Supprimer pour tous : l'auteur ou l'admin ; une trace reste dans la discussion.
+  - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 

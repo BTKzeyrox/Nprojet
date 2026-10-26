@@ -34,5 +34,6 @@ t('photos : un album = un album_id commun, envoyé photo par photo', /album_id\?
 t('photos : citation sur la 1re photo, texte sur la dernière', /noText: i < files\.length - 1, noReply: i > 0/.test(chat));
 t('photos : grille de 4 cases au plus, la 4e floue avec « +N »', /album\.slice\(0, 4\)/.test(chat) && /blur-\[3px\]/.test(chat) && /\+\{album\.length - 4\}/.test(chat));
 t('photos : les photos suivantes d\'un album ne font pas de bulle à part', /prevM\.album_id === msg\.album_id && prevM\.sender_id === msg\.sender_id\) return null/.test(chat));
+t('messagerie : un message supprimé disparaît sans trace (liste et aperçu)', /!hidden\.has\(m\.id\) && !m\.deleted_at\); \/\/ un message supprimé/.test(chat) && /inThread\(m, t\) && !hidden\.has\(m\.id\) && !m\.deleted_at\);\n    return l\[l\.length - 1\]/.test(chat));
 console.log(`${ok}/${ok + bad} contrôles OK`);
 process.exit(bad ? 1 : 0);
