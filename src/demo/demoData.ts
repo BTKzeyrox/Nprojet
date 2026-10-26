@@ -5,6 +5,7 @@ import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, Invoic
 
 import { clientPriceForPost } from '../utils/clientPrice';
 import { workingDays, type Leave } from '../utils/leaves';
+import { mondayOf, planAddDays, type Shift } from '../utils/planning';
 import type { Review } from '../utils/reviews';
 import type { HrFile } from '../utils/hrFile';
 import { addDays, billableMissions, formatNumber, invoiceTotals, proposeLines } from '../utils/invoices';
@@ -63,6 +64,7 @@ const MISSIONS: { title: string; type: string; desc: string }[] = [
 export interface DemoData {
   users: User[];
   leaves: Leave[];
+  shifts: Shift[];
   reviews: Review[];
   contracts: ClientContract[];
   posts: PostSession[];
@@ -340,6 +342,21 @@ function buildDemoLeaves(): Leave[] {
   ];
 }
 
+/** Planning inventé : cette semaine et la suivante. Lundi à vendredi sur la vacation habituelle de chacun, week-end en repos ; Hugo (nuit) enchaîne une Nuit puis un Jour ; Léa est planifiée pendant son congé accepté (conflits visibles en démo). */
+function buildDemoShifts(users: User[]): Shift[] {
+  const monday = mondayOf(ymd(new Date())), at = iso(daysAgo(1), 10);
+  const out: Shift[] = [];
+  for (const u of users.filter(x => x.role === 'employee')) {
+    for (let i = 0; i < 14; i++) {
+      const date = planAddDays(monday, i), dow = i % 7;
+      let kind: Shift['kind'] = dow >= 5 ? 'off' : (u.shift === 'night' ? 'night' : 'day');
+      if (u.id === 'demo_u4' && dow === 3) kind = 'day'; // Nuit (mercredi) puis Jour (jeudi) : repos insuffisant
+      out.push({ id: `sh-${u.id}-${date.replace(/-/g, '')}`, employee_id: u.id, date, kind, created_at: at, updated_at: at, updated_by: DEMO_ADMIN_ID });
+    }
+  }
+  return out;
+}
+
 /** Deux fiches d'évaluation inventées : une partagée (déjà lue), un brouillon. Scores fictifs. */
 function buildDemoReviews(): Review[] {
   const at = iso(daysAgo(20), 10), snap = { score: 78, components: { quality: 92, volume: 71, punctuality: 85, regularity: 64 }, badges: [{ id: 'quality', level: 2 as const }], done: 24, decided: 26, rate: 92, taken_at: at };
@@ -552,5 +569,5 @@ export function buildDemoData(): DemoData {
   const inv = buildDemoInvoices(posts, contracts, clients, cash);
   const buy = buildDemoPurchasing(products, stock, inv.cash);
   const quotes = buildDemoQuotes(clients, inv.invoices);
-  return { users, leaves: buildDemoLeaves(), reviews: buildDemoReviews(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
+  return { users, leaves: buildDemoLeaves(), shifts: buildDemoShifts(users), reviews: buildDemoReviews(), contracts, posts, advances, messages, groups, news, signups, resets, profileRequests, presence, errors, cash: buy.cash, products, stock: buy.stock, clients, invoices: inv.invoices, suppliers: buy.suppliers, purchases: buy.purchases, quotes };
 }

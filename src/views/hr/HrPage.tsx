@@ -4,10 +4,11 @@ import { useApp } from '../../context/AppContext';
 import { DossiersSection, DossierView, card } from './DossiersSection';
 import { LeavesSection } from './LeavesSection';
 import { ReviewsSection } from './ReviewsSection';
+import { PlanningSection } from './PlanningSection';
 import type { User } from '../../types';
 
 // Page « Ressources humaines » (module 5). Responsable : dossiers + congés. Salarié : mon dossier + mes congés.
-export type HrTab = 'dossiers' | 'leaves' | 'reviews';
+export type HrTab = 'dossiers' | 'leaves' | 'reviews' | 'planning';
 
 export const HrPage: React.FC<{ currentUser: User; initialTab?: HrTab }> = ({ currentUser, initialTab }) => {
   const { lang } = useApp();
@@ -29,9 +30,11 @@ export const HrPage: React.FC<{ currentUser: User; initialTab?: HrTab }> = ({ cu
       <div className="flex gap-1.5" role="tablist">
         {tabBtn('leaves', 'Congés', 'Leave')}
         {tabBtn('dossiers', isAdmin ? 'Dossiers' : 'Mon dossier', isAdmin ? 'Files' : 'My file')}
+        {tabBtn('planning', 'Planning', 'Schedule')}
         {tabBtn('reviews', 'Évaluations', 'Reviews')}
       </div>
       {tab === 'leaves' && <LeavesSection ver={ver} isAdmin={isAdmin} myId={currentUser.id} />}
+      {tab === 'planning' && <PlanningSection ver={ver} isAdmin={isAdmin} myId={currentUser.id} />}
       {tab === 'reviews' && <ReviewsSection ver={ver} isAdmin={isAdmin} myId={currentUser.id} />}
       {tab === 'dossiers' && (isAdmin ? <DossiersSection ver={ver} /> : <div className={card}><DossierView user={me} /></div>)}
     </div>

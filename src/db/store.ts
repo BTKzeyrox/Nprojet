@@ -16,6 +16,7 @@ import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_CO
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
+import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
 import { demoSheets, type Sheet } from '../utils/sheets';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
 import { checkHrFile, type HrFile } from '../utils/hrFile';
@@ -59,7 +60,7 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://fvkusbdhetxl
 const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'reviews', 'sheets'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'shifts', 'reviews', 'sheets'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -124,6 +125,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   reviews: (a, b) => String(b.period_end || '').localeCompare(String(a.period_end || '')) || String(a.id).localeCompare(String(b.id)),
   sheets: (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')) || String(a.id).localeCompare(String(b.id)),
   leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
+  shifts: (a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.id).localeCompare(String(b.id)),
   purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
   groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
@@ -173,6 +175,7 @@ export class AppStore {
   private sheets: Sheet[] = []; // « Mes tableaux » (module 12) : un opérateur ne reçoit que les siens ; l'admin lit tous (lecture seule)
   private reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
   private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
+  private shifts: Shift[] = []; // planning des équipes (M15.2) : le responsable voit et écrit tout, un salarié ne reçoit que SON planning
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
@@ -231,7 +234,7 @@ export class AppStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(), shifts: new Map(),
     };
   }
 
@@ -255,6 +258,7 @@ export class AppStore {
       case 'suppliers': return this.suppliers;
       case 'purchases': return this.purchases;
       case 'leaves': return this.leaves;
+      case 'shifts': return this.shifts;
       case 'reviews': return this.reviews;
       case 'sheets': return this.sheets;
     }
@@ -280,6 +284,7 @@ export class AppStore {
       case 'suppliers': this.suppliers = value; break;
       case 'purchases': this.purchases = value; break;
       case 'leaves': this.leaves = value; break;
+      case 'shifts': this.shifts = Array.isArray(value) ? value : []; break; // un serveur plus ancien n'envoie pas encore le planning
       case 'reviews': this.reviews = value; break;
       case 'sheets': this.sheets = value; break;
     }
@@ -763,6 +768,34 @@ export class AppStore {
     if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
     if (!this.leaves.some(l => l.id === id)) return { success: false, error: 'missing' };
     this.leaves = this.leaves.filter(l => l.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  // Planning des équipes (M15.2). Mêmes règles que le serveur (`checkShift`) : le site refuse avant d'envoyer, le serveur revérifie quand même.
+  // Responsable seulement en écriture ; un salarié ne reçoit que son planning (le serveur filtre).
+  public getShifts(): Shift[] { return [...this.shifts]; }
+  /** Limite de jours travaillés par semaine (Conditions de l'entreprise) ; 0 = pas de limite. */
+  public getPlanningMaxPerWeek(): number { return Number(readCompany(this.getSettings().company).leave.work_days_per_week) || 0; }
+  /**
+   * Applique plusieurs cases d'un coup (une seule synchronisation) : `set` = entrées à écrire, `clear` = cases à vider (entrée supprimée).
+   * Tout est vérifié avant : si une entrée est fausse, rien n'est changé.
+   */
+  public applyShifts(set: Array<{ employee_id: string; date: string; kind: ShiftKind; note?: string }>, clear: Array<{ employee_id: string; date: string }> = []): { success: boolean; error?: string } {
+    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
+    const now = new Date().toISOString(), me = this.currentUser.id;
+    const byId = new Map(this.shifts.map(s => [s.id, s] as const));
+    const next: Shift[] = [];
+    for (const d of set) {
+      const v = checkShift(d);
+      if (!v.ok) return { success: false, error: v.error };
+      if (!this.users.some(u => u.id === v.value.employee_id && u.role !== 'admin')) return { success: false, error: 'employee' };
+      const old = byId.get(v.value.id);
+      next.push({ id: v.value.id, employee_id: v.value.employee_id, date: v.value.date, kind: v.value.kind as ShiftKind, ...(v.value.note ? { note: v.value.note } : {}), created_at: old?.created_at || now, updated_at: now, updated_by: me });
+    }
+    const gone = new Set(clear.map(c => shiftId(c.employee_id, c.date)));
+    const put = new Map(next.map(s => [s.id, s] as const));
+    this.shifts = [...this.shifts.filter(s => !gone.has(s.id) && !put.has(s.id)), ...next];
     this.notify();
     return { success: true };
   }
@@ -1554,6 +1587,7 @@ export class AppStore {
     this.reviews = role === 'admin' ? d.reviews : d.reviews.filter(r => r.employee_id === 'demo_u1' && r.status === 'shared').map(r => forEmployeeReview(r) as Review);
     this.sheets = role === 'admin' ? demoSheets(new Date().toISOString()).map(x => ({ ...x, owner_id: 'demo_u1', owner_name: 'Camille Durand' })) : []; // l'opérateur démo reçoit ses exemples à l'ouverture de la page
     this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo
+    this.shifts = role === 'admin' ? d.shifts : d.shifts.filter(s => s.employee_id === 'demo_u1'); // idem pour le planning
     this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
     this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
     this.emit();
