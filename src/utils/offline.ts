@@ -105,7 +105,7 @@ export interface OfflineOp {
   review_note?: string; // raison écrite par le serveur quand il refuse (affichée dans « À revoir »)
   tries: number; next_try_at?: string;
   state: OpState; review_code?: ReviewCode;
-  bytes: number; photo_bytes?: number; // taille de l'action ; taille de la photo (route « upload »)
+  bytes: number; photo_bytes?: number; photos?: number; // taille de l'action ; taille des photos qu'elle contient ; nombre de photos (sans valeur : 1 si photo_bytes > 0)
   text?: string; // texte saisi, gardé pour être copié depuis « À revoir »
 }
 export type Queue = OfflineOp[];
@@ -140,8 +140,9 @@ export function enqueue(queue: Queue, op: OfflineOp, role: Role, limits: Offline
   if (!Number.isFinite(bytes) || bytes > limits.max_op_bytes) return fail('op_too_big');
   const pending = queue.filter(o => o.state === 'pending');
   if (pending.length >= limits.max_ops) return fail('queue_full');
+  const nPhotos = (o: Pick<OfflineOp, 'photos' | 'photo_bytes'>) => (typeof o.photos === 'number' ? o.photos : (o.photo_bytes || 0) > 0 ? 1 : 0);
   if (op.photo_bytes && op.photo_bytes > 0) {
-    if (pending.filter(o => (o.photo_bytes || 0) > 0).length >= limits.max_photos) return fail('too_many_photos');
+    if (pending.reduce((t, o) => t + nPhotos(o), 0) + Math.max(1, nPhotos(op)) > limits.max_photos) return fail('too_many_photos');
     if (pending.reduce((t, o) => t + (o.photo_bytes || 0), 0) + op.photo_bytes > limits.max_photo_bytes) return fail('photos_too_big');
   }
   return { queue: [...queue, { ...op, bytes, tries: op.tries || 0, state: 'pending' }] };
@@ -236,7 +237,7 @@ export interface QueueSummary { pending: number; review: number; photos: number;
 export function summary(queue: Queue): QueueSummary {
   const pending = queue.filter(o => o.state === 'pending');
   const oldest = pending.map(o => o.created_at).filter(c => Number.isFinite(time(c))).sort((a, b) => time(a) - time(b))[0] || null;
-  return { pending: pending.length, review: reviewList(queue).length, photos: pending.filter(o => (o.photo_bytes || 0) > 0).length, bytes: pending.reduce((t, o) => t + o.bytes + (o.photo_bytes || 0), 0), oldest };
+  return { pending: pending.length, review: reviewList(queue).length, photos: pending.reduce((t, o) => t + (typeof o.photos === 'number' ? o.photos : (o.photo_bytes || 0) > 0 ? 1 : 0), 0), bytes: pending.reduce((t, o) => t + o.bytes + (o.photo_bytes || 0), 0), oldest };
 }
 
 // ---------- Conflits ----------

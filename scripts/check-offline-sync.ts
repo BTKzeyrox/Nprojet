@@ -1,6 +1,7 @@
 // Contrôle du pont magasin ↔ file d'actions hors ligne (module 13, M13.5), sans réseau. Lancer : npm run check:offline-sync
 import { hashJson, textOf, buildOps, applyQueue, rejectedToReview, reapply, type Changes, type SyncedJson } from '../src/utils/offlineSync';
-import { OFFLINE_DEFAULTS, type OfflineOp, type Queue } from '../src/utils/offline';
+import { OFFLINE_DEFAULTS, summary, type OfflineOp, type Queue } from '../src/utils/offline';
+import { isInlineFile, findInlineFiles, inlineFileStats, replaceInlineFile } from '../src/utils/dataUrls';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, name: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${name}`); } else console.log(`OK    ${name}`); };
@@ -125,6 +126,36 @@ const synced = (m: Record<string, Record<string, unknown>>): SyncedJson => { con
   ok(reapply({ posts: [] }, op).posts.length === 1 && reapply({}, op).posts.length === 1, 'renvoyer un élément qui n\'existe plus : recréé');
   ok(reapply({ posts: [{ id: 'p1' }] }, { ...op, action: 'delete' }).posts.length === 0, 'renvoyer une suppression');
   ok(reapply({ posts: [{ id: 'p1' }] }, { ...op, kind: 'call' }).posts.length === 1, 'un appel direct ne touche pas aux données');
+}
+// ---------- photos collées dans une mission (M13.5b) ----------
+{
+  const img = (n: number, ch = 'A') => 'data:image/jpeg;base64,' + ch.repeat(n);
+  ok(isInlineFile(img(600)) && isInlineFile('data:application/pdf;base64,' + 'B'.repeat(600)) && !isInlineFile(img(100)) && !isInlineFile('https://cdn.test/a.jpg') && !isInlineFile('data:text/html;base64,' + 'C'.repeat(600)) && !isInlineFile(42) && !isInlineFile(null) && !isInlineFile('data:image/jpeg;base64,'), 'photo collée : image ou PDF assez long ; pas une adresse normale, pas un petit texte, pas du html');
+  const rec = { id: 'p1', start_proof_url: img(700), end_proof_urls: [img(800, 'B'), 'https://cdn.test/x.jpg', img(900, 'C')], files: [{ url: img(650, 'D') }], note: 'texte' };
+  const f = findInlineFiles(rec);
+  ok(f.length === 4 && f.map(x => x.path.join('.')).sort().join() === 'end_proof_urls.0,end_proof_urls.2,files.0.url,start_proof_url', 'toutes les photos collées sont retrouvées (champ, liste, objet dans une liste)');
+  ok(findInlineFiles({ a: { b: { c: { d: img(700) } } } }).length === 0 && findInlineFiles(null).length === 0 && findInlineFiles('x').length === 0 && findInlineFiles([]).length === 0, 'trop profond, vide, pas un objet : rien, sans plantage');
+  const st = inlineFileStats(rec);
+  ok(st.count === 4 && st.bytes === f.reduce((t, x) => t + x.value.length, 0), 'nombre et taille des photos collées');
+  const snap = JSON.stringify(rec);
+  const r1 = replaceInlineFile(rec, ['end_proof_urls', 0], img(800, 'B'), 'https://cdn.test/1.jpg')!;
+  ok(r1.end_proof_urls[0] === 'https://cdn.test/1.jpg' && r1.end_proof_urls[2] === img(900, 'C') && r1.start_proof_url === rec.start_proof_url && JSON.stringify(rec) === snap, 'remplacement : seule cette photo change, l\'original n\'est pas modifié');
+  ok(replaceInlineFile(rec, ['start_proof_url'], img(700, 'Z'), 'x') === null && replaceInlineFile(rec, ['nope', 'a'], 'x', 'y') === null && replaceInlineFile(rec, [], 'x', 'y') === null, 'la mission a changé pendant l\'envoi, ou chemin faux : pas de remplacement');
+  const r2 = replaceInlineFile(rec, ['files', 0, 'url'], img(650, 'D'), 'https://cdn.test/2.jpg')!;
+  ok(r2.files[0].url === 'https://cdn.test/2.jpg' && rec.files[0].url === img(650, 'D'), 'remplacement dans un objet d\'une liste, sans toucher l\'original');
+  // comptées dans la file
+  const sy = synced({ posts: { p1: { id: 'p1' } } });
+  const one = buildOps([], { posts: { upserts: [{ id: 'p1', end_proof_urls: [img(1000), img(2000, 'B')] }], deletes: [] } }, sy, 'employee', T0);
+  ok(one.queue[0].photos === 2 && one.queue[0].photo_bytes === img(1000).length + img(2000).length && summary(one.queue).photos === 2, 'une mission avec 2 photos : 2 photos comptées');
+  const none = buildOps([], { posts: { upserts: [{ id: 'p1', note: 'x' }], deletes: [] } }, sy, 'employee', T0);
+  ok(none.queue[0].photos === undefined && none.queue[0].photo_bytes === undefined && summary(none.queue).photos === 0, 'sans photo : rien compté');
+  const upserts = Array.from({ length: 12 }, (_, i) => ({ id: 'q' + i, a: img(1000, 'A'), b: img(1000, 'B') })); // 12 missions x 2 photos = 24 photos
+  const lim = buildOps([], { posts: { upserts, deletes: [] } }, synced({}), 'employee', T0);
+  ok(lim.queue.length === 10 && summary(lim.queue).photos === 20 && lim.skipped.length === 2 && lim.skipped[0].why.fr.includes('photos'), '24 photos : les 20 premières sont gardées, les 2 dernières missions sont signalées (jamais effacées en silence)');
+  const huge = buildOps([], { posts: { upserts: [{ id: 'g1', a: img(20 * 1024 * 1024) }, { id: 'g2', a: img(12 * 1024 * 1024) }], deletes: [] } }, synced({}), 'employee', T0, { ...OFFLINE_DEFAULTS, max_op_bytes: 40 * 1024 * 1024 });
+  ok(huge.queue.length === 1 && huge.skipped.length === 1 && huge.skipped[0].why.fr.includes('place'), 'photos : 30 Mo au total (20 Mo gardés, 12 Mo de plus refusés avec un message)');
+  const withPrev = buildOps(one.queue, { posts: { upserts: [{ id: 'p1', end_proof_urls: [img(1000)] }], deletes: [] } }, sy, 'employee', T1);
+  ok(withPrev.queue[0].photos === 1, 'une photo retirée de la mission : le compte est mis à jour');
 }
 // ---------- vitesse ----------
 {

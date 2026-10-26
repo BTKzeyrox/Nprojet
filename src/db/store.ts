@@ -2,6 +2,7 @@ import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type WriterLock } from './offlineController';
 import type { KV } from '../utils/offlineVault';
 import type { Arrays, Changes, SyncedJson } from '../utils/offlineSync';
+import { findInlineFiles, replaceInlineFile } from '../utils/dataUrls';
 import { checkDeadline } from '../utils/deadlines';
 import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
@@ -1309,11 +1310,37 @@ export class AppStore {
   }
 
   private flushFails = 0;
+  /**
+   * Quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée « collée » dans la mission. Au retour du réseau, on l'envoie
+   * vraiment (Supabase Storage) et on remplace l'image collée par son adresse : la base ne se remplit pas d'images entières. Si l'envoi échoue, la mission
+   * part comme avant (avec l'image collée) : rien n'est jamais perdu. Une même image n'est envoyée qu'une fois.
+   */
+  private async resolveInlineFiles(): Promise<void> {
+    if (this.demo || !this.token) return;
+    const first = this.diff().changes;
+    const cache = new Map<string, string | null>();
+    for (const col of ['posts', 'contracts'] as Col[]) {
+      for (const rec of first[col]?.upserts || []) {
+        for (const f of findInlineFiles(rec)) {
+          let url = cache.get(f.value);
+          if (url === undefined) { url = await this.uploadFile(f.value); cache.set(f.value, url); }
+          if (!url) return; // réseau coupé ou envoi refusé : on arrête là, la mission part comme avant
+          const list = this.arr(col);
+          const at = list.findIndex(x => x.id === rec.id);
+          if (at < 0) continue;
+          const next = replaceInlineFile(list[at], f.path, f.value, url); // dans la version ACTUELLE de la mission (elle a pu changer pendant l'envoi)
+          if (next) list[at] = next;
+        }
+      }
+    }
+  }
+
   private async flush() {
     if (this.syncing || !this.token) return;
     this.syncing = true;
     let retry = false;
     try {
+      await this.resolveInlineFiles(); // photos gardées sur l'appareil pendant la coupure : envoyées au bon endroit AVANT l'enregistrement (module 13, M13.5b)
       const { changes, sent } = this.diff();
       if (Object.keys(changes).length === 0) { this.dirty = false; return; }
       const r = await this.api('sync', { method: 'POST', body: JSON.stringify({ changes }) });

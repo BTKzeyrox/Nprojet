@@ -3,6 +3,7 @@
 // deuxième envoyeur : c'est le MIROIR durable de cette comparaison. Au démarrage on remet ces actions sur les données, et le magasin les envoie comme avant.
 // Envoyer deux fois la même modification est sans danger (le serveur enregistre « cet élément, dans cet état »).
 // Contrôlé par `npm run check:offline-sync`.
+import { inlineFileStats } from './dataUrls';
 import { OFFLINE_DEFAULTS, collectionPolicy, enqueue, type Bilingual, type OfflineLimits, type OfflineOp, type Queue, type Role } from './offline';
 
 /** Empreinte courte (FNV-1a 32 bits) d'un texte : sert à voir si le serveur a changé un élément pendant qu'on travaillait hors ligne. */
@@ -64,7 +65,13 @@ function makeOp(col: string, id: string, action: 'upsert' | 'delete', payload: a
     created_at: prev?.created_at ?? nowIso, tries: prev?.tries ?? 0, next_try_at: prev?.next_try_at, state: 'pending', bytes: 0,
     base_hash: prev ? prev.base_hash : baseJson !== undefined ? hashJson(baseJson) : undefined, // la version de DÉPART est gardée, pas celle d'après la dernière modification
     text: textOf(payload) ?? prev?.text,
+    ...photoFields(payload),
   };
+}
+/** Photos collées dans l'enregistrement : comptées pour respecter les limites (20 photos, 30 Mo). */
+function photoFields(payload: unknown): { photos?: number; photo_bytes?: number } {
+  const st = inlineFileStats(payload);
+  return st.count > 0 ? { photos: st.count, photo_bytes: st.bytes } : {};
 }
 
 export type Arrays = Record<string, any[]>;

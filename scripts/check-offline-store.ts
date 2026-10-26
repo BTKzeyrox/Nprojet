@@ -15,10 +15,10 @@ const tick = (ms = 40) => new Promise(r => setTimeout(r, ms));
 // ---------- faux serveur ----------
 type Rec = { id: string; [k: string]: any };
 const server = {
-  online: true, token: 'TOK-1', fetches: 0, syncs: [] as any[], rejectIds: new Set<string>(), status: 200, logoutCalls: 0,
+  online: true, token: 'TOK-1', fetches: 0, uploads: [] as string[], failUpload: false, syncs: [] as any[], rejectIds: new Set<string>(), status: 200, logoutCalls: 0,
   users: [{ id: 'u1', name: 'Rina', username: 'rina', role: 'employee', status: 'active', shift: 'day' }, { id: 'u2', name: 'Tojo', username: 'tojo', role: 'employee', status: 'active', shift: 'day' }, { id: 'ad', name: 'Chef', username: 'chef', role: 'admin', status: 'active' }] as Rec[],
   cols: { posts: new Map<string, Rec>(), messages: new Map<string, Rec>(), cash: new Map<string, Rec>(), news: new Map<string, Rec>() } as Record<string, Map<string, Rec>>,
-  reset() { this.online = true; this.status = 200; this.syncs = []; this.rejectIds.clear(); this.fetches = 0; this.logoutCalls = 0; for (const m of Object.values(this.cols)) m.clear(); this.cols.posts.set('p1', { id: 'p1', status: 'completed', note: 'v1', employee_id: 'u1' }); this.cols.messages.set('m0', { id: 'm0', message: 'ancien', sender_id: 'u2' }); },
+  reset() { this.uploads = []; this.failUpload = false; this.online = true; this.status = 200; this.syncs = []; this.rejectIds.clear(); this.fetches = 0; this.logoutCalls = 0; for (const m of Object.values(this.cols)) m.clear(); this.cols.posts.set('p1', { id: 'p1', status: 'completed', note: 'v1', employee_id: 'u1' }); this.cols.messages.set('m0', { id: 'm0', message: 'ancien', sender_id: 'u2' }); },
 };
 let me = 'u1';
 g.fetch = async (url: string, init?: any) => {
@@ -30,6 +30,11 @@ g.fetch = async (url: string, init?: any) => {
   const json = (status: number, data: any) => ({ ok: status < 400, status, json: async () => data });
   if (server.status >= 500 && route === 'state') return json(server.status, { error: 'boom' });
   if (route === 'login') { me = body.username === 'chef' ? 'ad' : 'u1'; return json(200, { token: server.token, user: server.users.find(u => u.id === me) }); }
+  if (route === 'upload') {
+    server.uploads.push(body.dataUrl);
+    if (server.failUpload) return json(500, { error: 'upload impossible' });
+    return json(200, { url: `https://cdn.test/photo-${server.uploads.length}.jpg` });
+  }
   if (route === 'logout') { server.logoutCalls++; return json(200, { ok: true }); }
   if (route === 'state') {
     if (init?.headers?.Authorization !== `Bearer ${server.token}`) return json(401, { error: 'expired' });
@@ -285,6 +290,65 @@ KV.raw.clear(); for (const k of Object.keys(mem)) delete mem[k];
   await realFlush();
   await tick(150);
   ok([...server.cols.messages.values()].filter(m => m.message === 'Message garde-fou').length === 1 && !server.syncs.some(sy => sy.messages?.deletes?.length), 'il part ensuite, une seule fois, et n\'est jamais envoyé comme une suppression');
+}
+// ---------- 16. photos de preuve prises sans réseau (M13.5b) ----------
+killAll(); server.reset();
+KV.raw.clear(); for (const k of Object.keys(mem)) delete mem[k];
+{
+  const PH = (c: string) => 'data:image/jpeg;base64,' + c.repeat(3000);
+  const D = await login(await open());
+  await tick(80);
+  server.online = false;
+  const post: any = (D as any).posts[0];
+  post.end_proof_url = PH('A'); post.end_proof_urls = [PH('A'), PH('B')]; // même photo à deux endroits + une autre : 2 photos différentes
+  (D as any).notify();
+  await tick(80);
+  const st = D.getOfflineStatus();
+  ok(st.pending === 1 && st.photos === 3, 'mission terminée sans réseau avec photos : 1 action en attente, 3 photos comptées');
+  const q: any = KV.raw.get('queue:u1');
+  ok(JSON.stringify(q.plain).includes('data:image/jpeg;base64,AAA'), 'les photos sont écrites sur l\'appareil avec la mission (elles survivent à un rechargement)');
+  // redémarrage sans réseau : les photos sont toujours là
+  killAll();
+  const E2 = await open();
+  ok(JSON.stringify((E2 as any).posts[0]).includes('data:image/jpeg;base64,AAA') && E2.getOfflineStatus().pending === 1, 'redémarrage sans réseau : la mission et ses photos sont de nouveau là');
+  // le réseau revient : les photos sont envoyées UNE fois chacune et remplacées par leur adresse
+  server.online = true;
+  E2.retryNow();
+  await tick(1200);
+  ok(server.uploads.length === 2 && new Set(server.uploads).size === 2, `au retour du réseau : 2 photos différentes envoyées, chacune une seule fois (${server.uploads.length} envois)`);
+  const saved = server.cols.posts.get('p1')!;
+  ok(!JSON.stringify(saved).includes('data:image') && /^https:\/\/cdn\.test\/photo-\d\.jpg$/.test(saved.end_proof_url) && saved.end_proof_urls.length === 2 && saved.end_proof_urls.every((u: string) => u.startsWith('https://cdn.test/')), 'le serveur reçoit des adresses de photos, jamais l\'image entière dans la mission');
+  ok(saved.end_proof_url === saved.end_proof_urls[0], 'la même photo, présente à deux endroits, a la même adresse aux deux endroits');
+  await tick(100);
+  ok(E2.getOfflineStatus().pending === 0 && E2.getOfflineStatus().photos === 0, 'plus rien en attente, plus de photo comptée');
+}
+// ---------- 17. l'envoi de la photo est refusé : la mission part quand même, rien n'est perdu ----------
+killAll(); server.reset();
+KV.raw.clear(); for (const k of Object.keys(mem)) delete mem[k];
+{
+  const F = await login(await open());
+  await tick(80);
+  server.failUpload = true;
+  const post: any = (F as any).posts[0];
+  post.end_proof_urls = ['data:image/jpeg;base64,' + 'Z'.repeat(3000)];
+  (F as any).notify();
+  await tick(900);
+  ok(server.cols.posts.get('p1')!.end_proof_urls[0].startsWith('data:image') && F.getOfflineStatus().pending === 0, 'envoi de la photo refusé par le serveur : la mission part quand même avec la version compressée (comme avant), rien n\'est perdu');
+}
+// ---------- 18. trop de photos : le dire, ne rien effacer ----------
+killAll(); server.reset();
+KV.raw.clear(); for (const k of Object.keys(mem)) delete mem[k];
+{
+  const G = await login(await open());
+  await tick(80);
+  server.online = false;
+  const posts: any[] = (G as any).posts;
+  for (let i = 0; i < 22; i++) posts.push({ id: 'ph' + i, status: 'pending_validation', employee_id: 'u1', date: '2026-10-25', end_proof_url: 'data:image/jpeg;base64,' + String.fromCharCode(65 + (i % 26)).repeat(2000) });
+  (G as any).notify();
+  await tick(150);
+  const st = G.getOfflineStatus();
+  ok(st.pending === 20 && st.photos === 20 && st.skipped.length === 2 && st.skipped.every(x => x.why.fr.includes('photos')), '22 missions avec photo hors ligne : 20 gardées sur l\'appareil, 2 signalées (« trop de photos en attente »)');
+  ok((G as any).posts.length >= 23, 'les 2 dernières restent affichées et partiront au retour du réseau (elles ne sont pas gardées sur l\'appareil)');
 }
 killAll();
 console.log(`\n${n - fails}/${n} contrôles réussis`);

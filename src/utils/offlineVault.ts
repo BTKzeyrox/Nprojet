@@ -221,6 +221,7 @@ const PUT_MSG = {
   no_meta: { fr: 'Copie locale non initialisée.', en: 'Local copy not initialised.' },
 };
 export const MAX_COPY_BYTES = 25 * 1024 * 1024;
+export const MAX_QUEUE_BYTES = 45 * 1024 * 1024; // 30 Mo de photos au plus (limite des actions) + le reste
 const store = async (v: Vault, kind: 'copy' | 'queue', value: unknown, maxBytes: number): Promise<PutResult> => {
   const json = JSON.stringify(value);
   if (json.length > maxBytes) return { ok: false, reason: 'too_big', why: PUT_MSG.too_big };
@@ -240,7 +241,7 @@ export async function putCopy(v: Vault, state: State, nowIso: string, maxBytes =
   return r;
 }
 /** Enregistre la file d'actions (à chaque action : la clé est déjà dérivée, rien de lent). Une action en attente n'est jamais filtrée. */
-export async function putQueue(v: Vault, queue: Queue, maxBytes = MAX_COPY_BYTES): Promise<PutResult> {
+export async function putQueue(v: Vault, queue: Queue, maxBytes = MAX_QUEUE_BYTES): Promise<PutResult> {
   if (v.role !== 'admin' && v.role !== 'employee') return { ok: false, reason: 'not_allowed', why: PUT_MSG.not_allowed };
   return store(v, 'queue', queue, maxBytes);
 }
