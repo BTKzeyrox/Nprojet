@@ -24,5 +24,9 @@ t('réponses : le nom cité est nettoyé et limité à 80', /replyToName \?\? ''
 t('réponses : supprimer un commentaire supprime ses réponses (serveur et démo)', /x\.id !== commentId && x\.parent_id !== commentId/.test(na) && /c\.id !== body\.commentId && c\.parent_id !== body\.commentId/.test(store));
 t('réponses : le site envoie parentId et affiche « Répondre »', /parentId: reply\.parentId/.test(store) && feed.includes('>Répondre</button>') && /Réponse à <b>\{reply\.name\}/.test(feed));
 t('réponses : décalées sous leur commentaire', /ml-10/.test(feed) && /replies\.map\(r => renderComment\(r, true\)\)/.test(feed));
+t('réponses : repliées par défaut, un bouton Afficher / Masquer par commentaire', feed.includes('useState<Set<string>>(new Set())') && feed.includes('shownReplies.has(c.id) && replies.map(r => renderComment(r, true))') && feed.includes('Masquer les réponses') && feed.includes('`Afficher ${replies.length}'));
+t('réponses : « Répondre » prend le curseur dans le geste du doigt (clavier du téléphone)', /flushSync\(\(\) => \{ setReply\(/.test(feed) && /el\.focus\(\{ preventScroll: true \}\)/.test(feed) && /enterKeyHint="send"/.test(feed));
+t('réponses : le commentaire cité s\'affiche au-dessus du champ', /reply\.excerpt/.test(feed) && /Réponse à <b>\{reply\.name\}/.test(feed));
+t('réponses : sa propre réponse est dépliée après l\'envoi', /setShownReplies\(prev => new Set\(prev\)\.add\(reply\.parentId\)\)/.test(feed));
 console.log(`${ok}/${ok + bad} contrôles OK`);
 process.exit(bad ? 1 : 0);

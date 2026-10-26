@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
@@ -69,7 +70,9 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const [cProg, setCProg] = useState<{ d: number; t: number } | null>(null);
   const cFile = useRef<HTMLInputElement>(null);
   const cInput = useRef<HTMLInputElement>(null);
-  const [reply, setReply] = useState<{ parentId: string; name: string } | null>(null); // réponse en cours : à quel commentaire, et à qui
+  const [reply, setReply] = useState<{ parentId: string; name: string; excerpt: string } | null>(null); // réponse en cours : à quel commentaire, à qui, et un extrait de ce qu'il dit
+  const [shownReplies, setShownReplies] = useState<Set<string>>(new Set()); // fils de réponses dépliés : tout est replié par défaut
+  const toggleReplies = (id: string) => setShownReplies(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const status = post.status || 'published';
   const published = status === 'published';
   const mine = post.author_id === me.id;
@@ -81,7 +84,13 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const muted = light ? 'text-slate-500' : 'text-slate-400';
   const users = db.getUsers();
   const tops = post.comments.filter(c => !c.parent_id || !post.comments.some(x => x.id === c.parent_id)); // commentaires de premier niveau (une réponse orpheline remonte)
-  const startReply = (c: NewsComment) => { setReply({ parentId: c.parent_id || c.id, name: c.role === 'admin' ? 'Responsable' : c.user_name }); setOpen(true); setTimeout(() => cInput.current?.focus(), 50); };
+  // « Répondre » : la zone d'écriture s'ouvre et prend le curseur TOUT DE SUITE (dans le geste du doigt, sinon le téléphone n'ouvre pas le clavier)
+  const startReply = (c: NewsComment) => {
+    const excerpt = (c.text || (c.files?.length ? 'Pièce jointe' : '')).replace(/\s+/g, ' ').trim().slice(0, 90);
+    flushSync(() => { setReply({ parentId: c.parent_id || c.id, name: c.role === 'admin' ? 'Responsable' : c.user_name, excerpt }); setOpen(true); });
+    const el = cInput.current;
+    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  };
   const openProfile = (id: string) => { const u = users.find(x => x.id === id); if (u && onOpenProfile) onOpenProfile(u); };
 
   const run = async (fn: () => Promise<{ success: boolean; error?: string }>) => {
@@ -128,6 +137,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     if (!up.ok) { setMsg(up.error); setBusy(false); return; }
     const r = await db.commentNews(post.id, v, up.files, reply ? { parentId: reply.parentId, replyToName: reply.name } : undefined);
     if (!r.success) { setMsg(r.error || 'Action impossible.'); setBusy(false); return; }
+    if (reply) setShownReplies(prev => new Set(prev).add(reply.parentId)); // sa réponse est visible tout de suite
     setText(''); setCItems([]); setReply(null);
     setBusy(false);
   };
@@ -168,7 +178,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                       </div>
                     );
                   })()}
-                  {open || !isReply ? <button type="button" onClick={() => startReply(c)} className={`mt-1 text-[11px] font-semibold cursor-pointer ${muted}`}>Répondre</button> : null}
+                  <button type="button" onClick={() => startReply(c)} className={`mt-1 text-[11px] font-semibold cursor-pointer ${muted}`}>Répondre</button>
                 </div>
               </div>
             );
@@ -279,7 +289,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             return (
               <div key={c.id} className="space-y-2">
                 {renderComment(c, false)}
-                {open ? replies.map(r => renderComment(r, true)) : replies.length > 0 && <button type="button" onClick={() => setOpen(true)} className={`ml-10 text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>Voir {replies.length} {replies.length > 1 ? 'réponses' : 'réponse'}</button>}
+                {replies.length > 0 && (
+                  <button type="button" onClick={() => toggleReplies(c.id)} aria-expanded={shownReplies.has(c.id)} className={`ml-10 text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>
+                    {shownReplies.has(c.id) ? 'Masquer les réponses' : `Afficher ${replies.length} ${replies.length > 1 ? 'réponses' : 'réponse'}`}
+                  </button>
+                )}
+                {shownReplies.has(c.id) && replies.map(r => renderComment(r, true))}
               </div>
             );
           })}
@@ -301,7 +316,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           )}
           {open && reply && (
             <div className={`flex items-center justify-between gap-2 text-xs rounded-lg px-2.5 py-1.5 ${light ? 'bg-slate-100 text-slate-700' : 'bg-white/5 text-slate-200'}`}>
-              <span className="truncate">Réponse à <b>{reply.name}</b></span>
+              <span className="min-w-0 truncate">Réponse à <b>{reply.name}</b>{reply.excerpt ? <span className="opacity-70"> : « {reply.excerpt} »</span> : null}</span>
               <button type="button" onClick={() => setReply(null)} className="shrink-0 p-1 cursor-pointer" aria-label="Annuler la réponse"><X className="w-3.5 h-3.5" /></button>
             </div>
           )}
@@ -312,6 +327,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             </button>
             <input
               ref={cInput}
+              enterKeyHint="send"
               value={text}
               maxLength={500}
               onChange={e => setText(e.target.value)}
