@@ -26,6 +26,7 @@ export const COMPANY_SPEC: Record<string, Record<string, Spec>> = {
   clients: { new_days: { t: 'int', min: 1, max: 365 }, regular_missions: { t: 'int', min: 1, max: 100 }, regular_months: { t: 'int', min: 1, max: 24 }, strategic_top_pct: { t: 'int', min: 1, max: 100 }, strategic_months: { t: 'int', min: 1, max: 36 }, strategic_min_missions: { t: 'int', min: 1, max: 1000 }, inactive_days: { t: 'int', min: 1, max: 730 } },
   options: { invoice_per: { t: 'enum', vals: ['client_month', 'mission'] }, quotes_enabled: { t: 'bool' }, employee_sees_badges: { t: 'bool' }, employee_sees_attention: { t: 'bool' }, mission_requires_client: { t: 'bool' }, badges_enabled: { t: 'bool' } },
   texts: { internal_rules: { t: 'text', max: 5000, multi: true }, customer_terms: { t: 'text', max: 5000, multi: true } },
+  modules: { hidden: { t: 'text', max: 400 } },
   watch: { validate_hours: { t: 'int', min: 0, max: 720 }, active_no_end_hours: { t: 'int', min: 0, max: 720 }, late_count: { t: 'int', min: 0, max: 100 }, late_window_days: { t: 'int', min: 0, max: 365 }, absent_streak_days: { t: 'int', min: 0, max: 60 }, refusal_rate_pct: { t: 'int', min: 0, max: 100 }, refusal_min_missions: { t: 'int', min: 0, max: 1000 }, min_periods: { t: 'int', min: 0, max: 60 }, ignore_days: { t: 'int', min: 0, max: 365 }, min_duration_minutes: { t: 'int', min: 0, max: 600 }, advance_pending_days: { t: 'int', min: 0, max: 90 }, inactive_days: { t: 'int', min: 0, max: 365 }, strategic_silent_days: { t: 'int', min: 0, max: 365 }, dormant_days: { t: 'int', min: 0, max: 730 }, others_pct: { t: 'int', min: 0, max: 100 }, backup_max_hours: { t: 'int', min: 0, max: 720 }, error_hours: { t: 'int', min: 0, max: 720 } },
 };
 
@@ -41,6 +42,7 @@ export const COMPANY_DEFAULTS: CompanySettings = {
   clients: { new_days: 60, regular_missions: 3, regular_months: 6, strategic_top_pct: 20, strategic_months: 12, strategic_min_missions: 5, inactive_days: 90 },
   options: { invoice_per: 'client_month', quotes_enabled: false, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
   texts: { internal_rules: '', customer_terms: '' },
+  modules: { hidden: '' },
   watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 },
 };
 
@@ -122,7 +124,7 @@ export function companyForEmployee(c: Partial<CompanySettings> | undefined): Par
   const full = readCompany(c);
   // Les 3 réglages « Badges » (oui/non, rien d'argent) : sans eux le salarié ne peut pas savoir si sa page « Ma performance » est ouverte (module 3).
   const { badges_enabled, employee_sees_badges, employee_sees_attention } = full.options;
-  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } as CompanySettings['texts'], options: { badges_enabled, employee_sees_badges, employee_sees_attention } as CompanySettings['options'] };
+  return { leave: full.leave, texts: { internal_rules: full.texts.internal_rules } as CompanySettings['texts'], options: { badges_enabled, employee_sees_badges, employee_sees_attention } as CompanySettings['options'], modules: full.modules };
 }
 
 /** Liste des champs changés entre deux versions (pour l'historique). `before` est coupé à 120 caractères. */

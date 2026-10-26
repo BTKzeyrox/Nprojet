@@ -5,6 +5,7 @@ import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
 import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
+import { HIDEABLE_MODULES, parseHidden, hiddenToCsv } from '../utils/moduleSwitch';
 import type { CompanySettings } from '../types';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
@@ -22,6 +23,7 @@ const SECTIONS: Sec[] = [
   { id: 'leave', fr: 'Congés et présence', en: 'Leave and attendance', shared: true },
   { id: 'missions', fr: 'Missions', en: 'Missions' },
   { id: 'clients', fr: 'Clients (statuts)', en: 'Clients (statuses)', note: ['Ces seuils décident du statut calculé de chaque client (Nouveau, Régulier, Stratégique, Inactif). Les valeurs de départ conviennent à la plupart des entreprises.', 'These thresholds decide each client\'s calculated status (New, Regular, Strategic, Inactive). The starting values suit most companies.'] },
+  { id: 'modules', fr: 'Pages du menu (cacher)', en: 'Menu pages (hide)', shared: true, note: ['Coche une page pour la CACHER du menu. Rien n\'est supprimé : les données restent, et tu peux la remontrer à tout moment. Actualités et Réglages restent toujours visibles.', 'Tick a page to HIDE it from the menu. Nothing is deleted: the data stays, and you can show it again any time. News and Settings are always visible.'] },
   { id: 'options', fr: 'Choix de fonctionnement', en: 'How the app works' },
   { id: 'texts', fr: 'Règlement et conditions', en: 'Rules and terms' },
   { id: 'watch', fr: 'Surveillance (Santé du site)', en: 'Monitoring (Site health)', note: ['Seuils des alertes, partagés par tous les administrateurs. 0 ou vide = valeur de départ. Un appareil peut en changer pour lui seul dans Réglages > Surveillance.', 'Alert thresholds, shared by all administrators. 0 or empty = starting value. A device can override them for itself in Settings > Monitoring.'] },
@@ -68,6 +70,7 @@ const FIELDS: F[] = [
   { sec: 'options', key: 'mission_requires_client', kind: 'bool', fr: 'Une mission a toujours un client', en: 'A mission always has a client', help: ['Pour le futur module des clients.', 'For the future clients module.'], dflt: ['Oui.', 'Yes.'] },
   { sec: 'texts', key: 'internal_rules', kind: 'area', fr: 'Règlement intérieur (visible par les opérateurs)', en: 'Internal rules (visible to operators)', help: ['Texte lu par les salariés dans leurs Réglages, en lecture seule.', 'Text read by employees in their Settings, read-only.'], dflt: NOT_SURE },
   { sec: 'texts', key: 'customer_terms', kind: 'area', fr: 'Conditions pour les clients', en: 'Terms for clients', help: ['Texte imprimé plus tard sur les devis et factures. Les opérateurs ne le voient pas.', 'Text printed later on quotes and invoices. Operators cannot see it.'], dflt: NOT_SURE },
+  { sec: 'modules', key: 'hidden', kind: 'text', fr: 'Pages cachées', en: 'Hidden pages', help: ['La liste des pages cachées, gérée par les cases ci-dessous.', 'The list of hidden pages, managed by the boxes below.'], dflt: ['Aucune page cachée.', 'No page hidden.'] },
   ...WATCH_F,
 ];
 
@@ -149,6 +152,25 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
             {isOpen && (
               <div className="px-4 pb-4 space-y-4">
                 {sec.note && <p className="text-[11px] text-slate-400">{t(sec.note[0], sec.note[1])}</p>}
+                {sec.id === 'modules' && (
+                  <div className="space-y-3">
+                    {(['work', 'money', 'team', 'talk'] as const).map(g => (
+                      <fieldset key={g} className="space-y-1">
+                        <legend className="text-[11px] font-mono uppercase text-slate-400">{g === 'work' ? t('Travail', 'Work') : g === 'money' ? t('Argent et clients', 'Money and clients') : g === 'team' ? t('Équipe', 'Team') : t('Communication', 'Communication')}</legend>
+                        {HIDEABLE_MODULES.filter(m => m.group === g).map(m => {
+                          const off = parseHidden(String(raw['modules.hidden'])).includes(m.id);
+                          return (
+                            <label key={m.id} className="flex items-center gap-3 min-h-[44px] text-sm text-slate-200 cursor-pointer">
+                              <input type="checkbox" checked={off} onChange={e => { const cur = parseHidden(String(raw['modules.hidden'])); set('modules.hidden', hiddenToCsv(e.target.checked ? [...cur, m.id] : cur.filter(x => x !== m.id))); }} className="w-5 h-5 accent-emerald-500" />
+                              <span>{t(m.fr, m.en)}</span>
+                              {off && <span className="text-[10px] font-mono text-amber-300">{t('cachée', 'hidden')}</span>}
+                            </label>
+                          );
+                        })}
+                      </fieldset>
+                    ))}
+                  </div>
+                )}
                 {FIELDS.filter(f => f.sec === sec.id).map(f => {
                   const k = `${f.sec}.${f.key}`, v = raw[k];
                   const isBad = bad.includes(k), id = `co-${f.sec}-${f.key}`;
@@ -166,7 +188,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
                       ) : f.kind === 'area' || f.kind === 'lines' ? (
                         <textarea id={id} value={String(v)} rows={f.kind === 'area' ? 6 : 4} maxLength={f.kind === 'area' ? spec.max + 200 : 3000} onChange={e => set(k, e.target.value)} className={`${inputCls} ${isBad ? 'border-red-500' : ''}`} />
                       ) : (
-                        <input id={id} type={f.kind === 'int' || f.kind === 'num' ? 'number' : 'text'} inputMode={f.kind === 'num' ? 'decimal' : f.kind === 'int' ? 'numeric' : undefined} value={String(v)} onChange={e => set(k, e.target.value)} placeholder={f.kind === 'time' ? '08:30' : undefined} min={spec.min} max={spec.max} step={f.kind === 'num' ? 0.01 : undefined} maxLength={spec.t === 'text' ? spec.max + 40 : undefined} className={`${inputCls} ${isBad ? 'border-red-500' : ''}`} />
+                        <input id={id} type={f.kind === 'int' || f.kind === 'num' ? 'number' : 'text'} inputMode={f.kind === 'num' ? 'decimal' : f.kind === 'int' ? 'numeric' : undefined} value={String(v)} readOnly={f.sec === 'modules'} onChange={e => set(k, e.target.value)} placeholder={f.kind === 'time' ? '08:30' : undefined} min={spec.min} max={spec.max} step={f.kind === 'num' ? 0.01 : undefined} maxLength={spec.t === 'text' ? spec.max + 40 : undefined} className={`${inputCls} ${isBad ? 'border-red-500' : ''}`} />
                       )}
                       {help === k && <p className="text-[11px] text-slate-300 bg-black/20 rounded-lg p-2">{t(f.help[0], f.help[1])} <span className="text-emerald-300">{t('Si je ne sais pas : ', 'If I do not know: ')}{t(f.dflt[0], f.dflt[1])}</span></p>}
                     </div>

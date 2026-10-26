@@ -4,6 +4,8 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
 import { teamPendingPosts } from '../utils/teamLead';
+import { isViewHidden } from '../utils/moduleSwitch';
+import { readCompany } from '../utils/companyRules';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { User } from '../types';
 import { useChatUnread } from '../utils/useChatUnread';
@@ -78,7 +80,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
     { id: 'chat', label: 'Messages', icon: MessageSquare, badge: chatUnread },
     { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: teamPendingPosts(currentUser, db.getUsers(), db.getPosts()).length },
   ];
-  const shownItems = currentUser?.role === 'accountant' ? accountantItems : currentUser?.role === 'team_lead' ? teamLeadItems : items;
+  const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
+  const shownItems = (currentUser?.role === 'accountant' ? accountantItems : currentUser?.role === 'team_lead' ? teamLeadItems : items).filter(it => !isViewHidden(hiddenPages, it.id));
 
   const base = `df-bottomnav fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
   const btn = (active: boolean) =>

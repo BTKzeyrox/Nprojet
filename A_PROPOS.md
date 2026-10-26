@@ -66,7 +66,7 @@ L'outil complet est peut-être trop gros pour une très petite structure : d'où
 
 ## 7. Peut-on cacher des modules ? Peut-on le transformer en site de réseau ?
 
-- **Cacher, pas supprimer.** L'idée : un interrupteur par module (missions, factures, stock, RH, achats, devis, messagerie, accueil…) dans les réglages. Le code et les données restent. **Cet interrupteur global n'existe pas encore partout** ; certaines options sont déjà dans Réglages > Conditions. À faire (voir §10).
+- **Cacher, pas supprimer.** L'idée : un interrupteur par module (missions, factures, stock, RH, achats, devis, messagerie, accueil…) dans les réglages. Le code et les données restent. **C'est fait (étape « Pages du menu »)** : Réglages > Conditions > « Pages du menu (cacher) ». Le responsable coche les pages à cacher (messagerie, clients, factures, paie, stats…). Actualités et Réglages restent toujours visibles. Ça cache la page du menu ; les droits et les données ne changent pas.
 - **Exemple école-communauté** : tout désactivé sauf **l'actualité** et **la messagerie**.
 - **Exemple site de gestion seulement** : messagerie et accueil cachés.
 
@@ -89,7 +89,7 @@ Recommandé pour commencer : **A + interrupteur de modules**.
 
 ## 10. Idées à faire (rien n'est lancé sans le « GO » de BTK)
 
-1. Interrupteur de modules par site (actualité, messagerie, missions, finances, stock, RH…).
+1. ~~Interrupteur de modules~~ : fait (cacher des pages du menu). Reste : des « modèles » prêts à choisir (école, gestion seule…).
 2. Page de gestion des copies / entreprises, réservée à BTK.
 3. « Tâche simple » : sans paie, sans client, avec responsable, date limite, statut.
 4. Paie par **paiement mobile** (MVola, Orange Money, Airtel Money).

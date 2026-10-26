@@ -1,6 +1,8 @@
 import { Avatar } from './Avatar';
 import { db } from '../db/store';
 import { viewAllowedFor } from '../utils/roles';
+import { isViewHidden } from '../utils/moduleSwitch';
+import { readCompany } from '../utils/companyRules';
 import { teamPendingPosts } from '../utils/teamLead';
 import React from 'react';
 import {
@@ -132,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ...(isAdmin ? [{ id: 'health', label: 'Santé du site', icon: HeartPulse, badge: health.total > 0 ? String(health.total) : undefined, tone: 'alert' as const }] : []),
     ...(isAdmin ? [{ id: 'errors', label: 'Journal des erreurs', icon: Bug }] : []),
     { id: 'settings', label: 'Réglages', icon: Settings },
-  ].filter(it => viewAllowedFor(currentUser.role, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
+  ].filter(it => viewAllowedFor(currentUser.role, it.id) && !isViewHidden(readCompany(db.getSettings().company).modules.hidden, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
   const inBottomBar = ['feed', 'chat', 'calendar', isAdmin || isTeamLead ? 'validations' : 'active-post'];

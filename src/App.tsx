@@ -11,6 +11,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ReportProblemModal } from './components/ReportProblemModal';
 import { setCurrentPage } from './utils/errorReport';
+import { isViewHidden } from './utils/moduleSwitch';
+import { readCompany } from './utils/companyRules';
 import { hideSplash } from './utils/splash';
 import { LoadingBar } from './components/LoadingBar';
 import { PageSkeleton } from './components/PageSkeleton';
@@ -81,6 +83,9 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>('feed');
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
+  // Page cachée par le responsable (Réglages > Pages du menu) : on revient aux Actualités
+  const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
+  useEffect(() => { if (isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
   useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);

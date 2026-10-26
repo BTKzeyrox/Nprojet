@@ -333,6 +333,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Une sauvegarde de nuit est faite automatiquement et gardée environ 14 jours.
   - Les changements des Conditions sont notés dans un historique.
+  - Le responsable peut cacher des pages du menu (Conditions > Pages du menu) ; rien n'est supprimé.
   - Un employé ne reçoit que le règlement et les règles de congés et de présence.
   - La visite guidée s'ouvre à la première connexion sur un appareil ; « Revoir la visite guidée » la relance.
   - Sécurité en deux étapes (facultative, responsable et Comptable) : code à 6 chiffres après le mot de passe ; garde tes codes de secours.
@@ -518,6 +519,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modeSwitch.ts` | Bouton « Vue opérateur / Retour responsable » du menu : visible ou masqué (réglé sur cet appareil). |
+| `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
 | `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
@@ -703,6 +705,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:monitoring-final` | Contrôle final de la surveillance (M11.14) : réglages « Surveillance », alertes de la démo, vitesse avec 2 ans de données, opérateur sans accès, anglais. Lancer : npm run check:monitoring-final |
 | `npm run check:cash` | Contrôle de la sécurité des finances dans le serveur df-api (sans réseau). |
 | `npm run check:company` | Contrôle des Conditions de l'entreprise (module 0), sans réseau. |
+| `npm run check:modules` | Contrôle de l'interrupteur de modules (pages cachées), sans réseau. |
 | `npm run check:purchasing` | Contrôle des règles pures du module 4 (fournisseurs, bons de commande, réception, inventaire, budgets, statistiques), sans réseau. |
 | `npm run check:purchasing-page` | Essai de la page Achats (sans écran réel, sans réseau) : démo admin et opérateur, fournisseurs, FR et EN. Complété à chaque étape du module 4. |
 | `npm run check:demo-simple` | Démo simplifiée : en mode démo, on CACHE ce qui est inutile ou simulé (notifications téléphone, IA externe, sauvegardes, restauration, remise à zéro, |
