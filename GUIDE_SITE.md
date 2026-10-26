@@ -486,6 +486,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clientPrice.ts` | Prix client : ce que le client paie pour une mission validée. |
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
+| `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
 | `enTranslate.ts` | Traduction automatique de l'interface en anglais (français → English). |
