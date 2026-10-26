@@ -68,6 +68,7 @@ export interface AppSettings {
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
   health_acks?: unknown[]; // marques « Ignorer / Vérifié » de la Santé du site, partagées entre appareils (admin seulement ; le serveur les revérifie)
   budgets?: Record<string, number>; // plafond mensuel par catégorie de dépense, en Ar (module 4) : admin seulement, jamais envoyé à un opérateur
+  acct_close?: import('../utils/accounting').CloseState; // clôture de la comptabilité (M14.6) : écrite par le serveur seulement (route accounting-close), jamais envoyée à un opérateur
   company_log?: CompanyLogEntry[]; // historique des changements des Conditions (écrit par le serveur, admin seulement)
 }
 

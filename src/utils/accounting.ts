@@ -121,6 +121,51 @@ export function reverseEntry(e: Entry, date: string, id: string): Entry {
     ...(e.source ? { source: e.source } : {}), reversal_of: e.id,
   };
 }
+
+// ---------- Clôture d'une période (M14.6) ----------
+export interface CloseLogEntry { at: string; by: string; by_name: string; action: 'close' | 'reopen'; through: string; reason?: string }
+/** `through` = dernier jour de la période close (« » = rien de clos). Écrit par le SERVEUR seulement (jamais par la synchro). */
+export interface CloseState { through: string; log: CloseLogEntry[] }
+export const addDays = (d: string, n: number): string => new Date(new Date(d + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
+export const isMonthEnd = (d: unknown): d is string => isDate(d) && addDays(d, 1).slice(8) === '01';
+/** Clôturer : jusqu'à une fin de mois, pas dans le futur, toujours plus loin que la clôture actuelle. `yearEnd` = le 31 décembre (exercice civil) : on y passe l'écriture de report à nouveau. */
+export function planClose(current: string, through: unknown, today: string): { ok: true; yearEnd: boolean } | { ok: false; reason: 'date' | 'future' | 'already' } {
+  if (!isMonthEnd(through)) return { ok: false, reason: 'date' };
+  if (through > today) return { ok: false, reason: 'future' };
+  if (current && through <= current) return { ok: false, reason: 'already' };
+  return { ok: true, yearEnd: through.slice(5) === '12-31' };
+}
+/** Rouvrir : motif de 3 caractères au moins ; `through` = nouvelle fin de clôture, plus tôt que l'actuelle (« » = tout rouvrir). */
+export function planReopen(current: string, through: unknown, reason: unknown): { ok: true } | { ok: false; reason: 'nothing' | 'reason' | 'date' | 'later' } {
+  if (!current) return { ok: false, reason: 'nothing' };
+  if (typeof reason !== 'string' || reason.replace(/[<>]/g, '').trim().length < 3) return { ok: false, reason: 'reason' };
+  if (through !== '' && !isMonthEnd(through)) return { ok: false, reason: 'date' };
+  if (through !== '' && (through as string) >= current) return { ok: false, reason: 'later' };
+  return { ok: true };
+}
+/**
+ * Report à nouveau : à la clôture du 31 décembre, les comptes de charges (6) et de produits (7) de l'exercice sont soldés et le résultat passe au compte 110.
+ * Daté du dernier jour de l'exercice. Renvoie null s'il n'y a rien à solder (déjà fait, ou exercice vide). Le calcul tient compte des écritures de clôture déjà passées (et de leurs annulations).
+ */
+export function closingEntry(entries: Entry[], yearStart: string, end: string, id: string): Entry | null {
+  if (!isDate(yearStart) || !isDate(end)) return null;
+  const net = new Map<string, number>();
+  for (const e of entries) {
+    if (e.date < yearStart || e.date > end) continue;
+    for (const l of e.lines) { const c = classOf(l.account); if (c === 6 || c === 7) net.set(l.account, (net.get(l.account) || 0) + l.debit - l.credit); }
+  }
+  const lines: EntryLine[] = [];
+  let result = 0;
+  for (const [account, n] of [...net.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (n === 0) continue;
+    lines.push(n > 0 ? { account, debit: 0, credit: n } : { account, debit: -n, credit: 0 });
+    result += n;
+  }
+  if (lines.length === 0) return null;
+  if (result > 0) lines.push({ account: '110', debit: result, credit: 0 });
+  else if (result < 0) lines.push({ account: '110', debit: 0, credit: -result });
+  return { id, date: end, journal: 'OD', label: `Report à nouveau : résultat de l'exercice clos le ${end}`, lines, source: { type: 'closing', id: end } };
+}
 // END ACCOUNTINGCORE
 
 /** Numérotation LOCALE (démo et prévisualisation), identique à celle du serveur : par année de l'écriture, dans l'ordre des dates puis des identifiants, à la suite des numéros existants (EC-AAAA-0001). */
@@ -170,8 +215,9 @@ export function trialBalance(entries: Entry[], from?: string, to?: string): { ro
 }
 
 /** Compte de résultat : produits (classe 7) moins charges (classe 6) sur la période. */
-export function incomeStatement(entries: Entry[], from?: string, to?: string) {
-  const tb = trialBalance(entries, from, to).rows;
+export function incomeStatement(entries: Entry[], from?: string, to?: string, withClosing = false) {
+  // Les écritures de clôture (report à nouveau) et leurs annulations ne sont pas de l'activité : on ne les compte pas dans le résultat affiché.
+  const tb = trialBalance(withClosing ? entries : entries.filter(e => e.source?.type !== 'closing'), from, to).rows;
   const income = tb.filter(r => classOf(r.account) === 7).map(r => ({ account: r.account, amount: r.credit - r.debit }));
   const expense = tb.filter(r => classOf(r.account) === 6).map(r => ({ account: r.account, amount: r.debit - r.credit }));
   const totalIncome = income.reduce((t, r) => t + r.amount, 0), totalExpense = expense.reduce((t, r) => t + r.amount, 0);
@@ -181,7 +227,7 @@ export function incomeStatement(entries: Entry[], from?: string, to?: string) {
 /**
  * Bilan à une date : actif (soldes débiteurs des classes 2 à 5), passif (soldes créditeurs des classes 1 à 5), plus le RÉSULTAT CUMULÉ (classes 6 et 7 jusqu'à cette date).
  * Un compte de tiers ou de trésorerie dont le solde change de sens (client créditeur, banque à découvert) passe de l'autre côté.
- * Tant qu'il n'y a pas de clôture d'exercice (M14.6), le résultat est cumulé depuis le début.
+ * Le résultat est cumulé depuis le début ; une fois un exercice clos, son résultat est déjà au compte 110 (report à nouveau).
  */
 export function balanceSheet(entries: Entry[], asOf: string) {
   const tb = trialBalance(entries, undefined, asOf).rows;
@@ -192,7 +238,7 @@ export function balanceSheet(entries: Entry[], asOf: string) {
     if (r.balance_debit > 0) assets.push({ account: r.account, amount: r.balance_debit });
     if (r.balance_credit > 0) liabilities.push({ account: r.account, amount: r.balance_credit });
   }
-  const result = incomeStatement(entries, undefined, asOf).result;
+  const result = incomeStatement(entries, undefined, asOf, true).result; // avec les écritures de clôture : le résultat déjà reporté au 110 n'est pas compté deux fois
   const totalAssets = assets.reduce((t, r) => t + r.amount, 0);
   const totalLiabilities = liabilities.reduce((t, r) => t + r.amount, 0) + result;
   return { assets, liabilities, result, totalAssets, totalLiabilities, balanced: totalAssets === totalLiabilities };

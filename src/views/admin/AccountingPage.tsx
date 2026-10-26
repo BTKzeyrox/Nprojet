@@ -5,7 +5,8 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { todayMada } from '../../utils/stats';
-import { JOURNALS, PLAN, accountOf, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
+import { askConfirm } from '../../components/ConfirmModal';
+import { JOURNALS, PLAN, accountOf, addDays, isMonthEnd, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
 import { downloadVatExcel } from '../../utils/exportDoc';
 
 // Comptabilité (M14.4). Responsable et Comptable : journal, grand livre, balance, résultat, bilan, saisie d'une écriture. Annuler une écriture : responsable seulement.
@@ -17,7 +18,7 @@ const btn = 'min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200
 const lbl = 'block text-[11px] font-semibold text-slate-400 mb-1';
 const num = (n: number) => n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ');
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
-export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet' | 'vat';
+export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet' | 'vat' | 'close';
 type Preset = 'month' | 'year' | 'all' | 'custom';
 interface Draft { date: string; journal: Journal; label: string; ref: string; lines: { account: string; debit: string; credit: string }[] }
 
@@ -53,6 +54,45 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
   const [formErr, setFormErr] = useState('');
   const [rev, setRev] = useState<{ id: string; date: string; reason: string } | null>(null);
   useLockBodyScroll(!!draft);
+  // Clôture (M14.6) : jusqu'à quel jour on ne peut plus écrire
+  const closeSt = db.getAcctClose();
+  const monthEnds = (from: string, to: string): string[] => { // fins de mois de `from` à `to` compris
+    const out: string[] = [];
+    let d = from;
+    for (let i = 0; i < 400 && d <= to; i++) { const e = addDays(`${d.slice(0, 7)}-01`, 0); const nx = new Date(Date.UTC(+e.slice(0, 4), +e.slice(5, 7), 0)).toISOString().slice(0, 10); if (nx >= from && nx <= to) out.push(nx); d = addDays(nx, 1); }
+    return out;
+  };
+  const firstMonth = entries.length ? entries.reduce((m, e) => (e.date < m ? e.date : m), entries[0].date) : today;
+  const lastDone = addDays(`${today.slice(0, 7)}-01`, -1); // fin du dernier mois fini
+  const closable = monthEnds(closeSt.through ? addDays(closeSt.through, 1) : firstMonth, lastDone).reverse();
+  const reopenable = closeSt.through ? [...monthEnds(firstMonth, addDays(closeSt.through, -1)).reverse(), ''] : [];
+  const [closeTo, setCloseTo] = useState('');
+  const [reopenTo, setReopenTo] = useState('');
+  const [reopenWhy, setReopenWhy] = useState('');
+  const pickClose = closable.includes(closeTo) ? closeTo : closable[0] || '';
+  const pickReopen = reopenable.includes(reopenTo) ? reopenTo : reopenable[0] ?? '';
+  const doClose = () => {
+    if (!pickClose) return;
+    const yearEnd = pickClose.slice(5) === '12-31';
+    askConfirm({
+      title: t(`Clôturer jusqu'au ${fmtDate(pickClose)} ?`, `Close up to ${fmtDate(pickClose)}?`),
+      message: t(`On ne pourra plus écrire à cette date ni avant.${yearEnd ? ' Le résultat de l\'exercice sera reporté au compte 110 (report à nouveau).' : ''} Tu pourras rouvrir avec un motif.`, `You will no longer be able to write on or before this date.${yearEnd ? ' The year\'s result will be carried to account 110 (retained earnings).' : ''} You can reopen with a reason.`),
+      confirmLabel: t('Clôturer', 'Close'),
+      onConfirm: async () => {
+        setBusy(true); setMsg(null);
+        const r = await db.closeAccounting(pickClose);
+        setBusy(false);
+        setMsg(r.ok ? { ok: true, text: t(`Période close jusqu'au ${fmtDate(pickClose)}.${r.data?.carried ? ' Report à nouveau passé.' : ''}`, `Period closed up to ${fmtDate(pickClose)}.${r.data?.carried ? ' Retained earnings entry posted.' : ''}`) } : { ok: false, text: r.error || t('Clôture refusée.', 'Closing refused.') });
+      },
+    });
+  };
+  const doReopen = async () => {
+    setBusy(true); setMsg(null);
+    const r = await db.reopenAccounting(pickReopen, reopenWhy);
+    setBusy(false);
+    if (r.ok) setReopenWhy('');
+    setMsg(r.ok ? { ok: true, text: pickReopen ? t(`Période rouverte : clôture ramenée au ${fmtDate(pickReopen)}.`, `Period reopened: closing moved back to ${fmtDate(pickReopen)}.`) : t('Tout est rouvert.', 'Everything is reopened.') } : { ok: false, text: r.error || t('Réouverture refusée.', 'Reopening refused.') });
+  };
 
   const accLabel = (code: string) => { const a = accountOf(code); return a ? `${code} ${a[lang === 'en' ? 'en' : 'fr']}` : code; };
   const byId = useMemo(() => new Map(entries.map(e => [e.id, e])), [entries]);
@@ -113,7 +153,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist">
-        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}{tabBtn('vat', 'TVA', 'VAT')}
+        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}{tabBtn('vat', 'TVA', 'VAT')}{tabBtn('close', 'Clôture', 'Closing')}{tabBtn('close', 'Clôture', 'Closing')}
       </div>
 
       {tab !== 'sheet' && (
@@ -252,6 +292,42 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
         </div>
       )}
 
+      {tab === 'close' && (
+        <div className={card}>
+          <p className="text-sm font-bold text-white">{t('Clôture de la comptabilité', 'Accounting closing')}</p>
+          <p className={`text-base font-bold ${closeSt.through ? 'text-amber-300' : 'text-slate-300'}`} data-testid="close-state">{closeSt.through ? t(`Période close jusqu'au ${fmtDate(closeSt.through)}`, `Period closed up to ${fmtDate(closeSt.through)}`) : t('Aucune période n\'est close.', 'No period is closed.')}</p>
+          <p className="text-[11px] text-slate-500">{t('Une période close est verrouillée : plus d\'écriture à ces dates ni avant (saisie, génération, annulation). Au 31 décembre, le résultat de l\'exercice est reporté au compte 110 (report à nouveau).', 'A closed period is locked: no more entries on or before those dates (manual, generated, reversal). On December 31, the year\'s result is carried to account 110 (retained earnings).')}</p>
+          {!isAdmin ? <p className="text-sm text-slate-400">{t('Seul le responsable peut clôturer ou rouvrir.', 'Only the admin can close or reopen.')}</p> : (
+            <>
+              <div className="space-y-1.5">
+                <label className={lbl} htmlFor="acct-close-to">{t('Clôturer jusqu\'à la fin du mois de…', 'Close up to the end of…')}</label>
+                {closable.length === 0 ? <p className="text-sm text-slate-400">{t('Rien à clôturer : aucun mois fini n\'est encore ouvert.', 'Nothing to close: no finished month is still open.')}</p> : (
+                  <div className="flex gap-2">
+                    <select id="acct-close-to" className={field} value={pickClose} onChange={e => setCloseTo(e.target.value)}>{closable.map(d => <option key={d} value={d}>{fmtDate(d)}{d.slice(5) === '12-31' ? ` · ${t('fin d\'exercice', 'year end')}` : ''}</option>)}</select>
+                    <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white shrink-0`} disabled={busy || !pickClose} onClick={doClose}>{t('Clôturer', 'Close')}</button>
+                  </div>
+                )}
+              </div>
+              {closeSt.through && (
+                <div className="space-y-1.5 border-t border-slate-800 pt-2.5">
+                  <label className={lbl} htmlFor="acct-reopen-to">{t('Rouvrir : ramener la clôture à…', 'Reopen: move the closing back to…')}</label>
+                  <select id="acct-reopen-to" className={field} value={pickReopen} onChange={e => setReopenTo(e.target.value)}>{reopenable.map(d => <option key={d || 'all'} value={d}>{d ? fmtDate(d) : t('Tout rouvrir', 'Reopen everything')}</option>)}</select>
+                  <input className={field} maxLength={150} placeholder={t('Motif (obligatoire, 3 caractères au moins)', 'Reason (required, at least 3 characters)')} value={reopenWhy} onChange={e => setReopenWhy(e.target.value)} aria-label={t('Motif', 'Reason')} />
+                  <button type="button" className={`${btn} border-amber-500 text-amber-200`} disabled={busy || reopenWhy.trim().length < 3} onClick={doReopen}>{t('Rouvrir', 'Reopen')}</button>
+                  <p className="text-[11px] text-slate-500">{t('Rouvrir annule aussi le report à nouveau des exercices rouverts. Tout est noté dans le journal d\'audit.', 'Reopening also reverses the retained earnings entry of reopened years. Everything is recorded in the audit log.')}</p>
+                </div>
+              )}
+            </>
+          )}
+          {closeSt.log.length > 0 && (
+            <div className="border-t border-slate-800 pt-2.5 space-y-1">
+              <p className="text-[11px] font-semibold text-slate-400">{t('Historique', 'History')}</p>
+              <ul className="space-y-1">{[...closeSt.log].reverse().slice(0, 20).map((x, i) => <li key={i} className="text-[12px] text-slate-300 break-words">{new Date(x.at).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR')} · {x.by_name || '—'} · {x.action === 'close' ? t('clôture', 'closed') : t('réouverture', 'reopened')} {x.through ? fmtDate(x.through) : t('(tout)', '(all)')}{x.reason ? ` · ${x.reason}` : ''}</li>)}</ul>
+            </div>
+          )}
+        </div>
+      )}
+
       {draft && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
           <div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto bg-[#0f1722] border border-slate-700 rounded-t-2xl sm:rounded-2xl p-4 space-y-3" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -274,6 +350,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
             ))}
             <div className="flex flex-wrap gap-2">{draft.lines.length < 40 && <button type="button" className={btn} onClick={() => setDraft({ ...draft, lines: [...draft.lines, { account: '512', debit: '', credit: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}<button type="button" className={btn} onClick={() => setDraft({ ...draft, journal: 'AC', label: draft.label || 'Achat avec TVA', lines: [{ account: '601', debit: '', credit: '' }, { account: '4456', debit: '', credit: '' }, { account: '401', debit: '', credit: '' }] })}>{t('Modèle : achat avec TVA', 'Template: purchase with VAT')}</button></div>
             <p className={`text-sm font-semibold ${dTot.debit === dTot.credit && dTot.debit > 0 ? 'text-emerald-400' : 'text-amber-300'}`}>{t('Débits', 'Debits')} {num(dTot.debit)} · {t('Crédits', 'Credits')} {num(dTot.credit)} {dTot.debit === dTot.credit && dTot.debit > 0 ? '✓' : `· ${t('écart', 'gap')} ${num(Math.abs(dTot.debit - dTot.credit))}`}</p>
+            {closeSt.through && draft.date && draft.date <= closeSt.through && <p className="text-sm text-amber-300" role="alert">{t(`Cette date est dans une période close (jusqu'au ${fmtDate(closeSt.through)}) : l'écriture sera refusée.`, `This date is in a closed period (up to ${fmtDate(closeSt.through)}): the entry will be refused.`)}</p>}
             {formErr && <p className="text-sm text-red-400" role="alert">{(() => { const m = /\(([a-z_]+)\)/.exec(formErr); return m ? entryReasonText(m[1], lang === 'en' ? 'en' : 'fr') : formErr; })()}</p>}
             <div className="flex gap-2"><button type="button" className={`${btn} flex-1 bg-emerald-700 border-emerald-500 text-white`} onClick={save}>{t('Enregistrer', 'Save')}</button><button type="button" className={`${btn} flex-1`} onClick={() => setDraft(null)}>{t('Annuler', 'Cancel')}</button></div>
             <p className="text-[11px] text-slate-500">{t('Une écriture enregistrée ne se modifie jamais : pour corriger, on l\'annule par une écriture inverse puis on en saisit une nouvelle.', 'A saved entry is never edited: to correct it, reverse it with an opposite entry and enter a new one.')}</p>

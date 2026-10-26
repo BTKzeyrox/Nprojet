@@ -55,9 +55,9 @@ ok(R.MONEY_ROUTES.includes('accounting-sync') && R.MONEY_ROUTES.includes('accoun
 ok(/ADMIN_ONLY_READ: string\[\] = \[[^\]]*"entries"/.test(server) && /ADMIN_ONLY_WRITE: string\[\] = \[[^\]]*"entries"/.test(server), 'les écritures sont dans les listes « jamais pour un employé » (lecture et écriture)');
 ok(/async function accountingReverse\(req: any, res: any, me: any\) \{\s*const no = adminOnly\(res, me\); if \(no\) return no;/.test(server), 'annuler une écriture : responsable seulement');
 ok(/if \(reason\.length < 3\)/.test(server) && /date < orig\.date/.test(server), 'annulation : motif de 3 caractères, jamais avant l\'écriture');
-ok(/ACCT\.cleanEntry\(\{ id, date: b\.date, journal: b\.journal, ref: b\.ref, label: b\.label, lines: b\.lines, source: \{ type: 'manual', id \} \}\)/.test(server), 'saisie manuelle : l\'identifiant vient du serveur, tout passe par cleanEntry');
+ok(/ACCT\.cleanEntry\(\{ id, date: b\.date, journal: b\.journal, ref: b\.ref, label: b\.label, lines: b\.lines, source: \{ type: 'manual', id \} \}, \(await acctCloseState\(\)\)\.through\)/.test(server), 'saisie manuelle : l\'identifiant vient du serveur, tout passe par cleanEntry');
 for (const a of ['accounting-sync', 'accounting-post', 'accounting-reverse']) ok(new RegExp(`action === "${a}" && req\\.method === "POST"`).test(server), `route ${a} branchée (POST seulement)`);
-ok(/AUDIT_ACTIONS = \[[^\]]*"accounting_sync", "accounting_post", "accounting_reverse"\]/.test(server) && (server.match(/auditLog\(me, 'accounting_/g) || []).length === 3, 'les 3 opérations sont notées dans le journal d\'audit');
+ok(/AUDIT_ACTIONS = \[[^\]]*"accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"\]/.test(server) && (server.match(/auditLog\(me, 'accounting_/g) || []).length === 5, 'les 5 opérations sont notées dans le journal d\'audit');
 ok(/rpc\('df_post_entries'/.test(server) && /rpc\('df_reverse_entry'/.test(server) && !/\.from\(T\.entries\)\.(insert|upsert|update|delete)/.test(server), 'le serveur n\'écrit dans les écritures que par les fonctions SQL (jamais d\'insertion directe)');
 ok(!/if \(col === 'entries'\)[^\n]*ok = true/.test(server), 'aucune ouverture de l\'écriture des écritures pour un employé');
 

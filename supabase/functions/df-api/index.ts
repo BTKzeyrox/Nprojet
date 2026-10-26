@@ -894,6 +894,51 @@ function reverseEntry(e: Entry, date: string, id: string): Entry {
     ...(e.source ? { source: e.source } : {}), reversal_of: e.id,
   };
 }
+
+// ---------- Clôture d'une période (M14.6) ----------
+interface CloseLogEntry { at: string; by: string; by_name: string; action: 'close' | 'reopen'; through: string; reason?: string }
+/** `through` = dernier jour de la période close (« » = rien de clos). Écrit par le SERVEUR seulement (jamais par la synchro). */
+interface CloseState { through: string; log: CloseLogEntry[] }
+const addDays = (d: string, n: number): string => new Date(new Date(d + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
+const isMonthEnd = (d: unknown): d is string => isDate(d) && addDays(d, 1).slice(8) === '01';
+/** Clôturer : jusqu'à une fin de mois, pas dans le futur, toujours plus loin que la clôture actuelle. `yearEnd` = le 31 décembre (exercice civil) : on y passe l'écriture de report à nouveau. */
+function planClose(current: string, through: unknown, today: string): { ok: true; yearEnd: boolean } | { ok: false; reason: 'date' | 'future' | 'already' } {
+  if (!isMonthEnd(through)) return { ok: false, reason: 'date' };
+  if (through > today) return { ok: false, reason: 'future' };
+  if (current && through <= current) return { ok: false, reason: 'already' };
+  return { ok: true, yearEnd: through.slice(5) === '12-31' };
+}
+/** Rouvrir : motif de 3 caractères au moins ; `through` = nouvelle fin de clôture, plus tôt que l'actuelle (« » = tout rouvrir). */
+function planReopen(current: string, through: unknown, reason: unknown): { ok: true } | { ok: false; reason: 'nothing' | 'reason' | 'date' | 'later' } {
+  if (!current) return { ok: false, reason: 'nothing' };
+  if (typeof reason !== 'string' || reason.replace(/[<>]/g, '').trim().length < 3) return { ok: false, reason: 'reason' };
+  if (through !== '' && !isMonthEnd(through)) return { ok: false, reason: 'date' };
+  if (through !== '' && (through as string) >= current) return { ok: false, reason: 'later' };
+  return { ok: true };
+}
+/**
+ * Report à nouveau : à la clôture du 31 décembre, les comptes de charges (6) et de produits (7) de l'exercice sont soldés et le résultat passe au compte 110.
+ * Daté du dernier jour de l'exercice. Renvoie null s'il n'y a rien à solder (déjà fait, ou exercice vide). Le calcul tient compte des écritures de clôture déjà passées (et de leurs annulations).
+ */
+function closingEntry(entries: Entry[], yearStart: string, end: string, id: string): Entry | null {
+  if (!isDate(yearStart) || !isDate(end)) return null;
+  const net = new Map<string, number>();
+  for (const e of entries) {
+    if (e.date < yearStart || e.date > end) continue;
+    for (const l of e.lines) { const c = classOf(l.account); if (c === 6 || c === 7) net.set(l.account, (net.get(l.account) || 0) + l.debit - l.credit); }
+  }
+  const lines: EntryLine[] = [];
+  let result = 0;
+  for (const [account, n] of [...net.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (n === 0) continue;
+    lines.push(n > 0 ? { account, debit: 0, credit: n } : { account, debit: -n, credit: 0 });
+    result += n;
+  }
+  if (lines.length === 0) return null;
+  if (result > 0) lines.push({ account: '110', debit: result, credit: 0 });
+  else if (result < 0) lines.push({ account: '110', debit: 0, credit: -result });
+  return { id, date: end, journal: 'OD', label: `Report à nouveau : résultat de l'exercice clos le ${end}`, lines, source: { type: 'closing', id: end } };
+}
 // END ACCOUNTINGCORE
 // BEGIN ACCOUNTINGBUILD
 /** Ce dont on a besoin d'une facture, d'une ligne d'argent, d'une avance : les vrais types du site les contiennent (typage structurel). */
@@ -1012,7 +1057,7 @@ function buildEntries(src: Sources, key: (id: string) => string = x => x): Built
   return { entries: out, skipped };
 }
 // END ACCOUNTINGBUILD
-return { cleanEntry, reverseEntry, buildEntries };
+return { cleanEntry, reverseEntry, buildEntries, planClose, planReopen, closingEntry, isMonthEnd, addDays };
 })();
 
 /** Clé opaque d'une pièce de paie ou d'avance : le Comptable lit les écritures mais ne doit pas pouvoir remonter à un salarié (l'identifiant d'une fiche contient celui du salarié). */
@@ -1021,6 +1066,18 @@ async function acctKey(id: string): Promise<string> {
   return Array.from(new Uint8Array(d)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 const acctFail = (res: any, msg: string, code = 400) => res.status(code).json({ error: msg });
+
+/** Clôture en cours (lue À CHAQUE FOIS dans la base, jamais dans le cache) : { through, log }. Écrite seulement par la route accounting-close. */
+async function acctCloseState(): Promise<{ through: string; log: any[]; rec: any }> {
+  const { data } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  const rec: any = (data as any)?.data || {};
+  const c = rec.acct_close || {};
+  return { through: typeof c.through === 'string' && ACCT.isMonthEnd(c.through) ? c.through : '', log: Array.isArray(c.log) ? c.log : [], rec };
+}
+const ACCT_CLOSE_REASON: Record<string, string> = {
+  date: 'La clôture se fait à une fin de mois (exemple : 2026-10-31).', future: 'On ne peut pas clôturer une période qui n\'est pas encore finie.', already: 'Cette période est déjà close.',
+  nothing: 'Aucune période n\'est close.', reason: 'Écris un motif (3 caractères au moins).', later: 'Pour rouvrir, choisis une date plus ancienne que la clôture actuelle.',
+};
 
 /** Génère les écritures de toutes les pièces (factures, avoirs, argent, paie, avances). Idempotent : une écriture qui existe déjà n'est ni refaite ni modifiée. Réservé à l'admin et au Comptable. */
 async function accountingSync(_req: any, res: any, me: any) {
@@ -1037,6 +1094,12 @@ async function accountingSync(_req: any, res: any, me: any) {
     slips: slipRows.map((r: any) => r.data), advances: advRows.map((r: any) => r.data),
   }, (id: string) => keys.get(id) || id);
   let created = 0, existing = 0;
+  const closed = (await acctCloseState()).through;
+  if (closed) { // une pièce datée dans une période close n'est PAS écrite (elle est signalée)
+    const keep = built.entries.filter((e: any) => e.date > closed);
+    for (const e of built.entries) if (e.date <= closed) built.skipped.push({ type: String(e.source?.type || 'entry'), id: String(e.source?.id || e.id), reason: 'closed' });
+    built.entries = keep;
+  }
   for (let i = 0; i < built.entries.length; i += 200) {
     const { data, error } = await sb.rpc('df_post_entries', { p_entries: built.entries.slice(i, i + 200), p_by: me.id });
     if (error) return acctFail(res, "Impossible d'enregistrer les écritures : " + error.message, 500);
@@ -1052,7 +1115,7 @@ async function accountingSync(_req: any, res: any, me: any) {
 async function accountingPost(req: any, res: any, me: any) {
   const b = req.body || {};
   const id = `je-manual-${newDocId('m')}`;
-  const v = ACCT.cleanEntry({ id, date: b.date, journal: b.journal, ref: b.ref, label: b.label, lines: b.lines, source: { type: 'manual', id } });
+  const v = ACCT.cleanEntry({ id, date: b.date, journal: b.journal, ref: b.ref, label: b.label, lines: b.lines, source: { type: 'manual', id } }, (await acctCloseState()).through);
   if (!v.ok) return acctFail(res, `Écriture refusée (${v.reason}).`, 400);
   const { data, error } = await sb.rpc('df_post_entries', { p_entries: [v.entry], p_by: me.id });
   if (error) return acctFail(res, "Impossible d'enregistrer l'écriture : " + error.message, 500);
@@ -1072,7 +1135,7 @@ async function accountingReverse(req: any, res: any, me: any) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < orig.date) return acctFail(res, "Date incorrecte (pas avant l'écriture annulée).");
   const rev = ACCT.reverseEntry(orig, date, `${id}-rev`);
   rev.label = `${rev.label} (${reason})`.slice(0, 200);
-  const v = ACCT.cleanEntry(rev);
+  const v = ACCT.cleanEntry(rev, (await acctCloseState()).through);
   if (!v.ok) return acctFail(res, `Annulation refusée (${v.reason}).`);
   const { data, error } = await sb.rpc('df_reverse_entry', { p_id: id, p_rev: v.entry, p_by: me.id });
   if (error) {
@@ -1084,6 +1147,67 @@ async function accountingReverse(req: any, res: any, me: any) {
   }
   await auditLog(me, 'accounting_reverse', { type: 'entries', id, label: orig.label }, reason);
   return res.json({ ok: true, ...data });
+}
+/** Clôture et réouverture d'une période (admin seulement). Clôturer = on n'écrit plus à cette date ni avant ; au 31 décembre, le résultat de l'exercice est reporté au compte 110. Rouvrir demande un motif et annule les reports à nouveau des exercices rouverts. Tout est noté dans le journal. */
+async function accountingClose(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const b = req.body || {};
+  const cur = await acctCloseState();
+  const now = new Date().toISOString();
+  const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); // jour de Madagascar (UTC+3)
+  const who = { by: String(me.id), by_name: String(me.name || me.username || '').slice(0, 80) };
+  const save = async (through: string, entry: any) => {
+    const log = [...cur.log, entry].slice(-100);
+    const { error } = await sb.from(T.settings).update({ data: { ...cur.rec, acct_close: { through, log } }, updated_at: now }).eq('id', 'general');
+    stCache = null;
+    return error;
+  };
+  const { data: rows, error: rerr } = await sb.from(T.entries).select('id, data').order('id', { ascending: true });
+  if (rerr) return acctFail(res, 'Lecture des écritures impossible.', 500);
+  const all: any[] = (rows || []).map((r: any) => r.data);
+  if (b.action === 'close') {
+    const through = String(b.through || '');
+    const p = ACCT.planClose(cur.through, through, today);
+    if (!p.ok) return acctFail(res, ACCT_CLOSE_REASON[p.reason] || 'Clôture refusée.');
+    let posted = 0;
+    if (p.yearEnd) {
+      const n = all.filter((e: any) => e.source?.type === 'closing' && e.source?.id === through && !e.reversal_of).length;
+      const ce = ACCT.closingEntry(all, `${through.slice(0, 4)}-01-01`, through, `je-closing-${through}-${n + 1}`);
+      if (ce) {
+        const v = ACCT.cleanEntry(ce, cur.through);
+        if (!v.ok) return acctFail(res, `Report à nouveau refusé (${v.reason}).`);
+        const { error } = await sb.rpc('df_post_entries', { p_entries: [v.entry], p_by: me.id });
+        if (error) return acctFail(res, "Impossible d'écrire le report à nouveau : " + error.message, 500);
+        posted = 1;
+      }
+    }
+    const err = await save(through, { at: now, ...who, action: 'close', through });
+    if (err) return acctFail(res, "Impossible d'enregistrer la clôture : " + err.message, 500);
+    await auditLog(me, 'accounting_close', { type: 'entries', id: through, label: 'Clôture' }, `jusqu'au ${through}${posted ? ' (report à nouveau passé)' : ''}`);
+    return res.json({ ok: true, through, carried: posted });
+  }
+  if (b.action === 'reopen') {
+    const through = b.through === undefined || b.through === null ? '' : String(b.through);
+    const reason = String(b.reason ?? '').replace(/[<>]/g, '').trim().slice(0, 150);
+    const p = ACCT.planReopen(cur.through, through, reason);
+    if (!p.ok) return acctFail(res, ACCT_CLOSE_REASON[p.reason] || 'Réouverture refusée.');
+    // Les reports à nouveau des exercices rouverts sont annulés d'abord (si la suite échoue, la période reste close : c'est le côté prudent).
+    let undone = 0;
+    for (const e of all.filter((x: any) => x.source?.type === 'closing' && !x.reversal_of && !x.reversed_by && x.date > through)) {
+      const rev = ACCT.reverseEntry(e, e.date, `${e.id}-rev`);
+      rev.label = `${rev.label} (réouverture : ${reason})`.slice(0, 200);
+      const v = ACCT.cleanEntry(rev, through);
+      if (!v.ok) return acctFail(res, `Annulation du report à nouveau refusée (${v.reason}).`);
+      const { error } = await sb.rpc('df_reverse_entry', { p_id: e.id, p_rev: v.entry, p_by: me.id });
+      if (error) return acctFail(res, "Impossible d'annuler le report à nouveau : " + error.message, 500);
+      undone++;
+    }
+    const err = await save(through, { at: now, ...who, action: 'reopen', through, reason });
+    if (err) return acctFail(res, "Impossible d'enregistrer la réouverture : " + err.message, 500);
+    await auditLog(me, 'accounting_reopen', { type: 'entries', id: through || 'tout', label: 'Réouverture' }, `${through ? `jusqu'au ${through}` : 'tout rouvert'} · ${reason}${undone ? ` · ${undone} report(s) à nouveau annulé(s)` : ''}`);
+    return res.json({ ok: true, through, undone });
+  }
+  return acctFail(res, 'Action inconnue.');
 }
 // ===== END ACCOUNTING =====
 
@@ -1860,7 +1984,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2011,7 +2135,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
@@ -2997,6 +3121,8 @@ async function sync(req: any, res: any, me: any) {
         // Budget prévu contre réel (M15.4) : plan mensuel revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
         const sentPlan = (rec as any).monthly_plan === undefined ? (existing as any)?.monthly_plan : (rec as any).monthly_plan;
         if (sentPlan !== undefined) toSave = { ...toSave, monthly_plan: cleanMonthlyPlan(sentPlan) };
+        // Clôture de la comptabilité (M14.6) : écrite par la route accounting-close SEULEMENT ; ce qu'envoie le navigateur est ignoré
+        if ((existing as any)?.acct_close !== undefined) toSave = { ...toSave, acct_close: (existing as any).acct_close }; else delete (toSave as any).acct_close;
       }
       if (admin && col === 'users') {
         // Dossier du salarié (M5.1) : revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
@@ -4715,6 +4841,7 @@ Deno.serve(async (request: Request) => {
     if (action === "accounting-sync" && req.method === "POST") return await accountingSync(req, res, me);
     if (action === "accounting-post" && req.method === "POST") return await accountingPost(req, res, me);
     if (action === "accounting-reverse" && req.method === "POST") return await accountingReverse(req, res, me);
+    if (action === "accounting-close" && req.method === "POST") return await accountingClose(req, res, me);
     if (action === "payroll-period" && req.method === "POST") return await payrollPeriod(req, res, me);
     if (action === "payroll-close" && req.method === "POST") return await payrollClose(req, res, me);
     if (action === "payroll-reopen" && req.method === "POST") return await payrollReopen(req, res, me);

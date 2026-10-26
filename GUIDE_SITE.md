@@ -264,6 +264,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.
   - Le plan comptable est un plan minimal de départ, à valider par un expert-comptable.
   - La TVA collectée vient des factures ; la TVA déductible vient des achats saisis à la main (modèle « Achat avec TVA »), car les dépenses n'ont pas de champ TVA.
+  - Clôture : le responsable verrouille les mois finis (onglet Clôture) ; plus d'écriture à ces dates. Au 31 décembre, le résultat passe au compte 110.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
@@ -432,7 +433,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -671,6 +672,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:accounting-page` | Essai de la page Comptabilité (M14.4), sans écran réel ni réseau : démo, génération, saisie, annulation, FR et EN, rôles. Lancer : npm run check:accounting-page |
+| `npm run check:accounting-close` | Contrôle de la clôture de la comptabilité (M14.6), sans réseau : règles, report à nouveau, démo (clôture, refus d'écrire, réouverture), serveur, écran FR/EN. |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |

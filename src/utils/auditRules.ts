@@ -3,7 +3,7 @@ export const AUDIT_ACTIONS = [
   'invoice_issue', 'invoice_cancel', 'invoice_pay', 'delete', 'tariff_change', 'settings_change', 'company_change',
   'user_create', 'user_password', 'signup_decision', 'profile_decision', 'reset_decision',
   'payroll_close', 'payroll_reopen', 'payroll_pay', 'backup_now', 'backup_restore', 'mission_decision', 'login_locked', 'totp_on', 'totp_off', 'totp_reset', 'backup_import',
-  'accounting_sync', 'accounting_post', 'accounting_reverse',
+  'accounting_sync', 'accounting_post', 'accounting_reverse', 'accounting_close', 'accounting_reopen',
 ] as const;
 export type AuditAction = typeof AUDIT_ACTIONS[number];
 export interface AuditEntry { id: string; at: string; by: string; by_name: string; action: AuditAction; target_type: string; target_id: string; target_label: string; detail: string }
@@ -60,7 +60,7 @@ const LABELS: Record<AuditAction, [string, string]> = {
   invoice_issue: ['Facture émise', 'Invoice issued'], invoice_cancel: ['Facture annulée (avoir)', 'Invoice cancelled (credit note)'], invoice_pay: ['Paiement de facture', 'Invoice payment'],
   delete: ['Suppression', 'Deletion'], tariff_change: ['Changement de tarif', 'Price change'], settings_change: ['Changement de réglage', 'Setting change'], company_change: ['Conditions de l\'entreprise modifiées', 'Company conditions changed'],
   user_create: ['Compte créé', 'Account created'], user_password: ['Mot de passe changé', 'Password changed'], signup_decision: ['Inscription traitée', 'Sign-up handled'], profile_decision: ['Modification de profil traitée', 'Profile change handled'], reset_decision: ['Mot de passe oublié traité', 'Password reset handled'],
-  accounting_sync: ['Écritures générées', 'Entries generated'], accounting_post: ['Écriture saisie', 'Entry posted'], accounting_reverse: ['Écriture annulée (contre-passation)', 'Entry reversed'],
+  accounting_sync: ['Écritures générées', 'Entries generated'], accounting_post: ['Écriture saisie', 'Entry posted'], accounting_reverse: ['Écriture annulée (contre-passation)', 'Entry reversed'], accounting_close: ['Comptabilité clôturée', 'Accounting closed'], accounting_reopen: ['Comptabilité rouverte', 'Accounting reopened'],
   payroll_close: ['Paie clôturée', 'Payroll closed'], payroll_reopen: ['Paie rouverte', 'Payroll reopened'], payroll_pay: ['Paie versée', 'Payroll paid'], backup_now: ['Sauvegarde manuelle', 'Manual backup'], backup_restore: ['Restauration d\'une sauvegarde', 'Backup restored'], backup_import: ['Fichier de sauvegarde importé', 'Backup file imported'], totp_on: ['Double étape activée', 'Two-step sign-in turned on'], totp_off: ['Double étape désactivée', 'Two-step sign-in turned off'], totp_reset: ['Double étape remise à zéro', 'Two-step sign-in reset'], login_locked: ['Délai de connexion après essais ratés', 'Sign-in delay after failed attempts'], mission_decision: ['Mission validée ou refusée', 'Mission approved or refused'],
 };
 export const auditLabel = (a: string, lang: 'fr' | 'en'): string => { const l = (LABELS as Record<string, [string, string]>)[a]; return l ? l[lang === 'en' ? 1 : 0] : (lang === 'en' ? 'Unknown action' : 'Action inconnue'); };

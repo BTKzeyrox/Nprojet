@@ -22,7 +22,7 @@ import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
 import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
 import { demoSheets, type Sheet } from '../utils/sheets';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
-import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, type Entry } from '../utils/accounting';
+import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, planClose, planReopen, closingEntry, type Entry, type CloseState } from '../utils/accounting';
 import { buildEntries } from '../utils/accountingEntries';
 import { checkHrFile, type HrFile } from '../utils/hrFile';
 import { todayMada as madaToday } from '../utils/stats';
@@ -690,6 +690,10 @@ export class AppStore {
   public accountingSync() { return this.invoiceCall('accounting-sync', {}); }
   public postEntry(d: { date: string; journal: string; label: string; ref?: string; lines: { account: string; debit: number; credit: number }[] }) { return this.invoiceCall('accounting-post', d); }
   public reverseEntryById(id: string, date: string, reason: string) { return this.invoiceCall('accounting-reverse', { id, date, reason }); }
+  /** Clôture de la comptabilité : jusqu'à quel jour on ne peut plus écrire, et l'historique (clôtures et réouvertures). */
+  public getAcctClose(): CloseState { const c = (this.settings[0] as any)?.acct_close; return { through: typeof c?.through === 'string' ? c.through : '', log: Array.isArray(c?.log) ? c.log : [] }; }
+  public closeAccounting(through: string) { return this.invoiceCall('accounting-close', { action: 'close', through }); }
+  public reopenAccounting(through: string, reason: string) { return this.invoiceCall('accounting-close', { action: 'reopen', through, reason }); }
   public payInvoice(id: string, p: { amount: number; date: string; method?: string; note?: string }) { return this.invoiceCall('invoice-pay', { id, ...p }); }
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
@@ -1565,7 +1569,8 @@ export class AppStore {
         if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
         const built = buildEntries({ invoices: this.invoices, cash: this.cash, slips: [], advances: this.advanceRequests });
         const have = new Set(this.entries.map(e => e.id));
-        const fresh = built.entries.filter(e => !have.has(e.id));
+        const closedTo = this.getAcctClose().through;
+        const fresh = built.entries.filter(e => !have.has(e.id) && (!closedTo || e.date > closedTo));
         this.entries = [...assignNumbers(fresh, this.entries), ...this.entries];
         this.emit();
         return ok({ ok: true, created: fresh.length, existing: built.entries.length - fresh.length, total: built.entries.length, skipped: built.skipped });
@@ -1573,7 +1578,7 @@ export class AppStore {
       case 'accounting-post': {
         if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
         const id = `je-manual-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-        const v = cleanEntry({ id, date: body.date, journal: body.journal, ref: body.ref, label: body.label, lines: body.lines, source: { type: 'manual', id } });
+        const v = cleanEntry({ id, date: body.date, journal: body.journal, ref: body.ref, label: body.label, lines: body.lines, source: { type: 'manual', id } }, this.getAcctClose().through);
         if (!v.ok) return fail(`Écriture refusée (${v.reason}).`);
         this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries];
         this.emit();
@@ -1590,11 +1595,50 @@ export class AppStore {
         if (orig.reversed_by) return fail('Cette écriture est déjà annulée.');
         const rev = reverseAccounting(orig, date, `${orig.id}-rev`);
         rev.label = `${rev.label} (${reason})`.slice(0, 200);
-        const v = cleanEntry(rev);
+        const v = cleanEntry(rev, this.getAcctClose().through);
         if (!v.ok) return fail(`Annulation refusée (${v.reason}).`);
         this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries.map(e => (e.id === orig.id ? { ...e, reversed_by: rev.id } : e))];
         this.emit();
         return ok({ ok: true });
+      }
+      case 'accounting-close': {
+        if (me?.role !== 'admin') return fail('Réservé à l\'administrateur.');
+        const cur = this.getAcctClose();
+        const now = new Date().toISOString(), today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+        const setClose = (through: string, e: any) => { this.settings = [{ ...(this.settings[0] as any), acct_close: { through, log: [...cur.log, { at: now, by: me.id, by_name: me.name || '', ...e }].slice(-100) } }]; };
+        if (body.action === 'close') {
+          const p = planClose(cur.through, body.through, today);
+          if (!p.ok) return fail(p.reason === 'date' ? 'La clôture se fait à une fin de mois (exemple : 2026-10-31).' : p.reason === 'future' ? 'On ne peut pas clôturer une période qui n\'est pas encore finie.' : 'Cette période est déjà close.');
+          let carried = 0;
+          if (p.yearEnd) {
+            const n = this.entries.filter(e => e.source?.type === 'closing' && e.source?.id === body.through && !e.reversal_of).length;
+            const ce = closingEntry(this.entries, `${String(body.through).slice(0, 4)}-01-01`, body.through, `je-closing-${body.through}-${n + 1}`);
+            const v = ce ? cleanEntry(ce, cur.through) : null;
+            if (v && v.ok) { this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries]; carried = 1; }
+          }
+          setClose(body.through, { action: 'close', through: body.through });
+          this.emit();
+          return ok({ ok: true, through: body.through, carried });
+        }
+        if (body.action === 'reopen') {
+          const through = body.through ? String(body.through) : '';
+          const reason = String(body.reason ?? '').replace(/[<>]/g, '').trim().slice(0, 150);
+          const p = planReopen(cur.through, through, reason);
+          if (!p.ok) return fail(p.reason === 'reason' ? 'Écris un motif (3 caractères au moins).' : p.reason === 'nothing' ? 'Aucune période n\'est close.' : p.reason === 'later' ? 'Pour rouvrir, choisis une date plus ancienne que la clôture actuelle.' : 'La clôture se fait à une fin de mois.');
+          let undone = 0;
+          for (const e of this.entries.filter(x => x.source?.type === 'closing' && !x.reversal_of && !x.reversed_by && x.date > through)) {
+            const rev = reverseAccounting(e, e.date, `${e.id}-rev`);
+            rev.label = `${rev.label} (réouverture : ${reason})`.slice(0, 200);
+            const v = cleanEntry(rev, through);
+            if (!v.ok) return fail(`Annulation du report à nouveau refusée (${v.reason}).`);
+            this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries.map(x => (x.id === e.id ? { ...x, reversed_by: rev.id } : x))];
+            undone++;
+          }
+          setClose(through, { action: 'reopen', through, reason });
+          this.emit();
+          return ok({ ok: true, through, undone });
+        }
+        return fail('Action inconnue.');
       }
       case 'invoice-issue': {
         const inv = this.invoices.find(x => x.id === body.id);
