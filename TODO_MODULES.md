@@ -555,6 +555,32 @@ But : vendre le site à plusieurs entreprises sans un hébergement par client. A
 - [ ] **M17.1 — Étude écrite** (S) : champ d'entreprise sur chaque table, droits à la lecture et à l'écriture, comptes, sauvegardes séparées, coût d'hébergement partagé, risques de fuite entre entreprises, plan de reprise des données existantes. **Aucun code avant l'accord de BTK sur cette étude.**
 - [ ] **M17.2 à M17.n** : étapes à écrire après l'étude.
 
+## MODULE 18 — Retrait complet du mode démo et vraie simulation dans la base — taille L (demande de BTK, 2026-10-27) — **PLAN SEULEMENT : rien n'est codé, rien n'est supprimé. En attente du « GO » de BTK (« GO 1 » = étape M18.1).**
+
+But : supprimer le mode démo du site (`?demo=admin` et `?demo=employee`, données en mémoire) et le remplacer par une **vraie base remplie de données réalistes sur 2 mois**, pour montrer le site en vrai (ex. à un recruteur).
+Plan écrit d'après le récapitulatif d'une autre session (2026-10-27). **L'état de la base ci-dessous vient de ce récapitulatif : à revérifier en lecture seule avant toute suppression.**
+
+**Contenu de la vraie base à l'origine du plan (2026-10-27)** : comptes `admin`, `kiot` (nom « tokiherivola »), `radama` ; 10 missions d'exemple (Société Aina, Cabinet Rado, Bureau Nirina, Atelier Tsiory, Boutique Mirana) ; 2 fiches client « Atelier Tsiory » ; 4 sessions ; 95 messages ; 2 actualités ; 4 lignes d'argent (paiements 150 000 et 20 000 Ar, achats 2 822 828 et 20 000 Ar) ; quelques lignes de journal, d'erreurs et de présence ; 54 sauvegardes de sécurité. Rien n'est marqué « démo ».
+
+**Ordre obligatoire** : vider les données actuelles d'abord, puis le retrait du mode démo, puis la simulation, puis (seulement après) le « tableau préparé par mission ». Chaque étape attend le « GO » de BTK.
+
+**Règles de ce module (ne jamais dépasser)** : aucune ligne supprimée sans la **liste exacte** montrée à BTK et son **accord écrit** ; le compte `kiot` n'est pas touché sans accord ; le serveur n'est pas déployé sans accord ; **les mots de passe ne vont jamais dans le dépôt** (BTK les donne dans le chat, ils ne sont pas écrits dans les fichiers ni la mémoire) ; une sauvegarde avant chaque étape qui écrit dans la base.
+
+**À trancher avec BTK (choix par défaut entre parenthèses)** :
+- Le compte `kiot` est-il à BTK ? (on le garde, on supprime `radama`) ; ou on supprime les deux ?
+- Les 54 anciennes sauvegardes contiennent les données d'essai : les garder ? (oui)
+- Sans mode démo, un visiteur doit se connecter : préparer un compte « visiteur » partagé (mot de passe donné par BTK) ? (oui, 1 compte ; il pourrait casser les données, donc prévoir un moyen de recharger la simulation et noter le point dans le guide)
+- Mots de passe des 4 opérateurs : BTK les donne dans le chat.
+- Noms des 2 clients et des 4 opérateurs : (noms malgaches crédibles inventés par Claude)
+
+- [ ] **M18.1 — Sauvegarde avant tout** (S) : sauvegarde de sécurité n° 55 (`select public.df_take_backup();`) + un export. Rien n'est supprimé. *Demande « GO 1 ».*
+- [ ] **M18.2 — Nettoyage de la vraie base** (M) : relire la base en lecture seule, donner à BTK la **liste exacte** des lignes à supprimer (comptes, missions, clients, sessions, messages, actualités, argent, journal, erreurs, présence), BTK confirme **par écrit**, puis suppression. On garde `admin`, les réglages de l'entreprise et les 54 sauvegardes (sauf avis contraire de BTK). Vérifier après : ce qui reste est exactement ce qui était prévu.
+- [ ] **M18.3 — Retrait du mode démo dans le site** (L) : enlever la démo du magasin de données (`src/db/store.ts`), du bandeau, des Réglages, de la page de connexion et de l'adresse `?demo=`, soit une quinzaine de fichiers. **48 tests utilisent les données de démo comme matière d'essai** : garder le générateur de données comme **outil de test seulement, invisible sur le site** (c'est lui qui servira aussi à la simulation), adapter les tests. Mettre à jour : guide, `AI_STUDIO.md`, et la ligne de risques « Données de démo mélangées à la vraie base » (le contrôle « 0 appel réseau en démo » change de sens). Notes de l'autre session : la correction de la démo des **congés** devient inutile ; celle du seuil « **trop rapide** » reste utile.
+- [ ] **M18.4 — Générateur de la simulation** (L) : **2 clients** crédibles, **10 missions différentes** (saisie de fiches, contrôle qualité, administratif, support, web), **4 opérateurs** de jour et de nuit + le responsable, **2 mois d'activité** avec quelques refus ; en plus : validations, paie, factures et paiements des clients, dépenses, congés, planning, messages et actualités. **Tester d'abord la cohérence sur une base locale de test** : chiffres, factures contre missions, paie contre sessions. (Idée à valider avec BTK : marquer les lignes de la simulation pour pouvoir les retrouver et les recharger sans toucher aux vraies données.)
+- [ ] **M18.5 — Chargement dans la vraie base** (M) : sauvegarde avant, chargement de la simulation, création des comptes des 4 opérateurs (mots de passe donnés par BTK dans le chat) et du compte « visiteur » si BTK le veut, avec un moyen de recharger la simulation. Vérifier les chiffres (Statistiques, Finances, Paie) contre le générateur.
+- [ ] **M18.6 — Tableau préparé par mission (« étape B »)** (M) : **change le serveur** : sauvegarde avant, **accord de BTK avant le déploiement**, version et retour en arrière notés dans `AI_STUDIO.md`.
+- [ ] **M18.7 — Essai de BTK et clôture** (S) : BTK essaie sur téléphone (connexion de chaque rôle, chiffres, rechargement de la simulation) ; guide et TODO mis à jour.
+
 ## Ordre conseillé
 
 1. **Module 0** (page Conditions de l'entreprise) — les autres modules en dépendent.
@@ -631,3 +657,4 @@ But : vendre le site à plusieurs entreprises sans un hébergement par client. A
 - 2026-10-25 : **M14.5 faite** : onglet TVA (par mois, total, crédit de TVA, brouillon Excel) ; la TVA déductible vient d'achats saisis à la main (modèle fourni). `check:accounting` 74/74.
 - 2026-10-27 : **M14.9 faite (code)** : 3 alertes Comptabilité dans la Santé du site (écriture déséquilibrée, mois finis pas clos, TVA à payer), solutions de l'assistant, carte du site, guide. `check:health-accounting` 28/28. Aucun serveur ni table. Reste M14.10 (expert-comptable et essai de BTK).
 - 2026-10-27 : **M15.8 faite (code)** : fiches de la carte du site pour les missions récurrentes, le planning, le prévu contre réel, le rapport automatique et le plafond ; alertes `planning-conflicts` et `plan-over` dans la Santé du site ; règle récurrente dans la démo ; guide à jour. `check:health-management` 24/24. Aucun serveur ni table. Reste M15.7 (décision de BTK) et M15.9 (essai).
+- 2026-10-27 : **MODULE 18 ajouté à la demande de BTK** (« mettre d'abord le plan dans un todo : retrait du mode démo complet et ajout d'une vraie simulation dans la base »). **Plan seulement : rien n'est codé, rien n'est supprimé.** En attente : réponses aux points à trancher et « GO 1 » (sauvegarde n° 55).
