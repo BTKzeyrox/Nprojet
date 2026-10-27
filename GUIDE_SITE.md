@@ -555,6 +555,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
+| `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
 | `modeSwitch.ts` | Bouton « Vue opérateur / Retour responsable » du menu : visible ou masqué (réglé sur cet appareil). |
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
@@ -734,6 +735,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-invoices` | Contrôle des règles Factures du module 11 (M11.12). Pur, sans réseau. Lancer : npm run check:health-invoices |
 | `npm run check:health-accounting` | Contrôle des règles Comptabilité du module 11 (M14.9). Pur, sans réseau. Lancer : npm run check:health-accounting |
 | `npm run check:health-management` | Contrôle des règles du module 15 dans la Santé du site (M15.8) : conflits de planning, paie et dépenses au-dessus du prévu. Pur, sans réseau. |
+| `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
 | `npm run check:health-performance` | Contrôle de la règle Performance du module 11 (M11.12). Pur, sans réseau. Lancer : npm run check:health-performance |
 | `npm run check:health-notif` | Contrôle des notifications de la cloche (M11.7 / M9.4) : règles pures + câblage. Lancer : npm run check:health-notif |
 | `npm run check:watch-shared` | Contrôle des seuils de Surveillance PARTAGÉS (Conditions > Surveillance, M11.14 « Accord Surveillance »). Sans réseau. Lancer : npm run check:watch-shared |

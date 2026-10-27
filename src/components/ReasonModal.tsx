@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { XCircle, CheckCircle } from 'lucide-react';
+import { backdropDown, backdropShouldClose } from '../utils/modalGuard';
 
 export interface ReasonOptions {
   title: string;
@@ -16,13 +17,14 @@ const MAX = 300;
 const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void }> = ({ options, onClose }) => {
   const [text, setText] = useState('');
   useEffect(() => { setText(''); }, [options]);
+  const downOnBackdrop = useRef(false); // l'appui a commencé sur le fond : seul cas où un clic sur le fond ferme la fenêtre (voir modalGuard.ts)
   useLockBodyScroll(!!options);
   if (!options) return null;
   const clean = text.trim();
   const optional = !!options.optional;
   const ok = optional || clean.length >= MIN;
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/70" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/70" onPointerDown={e => { downOnBackdrop.current = backdropDown(e.target, e.currentTarget); }} onClick={e => { const close = backdropShouldClose(downOnBackdrop.current, e.target, e.currentTarget); downOnBackdrop.current = false; if (close) onClose(); }} role="dialog" aria-modal="true">
       <form
         className="w-full max-w-sm bg-[#0d1624] border rounded-2xl border-slate-600 p-5 space-y-3 text-slate-100"
         onClick={e => e.stopPropagation()}
@@ -47,7 +49,7 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
             rows={3}
             value={text}
             maxLength={MAX}
-            autoFocus
+            autoFocus={!optional} // champ facultatif : pas de clavier qui s'ouvre tout seul (il décalait la fenêtre pendant le toucher de « Valider »)
             onChange={e => setText(e.target.value)}
             placeholder={optional ? "Un mot pour l’opérateur (facultatif)" : "Écris la raison du refus"}
             className={`w-full bg-[#141e2a] border rounded-xl border-slate-600 p-2.5 text-sm text-white focus:outline-none ${optional ? 'focus:border-emerald-500' : 'focus:border-red-500'}`}

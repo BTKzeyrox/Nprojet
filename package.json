@@ -59,6 +59,7 @@
     "check:health-invoices": "npx --yes tsx scripts/check-health-invoices.ts",
     "check:health-accounting": "npx --yes tsx scripts/check-health-accounting.ts",
     "check:health-management": "npx --yes tsx scripts/check-health-management.ts",
+    "check:reason-modal": "npx --yes tsx scripts/check-reason-modal.ts",
     "check:health-performance": "npx --yes tsx scripts/check-health-performance.ts",
     "check:health-notif": "npx --yes tsx scripts/check-health-notif.ts",
     "check:watch-shared": "npx --yes tsx scripts/check-watch-shared.ts",
