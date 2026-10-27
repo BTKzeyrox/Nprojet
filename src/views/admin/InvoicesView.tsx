@@ -19,6 +19,7 @@ import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
 import { downloadInvoiceExcel, downloadPdfFromHtml } from '../../utils/exportDoc';
 import type { Invoice } from '../../types';
 import { QuotesSection } from './QuotesSection';
+import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 
 // Page « Facturation » (responsable seulement) : liste, brouillon, émission, paiement, avoir.
 // Le numéro, le reçu et les totaux définitifs sont toujours posés par le serveur ; l'état (payée, en retard…) se calcule (src/utils/invoices.ts).
@@ -58,6 +59,8 @@ interface Pay { id: string; amount: string; date: string; method: string; note: 
 export const InvoicesView: React.FC = () => {
   const { lang } = useApp();
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const issueGate = useOnlineOnly('invoice'); // le numéro est donné par le serveur à l'émission
+  const payGate = useOnlineOnly('payment'); // un paiement est validé par le serveur (jamais compté deux fois)
   const [ver, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const [q, setQ] = useState('');
@@ -290,10 +293,11 @@ export const InvoicesView: React.FC = () => {
           <button type="button" onClick={() => void downloadInvoiceExcel(open, lang === 'en' ? 'en' : 'fr')} className={`${btn} border-slate-600 text-slate-100`}><Download className="w-4 h-4" />Excel</button>
           {open.status === 'draft' && <>
             <button type="button" disabled={busy} onClick={() => { setError(''); setEditor(editDraft(open)); }} className={`${btn} border-slate-600 text-slate-100`}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>
-            <button type="button" disabled={busy} onClick={() => issue(open)} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Send className="w-4 h-4" />{t('Émettre', 'Issue')}</button>
+            <button type="button" disabled={busy || issueGate.blocked} title={issueGate.blocked ? issueGate.why : undefined} onClick={() => issue(open)} className={`${btn} bg-emerald-600 border-emerald-500 text-white disabled:opacity-50`}><Send className="w-4 h-4" />{t('Émettre', 'Issue')}</button>
             <button type="button" disabled={busy} onClick={() => remove(open)} className={`${btn} border-rose-700 text-rose-200`}><Trash2 className="w-4 h-4" />{t('Supprimer', 'Delete')}</button>
+            <OnlineOnlyNote kind="invoice" className="w-full" />
           </>}
-          {open.status === 'issued' && open.type !== 'credit_note' && openInfo.balance > 0 && <button type="button" disabled={busy} onClick={() => { setError(''); setPay({ id: open.id, amount: String(openInfo.balance), date: today, method: '', note: '' }); }} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Wallet className="w-4 h-4" />{t('Enregistrer un paiement', 'Record a payment')}</button>}
+          {open.status === 'issued' && open.type !== 'credit_note' && openInfo.balance > 0 && <button type="button" disabled={busy || payGate.blocked} title={payGate.blocked ? payGate.why : undefined} onClick={() => { setError(''); setPay({ id: open.id, amount: String(openInfo.balance), date: today, method: '', note: '' }); }} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Wallet className="w-4 h-4" />{t('Enregistrer un paiement', 'Record a payment')}</button>}
           {canCancel(open, openInfo) && <button type="button" disabled={busy} onClick={() => cancel(open)} className={`${btn} border-rose-700 text-rose-200`}><Ban className="w-4 h-4" />{t('Annuler (avoir)', 'Cancel (credit note)')}</button>}
           {openInfo.state === 'paid' && <span className="inline-flex items-center gap-1 text-emerald-300 text-sm"><CheckCircle2 className="w-4 h-4" />{t('Payée en totalité', 'Fully paid')}</span>}
         </div>

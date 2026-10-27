@@ -4,11 +4,12 @@
 // ce que le serveur refuse ou ce qui est en conflit. Il ne parle jamais au réseau. Jamais actif en mode démo.
 // Opérateur : copie automatique, sans code. Admin : seulement avec un code de verrouillage (écran du M13.6) ; tant qu'il n'y en a pas, rien n'est gardé.
 import type { User } from '../types';
-import { OFFLINE_DEFAULTS, type Bilingual, type OfflineLimits, type OfflineOp, type Queue, type Role, copyText, discard, requeue as requeueOp, reviewList, summary } from '../utils/offline';
-import { applyQueue, buildOps, reapply, rejectedToReview, type Arrays, type Changes, type RejectedItem, type Skipped, type SyncedJson } from '../utils/offlineSync';
-import { createVault, getCopy, getQueue, idbKV, putCopy, putQueue, unlockVault, wipeCopyOnly, wipeVault, type KV, type Vault } from '../utils/offlineVault';
+import { OFFLINE_DEFAULTS, type Bilingual, type OfflineLimits, type OfflineOp, type Queue, type Role, collectionPolicy, copyText, discard, requeue as requeueOp, reviewList, summary } from '../utils/offline';
+import { applyQueue, buildOps, reapply, rejectedToReview, textOf, type Arrays, type Changes, type RejectedItem, type Skipped, type SyncedJson } from '../utils/offlineSync';
+import { changePin, createVault, getCopy, getQueue, idbKV, putCopy, putQueue, unlockVault, wipeCopyOnly, wipeVault, type KV, type Vault } from '../utils/offlineVault';
 
 const WHO_KEY = 'df_offline_who';
+const safeParse = (json: string | undefined): any => { if (json === undefined) return undefined; try { return JSON.parse(json); } catch { return undefined; } };
 
 /**
  * UN SEUL onglet écrit la copie locale (sinon deux onglets se réécrivent la file, et celui qui n'a rien à envoyer EFFACE les actions de l'autre).
@@ -44,9 +45,37 @@ export interface OfflineHost {
   diff(): Changes;
   flushSoon(): void; // des changements viennent d'être remis : les envoyer dès que possible
   emit(): void;
+  currentRole?(): Role | null; // rôle de la personne connectée (pour compter ce qui n'est pas encore envoyé, même sans copie locale)
 }
 export interface OfflineOptions { lock?: WriterLock; kv?: KV; queueDelayMs?: number; copyEveryMs?: number; limits?: OfflineLimits; now?: () => string; ioTimeoutMs?: number; storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null }
-export interface OfflineStatus { enabled: boolean; locked: boolean; problem: string | null; pending: number; photos: number; review: OfflineOp[]; skipped: Skipped[]; copy_saved_at: string | null; oldest_pending: string | null }
+export interface OfflineStatus {
+  enabled: boolean; locked: boolean; problem: string | null; pending: number; photos: number; review: OfflineOp[]; skipped: Skipped[]; copy_saved_at: string | null; oldest_pending: string | null;
+  // Écrans (M13.6)
+  role: Role | null; can_offline: boolean; // ce rôle a le droit de travailler hors ligne (admin, opérateur)
+  has_vault: boolean; // une copie existe sur cet appareil (ouverte ou verrouillée)
+  encrypted: boolean; needs_code: boolean; // needs_code : admin sans code, rien n'est gardé sur l'appareil
+  wait_seconds: number; // attente imposée après des erreurs de code
+}
+/** Un élément modifié sur cet appareil et pas encore reçu par le serveur. `kept` : il est aussi gardé sur le disque de l'appareil (sinon il est seulement en mémoire). */
+export interface UnsentItem { key: string; col: string; id: string; action: 'upsert' | 'delete'; created: boolean; text?: string; kept: boolean }
+export interface Unsent { count: number; items: UnsentItem[] }
+export type PinCode = 'weak_pin' | 'no_pin' | 'wrong_pin' | 'wait' | 'exists' | 'storage_error' | 'not_allowed' | 'locked' | 'no_user' | 'other_tab' | 'corrupt' | 'wrong_user' | 'newer_version' | 'none' | 'demo';
+export type PinResult = { ok: true } | { ok: false; code: PinCode; why: Bilingual; wait_seconds?: number };
+const PIN_MSG: Record<string, Bilingual> = {
+  wrong_pin: { fr: 'Code incorrect.', en: 'Wrong code.' },
+  wait: { fr: 'Trop d\'erreurs : patiente un peu avant de réessayer.', en: 'Too many mistakes: wait a little before trying again.' },
+  locked: { fr: 'La copie est verrouillée : entre d\'abord ton code actuel.', en: 'The copy is locked: enter your current code first.' },
+  no_user: { fr: 'Aucune personne connectée sur cet appareil.', en: 'Nobody is signed in on this device.' },
+  other_tab: { fr: 'Un autre onglet garde déjà la copie hors ligne : ferme-le, puis réessaie.', en: 'Another tab already holds the offline copy: close it, then try again.' },
+  corrupt: { fr: 'La copie de cet appareil est illisible. Tu peux l\'effacer et recommencer (les actions qu\'elle contenait seront perdues).', en: 'The copy on this device is unreadable. You can erase it and start again (actions it contained will be lost).' },
+  wrong_user: { fr: 'Cette copie appartient à un autre compte.', en: 'This copy belongs to another account.' },
+  newer_version: { fr: 'Cette copie vient d\'une version plus récente du site : mets le site à jour.', en: 'This copy comes from a newer version of the site: update the site.' },
+  none: { fr: 'Aucune copie sur cet appareil.', en: 'No copy on this device.' },
+  demo: { fr: 'Indisponible en mode démo.', en: 'Not available in demo mode.' },
+  not_allowed: { fr: 'Ce compte ne travaille pas encore hors ligne.', en: 'This account cannot work offline yet.' },
+  storage_error: { fr: 'Impossible d\'écrire sur cet appareil (plein ou navigation privée).', en: 'Cannot write on this device (full or private browsing).' },
+};
+const failPin = (code: PinCode, why?: Bilingual, wait?: number): PinResult => ({ ok: false, code, why: why ?? PIN_MSG[code] ?? PIN_MSG.corrupt, wait_seconds: wait });
 
 export class OfflineController {
   private kv: KV | null;
@@ -65,6 +94,11 @@ export class OfflineController {
   private cTimer: ReturnType<typeof setTimeout> | null = null;
   private lock: WriterLock;
   private lastUser: User | null = null;
+  private noVault = false; // admin connecté, aucune copie sur l'appareil (pas encore de code)
+  private enc = false;
+  private waitUntil = 0; // fin de l'attente imposée après des erreurs de code (ms)
+  private pinFail: PinResult | null = null;
+  private unsentCache: { at: number; value: Unsent } | null = null;
   private opt: Required<Omit<OfflineOptions, 'kv' | 'storage' | 'lock'>> & { storage: OfflineOptions['storage'] };
 
   constructor(private host: OfflineHost, opts: OfflineOptions = {}) {
@@ -104,10 +138,10 @@ export class OfflineController {
         const c = await this.io(createVault(kv, user.id, 'employee', undefined), { status: 'storage_error' } as Awaited<ReturnType<typeof createVault>>);
         if (c.status === 'ok') u = { status: 'ok', vault: c.vault }; else { this.problem = c.status; return; }
       }
-      if (u.status === 'none') return; // admin sans code : rien n'est gardé
-      if (u.status === 'locked') { this.locked = true; return; }
+      if (u.status === 'none') { this.noVault = true; return; } // admin sans code : rien n'est gardé
+      if (u.status === 'locked') { this.locked = true; this.host.emit(); return; }
       if (u.status !== 'ok') { this.problem = u.status; return; }
-      this.vault = u.vault; this.problem = null; this.locked = false;
+      this.vault = u.vault; this.problem = null; this.locked = false; this.noVault = false; this.enc = u.vault.enc;
       this.writeWho(this.user);
       const q = await this.io(getQueue(this.vault), { status: 'corrupt' } as Awaited<ReturnType<typeof getQueue>>);
       if (q.status === 'corrupt') this.problem = 'queue_corrupt';
@@ -131,16 +165,22 @@ export class OfflineController {
 
   // ---------- démarrage SANS réseau ----------
   /** Ouvre l'appli avec la dernière copie gardée. Faux si rien n'a été gardé, si la copie est trop vieille, ou si elle est verrouillée par un code. */
-  async openOffline(): Promise<boolean> {
+  async openOffline(pin?: string): Promise<boolean> {
+    this.pinFail = null;
     if (this.host.isDemo()) return false;
     const who = this.readWho();
     if (!who) return false;
     if (!(await this.lock.acquire())) { this.problem = 'other_tab'; return false; }
     return this.serial(async () => {
       const kv = this.store();
-      const u = await this.io(unlockVault(kv, who.id, who.role, undefined, this.opt.now(), this.opt.limits), { status: 'corrupt' } as Awaited<ReturnType<typeof unlockVault>>);
-      if (u.status === 'locked') { this.locked = true; this.user = who; return false; }
-      if (u.status !== 'ok') return false;
+      const u = await this.io(unlockVault(kv, who.id, who.role, pin, this.opt.now(), this.opt.limits), { status: 'corrupt' } as Awaited<ReturnType<typeof unlockVault>>);
+      if (u.status === 'locked' || u.status === 'wrong_pin' || u.status === 'wait') {
+        this.locked = true; this.user = who;
+        if (u.status === 'wrong_pin' || u.status === 'wait') { this.waitUntil = Date.now() + u.wait_seconds * 1000; this.pinFail = failPin(u.status, undefined, u.wait_seconds); }
+        this.host.emit();
+        return false;
+      }
+      if (u.status !== 'ok') { this.pinFail = failPin(u.status as PinCode); return false; }
       const c = await this.io(getCopy(u.vault), { status: 'corrupt' } as Awaited<ReturnType<typeof getCopy>>);
       if (c.status !== 'ok') return false;
       const q = await this.io(getQueue(u.vault), { status: 'none' } as Awaited<ReturnType<typeof getQueue>>);
@@ -148,7 +188,7 @@ export class OfflineController {
       for (const [col, list] of Object.entries(c.state)) if (Array.isArray(list)) { arrays[col] = list.filter(r => r && typeof r.id === 'string'); synced[col] = new Map(arrays[col].map(r => [r.id, JSON.stringify(r)])); }
       const me = (arrays.users || []).find(x => x.id === who.id);
       if (!me) return false;
-      this.vault = u.vault; this.user = who; this.attachedFor = who.id; this.copySavedAt = c.saved_at;
+      this.vault = u.vault; this.user = who; this.attachedFor = who.id; this.copySavedAt = c.saved_at; this.locked = false; this.enc = u.vault.enc; this.waitUntil = 0;
       this.queue = q.status === 'ok' ? q.queue : [];
       this.host.setSynced(synced); this.host.setArrays(arrays); this.host.setCurrentUser(me as User);
       this.restoreOnData();
@@ -159,7 +199,7 @@ export class OfflineController {
 
   // ---------- pendant le travail ----------
   /** Une modification locale vient d'avoir lieu : on garde le miroir des changements (après un court délai, plusieurs modifications d'un coup = une écriture). */
-  onLocalChange(): void { this.schedulePersist(); }
+  onLocalChange(): void { this.unsentCache = null; this.schedulePersist(); }
   /** Le serveur vient de répondre : on renouvelle la copie des données (au plus une fois par minute, tout de suite la première fois). */
   onServerState(): void {
     if (!this.vault) { if (this.problem === 'other_tab' && this.lastUser) void this.attach(this.lastUser); return; } // l'autre onglet a peut-être été fermé : on réessaie
@@ -212,8 +252,128 @@ export class OfflineController {
   // ---------- « À revoir » ----------
   status(): OfflineStatus {
     const s = summary(this.queue);
-    return { enabled: !!this.vault, locked: this.locked, problem: this.problem, pending: s.pending, photos: s.photos, review: reviewList(this.queue), skipped: this.skipped, copy_saved_at: this.copySavedAt, oldest_pending: s.oldest };
+    const role = this.role();
+    const can = role === 'admin' || role === 'employee';
+    const wait = this.waitUntil > Date.now() ? Math.ceil((this.waitUntil - Date.now()) / 1000) : 0;
+    return {
+      enabled: !!this.vault, locked: this.locked, problem: this.problem, pending: s.pending, photos: s.photos, review: reviewList(this.queue), skipped: this.skipped, copy_saved_at: this.copySavedAt, oldest_pending: s.oldest,
+      role, can_offline: can, has_vault: !!this.vault || this.locked, encrypted: this.enc || this.locked, needs_code: can && this.noVault && !this.vault && !this.locked && !this.problem, wait_seconds: wait,
+    };
   }
+  private role(): Role | null { return this.user?.role ?? this.lastUser?.role ?? this.host.currentRole?.() ?? null; }
+
+  /**
+   * Ce qui a été modifié sur cet appareil et n'est pas encore reçu par le serveur (comparaison « mes données / dernière version du serveur »).
+   * Compte TOUT, même ce qui ne peut pas être gardé sur le disque (`kept` faux) : la personne doit savoir ce qui part au retour du réseau.
+   * Calcul au plus une fois toutes les 750 ms (la comparaison parcourt toutes les données).
+   */
+  unsent(force = false): Unsent {
+    const t = Date.now();
+    if (!force && this.unsentCache && t - this.unsentCache.at < 750) return this.unsentCache.value;
+    const role = this.role() ?? 'employee';
+    const ch = this.host.diff(), synced = this.host.getSynced();
+    const items: UnsentItem[] = [];
+    for (const col of Object.keys(ch).sort()) {
+      for (const rec of ch[col].upserts) {
+        if (!rec || typeof rec.id !== 'string') continue;
+        items.push({ key: `${col}|${rec.id}`, col, id: rec.id, action: 'upsert', created: synced[col]?.get(rec.id) === undefined, text: textOf(rec), kept: !!this.vault && collectionPolicy(role, col, rec).mode === 'queue' });
+      }
+      for (const id of ch[col].deletes) items.push({ key: `${col}|${id}`, col, id, action: 'delete', created: false, text: textOf(safeParse(synced[col]?.get(id))), kept: !!this.vault && collectionPolicy(role, col, safeParse(synced[col]?.get(id))).mode === 'queue' });
+    }
+    const value: Unsent = { count: items.length, items };
+    this.unsentCache = { at: t, value };
+    return value;
+  }
+
+  // ---------- code de verrouillage (M13.6) ----------
+  /** Dernière erreur de l'ouverture hors ligne (mauvais code, attente…). */
+  lastOpenFailure(): PinResult | null { return this.pinFail; }
+  /**
+   * Entre le code pour ouvrir la copie verrouillée.
+   * - Appli déjà chargée avec les données du serveur : on rouvre la file gardée (ses actions sont remises sur les données) et la copie reprend.
+   * - Appli ouverte SANS réseau : on ouvre la dernière copie avec ce code.
+   */
+  async unlockWithPin(pin: string): Promise<PinResult> {
+    if (this.host.isDemo()) return failPin('demo');
+    if (this.vault) return { ok: true };
+    const who = this.user ?? this.readWho();
+    if (!who) return failPin('no_user');
+    if (this.waitUntil > Date.now()) return failPin('wait', undefined, Math.ceil((this.waitUntil - Date.now()) / 1000));
+    if (this.attachedFor !== who.id) { // pas de données chargées : ouverture hors ligne
+      const ok = await this.openOffline(pin);
+      return ok ? { ok: true } : (this.pinFail ?? failPin('corrupt'));
+    }
+    return this.serial(async () => {
+      const u = await this.io(unlockVault(this.store(), who.id, who.role, pin, this.opt.now(), this.opt.limits), { status: 'corrupt' } as Awaited<ReturnType<typeof unlockVault>>);
+      if (u.status === 'wrong_pin' || u.status === 'wait') { this.waitUntil = Date.now() + u.wait_seconds * 1000; return failPin(u.status, undefined, u.wait_seconds); }
+      if (u.status !== 'ok') return failPin(u.status === 'locked' ? 'locked' : (u.status as PinCode));
+      this.vault = u.vault; this.locked = false; this.problem = null; this.noVault = false; this.enc = u.vault.enc; this.waitUntil = 0; this.writeWho(who);
+      const q = await this.io(getQueue(this.vault), { status: 'corrupt' } as Awaited<ReturnType<typeof getQueue>>);
+      if (q.status === 'corrupt') this.problem = 'queue_corrupt';
+      this.queue = q.status === 'ok' ? q.queue : [];
+      this.restoreOnData();
+      this.lastCopyAt = 0;
+      await this.writeQueue(); await this.writeCopy();
+      this.host.emit();
+      return { ok: true } as PinResult;
+    });
+  }
+
+  /** Crée (admin : première fois) ou change le code. Sans rien perdre : la copie et la file sont rechiffrées. */
+  async setPin(pin: string): Promise<PinResult> {
+    if (this.host.isDemo()) return failPin('demo');
+    const who = this.user;
+    if (!who) return failPin(this.problem === 'other_tab' ? 'other_tab' : 'no_user');
+    if (this.vault) {
+      const v = this.vault;
+      return this.serial(async () => {
+        const r = await this.io(changePin(v, pin, this.opt.now()), { status: 'storage_error', why: PIN_MSG.storage_error } as Awaited<ReturnType<typeof changePin>>);
+        if (r.status !== 'ok') return failPin(r.status, r.why);
+        this.vault = r.vault; this.enc = r.vault.enc; this.host.emit();
+        return { ok: true } as PinResult;
+      });
+    }
+    if (this.locked) return failPin('locked');
+    return this.serial(async () => {
+      const r = await this.io(createVault(this.store(), who.id, who.role, pin), { status: 'storage_error', why: PIN_MSG.storage_error } as Awaited<ReturnType<typeof createVault>>);
+      if (r.status !== 'ok') return failPin(r.status, r.why);
+      this.vault = r.vault; this.enc = r.vault.enc; this.noVault = false; this.locked = false; this.problem = null; this.queue = []; this.writeWho(who);
+      await this.writeQueue(); await this.writeCopy();
+      this.host.emit();
+      return { ok: true } as PinResult;
+    });
+  }
+
+  /** Opérateur seulement : retire le code (la copie n'est plus chiffrée). L'admin ne peut pas : son code est obligatoire. */
+  async removePin(): Promise<PinResult> {
+    if (!this.vault) return failPin(this.locked ? 'locked' : 'none');
+    const v = this.vault;
+    return this.serial(async () => {
+      const r = await this.io(changePin(v, undefined, this.opt.now()), { status: 'storage_error', why: PIN_MSG.storage_error } as Awaited<ReturnType<typeof changePin>>);
+      if (r.status !== 'ok') return failPin(r.status, r.why);
+      this.vault = r.vault; this.enc = false; this.host.emit();
+      return { ok: true } as PinResult;
+    });
+  }
+
+  /**
+   * « Code oublié » : efface la copie de CET appareil, y compris les actions en attente qu'elle contient (elles ne peuvent plus être lues).
+   * À n'appeler qu'après une confirmation claire de la personne. Les données du serveur ne sont pas touchées.
+   */
+  async eraseLocal(): Promise<void> {
+    const who = this.user ?? this.readWho();
+    if (!who) return;
+    if (this.qTimer) { clearTimeout(this.qTimer); this.qTimer = null; }
+    if (this.cTimer) { clearTimeout(this.cTimer); this.cTimer = null; }
+    this.vault = null; this.queue = []; this.skipped = []; this.locked = false; this.problem = null; this.copySavedAt = null; this.lastCopyAt = 0; this.frozen = false; this.enc = false; this.waitUntil = 0; this.pinFail = null; this.unsentCache = null;
+    await this.serial(async () => { await this.io(wipeVault(this.store(), who.id), undefined); });
+    this.writeWho(null);
+    const again = this.lastUser;
+    this.attachedFor = null; this.user = null; this.noVault = false;
+    if (again) await this.attach(again); // opérateur : une copie neuve est recréée ; admin : « pas encore de code »
+    this.host.emit();
+  }
+
   /** « Renvoyer » : la version de la personne remplace celle du serveur. */
   requeue(id: string): boolean {
     const op = this.queue.find(o => o.id === id && o.state === 'review');
@@ -239,7 +399,7 @@ export class OfflineController {
     if (this.qTimer) { clearTimeout(this.qTimer); this.qTimer = null; }
     if (this.cTimer) { clearTimeout(this.cTimer); this.cTimer = null; }
     const out = { user: this.user, vault: this.vault, queue: this.queue };
-    this.vault = null; this.user = null; this.attachedFor = null; this.queue = []; this.skipped = []; this.locked = false; this.problem = null; this.copySavedAt = null; this.lastCopyAt = 0; this.frozen = false; this.lastUser = null;
+    this.vault = null; this.user = null; this.attachedFor = null; this.queue = []; this.skipped = []; this.locked = false; this.problem = null; this.copySavedAt = null; this.lastCopyAt = 0; this.frozen = false; this.lastUser = null; this.noVault = false; this.enc = false; this.waitUntil = 0; this.pinFail = null; this.unsentCache = null;
     return out;
   }
   /**

@@ -10,6 +10,7 @@ import type { CashEntry, CashKind } from '../../types';
 import { BudgetsCard } from './BudgetsCard';
 import { PlanVsActualCard } from './PlanVsActualCard';
 import { FinanceInsights } from './FinanceInsights';
+import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
 // Les salaires viennent des missions validées (calculés, jamais saisis) ; les avances sont des salaires versés d'avance : elles ne s'ajoutent pas.
@@ -24,6 +25,7 @@ const fmtDate = (d: string) => d.split('-').reverse().join('/');
 
 export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesAr }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const moneyGate = useOnlineOnly('money'); // l'argent ne se saisit qu'en ligne : bouton grisé hors ligne, avec la raison
   const [kind, setKind] = useState<'all' | CashKind>('all');
   const [category, setCategory] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -184,9 +186,10 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
               <textarea value={editor.note} maxLength={300} rows={2} onChange={e => setEditor({ ...editor, note: e.target.value })} className={`${field} mt-1 py-2`} />
             </label>
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
+            <OnlineOnlyNote kind="money" />
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={save} disabled={moneyGate.blocked} title={moneyGate.blocked ? moneyGate.why : undefined} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

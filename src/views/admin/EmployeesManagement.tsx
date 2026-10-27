@@ -38,6 +38,7 @@ import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 import { PayrollAdmin } from '../../components/PayrollAdmin';
 import { AdvPayTabs } from '../../components/AdvPayTabs';
+import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -88,6 +89,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const accountGate = useOnlineOnly('account'); // comptes et mots de passe : en ligne seulement
   const [editShift, setEditShift] = useState<ShiftType>('day');
   const [editBadge, setEditBadge] = useState<User['performance_badge']>('Standard');
 
@@ -887,6 +889,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 </select>
               </div>
 
+              <OnlineOnlyNote kind="account" />
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -897,7 +900,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded"
+                  disabled={accountGate.blocked}
+                  title={accountGate.blocked ? accountGate.why : undefined}
+                  className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded disabled:opacity-50"
                 >
                   Enregistrer
                 </button>
@@ -1007,6 +1012,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
+              <OnlineOnlyNote kind="account" />
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -1017,7 +1023,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded"
+                  disabled={accountGate.blocked}
+                  title={accountGate.blocked ? accountGate.why : undefined}
+                  className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded disabled:opacity-50"
                 >
                   Créer le Profil
                 </button>

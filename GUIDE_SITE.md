@@ -565,6 +565,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
 | `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
 | `offlineSync.ts` | Pont entre le magasin de données et la file d'actions hors ligne (module 13, M13.5) : règles pures, sans réseau, sans stockage. |
+| `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `payslip.ts` | — |
 | `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
@@ -610,6 +611,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
+| `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
 
@@ -718,6 +720,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:offline-vault` | Contrôle de la copie locale chiffrée du mode hors ligne (module 13, M13.3), sans réseau. Lancer : npm run check:offline-vault |
 | `npm run check:offline-sync` | Contrôle du pont magasin ↔ file d'actions hors ligne (module 13, M13.5), sans réseau. Lancer : npm run check:offline-sync |
 | `npm run check:offline-store` | Contrôle du mode hors ligne branché sur le VRAI magasin de données (module 13, M13.5), sans réseau réel. |
+| `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |

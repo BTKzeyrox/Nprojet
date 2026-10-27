@@ -50,6 +50,7 @@ import { MissionGuideButton } from '../../components/MissionGuide';
 import { getGuide, stepOfStatus } from '../../utils/missionGuides';
 import { ScoreInput } from '../../components/ScoreInput';
 import { QueueButton } from '../../components/QueueButton';
+import { PendingMark } from '../../components/PendingMark';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -666,6 +667,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <span className="text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">
                           MISSION EN COURS
                         </span>
+                        <PendingMark col="posts" id={activePost.id} />
                       </div>
                       <h3 className="text-xl sm:text-2xl font-bold font-tactical text-white mt-1">
                         Mission : {activePost.client_name}

@@ -9,6 +9,7 @@ import { db } from '../db/store';
 import { ChatGroup, ChatMessage, User } from '../types';
 import { compressProofImage } from '../utils/imageUtils';
 import { Avatar } from './Avatar';
+import { PendingMark } from './PendingMark';
 import { markChatSeen } from '../utils/notifications';
 import { LightboxModal } from './LightboxModal';
 import { FileViewerModal } from './FileViewerModal';
@@ -764,6 +765,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         {msg.pinned && <Pin className="w-3 h-3 text-amber-500" />}
                         {msg.edited_at && <span className="italic">modifié ·</span>}
                         <span>{time}</span>
+                        {isMe && <PendingMark col="messages" id={msg.id} />}
                         {isMe && (current.kind === 'user' || current.kind === 'group') && (
                           current.kind === 'user' ? (
                             isRead(msg)

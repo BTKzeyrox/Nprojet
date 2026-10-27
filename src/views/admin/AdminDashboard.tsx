@@ -56,6 +56,7 @@ import { ScoreInput } from '../../components/ScoreInput';
 import { AdminChecklist } from '../../components/MissionGuide';
 import { clientPriceForType, parsePriceInput } from '../../utils/clientPrice';
 import { AlertsList, GoalsBars } from '../../components/GoalsPanel';
+import { PendingMark } from '../../components/PendingMark';
 import { setStatsTab } from '../../utils/statsNav';
 import { useApp } from '../../context/AppContext';
 
@@ -1535,7 +1536,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </div>
                         <h4 className="text-base font-bold text-white mt-1">
-                          Mission : {post.client_name} ({post.account_tag})
+                          Mission : {post.client_name} ({post.account_tag}) <PendingMark col="posts" id={post.id} className="align-middle" />
                         </h4>
                         <p className="text-xs text-slate-300 font-mono">
                           Opérateur : <strong className="text-emerald-400">{post.employee_name}</strong>

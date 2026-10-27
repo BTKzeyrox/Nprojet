@@ -17,6 +17,7 @@ import { PerformanceSettings } from '../../components/PerformanceSettings';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { RecurringMissionsSection } from '../../components/RecurringMissionsSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
+import { OfflineCard } from '../../components/OfflineCard';
 import { TourReplayCard } from '../../components/TourGuide';
 import { TwoStepCard } from '../../components/TwoStepCard';
 import { SignupSettings } from '../../components/SignupSettings';
@@ -173,6 +174,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       </section>
 
       {!db.isDemo() && <NotificationsCard />}
+      <OfflineCard />
 
       <TwoStepCard />
       <TourReplayCard />
@@ -244,6 +246,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && !db.isDemo() && <NotificationsCard />}
+      {tab === 'general' && <OfflineCard />}
       {tab === 'general' && <TwoStepCard />}
       {tab === 'general' && <TourReplayCard />}
       {tab === 'general' && !db.isDemo() && <SignupSettings />}

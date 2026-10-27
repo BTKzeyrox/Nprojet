@@ -9,6 +9,8 @@ import { BottomNav } from './components/BottomNav';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
+import { OfflineCenter } from './components/OfflineCenter';
+import { OfflineUnlockView } from './components/OfflineUnlockView';
 import { ReportProblemModal } from './components/ReportProblemModal';
 import { setCurrentPage } from './utils/errorReport';
 import { isViewHidden } from './utils/moduleSwitch';
@@ -68,6 +70,7 @@ export default function App() {
   const isLight = theme === 'light';
 
   const [isReady, setIsReady] = useState(false);
+  const [offlineLocked, setOfflineLocked] = useState(false); // appli ouverte sans réseau, copie protégée par un code : écran de code au lieu de la connexion
 
   // Langue anglaise : traduit les textes affichés
   // Le dictionnaire n'est téléchargé que si l'anglais est choisi
@@ -189,6 +192,7 @@ export default function App() {
   useEffect(() => {
     db.whenReady().then(() => {
       setCurrentUser(db.getCurrentUser());
+      setOfflineLocked(db.getOfflineStatus().locked);
       setIsReady(true);
     });
   }, []);
@@ -210,6 +214,7 @@ export default function App() {
   const lastUserJson = useRef('');
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
+      setOfflineLocked(db.getOfflineStatus().locked);
       const user = db.getCurrentUser();
       if (!user) { lastUserJson.current = ''; setCurrentUser(null); return; }
       const json = JSON.stringify(user);
@@ -301,9 +306,11 @@ export default function App() {
           : 'text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
       }`}>
         <ToastHost />
+        {offlineLocked ? <OfflineUnlockView /> : (
         <LoginView
           onLoginSuccess={handleLoginSuccess}
         />
+        )}
         <LightboxModal
           isOpen={lightboxParams.isOpen}
           onClose={() => setLightboxParams(prev => ({ ...prev, isOpen: false }))}
@@ -382,6 +389,7 @@ export default function App() {
         
         <LoadingBar />
         <ConnectionBanner />
+        <OfflineCenter />
 
         <PullToRefresh disabled={activeView === 'chat'} />
         <ScrollButtons hidden={activeView === 'chat'} />

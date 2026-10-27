@@ -1,5 +1,6 @@
 import { checkDraft, type CashDraft } from '../utils/finance';
-import { OfflineController, type OfflineHost, type OfflineStatus, type WriterLock } from './offlineController';
+import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
+import type { Role as OfflineRole } from '../utils/offline';
 import type { KV } from '../utils/offlineVault';
 import type { Arrays, Changes, SyncedJson } from '../utils/offlineSync';
 import { findInlineFiles, replaceInlineFile } from '../utils/dataUrls';
@@ -216,16 +217,19 @@ export class AppStore {
   // Mode hors ligne (module 13, M13.5) : copie locale et file d'actions durables. Le magasin reste le seul à envoyer au serveur.
   private offline: OfflineController;
   private lastPullStatus = 200;
+  private demoCut = false; // mode démo : coupure SIMULÉE (aucun vrai réseau n'est touché)
+  private demoBase: Record<Col, Map<string, string>> | null = null; // état des données au moment de la coupure simulée
 
   constructor(opts: { offlineKV?: KV; offlineDelayMs?: number; offlineLock?: WriterLock } = {}) {
     const host: OfflineHost = {
       isDemo: () => this.demo,
       getArrays: () => { const o: Arrays = {}; for (const c of COLS) o[c] = this.arr(c); return o; },
       setArrays: a => { for (const c of COLS) if (a[c]) this.setArr(c, a[c]); },
-      getSynced: () => this.synced as unknown as SyncedJson,
+      getSynced: () => this.syncedForDiff() as unknown as SyncedJson,
       setSynced: sj => { for (const c of COLS) this.synced[c] = sj[c] ? new Map(sj[c]) : new Map(); },
       setCurrentUser: u => { this.currentUser = u; },
       diff: () => this.diff().changes as Changes,
+      currentRole: () => (this.currentUser?.role as OfflineRole | undefined) ?? null,
       flushSoon: () => { this.dirty = true; if (this.token) { if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = setTimeout(() => void this.flush(), 300); } },
       emit: () => this.emit(),
     };
@@ -360,7 +364,10 @@ export class AppStore {
   }
 
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
-    if (this.demo) return this.demoApi(path, init); // mode démo : un « faux serveur » local, rien ne part sur internet
+    if (this.demo) {
+      if (this.demoCut) return { ok: false, status: 0, data: { error: 'Réseau indisponible.' } }; // coupure simulée : tout appel direct échoue, comme sans réseau
+      return this.demoApi(path, init); // mode démo : un « faux serveur » local, rien ne part sur internet
+    }
     try {
       const res = await fetch(`${API_BASE}/${path}`, {
         ...init,
@@ -1310,9 +1317,13 @@ export class AppStore {
     this.emit();
   }
 
+  /** Version de référence pour « qu'est-ce qui n'est pas encore envoyé ». Normalement la dernière version connue du serveur ; en démo pendant une coupure simulée, l'état au moment de la coupure. */
+  private syncedForDiff(): Record<Col, Map<string, string>> { return this.demo && this.demoBase ? this.demoBase : this.synced; }
+
   private diff() {
     const changes: Record<string, { upserts: any[]; deletes: string[] }> = {};
     const sent: Record<string, { sets: Map<string, string>; deletes: string[] }> = {};
+    const base = this.syncedForDiff();
     for (const col of COLS) {
       const upserts: any[] = [];
       const sets = new Map<string, string>();
@@ -1320,9 +1331,9 @@ export class AppStore {
       for (const rec of this.arr(col)) {
         current.add(rec.id);
         const json = JSON.stringify(rec);
-        if (this.synced[col].get(rec.id) !== json) { upserts.push(rec); sets.set(rec.id, json); }
+        if (base[col].get(rec.id) !== json) { upserts.push(rec); sets.set(rec.id, json); }
       }
-      const deletes = Array.from(this.synced[col].keys()).filter(id => !current.has(id));
+      const deletes = Array.from(base[col].keys()).filter(id => !current.has(id));
       if (upserts.length || deletes.length) {
         changes[col] = { upserts, deletes };
         sent[col] = { sets, deletes };
@@ -1746,6 +1757,10 @@ export class AppStore {
     if (this.token) {
       fetch(`${API_BASE}/logout`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
     }
+    { // prévient la personne AVANT de vider les données : ce qui est gardé sur l'appareil partira à sa prochaine connexion
+      const st = this.offline.status();
+      if (!this.demo && st.enabled && (this.offline.unsent(true).count > 0 || st.review.length > 0)) { try { sessionStorage.setItem('df_login_notice', 'Des actions faites hors ligne sont gardées sur cet appareil. Elles partiront quand tu te reconnecteras avec le même compte.'); } catch { /* ignore */ } }
+    }
     void this.offline.beforeLogout(); // fige les actions en attente (synchrone) avant de vider les données ; efface la copie ; garde ce qui n'est pas encore parti
     this.token = null;
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
@@ -1759,6 +1774,51 @@ export class AppStore {
 
   /** État du mode hors ligne pour l'écran (module 13) : actions en attente, éléments « À revoir », copie locale. */
   public getOfflineStatus(): OfflineStatus { return this.offline.status(); }
+  /** Ce qui est modifié sur cet appareil et pas encore reçu par le serveur (compté au plus toutes les 0,75 s). En démo : seulement pendant une coupure simulée. */
+  public getUnsent(force = false): Unsent {
+    if (this.demo && !this.demoBase) return { count: 0, items: [] };
+    return this.offline.unsent(force);
+  }
+  public isUnsent(col: string, id: string): boolean { return this.getUnsent().items.some(i => i.col === col && i.id === id); }
+  /** Annuler une modification pas encore envoyée : l'élément revient à la dernière version connue du serveur (créé hors ligne : il disparaît). */
+  public offlineCancelUnsent(col: string, id: string): boolean {
+    if (!(COLS as readonly string[]).includes(col)) return false;
+    const c = col as Col;
+    const base = this.syncedForDiff()[c].get(id);
+    const list = [...this.arr(c)];
+    const at = list.findIndex(x => x && x.id === id);
+    if (base === undefined) { if (at < 0) return false; list.splice(at, 1); }
+    else { let rec: any; try { rec = JSON.parse(base); } catch { return false; } if (at >= 0) list[at] = rec; else list.push(rec); }
+    this.setArr(c, list);
+    this.notify();
+    return true;
+  }
+  public offlineUnlock(pin: string): Promise<PinResult> { return this.offline.unlockWithPin(pin).then(r => { if (r.ok && this.token && !this.pollTimer) this.startPolling(); return r; }); }
+  public offlineSetPin(pin: string): Promise<PinResult> { return this.offline.setPin(pin); }
+  public offlineRemovePin(): Promise<PinResult> { return this.offline.removePin(); }
+  /** « Code oublié » : efface la copie de cet appareil (les données du serveur ne sont pas touchées). À n'appeler qu'après confirmation. */
+  public async offlineEraseLocal(): Promise<void> {
+    await this.offline.eraseLocal();
+    if (!this.currentUser) { this.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } this.emit(); } // appli restée fermée sur le code : retour à la connexion
+  }
+  /** Écran de code (appli ouverte sans réseau) : essaie de joindre le serveur ; si la connexion est revenue, la personne est reconnectée avec son jeton. */
+  public async retryOnline(): Promise<boolean> {
+    if (!this.token) return false;
+    const ok = await this.pull(true);
+    if (ok) { this.startPolling(); this.emit(); }
+    return ok;
+  }
+  /** Mode démo : simule une coupure du réseau pour essayer le mode hors ligne (marques « en attente », compteur, retour du réseau). */
+  public isDemoCut(): boolean { return this.demo && this.demoCut; }
+  public setDemoCut(on: boolean): void {
+    if (!this.demo || on === this.demoCut) return;
+    if (on) {
+      const base = this.emptySynced();
+      for (const c of COLS) for (const rec of this.arr(c)) if (rec && typeof rec.id === 'string') base[c].set(rec.id, JSON.stringify(rec));
+      this.demoBase = base; this.demoCut = true; this.setConn(true);
+    } else { this.demoCut = false; this.demoBase = null; this.setConn(false); }
+    this.emit();
+  }
   public offlineRequeue(id: string): boolean { return this.offline.requeue(id); }
   public offlineDiscard(id: string): boolean { return this.offline.discard(id); }
   public offlineCopyText(id: string, lang: string): string | null { return this.offline.copyText(id, lang); }
