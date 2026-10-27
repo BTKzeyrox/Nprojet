@@ -6,6 +6,7 @@ import { findInlineFiles, replaceInlineFile } from '../utils/dataUrls';
 import { checkDeadline } from '../utils/deadlines';
 import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
 import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
+import { checkReportRecord, cleanAutoReport, periodForRun, periodFromId, type AutoReportSetting, type ReportRecord } from '../utils/autoReport';
 import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type RecurringDraft, type RecurringRule } from '../utils/recurring';
 import { checkTeamGoal, cleanTeamGoals, newTeamGoalId, TEAM_GOAL_ERROR_MESSAGE, type TeamGoal } from '../utils/teamGoals';
 import { checkMonthlyPlan, cleanMonthlyPlan, MONTHLY_PLAN_ERROR_MESSAGE, type MonthlyPlan } from '../utils/budgetPlan';
@@ -193,6 +194,7 @@ export class AppStore {
   private demo = false; // mode démo : données inventées, aucun appel au serveur
   private demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
   private demoBackups: { id: number; taken_at: string; tables: number; bytes: number }[] = []; // mode démo : sauvegardes inventées
+  private demoReports: ReportRecord[] = []; // mode démo : rapports automatiques inventés (M15.5), jamais envoyés au serveur
   private listeners: Set<() => void> = new Set();
 
   // --- Synchronisation avec le serveur (Supabase via /api) ---
@@ -1505,6 +1507,26 @@ export class AppStore {
         const ago = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
         const mk = (h: number, a: string, ty: string, label: string, detail: string) => buildAuditEntry(me0, a, { type: ty, id: `demo-${a}-${h}`, label }, detail, ago(h), `d${h}`);
         return ok({ rows: [mk(1, 'invoice_issue', 'invoices', 'F-2026-0012', 'Client : Alice'), mk(3, 'invoice_pay', 'invoices', 'F-2026-0011', '150000 Ar'), mk(26, 'tariff_change', 'settings', 'Réglages', 'client_price_default_ar : 1000 → 1200'), mk(50, 'delete', 'clients', 'Client test', ''), mk(72, 'settings_change', 'settings', 'Réglages', 'day_shift_start'), mk(120, 'backup_now', 'backups', 'Sauvegarde', '')].filter(Boolean) });
+      }
+      case 'report-list': case 'report-open': case 'report-freeze': {
+        if (me?.role !== 'admin') return { ok: false, status: 403, data: { error: "Réservé à l'administrateur." } };
+        if (!this.demoReports.length) { // deux fiches « en attente » : la semaine finie et le mois fini
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Indian/Antananarivo' });
+          for (const st of [{ frequency: 'weekly', weekday: 1, month_day: 1, time: '08:00' }, { frequency: 'monthly', weekday: 1, month_day: 1, time: '08:00' }] as AutoReportSetting[]) {
+            const p = periodForRun(st, today); const c = p ? checkReportRecord({ id: p.id, status: 'pending', created_at: nowIso }) : null;
+            if (c && c.ok) this.demoReports.push(c.value);
+          }
+        }
+        if (route === 'report-list') return ok({ rows: this.demoReports.map(({ html: _h, ...m }) => m) });
+        const cur = this.demoReports.find(x => x.id === body.id);
+        if (!cur) return { ok: false, status: 404, data: { error: 'Rapport introuvable.' } };
+        if (route === 'report-open') return ok({ record: cur });
+        if (cur.status === 'ready') return ok({ record: cur, already: true });
+        const html = typeof body.html === 'string' ? body.html : '';
+        if (!html.trim() || html.length > 400000) return fail('Texte du rapport non valide.');
+        const next: ReportRecord = { ...cur, status: 'ready', frozen_at: nowIso, html };
+        this.demoReports = this.demoReports.map(x => (x.id === cur.id ? next : x));
+        return ok({ record: next, already: false });
       }
       case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
       case 'backup-now': {
@@ -2855,6 +2877,36 @@ export class AppStore {
     const r = await this.api('audit-list?limit=1000');
     if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
     return { ok: true, rows: cleanAuditRows(r.data?.rows) };
+  }
+  // --- Rapport automatique (M15.5, admin) : le réglage est dans les réglages ; les fiches sont dans la table df_reports (routes report-*) ---
+  public getAutoReport(): AutoReportSetting { return cleanAutoReport(this.getSettings().auto_report); }
+  public saveAutoReport(d: unknown): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    this.updateSettings({ auto_report: cleanAutoReport(d) });
+    return { success: true };
+  }
+  public async listReports(): Promise<{ ok: boolean; error?: string; rows: Omit<ReportRecord, 'html'>[] }> {
+    const r = await this.api('report-list', { method: 'POST', body: '{}' });
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
+    const rows: Omit<ReportRecord, 'html'>[] = [];
+    for (const x of Array.isArray(r.data?.rows) ? r.data.rows : []) {
+      const c = checkReportRecord(x?.status === 'ready' ? { ...x, html: '-' } : x); // la liste n'a pas le texte : on vérifie le reste
+      if (c.ok) { const { html: _h, ...meta } = c.value; rows.push(meta); }
+    }
+    return { ok: true, rows };
+  }
+  public async openReport(id: string): Promise<{ ok: boolean; error?: string; record?: ReportRecord }> {
+    if (!periodFromId(id)) return { ok: false, error: 'Rapport inconnu.' };
+    const r = await this.api('report-open', { method: 'POST', body: JSON.stringify({ id }) });
+    const c = r.ok ? checkReportRecord(r.data?.record) : null;
+    return c && c.ok ? { ok: true, record: c.value } : { ok: false, error: r.data?.error || 'Rapport illisible.' };
+  }
+  /** Fige la copie (texte du rapport) d'une fiche « en attente ». Une copie déjà figée n'est jamais changée : le serveur rend celle qui existe. */
+  public async freezeReportCopy(id: string, html: string): Promise<{ ok: boolean; error?: string; record?: ReportRecord; already?: boolean }> {
+    if (!periodFromId(id)) return { ok: false, error: 'Rapport inconnu.' };
+    const r = await this.api('report-freeze', { method: 'POST', body: JSON.stringify({ id, html }) });
+    const c = r.ok ? checkReportRecord(r.data?.record) : null;
+    return c && c.ok ? { ok: true, record: c.value, already: !!r.data?.already } : { ok: false, error: r.data?.error || 'Copie impossible.' };
   }
   public async getBackup(id: number): Promise<{ ok: boolean; error?: string; backup?: { id: number; taken_at: string; data: unknown } }> {
     const r = await this.api(`backup-get?id=${encodeURIComponent(String(id))}`);

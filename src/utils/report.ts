@@ -24,10 +24,11 @@ export interface ReportInput {
   invoices?: Invoice[]; // factures (module 2) : onglets « Factures » et « Créances » et lignes du résumé, seulement s'il y en a
   performance?: PerformanceResult; // scores et badges des salariés (module 3) : section « Performance » du rapport
   clientBadges?: ClientBadgeResult; // badges des clients (module 3) : « Clients à surveiller »
+  granularity?: 'month' | 'week'; // M15.5 : « week » = rapport d'une semaine (lundi à dimanche, `anchor` = le lundi) ; absent = le mois, comme avant
 }
 
 export interface Report {
-  lang: 'fr' | 'en'; title: string; month: string; inProgress: boolean; company: string;
+  lang: 'fr' | 'en'; title: string; month: string; inProgress: boolean; company: string; granularity: 'month' | 'week';
   stats: StatsResult; fin: FinanceStats; finPrev: FinanceStats;
   goals: GoalRow[]; forecast: Forecast | null; alerts: AlertItem[];
   stock: { rows: StockRow[]; value: number };
@@ -44,14 +45,16 @@ const pctTxt = (n: number) => `${n > 0 ? '+' : ''}${n} %`;
 export function buildReport(i: ReportInput): Report {
   const t = (fr: string, en: string) => (i.lang === 'en' ? en : fr);
   const s = i.settings;
+  const g: 'month' | 'week' = i.granularity === 'week' ? 'week' : 'month';
+  const wk = (x: string) => (g === 'week' ? x.replace(/ce mois-ci/g, 'cette semaine').replace(/this month/g, 'this week').replace(/Mois à venir/g, 'Semaine à venir').replace(/Upcoming month/g, 'Upcoming week') : x);
   const price = s.price_per_mission || 0;
-  const stats = computeStats({ posts: i.posts, contracts: i.contracts, users: i.users, advances: i.advances, pricePerMission: price }, 'month', i.anchor, i.today, i.lang);
+  const stats = computeStats({ posts: i.posts, contracts: i.contracts, users: i.users, advances: i.advances, pricePerMission: price }, g, i.anchor, i.today, i.lang);
   const rg = stats.ranges;
   const fin0 = { cash: i.cash, posts: i.posts, contracts: i.contracts, prices: s, pricePerMission: price, clients: i.clients };
   const empty = rg.isFuture;
-  const fin = computeFinance(fin0, 'month', empty ? { start: rg.cur.start, end: rg.cur.start, days: 1 } : rg.curEff, i.lang, t('Salaires', 'Salaries'));
-  const finPrev = computeFinance(fin0, 'month', rg.prev, i.lang, t('Salaires', 'Salaries'));
-  const sameMonthAsToday = i.today >= rg.cur.start && i.today <= rg.cur.end;
+  const fin = computeFinance(fin0, g, empty ? { start: rg.cur.start, end: rg.cur.start, days: 1 } : rg.curEff, i.lang, t('Salaires', 'Salaries'));
+  const finPrev = computeFinance(fin0, g, rg.prev, i.lang, t('Salaires', 'Salaries'));
+  const sameMonthAsToday = g === 'month' && i.today >= rg.cur.start && i.today <= rg.cur.end;
   const monthNow = monthFigures(fin0, i.today);
   // Objectifs et prévision : seulement pour le mois en cours (un mois passé n'a plus de « rythme »)
   const goals = sameMonthAsToday ? goalRows(s, monthNow) : [];
@@ -94,11 +97,11 @@ export function buildReport(i: ReportInput): Report {
   if (!attention.length) attention.push(empty ? t('Mois à venir : rien à analyser.', 'Upcoming month: nothing to analyse.') : t('Aucun point d\'attention ce mois-ci.', 'No point of attention this month.'));
 
   return {
-    lang: i.lang, title: t('Rapport mensuel', 'Monthly report'), month: periodLabel('month', i.anchor, i.lang), inProgress: rg.inProgress,
+    lang: i.lang, title: g === 'week' ? t('Rapport hebdomadaire', 'Weekly report') : t('Rapport mensuel', 'Monthly report'), month: periodLabel(g, i.anchor, i.lang), inProgress: rg.inProgress, granularity: g,
     company: String(i.companyName || '').trim().slice(0, 80),
     stats, fin, finPrev, goals, forecast, alerts,
     stock: { rows, value: stockValue(rows) }, cashLines,
-    strengths: strengths.slice(0, 3), attention: attention.slice(0, 3),
+    strengths: strengths.slice(0, 3).map(wk), attention: attention.slice(0, 3).map(wk),
     perf: reportPerformance(i.performance, i.clientBadges, i.lang),
     inv: invList.length ? invoiceFigures({ invoices: invList, cash: i.cash, posts: i.posts, contracts: i.contracts, clients: i.clients || [], prices: s, today: i.today, range: invRange }) : null,
     invoices: invList, cashAll: i.cash, clientNames: Object.fromEntries((i.clients || []).map(c => [c.id, c.name])), range: invRange, today: i.today,
@@ -111,13 +114,14 @@ export interface SheetData { name: string; rows: (string | number)[][] }
 
 export function exportSheets(r: Report): SheetData[] {
   const t = (fr: string, en: string) => (r.lang === 'en' ? en : fr);
+  const wk = r.granularity === 'week';
   const { stats: st, fin, finPrev } = r;
   const sheets: SheetData[] = [];
   sheets.push({ name: t('Résumé', 'Summary'), rows: [
     [r.title, r.month],
     ...(r.company ? [[r.company]] : []),
     [],
-    [t('Chiffre', 'Figure'), t('Ce mois', 'This month'), t('Mois d\'avant', 'Previous month')],
+    [t('Chiffre', 'Figure'), t(wk ? 'Cette semaine' : 'Ce mois', wk ? 'This week' : 'This month'), t(wk ? 'Semaine d\'avant' : 'Mois d\'avant', wk ? 'Previous week' : 'Previous month')],
     [t('Missions validées', 'Validated missions'), st.cur.done, st.prev.done],
     [t('Missions refusées', 'Rejected missions'), st.cur.rejected, st.prev.rejected],
     [t('Taux de validation (%)', 'Validation rate (%)'), st.cur.rate ?? '', st.prev.rate ?? ''],
@@ -129,7 +133,7 @@ export function exportSheets(r: Report): SheetData[] {
     [t('Facturé (Ar)', 'Billed (Ar)'), fin.billed, finPrev.billed],
     [t('À encaisser (Ar)', 'To collect (Ar)'), fin.toCollect, finPrev.toCollect],
     [t('Trésorerie (Ar)', 'Cash on hand (Ar)'), fin.treasury, ''],
-    ...(r.inv ? [[t('Factures émises sur le mois (Ar)', 'Invoices issued in the month (Ar)'), r.inv.issued_total, ''], [t('Reste à payer sur les factures (Ar)', 'Left to pay on invoices (Ar)'), r.inv.to_collect, ''], [t('Dont en retard (Ar)', 'Of which overdue (Ar)'), r.inv.overdue, ''], [t('Missions validées pas encore facturées (Ar)', 'Approved missions not yet invoiced (Ar)'), r.inv.unbilled_total, '']] : []),
+    ...(r.inv ? [[t(wk ? 'Factures émises sur la semaine (Ar)' : 'Factures émises sur le mois (Ar)', wk ? 'Invoices issued in the week (Ar)' : 'Invoices issued in the month (Ar)'), r.inv.issued_total, ''], [t('Reste à payer sur les factures (Ar)', 'Left to pay on invoices (Ar)'), r.inv.to_collect, ''], [t('Dont en retard (Ar)', 'Of which overdue (Ar)'), r.inv.overdue, ''], [t('Missions validées pas encore facturées (Ar)', 'Approved missions not yet invoiced (Ar)'), r.inv.unbilled_total, '']] : []),
     [],
     [t('Points forts', 'Strengths'), ...r.strengths],
     [t('Points d\'attention', 'Points of attention'), ...r.attention],
@@ -205,6 +209,7 @@ const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 /** Page HTML complète, claire, faite pour l'impression (aucun script, tout est échappé). */
 export function reportHtml(r: Report): string {
   const t = (fr: string, en: string) => (r.lang === 'en' ? en : fr);
+  const wk = r.granularity === 'week';
   const { stats: st, fin, finPrev } = r;
   const delta = (cur: number, prev: number) => { const v = variation(cur, prev); return v.pct === null ? '–' : pctTxt(v.pct); };
   const row = (label: string, cur: string, prev: string, d: string) => `<tr><td>${esc(label)}</td><td class="n">${esc(cur)}</td><td class="n">${esc(prev)}</td><td class="n">${esc(d)}</td></tr>`;
@@ -227,9 +232,9 @@ ul{margin:4px 0 0 18px;padding:0}li{margin:2px 0}.two{display:grid;grid-template
 .g{margin:6px 0}.gl{display:flex;justify-content:space-between;gap:8px}.gb{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}.gb i{display:block;height:100%}
 .note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two{break-inside:avoid}}@page{margin:14mm}
 </style></head><body>
-${r.company ? `<div class="sub"><b>${esc(r.company)}</b></div>` : ''}<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t('mois en cours', 'month in progress')) : ''}</div>
+${r.company ? `<div class="sub"><b>${esc(r.company)}</b></div>` : ''}<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t(wk ? 'semaine en cours' : 'mois en cours', wk ? 'week in progress' : 'month in progress')) : ''}</div>
 <h2>${esc(t('Résumé', 'Summary'))}</h2>
-<table><tr><th></th><th class="n">${esc(t('Ce mois', 'This month'))}</th><th class="n">${esc(t('Mois d\'avant', 'Previous month'))}</th><th class="n">${esc(t('Écart', 'Change'))}</th></tr>
+<table><tr><th></th><th class="n">${esc(t(wk ? 'Cette semaine' : 'Ce mois', wk ? 'This week' : 'This month'))}</th><th class="n">${esc(t(wk ? 'Semaine d\'avant' : 'Mois d\'avant', wk ? 'Previous week' : 'Previous month'))}</th><th class="n">${esc(t('Écart', 'Change'))}</th></tr>
 ${row(t('Missions validées', 'Validated missions'), String(st.cur.done), String(st.prev.done), delta(st.cur.done, st.prev.done))}
 ${row(t('Taux de validation', 'Validation rate'), st.cur.rate === null ? '–' : `${st.cur.rate} %`, st.prev.rate === null ? '–' : `${st.prev.rate} %`, st.cur.rate !== null && st.prev.rate !== null ? `${st.cur.rate - st.prev.rate > 0 ? '+' : ''}${st.cur.rate - st.prev.rate} pts` : '–')}
 ${row(t('Argent reçu', 'Money received'), ar(fin.received), ar(finPrev.received), delta(fin.received, finPrev.received))}
@@ -238,7 +243,7 @@ ${row(t('Bénéfice net', 'Net profit'), ar(fin.profit), ar(finPrev.profit), del
 ${row(t('Marge', 'Margin'), fin.marginPct === null ? '–' : `${fin.marginPct} %`, finPrev.marginPct === null ? '–' : `${finPrev.marginPct} %`, '')}
 ${row(t('À encaisser', 'To collect'), ar(fin.toCollect), ar(finPrev.toCollect), '')}
 ${row(t('Trésorerie', 'Cash on hand'), ar(fin.treasury), '', '')}
-${r.inv ? row(t('Factures émises ce mois', 'Invoices issued this month'), ar(r.inv.issued_total), '', '') + row(t('Reste à payer sur les factures', 'Left to pay on invoices'), ar(r.inv.to_collect), '', '') + row(t('Dont en retard', 'Of which overdue'), ar(r.inv.overdue), '', '') : ''}</table>
+${r.inv ? row(t(wk ? 'Factures émises cette semaine' : 'Factures émises ce mois', wk ? 'Invoices issued this week' : 'Invoices issued this month'), ar(r.inv.issued_total), '', '') + row(t('Reste à payer sur les factures', 'Left to pay on invoices'), ar(r.inv.to_collect), '', '') + row(t('Dont en retard', 'Of which overdue'), ar(r.inv.overdue), '', '') : ''}</table>
 <div class="two"><div class="ok"><h2>${esc(t('3 points forts', '3 strengths'))}</h2><ul>${r.strengths.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
 <div class="warn"><h2>${esc(t('3 points d\'attention', '3 points of attention'))}</h2><ul>${r.attention.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>
 ${r.goals.length ? `<h2>${esc(t('Objectifs du mois', 'Monthly goals'))}</h2>${r.goals.map(goalLine).join('')}` : ''}

@@ -124,6 +124,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     delete (general as { monthly_plan?: unknown }).monthly_plan; // le plan mensuel s'enregistre tout de suite aussi
     delete (general as { team_goals?: unknown }).team_goals; // les objectifs s'enregistrent tout de suite aussi
     delete (general as { recurring_missions?: unknown }).recurring_missions; // les règles récurrentes s'enregistrent tout de suite aussi
+    delete (general as { auto_report?: unknown }).auto_report; // le rapport automatique s'enregistre tout de suite aussi (Statistiques > Rapport)
     delete (general as { mission_templates?: unknown }).mission_templates; // les modèles de mission s'enregistrent tout de suite (jamais écrasés par une vieille copie)
     db.updateSettings({
       ...general,

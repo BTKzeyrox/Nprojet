@@ -7,6 +7,7 @@ import { StatCard } from '../../components/StatCard';
 import { FinanceTab } from './FinanceTab';
 import { StockTab } from './StockTab';
 import { ReportTab } from './ReportTab';
+import { AutoReportCard } from './AutoReportCard';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
 import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
@@ -131,7 +132,10 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       </div>
 
       {tab === 'report' ? (
-        <ReportTab anchor={anchor} lang={l} />
+        <>
+          <ReportTab anchor={anchor} lang={l} />
+          <AutoReportCard lang={l} />
+        </>
       ) : tab === 'stock' ? (
         <StockTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} />
       ) : tab === 'finance' ? (

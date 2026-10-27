@@ -1,5 +1,6 @@
 import type { MissionTemplate } from '../utils/missionTemplates';
 import type { RecurringRule } from '../utils/recurring';
+import type { AutoReportSetting } from '../utils/autoReport';
 import type { TeamGoal } from '../utils/teamGoals';
 import type { MonthlyPlan } from '../utils/budgetPlan';
 export interface PasswordResetRequest {
@@ -63,6 +64,7 @@ export interface AppSettings {
   monthly_plan?: MonthlyPlan; // revenus et paie prévus par mois (module 15, M15.4) ; admin seulement
   team_goals?: TeamGoal[]; // objectifs par salarié et par équipe (module 15, M15.3) ; admin seulement
   recurring_missions?: RecurringRule[]; // missions récurrentes (module 15, M15.1) ; admin seulement
+  auto_report?: AutoReportSetting; // rapport automatique (module 15, M15.5) : arrêté / chaque semaine / chaque mois ; admin seulement
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
   performance?: import('../utils/performanceScore').PerformanceConfig; // Réglages de la performance (module 3) : le serveur revérifie tout
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés
