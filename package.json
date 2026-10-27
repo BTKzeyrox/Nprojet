@@ -66,6 +66,7 @@
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:recurring": "npx --yes tsx scripts/check-recurring.ts",
+    "check:approval-limit": "npx --yes tsx scripts/check-approval-limit.ts",
     "check:auto-report": "npx --yes tsx scripts/check-auto-report.ts",
     "check:auto-report-ui": "esbuild scripts/check-auto-report-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-auto-report-ui.mjs && node node_modules/.cache/check-auto-report-ui.mjs",
     "check:report-week": "npx --yes tsx scripts/check-report-week.ts",

@@ -25,6 +25,7 @@ export interface AppSettings {
   goal_max_expenses_ar?: number; // plafond de dépenses du mois en Ar (admin seulement)
   signup_open?: boolean; // « Créer un compte » : false = l'admin a fermé les inscriptions (le serveur refuse les nouvelles demandes) ; absent = ouvertes
   alert_unpaid_days?: number; // alerte « client qui n'a pas payé depuis X jours » (30 par défaut)
+  team_lead_limit_ar?: number; // plafond du Chef d'équipe (M15.6) : au-dessus de ce prix client, la décision revient au responsable ; 0 = pas de plafond ; admin seulement
   alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
   day_shift_start: string; // HH:MM
   day_shift_end: string;

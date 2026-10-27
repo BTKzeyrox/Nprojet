@@ -104,6 +104,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     setError(null);
     if (!(s.price_per_mission >= 0)) return setError('Le tarif par mission ne peut pas être négatif.');
     if (!((s.client_price_default_ar ?? 0) >= 0)) return setError('Le prix client par défaut ne peut pas être négatif.');
+    if (s.team_lead_limit_ar !== undefined && !(Number(s.team_lead_limit_ar) >= 0)) return setError('Le plafond du Chef d\'équipe ne peut pas être négatif.');
     for (const v of Object.values(s.client_prices_by_type || {})) if (!(Number(v) >= 0)) return setError('Un prix client par type ne peut pas être négatif.');
     for (const k of ['goal_missions', 'goal_profit_ar', 'goal_max_expenses_ar', 'alert_low_cash_ar'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Objectifs et alertes : un montant ne peut pas être négatif.');
     if (s.alert_unpaid_days !== undefined && !(Number(s.alert_unpaid_days) >= 1)) return setError('Alerte « client qui n\'a pas payé » : 1 jour ou plus.');
@@ -131,6 +132,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       price_per_million: Math.round(s.price_per_million),
       price_per_mission: Math.round(s.price_per_mission),
       client_price_default_ar: Math.round(s.client_price_default_ar ?? 0),
+      team_lead_limit_ar: Math.max(0, Math.round(Number(s.team_lead_limit_ar) || 0)),
       goal_missions: Math.round(Number(s.goal_missions) || 0),
       goal_profit_ar: Math.round(Number(s.goal_profit_ar) || 0),
       goal_max_expenses_ar: Math.round(Number(s.goal_max_expenses_ar) || 0),
@@ -384,6 +386,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <label className={labelCls}>Prix par défaut d'une mission (Ar)</label>
           <input type="number" min={0} step={100} value={s.client_price_default_ar ?? 0} onChange={e => set('client_price_default_ar', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-400 mt-1">Ce que le client paie pour une mission validée. 0 = pas encore réglé. Il est figé au moment de la validation : changer un prix ne modifie pas les missions déjà validées.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Plafond du Chef d'équipe (Ar)</label>
+          <input type="number" min={0} step={1000} value={s.team_lead_limit_ar ?? 0} onChange={e => set('team_lead_limit_ar', Number(e.target.value))} className={inputCls} />
+          <p className="text-[11px] text-slate-400 mt-1">Au-dessus de ce prix client, seul le responsable décide (valider un début, valider une fin ou refuser). Le Chef d'équipe n'en voit jamais le montant. 0 = pas de plafond : le Chef d'équipe décide comme avant.</p>
         </div>
         <div className="space-y-2">
           <p className="text-xs font-semibold text-slate-300">Exceptions par type de mission</p>

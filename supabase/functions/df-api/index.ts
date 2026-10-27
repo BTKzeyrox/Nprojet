@@ -79,6 +79,20 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
   };
 }
 // ===== END DECIDE =====
+// ===== BEGIN LEADLIMIT (plafond du Chef d'équipe, M15.6 : copie exacte de src/utils/approvalLimit.ts ; ce bloc est contrôlé par scripts/check-approval-limit.ts) =====
+const TEAM_LEAD_LIMIT_MAX = 1000000000;
+
+/** Le plafond du réglage : un nombre entier d'Ar. 0, absent ou valeur fausse = pas de plafond. */
+function cleanTeamLeadLimit(v: unknown): number {
+  return typeof v === 'number' && isFinite(v) && v >= 1 ? Math.min(Math.round(v), TEAM_LEAD_LIMIT_MAX) : 0;
+}
+
+/** Vrai si la décision doit venir du responsable : c'est un Chef d'équipe, un plafond est réglé et le prix de la mission est STRICTEMENT au-dessus. Le responsable n'est jamais bloqué. */
+function decisionNeedsAdmin(role: unknown, price: unknown, limit: unknown): boolean {
+  const l = cleanTeamLeadLimit(limit);
+  return role === 'team_lead' && l > 0 && typeof price === 'number' && isFinite(price) && price > l;
+}
+// ===== END LEADLIMIT =====
 
 // ===== BEGIN CASH (finances : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-cash.ts) =====
 // Collections qu'un employé ne reçoit JAMAIS (lecture) : journal de sécurité des autres et finances.
@@ -2137,7 +2151,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -3606,8 +3620,10 @@ async function postDecide(req: any, res: any, me: any) {
   const owner = await getUserRow(String(post.employee_id || ''));
   if (!canDecidePost(me, owner)) return res.status(403).json({ error: "Cette mission n'est pas dans ton équipe." });
   const approve = b.approve === true;
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  const teamLimit = cleanTeamLeadLimit(st?.data?.team_lead_limit_ar); // plafond du Chef d'équipe (M15.6) : 0 = aucun
   let cRow: any = null;
-  if (approve && post.status === 'pending_end') {
+  if ((approve && post.status === 'pending_end') || (me.role === 'team_lead' && teamLimit > 0)) {
     const { data: c1 } = await sb.from(T.contracts).select('id, data').eq('data->>post_number', String(post.post_number)).limit(1);
     cRow = (c1 || [])[0] || null;
     if (!cRow && post.client_name) {
@@ -3615,7 +3631,8 @@ async function postDecide(req: any, res: any, me: any) {
       cRow = (c2 || [])[0] || null;
     }
   }
-  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  // Au-dessus du plafond, la décision revient au responsable (début, fin et refus). Le montant n'est jamais dit au Chef d'équipe.
+  if (decisionNeedsAdmin(me.role, decisionClientPrice(cRow ? cRow.data : undefined, st?.data || {}), teamLimit)) return res.status(403).json({ error: 'Cette mission est au-dessus du plafond : la décision revient au responsable.' });
   const now = new Date().toISOString();
   const plan = planPostDecision(post, cRow ? cRow.data : undefined, st?.data || {}, owner, approve, b.reason, now);
   if (!plan.ok) {
