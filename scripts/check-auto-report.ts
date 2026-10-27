@@ -1,4 +1,6 @@
 // Contrôle du rapport automatique (M15.5, règles pures). Lancer : npm run check:auto-report
+import { readFileSync } from 'node:fs';
+import { transformSync } from 'esbuild';
 import { AUTO_REPORT_DEFAULT, AUTO_REPORT_LIMITS, checkReportRecord, cleanAutoReport, describeAutoReport, dueReport, freezeReport, nextAutoReport, periodForRun, periodFromId, reportNotice, reportRunsOn, reportsToPrune, type AutoReportSetting, type ReportRecord } from '../src/utils/autoReport';
 
 let fails = 0, n = 0;
@@ -147,6 +149,71 @@ eq(describeAutoReport(weekly(1)), 'Chaque lundi à 08:00', 'phrase : chaque lund
 eq(describeAutoReport(weekly(5, '17:00'), 'en'), 'Every Friday at 17:00', 'phrase : chaque vendredi EN');
 eq(describeAutoReport(monthly(1)), 'Le 1er de chaque mois à 08:00', 'phrase : le 1er');
 eq(describeAutoReport(monthly(15)), 'Le 15 de chaque mois à 08:00', 'phrase : le 15');
+
+// ---- Site / serveur : le bloc AUTOREPORT du serveur est le même texte et donne les mêmes réponses
+{
+  const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8').replace(/\r\n/g, '\n');
+  const m = src.match(/\/\/ ===== BEGIN AUTOREPORT[^\n]*\n([\s\S]*?)\/\/ ===== END AUTOREPORT =====/);
+  ok(!!m, 'serveur : bloc AUTOREPORT présent');
+  if (m) {
+    const site = readFileSync('src/utils/autoReport.ts', 'utf8').replace(/\r\n/g, '\n').split('\n').filter((l, i, a) => !(i < a.findIndex((x) => !x.startsWith('//')))).join('\n');
+    const strip = (s: string) => s.replace(/^export /gm, '').trim();
+    ok(strip(site) === strip(m[1]), 'serveur : le bloc est la copie exacte de src/utils/autoReport.ts (sans « export »)');
+    const js = transformSync(m[1] + '\n;globalThis.__s = { cleanAutoReport, periodFromId, dueReport, nextAutoReport, checkReportRecord, freezeReport, reportsToPrune, reportNotice };', { loader: 'ts' }).code;
+    new Function(js)();
+    const s = (globalThis as any).__s;
+    const settings = [weekly(1), weekly(7, '23:30'), monthly(1), monthly(31), { ...weekly(1), frequency: 'off' } as AutoReportSetting];
+    let same = 0, total = 0;
+    for (const st of settings) for (const t of [MS(2026, 10, 26, 7, 59), MS(2026, 10, 26, 8, 0), MS(2026, 10, 26, 9, 59), MS(2026, 10, 26, 10, 0), MS(2026, 10, 27, 0, 15), MS(2026, 11, 1, 8, 30), MS(2026, 11, 30, 8, 5), MS(2027, 1, 1, 8, 0)]) {
+      total++;
+      const a = JSON.stringify(dueReport(st, t)), b = JSON.stringify(s.dueReport(st, t));
+      if (a === b) same++; else console.log('   différence', t, a, b);
+    }
+    eq(same, total, `serveur et site créent les mêmes rapports aux mêmes instants (${total} cas)`);
+    eq(JSON.stringify(s.cleanAutoReport({ frequency: 'weekly', weekday: 9, time: '25:00' })), JSON.stringify(cleanAutoReport({ frequency: 'weekly', weekday: 9, time: '25:00' })), 'serveur et site nettoient le même réglage pareil');
+    eq(JSON.stringify(s.checkReportRecord({ ...pending, kind: 'month' })), JSON.stringify(checkReportRecord({ ...pending, kind: 'month' })), 'serveur et site vérifient la même fiche pareil');
+    eq(JSON.stringify(s.nextAutoReport(weekly(1), MS(2026, 10, 27, 10))), JSON.stringify(nextAutoReport(weekly(1), MS(2026, 10, 27, 10))), 'serveur et site donnent la même prochaine exécution');
+    const p0 = checkReportRecord(pending); if (!p0.ok) throw new Error('fiche de test fausse');
+    eq(JSON.stringify(s.freezeReport(p0.value, '<p>x</p>', T1)), JSON.stringify(freezeReport(p0.value, '<p>x</p>', T1)), 'serveur et site figent la même copie');
+    eq(JSON.stringify(s.reportsToPrune([{ id: 'm-2026-09' }, { id: 'm-2026-08' }, { id: 'm-2026-07' }], 2)), JSON.stringify(['m-2026-07']), 'serveur : garde les plus récentes');
+    eq(JSON.stringify(s.reportNotice(periodFromId('m-2026-09')!)), JSON.stringify(reportNotice(periodFromId('m-2026-09')!)), 'serveur et site écrivent la même notification');
+  }
+  // Les routes et les garde-fous
+  ok(/action === "report-due" && req\.method === "POST"\) return await reportDue\(request, res\)/.test(src), 'serveur : route report-due (POST) branchée avant la connexion');
+  const iServe = src.indexOf('Deno.serve('), iDue = src.indexOf('action === "report-due"', iServe), iAuth = src.indexOf('const me = await authenticate(req);', iServe);
+  ok(iDue > 0 && iAuth > 0 && iDue < iAuth, 'serveur : report-due est avant « authenticate » (la tâche n\'a pas de session, elle a un secret)');
+  for (const r of ['report-list', 'report-open', 'report-freeze']) ok(new RegExp(`action === "${r}" && req\\.method === "POST"\\) return await report\\w+\\(req, res, me\\)`).test(src) && src.indexOf(`action === "${r}"`) > iAuth, `serveur : route ${r} après la connexion`);
+  const h = src.match(/async function reportDue\([\s\S]*?\n}\n/);
+  ok(!!h, 'serveur : fonction reportDue présente');
+  if (h) {
+    ok(/x-cron-secret/.test(h[0]) && /timingSafeEqual/.test(h[0]) && /push_cron_secret/.test(h[0]), 'serveur : la tâche planifiée doit donner le secret (comparaison à temps constant)');
+    ok(/status\(401\)/.test(h[0]), 'serveur : sans le bon secret → refus 401');
+    ok(/\.insert\(/.test(h[0]) && !/\.upsert\(/.test(h[0]) && /23505/.test(h[0]), 'serveur : une fiche déjà créée n\'est jamais recréée ni écrasée (insert, doublon = rien)');
+    ok(/reportsToPrune\(/.test(h[0]) && (h[0].match(/\.delete\(/g) || []).length === 1, 'serveur : seule suppression = les fiches au-delà des 24 plus récentes');
+  }
+  for (const f of ['reportList', 'reportOpen', 'reportFreeze']) {
+    const hh = src.match(new RegExp(`async function ${f}\\([\\s\\S]*?\\n}\\n`));
+    ok(!!hh && /adminOnly\(res, me\)/.test(hh[0]), `serveur : ${f} réservée au responsable`);
+  }
+  const fr = src.match(/async function reportFreeze\([\s\S]*?\n}\n/);
+  if (fr) {
+    ok(/\.eq\('data->>status', 'pending'\)/.test(fr[0]), 'serveur : la copie ne s\'écrit que si la fiche est encore « en attente » (jamais d\'écrasement)');
+    ok(/status === 'ready'/.test(fr[0]) && /already: true/.test(fr[0]), 'serveur : une copie déjà figée est rendue telle quelle');
+    ok(!/\.delete\(/.test(fr[0]), 'serveur : figer ne supprime rien');
+  }
+  const lst = src.match(/async function reportList\([\s\S]*?\n}\n/);
+  ok(!!lst && !/html:/.test(lst[0]), 'serveur : la liste ne renvoie pas le texte (gros) des rapports');
+  ok(/"acct_close", "auto_report", "monthly_plan"/.test(src), 'serveur : réglage jamais envoyé à un opérateur (réglages réservés à l\'admin)');
+  ok(/cleanAutoReport\(sentAr\)/.test(src), 'serveur : réglage revérifié à chaque enregistrement des réglages');
+  ok(!/T = \{[\s\S]*?df_reports[\s\S]*?\} as const/.test(src), 'serveur : df_reports n\'est pas une collection de la synchro (seulement les routes report-*)');
+  const mig = readFileSync('supabase/migrations/20261027_auto_report_cron.sql', 'utf8');
+  ok(/cron\.schedule\(\s*'df-report-due'/.test(mig) && /\*\/15 \* \* \* \*/.test(mig) && /report-due/.test(mig) && /push_cron_secret/.test(mig), 'migration : tâche df-report-due toutes les 15 min avec le secret');
+  ok(/cron\.unschedule\('df-report-due'\)/.test(mig), 'migration (tâche) : retour en arrière noté');
+  ok(!/create table|drop table/i.test(mig.replace(/--[^\n]*/g, '')), 'migration (tâche) : aucune table créée ni supprimée');
+  const tab = readFileSync('supabase/migrations/20261027_create_df_reports.sql', 'utf8');
+  ok(/enable row level security/i.test(tab) && /revoke all on public\.df_reports from anon, authenticated/i.test(tab), 'migration (table) : RLS active, aucun accès public');
+  ok(/drop table public\.df_reports/.test(tab), 'migration (table) : retour en arrière noté');
+}
 
 console.log(fails ? `\n${fails} échec(s) sur ${n} contrôles.` : `OK : ${n}/${n} contrôles.`);
 process.exit(fails ? 1 : 0);

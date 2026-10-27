@@ -1851,6 +1851,159 @@ const RECURRING_MESSAGE: Record<RecurringError, string> = {
 /** Nouvel identifiant de règle (lettres, chiffres, tiret). */
 const newRecurringId = (existing: RecurringRule[]): string => { let id = `rr-${Date.now().toString(36)}`; for (let k = 2; existing.some((r) => r.id === id); k++) id = `rr-${Date.now().toString(36)}-${k}`; return id; };
 // ===== END RECURRING =====
+// ===== BEGIN AUTOREPORT (rapport automatique, M15.5 : copie exacte de src/utils/autoReport.ts ; ce bloc est contrôlé par scripts/check-auto-report.ts) =====
+type ReportFrequency = 'off' | 'weekly' | 'monthly';
+interface AutoReportSetting { frequency: ReportFrequency; weekday: number; month_day: number; time: string }
+type ReportKind = 'week' | 'month';
+interface ReportPeriod { id: string; kind: ReportKind; start: string; end: string }
+interface ReportRecord { id: string; kind: ReportKind; start: string; end: string; status: 'pending' | 'ready'; created_at: string; frozen_at?: string; html?: string }
+
+const AUTO_REPORT_DEFAULT: AutoReportSetting = { frequency: 'off', weekday: 1, month_day: 1, time: '08:00' };
+const AUTO_REPORT_LIMITS = { keep: 24, html: 400000 };
+const AUTO_REPORT_GRACE_MS = 2 * 60 * 60 * 1000; // la fiche se crée dans les 2 h qui suivent l'heure prévue
+const ARP_OFFSET_H = 3;
+const ARP_FREQUENCIES = ['off', 'weekly', 'monthly'];
+
+const arpIsDate = (s: unknown): boolean => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  if (y < 2000 || y > 2100) return false;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+};
+const arpIsTime = (s: unknown): boolean => typeof s === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+const arpDaysIn = (y: number, m: number): number => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const arpWeekday = (ymd: string): number => { const [y, m, d] = ymd.split('-').map(Number); const w = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); return w === 0 ? 7 : w; };
+const arpAddDays = (ymd: string, n: number): string => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const arpScheduledMs = (ymd: string, time: string): number => { const [y, m, d] = ymd.split('-').map(Number); const [hh, mm] = time.split(':').map(Number); return Date.UTC(y, m - 1, d, hh - ARP_OFFSET_H, mm); };
+const arpMadagascarDate = (nowMs: number): string => new Date(nowMs + ARP_OFFSET_H * 3600000).toISOString().slice(0, 10);
+
+/** Nettoie le réglage reçu : une valeur fausse devient la valeur de départ, jamais d'erreur. Rien reçu = arrêté. */
+function cleanAutoReport(raw: unknown): AutoReportSetting {
+  const out: AutoReportSetting = { ...AUTO_REPORT_DEFAULT };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.frequency === 'string' && ARP_FREQUENCIES.includes(r.frequency)) out.frequency = r.frequency as ReportFrequency;
+  if (typeof r.weekday === 'number' && Number.isInteger(r.weekday) && r.weekday >= 1 && r.weekday <= 7) out.weekday = r.weekday;
+  if (typeof r.month_day === 'number' && Number.isInteger(r.month_day) && r.month_day >= 1 && r.month_day <= 31) out.month_day = r.month_day;
+  if (arpIsTime(r.time)) out.time = r.time as string;
+  return out;
+}
+
+/** La période de l'identifiant (« w-2026-10-12 » = semaine du lundi 12 au dimanche 18 ; « m-2026-09 » = septembre 2026), ou null si l'identifiant est faux. */
+function periodFromId(id: unknown): ReportPeriod | null {
+  if (typeof id !== 'string') return null;
+  let m = /^w-(\d{4}-\d{2}-\d{2})$/.exec(id);
+  if (m) {
+    if (!arpIsDate(m[1]) || arpWeekday(m[1]) !== 1) return null; // une semaine commence toujours un lundi
+    return { id, kind: 'week', start: m[1], end: arpAddDays(m[1], 6) };
+  }
+  m = /^m-(\d{4})-(\d{2})$/.exec(id);
+  if (m) {
+    const y = Number(m[1]), mo = Number(m[2]);
+    if (y < 2000 || y > 2100 || mo < 1 || mo > 12) return null;
+    return { id, kind: 'month', start: `${m[1]}-${m[2]}-01`, end: `${m[1]}-${m[2]}-${String(arpDaysIn(y, mo)).padStart(2, '0')}` };
+  }
+  return null;
+}
+
+/** Vrai si le réglage tombe ce jour-là (date AAAA-MM-JJ). « Arrêté » ne tombe jamais. Le 31 tombe le dernier jour des mois plus courts. */
+function reportRunsOn(s: AutoReportSetting, ymd: string): boolean {
+  if (!arpIsDate(ymd) || s.frequency === 'off') return false;
+  if (s.frequency === 'weekly') return arpWeekday(ymd) === s.weekday;
+  const [y, m, d] = ymd.split('-').map(Number);
+  return d === Math.min(s.month_day, arpDaysIn(y, m));
+}
+
+/** La période FINIE que couvre un rapport lancé ce jour-là : la semaine d'avant (lundi à dimanche) ou le mois d'avant. */
+function periodForRun(s: AutoReportSetting, ymd: string): ReportPeriod | null {
+  if (!arpIsDate(ymd) || s.frequency === 'off') return null;
+  if (s.frequency === 'weekly') {
+    const thisMonday = arpAddDays(ymd, -(arpWeekday(ymd) - 1));
+    return periodFromId(`w-${arpAddDays(thisMonday, -7)}`);
+  }
+  const [y, m] = ymd.split('-').map(Number);
+  const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1;
+  return periodFromId(`m-${py}-${String(pm).padStart(2, '0')}`);
+}
+
+/** Le rapport à créer maintenant : réglage actif, jour concerné, heure prévue passée depuis moins de 2 h. Sinon null. */
+function dueReport(s: AutoReportSetting, nowMs: number, graceMs: number = AUTO_REPORT_GRACE_MS): (ReportPeriod & { run_date: string; at: number }) | null {
+  if (s.frequency === 'off') return null;
+  const today = arpMadagascarDate(nowMs);
+  for (const date of [arpAddDays(today, -1), today]) {
+    if (!reportRunsOn(s, date)) continue;
+    const at = arpScheduledMs(date, s.time);
+    if (nowMs >= at && nowMs < at + graceMs) { const p = periodForRun(s, date); if (p) return { ...p, run_date: date, at }; }
+  }
+  return null;
+}
+
+/** Prochaine exécution après `nowMs` (millisecondes UTC), ou null (arrêté). */
+function nextAutoReport(s: AutoReportSetting, nowMs: number): number | null {
+  if (s.frequency === 'off') return null;
+  let day = arpMadagascarDate(nowMs);
+  for (let i = 0; i < 400; i++, day = arpAddDays(day, 1)) {
+    if (!reportRunsOn(s, day)) continue;
+    const at = arpScheduledMs(day, s.time);
+    if (at > nowMs) return at;
+  }
+  return null;
+}
+
+type ReportRecordError = 'format' | 'id' | 'status' | 'date' | 'html';
+
+/** Vérifie une fiche de rapport. L'identifiant décide de tout : type, début et fin sont recalculés, jamais crus. Une fiche prête demande un texte (400 000 signes au plus). */
+function checkReportRecord(d: unknown): { ok: true; value: ReportRecord } | { ok: false; error: ReportRecordError } {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false, error: 'format' };
+  const r = d as Record<string, unknown>;
+  if (['__proto__', 'constructor', 'prototype'].some((k) => Object.prototype.hasOwnProperty.call(r, k))) return { ok: false, error: 'format' };
+  const p = periodFromId(r.id);
+  if (!p) return { ok: false, error: 'id' };
+  if (r.status !== 'pending' && r.status !== 'ready') return { ok: false, error: 'status' };
+  if (typeof r.created_at !== 'string' || Number.isNaN(Date.parse(r.created_at))) return { ok: false, error: 'date' };
+  const value: ReportRecord = { id: p.id, kind: p.kind, start: p.start, end: p.end, status: r.status, created_at: new Date(r.created_at).toISOString() };
+  if (r.status === 'ready') {
+    if (typeof r.frozen_at !== 'string' || Number.isNaN(Date.parse(r.frozen_at))) return { ok: false, error: 'date' };
+    if (typeof r.html !== 'string' || !r.html.trim() || r.html.length > AUTO_REPORT_LIMITS.html) return { ok: false, error: 'html' };
+    value.frozen_at = new Date(r.frozen_at).toISOString();
+    value.html = r.html;
+  } else if (r.html !== undefined || r.frozen_at !== undefined) return { ok: false, error: 'status' };
+  return { ok: true, value };
+}
+
+/** Fige la copie : une fiche « en attente » devient « prête » avec son texte. Une fiche déjà prête ne change JAMAIS (null). */
+function freezeReport(existing: ReportRecord | null | undefined, html: unknown, nowIso: string): ReportRecord | null {
+  if (!existing || existing.status === 'ready') return null;
+  if (typeof html !== 'string' || !html.trim() || html.length > AUTO_REPORT_LIMITS.html) return null;
+  return { ...existing, status: 'ready', frozen_at: nowIso, html };
+}
+
+/** Les fiches à garder : les 24 plus récentes (par fin de période, puis identifiant). Rend les identifiants à supprimer. */
+function reportsToPrune(list: { id: string; end?: string }[], keep: number = AUTO_REPORT_LIMITS.keep): string[] {
+  const rows = list.map((r) => ({ id: r.id, end: periodFromId(r.id)?.end || '' })).sort((a, b) => b.end.localeCompare(a.end) || b.id.localeCompare(a.id));
+  return rows.slice(keep).map((r) => r.id);
+}
+
+/** Texte de la notification (FR et EN) pour une période. */
+function reportNotice(p: ReportPeriod): { fr: { title: string; body: string }; en: { title: string; body: string } } {
+  const week = p.kind === 'week';
+  return {
+    fr: { title: week ? 'Rapport de la semaine prêt' : 'Rapport du mois prêt', body: `Période du ${p.start} au ${p.end}. Ouvre Statistiques > Rapport.` },
+    en: { title: week ? 'Weekly report ready' : 'Monthly report ready', body: `Period ${p.start} to ${p.end}. Open Statistics > Report.` },
+  };
+}
+
+const ARP_DAYS_FR = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const ARP_DAYS_EN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+/** Phrase courte : « Arrêté », « Chaque lundi à 08:00 », « Le 1er de chaque mois à 08:00 ». */
+function describeAutoReport(s: AutoReportSetting, lang: 'fr' | 'en' = 'fr'): string {
+  const fr = lang === 'fr';
+  if (s.frequency === 'off') return fr ? 'Arrêté' : 'Off';
+  if (s.frequency === 'weekly') return fr ? `Chaque ${ARP_DAYS_FR[s.weekday]} à ${s.time}` : `Every ${ARP_DAYS_EN[s.weekday]} at ${s.time}`;
+  return fr ? `Le ${s.month_day}${s.month_day === 1 ? 'er' : ''} de chaque mois à ${s.time}` : `On day ${s.month_day} of each month at ${s.time}`;
+}
+// ===== END AUTOREPORT =====
 
 // ===== BEGIN SHIFTS (planning des équipes, M15.2 : copie exacte du bloc de src/utils/planning.ts ; contrôlé par scripts/check-planning.ts) =====
 const SH_KINDS = ['day', 'night', 'off'];
@@ -1984,7 +2137,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -3115,6 +3268,9 @@ async function sync(req: any, res: any, me: any) {
         // Missions récurrentes (M15.1) : revérifiées ; un vieux site qui ne les envoie pas ne les efface pas
         const sentRec = (rec as any).recurring_missions === undefined ? (existing as any)?.recurring_missions : (rec as any).recurring_missions;
         if (sentRec !== undefined) toSave = { ...toSave, recurring_missions: cleanRecurring(sentRec) };
+        // Rapport automatique (M15.5) : réglage revérifié ; un vieux site qui ne l'envoie pas ne l'efface pas
+        const sentAr = (rec as any).auto_report === undefined ? (existing as any)?.auto_report : (rec as any).auto_report;
+        if (sentAr !== undefined) toSave = { ...toSave, auto_report: cleanAutoReport(sentAr) };
         // Objectifs par salarié et par équipe (M15.3) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentGoals = (rec as any).team_goals === undefined ? (existing as any)?.team_goals : (rec as any).team_goals;
         if (sentGoals !== undefined) toSave = { ...toSave, team_goals: cleanTeamGoals(sentGoals) };
@@ -4732,6 +4888,78 @@ async function recurringDue(request: Request, res: any) {
   return res.json({ due: due.length, created, failed });
 }
 
+// Rapport automatique (M15.5). Table df_reports : absente de T (jamais écrite par la synchro), comme df_audit ; seulement ces routes.
+const REPORTS = "df_reports";
+// Appelée toutes les 15 min par la tâche planifiée « df-report-due » (même secret que push-due). Crée UNE fiche « en attente » pour la période finie
+// (identifiant = période : une fiche déjà là n'est jamais recréée ni écrasée), prévient le responsable, puis garde les 24 plus récentes.
+async function reportDue(request: Request, res: any) {
+  const given = request.headers.get('x-cron-secret') || '';
+  const { data: want } = await sb.rpc('df_push_get_secret', { secret_name: 'push_cron_secret' });
+  const a = Buffer.from(given), b = Buffer.from(String(want || ''));
+  if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return res.status(401).json({ error: 'refusé' });
+  const st: any = await getSettings();
+  const due = dueReport(cleanAutoReport(st?.auto_report), Date.now());
+  if (!due) return res.json({ due: 0, created: 0 });
+  const nowIso = new Date().toISOString();
+  const checked = checkReportRecord({ id: due.id, status: 'pending', created_at: nowIso });
+  if (!checked.ok) return res.status(500).json({ error: 'fiche non valide' });
+  const { error } = await sb.from(REPORTS).insert({ id: due.id, data: checked.value, updated_at: nowIso });
+  if (error) {
+    if ((error as any).code === '23505') return res.json({ due: 1, created: 0 }); // déjà créée : rien à refaire, personne n'est prévenu deux fois
+    return res.status(500).json({ error: 'écriture impossible' });
+  }
+  const { data: us } = await sb.from(T.users).select('id').eq('data->>role', 'admin');
+  const sent = await pushTo((us || []).map((r: any) => String(r.id)), reportNotice(due), ('rep-' + due.id).slice(0, 60));
+  const { data: all } = await sb.from(REPORTS).select('id');
+  const old = reportsToPrune((all || []).map((r: any) => ({ id: String(r.id) })));
+  if (old.length) await sb.from(REPORTS).delete().in('id', old);
+  return res.json({ due: 1, created: 1, notified: sent, pruned: old.length });
+}
+// Liste des fiches (sans le texte, qui est gros), les plus récentes d'abord. Responsable seulement.
+async function reportList(_req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const { data, error } = await sb.from(REPORTS).select('data').order('id', { ascending: false }).limit(60);
+  if (error) return res.status(500).json({ error: "Les rapports ne sont pas disponibles (table df_reports absente ?)." });
+  const rows = (data || []).map((r: any) => r.data).filter((d: any) => d && typeof d === 'object').map((d: any) => ({ id: d.id, kind: d.kind, start: d.start, end: d.end, status: d.status, created_at: d.created_at, frozen_at: d.frozen_at }));
+  rows.sort((x: any, y: any) => String(y.end).localeCompare(String(x.end)) || String(y.id).localeCompare(String(x.id)));
+  return res.json({ rows });
+}
+// Une fiche entière (avec son texte si elle est prête). Responsable seulement.
+async function reportOpen(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const p = periodFromId(String((req.body || {}).id || ''));
+  if (!p) return res.status(400).json({ error: 'Rapport inconnu.' });
+  const { data, error } = await sb.from(REPORTS).select('data').eq('id', p.id).maybeSingle();
+  if (error) return res.status(500).json({ error: 'Lecture impossible.' });
+  if (!data) return res.status(404).json({ error: 'Rapport introuvable.' });
+  return res.json({ record: data.data });
+}
+// Fige la copie : une fiche « en attente » devient « prête » avec le texte envoyé par le responsable. Une copie déjà figée ne change JAMAIS.
+async function reportFreeze(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const b = req.body || {};
+  const p = periodFromId(String(b.id || ''));
+  if (!p) return res.status(400).json({ error: 'Rapport inconnu.' });
+  const { data: row, error } = await sb.from(REPORTS).select('data').eq('id', p.id).maybeSingle();
+  if (error) return res.status(500).json({ error: 'Lecture impossible.' });
+  if (!row) return res.status(404).json({ error: 'Rapport introuvable.' });
+  const cur = checkReportRecord(row.data);
+  if (!cur.ok) return res.status(500).json({ error: 'Fiche illisible.' });
+  if (cur.value.status === 'ready') return res.json({ record: cur.value, already: true }); // déjà figée : on rend celle qui existe
+  const next = freezeReport(cur.value, b.html, new Date().toISOString());
+  if (!next) return res.status(400).json({ error: 'Texte du rapport non valide.' });
+  const ck = checkReportRecord(next);
+  if (!ck.ok) return res.status(400).json({ error: 'Texte du rapport non valide.' });
+  // Seulement si la fiche est encore « en attente » au moment de l'écriture : deux envois en même temps ne s'écrasent pas.
+  const { data: saved, error: werr } = await sb.from(REPORTS).update({ data: ck.value, updated_at: ck.value.frozen_at }).eq('id', p.id).eq('data->>status', 'pending').select('data');
+  if (werr) return res.status(500).json({ error: 'Écriture impossible.' });
+  if (!saved || !saved.length) {
+    const { data: again } = await sb.from(REPORTS).select('data').eq('id', p.id).maybeSingle();
+    return res.json({ record: again?.data ?? ck.value, already: true });
+  }
+  return res.json({ record: ck.value, already: false });
+}
+
 async function pushDue(request: Request, res: any) {
   const given = request.headers.get('x-cron-secret') || '';
   const { data: want } = await sb.rpc('df_push_get_secret', { secret_name: 'push_cron_secret' });
@@ -4791,6 +5019,7 @@ Deno.serve(async (request: Request) => {
     if (action === "report-error" && req.method === "POST") return await reportError(req, res);
     if (action === "push-due" && req.method === "POST") return await pushDue(request, res);
     if (action === "recurring-due" && req.method === "POST") return await recurringDue(request, res);
+    if (action === "report-due" && req.method === "POST") return await reportDue(request, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
     if (action !== "logout") {
@@ -4808,6 +5037,9 @@ Deno.serve(async (request: Request) => {
     if (action === "backup-import" && req.method === "POST") return await backupImport(req, res, me);
     if (action === "backup-now" && req.method === "POST") return await backupNow(req, res, me);
     if (action === "audit-list" && req.method === "GET") return await auditList(req, res, me);
+    if (action === "report-list" && req.method === "POST") return await reportList(req, res, me);
+    if (action === "report-open" && req.method === "POST") return await reportOpen(req, res, me);
+    if (action === "report-freeze" && req.method === "POST") return await reportFreeze(req, res, me);
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
