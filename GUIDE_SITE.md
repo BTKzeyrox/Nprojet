@@ -266,6 +266,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - La TVA collectée vient des factures ; la TVA déductible vient des achats saisis à la main (modèle « Achat avec TVA »), car les dépenses n'ont pas de champ TVA.
   - Clôture : le responsable verrouille les mois finis (onglet Clôture) ; plus d'écriture à ces dates. Au 31 décembre, le résultat passe au compte 110.
   - Rapprochement : on charge le relevé (CSV ou Excel) ; le site montre ce qui correspond, ce qui manque aux livres et ce qui manque au relevé. Rien n'est écrit sans ton accord.
+  - Export pour le comptable : Excel (journal, grand livre, balance) ou CSV, sur la période choisie ; montants en nombres entiers.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
@@ -488,6 +489,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 |---|---|
 | `accounting.ts` | Comptabilité (module 14, M14.1) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:accounting`. |
 | `accountingEntries.ts` | Écritures AUTOMATIQUES (module 14, M14.2) : règles pures qui transforment chaque pièce du site en écriture comptable. Sans écran, sans serveur, sans table. |
+| `accountingExport.ts` | Export pour le comptable (module 14, M14.8) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:accounting-export`. |
 | `advice.ts` | Solutions proposées (suggestions) pour chaque règle de la Santé du site. Texte fixe, FR/EN, jamais d'accusation : ce sont des pistes que l'admin juge lui-même. |
 | `aiAssist.ts` | Assistant IA externe (niveau B, M11.13) côté site. ADMIN SEULEMENT, DÉSACTIVÉ PAR DÉFAUT (case dans Réglages, réglée sur cet appareil). |
 | `alerts.ts` | Alertes de l'accueil admin (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
@@ -676,6 +678,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |
 | `npm run check:accounting-page` | Essai de la page Comptabilité (M14.4), sans écran réel ni réseau : démo, génération, saisie, annulation, FR et EN, rôles. Lancer : npm run check:accounting-page |
 | `npm run check:accounting-close` | Contrôle de la clôture de la comptabilité (M14.6), sans réseau : règles, report à nouveau, démo (clôture, refus d'écrire, réouverture), serveur, écran FR/EN. |
+| `npm run check:accounting-export` | Contrôle de l'export pour le comptable (M14.8), sans réseau. Lancer : npm run check:accounting-export |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
 | `npm run check:clients` | Contrôle des règles des clients (module 1) : statuts, chiffres, rattachement, prix à 5 niveaux. Sans écran, sans serveur. |
 | `npm run check:import` | Contrôle de l'import Excel et CSV (module 16, M16.1) : lecture CSV, colonnes reconnues, aperçu ligne par ligne, doublons, tableau libre, mots de passe. Sans écran, sans réseau. |

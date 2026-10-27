@@ -7,10 +7,12 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { todayMada } from '../../utils/stats';
 import { askConfirm } from '../../components/ConfirmModal';
 import { JOURNALS, PLAN, accountOf, addDays, isMonthEnd, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
-import { downloadVatExcel } from '../../utils/exportDoc';
+import { downloadAccountingExcel, downloadVatExcel } from '../../utils/exportDoc';
 import { RECON_ACCOUNTS, STATEMENT_ERROR, STATEMENT_PROBLEM, STATEMENT_TEMPLATE, bookLines, parseStatement, reconcile, type StatementParse } from '../../utils/bankRecon';
 import { matrixFromFile, FILE_PROBLEM_TEXT, downloadCsv } from '../../utils/importFile';
 import { matrixToCsv } from '../../utils/importRules';
+import { balanceRows, exportFileName, infoRows, journalRows, ledgerRows } from '../../utils/accountingExport';
+import { readCompany } from '../../utils/companyRules';
 
 // Comptabilité (M14.4). Responsable et Comptable : journal, grand livre, balance, résultat, bilan, saisie d'une écriture. Annuler une écriture : responsable seulement.
 // Le site LIT les écritures ; elles s'écrivent par les routes accounting-* (le serveur revérifie, numérote et note tout dans le journal d'audit).
@@ -89,6 +91,18 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
     const out = r.amount < 0, v = String(Math.abs(r.amount));
     setDraft({ date: r.date, journal: reconAcc === '531' ? 'CA' : reconAcc === '514' ? 'MM' : 'BQ', label: r.label || t('Opération du relevé', 'Statement item'), ref: '', lines: [{ account: reconAcc, debit: out ? '' : v, credit: out ? v : '' }, { account: out ? '658' : '706', debit: out ? v : '', credit: out ? '' : v }] });
     setFormErr('');
+  };
+  // Export pour le comptable (M14.8) : la période choisie plus bas ; montants en nombres, jamais de texte
+  const exLang = lang === 'en' ? 'en' : 'fr';
+  const exportExcel = () => downloadAccountingExcel([
+    { name: lang === 'en' ? 'Info' : 'Infos', rows: infoRows(readCompany(db.getSettings().company).identity.name, range.from, range.to, today, entries.filter(e => (!range.from || e.date >= range.from) && (!range.to || e.date <= range.to)).length, exLang) },
+    { name: 'Journal', rows: journalRows(entries, range.from, range.to, exLang) },
+    { name: lang === 'en' ? 'Ledger' : 'Grand livre', rows: ledgerRows(entries, range.from, range.to, exLang) },
+    { name: 'Balance', rows: balanceRows(entries, range.from, range.to, exLang) },
+  ], exportFileName('comptabilite', range.from, range.to, today));
+  const exportCsv = (kind: 'journal' | 'grand-livre' | 'balance') => {
+    const rows = kind === 'journal' ? journalRows(entries, range.from, range.to, exLang) : kind === 'grand-livre' ? ledgerRows(entries, range.from, range.to, exLang) : balanceRows(entries, range.from, range.to, exLang);
+    downloadCsv(`${exportFileName(kind, range.from, range.to, today)}.csv`, matrixToCsv(rows.map(r => r.map(String)))); // matrixToCsv met déjà le BOM : Excel lit bien les accents
   };
   const [closeTo, setCloseTo] = useState('');
   const [reopenTo, setReopenTo] = useState('');
@@ -172,6 +186,18 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
           <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={generate} disabled={busy}><RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} aria-hidden="true" />{t('Générer les écritures', 'Generate the entries')}</button>
           <button type="button" className={btn} onClick={() => { setDraft(newDraft()); setFormErr(''); }}><Plus className="w-4 h-4" aria-hidden="true" />{t('Saisir une écriture', 'Enter an entry')}</button>
         </div>
+        <details className="text-sm">
+          <summary className="cursor-pointer min-h-[44px] flex items-center text-slate-200 font-semibold">{t('Exporter pour le comptable', 'Export for the accountant')}</summary>
+          <div className="space-y-2 pt-1">
+            <p className="text-[11px] text-slate-500">{t(`Période : ${range.from ? fmtDate(range.from) : 'début'} au ${range.to ? fmtDate(range.to) : 'fin'} (choisie dans « Ce mois / Cette année / Tout / Dates » plus bas). Montants en Ariary entiers, lisibles par un tableur.`, `Period: ${range.from ? fmtDate(range.from) : 'start'} to ${range.to ? fmtDate(range.to) : 'end'} (chosen in "This month / This year / All / Dates" below). Whole Ariary amounts a spreadsheet can add up.`)}</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={exportExcel}>{t('Excel (journal, grand livre, balance)', 'Excel (journal, ledger, trial balance)')}</button>
+              <button type="button" className={btn} onClick={() => exportCsv('journal')}>{t('CSV journal', 'CSV journal')}</button>
+              <button type="button" className={btn} onClick={() => exportCsv('grand-livre')}>{t('CSV grand livre', 'CSV ledger')}</button>
+              <button type="button" className={btn} onClick={() => exportCsv('balance')}>{t('CSV balance', 'CSV trial balance')}</button>
+            </div>
+          </div>
+        </details>
         <p className="text-[11px] text-slate-500">{t('« Générer » crée l\'écriture de chaque facture, avoir, paiement, dépense, paie et avance qui n\'en a pas encore. Cliquer plusieurs fois ne crée jamais de doublon. Les montants sont en Ariary.', '"Generate" creates the entry of every invoice, credit note, payment, expense, payroll and advance that has none yet. Clicking several times never creates duplicates. Amounts are in Ariary.')}</p>
         {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`} role={msg.ok ? 'status' : 'alert'}>{msg.text}</p>}
       </div>

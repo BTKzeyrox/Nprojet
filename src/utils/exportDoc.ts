@@ -56,7 +56,7 @@ async function saveXlsx(sheets: { name: string; rows: Rows }[], fileName: string
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   for (const sh of sheets) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sh.rows.length ? sh.rows : [['']]), sh.name.slice(0, 31));
-  XLSX.writeFile(wb, `${safeFileName(fileName)}.xlsx`);
+  XLSX.writeFile(wb, `${safeFileName(fileName.replace(/\.xlsx$/i, ''))}.xlsx`); // jamais « .xlsx.xlsx » même si l'appelant a déjà mis l'extension
 }
 
 /** Lignes du bulletin de paie pour Excel (pure : testable). */
@@ -116,3 +116,6 @@ export function vatRows(rep: { months: { month: string; collected: number; deduc
 export const downloadVatExcel = (rep: Parameters<typeof vatRows>[0], period: string, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: 'TVA', rows: vatRows(rep, period, lang) }], `tva-${safeFileName(period)}.xlsx`);
 
 export { saveBlob };
+
+/** Classeur « Comptabilité » pour le comptable : Infos, Journal, Grand livre, Balance (montants en nombres). */
+export const downloadAccountingExcel = (sheets: { name: string; rows: (string | number)[][] }[], fileName: string) => saveXlsx(sheets, `${safeFileName(fileName)}.xlsx`);

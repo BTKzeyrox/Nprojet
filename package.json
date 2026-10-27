@@ -22,6 +22,7 @@
     "check:bank-recon": "npx --yes tsx scripts/check-bank-recon.ts",
     "check:accounting-page": "esbuild scripts/check-accounting-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-accounting-page.mjs && node node_modules/.cache/check-accounting-page.mjs",
     "check:accounting-close": "esbuild scripts/check-accounting-close.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-accounting-close.mjs && node node_modules/.cache/check-accounting-close.mjs",
+    "check:accounting-export": "esbuild scripts/check-accounting-export.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-accounting-export.mjs && node node_modules/.cache/check-accounting-export.mjs",
     "check:payslip": "npx --yes tsx scripts/check-payslip.ts",
     "check:clients": "npx --yes tsx scripts/check-clients.ts",
     "check:import": "npx --yes tsx scripts/check-import.ts",
