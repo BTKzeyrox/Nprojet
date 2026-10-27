@@ -8,6 +8,9 @@ import { todayMada } from '../../utils/stats';
 import { askConfirm } from '../../components/ConfirmModal';
 import { JOURNALS, PLAN, accountOf, addDays, isMonthEnd, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
 import { downloadVatExcel } from '../../utils/exportDoc';
+import { RECON_ACCOUNTS, STATEMENT_ERROR, STATEMENT_PROBLEM, STATEMENT_TEMPLATE, bookLines, parseStatement, reconcile, type StatementParse } from '../../utils/bankRecon';
+import { matrixFromFile, FILE_PROBLEM_TEXT, downloadCsv } from '../../utils/importFile';
+import { matrixToCsv } from '../../utils/importRules';
 
 // Comptabilité (M14.4). Responsable et Comptable : journal, grand livre, balance, résultat, bilan, saisie d'une écriture. Annuler une écriture : responsable seulement.
 // Le site LIT les écritures ; elles s'écrivent par les routes accounting-* (le serveur revérifie, numérote et note tout dans le journal d'audit).
@@ -18,7 +21,7 @@ const btn = 'min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200
 const lbl = 'block text-[11px] font-semibold text-slate-400 mb-1';
 const num = (n: number) => n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ');
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
-export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet' | 'vat' | 'close';
+export type Tab = 'journal' | 'ledger' | 'balance' | 'result' | 'sheet' | 'vat' | 'close' | 'recon';
 type Preset = 'month' | 'year' | 'all' | 'custom';
 interface Draft { date: string; journal: Journal; label: string; ref: string; lines: { account: string; debit: string; credit: string }[] }
 
@@ -66,6 +69,27 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
   const lastDone = addDays(`${today.slice(0, 7)}-01`, -1); // fin du dernier mois fini
   const closable = monthEnds(closeSt.through ? addDays(closeSt.through, 1) : firstMonth, lastDone).reverse();
   const reopenable = closeSt.through ? [...monthEnds(firstMonth, addDays(closeSt.through, -1)).reverse(), ''] : [];
+  // Rapprochement (M14.7) : on compare un relevé de banque ou de Mobile Money aux écritures ; rien n'est écrit sans que tu le décides
+  const [reconAcc, setReconAcc] = useState<string>('512');
+  const [stmt, setStmt] = useState<StatementParse | null>(null);
+  const [stmtName, setStmtName] = useState('');
+  const [stmtErr, setStmtErr] = useState('');
+  const [tol, setTol] = useState(3);
+  const onStatement = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setStmtErr(''); setStmt(null);
+    const r = await matrixFromFile(f);
+    if (r.problem) { const x = FILE_PROBLEM_TEXT[r.problem]; setStmtErr(lang === 'en' ? x.en : x.fr); return; }
+    setStmtName(f.name); setStmt(parseStatement(r.matrix!));
+  };
+  const recon = useMemo(() => (stmt && !stmt.problem && stmt.rows.length ? reconcile(stmt.rows, bookLines(entries, reconAcc), tol) : null), [stmt, entries, reconAcc, tol]);
+  const prefill = (r: { date: string; label: string; amount: number }) => {
+    const out = r.amount < 0, v = String(Math.abs(r.amount));
+    setDraft({ date: r.date, journal: reconAcc === '531' ? 'CA' : reconAcc === '514' ? 'MM' : 'BQ', label: r.label || t('Opération du relevé', 'Statement item'), ref: '', lines: [{ account: reconAcc, debit: out ? '' : v, credit: out ? v : '' }, { account: out ? '658' : '706', debit: out ? v : '', credit: out ? '' : v }] });
+    setFormErr('');
+  };
   const [closeTo, setCloseTo] = useState('');
   const [reopenTo, setReopenTo] = useState('');
   const [reopenWhy, setReopenWhy] = useState('');
@@ -153,7 +177,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist">
-        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}{tabBtn('vat', 'TVA', 'VAT')}{tabBtn('close', 'Clôture', 'Closing')}{tabBtn('close', 'Clôture', 'Closing')}
+        {tabBtn('journal', 'Journal', 'Journal')}{tabBtn('ledger', 'Grand livre', 'Ledger')}{tabBtn('balance', 'Balance', 'Trial balance')}{tabBtn('result', 'Résultat', 'Income')}{tabBtn('sheet', 'Bilan', 'Balance sheet')}{tabBtn('vat', 'TVA', 'VAT')}{tabBtn('recon', 'Rapprochement', 'Reconciliation')}{tabBtn('close', 'Clôture', 'Closing')}
       </div>
 
       {tab !== 'sheet' && (
@@ -289,6 +313,61 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
           <p className={`text-base font-bold ${vat.total.due < 0 ? 'text-sky-300' : 'text-white'}`}>{vat.total.due < 0 ? t('Crédit de TVA', 'VAT credit') : t('TVA à payer', 'VAT to pay')} : {num(Math.abs(vat.total.due))} Ar</p>
           <button type="button" className={btn} onClick={() => downloadVatExcel(vat, `${range.from || ''} → ${range.to || ''}`.trim(), lang === 'en' ? 'en' : 'fr')} disabled={vat.months.length === 0}>{t('Télécharger le brouillon (Excel)', 'Download the draft (Excel)')}</button>
           <p className="text-[11px] text-slate-500">{t('La TVA collectée vient des factures et des avoirs. La TVA déductible n\'est PAS générée toute seule (les dépenses n\'ont pas de champ TVA) : saisis tes achats avec TVA par « Saisir une écriture » (modèle « Achat avec TVA »). Brouillon à valider par un expert-comptable avant toute déclaration.', 'Collected VAT comes from invoices and credit notes. Deductible VAT is NOT generated automatically (expenses have no VAT field): enter your purchases with VAT via "Enter an entry" (template "Purchase with VAT"). Draft to be validated by an accountant before any return.')}</p>
+        </div>
+      )}
+
+      {tab === 'recon' && (
+        <div className={card}>
+          <p className="text-sm font-bold text-white">{t('Rapprochement bancaire et Mobile Money', 'Bank and Mobile Money reconciliation')}</p>
+          <p className="text-[11px] text-slate-500">{t('Compare ton relevé (CSV ou Excel) aux écritures du compte. Rien n\'est écrit tout seul : tu décides pour chaque ligne.', 'Compares your statement (CSV or Excel) with the account entries. Nothing is written on its own: you decide for each line.')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className={lbl} htmlFor="recon-acc">{t('Compte', 'Account')}</label><select id="recon-acc" className={field} value={reconAcc} onChange={e => setReconAcc(e.target.value)}>{RECON_ACCOUNTS.map(c => <option key={c} value={c}>{accLabel(c)}</option>)}</select></div>
+            <div><label className={lbl} htmlFor="recon-tol">{t('Écart de dates accepté', 'Date gap allowed')}</label><select id="recon-tol" className={field} value={tol} onChange={e => setTol(Number(e.target.value))}>{[0, 1, 2, 3, 5, 7].map(d => <option key={d} value={d}>{d} {t('jour(s)', 'day(s)')}</option>)}</select></div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className={`${btn} cursor-pointer`}><input type="file" accept=".csv,.txt,.tsv,.xlsx,.xls" className="hidden" onChange={onStatement} />{t('Choisir le relevé', 'Choose the statement')}</label>
+            <button type="button" className={btn} onClick={() => downloadCsv('modele-releve.csv', matrixToCsv(STATEMENT_TEMPLATE))}>{t('Modèle de relevé', 'Statement template')}</button>
+          </div>
+          <p className="text-[11px] text-slate-500">{t('Colonnes reconnues : Date, Libellé, Montant (négatif = sortie) ou Débit + Crédit, Solde (facultatif). Ariary entiers.', 'Recognised columns: Date, Label, Amount (negative = outflow) or Debit + Credit, Balance (optional). Whole Ariary.')}</p>
+          {stmtErr && <p className="text-sm text-red-400" role="alert">{stmtErr}</p>}
+          {stmt?.problem && <p className="text-sm text-red-400" role="alert">{STATEMENT_PROBLEM[stmt.problem][l2]}</p>}
+          {stmt && !stmt.problem && (
+            <p className="text-sm text-slate-300">{stmtName} · {stmt.rows.length} {t('ligne(s) lue(s)', 'row(s) read')}{stmt.errors.length > 0 && <span className="text-amber-300"> · {stmt.errors.length} {t('ligne(s) à corriger', 'row(s) to fix')}</span>}</p>
+          )}
+          {stmt && stmt.errors.length > 0 && (
+            <ul className="space-y-0.5">{stmt.errors.slice(0, 20).map(x => <li key={x.line} className="text-[12px] text-amber-300">{t('Ligne', 'Row')} {x.line} : {STATEMENT_ERROR[x.code][l2]}</li>)}{stmt.errors.length > 20 && <li className="text-[12px] text-slate-500">… {stmt.errors.length - 20} {t('autres', 'more')}</li>}</ul>
+          )}
+          {recon && (
+            <div className="space-y-3" data-testid="recon-result">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border border-slate-700 p-2"><p className="text-lg font-bold text-emerald-300">{recon.matched.length}</p><p className="text-[11px] text-slate-400">{t('rapprochées', 'matched')}</p></div>
+                <div className="rounded-lg border border-slate-700 p-2"><p className="text-lg font-bold text-amber-300">{recon.statementOnly.length}</p><p className="text-[11px] text-slate-400">{t('relevé seulement', 'statement only')}</p></div>
+                <div className="rounded-lg border border-slate-700 p-2"><p className="text-lg font-bold text-sky-300">{recon.bookOnly.length}</p><p className="text-[11px] text-slate-400">{t('livres seulement', 'books only')}</p></div>
+              </div>
+              <p className={`text-base font-bold ${recon.gap === 0 ? 'text-emerald-400' : 'text-amber-300'}`}>{recon.gap === 0 ? t('Tout correspond : écart 0 Ar.', 'Everything matches: gap 0 Ar.') : `${t('Écart (relevé − livres)', 'Gap (statement − books)')} : ${num(recon.gap)} Ar`}</p>
+              <p className="text-[11px] text-slate-500">{t(`Période du relevé : ${fmtDate(recon.from)} au ${fmtDate(recon.to)}. Relevé ${num(recon.statementTotal)} Ar · livres ${num(recon.bookTotal)} Ar.`, `Statement period: ${fmtDate(recon.from)} to ${fmtDate(recon.to)}. Statement ${num(recon.statementTotal)} Ar · books ${num(recon.bookTotal)} Ar.`)}</p>
+              {recon.duplicates.length > 0 && <p className="text-[12px] text-amber-300">{t(`Doublon possible sur le relevé (lignes ${recon.duplicates.join(', ')}) : même date, même montant, même libellé.`, `Possible duplicate on the statement (rows ${recon.duplicates.join(', ')}): same date, amount and label.`)}</p>}
+              {recon.statementOnly.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-amber-300">{t('Sur le relevé, pas dans les livres : à saisir', 'On the statement, not in the books: to enter')}</p>
+                  <ul className="space-y-1">{recon.statementOnly.map(r => (
+                    <li key={r.line} className="flex items-center gap-2 text-sm text-slate-200"><span className="flex-1 min-w-0 break-words">{fmtDate(r.date)} · {r.label || '—'} · <b className={r.amount < 0 ? 'text-red-300' : 'text-emerald-300'}>{num(r.amount)}</b></span><button type="button" className={`${btn} shrink-0 px-2`} onClick={() => prefill(r)}>{t('Saisir', 'Enter')}</button></li>
+                  ))}</ul>
+                </div>
+              )}
+              {recon.bookOnly.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-sky-300">{t('Dans les livres, pas sur le relevé : à vérifier', 'In the books, not on the statement: to check')}</p>
+                  <ul className="space-y-1">{recon.bookOnly.map(b => <li key={b.entry_id} className="text-sm text-slate-200 break-words">{fmtDate(b.date)} · {b.number || ''} {b.label} · <b className={b.amount < 0 ? 'text-red-300' : 'text-emerald-300'}>{num(b.amount)}</b></li>)}</ul>
+                </div>
+              )}
+              {recon.matched.length > 0 && (
+                <details className="text-sm text-slate-300"><summary className="cursor-pointer min-h-[44px] flex items-center">{t('Voir les lignes rapprochées', 'Show matched lines')}</summary>
+                  <ul className="space-y-1">{recon.matched.map(m => <li key={m.statement.line} className="text-[12px] break-words">{fmtDate(m.statement.date)} · {m.statement.label || '—'} · {num(m.statement.amount)} ↔ {m.book.number || ''} {fmtDate(m.book.date)}{m.days > 0 ? ` (${m.days} ${t('j', 'd')})` : ''}</li>)}</ul>
+                </details>
+              )}
+            </div>
+          )}
         </div>
       )}
 

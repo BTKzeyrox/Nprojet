@@ -265,6 +265,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le plan comptable est un plan minimal de départ, à valider par un expert-comptable.
   - La TVA collectée vient des factures ; la TVA déductible vient des achats saisis à la main (modèle « Achat avec TVA »), car les dépenses n'ont pas de champ TVA.
   - Clôture : le responsable verrouille les mois finis (onglet Clôture) ; plus d'écriture à ces dates. Au 31 décembre, le résultat passe au compte 110.
+  - Rapprochement : on charge le relevé (CSV ou Excel) ; le site montre ce qui correspond, ce qui manque aux livres et ce qui manque au relevé. Rien n'est écrit sans ton accord.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
@@ -497,6 +498,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `avatarColor.ts` | Couleur d'une personne = couleur dominante de sa photo de profil (rouge sur photo rouge, etc.). |
 | `backupExcel.ts` | Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté. |
+| `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
 | `chartData.ts` | Données des graphiques : parties réelles, prévision en pointillé, rythme d'un objectif (purs, sans écran). |
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
@@ -671,6 +673,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
+| `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |
 | `npm run check:accounting-page` | Essai de la page Comptabilité (M14.4), sans écran réel ni réseau : démo, génération, saisie, annulation, FR et EN, rôles. Lancer : npm run check:accounting-page |
 | `npm run check:accounting-close` | Contrôle de la clôture de la comptabilité (M14.6), sans réseau : règles, report à nouveau, démo (clôture, refus d'écrire, réouverture), serveur, écran FR/EN. |
 | `npm run check:payslip` | Contrôle du bulletin de paie imprimable (M5.3), sans écran ni réseau. Lancer : npm run check:payslip |
