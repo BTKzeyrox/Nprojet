@@ -2,6 +2,7 @@
 // sans doublon, triées, et applique « Ignorer / Vérifié ». Aucune règle ne peut faire tomber les autres.
 import type { Leave } from '../leaves';
 import type { Entry } from '../accounting';
+import type { Shift } from '../planning';
 import type { AppSettings, CashEntry, Client, ClientContract, PostSession, Product, PurchaseOrder, Invoice, SalaryAdvanceRequest, StockMove, User } from '../../types';
 import { HEALTH_PAGES, severityRank, type HealthAck, type HealthAlert, type HealthPage, type HealthSeverity, type HealthThresholds } from './types';
 
@@ -19,6 +20,9 @@ export interface HealthContext {
   invoices?: Invoice[] | null;
   /** Écritures comptables (M14.9) : `undefined` ou `null` = pas chargé, les règles de comptabilité se taisent. La clôture est lue dans `settings.acct_close`. */
   entries?: Entry[] | null;
+  /** Planning des équipes (M15.8) et nombre maximal de jours travaillés par semaine (0 = pas de limite) : `undefined` ou `null` = pas chargé, la règle de planning se tait. */
+  shifts?: Shift[] | null;
+  planningMax?: number;
   backups?: { taken_at: string }[] | null;
   /** Journal d'audit (M16.7) : sert à repérer les délais de connexion après trop d'essais. */
   audit?: { at?: string; action?: string; target_id?: string; target_label?: string }[] | null;

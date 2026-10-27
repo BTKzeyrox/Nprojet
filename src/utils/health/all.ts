@@ -6,5 +6,6 @@ import { LOT3_RULES } from './rules/lot3';
 import { STATS_RULES } from './rules/stats';
 import { HR_RULES } from './rules/hr';
 import { ACCOUNTING_RULES } from './rules/accounting';
+import { MANAGEMENT_RULES } from './rules/management';
 
-export const ALL_RULES: HealthRule[] = [...LOT1_RULES, ...LOT2_RULES, ...LOT3_RULES, ...STATS_RULES, ...HR_RULES, ...ACCOUNTING_RULES];
+export const ALL_RULES: HealthRule[] = [...LOT1_RULES, ...LOT2_RULES, ...LOT3_RULES, ...STATS_RULES, ...HR_RULES, ...ACCOUNTING_RULES, ...MANAGEMENT_RULES];

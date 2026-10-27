@@ -1,4 +1,5 @@
 import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
+import type { RecurringRule } from '../utils/recurring';
 
 // Données 100 % inventées pour le mode démo (aucune vraie personne, aucun vrai montant, aucune photo).
 // Tout est calculé à partir de la date du jour, avec un générateur « aléatoire » fixe : la démo est la même à chaque ouverture.
@@ -26,6 +27,8 @@ export const DEMO_TEAM_GOALS: TeamGoal[] = [
 ];
 /** Plan mensuel inventé (M15.4) : revenus et paie prévus par mois. */
 export const DEMO_MONTHLY_PLAN = { revenue_ar: 2000000, payroll_ar: 800000 };
+/** Une règle de mission récurrente inventée pour la démo (M15.8) : visible dans Réglages > Missions, sans effet (la démo n'a pas de serveur). */
+export const DEMO_RECURRING: RecurringRule[] = [{ id: 'rc-demo-lundi', name: 'Contrôle du lundi', title: 'Contrôle qualité hebdomadaire', post_type: 'CONTRÔLE QUALITÉ', proof_mode: 'photo', objective: 0, priority: 'Normale', frequency: 'weekly', weekdays: [1], month_day: 1, time: '08:00', start_date: '2026-10-01', active: true }];
 export const DEMO_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 20000 };
 export const DEMO_CLIENT_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 9000, 'WEB': 12000 } as Record<string, number> };
 /** Conditions inventées pour la démo (rien de réel : ni numéro fiscal, ni adresse vraie). Locales, jamais envoyées. */

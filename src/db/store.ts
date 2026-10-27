@@ -16,7 +16,7 @@ import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
 import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
+import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_RECURRING, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
@@ -1718,7 +1718,7 @@ export class AppStore {
     this.messages = d.messages; this.groups = d.groups; this.news = d.news;
     this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
     this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS, team_goals: DEMO_TEAM_GOALS, monthly_plan: DEMO_MONTHLY_PLAN } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
+    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS, team_goals: DEMO_TEAM_GOALS, monthly_plan: DEMO_MONTHLY_PLAN, recurring_missions: DEMO_RECURRING } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
     this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
     this.products = role === 'admin' ? d.products : []; // le stock aussi
     this.stockMoves = role === 'admin' ? d.stock : [];
