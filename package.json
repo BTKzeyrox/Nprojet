@@ -114,6 +114,7 @@
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",
     "check:export": "npx --yes tsx scripts/check-export.ts",
     "check:print-format": "npx --yes tsx scripts/check-print-format.ts",
+    "check:xlsx-a4": "npx --yes tsx scripts/check-xlsx-a4.ts",
     "check:totp-page": "esbuild scripts/check-totp-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-totp-page.mjs && node node_modules/.cache/check-totp-page.mjs",
     "check:module3": "npm run check:badges --silent && npm run check:performance-config --silent && npm run check:performance-page --silent && npm run check:client-badges --silent && npm run check:recognition --silent && npm run check:performance-export --silent",
     "check:roles": "npx --yes tsx scripts/check-roles.ts",
@@ -133,6 +134,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.546.0",

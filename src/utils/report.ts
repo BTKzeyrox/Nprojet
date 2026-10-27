@@ -10,6 +10,7 @@ import { stockRows, stockValue, type StockRow } from './stock';
 import { agedSheetRows, invoiceFigures, invoiceSheetRows, type InvoiceFigures } from './invoiceStats';
 import { STATE_NAMES } from './invoices';
 import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
+import { downloadWorkbook } from './xlsxA4';
 
 import { performanceSheets, reportPerformance, type ReportPerformance } from './performanceExport';
 import type { PerformanceResult } from './performanceScore';
@@ -195,12 +196,9 @@ export function exportSheets(r: Report): SheetData[] {
   return sheets;
 }
 
-/** Fichier Excel (bibliothèque xlsx chargée seulement au clic). */
+/** Fichier Excel : A4, Times New Roman 12 ; s'il y a beaucoup de lignes, plusieurs fichiers (-partie-2, …). Bibliothèque chargée seulement au clic (xlsxA4.ts). */
 export async function downloadReportExcel(r: Report, anchor: string): Promise<void> {
-  const XLSX = await import('xlsx');
-  const wb = XLSX.utils.book_new();
-  for (const sh of exportSheets(r)) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sh.rows.length ? sh.rows : [['']]), sh.name.slice(0, 31));
-  XLSX.writeFile(wb, `rapport-${anchor.slice(0, 7)}.xlsx`);
+  await downloadWorkbook(exportSheets(r), `rapport-${anchor.slice(0, 7)}`);
 }
 
 // ---------- Page imprimable (PDF : « Imprimer » puis « Enregistrer en PDF ») ----------

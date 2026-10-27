@@ -1,6 +1,7 @@
 import { db } from '../db/store';
 import type { PostSession } from '../types';
 import { performanceAoa, type ScoreCells } from './performanceExport';
+import { downloadWorkbook } from './xlsxA4';
 
 // Statistiques de performance par opérateur (lecture du store, aucun appel serveur).
 export type PerfPeriod = '7' | '30' | 'all';
@@ -100,13 +101,8 @@ const stamp = (period: PerfPeriod) => `${period === 'all' ? 'tout' : period + 'j
 export interface ScoreExport { scores: Map<string, ScoreCells>; windowDays: number; lang: string }
 
 export async function exportPerformanceExcel(rows: PerfRow[], period: PerfPeriod, sc?: ScoreExport): Promise<void> {
-  const XLSX = await import('xlsx');
   const aoa = performanceAoa(rows, totalRow(rows), sc ? sc.scores : null, sc ? sc.windowDays : 30, sc ? sc.lang : 'fr');
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{ wch: 24 }, { wch: 11 }, { wch: 11 }, { wch: 10 }, { wch: 22 }, { wch: 18 }, ...(sc ? [{ wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 18 }] : [])];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Performance');
-  XLSX.writeFile(wb, `performance-${stamp(period)}.xlsx`);
+  await downloadWorkbook([{ name: 'Performance', rows: aoa }], `performance-${stamp(period)}`); // A4, Times New Roman 12, autre fichier si c'est long (xlsxA4.ts)
 }
 
 export function exportPerformanceCsv(rows: PerfRow[], period: PerfPeriod, sc?: ScoreExport): void {

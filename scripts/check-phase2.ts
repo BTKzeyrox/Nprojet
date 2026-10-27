@@ -85,7 +85,7 @@ ok(/wipe\("df_posts"\)/.test(restore), 'df-restore : efface toujours les mission
 const screen = read('src/components/RestoreSection.tsx');
 ok(screen.includes('Vos finances (paiements reçus et dépenses) et votre stock sont gardés'), 'écran de remise à zéro : dit que les finances sont gardées');
 ok(read('src/utils/enDict.json').includes('Your finances (payments received and expenses) and your stock are kept'), 'écran de remise à zéro : phrase anglaise présente');
-ok(/'Finances'\)/.test(read('src/utils/backupExcel.ts')), 'sauvegarde Excel : feuille « Finances »');
+ok(/add\('Finances',/.test(read('src/utils/backupExcel.ts')), 'sauvegarde Excel : feuille « Finances » (écrite par xlsxA4.ts depuis E2)');
 const mig = read('supabase/migrations/20261019_create_df_cash.sql');
 ok(/enable row level security/.test(mig) && /revoke all on public\.df_cash from anon, authenticated/.test(mig), 'migration df_cash : sécurité RLS et aucun accès public');
 ok(existsSync(join(process.cwd(), 'scripts/check-cash.ts')), 'contrôle du serveur (check:cash) présent');

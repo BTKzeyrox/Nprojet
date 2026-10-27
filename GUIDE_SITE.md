@@ -610,6 +610,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
+| `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
 
 **Santé du site : moteur (`src/utils/health/`)**
 
@@ -785,6 +786,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
+| `npm run check:xlsx-a4` | Contrôle des fichiers Excel A4 (Times New Roman 12, un autre fichier si c'est long), sans écran ni réseau. Lancer : npm run check:xlsx-a4 |
 | `npm run check:totp-page` | Contrôle M16.4 (écrans) : la carte « Sécurité en deux étapes » ne montre rien tant que le serveur n'a pas dit « oui » et ne fait aucun appel pendant l'affichage ; le mode démo n'appelle jamais le serveur. |
 | `npm run check:module3` | (plusieurs contrôles) |
 | `npm run check:roles` | Contrôle des rôles (M7.1) : règles du site, copie serveur identique, protections du serveur. Lancer : npm run check:roles |
@@ -808,6 +810,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 
 | Problème | Solution retenue |
 |---|---|
+| Les fichiers Excel doivent aussi être en A4, Times New Roman 12, sans rétrécir, et un autre fichier si c'est long (règle de BTK) | Tout passe par `src/utils/xlsxA4.ts` (bibliothèque `exceljs`, chargée au clic ; `xlsx` ne sert plus qu'à lire les fichiers importés). Police Times New Roman 12 dans chaque case, page A4 à 100 % (jamais « ajuster à une page »), portrait ou paysage selon la largeur, marges normales, en-tête répété à chaque page, numéro de page. Au-delà de 500 lignes dans un fichier (`EXCEL_MAX_ROWS`), le site fait `nom-partie-1.xlsx`, `nom-partie-2.xlsx`… avec l'en-tête répété. Contrôle : `npm run check:xlsx-a4`. |
 | Les PDF et les pages imprimables doivent être en A4, Times New Roman, taille normale, sans texte rétréci (règle de BTK) | Règle commune dans `src/utils/printFormat.ts` : page dessinée à 180 mm de large (marges de 15 mm), texte à 12 pt, coupure de page entre deux lignes ou deux blocs (jamais au milieu d'une ligne). Quand la machine n'a pas Times New Roman (téléphones), la police Tinos (mêmes largeurs de lettres), livrée dans `public/fonts`, la remplace. Contrôle : `npm run check:print-format`. |
 | Le serveur en ligne ne change pas quand on modifie le fichier dans GitHub | Redéployer à chaque fois (§7). Comparer le fichier en ligne au dépôt avant de déployer. |
 | `index.ts` du serveur trop gros pour être recopié (plus de 230 Ko) | Fichier d'une ligne qui importe le dépôt à un commit précis. Le retour en arrière est le commit précédent. |
@@ -834,6 +837,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 **Pas testé par BTK sur un vrai téléphone, avec de vraies données** : la plupart des écrans récents (RH, Direction, Mes tableaux, évaluations, congés). Les contrôles automatiques passent, mais aucun ne remplace un essai à l'écran, en clair et sombre, en français et en anglais.
 
 **À valider par un professionnel** : le bulletin de paie (CNaPS, OSTIE, IRSA) et les factures (mentions légales, TVA) : le plan lui-même demande la relecture d'un comptable.
+
+**Excel A4 : pas encore ouvert dans le vrai Excel ni imprimé.** Les contrôles relisent le fichier fabriqué (police, A4, marges, en-têtes, coupure en parties) mais seul un essai avec Excel ou LibreOffice, puis l'aperçu avant impression, le confirme. Si plusieurs fichiers sont faits, le navigateur peut demander d'autoriser les téléchargements multiples (une seule fois). La « Sauvegarde Excel » de beaucoup de messages donne donc plusieurs fichiers ; la vraie sauvegarde complète reste le fichier JSON. Une page imprimée plus large que l'A4 continue sur la page suivante, à la même taille.
 
 **PDF : pas encore essayé sur un vrai téléphone ni à l'impression.** Le PDF reste une image de la page (le texte ne se sélectionne pas). Les contrôles automatiques vérifient les règles (A4, 12 pt, police, coupure de page), mais pas le rendu réel : à regarder à l'écran avec un bulletin, une facture et un rapport longs.
 

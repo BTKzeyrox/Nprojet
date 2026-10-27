@@ -5,6 +5,7 @@ import type { Slip } from './payslip';
 import { slipTotals } from './payslip';
 import type { Invoice } from '../types';
 import { A4_MM, PRINT_CONTENT_W_MM, PRINT_CONTENT_W_PX, PRINT_MARGIN_MM, pickBreak, withPrintRules } from './printFormat';
+import { downloadWorkbook } from './xlsxA4';
 
 const saveBlob = (blob: Blob, name: string) => {
   const a = document.createElement('a');
@@ -62,11 +63,9 @@ export async function downloadPdfFromHtml(html: string, fileName: string): Promi
 }
 
 type Rows = (string | number)[][];
-async function saveXlsx(sheets: { name: string; rows: Rows }[], fileName: string): Promise<void> {
-  const XLSX = await import('xlsx');
-  const wb = XLSX.utils.book_new();
-  for (const sh of sheets) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sh.rows.length ? sh.rows : [['']]), sh.name.slice(0, 31));
-  XLSX.writeFile(wb, `${safeFileName(fileName.replace(/\.xlsx$/i, ''))}.xlsx`); // jamais « .xlsx.xlsx » même si l'appelant a déjà mis l'extension
+// A4, Times New Roman 12, un autre fichier (-partie-2, …) si c'est long : tout est dans `xlsxA4.ts`. Jamais « .xlsx.xlsx » même si l'appelant a déjà mis l'extension.
+async function saveXlsx(sheets: { name: string; rows: Rows; headerRows?: number }[], fileName: string): Promise<void> {
+  await downloadWorkbook(sheets, safeFileName(fileName.replace(/\.xlsx$/i, '')));
 }
 
 /** Lignes du bulletin de paie pour Excel (pure : testable). */
@@ -88,7 +87,7 @@ export function slipRows(s: Slip, lang: 'fr' | 'en' = 'fr'): Rows {
     [t('Net à payer', 'Net pay'), '', '', '', '', s.net],
   ];
 }
-export const downloadSlipExcel = (s: Slip, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: lang === 'en' ? 'Payslip' : 'Bulletin', rows: slipRows(s, lang) }], `bulletin-${s.username || s.user_id}-${s.period_end}`);
+export const downloadSlipExcel = (s: Slip, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: lang === 'en' ? 'Payslip' : 'Bulletin', rows: slipRows(s, lang), headerRows: 4 }], `bulletin-${s.username || s.user_id}-${s.period_end}`);
 
 /** Lignes d'une facture pour Excel (pure : testable). */
 export function invoiceRows(inv: Invoice, lang: 'fr' | 'en' = 'fr'): Rows {
@@ -107,7 +106,7 @@ export function invoiceRows(inv: Invoice, lang: 'fr' | 'en' = 'fr'): Rows {
     [t('Total', 'Total'), '', '', inv.total_ar],
   ];
 }
-export const downloadInvoiceExcel = (inv: Invoice, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: lang === 'en' ? 'Invoice' : 'Facture', rows: invoiceRows(inv, lang) }], `${inv.type === 'credit_note' ? 'avoir' : 'facture'}-${inv.number || inv.id}`);
+export const downloadInvoiceExcel = (inv: Invoice, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: lang === 'en' ? 'Invoice' : 'Facture', rows: invoiceRows(inv, lang), headerRows: 6 }], `${inv.type === 'credit_note' ? 'avoir' : 'facture'}-${inv.number || inv.id}`);
 
 /** Brouillon de déclaration de TVA (Excel) : mois par mois puis total. À faire valider par un expert-comptable avant toute déclaration officielle. */
 export function vatRows(rep: { months: { month: string; collected: number; deductible: number; due: number }[]; total: { collected: number; deductible: number; due: number } }, period: string, lang: 'fr' | 'en' = 'fr'): Rows {
@@ -123,7 +122,7 @@ export function vatRows(rep: { months: { month: string; collected: number; deduc
     [rep.total.due < 0 ? t('Crédit de TVA', 'VAT credit') : t('TVA à payer', 'VAT to pay'), '', '', Math.abs(rep.total.due)],
   ];
 }
-export const downloadVatExcel = (rep: Parameters<typeof vatRows>[0], period: string, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: 'TVA', rows: vatRows(rep, period, lang) }], `tva-${safeFileName(period)}.xlsx`);
+export const downloadVatExcel = (rep: Parameters<typeof vatRows>[0], period: string, lang: 'fr' | 'en' = 'fr') => saveXlsx([{ name: 'TVA', rows: vatRows(rep, period, lang), headerRows: 4 }], `tva-${safeFileName(period)}.xlsx`);
 
 export { saveBlob };
 
