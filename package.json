@@ -112,6 +112,7 @@
     "check:totp": "npx --yes tsx scripts/check-totp.ts",
     "check:ui-fixes": "npx --yes tsx scripts/check-ui-fixes.ts",
     "check:admin-decide": "npx --yes tsx scripts/check-admin-decide.ts",
+    "check:decide-fast": "esbuild scripts/check-decide-fast.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-decide-fast.mjs && node node_modules/.cache/check-decide-fast.mjs",
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",
     "check:export": "npx --yes tsx scripts/check-export.ts",
     "check:print-format": "npx --yes tsx scripts/check-print-format.ts",

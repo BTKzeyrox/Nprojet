@@ -223,18 +223,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     if (decidingRef.current.has(postId)) return;
     decidingRef.current.add(postId);
-    // La décision est prise par le SERVEUR (paie et prix client calculés là-bas), puis l'état officiel est rechargé : plus de validation « perdue »
-    let res: { ok: boolean; error?: string };
-    try { res = await db.decidePost(postId, true, undefined, note); } finally { decidingRef.current.delete(postId); }
+    // La décision est prise par le SERVEUR (paie et prix client calculés là-bas) : plus de validation « perdue ».
+    // Mais l'écran n'attend pas : la mission change d'état tout de suite, et si le serveur refuse (ou si le réseau tombe), elle revient comme avant avec un message.
+    const now = db.decidePostNow(postId, true, undefined, note);
+    if (!now.ok) { decidingRef.current.delete(postId); showToast(now.error || 'Erreur lors de la validation', 'error'); return; }
+    showToast('Mission validée avec succès !', 'success');
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+    // If modal was open for this post, refresh or close
+    if (activeSessionForModal && activeSessionForModal.id === postId) {
+      setAssignSuccessMsg('Session validée avec succès !');
+      closeTimer = setTimeout(() => setSelectedAdminContract(null), 1200);
+    }
+    const res = await now.settled;
+    decidingRef.current.delete(postId);
     if (!res.ok) {
-      showToast(res.error || 'Erreur lors de la validation', 'error');
-    } else {
-      showToast('Mission validée avec succès !', 'success');
-      // If modal was open for this post, refresh or close
-      if (activeSessionForModal && activeSessionForModal.id === postId) {
-        setAssignSuccessMsg('Session validée avec succès !');
-        setTimeout(() => setSelectedAdminContract(null), 1200);
-      }
+      if (closeTimer) { clearTimeout(closeTimer); setAssignSuccessMsg(null); }
+      showToast(`La validation n'a pas été enregistrée : ${res.error || 'erreur'}. La mission est revenue en attente.`, 'error');
     }
   };
 
@@ -336,14 +340,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const id = rejectingPostId;
     if (decidingRef.current.has(id)) return;
     decidingRef.current.add(id);
-    let res: { ok: boolean; error?: string };
-    try { res = await db.decidePost(id, false, rejectReason); } finally { decidingRef.current.delete(id); }
-    if (!res.ok) {
-      showToast(res.error || 'Erreur de rejet', 'error');
-    } else {
-      showToast('Soumission rejetée avec notification à l\'opérateur.', 'info');
-    }
+    // Même principe que la validation : affichage immédiat, vrai résultat du serveur ensuite (retour en arrière + message si refusé)
+    const now = db.decidePostNow(id, false, rejectReason);
+    if (!now.ok) { decidingRef.current.delete(id); showToast(now.error || 'Erreur de rejet', 'error'); setRejectingPostId(null); return; }
+    showToast('Soumission rejetée avec notification à l\'opérateur.', 'info');
     setRejectingPostId(null);
+    const res = await now.settled;
+    decidingRef.current.delete(id);
+    if (!res.ok) showToast(`Le rejet n'a pas été enregistré : ${res.error || 'erreur'}. La mission est revenue en attente.`, 'error');
   };
 
   const handleOpenForceRelease = (postId: string) => {

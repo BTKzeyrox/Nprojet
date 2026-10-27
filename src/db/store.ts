@@ -204,6 +204,8 @@ export class AppStore {
   private dirty = false;
   private syncing = false;
   private mutationSeq = 0; // +1 à chaque modification locale : sert à ignorer une réponse serveur devenue périmée
+  // Décisions (valider / refuser) envoyées au serveur mais pas encore confirmées par un rechargement : affichage immédiat SEULEMENT (jamais écrit dans `posts`, jamais renvoyé au serveur).
+  private pendingDecisions = new Map<string, { status: PostSession['status']; reason?: string; settled: boolean }>();
   private onVisible: (() => void) | null = null;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -304,6 +306,7 @@ export class AppStore {
   private resetLocal() {
     COLS.forEach(c => this.setArr(c, []));
     this.synced = this.emptySynced();
+    this.pendingDecisions.clear(); // déconnexion : plus aucun affichage immédiat d'une décision
     this.since = '';
     this.dirty = false;
     this.resets = [];
@@ -587,6 +590,7 @@ export class AppStore {
       this.currentUser = me;
       if (prev !== JSON.stringify(me)) changedAny = true;
     }
+    if (this.dropSettledDecisions()) changedAny = true; // l'état officiel du serveur est là : l'affichage immédiat d'une décision peut partir
     if (changedAny) this.emit();
     if (!this.demo) { await this.offline.attach(this.currentUser); this.offline.onServerState(); } // copie locale et actions en attente (module 13)
     return true;
@@ -2074,7 +2078,9 @@ export class AppStore {
   }
 
   public getPosts(): PostSession[] {
-    return [...this.posts];
+    if (this.pendingDecisions.size === 0) return [...this.posts];
+    // Décision en cours d'envoi (voir decidePostNow) : on MONTRE déjà le nouvel état, mais la vraie liste (this.posts) n'est pas touchée.
+    return this.posts.map(p => { const d = this.pendingDecisions.get(p.id); return d ? { ...p, status: d.status, ...(d.reason ? { rejection_reason: d.reason } : {}) } : p; });
   }
 
   public static readonly MAX_CONTRACTS = 100;
@@ -2862,14 +2868,52 @@ export class AppStore {
     return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
   }
   // --- Chef d'équipe (M7.1 d) : valider ou refuser la session d'un opérateur de son équipe. La paie et le prix client sont calculés par le serveur, jamais ici. ---
-  public async decidePost(id: string, approve: boolean, reason?: string, note?: string): Promise<{ ok: boolean; error?: string }> {
+  /**
+   * Valider ou refuser SANS faire attendre l'écran : le nouvel état s'affiche tout de suite (`ok: true`), la décision part au serveur
+   * en arrière-plan, et `settled` donne le résultat réel. Si le serveur refuse ou si le réseau tombe, l'affichage revient à l'état d'avant
+   * (`settled` = { ok: false, error }). La paie et le prix client restent calculés par le serveur seulement : aucun chiffre n'est inventé ici.
+   * Le rechargement complet qui suit ne bloque plus personne ; l'affichage immédiat part dès que l'état officiel est arrivé (ou après 20 s au plus).
+   */
+  public decidePostNow(id: string, approve: boolean, reason?: string, note?: string): { ok: boolean; error?: string; settled: Promise<{ ok: boolean; error?: string }> } {
+    const done = (r: { ok: boolean; error?: string }) => ({ ...r, settled: Promise.resolve(r) });
     const me = this.currentUser;
-    if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return { ok: false, error: 'Réservé au chef d\'équipe.' };
-    if (this.demo) { const r = approve ? this.validatePost(id, note) : this.rejectPost(id, reason || ''); return r.success ? { ok: true } : { ok: false, error: r.error }; }
-    const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason, note: approve ? note : undefined }) });
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
-    this.since = ''; await this.pull(true);
-    return { ok: true };
+    if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return done({ ok: false, error: 'Réservé au chef d\'équipe.' });
+    if (this.demo) { const r = approve ? this.validatePost(id, note) : this.rejectPost(id, reason || ''); return done(r.success ? { ok: true } : { ok: false, error: r.error }); }
+    if (!approve && !(reason || '').trim()) return done({ ok: false, error: 'Un motif de rejet est obligatoire' });
+    if (this.pendingDecisions.has(id)) return done({ ok: false, error: 'Une décision est déjà en cours pour cette mission.' });
+    const post = this.posts.find(p => p.id === id);
+    const waiting = post?.status === 'pending_start' || post?.status === 'pending_end';
+    if (post && waiting) this.pendingDecisions.set(id, { status: !approve ? 'rejected' : post.status === 'pending_start' ? 'active' : 'completed', reason: approve ? undefined : (reason || '').trim(), settled: false });
+    if (this.pendingDecisions.has(id)) this.emit();
+    const settled = (async (): Promise<{ ok: boolean; error?: string }> => {
+      const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason, note: approve ? note : undefined }) });
+      const entry = this.pendingDecisions.get(id);
+      if (!r.ok) { // refusé ou réseau tombé : on revient à l'état d'avant
+        if (entry) { this.pendingDecisions.delete(id); this.emit(); }
+        return { ok: false, error: r.data?.error || 'Erreur.' };
+      }
+      if (entry) {
+        entry.settled = true; // le prochain rechargement réussi enlève l'affichage immédiat
+        setTimeout(() => { if (this.pendingDecisions.get(id) === entry) { this.pendingDecisions.delete(id); this.emit(); } }, 20000); // filet : jamais bloqué
+      }
+      this.since = '';
+      void this.pull(true); // en arrière-plan : le vrai état (paie, prix client, totaux) arrive sans bloquer l'écran
+      return { ok: true };
+    })();
+    return { ok: true, settled };
+  }
+
+  /** Même chose, en attendant la réponse du serveur (gardée pour les appels qui veulent le résultat final). */
+  public async decidePost(id: string, approve: boolean, reason?: string, note?: string): Promise<{ ok: boolean; error?: string }> {
+    const r = this.decidePostNow(id, approve, reason, note);
+    return r.ok ? r.settled : { ok: false, error: r.error };
+  }
+
+  /** Enlève l'affichage immédiat des décisions déjà confirmées par le serveur. Renvoie vrai si quelque chose a changé. */
+  private dropSettledDecisions(): boolean {
+    let any = false;
+    for (const [id, d] of this.pendingDecisions) if (d.settled) { this.pendingDecisions.delete(id); any = true; }
+    return any;
   }
 
   // --- Journal d'audit (M7.2, admin) : lecture seule ; le serveur écrit les lignes ---

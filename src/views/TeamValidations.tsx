@@ -23,11 +23,14 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
   const decide = async (p: PostSession, approve: boolean) => {
     setError('');
     setBusy(p.id);
-    const r = await db.decidePost(p.id, approve, approve ? undefined : reason);
-    setBusy('');
-    if (!r.ok) { setError(r.error || 'Erreur.'); return; }
+    // La ligne disparaît tout de suite ; le vrai résultat du serveur arrive ensuite (si refus ou réseau tombé : la ligne revient avec un message).
+    const now = db.decidePostNow(p.id, approve, approve ? undefined : reason);
+    if (!now.ok) { setBusy(''); setError(now.error || 'Erreur.'); return; }
     setRefusing(null);
     setReason('');
+    const r = await now.settled;
+    setBusy('');
+    if (!r.ok) setError(`${approve ? 'La validation' : 'Le refus'} n'a pas été enregistré${approve ? 'e' : ''} : ${r.error || 'erreur'}. La session est revenue en attente.`);
   };
 
   const proofs = (p: PostSession) => (p.status === 'pending_end' ? (p.end_proof_urls?.length ? p.end_proof_urls : p.end_proof_url ? [p.end_proof_url] : []) : (p.start_proof_urls?.length ? p.start_proof_urls : p.start_proof_url ? [p.start_proof_url] : []));
