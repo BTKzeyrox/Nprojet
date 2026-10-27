@@ -13,10 +13,10 @@ const PAGE_LABEL: Record<Page, { fr: string; en: string }> = {
   finance: { fr: 'Finances', en: 'Finance' }, clients: { fr: 'Clients', en: 'Clients' }, stock: { fr: 'Stock', en: 'Stock' },
   invoices: { fr: 'Facturation', en: 'Invoicing' }, suppliers: { fr: 'Fournisseurs', en: 'Suppliers' }, hr: { fr: 'RH', en: 'HR' },
   performance: { fr: 'Performance', en: 'Performance' }, conditions: { fr: 'Conditions', en: 'Conditions' }, data: { fr: 'Qualité des données', en: 'Data quality' },
-  security: { fr: 'Sécurité', en: 'Security' }, system: { fr: 'Système', en: 'System' },
+  security: { fr: 'Sécurité', en: 'Security' }, system: { fr: 'Système', en: 'System' }, accounting: { fr: 'Comptabilité', en: 'Accounting' },
 };
 // Pages sans contrôleur tant que leur module n'existe pas : on ne les montre pas (rien à dire, ce serait trompeur de les montrer « OK »)
-const LIVE_PAGES: Page[] = ['missions', 'team', 'payroll', 'finance', 'clients', 'stock', 'conditions', 'data', 'system'];
+const LIVE_PAGES: Page[] = ['missions', 'team', 'payroll', 'finance', 'clients', 'stock', 'conditions', 'data', 'system', 'accounting'];
 const SEV: Record<HealthSeverity, { fr: string; en: string; cls: string }> = {
   urgent: { fr: 'Urgent', en: 'Urgent', cls: 'bg-rose-600 text-white' },
   watch: { fr: 'À voir', en: 'To check', cls: 'bg-amber-500 text-black' },

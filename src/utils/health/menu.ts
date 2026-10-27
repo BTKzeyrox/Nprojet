@@ -5,7 +5,7 @@ import { HEALTH_PAGES } from './types';
 /** Entrée du menu qui porte la pastille d'une page surveillée. `null` = pas d'entrée de menu à elle (comptée dans « Santé du site » seulement). */
 export const MENU_ITEM_OF_PAGE: Record<HealthPage, string | null> = {
   missions: 'validations', team: 'employees', payroll: 'advances', finance: 'stats', clients: 'clients', stock: 'stats',
-  invoices: 'invoices', suppliers: 'purchasing', hr: 'hr', performance: 'performance', conditions: 'settings', data: 'history', security: null, system: 'errors',
+  invoices: 'invoices', suppliers: 'purchasing', hr: 'hr', performance: 'performance', conditions: 'settings', data: 'history', security: null, system: 'errors', accounting: 'accounting',
 };
 
 /** Pastille par entrée de menu : nombre d'alertes À VOIR + URGENTES (les « infos » ne font pas de pastille). */

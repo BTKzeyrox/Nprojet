@@ -9,7 +9,7 @@ export const severityRank = (s: HealthSeverity): number => SEVERITY_ORDER.indexO
 /** Une page surveillée (une entrée du menu, ou un sujet transversal). Les contrôleurs d'une page arrivent quand la page existe. */
 export const HEALTH_PAGES = [
   'missions', 'team', 'payroll', 'finance', 'clients', 'stock', 'invoices', 'suppliers', 'hr', 'performance',
-  'conditions', 'data', 'security', 'system',
+  'conditions', 'data', 'security', 'system', 'accounting',
 ] as const;
 export type HealthPage = typeof HEALTH_PAGES[number];
 

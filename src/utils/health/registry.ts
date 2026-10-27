@@ -1,6 +1,7 @@
 // Registre et moteur d'alertes (module 11) : exécute les règles de chaque page, ne garde que des alertes valides,
 // sans doublon, triées, et applique « Ignorer / Vérifié ». Aucune règle ne peut faire tomber les autres.
 import type { Leave } from '../leaves';
+import type { Entry } from '../accounting';
 import type { AppSettings, CashEntry, Client, ClientContract, PostSession, Product, PurchaseOrder, Invoice, SalaryAdvanceRequest, StockMove, User } from '../../types';
 import { HEALTH_PAGES, severityRank, type HealthAck, type HealthAlert, type HealthPage, type HealthSeverity, type HealthThresholds } from './types';
 
@@ -16,6 +17,8 @@ export interface HealthContext {
   /** Lectures serveur faites par l'admin (listes qui existent déjà). `undefined` ou `null` = pas chargé : les règles « système » se taisent. */
   purchases?: PurchaseOrder[] | null;
   invoices?: Invoice[] | null;
+  /** Écritures comptables (M14.9) : `undefined` ou `null` = pas chargé, les règles de comptabilité se taisent. La clôture est lue dans `settings.acct_close`. */
+  entries?: Entry[] | null;
   backups?: { taken_at: string }[] | null;
   /** Journal d'audit (M16.7) : sert à repérer les délais de connexion après trop d'essais. */
   audit?: { at?: string; action?: string; target_id?: string; target_label?: string }[] | null;
