@@ -1,6 +1,6 @@
 -- Rapport automatique (module 15, étape M15.5) : une fiche par période finie (semaine ou mois), avec la copie figée du rapport. Même modèle que df_shifts.
 -- À appliquer sur la base `nprojet` APRÈS une sauvegarde (select public.df_take_backup();). Accord de BTK : « copie figée avec table » (2026-10-27).
--- NON APPLIQUÉE à ce jour : le fichier est seulement dans le dépôt.
+-- APPLIQUÉE le 2026-10-27 (sauvegarde n° 53 prise avant ; serveur v45).
 -- Retour en arrière (table vide au départ) : drop table public.df_reports;
 -- Le serveur df-api (bloc AUTOREPORT) crée la fiche « en attente » (identifiant = période : jamais de doublon) ; le responsable fige la copie à la première ouverture ; une copie figée ne change plus.
 -- Responsable seulement (lecture et écriture) ; jamais envoyée à un salarié. On garde les 24 plus récentes.
