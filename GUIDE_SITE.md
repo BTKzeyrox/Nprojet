@@ -576,6 +576,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
+| `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
@@ -783,6 +784,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:admin-decide` | Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
+| `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
 | `npm run check:totp-page` | Contrôle M16.4 (écrans) : la carte « Sécurité en deux étapes » ne montre rien tant que le serveur n'a pas dit « oui » et ne fait aucun appel pendant l'affichage ; le mode démo n'appelle jamais le serveur. |
 | `npm run check:module3` | (plusieurs contrôles) |
 | `npm run check:roles` | Contrôle des rôles (M7.1) : règles du site, copie serveur identique, protections du serveur. Lancer : npm run check:roles |
@@ -806,6 +808,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 
 | Problème | Solution retenue |
 |---|---|
+| Les PDF et les pages imprimables doivent être en A4, Times New Roman, taille normale, sans texte rétréci (règle de BTK) | Règle commune dans `src/utils/printFormat.ts` : page dessinée à 180 mm de large (marges de 15 mm), texte à 12 pt, coupure de page entre deux lignes ou deux blocs (jamais au milieu d'une ligne). Quand la machine n'a pas Times New Roman (téléphones), la police Tinos (mêmes largeurs de lettres), livrée dans `public/fonts`, la remplace. Contrôle : `npm run check:print-format`. |
 | Le serveur en ligne ne change pas quand on modifie le fichier dans GitHub | Redéployer à chaque fois (§7). Comparer le fichier en ligne au dépôt avant de déployer. |
 | `index.ts` du serveur trop gros pour être recopié (plus de 230 Ko) | Fichier d'une ligne qui importe le dépôt à un commit précis. Le retour en arrière est le commit précédent. |
 | Le site et le serveur doivent appliquer **exactement** les mêmes règles | Le code est écrit une fois, copié dans un bloc délimité du serveur, et un contrôle compare les deux textes. |
@@ -831,6 +834,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 **Pas testé par BTK sur un vrai téléphone, avec de vraies données** : la plupart des écrans récents (RH, Direction, Mes tableaux, évaluations, congés). Les contrôles automatiques passent, mais aucun ne remplace un essai à l'écran, en clair et sombre, en français et en anglais.
 
 **À valider par un professionnel** : le bulletin de paie (CNaPS, OSTIE, IRSA) et les factures (mentions légales, TVA) : le plan lui-même demande la relecture d'un comptable.
+
+**PDF : pas encore essayé sur un vrai téléphone ni à l'impression.** Le PDF reste une image de la page (le texte ne se sélectionne pas). Les contrôles automatiques vérifient les règles (A4, 12 pt, police, coupure de page), mais pas le rendu réel : à regarder à l'écran avec un bulletin, une facture et un rapport longs.
 
 **Ce que le site ne fait pas (confirmé le 2026-10-24)** :
 - Comptabilité (M14, code fait, **à valider par un expert-comptable**) : plan comptable minimal de 20 comptes, journal, grand livre, balance, résultat, bilan, TVA mois par mois, clôture, rapprochement et export. Limites : la TVA déductible vient d'écritures saisies à la main (les dépenses n'ont pas de champ TVA) ; le site ne garde pas « TVA déclarée » (un mois clos n'est plus signalé) ; la date limite légale de la TVA n'est pas codée.

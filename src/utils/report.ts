@@ -9,6 +9,7 @@ import { computeAlerts, type AlertItem, type AlertSettings } from './alerts';
 import { stockRows, stockValue, type StockRow } from './stock';
 import { agedSheetRows, invoiceFigures, invoiceSheetRows, type InvoiceFigures } from './invoiceStats';
 import { STATE_NAMES } from './invoices';
+import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 
 import { performanceSheets, reportPerformance, type ReportPerformance } from './performanceExport';
 import type { PerformanceResult } from './performanceScore';
@@ -224,13 +225,13 @@ export function reportHtml(r: Report): string {
     return `<div class="g"><div class="gl"><b>${esc(name)}</b><span>${esc(money ? ar(g.value) : g.value)} / ${esc(money ? ar(g.goal) : g.goal)} (${g.pct} %)</span></div><div class="gb"><i style="width:${Math.min(100, g.pct)}%;background:${col}"></i></div></div>`;
   };
   return `<!doctype html><html lang="${r.lang}"><head><meta charset="utf-8"><title>${esc(r.title)} — ${esc(r.month)}</title><style>
-*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;background:#fff;margin:0;padding:24px;font-size:13px;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+${PRINT_FONT_FACE}*{box-sizing:border-box}body{font-family:${PRINT_FONT};color:#0f172a;background:#fff;margin:0;padding:24px;font-size:${PRINT_PT}pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 h1{font-size:22px;margin:0 0 2px}h2{font-size:15px;margin:18px 0 6px;border-bottom:1px solid #cbd5e1;padding-bottom:3px}.sub{color:#475569;margin-bottom:8px}
 table{width:100%;border-collapse:collapse}td,th{padding:4px 6px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f1f5f9;font-size:12px}.n{text-align:right;white-space:nowrap}
 ul{margin:4px 0 0 18px;padding:0}li{margin:2px 0}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.ok h2{color:#047857}.warn h2{color:#b45309}
 .bars{display:flex;align-items:flex-end;gap:2px;height:90px;border-bottom:1px solid #94a3b8}.b{flex:1;height:100%;display:flex;align-items:flex-end}.b i{display:block;width:100%;min-height:1px}.ax{display:flex;justify-content:space-between;font-size:10px;color:#64748b}
 .g{margin:6px 0}.gl{display:flex;justify-content:space-between;gap:8px}.gb{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}.gb i{display:block;height:100%}
-.note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two{break-inside:avoid}}@page{margin:14mm}
+.note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two{break-inside:avoid}}@page{size:A4;margin:${PRINT_MARGIN_MM}mm}
 </style></head><body>
 ${r.company ? `<div class="sub"><b>${esc(r.company)}</b></div>` : ''}<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t(wk ? 'semaine en cours' : 'mois en cours', wk ? 'week in progress' : 'month in progress')) : ''}</div>
 <h2>${esc(t('Résumé', 'Summary'))}</h2>

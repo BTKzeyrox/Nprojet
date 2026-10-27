@@ -113,6 +113,7 @@
     "check:admin-decide": "npx --yes tsx scripts/check-admin-decide.ts",
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",
     "check:export": "npx --yes tsx scripts/check-export.ts",
+    "check:print-format": "npx --yes tsx scripts/check-print-format.ts",
     "check:totp-page": "esbuild scripts/check-totp-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-totp-page.mjs && node node_modules/.cache/check-totp-page.mjs",
     "check:module3": "npm run check:badges --silent && npm run check:performance-config --silent && npm run check:performance-page --silent && npm run check:client-badges --silent && npm run check:recognition --silent && npm run check:performance-export --silent",
     "check:roles": "npx --yes tsx scripts/check-roles.ts",

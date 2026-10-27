@@ -1,3 +1,4 @@
+import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 export interface SlipLine { post_id: string; date: string; client: string; post_number: number | null; score: number; rate: number; amount: number }
 export interface SlipEntry { id: string; amount: number; reason: string; at: string }
 export interface Slip {
@@ -99,9 +100,9 @@ export const slipHtml = (s: Slip, opts: SlipOptions = {}) => {
   const printed = fmtDay((opts.printedAt || new Date().toISOString()).slice(0, 10), lang);
   const rows = s.lines.map(l => `<tr><td>${esc(fmtDay(l.date, lang))}</td><td>${l.post_number ? 'Mission ' + esc(l.post_number) + ' · ' : ''}${esc(l.client)}</td><td class="r">${esc(fmtScore(num(l.score), lang))}</td><td class="r">${esc(Math.round(num(l.rate)).toLocaleString(locOf(lang)))}</td><td class="r">${m(l.amount)}</td></tr>`).join('');
   return `<!doctype html><html lang="${t.lang}"><head><meta charset="utf-8"><title>${esc(t.file)} ${esc(s.name)} ${esc(pidLabel(s.pid, lang))}</title>
-<style>
-@page{size:A4;margin:14mm}
-body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:12.5px;line-height:1.35}
+<style>${PRINT_FONT_FACE}
+@page{size:A4;margin:${PRINT_MARGIN_MM}mm}
+body{font-family:${PRINT_FONT};color:#111;margin:0;font-size:${PRINT_PT}pt;line-height:1.35}
 .head{display:flex;gap:14px;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
 .head img{max-height:56px;max-width:140px}.head .co b{font-size:15px}.head .co div{color:#333}
 h1{font-size:19px;margin:0 0 8px;letter-spacing:.5px;text-transform:uppercase}h2{font-size:13px;margin:16px 0 6px}

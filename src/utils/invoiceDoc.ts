@@ -1,6 +1,7 @@
 // Facture, avoir et reçu imprimables (A4), même méthode que le bulletin de paie : page claire isolée, tout échappé, « Imprimer » puis « Enregistrer en PDF ».
 // Le serveur a déjà posé le numéro, les copies du client et de l'entreprise et les totaux ; ici on met en page et on vérifie que le détail retombe sur le total.
 import type { CashEntry, CompanySettings, Invoice, InvoiceParty } from '../types';
+import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 
 export type DocLang = 'fr' | 'en';
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
@@ -36,9 +37,9 @@ const L = {
 
 const money = (n: number, cur: string, lang: DocLang) => `${Math.round(num(n)).toLocaleString(loc(lang))} ${cur || 'Ar'}`;
 
-const STYLE = `<style>
-@page{size:A4;margin:14mm}
-body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:12.5px;line-height:1.4}
+const STYLE = `<style>${PRINT_FONT_FACE}
+@page{size:A4;margin:${PRINT_MARGIN_MM}mm}
+body{font-family:${PRINT_FONT};color:#111;margin:0;font-size:${PRINT_PT}pt;line-height:1.4}
 .head{display:flex;gap:14px;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
 .head img{max-height:56px;max-width:140px}.head .co b{font-size:15px}.head .co div{color:#333}
 h1{font-size:20px;margin:0 0 8px;letter-spacing:.5px;text-transform:uppercase}h2{font-size:13px;margin:14px 0 6px}

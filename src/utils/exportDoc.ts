@@ -4,8 +4,7 @@
 import type { Slip } from './payslip';
 import { slipTotals } from './payslip';
 import type { Invoice } from '../types';
-
-const A4_W_PX = 794; // 210 mm à 96 dpi
+import { A4_MM, PRINT_CONTENT_W_MM, PRINT_CONTENT_W_PX, PRINT_MARGIN_MM, pickBreak, withPrintRules } from './printFormat';
 
 const saveBlob = (blob: Blob, name: string) => {
   const a = document.createElement('a');
@@ -19,27 +18,38 @@ const saveBlob = (blob: Blob, name: string) => {
 /** Nom de fichier sûr (lettres, chiffres, tiret). */
 export const safeFileName = (s: string): string => (s || 'document').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'document';
 
-/** Page HTML complète → fichier PDF A4 téléchargé. */
+/**
+ * Page HTML complète → fichier PDF A4 téléchargé (règle de BTK : A4, Times New Roman 12 pt, rien n'est rétréci).
+ * La page est dessinée à 180 mm de large (largeur utile de l'A4) : 12 pt à l'écran = 12 pt sur le papier.
+ * Si c'est long, le PDF continue sur la page A4 suivante ; on coupe entre deux lignes ou deux blocs, jamais au milieu d'une ligne.
+ */
 export async function downloadPdfFromHtml(html: string, fileName: string): Promise<void> {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  const SCALE = 2;
   const f = document.createElement('iframe');
   f.setAttribute('aria-hidden', 'true');
-  f.style.cssText = `position:fixed;left:-10000px;top:0;width:${A4_W_PX}px;height:1200px;border:0;background:#fff`;
+  f.style.cssText = `position:fixed;left:-10000px;top:0;width:${PRINT_CONTENT_W_PX}px;height:1200px;border:0;background:#fff`;
   document.body.appendChild(f);
   try {
     const d = f.contentWindow!.document;
-    d.open(); d.write(html); d.close();
+    d.open(); d.write(withPrintRules(html, location.origin)); d.close();
     await new Promise<void>(r => { setTimeout(r, 400); });
+    try { await d.fonts.ready; } catch { /* anciens navigateurs : on continue avec la police du moment */ }
     const body = d.body;
     f.style.height = `${Math.max(body.scrollHeight, 400)}px`;
-    const canvas = await html2canvas(body, { scale: 2, backgroundColor: '#ffffff', useCORS: true, width: A4_W_PX, windowWidth: A4_W_PX });
+    // Bas des blocs qu'on ne coupe pas en deux, en pixels du dessin (le dessin est pris à l'échelle SCALE).
+    const top = body.getBoundingClientRect().top;
+    const safe = Array.from(body.querySelectorAll('body > *, table tr, li, .g, .two > *'))
+      .map(el => Math.round((el.getBoundingClientRect().bottom - top) * SCALE));
+    const canvas = await html2canvas(body, { scale: SCALE, backgroundColor: '#ffffff', useCORS: true, width: PRINT_CONTENT_W_PX, windowWidth: PRINT_CONTENT_W_PX });
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-    const pw = 210, ph = 297, margin = 8;
-    const imgW = pw - margin * 2;
-    const pageHpx = Math.floor(((ph - margin * 2) / imgW) * canvas.width); // hauteur d'une page, en pixels du canvas
+    const margin = PRINT_MARGIN_MM;
+    const imgW = PRINT_CONTENT_W_MM;
+    const pageHpx = Math.floor(((A4_MM.h - margin * 2) / imgW) * canvas.width); // hauteur d'une page, en pixels du canvas
     let y = 0, page = 0;
     while (y < canvas.height) {
-      const h = Math.min(pageHpx, canvas.height - y);
+      const end = pickBreak(safe, y, pageHpx, canvas.height);
+      const h = Math.max(1, Math.min(end, canvas.height) - y);
       const part = document.createElement('canvas');
       part.width = canvas.width; part.height = h;
       part.getContext('2d')!.drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);

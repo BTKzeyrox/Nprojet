@@ -2,6 +2,7 @@
 // La partie qui fabrique le texte est pure (testée) ; seuls `download*` et `printSheet` touchent le navigateur.
 import { exportMatrix, type Sheet } from './sheets';
 import { isErr, showVal, type Val } from './sheetFormula';
+import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 
 const esc = (x: string) => x.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 const cellText = (v: Val, lang: 'fr' | 'en') => (typeof v === 'string' ? v : showVal(v, lang));
@@ -15,7 +16,7 @@ export function sheetHtml(s: Sheet, today: string, lang: 'fr' | 'en', author: st
   const head = `<tr>${m.header.map(h => `<th>${esc(h)}</th>`).join('')}</tr>`;
   const body = m.rows.map(r => `<tr>${r.map(v => `<td${typeof v === 'number' ? ' class="n"' : ''}>${esc(cellText(v, lang))}</td>`).join('')}</tr>`).join('');
   const word = opts.word ? ' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"' : '';
-  return `<!doctype html><html lang="${fr ? 'fr' : 'en'}"${word}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(s.title)}</title><style>body{font-family:system-ui,Arial,sans-serif;margin:20px;color:#111}h1{font-size:20px;margin:0 0 4px}p.s{color:#555;margin:0 0 14px;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px 7px;font-size:12px;text-align:left}th{background:#e8edf3}td.n{text-align:right}button{margin-top:14px;padding:10px 16px;font-size:15px}@media print{button{display:none}body{margin:8mm}@page{size:landscape}}</style></head><body><h1>${esc(s.title)}</h1><p class="s">${esc(author)} · ${esc(date)} · Gestion Pro · ${m.rows.length} ${esc(t('ligne(s)', 'row(s)'))}</p><table>${head}${body}</table>${opts.print ? `<button onclick="window.print()">${esc(t('Imprimer / enregistrer en PDF', 'Print / save as PDF'))}</button>` : ''}</body></html>`;
+  return `<!doctype html><html lang="${fr ? 'fr' : 'en'}"${word}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(s.title)}</title><style>${PRINT_FONT_FACE}body{font-family:${PRINT_FONT};font-size:${PRINT_PT}pt;margin:20px;color:#111}h1{font-size:20px;margin:0 0 4px}p.s{color:#555;margin:0 0 14px;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px 7px;font-size:${PRINT_PT}pt;text-align:left}tr{break-inside:avoid}thead{display:table-header-group}th{background:#e8edf3}td.n{text-align:right}button{margin-top:14px;padding:10px 16px;font-size:15px}@media print{button{display:none}body{margin:0}}@page{size:A4 ${m.header.length > 7 ? 'landscape' : 'portrait'};margin:${PRINT_MARGIN_MM}mm}</style></head><body><h1>${esc(s.title)}</h1><p class="s">${esc(author)} · ${esc(date)} · Gestion Pro · ${m.rows.length} ${esc(t('ligne(s)', 'row(s)'))}</p><table>${head}${body}</table>${opts.print ? `<button onclick="window.print()">${esc(t('Imprimer / enregistrer en PDF', 'Print / save as PDF'))}</button>` : ''}</body></html>`;
 }
 
 /** Lignes prêtes pour Excel : en-têtes puis valeurs (nombres restent des nombres, erreurs en texte). */
