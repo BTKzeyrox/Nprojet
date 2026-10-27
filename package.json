@@ -66,6 +66,7 @@
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:recurring": "npx --yes tsx scripts/check-recurring.ts",
+    "check:auto-report": "npx --yes tsx scripts/check-auto-report.ts",
     "check:planning": "npx --yes tsx scripts/check-planning.ts",
     "check:team-goals": "npx --yes tsx scripts/check-team-goals.ts",
     "check:budget-plan": "npx --yes tsx scripts/check-budget-plan.ts",
