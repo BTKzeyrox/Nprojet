@@ -41,6 +41,7 @@ const maxByYear = (items: { number?: string; receipt_no?: string }[], key: 'numb
 };
 for (const [y, n] of maxByYear(sim.invoices as any, 'number', /^FA-(\d{4})-(\d+)$/)) out.push(`insert into public.df_counters (id, value) values ('invoice:${y}', ${n}) on conflict (id) do update set value = greatest(public.df_counters.value, ${n}), updated_at = now();`);
 for (const [y, n] of maxByYear(sim.cash as any, 'receipt_no', /^RC-(\d{4})-(\d+)$/)) out.push(`insert into public.df_counters (id, value) values ('receipt:${y}', ${n}) on conflict (id) do update set value = greatest(public.df_counters.value, ${n}), updated_at = now();`);
+for (const [y, n] of maxByYear(sim.entries as any, 'number', /^EC-(\d{4})-(\d+)$/)) out.push(`insert into public.df_counters (id, value) values ('entry:${y}', ${n}) on conflict (id) do update set value = greatest(public.df_counters.value, ${n}), updated_at = now();`); // écritures : sinon la 1re vraie écriture reprendrait EC-AAAA-0001, déjà pris par la simulation
 out.push('commit;');
 console.log(out.join('\n'));
 console.error(`Simulation du ${sim.start} au ${today} : ` + tables.map(([t, r]) => `${t.replace('df_', '')} ${r.length}`).join(', '));
