@@ -99,6 +99,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
     if (another) { setAdded(pEdit.name.trim()); setError(''); setPEdit({ name: '', category: pEdit.category, unit: pEdit.unit, buy: '', sell: '', threshold: '', qty: '' }); return; }
     setPEdit(null);
   };
+  const quickMove = (p: Product, type: 'in' | 'out') => { setError(''); const r = db.addStockMove({ product_id: p.id, type, qty: 1, date: today, note: '' }); if (!r.success) setError(say(r.error)); };
   const removeProduct = (id: string) => { const r = db.deleteProduct(id); setConfirmId(null); if (!r.success) setError(say(r.error)); };
 
   const newMove = (p: Product, type: StockMoveType) => { setError(''); setMEdit({ product: p, type, qty: '', date: today, cost: type === 'in' && p.buy_price_ar ? String(p.buy_price_ar) : '', note: '', expense: false, supplier: '' }); };
@@ -184,6 +185,8 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
                     <div className={`text-sm font-bold whitespace-nowrap ${r.low ? 'text-rose-400' : 'text-white'}`}>{num(r.qty)} <span className="text-[11px] font-normal text-slate-400">{p.unit}</span></div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
+                    <button type="button" aria-label={t(`Retirer 1 ${p.unit}`, `Remove 1 ${p.unit}`)} onClick={() => quickMove(p, 'out')} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-700 text-rose-300 text-base font-bold flex items-center justify-center">−1</button>
+                    <button type="button" aria-label={t(`Ajouter 1 ${p.unit}`, `Add 1 ${p.unit}`)} onClick={() => quickMove(p, 'in')} className="min-h-[44px] min-w-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-base font-bold flex items-center justify-center">+1</button>
                     <button type="button" onClick={() => newMove(p, 'in')} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Entrée', 'Entry')}</button>
                     <button type="button" onClick={() => newMove(p, 'out')} className="min-h-[44px] px-3 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Sortie', 'Exit')}</button>
                     <button type="button" aria-label={t('Historique', 'History')} aria-pressed={openHistory === p.id} onClick={() => setOpenHistory(openHistory === p.id ? null : p.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><History className="w-4 h-4" /></button>
