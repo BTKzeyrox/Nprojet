@@ -23,6 +23,7 @@ import { isMoneyRole } from '../utils/roles';
 import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
 import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
 import { demoSheets, type Sheet } from '../utils/sheets';
+import { buildMissionSheet, needsMissionSheet } from '../utils/missionSheet';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
 import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, planClose, planReopen, closingEntry, type Entry, type CloseState } from '../utils/accounting';
 import { buildEntries } from '../utils/accountingEntries';
@@ -844,6 +845,16 @@ export class AppStore {
 
   // « Mes tableaux » (module 12). Le serveur revérifie tout (bloc SHEETS) ; ici on range seulement les tableaux de la personne connectée.
   public getSheets(): Sheet[] { return [...this.sheets]; }
+  /** M18.6 : prépare le tableau de la session (un seul : identifiant imposé). Seulement pour l'opérateur lui-même ; le serveur revérifie que la session est la sienne. */
+  private prepareMissionSheet(post: PostSession): void {
+    const me = this.currentUser;
+    if (!me || !needsMissionSheet(post, me.id, me.role, this.sheets.map(x => x.id))) return;
+    let lang: 'fr' | 'en' = 'fr';
+    try { if (globalThis.localStorage?.getItem('delta_lang') === 'en') lang = 'en'; } catch { /* langue par défaut */ }
+    const contract = post.post_number != null ? this.contracts.find(c => c.post_number === post.post_number) : undefined;
+    const sheet = buildMissionSheet({ postId: post.id, postNumber: post.post_number, date: post.date, type: contract?.post_type, lang, now: post.created_at });
+    if (sheet) this.putMySheets([sheet, ...this.sheets.filter(x => x.owner_id === me.id)]);
+  }
   /** Remplace les tableaux de la personne connectée par cette liste (les autres, vus par l'admin, ne bougent pas). Le lien avec le serveur se fait tout seul. */
   public putMySheets(list: Sheet[]): void {
     const me = this.currentUser;
@@ -2466,6 +2477,7 @@ export class AppStore {
     };
 
     this.posts.unshift(newPost);
+    this.prepareMissionSheet(newPost);
     this.notify();
     return { success: true, post: newPost };
   }

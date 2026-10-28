@@ -10,6 +10,7 @@ export interface Sheet {
   id: string; title: string; columns: Column[]; rows: Row[]; rules: CondRule[];
   created_at: string; updated_at: string; deleted_at?: string | null;
   owner_id?: string; owner_name?: string; // posés par le serveur (le propriétaire ne change jamais)
+  post_id?: string; // M18.6 : tableau préparé pour UNE session de mission (identifiant imposé : `sp-` + id de la session) ; le lien ne change jamais
 }
 
 /** Taille maximale d'un tableau une fois écrit en texte (caractères) : au-delà, le serveur refuse. */
@@ -17,7 +18,7 @@ export const SHEET_MAX_CHARS = 1_500_000;
 /** Nombre maximal d'enregistrements par personne, corbeille comprise. */
 export const SHEETS_MAX_RECORDS = 60;
 export const sheetChars = (s: unknown): number => { try { return JSON.stringify(s).length; } catch { return Infinity; } };
-export const LIMITS = { sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50, trashDays: 30, history: 50 };
+export const LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50, trashDays: 30, history: 50 };
 const COLORS = ['red', 'green', 'amber', 'blue'];
 const OPS = ['>', '<', '=', '<>', 'contains', 'empty'];
 const TYPES: ColType[] = ['text', 'number', 'date', 'list', 'check'];
@@ -82,6 +83,7 @@ export function cleanSheet(raw: unknown, now = new Date().toISOString()): Sheet 
   if (typeof r.deleted_at === 'string') s.deleted_at = r.deleted_at.slice(0, 40);
   if (typeof r.owner_id === 'string' && r.owner_id) s.owner_id = r.owner_id.slice(0, 60);
   if (typeof r.owner_name === 'string' && r.owner_name) s.owner_name = r.owner_name.slice(0, 80);
+  if (typeof r.post_id === 'string' && r.post_id) s.post_id = r.post_id.slice(0, 60);
   return s;
 }
 

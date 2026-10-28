@@ -621,7 +621,7 @@ function cleanLeave(rec: any, existing: any, actor: { id: string; name: string; 
 // ===== BEGIN SHEETS (« Mes tableaux » : l'opérateur écrit et lit SES tableaux, l'admin lit tous ; ce bloc est contrôlé par scripts/check-sheets-shared.ts, copie de src/utils/sheets.ts) =====
 const SHEET_MAX_CHARS = 1_500_000;
 const SHEETS_MAX_RECORDS = 60;
-const SHEET_LIMITS = { sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50 };
+const SHEET_LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50 };
 const SHEET_COLORS = ["red", "green", "amber", "blue"];
 const SHEET_OPS = [">", "<", "=", "<>", "contains", "empty"];
 const SHEET_TYPES = ["text", "number", "date", "list", "check"];
@@ -675,18 +675,30 @@ function cleanSheet(raw: unknown, now: string): any | null {
   if (typeof r.deleted_at === "string") s.deleted_at = r.deleted_at.slice(0, 40);
   if (typeof r.owner_id === "string" && r.owner_id) s.owner_id = r.owner_id.slice(0, 60);
   if (typeof r.owner_name === "string" && r.owner_name) s.owner_name = r.owner_name.slice(0, 80);
+  if (typeof r.post_id === "string" && r.post_id) s.post_id = r.post_id.slice(0, 60);
   return s;
 }
-/** Écriture d'un tableau : opérateur seulement, jamais celui d'un autre ; le propriétaire est celui qui écrit. `counts` = ses tableaux déjà au serveur (hors celui-ci). */
-function cleanSheetWrite(rec: any, existing: any, me: { id: string; name: string; role: string }, now: string, counts: { active: number; total: number }): { ok: true; save: any } | { ok: false; reason: string } {
+/** Écriture d'un tableau : opérateur seulement, jamais celui d'un autre ; le propriétaire est celui qui écrit. `counts` = ses tableaux PERSONNELS déjà au serveur (hors celui-ci, hors tableaux de mission) ; `counts.mission` = ses tableaux de mission déjà au serveur.
+ *  Tableau de mission (M18.6, `post_id`) : l'identifiant est imposé (`sp-` + id de la session, donc UN seul par session), la session doit être la SIENNE (`post`), le lien ne change jamais et ne s'ajoute jamais après coup ; ces tableaux ont leur propre limite (400) et ne comptent pas dans les 20 tableaux personnels. */
+function cleanSheetWrite(rec: any, existing: any, me: { id: string; name: string; role: string }, now: string, counts: { active: number; total: number; mission?: number }, post?: { employee_id?: unknown } | null): { ok: true; save: any } | { ok: false; reason: string } {
   if (me.role !== "employee") return { ok: false, reason: "forbidden" };
   if (existing && existing.owner_id !== me.id) return { ok: false, reason: "forbidden" };
   const s = cleanSheet(rec, now);
   if (!s) return { ok: false, reason: "format" };
+  if (existing && typeof existing.post_id === "string" && existing.post_id) s.post_id = existing.post_id;
+  else if (existing) delete s.post_id;
+  if (s.post_id) {
+    if (s.id !== "sp-" + s.post_id) return { ok: false, reason: "post" };
+    if (!existing && (!post || String(post.employee_id || "") !== me.id)) return { ok: false, reason: "post" };
+  }
   s.owner_id = me.id;
   s.owner_name = String(me.name || "").slice(0, 80);
   if (existing && typeof existing.created_at === "string") s.created_at = existing.created_at;
   if (sheetChars(s) > SHEET_MAX_CHARS) return { ok: false, reason: "size" };
+  if (s.post_id) {
+    if (!existing && (counts.mission || 0) >= SHEET_LIMITS.missionSheets) return { ok: false, reason: "limit" };
+    return { ok: true, save: s };
+  }
   if (!existing) {
     if (counts.total >= SHEETS_MAX_RECORDS) return { ok: false, reason: "limit" };
     if (!s.deleted_at && counts.active >= SHEET_LIMITS.sheetsPerPerson) return { ok: false, reason: "limit" };
@@ -3201,8 +3213,11 @@ async function sync(req: any, res: any, me: any) {
         // Tableaux (M12.4) : l'opérateur écrit ses tableaux ; l'admin (lecture seule) et les autres rôles sont refusés
         const { data: mine } = await sb.from(T.sheets).select('id, data').eq('data->>owner_id', me.id);
         const others = (mine || []).filter((x: any) => x.id !== rec.id);
-        const counts = { active: others.filter((x: any) => !x.data.deleted_at).length, total: others.length };
-        const sv = cleanSheetWrite(rec, existing, { id: me.id, name: String(me.name || ''), role: me.role }, now, counts);
+        const personal = others.filter((x: any) => !x.data.post_id);
+        const counts = { active: personal.filter((x: any) => !x.data.deleted_at).length, total: personal.length, mission: others.length - personal.length };
+        let sessionRow: any = null; // tableau de mission (M18.6) : la session doit exister et être celle de l'opérateur
+        if (!existing && typeof rec.post_id === 'string' && rec.post_id) { const { data: pr } = await sb.from(T.posts).select('data').eq('id', rec.post_id).maybeSingle(); sessionRow = pr?.data || null; }
+        const sv = cleanSheetWrite(rec, existing, { id: me.id, name: String(me.name || ''), role: me.role }, now, counts, sessionRow);
         if (!sv.ok) { rejected.push({ col, id: rec.id, reason: sv.reason }); continue; }
         toSave = sv.save;
       } else if (col === 'reviews') {

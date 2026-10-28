@@ -92,7 +92,7 @@ export const MySheets: React.FC = () => {
   const open = (s: S.Sheet) => { openRef.current = s.id; setOpenId(s.id); setHist(S.newHistory(s)); setView({}); setPanel(''); setColEdit(null); };
   const close = () => { openRef.current = null; setOpenId(null); setHist(null); if (ro) setSheets(fromDb()); };
   const addSheet = (s: S.Sheet) => {
-    if (sheets.filter(x => !x.deleted_at).length >= S.LIMITS.sheetsPerPerson) { showToast(t(`${S.LIMITS.sheetsPerPerson} tableaux au maximum : supprime-en un.`, `${S.LIMITS.sheetsPerPerson} tables maximum: delete one.`), 'error'); return; }
+    if (sheets.filter(x => !x.deleted_at && !x.post_id).length >= S.LIMITS.sheetsPerPerson) { showToast(t(`${S.LIMITS.sheetsPerPerson} tableaux au maximum : supprime-en un.`, `${S.LIMITS.sheetsPerPerson} tables maximum: delete one.`), 'error'); return; }
     setSheets(l => [...l, s]); open(s);
   };
 
@@ -103,8 +103,18 @@ export const MySheets: React.FC = () => {
 
   if (!me || (me.role !== 'employee' && me.role !== 'admin')) return null;
 
-  const list = sheets.filter(s => !s.deleted_at);
+  const list = sheets.filter(s => !s.deleted_at && !s.post_id);
+  const missionList = sheets.filter(s => !s.deleted_at && !!s.post_id); // M18.6 : tableaux préparés par mission (ne comptent pas dans les 20)
   const trashed = sheets.filter(s => s.deleted_at);
+
+  const item = (s: S.Sheet) => (
+            <li key={s.id} className="flex items-center gap-2 border border-slate-700 rounded-lg px-3 py-2">
+              <button className="flex-1 min-w-0 text-left cursor-pointer" onClick={() => open(s)}>
+                <span className="block text-sm font-semibold text-slate-100 truncate">{ro && s.owner_name ? `${s.owner_name} — ` : ''}{s.title}</span>
+                <span className="block text-[11px] text-slate-400">{S.activeRows(s).length} {t('ligne(s)', 'row(s)')} · {S.activeColumns(s).length} {t('colonne(s)', 'column(s)')} · {s.updated_at.slice(0, 10)}</span>
+              </button>
+              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x)))}><Trash2 className="w-3.5 h-3.5" /></button>}
+            </li>);
 
   // ---------------- liste ----------------
   if (!cur || !comp) {
@@ -120,15 +130,16 @@ export const MySheets: React.FC = () => {
           <p className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
           <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={() => setImporting(true)}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
         </div>}
-        {list.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (
-          <ul className="space-y-2">{list.map(s => (
-            <li key={s.id} className="flex items-center gap-2 border border-slate-700 rounded-lg px-3 py-2">
-              <button className="flex-1 min-w-0 text-left cursor-pointer" onClick={() => open(s)}>
-                <span className="block text-sm font-semibold text-slate-100 truncate">{ro && s.owner_name ? `${s.owner_name} — ` : ''}{s.title}</span>
-                <span className="block text-[11px] text-slate-400">{S.activeRows(s).length} {t('ligne(s)', 'row(s)')} · {S.activeColumns(s).length} {t('colonne(s)', 'column(s)')} · {s.updated_at.slice(0, 10)}</span>
-              </button>
-              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x)))}><Trash2 className="w-3.5 h-3.5" /></button>}
-            </li>))}</ul>
+        {list.length === 0 && missionList.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (
+          <>
+            {list.length > 0 && <ul className="space-y-2">{list.map(item)}</ul>}
+            {missionList.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-300 mb-2">{ro ? t('Tableaux de mission', 'Mission tables') : t('Tableaux de mes missions (prêts à remplir)', 'Tables for my missions (ready to fill)')}</p>
+                <ul className="space-y-2">{missionList.map(item)}</ul>
+              </div>
+            )}
+          </>
         )}
         {!ro && trashed.length > 0 && (
           <div>
