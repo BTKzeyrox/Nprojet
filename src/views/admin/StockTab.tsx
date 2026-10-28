@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileSpreadsheet, History, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, FileSpreadsheet, History, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { ImportDialog } from '../../components/ImportDialog';
 import { db } from '../../db/store';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { supplierRanking, topPurchased } from '../../utils/purchasing';
-import { purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
+import { checkMoveDraft, purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
 import type { Product, StockMoveType } from '../../types';
 import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
 import { monthTitle } from '../../utils/chartData';
@@ -15,7 +15,9 @@ import { monthTitle } from '../../utils/chartData';
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
-interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string }
+interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string }
+type StockFilter = 'all' | 'low' | 'empty';
+const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean; supplier: string }
 
 const field = 'w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm text-white';
@@ -32,6 +34,10 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const [confirmId, setConfirmId] = useState<string | null>(null); // produit à supprimer
   const [confirmMove, setConfirmMove] = useState<string | null>(null);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<StockFilter>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'qty'>('name');
+  const [added, setAdded] = useState('');
   useLockBodyScroll(!!pEdit || !!mEdit);
 
   const products = db.getProducts();
@@ -40,6 +46,14 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const rows = useMemo(() => stockRows(products, moves), [products, moves]);
   const total = stockValue(rows);
   const red = rows.filter(r => r.low).length;
+  const emptyCount = rows.filter(r => r.empty).length;
+  const lowCount = rows.filter(r => r.low && !r.empty).length;
+  const categories = useMemo(() => Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [products]);
+  const shown = useMemo(() => {
+    const k = norm(query);
+    const list = rows.filter(r => (filter === 'all' || (filter === 'empty' ? r.empty : r.low && !r.empty)) && (!k || norm(r.product.name).includes(k) || norm(r.product.category).includes(k)));
+    return sortBy === 'qty' ? [...list].sort((a, b) => a.qty - b.qty || a.product.name.localeCompare(b.product.name)) : list;
+  }, [rows, query, filter, sortBy]);
   const period = useMemo(() => stockPeriod(products, moves, range.start, range.end), [products, moves, range.start, range.end]);
   const months = useMemo(() => valueByMonth(products, moves, today, 12), [products, moves, today]);
   const used = useMemo(() => topUsed(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
@@ -58,13 +72,31 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
-  const newProduct = () => { setError(''); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '' }); };
-  const editProduct = (p: Product) => { setError(''); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '' }); };
-  const saveProduct = () => {
+  const newProduct = () => { setError(''); setAdded(''); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '', qty: '' }); };
+  const editProduct = (p: Product) => { setError(''); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '', qty: '' }); };
+  const saveProduct = (another = false) => {
     if (!pEdit) return;
     const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold };
-    const r = pEdit.id ? db.updateProduct(pEdit.id, draft) : db.addProduct(draft);
-    if (!r.success) { setError(say(r.error)); return; }
+    if (pEdit.id) {
+      const r = db.updateProduct(pEdit.id, draft);
+      if (!r.success) { setError(say(r.error)); return; }
+      setPEdit(null);
+      return;
+    }
+    // Nouveau produit : la quantité de départ est vérifiée AVANT de créer le produit, puis ajoutée comme une entrée « Stock de départ ».
+    let startQty = 0;
+    if (pEdit.qty.trim() !== '') {
+      const mv = checkMoveDraft({ product_id: 'x', type: 'in', qty: pEdit.qty, date: today });
+      if (!mv.ok) { setError(say(mv.error)); return; }
+      startQty = mv.clean.qty;
+    }
+    const r = db.addProduct(draft);
+    if (!r.success || !r.id) { setError(say(r.error)); return; }
+    if (startQty > 0) {
+      const m = db.addStockMove({ product_id: r.id, type: 'in', qty: startQty, date: today, note: t('Stock de départ', 'Starting stock') });
+      if (!m.success) { setPEdit(null); setError(t('Produit créé, mais la quantité n\'a pas été ajoutée : utilise « Entrée ».', 'Product created, but the quantity was not added: use “Entry”.')); return; }
+    }
+    if (another) { setAdded(pEdit.name.trim()); setError(''); setPEdit({ name: '', category: pEdit.category, unit: pEdit.unit, buy: '', sell: '', threshold: '', qty: '' }); return; }
     setPEdit(null);
   };
   const removeProduct = (id: string) => { const r = db.deleteProduct(id); setConfirmId(null); if (!r.success) setError(say(r.error)); };
@@ -107,12 +139,35 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
 
       {error && !pEdit && !mEdit && <div role="alert" className="text-sm text-rose-300">{error}</div>}
 
+      {rows.length > 0 && (
+        <div className={card}>
+          {(emptyCount > 0 || lowCount > 0) && (
+            <div className="flex flex-wrap gap-2" role="status">
+              {emptyCount > 0 && <button type="button" onClick={() => setFilter('empty')} className="min-h-[44px] px-3 rounded-lg bg-rose-900/40 border border-rose-700 text-rose-200 text-sm font-semibold flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{t(`${emptyCount} épuisé${emptyCount > 1 ? 's' : ''}`, `${emptyCount} out of stock`)}</button>}
+              {lowCount > 0 && <button type="button" onClick={() => setFilter('low')} className="min-h-[44px] px-3 rounded-lg bg-amber-900/40 border border-amber-700 text-amber-200 text-sm font-semibold flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{t(`${lowCount} stock bas`, `${lowCount} low stock`)}</button>}
+            </div>
+          )}
+          <div className="relative">
+            <Search aria-hidden="true" className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Rechercher un produit ou une catégorie', 'Search a product or category')} aria-label={t('Rechercher un produit', 'Search a product')} className={`${field} pl-9`} />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('Filtrer', 'Filter')}>
+            {([['all', t('Tous', 'All'), rows.length], ['low', t('Stock bas', 'Low'), lowCount], ['empty', t('Épuisés', 'Out'), emptyCount]] as [StockFilter, string, number][]).map(([id, label, n]) => (
+              <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`min-h-[44px] px-3 rounded-lg text-sm font-semibold border ${filter === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{label} ({n})</button>
+            ))}
+            <button type="button" aria-pressed={sortBy === 'qty'} onClick={() => setSortBy(sortBy === 'name' ? 'qty' : 'name')} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm ml-auto">{sortBy === 'name' ? t('Tri : nom', 'Sort: name') : t('Tri : moins en stock', 'Sort: lowest first')}</button>
+          </div>
+        </div>
+      )}
+
       <div className={card}>
         {rows.length === 0 ? (
           <div className="text-sm text-slate-400 py-3 text-center">{t('Aucun produit pour l\'instant. Ajoute le premier avec « Nouveau produit ».', 'No products yet. Add the first one with “New product”.')}</div>
+        ) : shown.length === 0 ? (
+          <div className="text-sm text-slate-400 py-3 text-center">{t('Aucun produit ne correspond.', 'No matching product.')}</div>
         ) : (
           <ul>
-            {rows.map(r => {
+            {shown.map(r => {
               const p = r.product;
               const hist = moves.filter(m => m.product_id === p.id).slice(0, 8);
               return (
@@ -233,33 +288,46 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
               <h2 className="text-base font-bold text-white">{pEdit.id ? t('Modifier le produit', 'Edit product') : t('Nouveau produit', 'New product')}</h2>
               <button type="button" aria-label={t('Fermer', 'Close')} onClick={() => setPEdit(null)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300"><X className="w-5 h-5" /></button>
             </div>
+            {added && !pEdit.id && <div role="status" className="text-sm text-emerald-300">{t(`✓ « ${added} » ajouté. Suivant :`, `✓ “${added}” added. Next:`)}</div>}
             <label className="block text-xs text-slate-400">{t('Nom', 'Name')}
               <input autoFocus value={pEdit.name} maxLength={80} onChange={e => setPEdit({ ...pEdit, name: e.target.value })} className={`${field} mt-1`} />
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-xs text-slate-400">{t('Catégorie', 'Category')}
-                <input value={pEdit.category} maxLength={40} onChange={e => setPEdit({ ...pEdit, category: e.target.value })} className={`${field} mt-1`} />
+            {!pEdit.id && (
+              <label className="block text-xs text-slate-400">{t('Quantité en stock maintenant (facultatif)', 'Quantity in stock now (optional)')}
+                <input inputMode="decimal" value={pEdit.qty} onChange={e => setPEdit({ ...pEdit, qty: e.target.value })} className={`${field} mt-1`} placeholder="0" />
               </label>
-              <label className="block text-xs text-slate-400">{t('Unité', 'Unit')}
-                <input value={pEdit.unit} maxLength={16} placeholder={t('unité', 'unit')} onChange={e => setPEdit({ ...pEdit, unit: e.target.value })} className={`${field} mt-1`} />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-xs text-slate-400">{t('Prix d\'achat (Ar)', 'Purchase price (Ar)')}
-                <input inputMode="numeric" value={pEdit.buy} onChange={e => setPEdit({ ...pEdit, buy: e.target.value })} className={`${field} mt-1`} />
-              </label>
-              <label className="block text-xs text-slate-400">{t('Prix de vente (Ar)', 'Selling price (Ar)')}
-                <input inputMode="numeric" value={pEdit.sell} onChange={e => setPEdit({ ...pEdit, sell: e.target.value })} className={`${field} mt-1`} />
-              </label>
-            </div>
-            <label className="block text-xs text-slate-400">{t('Seuil d\'alerte (voyant rouge à cette quantité ou moins)', 'Alert threshold (red light at this quantity or less)')}
-              <input inputMode="decimal" value={pEdit.threshold} onChange={e => setPEdit({ ...pEdit, threshold: e.target.value })} className={`${field} mt-1`} placeholder="0" />
-            </label>
+            )}
+            <details open={!!pEdit.id} className="rounded-lg border border-slate-800 p-2">
+              <summary className="min-h-[44px] flex items-center text-sm text-slate-300 cursor-pointer">{t('Plus de détails (catégorie, unité, prix, alerte)', 'More details (category, unit, prices, alert)')}</summary>
+              <div className="space-y-3 pt-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs text-slate-400">{t('Catégorie', 'Category')}
+                    <input list="stock-categories" value={pEdit.category} maxLength={40} onChange={e => setPEdit({ ...pEdit, category: e.target.value })} className={`${field} mt-1`} />
+                    <datalist id="stock-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
+                  </label>
+                  <label className="block text-xs text-slate-400">{t('Unité', 'Unit')}
+                    <input value={pEdit.unit} maxLength={16} placeholder={t('unité', 'unit')} onChange={e => setPEdit({ ...pEdit, unit: e.target.value })} className={`${field} mt-1`} />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs text-slate-400">{t('Prix d\'achat (Ar)', 'Purchase price (Ar)')}
+                    <input inputMode="numeric" value={pEdit.buy} onChange={e => setPEdit({ ...pEdit, buy: e.target.value })} className={`${field} mt-1`} />
+                  </label>
+                  <label className="block text-xs text-slate-400">{t('Prix de vente (Ar)', 'Selling price (Ar)')}
+                    <input inputMode="numeric" value={pEdit.sell} onChange={e => setPEdit({ ...pEdit, sell: e.target.value })} className={`${field} mt-1`} />
+                  </label>
+                </div>
+                <label className="block text-xs text-slate-400">{t('Seuil d\'alerte (voyant rouge à cette quantité ou moins)', 'Alert threshold (red light at this quantity or less)')}
+                  <input inputMode="decimal" value={pEdit.threshold} onChange={e => setPEdit({ ...pEdit, threshold: e.target.value })} className={`${field} mt-1`} placeholder="0" />
+                </label>
+              </div>
+            </details>
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setPEdit(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={saveProduct} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={() => saveProduct(false)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
+            {!pEdit.id && <button type="button" onClick={() => saveProduct(true)} className="w-full min-h-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold">{t('Enregistrer et ajouter un autre', 'Save and add another')}</button>}
           </div>
         </div>,
         document.body,
