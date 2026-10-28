@@ -563,6 +563,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
 | `notifications.ts` | — |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
+| `offlineServer.ts` | Règles du SERVEUR pour les actions envoyées après une coupure (module 13, M13.7) : « une même action n'est exécutée qu'une fois ». |
 | `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
 | `offlineSync.ts` | Pont entre le magasin de données et la file d'actions hors ligne (module 13, M13.5) : règles pures, sans réseau, sans stockage. |
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
@@ -721,6 +722,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:offline-sync` | Contrôle du pont magasin ↔ file d'actions hors ligne (module 13, M13.5), sans réseau. Lancer : npm run check:offline-sync |
 | `npm run check:offline-store` | Contrôle du mode hors ligne branché sur le VRAI magasin de données (module 13, M13.5), sans réseau réel. |
 | `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
+| `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |

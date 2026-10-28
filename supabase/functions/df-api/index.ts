@@ -2362,7 +2362,7 @@ const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
+  "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey, x-df-action-id, x-df-device-time",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -5004,6 +5004,121 @@ async function pushDue(request: Request, res: any) {
   return res.json({ ok: true, reminders: reminders.length, notified: done, sent });
 }
 
+// ----- M13.7 : actions numérotées (une seule exécution par numéro) -----
+// ===== BEGIN OFFLINE_ACTIONS (M13.7 : copie exacte de src/utils/offlineServer.ts ; ce bloc est contrôlé par scripts/check-offline-server.ts) =====
+const ONCE_ROUTES: readonly string[] = ['news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'report-error'];
+const ACTION_RUNNING_MS = 120_000; // un appel « en cours » depuis plus longtemps est considéré comme tombé en panne : il peut être refait
+const ACTION_KEEP_DAYS = 30; // les fiches plus anciennes sont effacées
+const ACTION_BODY_MAX = 16_000; // réponse gardée : 16 000 caractères au plus (au-delà : seulement le code)
+
+interface ActionRecord {
+  state: 'running' | 'done';
+  route: string;
+  started_at: string; // heure du serveur au début
+  received_at: string; // heure de réception par le serveur
+  device_time: string | null; // heure du téléphone quand l'action a été faite (nettoyée, sinon null)
+  skew_s: number | null; // écart serveur - téléphone en secondes (négatif : le téléphone est en avance)
+  status?: number;
+  body?: string;
+  body_cut?: boolean;
+}
+interface ActionStore {
+  claim(key: string, rec: ActionRecord): Promise<boolean>; // crée la fiche ; faux si elle existe déjà (jamais deux fois)
+  read(key: string): Promise<ActionRecord | null>;
+  update(key: string, rec: ActionRecord): Promise<void>;
+  takeover(key: string, old: ActionRecord, rec: ActionRecord): Promise<boolean>; // remplace une fiche « en cours » tombée en panne, seulement si personne ne l'a changée entre-temps
+  drop(key: string): Promise<void>;
+}
+type OnceOutcome = { kind: 'fresh' | 'replay'; status: number; body: string; record: ActionRecord } | { kind: 'busy'; status: 409; body: string };
+
+/** Numéro d'action accepté : 8 à 64 caractères (lettres, chiffres, - _ . :). Sinon null (l'appel est refusé avec une raison claire). */
+function cleanActionId(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  return /^[A-Za-z0-9._:-]{8,64}$/.test(s) ? s : null;
+}
+/** Heure du téléphone : acceptée si c'est une vraie date entre 2020 et demain ; sinon null (on l'ignore, on ne refuse pas l'action pour ça). */
+function cleanDeviceTime(v: unknown, nowMs: number): { iso: string | null; skew_s: number | null } {
+  if (typeof v !== 'string' || v.length > 40) return { iso: null, skew_s: null };
+  const t = Date.parse(v);
+  if (!Number.isFinite(t) || t < Date.UTC(2020, 0, 1) || t > nowMs + 24 * 3600 * 1000) return { iso: null, skew_s: null };
+  return { iso: new Date(t).toISOString(), skew_s: Math.round((nowMs - t) / 1000) };
+}
+/** Clé de la fiche : propre à la personne (une autre personne ne peut ni rejouer ni deviner la réponse). `anon` : appel sans connexion (rapport d'erreur). */
+function actionKey(userId: string | null, actionId: string): string { return `${userId || 'anon'}:${actionId}`; }
+
+const iso = (ms: number) => new Date(ms).toISOString();
+const BUSY_BODY = JSON.stringify({ error: 'Cette action est déjà en cours d\'envoi : patiente quelques secondes, puis réessaie.', code: 'in_progress' });
+
+/**
+ * Exécute `exec` UNE seule fois pour ce numéro d'action.
+ * - première fois : la fiche est créée (« en cours »), l'action est faite, la réponse est gardée (sauf erreur serveur 5xx : la fiche est effacée pour permettre un nouvel essai) ;
+ * - déjà faite : on rend la même réponse, sans refaire ;
+ * - en cours (appel simultané) : 409 « déjà en cours » ; si l'appel est tombé en panne depuis plus de 2 minutes, il est refait ;
+ * - si `exec` lève une erreur, la fiche « en cours » est effacée puis l'erreur remonte (le téléphone pourra réessayer).
+ */
+async function runOnce(store: ActionStore, key: string, route: string, deviceTimeRaw: unknown, nowMs: number, exec: () => Promise<{ status: number; body: string }>): Promise<OnceOutcome> {
+  const dt = cleanDeviceTime(deviceTimeRaw, nowMs);
+  const mine: ActionRecord = { state: 'running', route, started_at: iso(nowMs), received_at: iso(nowMs), device_time: dt.iso, skew_s: dt.skew_s };
+  let owner = await store.claim(key, mine);
+  if (!owner) {
+    const old = await store.read(key);
+    if (old && old.state === 'done') return { kind: 'replay', status: old.status ?? 200, body: old.body ?? JSON.stringify({ ok: (old.status ?? 200) < 400, replayed: true, note: 'Action déjà faite : la réponse d\'origine était trop longue pour être gardée.' }), record: old };
+    if (old && old.state === 'running' && nowMs - Date.parse(old.started_at) < ACTION_RUNNING_MS) return { kind: 'busy', status: 409, body: BUSY_BODY };
+    owner = old ? await store.takeover(key, old, mine) : await store.claim(key, mine); // fiche tombée en panne (ou disparue entre-temps)
+    if (!owner) return { kind: 'busy', status: 409, body: BUSY_BODY };
+  }
+  let out: { status: number; body: string };
+  try { out = await exec(); } catch (e) { await store.drop(key); throw e; }
+  if (out.status >= 500) { await store.drop(key); return { kind: 'fresh', status: out.status, body: out.body, record: { ...mine, status: out.status } }; }
+  const cut = out.body.length > ACTION_BODY_MAX;
+  const done: ActionRecord = { ...mine, state: 'done', status: out.status, ...(cut ? { body_cut: true } : { body: out.body }) };
+  await store.update(key, done);
+  return { kind: 'fresh', status: out.status, body: out.body, record: done };
+}
+// ===== END OFFLINE_ACTIONS =====
+
+// ---- Appels envoyés après une coupure (M13.7) : une même action (même numéro) n'est faite qu'UNE fois. Règles pures dans le bloc ci-dessus ; ici : la table df_actions.
+const ACTIONS = "df_actions";
+const actionStore: ActionStore = {
+  async claim(key, rec) {
+    const { data, error } = await sb.from(ACTIONS).upsert({ id: key, data: rec, updated_at: new Date().toISOString() }, { onConflict: "id", ignoreDuplicates: true }).select("id");
+    if (error) throw new Error(error.message);
+    return Array.isArray(data) && data.length > 0;
+  },
+  async read(key) {
+    const { data } = await sb.from(ACTIONS).select("data").eq("id", key).maybeSingle();
+    return data ? (data.data as ActionRecord) : null;
+  },
+  async update(key, rec) { await sb.from(ACTIONS).update({ data: rec, updated_at: new Date().toISOString() }).eq("id", key); },
+  async takeover(key, old, rec) {
+    const { data } = await sb.from(ACTIONS).update({ data: rec, updated_at: new Date().toISOString() }).eq("id", key).eq("data->>state", "running").eq("data->>started_at", old.started_at).select("id");
+    return Array.isArray(data) && data.length > 0;
+  },
+  async drop(key) { await sb.from(ACTIONS).delete().eq("id", key); },
+};
+async function callOnce(action: string, req: any, res: any, me: any): Promise<Response> {
+  if (action === "report-error") return await reportError(req, res);
+  if (action === "post-decide") return await postDecide(req, res, me);
+  if (action === "news-react") return await newsAction('react', req, res, me);
+  if (action === "news-comment") return await newsAction('comment', req, res, me);
+  if (action === "news-comment-delete") return await newsAction('comment-delete', req, res, me);
+  if (action === "news-comment-react") return await newsAction('comment-react', req, res, me);
+  if (action === "news-share") return await newsAction('share', req, res, me);
+  return await newsSubmit(req, res, me); // news-submit
+}
+async function onceRoute(action: string, req: any, res: any, me: any): Promise<Response> {
+  const id = cleanActionId(req.headers.actionId);
+  if (!id) return res.status(400).json({ error: "Numéro d'action invalide (8 à 64 caractères : lettres, chiffres, - _ . :).", code: "bad_action_id" });
+  const nowMs = Date.now();
+  const out = await runOnce(actionStore, actionKey(me ? me.id : null, id), action, req.headers.deviceTime, nowMs, async () => {
+    const r: Response = await callOnce(action, req, res, me);
+    return { status: r.status, body: await r.text() };
+  });
+  if (Math.random() < 0.02) void sb.from(ACTIONS).delete().lt("updated_at", new Date(nowMs - ACTION_KEEP_DAYS * 86400000).toISOString()); // la table ne grossit pas
+  return new Response(out.body, { status: out.status, headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "no-store", ...(out.kind === "replay" ? { "x-df-replayed": "1" } : {}) } });
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(request.url);
@@ -5027,12 +5142,15 @@ Deno.serve(async (request: Request) => {
     headers: {
       authorization: request.headers.get("authorization") || "",
       ip: (request.headers.get("x-forwarded-for") || "").split(",")[0].trim(),
+      actionId: request.headers.get("x-df-action-id") || "", // numéro d'action (appels envoyés après une coupure)
+      deviceTime: request.headers.get("x-df-device-time") || "", // heure du téléphone quand l'action a été faite
     },
   };
   try {
     if (action === "login" && req.method === "POST") return await login(req, res);
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
     if (action === "signup" && req.method === "POST") return await signup(req, res);
+    if (action === "report-error" && req.method === "POST" && req.headers.actionId) return await onceRoute(action, req, res, null);
     if (action === "report-error" && req.method === "POST") return await reportError(req, res);
     if (action === "push-due" && req.method === "POST") return await pushDue(request, res);
     if (action === "recurring-due" && req.method === "POST") return await recurringDue(request, res);
@@ -5045,6 +5163,7 @@ Deno.serve(async (request: Request) => {
       const acc = await shiftAccess(me);
       if (!acc.ok) return res.status(401).json({ error: acc.message, code: 'shift' });
     }
+    if (req.method === "POST" && req.headers.actionId && ONCE_ROUTES.includes(action)) return await onceRoute(action, req, res, me); // même numéro = même réponse, jamais deux fois
     if (action === "state" && req.method === "GET") return await state(req, res, me);
     if (action === "attendance" && req.method === "GET") return await attendanceRoute(req, res, me);
     if (action === "errors" && req.method === "GET") return await errorsList(req, res, me);

@@ -76,7 +76,9 @@ ok(/this\.pulling/.test(store), 'rechargement : jamais deux appels en même temp
 const files = fs.readdirSync('src', { recursive: true }).map(String).filter(f => /\.(ts|tsx)$/.test(f));
 const loops: string[] = [];
 for (const f of files) { const t = fs.readFileSync(`src/${f}`, 'utf8'); for (const m of t.matchAll(/setInterval\(([\s\S]{0,160})/g)) loops.push(`${f}: ${m[1].split('\n')[0].slice(0, 90)}`); }
-const KNOWN = ['ConnectionBanner.tsx', 'TopBar.tsx', 'ScrollButtons.tsx', 'QueueButton.tsx', 'DiagPanel.tsx', 'EmployeesManagement.tsx', 'updateWatcher.ts'];
+const KNOWN = ['ConnectionBanner.tsx', 'TopBar.tsx', 'ScrollButtons.tsx', 'QueueButton.tsx', 'DiagPanel.tsx', 'EmployeesManagement.tsx', 'updateWatcher.ts',
+  // Mode hors ligne (M13.6) : minuteurs LOCAUX (rafraîchir un compteur, une attente de code) ; aucun ne parle au serveur
+  'OfflineCenter.tsx', 'OfflineCard.tsx', 'OfflinePin.tsx', 'useOfflineStatus.ts'];
 ok(loops.every(l => KNOWN.some(k => l.includes(k))), `minuteurs : seulement ceux déjà connus (${loops.length}) ; un nouveau minuteur fait échouer ce contrôle`);
 const timerCalls = loops.filter(l => /fetch|db\.|api\(|pull/.test(l.split(': ').slice(1).join(': ')));
 ok(timerCalls.length === 0 || timerCalls.every(l => l.includes('updateWatcher.ts') || l.includes('ConnectionBanner.tsx')), 'minuteurs : à part le vérificateur de version (2 min) et la bannière de connexion, aucun ne parle au serveur');

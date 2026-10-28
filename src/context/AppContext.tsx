@@ -80,6 +80,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
+/** La langue seule, sans exiger le fournisseur (petits composants posés dans des pages essayées seules) : français si absent. */
+export const useLang = (): 'fr' | 'en' => (useContext(AppContext)?.lang === 'en' ? 'en' : 'fr');
+
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {

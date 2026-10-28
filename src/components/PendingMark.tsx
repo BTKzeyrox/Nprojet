@@ -1,13 +1,13 @@
 import React from 'react';
 import { Clock, WifiOff } from 'lucide-react';
 import { db } from '../db/store';
-import { useApp } from '../context/AppContext';
+import { useLang } from '../context/AppContext';
 import { useIsOffline, useUnsentTick } from '../utils/useOfflineStatus';
 import { ONLINE_ONLY_WHY, pick } from '../utils/offlineText';
 
 /** Petite marque « En attente » sur un élément modifié ici et pas encore reçu par le serveur (disparaît toute seule dès qu'il est envoyé). */
 export const PendingMark: React.FC<{ col: string; id: string; className?: string }> = ({ col, id, className = '' }) => {
-  const { lang } = useApp();
+  const lang = useLang();
   useUnsentTick();
   if (!db.isUnsent(col, id)) return null;
   const label = lang === 'en' ? 'Waiting to be sent' : 'En attente d\'envoi';
@@ -23,7 +23,7 @@ export const PendingMark: React.FC<{ col: string; id: string; className?: string
  * Jamais un bouton grisé sans explication.
  */
 export function useOnlineOnly(kind: keyof typeof ONLINE_ONLY_WHY): { blocked: boolean; why: string } {
-  const { lang } = useApp();
+  const lang = useLang();
   const blocked = useIsOffline();
   return { blocked, why: pick(ONLINE_ONLY_WHY[kind], lang) };
 }
