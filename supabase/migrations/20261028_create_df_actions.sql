@@ -1,6 +1,7 @@
 -- Actions numérotées (module 13, étape M13.7) : une fiche par action envoyée par le téléphone après une coupure, pour qu'une même action ne soit JAMAIS faite deux fois
 -- (la réponse se perd, le téléphone renvoie : le serveur rend la réponse gardée au lieu de recommencer). Garde aussi l'heure de réception et l'heure du téléphone.
 -- À appliquer sur la base `nprojet` APRÈS une sauvegarde (select public.df_take_backup();). Accord de BTK : « Accord hors ligne » (2026-10-28).
+-- APPLIQUÉE le 2026-10-28 (sauvegarde n° 58 prise avant ; serveur v47 = commit 8069cde).
 -- Retour en arrière (table sans effet sur le reste, vide au départ) : drop table public.df_actions;
 -- Identifiant = « <personne>:<numéro d'action> » (une autre personne ne peut ni rejouer ni deviner la réponse). `data` : route, état (en cours / fait), code et réponse gardés (16 000 caractères au plus),
 -- heure de réception, heure du téléphone, écart en secondes. Fiches effacées après 30 jours (par le serveur, de temps en temps).
