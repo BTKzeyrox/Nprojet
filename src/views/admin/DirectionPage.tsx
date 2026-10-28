@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Boxes, HeartPulse, Landmark, Trophy, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BookOpen, Boxes, HeartPulse, Landmark, Target, Trophy, Users, Wallet } from 'lucide-react';
+import { PLAN_STATUS_LABEL } from '../../utils/budgetPlan';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { formatCurrencyAr } from '../../utils/formatUtils';
@@ -30,8 +31,9 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
     () => directionSummary({
       today, cash: db.getCash(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(), invoices: db.getInvoices(), products: db.getProducts(), moves: db.getStockMoves(),
       prices: s, pricePerMission: s.price_per_mission || 0, ranking: rankByScore(perf.res), alerts,
+      entries: db.getEntries(), monthlyPlan: s.monthly_plan, budgets: s.budgets,
     }),
-    [today, db.getCash(), db.getPosts(), db.getContracts(), db.getClients(), db.getInvoices(), db.getProducts(), db.getStockMoves(), s, perf.res, alerts], // eslint-disable-line react-hooks/exhaustive-deps
+    [today, db.getCash(), db.getPosts(), db.getContracts(), db.getClients(), db.getInvoices(), db.getProducts(), db.getStockMoves(), db.getEntries(), s, perf.res, alerts], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const ar = (n: number) => formatCurrencyAr(n);
   const go = (view: string, fr: string, en: string) => (onNavigate ? <button type="button" className={link} onClick={() => onNavigate(view)}>{t(fr, en)}<ArrowRight className="w-4 h-4" aria-hidden="true" /></button> : null);
@@ -70,6 +72,28 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
           {sum.receivables.unbilledTotal > 0 && row(t('Missions validées pas encore facturées', 'Validated missions not yet invoiced'), ar(sum.receivables.unbilledTotal))}
           {go('invoices', 'Voir la facturation', 'See invoicing')}
         </div>
+
+        {sum.accounting && (
+          <div className={card}>
+            {head(<BookOpen className="w-4 h-4 text-violet-400" aria-hidden="true" />, 'Comptabilité du mois', 'Accounting this month')}
+            {row(t('Produits (ventes)', 'Income (sales)'), ar(sum.accounting.income))}
+            {row(t('Charges', 'Expenses'), ar(sum.accounting.expense))}
+            {row(t('Résultat comptable', 'Accounting result'), ar(sum.accounting.result), sum.accounting.result < 0 ? 'text-red-400' : 'text-emerald-400')}
+            {row(t('TVA à payer (collectée − déductible)', 'VAT due (collected − deductible)'), ar(sum.accounting.vatDue))}
+            {go('accounting', 'Voir la comptabilité', 'See accounting')}
+          </div>
+        )}
+
+        {sum.plan && (
+          <div className={card}>
+            {head(<Target className="w-4 h-4 text-cyan-400" aria-hidden="true" />, 'Prévu contre réel', 'Planned vs actual')}
+            {([['revenue', 'Revenus encaissés', 'Revenue received'], ['expenses', 'Dépenses', 'Expenses'], ['payroll', 'Paie', 'Payroll']] as const).map(([k, fr, en]) => {
+              const l = sum.plan![k], st = PLAN_STATUS_LABEL[l.status];
+              return <React.Fragment key={k}>{row(t(fr, en), l.status === 'none' ? t('rien de prévu', 'nothing planned') : `${ar(l.actual)} / ${ar(l.planned)} · ${lang === 'en' ? st.en : st.fr}`, l.status === 'bad' ? 'text-red-400' : l.status === 'watch' ? 'text-amber-300' : 'text-white')}</React.Fragment>;
+            })}
+            {go('stats', 'Voir les finances', 'See the finances')}
+          </div>
+        )}
 
         <div className={card}>
           {head(<Users className="w-4 h-4 text-sky-400" aria-hidden="true" />, 'Meilleurs clients du mois', 'Top clients this month')}

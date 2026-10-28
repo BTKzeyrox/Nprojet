@@ -76,5 +76,26 @@ const lateChase = toChase(db.getInvoices(), db.getCash(), '2028-10-24', Object.f
 ok(late.receivables.total === lateChase.reduce((t, r) => t + r.total, 0) && late.receivables.oldestDays === Math.max(0, ...lateChase.map(r => r.max_days)) && late.receivables.top.length <= 3, 'créances : deux ans plus tard, mêmes chiffres que les relances');
 ok(late.month.start === '2028-10-01' && late.month.end === '2028-10-31', 'mois de la page = mois de la date donnée');
 
+// ---- M8 (mise à jour) : comptabilité du mois et prévu contre réel (aucun calcul nouveau : mêmes règles que la Comptabilité et le module 15)
+const { incomeStatement, vatByMonth } = await import('../src/utils/accounting');
+const { budgetVsActual, cleanMonthlyPlan } = await import('../src/utils/budgetPlan');
+const entries = db.getEntries();
+const full = directionSummary(input({ entries, monthlyPlan: s.monthly_plan, budgets: s.budgets }));
+ok(entries.length > 0, 'la démo a des écritures comptables (sinon les contrôles suivants ne prouvent rien)');
+const stmt = incomeStatement(entries, month.start, month.end), vat = vatByMonth(entries, month.start, month.end).total.due;
+ok(!!full.accounting && full.accounting.result === stmt.result && full.accounting.income === stmt.totalIncome && full.accounting.expense === stmt.totalExpense && full.accounting.vatDue === vat && full.accounting.entries === entries.length, 'comptabilité : résultat, produits, charges et TVA du mois = règles de la Comptabilité');
+ok(full.accounting!.result === full.accounting!.income - full.accounting!.expense, 'résultat = produits − charges');
+const cur = budgetVsActual({ cash: db.getCash(), posts: db.getPosts(), contracts: db.getContracts(), prices: s, pricePerMission: s.price_per_mission || 0, clients: db.getClients() }, cleanMonthlyPlan(s.monthly_plan), s.budgets, today, 1)[0];
+ok(!!full.plan && JSON.stringify(full.plan) === JSON.stringify(cur), 'prévu contre réel : le mois en cours est celui de la carte « Prévu contre réel »');
+ok(!bad(full), 'avec écritures et plan : aucun NaN, Infinity ni undefined');
+ok(sum.accounting === null && sum.plan === null, 'sans écritures ni plan fournis : les deux cartes sont absentes (rien d\'inventé)');
+ok(directionSummary(input({ entries: [] })).accounting === null, 'aucune écriture : pas de carte Comptabilité');
+ok(directionSummary(input({ entries: [null, { id: 'x' }, { date: 5, lines: [] }, { date: '2026-10-01' }] as any })).accounting === null, 'écritures abîmées (null, sans lignes, date fausse) : ignorées, aucun plantage');
+ok(directionSummary(input({ monthlyPlan: 'faux', budgets: 5 as any })).plan === null && directionSummary(input({ monthlyPlan: { revenue_ar: -5, payroll_ar: 'x' } })).plan === null, 'plan ou budgets faux : carte absente, aucun plantage');
+const onlyBudgets = directionSummary(input({ budgets: { Loyer: 100000 } })).plan;
+ok(!!onlyBudgets && onlyBudgets.expenses.planned === 100000 && onlyBudgets.revenue.status === 'none', 'seulement des budgets : la carte existe, revenus « rien de prévu »');
+const octo = directionSummary(input({ entries: [{ id: 'a', date: month.start, journal: 'VT', label: 'v', lines: [{ account: '411', debit: 1200, credit: 0 }, { account: '706', debit: 0, credit: 1000 }, { account: '4457', debit: 0, credit: 200 }] }, { id: 'c', date: month.start, journal: 'AC', label: 'achat', lines: [{ account: '4456', debit: 50, credit: 0 }, { account: '512', debit: 0, credit: 50 }] }, { id: 'b', date: '2020-01-05', journal: 'VT', label: 'vieux', lines: [{ account: '411', debit: 9999, credit: 0 }, { account: '706', debit: 0, credit: 9999 }] }] as any })).accounting!;
+ok(octo.income === 1000 && octo.expense === 0 && octo.result === 1000 && octo.vatDue === 150 && octo.entries === 3, 'cas piégé : seules les écritures du mois comptent (vente 1 000, TVA collectée 200 moins déductible 50 = 150 à payer ; l\'écriture de 2020 est ignorée)');
+
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

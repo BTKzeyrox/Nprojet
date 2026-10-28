@@ -17,7 +17,7 @@
 - **Coût** : tout tourne sur des offres gratuites (Vercel pour le site, Supabase pour la base et le serveur, Cloudinary pour les photos). Voir §9 pour ce qui change en usage commercial.
 - **Mode démo** : le site s'ouvre avec des chiffres inventés, sans aucun appel au serveur. La démo cache ce qui est simulé (IA externe, notifications téléphone, mot de passe, sauvegardes).
 
-Ce qui est fait : les modules **M0 à M12** du plan (`TODO_MODULES.md`) plus **M8.1** (page Direction). Ce qui reste : essais de BTK (M8.2, M12.6), vitesse (M8.3), nettoyage (M8.4) et le module **M15** (en cours : **M15.1 missions récurrentes**, **M15.2 planning** et **M15.3 objectifs** et **M15.4 budget prévu contre réel** faites, **M15.5 rapport automatique** commencé : règles seulement), les modules proposés M14, M16 et M17 et le mode hors ligne M13 (§10).
+Ce qui est fait : les modules **M0 à M12** du plan (`TODO_MODULES.md`), la page Direction **M8** (mise à jour avec la comptabilité et le prévu contre réel), le mode hors ligne **M13** (code et serveur jusqu'à M13.7), la comptabilité **M14**, le management **M15** (sauf M15.7, plusieurs sites) et **M16** (code). Ce qui reste : tes essais (M12.6, M13.8, M14.10, M15.9, M16.8), **M17** (étude seulement) et **M18** (retrait de la démo : M18.1 et M18.2 faites, le reste attend ton « GO »).
 
 ---
 
@@ -281,16 +281,18 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 
 ### Direction  `direction`
 - **Qui** : responsable
-- **À quoi ça sert** : Une page de synthèse du mois en cours : argent, créances en retard, meilleurs clients et salariés, stock critique, alertes.
+- **À quoi ça sert** : Une page de synthèse du mois en cours : argent, comptabilité, prévu contre réel, créances en retard, meilleurs clients et salariés, stock critique, alertes.
 - **Comment l'utiliser** : 1. Lis les cartes de haut en bas : chacune résume une page du site. 2. Touche « Voir… » sous une carte pour ouvrir la page qui détaille. 3. Un chiffre qui te surprend : ouvre la page d'origine, c'est le même chiffre.
 - **Règles** :
   - Aucun calcul nouveau : cette page reprend les chiffres des Finances, de la Facturation, des Relances, du Stock, de la Performance et de la Santé du site.
   - Le chiffre d'affaires est celui des factures émises ce mois ; sans facture, c'est la valeur des missions validées, marquée « estimé ».
   - Seuls le responsable et son accès complet voient cette page : le Comptable et les salariés ne la reçoivent pas.
+  - Les cartes Comptabilité (résultat et TVA du mois) et Prévu contre réel n'apparaissent que s'il y a des écritures ou un plan réglé : rien n'est inventé.
 - **Chiffres et formules** :
   - Bénéfice du mois : Argent encaissé moins dépenses saisies et salaires des missions validées (comme dans les Finances).
   - Créances en retard : Reste à payer des factures émises dont l'échéance est dépassée (comme dans les relances).
   - Stock critique : Produits sous leur seuil d'alerte ou à quantité négative (voyant rouge du Stock).
+  - Résultat comptable du mois : Produits (comptes 7) moins charges (comptes 6) des écritures du mois ; les écritures de clôture ne comptent pas (comme dans le Compte de résultat).
 - **Dans le code** : `src/views/admin/DirectionPage.tsx`
 
 ### Ressources humaines / Mon dossier et congés  `hr`

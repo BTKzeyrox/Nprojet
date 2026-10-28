@@ -34,6 +34,10 @@ ok(/\.\.\.\(isAdmin \? \[\{ id: 'direction'/.test(side), 'menu : « Direction »
 const app = fs.readFileSync('src/App.tsx', 'utf8');
 const adminBranch = app.slice(app.indexOf("activeView === 'direction'") - 200, app.indexOf("activeView === 'direction'") + 200);
 ok((app.match(/activeView === 'direction'/g) || []).length === 1 && /DirectionPage/.test(adminBranch), 'la page n\'est branchée que dans la partie admin de l\'application');
+ok(fr.includes('Comptabilité du mois') && en.includes('Accounting this month') && fr.includes('Résultat comptable') && en.includes('Accounting result'), 'carte « Comptabilité du mois » affichée en FR et EN (la démo a des écritures)');
+ok(fr.includes('Prévu contre réel') && en.includes('Planned vs actual') && /Revenus encaissés/.test(fr) && /Revenue received/.test(en), 'carte « Prévu contre réel » affichée en FR et EN (la démo a un plan)');
+ok(!/Comptabilité du mois|Résultat comptable|Prévu contre réel|Revenus encaissés/.test(en), 'anglais : aucun libellé français dans les deux nouvelles cartes');
+ok(['accounting'].every(v => /Voir la comptabilité/.test(fr) && /See accounting/.test(en)), 'lien « Voir la comptabilité » vers la page Comptabilité');
 ok(calls === 0, 'aucun appel réseau');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);

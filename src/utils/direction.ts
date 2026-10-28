@@ -9,6 +9,8 @@ import { invoiceFigures } from './invoiceStats';
 import { toChase, type ChaseRow } from './receivables';
 import { stockRows, type StockRow } from './stock';
 import { periodRange, type StatsRange } from './stats';
+import { incomeStatement, vatByMonth, type Entry } from './accounting';
+import { budgetVsActual, cleanMonthlyPlan, type PlanMonth } from './budgetPlan';
 import type { HealthAlert } from './health/types';
 
 export interface DirectionInput {
@@ -18,6 +20,8 @@ export interface DirectionInput {
   prices: FinanceInput['prices']; pricePerMission: number;
   ranking: { id: string; name: string; score: number | null; rank: number | null }[]; // sortie de `rankByScore` (module 3)
   alerts: HealthAlert[]; // alertes VISIBLES de la Santé du site, déjà triées (module 11)
+  /** M8 (mise à jour) : écritures comptables (module 14), plan mensuel et budgets (module 15). Facultatifs : sans eux, les cartes correspondantes sont absentes. */
+  entries?: Entry[]; monthlyPlan?: unknown; budgets?: Record<string, number>;
 }
 
 export interface DirectionSummary {
@@ -30,6 +34,10 @@ export interface DirectionSummary {
   topEmployees: { id: string; name: string; score: number }[];
   stock: { count: number; empty: number; negative: number; low: number; rows: StockRow[] };
   alerts: { urgent: number; watch: number; info: number; top: HealthAlert[] };
+  /** Résultat comptable et TVA à payer du mois (règles de la Comptabilité) ; `null` s'il n'y a aucune écriture. */
+  accounting: { result: number; income: number; expense: number; vatDue: number; entries: number } | null;
+  /** « Prévu contre réel » du mois en cours (règle du module 15) ; `null` si rien n'est prévu (ni plan mensuel, ni budget). */
+  plan: PlanMonth | null;
 }
 
 export const DIRECTION_LIMITS = { clients: 5, employees: 3, stock: 5, alerts: 5, chase: 3 } as const;
@@ -37,6 +45,21 @@ export const DIRECTION_LIMITS = { clients: 5, employees: 3, stock: 5, alerts: 5,
 /** Ordre « le plus grave d'abord » pour le stock : négatif, puis épuisé, puis sous le seuil (le moins de stock avant, nom pour un ordre stable). */
 const stockOrder = (a: StockRow, b: StockRow): number =>
   Number(b.negative) - Number(a.negative) || Number(b.empty) - Number(a.empty) || a.qty - b.qty || a.product.name.localeCompare(b.product.name);
+
+const cleanEntries = (list: unknown): Entry[] => (Array.isArray(list) ? list.filter((e): e is Entry => !!e && typeof (e as Entry).date === 'string' && Array.isArray((e as Entry).lines)) : []);
+
+function accountingOf(entries: unknown, month: StatsRange): DirectionSummary['accounting'] {
+  const list = cleanEntries(entries);
+  if (!list.length) return null;
+  const st = incomeStatement(list, month.start, month.end);
+  return { result: st.result, income: st.totalIncome, expense: st.totalExpense, vatDue: vatByMonth(list, month.start, month.end).total.due, entries: list.length };
+}
+
+function planOf(i: DirectionInput, _month: StatsRange): DirectionSummary['plan'] {
+  const cur = budgetVsActual({ cash: i.cash, posts: i.posts, contracts: i.contracts, prices: i.prices, pricePerMission: i.pricePerMission, clients: i.clients }, cleanMonthlyPlan(i.monthlyPlan), i.budgets, i.today, 1)[0];
+  if (!cur || (cur.revenue.status === 'none' && cur.expenses.status === 'none' && cur.payroll.status === 'none')) return null;
+  return cur;
+}
 
 export function directionSummary(i: DirectionInput): DirectionSummary {
   const month = periodRange('month', i.today);
@@ -58,5 +81,7 @@ export function directionSummary(i: DirectionInput): DirectionSummary {
     topEmployees: i.ranking.filter((r): r is { id: string; name: string; score: number; rank: number } => r.score !== null && r.rank !== null).slice(0, DIRECTION_LIMITS.employees).map(r => ({ id: r.id, name: r.name, score: r.score })),
     stock: { count: critical.length, empty: critical.filter(r => r.empty).length, negative: critical.filter(r => r.negative).length, low: critical.filter(r => r.low).length, rows: critical.slice(0, DIRECTION_LIMITS.stock) },
     alerts: { urgent: sev('urgent'), watch: sev('watch'), info: sev('info'), top: i.alerts.filter(a => a.severity !== 'info').slice(0, DIRECTION_LIMITS.alerts) },
+    accounting: accountingOf(i.entries, month),
+    plan: planOf(i, month),
   };
 }
