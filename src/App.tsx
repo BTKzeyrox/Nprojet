@@ -53,6 +53,7 @@ const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => 
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
 const InvoicesView = lazy(() => import('./views/admin/InvoicesView').then(m => ({ default: m.InvoicesView })));
 const PurchasingPage = lazy(() => import('./views/admin/PurchasingPage').then(m => ({ default: m.PurchasingPage })));
+const StoragePage = lazy(() => import('./views/admin/StoragePage').then(m => ({ default: m.StoragePage })));
 const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
@@ -447,6 +448,8 @@ export default function App() {
                 <ClientsPage />
               ) : activeView === 'purchasing' ? (
                 <PurchasingPage />
+              ) : activeView === 'storage' ? (
+                <StoragePage />
               ) : activeView === 'invoices' ? (
                 <InvoicesView />
               ) : activeView === 'stats' ? (

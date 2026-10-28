@@ -75,7 +75,7 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   const lowRows = stockRows(i.products, i.moves).filter(r => r.low);
   if (lowRows.length) {
     const names = lowRows.map(r => r.product.name);
-    out.push({ id: 'stock-low', level: lowRows.some(r => r.empty) ? 'danger' : 'warn', go: 'stats', tab: 'stock',
+    out.push({ id: 'stock-low', level: lowRows.some(r => r.empty) ? 'danger' : 'warn', go: 'storage',
       fr: `Stock bas : ${lowRows.length} produit${lowRows.length > 1 ? 's' : ''} (${list(names)}).`, en: `Low stock: ${lowRows.length} product${lowRows.length > 1 ? 's' : ''} (${list(names)}).` });
   }
 

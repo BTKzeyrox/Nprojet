@@ -40,7 +40,7 @@ ok(applyAcks([al], ig, '2026-11-03', 14).visible.length === 0 && applyAcks([al],
 
 // Pastilles
 const bad = menuBadges([A('team:a', 'team', 'watch'), A('team:b', 'team', 'urgent'), A('team:c', 'team', 'info'), A('clients:a', 'clients', 'info'), A('finance:a', 'finance', 'watch'), A('stock:a', 'stock', 'urgent')]);
-ok(bad.employees?.count === 2 && bad.employees?.urgent === true && !bad.clients && bad.stats?.count === 2, 'pastilles : « info » ne compte pas ; Équipe → Employés (2, urgent) ; Finances + Stock → Statistiques (2)');
+ok(bad.employees?.count === 2 && bad.employees?.urgent === true && !bad.clients && bad.stats?.count === 1 && bad.storage?.count === 1 && bad.storage?.urgent === true, 'pastilles : « info » ne compte pas ; Équipe → Employés (2, urgent) ; Finances → Statistiques (1) ; Stock → Stockage (1, urgent)');
 ok(allPagesCovered(), 'pastilles : toutes les pages surveillées ont une entrée de menu ou « aucune » écrite');
 ok(Object.values(MENU_ITEM_OF_PAGE).every(v => v === null || isKnownView(v)), 'pastilles : chaque entrée de menu visée existe');
 const sidebar = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');

@@ -35,6 +35,7 @@ import {
   Building2,
   Receipt,
   Truck,
+  Package,
   HeartPulse,
   Award,
   Table2,
@@ -116,6 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'invoices', label: 'Facturation', icon: Receipt },
           { id: 'accounting', label: 'Comptabilité', icon: BookOpen },
           { id: 'purchasing', label: 'Achats', icon: Truck },
+          ...(isAdmin ? [{ id: 'storage', label: 'Stockage', icon: Package }] : []),
           { id: 'performance', label: 'Performance', icon: BarChart3 },
           { id: 'stats', label: 'Statistiques', icon: TrendingUp, badge: alertCount > 0 ? String(alertCount) : undefined, tone: 'alert' as const },
         ]

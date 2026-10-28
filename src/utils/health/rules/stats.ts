@@ -114,7 +114,7 @@ export const stockValueDrop: HealthRule = {
       why_fr: `${ar(cur)} aujourd'hui, contre ${ar(cmp.baseline)} en général (médiane de ${cmp.periods} mois). Valeur = quantité × prix d'achat.`,
       why_en: `${ar(cur, true)} today, versus ${ar(cmp.baseline, true)} usually (median of ${cmp.periods} months). Value = quantity × purchase price.`,
       todo_fr: 'Vérifier si c\'est voulu (ventes, usage) ou s\'il manque des entrées.', todo_en: 'Check whether it is intended (sales, usage) or whether entries are missing.',
-      since: null, value: Math.round(cmp.baseline - cur), go: { view: 'stats', tab: 'stock' },
+      since: null, value: Math.round(cmp.baseline - cur), go: { view: 'storage' },
     } as HealthAlert];
   },
 };

@@ -176,15 +176,27 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Formules : SOMME, MOYENNE, MIN, MAX, NB, SI, ET, OU, ARRONDI, RECHERCHEV, SOMME.SI, NB.SI, AUJOURDHUI, JOURS, CONCAT, GAUCHE, DROITE et autres, en français ou en anglais.
 - **Dans le code** : `src/components/MySheets.tsx`
 
+### Stockage  `storage`
+- **Qui** : responsable
+- **À quoi ça sert** : Gérer tes produits : entrer le stock, voir les épuisés et les alertes, chercher un produit et ajouter sa photo.
+- **Comment l'utiliser** : 1. Nouveau produit : le nom et la quantité de départ suffisent ; le reste est sous « Plus de détails ». 2. Chercher par nom ou catégorie, puis filtrer Stock bas ou Épuisés. 3. −1 / +1 pour un mouvement rapide ; Entrée et Sortie pour une autre quantité.
+- **Règles** :
+  - Stockage est réservé à l'admin : le serveur refuse tout autre accès.
+  - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
+  - Import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
+  - La photo d'un produit est envoyée sur Cloudinary ; le serveur n'accepte que les adresses du site.
+- **Chiffres et formules** :
+  - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
+  - Quantité en stock : Entrées − sorties ± ajustements.
+- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockTab.tsx`
+
 ### Statistiques  `stats`
 - **Qui** : responsable
-- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances, stock et rapport du mois.
-- **Comment l'utiliser** : 1. Choisir l'onglet (Statistiques, Finances, Stock, Rapport) puis la période. 2. Saisir les entrées et dépenses dans l'onglet Finances. 3. Saisir les entrées, sorties et ajustements dans l'onglet Stock.
+- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances et rapport du mois.
+- **Comment l'utiliser** : 1. Choisir l'onglet (Statistiques, Finances, Rapport) puis la période. 2. Saisir les entrées et dépenses dans l'onglet Finances. 3. Lire le rapport du mois dans l'onglet Rapport.
 - **Règles** :
-  - Finances et Stock sont réservés à l'admin : le serveur refuse tout autre accès.
-  - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
+  - Finances est réservé à l'admin : le serveur refuse tout autre accès.
   - Les avances sont déjà dans les salaires : elles ne sont pas comptées deux fois.
-  - Stock : import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
   - Prévu contre réel (Finances, 6 mois) : dépenses prévues = total des budgets par catégorie ; revenus et paie prévus = deux montants mensuels du responsable ; le réel est calculé, jamais saisi.
   - Rapport automatique : arrêté, chaque semaine ou chaque mois, à une heure de Madagascar ; le serveur crée la fiche de la période finie et prévient. Aucun e-mail.
   - La copie figée du rapport est posée une seule fois, à la première ouverture. Une période manquée (serveur arrêté plus de 2 h) n'est pas rattrapée.
@@ -195,10 +207,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Dépenses : Dépenses saisies + salaires (les avances sont déjà dans les salaires).
   - Bénéfice : Encaissé − dépenses.
   - Marge : Bénéfice ÷ encaissé, en %. Vide si rien n'est encaissé.
-  - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
-  - Quantité en stock : Entrées − sorties ± ajustements.
   - Écart prévu contre réel : Revenus : réel − prévu (positif = mieux que prévu). Dépenses et paie : prévu − réel (négatif = plafond dépassé). « À surveiller » à 80 % du plafond ; « rien de prévu » quand le prévu vaut 0.
-- **Dans le code** : `src/views/admin/StatsPage.tsx`, `src/views/admin/FinanceTab.tsx`, `src/views/admin/StockTab.tsx`, `src/views/admin/ReportTab.tsx`
+- **Dans le code** : `src/views/admin/StatsPage.tsx`, `src/views/admin/FinanceTab.tsx`, `src/views/admin/ReportTab.tsx`
 
 ### Missions  `grid`
 - **Qui** : opérateur

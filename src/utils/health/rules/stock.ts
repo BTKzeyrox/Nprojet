@@ -5,7 +5,7 @@ import type { HealthAlert } from '../types';
 import { stockRows } from '../../stock';
 import { dayDiff, list, plural } from './common';
 
-const GO = { view: 'stats', tab: 'stock' };
+const GO = { view: 'storage' };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const negativeQty: HealthRule = {

@@ -5,7 +5,6 @@ import { useApp } from '../../context/AppContext';
 import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
 import { StatCard } from '../../components/StatCard';
 import { FinanceTab } from './FinanceTab';
-import { StockTab } from './StockTab';
 import { ReportTab } from './ReportTab';
 import { AutoReportCard } from './AutoReportCard';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
@@ -123,7 +122,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
 
       {/* Quatre onglets : les chiffres de l'activité, l'argent (paiements reçus, dépenses), le stock et le rapport du mois */}
       <div className="grid grid-cols-4 gap-1.5" role="tablist" aria-label={l === 'en' ? 'Section' : 'Rubrique'} {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
-        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['stock', 'Stock'], ['report', l === 'en' ? 'Report' : 'Rapport']] as [StatsTab, string][]).map(([id, label]) => (
+        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['report', l === 'en' ? 'Report' : 'Rapport']] as [StatsTab, string][]).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`min-h-[44px] rounded-lg text-xs sm:text-sm font-semibold border transition-colors px-0.5 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
             {label}
@@ -136,8 +135,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
           <ReportTab anchor={anchor} lang={l} />
           <AutoReportCard lang={l} />
         </>
-      ) : tab === 'stock' ? (
-        <StockTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} />
       ) : tab === 'finance' ? (
         <FinanceTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} salariesAr={ranges.isFuture ? 0 : stats.cur.earned} advancesAr={ranges.isFuture ? 0 : stats.cur.advances} />
       ) : (<>
