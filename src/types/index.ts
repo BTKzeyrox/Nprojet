@@ -440,6 +440,7 @@ export interface Product {
   buy_price_ar: number; // prix d'achat par unité
   sell_price_ar: number; // prix de vente par unité
   alert_threshold: number; // voyant rouge quand la quantité est à ce nombre ou en dessous (0 = pas d'alerte)
+  photo_url?: string; // photo du produit (Cloudinary), vide = pas de photo
   created_by?: string;
   created_at?: string;
   updated_at?: string;

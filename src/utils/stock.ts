@@ -7,10 +7,10 @@ export const MAX_QTY = 1_000_000_000;
 export const DEFAULT_UNIT = 'unité';
 export const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-export interface ProductDraft { name: string; category?: string; unit?: string; buy_price?: string | number; sell_price?: string | number; alert_threshold?: string | number }
-export type ProductError = 'name' | 'buy' | 'sell' | 'threshold';
+export interface ProductDraft { name: string; category?: string; unit?: string; buy_price?: string | number; sell_price?: string | number; alert_threshold?: string | number; photo_url?: string }
+export type ProductError = 'name' | 'buy' | 'sell' | 'threshold' | 'photo';
 export type ProductResult =
-  | { ok: true; clean: { name: string; category: string; unit: string; buy_price_ar: number; sell_price_ar: number; alert_threshold: number } }
+  | { ok: true; clean: { name: string; category: string; unit: string; buy_price_ar: number; sell_price_ar: number; alert_threshold: number; photo_url: string } }
   | { ok: false; error: ProductError };
 
 /** Vide = 0. Sinon un nombre ≥ 0. */
@@ -23,7 +23,9 @@ export function checkProductDraft(d: ProductDraft): ProductResult {
   if (!Number.isFinite(buy) || buy < 0 || buy > MAX_AMOUNT) return { ok: false, error: 'buy' };
   if (!Number.isFinite(sell) || sell < 0 || sell > MAX_AMOUNT) return { ok: false, error: 'sell' };
   if (!Number.isFinite(thr) || thr < 0 || thr > MAX_QTY) return { ok: false, error: 'threshold' };
-  return { ok: true, clean: { name, category: String(d.category || '').trim().slice(0, 40), unit: String(d.unit || '').trim().slice(0, 16) || DEFAULT_UNIT, buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2(thr) } };
+  const photo = String(d.photo_url || '').trim();
+  if (photo && (photo.length > 500 || !/^https:\/\//i.test(photo))) return { ok: false, error: 'photo' }; // le serveur vérifie en plus que l'adresse vient de notre Cloudinary
+  return { ok: true, clean: { name, category: String(d.category || '').trim().slice(0, 40), unit: String(d.unit || '').trim().slice(0, 16) || DEFAULT_UNIT, buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2(thr), photo_url: photo } };
 }
 
 export interface MoveDraft { product_id: string; type: StockMoveType; qty: string | number; date: string; note?: string; unit_cost?: string | number; supplier_id?: string }

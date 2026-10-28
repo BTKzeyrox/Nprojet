@@ -7,6 +7,7 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { supplierRanking, topPurchased } from '../../utils/purchasing';
+import { compressImageToDataUrl } from '../../utils/imageUtils';
 import { checkMoveDraft, purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
 import type { Product, StockMoveType } from '../../types';
 import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
@@ -15,7 +16,7 @@ import { monthTitle } from '../../utils/chartData';
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
-interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string }
+interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string; photo: string }
 type StockFilter = 'all' | 'low' | 'empty';
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean; supplier: string }
@@ -38,6 +39,8 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const [filter, setFilter] = useState<StockFilter>('all');
   const [sortBy, setSortBy] = useState<'name' | 'qty'>('name');
   const [added, setAdded] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [zoom, setZoom] = useState<{ url: string; name: string } | null>(null);
   useLockBodyScroll(!!pEdit || !!mEdit);
 
   const products = db.getProducts();
@@ -64,7 +67,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
 
   const errors: Record<string, [string, string]> = {
     name: ['Écris le nom du produit.', 'Enter the product name.'], buy: ['Prix d\'achat invalide.', 'Invalid purchase price.'], sell: ['Prix de vente invalide.', 'Invalid selling price.'],
-    threshold: ['Seuil d\'alerte invalide.', 'Invalid alert threshold.'], type: ['Type inconnu.', 'Unknown type.'],
+    photo: ['Photo refusée : renvoie-la.', 'Photo rejected: send it again.'], threshold: ['Seuil d\'alerte invalide.', 'Invalid alert threshold.'], type: ['Type inconnu.', 'Unknown type.'],
     qty: ['Entre une quantité (pas 0 ; une entrée et une sortie sont positives).', 'Enter a quantity (not 0; entries and exits are positive).'],
     date: ['Choisis une date valide.', 'Choose a valid date.'], cost: ['Prix payé invalide, ou à remplir pour créer la dépense.', 'Invalid price paid, or fill it in to create the expense.'],
     product: ['Ce produit n\'existe plus.', 'This product no longer exists.'], stock: ['Il n\'y a pas assez en stock pour cela.', 'There is not enough in stock for that.'],
@@ -72,11 +75,11 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
-  const newProduct = () => { setError(''); setAdded(''); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '', qty: '' }); };
-  const editProduct = (p: Product) => { setError(''); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '', qty: '' }); };
+  const newProduct = () => { setError(''); setAdded(''); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '', qty: '', photo: '' }); };
+  const editProduct = (p: Product) => { setError(''); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '', qty: '', photo: p.photo_url || '' }); };
   const saveProduct = (another = false) => {
     if (!pEdit) return;
-    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold };
+    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold, photo_url: pEdit.photo };
     if (pEdit.id) {
       const r = db.updateProduct(pEdit.id, draft);
       if (!r.success) { setError(say(r.error)); return; }
@@ -96,8 +99,18 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
       const m = db.addStockMove({ product_id: r.id, type: 'in', qty: startQty, date: today, note: t('Stock de départ', 'Starting stock') });
       if (!m.success) { setPEdit(null); setError(t('Produit créé, mais la quantité n\'a pas été ajoutée : utilise « Entrée ».', 'Product created, but the quantity was not added: use “Entry”.')); return; }
     }
-    if (another) { setAdded(pEdit.name.trim()); setError(''); setPEdit({ name: '', category: pEdit.category, unit: pEdit.unit, buy: '', sell: '', threshold: '', qty: '' }); return; }
+    if (another) { setAdded(pEdit.name.trim()); setError(''); setPEdit({ name: '', category: pEdit.category, unit: pEdit.unit, buy: '', sell: '', threshold: '', qty: '', photo: '' }); return; }
     setPEdit(null);
+  };
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || !pEdit) return;
+    setError(''); setPhotoBusy(true);
+    try {
+      const small = await compressImageToDataUrl(file, 640);
+      const url = await db.uploadFile(small);
+      if (!url) { setError(t('Photo non envoyée. Vérifie la connexion et réessaie.', 'Photo not sent. Check the connection and try again.')); return; }
+      setPEdit(cur => cur ? { ...cur, photo: url } : cur);
+    } catch { setError(t('Image illisible.', 'Unreadable image.')); } finally { setPhotoBusy(false); }
   };
   const quickMove = (p: Product, type: 'in' | 'out') => { setError(''); const r = db.addStockMove({ product_id: p.id, type, qty: 1, date: today, note: '' }); if (!r.success) setError(say(r.error)); };
   const removeProduct = (id: string) => { const r = db.deleteProduct(id); setConfirmId(null); if (!r.success) setError(say(r.error)); };
@@ -175,6 +188,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
                 <li key={p.id} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <span aria-hidden="true" className={`w-3 h-3 rounded-full flex-shrink-0 ${r.low ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                    {p.photo_url && <button type="button" onClick={() => setZoom({ url: p.photo_url || '', name: p.name })} aria-label={t(`Agrandir la photo de ${p.name}`, `Enlarge photo of ${p.name}`)} className="flex-shrink-0"><img src={p.photo_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-slate-700" /></button>}
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-white truncate">{p.name}{p.category ? <span className="text-slate-500"> · {p.category}</span> : null}</div>
                       <div className="text-[11px] text-slate-400 truncate">
@@ -295,6 +309,16 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
             <label className="block text-xs text-slate-400">{t('Nom', 'Name')}
               <input autoFocus value={pEdit.name} maxLength={80} onChange={e => setPEdit({ ...pEdit, name: e.target.value })} className={`${field} mt-1`} />
             </label>
+            <div className="flex items-center gap-3">
+              {pEdit.photo ? <img src={pEdit.photo} alt="" className="w-16 h-16 rounded-lg object-cover border border-slate-700" /> : <div aria-hidden="true" className="w-16 h-16 rounded-lg border border-dashed border-slate-700" />}
+              <div className="flex-1 flex flex-wrap gap-2">
+                <label className={`min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-200 text-sm font-semibold flex items-center cursor-pointer ${photoBusy ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {photoBusy ? t('Envoi…', 'Sending…') : pEdit.photo ? t('Changer la photo', 'Change photo') : t('Ajouter une photo', 'Add a photo')}
+                  <input type="file" accept="image/*" className="sr-only" disabled={photoBusy} onChange={e => { void pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+                </label>
+                {pEdit.photo && <button type="button" onClick={() => setPEdit({ ...pEdit, photo: '' })} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm">{t('Retirer', 'Remove')}</button>}
+              </div>
+            </div>
             {!pEdit.id && (
               <label className="block text-xs text-slate-400">{t('Quantité en stock maintenant (facultatif)', 'Quantity in stock now (optional)')}
                 <input inputMode="decimal" value={pEdit.qty} onChange={e => setPEdit({ ...pEdit, qty: e.target.value })} className={`${field} mt-1`} placeholder="0" />
@@ -385,6 +409,13 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
           </div>
         </div>,
         document.body,
+      )}
+      {zoom && (
+        <div role="dialog" aria-modal="true" aria-label={zoom.name} onClick={() => setZoom(null)} className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 gap-3">
+          <img src={zoom.url} alt={zoom.name} className="max-w-full max-h-[75vh] rounded-lg" />
+          <div className="text-white text-sm">{zoom.name}</div>
+          <button type="button" onClick={() => setZoom(null)} className="min-h-[44px] px-4 rounded-lg bg-slate-800 text-white text-sm font-semibold">{t('Fermer', 'Close')}</button>
+        </div>
       )}
     </div>
   );

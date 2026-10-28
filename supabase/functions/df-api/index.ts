@@ -145,10 +145,13 @@ function cleanProduct(rec: any, existing: any, meId: string, now: string): { ok:
   if (!Number.isFinite(sell) || sell < 0 || sell > STOCK_MAX_MONEY) return { ok: false, reason: "sell" };
   const thr = rec.alert_threshold === undefined || rec.alert_threshold === null || rec.alert_threshold === "" ? 0 : Number(rec.alert_threshold);
   if (!Number.isFinite(thr) || thr < 0 || thr > STOCK_MAX_QTY) return { ok: false, reason: "threshold" };
+  // Photo : vide, ou une adresse envoyée par notre serveur (Cloudinary du site, ou à défaut le stockage Supabase du site)
+  const photo = typeof rec.photo_url === "string" ? rec.photo_url.trim() : "";
+  if (photo && (photo.length > 500 || !(photo.startsWith(CLD_PREFIX) || photo.includes(`/object/public/${BUCKET}/`)))) return { ok: false, reason: "photo" };
   return {
     ok: true,
     save: {
-      id: rec.id, name, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
+      id: rec.id, name, photo_url: photo, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
       buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2s(thr),
       created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
     },
