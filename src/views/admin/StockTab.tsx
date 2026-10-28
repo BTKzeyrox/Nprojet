@@ -15,9 +15,9 @@ import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
-interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
+interface Props { range: { start: string; end: string }; lang: 'fr' | 'en'; initialFilter?: StockFilter }
 interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string; photo: string }
-type StockFilter = 'all' | 'low' | 'empty';
+export type StockFilter = 'all' | 'low' | 'empty';
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean; supplier: string }
 
@@ -26,7 +26,7 @@ const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockTab: React.FC<Props> = ({ range, lang }) => {
+export const StockTab: React.FC<Props> = ({ range, lang, initialFilter }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [pEdit, setPEdit] = useState<ProductEditor | null>(null);
   const [importing, setImporting] = useState(false);
@@ -36,7 +36,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const [confirmMove, setConfirmMove] = useState<string | null>(null);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<StockFilter>('all');
+  const [filter, setFilter] = useState<StockFilter>(initialFilter ?? 'all');
   const [sortBy, setSortBy] = useState<'name' | 'qty'>('name');
   const [added, setAdded] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);

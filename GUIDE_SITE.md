@@ -178,8 +178,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 
 ### Stockage  `storage`
 - **Qui** : responsable
-- **À quoi ça sert** : Gérer tes produits : entrer le stock, voir les épuisés et les alertes, chercher un produit et ajouter sa photo.
-- **Comment l'utiliser** : 1. Nouveau produit : le nom et la quantité de départ suffisent ; le reste est sous « Plus de détails ». 2. Chercher par nom ou catégorie, puis filtrer Stock bas ou Épuisés. 3. −1 / +1 pour un mouvement rapide ; Entrée et Sortie pour une autre quantité.
+- **À quoi ça sert** : Voir l'essentiel au Tableau de bord, puis gérer tes produits : entrer le stock, chercher un produit, ajouter sa photo.
+- **Comment l'utiliser** : 1. Tableau de bord : chiffres clés, alertes, rupture proche ; toucher Épuisés ou Stock bas ouvre la liste. 2. Produits : nouveau produit = nom + quantité de départ ; chercher, filtrer, −1 / +1 ou Entrée / Sortie. 3. Chaque photo se touche pour l'agrandir ; « Plus de détails » garde catégorie, unité, prix et seuil.
 - **Règles** :
   - Stockage est réservé à l'admin : le serveur refuse tout autre accès.
   - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
@@ -188,7 +188,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Chiffres et formules** :
   - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
   - Quantité en stock : Entrées − sorties ± ajustements.
-- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockTab.tsx`
+- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockDashboard.tsx`, `src/views/admin/StockTab.tsx`
 
 ### Statistiques  `stats`
 - **Qui** : responsable
