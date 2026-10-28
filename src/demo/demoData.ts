@@ -343,7 +343,10 @@ const DEMO_HR: Record<string, HrFile> = {
 /** Demandes de congé inventées : une acceptée à venir, une maladie passée, une en attente, une refusée, un congé en cours. */
 function buildDemoLeaves(): Leave[] {
   const mk = (id: string, emp: string, name: string, type: Leave['type'], from: number, len: number, status: Leave['status'], extra: Partial<Leave> = {}): Leave => {
-    const start = ymd(daysAgo(-from)), end = ymd(daysAgo(-(from + len - 1)));
+    // Le premier jour d'un congé tombe toujours un jour ouvré (lundi à vendredi) : un congé « grippe » du samedi au dimanche aurait 0 jour ouvré selon la date du jour
+    let first = from;
+    while ([0, 6].includes(new Date(ymd(daysAgo(-first)) + 'T00:00:00Z').getUTCDay())) first += 1;
+    const start = ymd(daysAgo(-first)), end = ymd(daysAgo(-(first + len - 1)));
     const at = iso(daysAgo(Math.max(from, 0) + 3), 10);
     return { id, employee_id: emp, employee_name: name, type, start_date: start, end_date: end, days: workingDays(start, end, 5), status, created_by: emp, created_at: at, updated_at: at, ...extra };
   };

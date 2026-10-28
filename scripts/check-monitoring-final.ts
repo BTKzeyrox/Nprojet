@@ -32,8 +32,11 @@ ok(sev.has('watch') && sev.size >= 2, `démo : plusieurs gravités visibles (${[
 const states = pageStates(base.alerts, HEALTH_PAGES);
 const stateSet = new Set(Object.values(states));
 ok(stateSet.has('ok') && (stateSet.has('watch') || stateSet.has('urgent')), `démo : des pages « OK » et des pages avec alerte (${[...stateSet].join(', ')})`);
-const strict = runHealth(mk({ thresholds: Object.fromEntries(keys.map(k => [k, 1])) as any }), ALL_RULES).alerts.length;
-const lax = runHealth(mk({ thresholds: HEALTH_THRESHOLDS_MAX }), ALL_RULES).alerts.length;
+// « Mission terminée en moins de X minutes (trop rapide) » va dans le sens CONTRAIRE des autres seuils : plus X est grand, plus il y a d'alertes.
+// Pour « très strict » il faut donc la valeur MAXIMALE, et pour « très large » la valeur MINIMALE (1).
+const INVERSE = new Set<string>(['min_duration_minutes']);
+const strict = runHealth(mk({ thresholds: Object.fromEntries(keys.map(k => [k, INVERSE.has(k) ? (HEALTH_THRESHOLDS_MAX as any)[k] : 1])) as any }), ALL_RULES).alerts.length;
+const lax = runHealth(mk({ thresholds: Object.fromEntries(keys.map(k => [k, INVERSE.has(k) ? 1 : (HEALTH_THRESHOLDS_MAX as any)[k]])) as any }), ALL_RULES).alerts.length;
 ok(strict >= base.alerts.length && base.alerts.length >= lax && strict > lax, `seuils : très stricts (${strict}) ≥ départ (${base.alerts.length}) ≥ très larges (${lax}) ; le réglage change bien le résultat`);
 
 // ---- vitesse avec 2 ans de données ----

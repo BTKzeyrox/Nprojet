@@ -42,7 +42,6 @@ import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { MyPayroll, AdvanceRoomInfo, useAdvanceRoom } from '../../components/MyPayroll';
 import { AdvPayTabs } from '../../components/AdvPayTabs';
 import { compressProofImage } from '../../utils/imageUtils';
-import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
@@ -594,7 +593,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>Missions disponibles ({AVAILABLE_CLIENT_CONTRACTS.length})</span>
+                <span>Missions disponibles ({db.getContracts().length})</span>
               </button>
 
               <button

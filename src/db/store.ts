@@ -58,7 +58,6 @@ import {
   Invoice,
   NewsAttachment,
 } from '../types';
-import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 import { clientPriceForContract } from '../utils/clientPrice';
 
 const TOKEN_KEY = 'df_session_token_v2';
@@ -584,12 +583,8 @@ export class AppStore {
       }
     }
 
-    // Premier démarrage : l'admin remplit les 20 missions
-    if (r.data.me?.role === 'admin' && this.contracts.length === 0 && (cols.contracts?.ids || []).length === 0) {
-      this.contracts = [...AVAILABLE_CLIENT_CONTRACTS];
-      this.notify();
-      changedAny = true;
-    }
+    // Une liste de missions VIDE reste vide : le site ne recrée plus tout seul les 10 missions d'exemple quand l'admin se connecte
+    // (ça annulait le nettoyage de la vraie base, M18.2, à chaque connexion). C'est l'admin qui crée ses missions (ou la simulation, M18.5).
 
     const me = r.data.me ? this.users.find(u => u.id === r.data.me.id) || r.data.me : null;
     if (me) {
