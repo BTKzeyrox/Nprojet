@@ -44,7 +44,6 @@ export const BackupsSection: React.FC = () => {
     setBusy(false);
     if (!r.ok) return setMsg({ text: r.error || 'La restauration a échoué.', ok: false });
     closeRestore();
-    if (db.isDemo()) return setMsg({ text: 'Mode démo : restauration simulée, rien n\'a changé.', ok: true });
     setMsg({ text: 'Sauvegarde restaurée. Une sauvegarde de sécurité a été prise juste avant. Rechargement…', ok: true });
     setTimeout(() => window.location.reload(), 1500);
   };
@@ -142,7 +141,7 @@ export const BackupsSection: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <button type="button" disabled={busy} onClick={exportAll} className="min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
-        {!db.isDemo() && <label className={`min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}><Database className="w-4 h-4" /> Importer un fichier d'export<input type="file" accept=".json,application/json" className="sr-only" onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} /></label>}
+        {<label className={`min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}><Database className="w-4 h-4" /> Importer un fichier d'export<input type="file" accept=".json,application/json" className="sr-only" onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} /></label>}
       </div>
 
       {rows && rows.length > 0 && (

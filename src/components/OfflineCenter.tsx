@@ -118,7 +118,7 @@ export const OfflineCenterView: React.FC<{ tab: 'pending' | 'review'; onTab: (t:
                 <button type="button" onClick={() => cancel(i.col, i.id)} className={`${btn} border-slate-600 text-slate-200`}><Undo2 className="w-3.5 h-3.5" />{t('Annuler la modification', 'Cancel the change')}</button>
               </div>
             ))}
-            {!db.isDemo() && un.count > 0 && <button type="button" onClick={() => db.retryNow()} className={`${btn} bg-blue-600 border-blue-500 text-white`}><RotateCcw className="w-3.5 h-3.5" />{t('Réessayer maintenant', 'Try now')}</button>}
+            {un.count > 0 && <button type="button" onClick={() => db.retryNow()} className={`${btn} bg-blue-600 border-blue-500 text-white`}><RotateCcw className="w-3.5 h-3.5" />{t('Réessayer maintenant', 'Try now')}</button>}
           </div>
         )}
 

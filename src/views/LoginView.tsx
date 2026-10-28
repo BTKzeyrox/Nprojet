@@ -13,7 +13,6 @@ import {
   Phone,
   ArrowLeft,
   CheckCircle2,
-  FlaskConical,
 } from 'lucide-react';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { db } from '../db/store';
@@ -133,16 +132,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
       document.removeEventListener('focusin', onFocus);
       document.removeEventListener('focusout', onFocus);
     };
-  }, []);
-
-  // Démo sans compte : données inventées, tout se passe dans le navigateur
-  const [demoChoice, setDemoChoice] = useState(false);
-  const startDemo = (role: 'admin' | 'employee') => onLoginSuccess(db.enterDemo(role));
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('demo');
-    if (q === 'admin' || q === 'employee') startDemo(q);
-    else if (q) setDemoChoice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Double étape (M16.4) : le serveur demande un code après le bon mot de passe
@@ -280,21 +269,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   )}
                 </button>
               </form>
-              <div className="mt-4">
-                {!demoChoice ? (
-                  <button type="button" onClick={() => setDemoChoice(true)} className="w-full min-h-[48px] rounded-full border-2 font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2" style={{ borderColor: isLight ? '#2563eb' : '#60a5fa', color: isLight ? '#2563eb' : '#93c5fd' }}>
-                    <FlaskConical className="w-4 h-4" /> Voir la démo, sans compte
-                  </button>
-                ) : (
-                  <div className="rounded-2xl border p-3 space-y-2" style={{ borderColor: C.line }}>
-                    <p className="text-[13px] text-center" style={{ color: C.sub }}>Données fictives, rien n'est enregistré. Voir le site en tant que :</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => startDemo('admin')} className="min-h-[44px] rounded-full font-bold text-sm text-white cursor-pointer" style={{ background: btnGrad }}>Responsable</button>
-                      <button type="button" onClick={() => startDemo('employee')} className="min-h-[44px] rounded-full font-bold text-sm text-white cursor-pointer" style={{ background: btnGrad }}>Opérateur</button>
-                    </div>
-                  </div>
-                )}
-              </div>
               <div className="mt-5 pt-4 border-t text-center text-[14px]" style={{ borderColor: C.line }}>
                 <span style={{ color: C.sub }}>Pas encore de compte ?</span>{' '}
                 <button type="button" onClick={() => setSignupOpen(true)} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>

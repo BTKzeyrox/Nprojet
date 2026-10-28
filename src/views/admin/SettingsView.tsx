@@ -71,7 +71,6 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'company' | 'performance' | 'data'>('general');
-  const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Si les réglages changent ailleurs (autre appareil), on les recharge tant qu'on n'a rien modifié
@@ -173,7 +172,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <FontSizePicker />
       </section>
 
-      {!db.isDemo() && <NotificationsCard />}
+      {<NotificationsCard />}
       <OfflineCard />
 
       <TwoStepCard />
@@ -245,13 +244,13 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'general' && <ModeSwitchSection />}
-      {tab === 'general' && !db.isDemo() && <NotificationsCard />}
+      {tab === 'general' && <NotificationsCard />}
       {tab === 'general' && <OfflineCard />}
       {tab === 'general' && <TwoStepCard />}
       {tab === 'general' && <TourReplayCard />}
-      {tab === 'general' && !db.isDemo() && <SignupSettings />}
+      {tab === 'general' && <SignupSettings />}
       {tab === 'general' && <WatchSettingsSection />}
-      {tab === 'general' && !db.isDemo() && <AiSettingsSection />}
+      {tab === 'general' && <AiSettingsSection />}
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
@@ -522,39 +521,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       </section>
       )}
 
-      {tab === 'data' && (
-      <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Données de démonstration</h3>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
-          Les sessions et les demandes d'avance de démonstration comptent dans la paie et les totaux. Les comptes des opérateurs ne sont pas supprimés.
-        </p>
-        <button
-          type="button"
-          onClick={() =>
-            askConfirm({
-              title: 'Supprimer les données de démonstration ?',
-              message: 'Toutes les sessions et avances de démonstration seront supprimées. Cette action ne peut pas être annulée.',
-              confirmLabel: 'Supprimer',
-              danger: true,
-              onConfirm: () => {
-                const n = db.removeDemoData();
-                setDemoMsg(n > 0 ? `${n} éléments de démonstration supprimés.` : 'Aucune donnée de démonstration à supprimer.');
-              },
-            })
-          }
-          className="w-full px-4 py-2.5 rounded-full bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 font-semibold text-sm"
-        >
-          Supprimer les données de démonstration
-        </button>
-        {demoMsg && <div className="text-sm text-emerald-300">{demoMsg}</div>}
-      </section>
-      )}
-
       {/* Démo : sauvegardes, restauration, remise à zéro et journal d'audit sont cachés (rien de réel à sauvegarder ni à effacer) */}
-      {tab === 'data' && !db.isDemo() && <BackupsSection />}
-      {tab === 'data' && !db.isDemo() && <AuditSection lang={lang} />}
+      {tab === 'data' && <BackupsSection />}
+      {tab === 'data' && <AuditSection lang={lang} />}
 
-      {!db.isDemo() && <RestoreSection />}
+      {<RestoreSection />}
 
       <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer

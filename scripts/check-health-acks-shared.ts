@@ -45,7 +45,7 @@ ok(/"mission_templates", "budgets", "health_acks"\]/.test(src), 'serveur : jamai
 ok(/AUDIT_SETTINGS_SKIP = \[[^\]]*"health_acks"/.test(src), 'serveur : pas de ligne d\'audit à chaque « Vérifié »');
 ok(/applyHealthAcks\(toSave, rec, existing\)/.test(src), 'serveur : la vérification est appelée à chaque écriture des réglages');
 const hd = fs.readFileSync('src/utils/healthDb.ts', 'utf8');
-ok(/health_acks: list/.test(hd) && /cleanAckList/.test(hd) && /!db\.isDemo\(\)/.test(hd), 'site : écrit dans les réglages (jamais en démo), lit la liste vérifiée');
+ok(/health_acks: list/.test(hd) && /cleanAckList/.test(hd) && !/isDemo/.test(hd), 'site : écrit dans les réglages, lit la liste vérifiée');
 ok(/mergedKey/.test(hd) && /mergeAcks\(shared \|\| \[\], local\)/.test(hd), 'site : les marques déjà gardées sur l\'appareil sont reprises une seule fois');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);

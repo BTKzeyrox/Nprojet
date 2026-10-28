@@ -19,15 +19,14 @@ const emit = () => { dirty = true; listeners.forEach(l => { try { l(); } catch {
 export const subscribeHealth = (l: () => void): (() => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 
 const adminId = (): string => db.getCurrentUser()?.id || 'admin';
-// Marques « Ignorer / Vérifié » : partagées entre appareils dans les réglages du site (`health_acks`, revérifiées par le serveur). Copie locale = secours et mode démo.
+// Marques « Ignorer / Vérifié » : partagées entre appareils dans les réglages du site (`health_acks`, revérifiées par le serveur). Copie locale = secours.
 // Première fois sur un appareil : ses anciennes marques locales sont réunies à celles du site (la plus récente gagne), puis ajoutées au site.
 const sharedAcks = (): HealthAck[] | null => cleanAckList((db.getSettings() as { health_acks?: unknown }).health_acks);
 const mergedKey = (id: string) => `df_health_acks_merged_${id}`;
 const wasMerged = (id: string): boolean => { try { return localStorage.getItem(mergedKey(id)) === '1'; } catch { return true; } };
-const writeShared = (list: HealthAck[]): void => { if (!db.isDemo()) db.updateSettings({ health_acks: list } as never); };
+const writeShared = (list: HealthAck[]): void => { db.updateSettings({ health_acks: list } as never); };
 const acks = (): HealthAck[] => {
   const id = adminId(), local = loadAcks(id), shared = sharedAcks();
-  if (db.isDemo()) return local;
   if (!wasMerged(id)) {
     const merged = mergeAcks(shared || [], local);
     try { localStorage.setItem(mergedKey(id), '1'); } catch { /* stockage indisponible : on réessaiera */ }

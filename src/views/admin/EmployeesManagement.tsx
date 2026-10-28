@@ -212,12 +212,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       setAddUserError('Identifiant manquant.');
       return;
     }
-    const demoMode = db.isDemo(); // démo : le champ mot de passe est caché, un mot de passe inventé est utilisé
-    if (!demoMode && !newPassword) {
+    if (!newPassword) {
       setAddUserError('Mot de passe manquant.');
       return;
     }
-    if (!demoMode && newPassword.length < 6) {
+    if (newPassword.length < 6) {
       setAddUserError('Le mot de passe doit avoir au moins 6 caractères.');
       return;
     }
@@ -240,7 +239,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       status: 'active',
       avatar_url: '',
       performance_badge: 'Standard',
-    }, demoMode ? 'demo-password' : newPassword);
+    }, newPassword);
 
     if (!created.success) {
       setAddUserError(created.error || 'Création impossible.');
@@ -829,7 +828,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
-              {!db.isDemo() && <div>
+              {<div>
                 <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe (optionnel)</label>
                 <input
                   type="text"
@@ -843,7 +842,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>}
 
-              {!db.isDemo() && editingUser && editingUser.role === 'accountant' && (
+              {editingUser && editingUser.role === 'accountant' && (
                 <div className="rounded-lg border border-slate-700 p-2 space-y-1">
                   <p className="text-slate-300 uppercase">Sécurité en deux étapes</p>
                   <p className="text-[11px] text-slate-400">Téléphone perdu et plus de code de secours : remets la double étape à zéro. Il pourra la réactiver ensuite.</p>
@@ -940,7 +939,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
-              {!db.isDemo() && <div>
+              {<div>
                 <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
                 <input
                   type="text"

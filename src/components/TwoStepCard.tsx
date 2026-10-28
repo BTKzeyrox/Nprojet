@@ -29,9 +29,9 @@ export const TwoStepCard: React.FC = () => {
     const r = await db.totpStatus();
     if (r.ok) setStatus({ eligible: !!r.data.eligible, enabled: !!r.data.enabled, backup_left: Number(r.data.backup_left) || 0 });
   };
-  useEffect(() => { if (!db.isDemo()) void load(); }, []);
+  useEffect(() => { void load(); }, []);
 
-  if (db.isDemo() || !status?.eligible) return null;
+  if (!status?.eligible) return null;
   const reset = () => { setStep('idle'); setPw(''); setCode(''); setErr(''); setSecret(''); setUri(''); };
   const run = async (f: () => Promise<void>) => { setBusy(true); setErr(''); try { await f(); } finally { setBusy(false); } };
 

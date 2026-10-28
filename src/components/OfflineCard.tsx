@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CloudOff, FlaskConical } from 'lucide-react';
+import { CloudOff } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { copyLine, pick } from '../utils/offlineText';
@@ -20,7 +20,6 @@ export const OfflineCard: React.FC = () => {
 
   const st = db.getOfflineStatus();
   const un = db.getUnsent();
-  const demo = db.isDemo();
   const btn = 'px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer disabled:opacity-50';
   const operator = st.role === 'employee';
   const broken = st.problem === 'corrupt' || st.problem === 'queue_corrupt';
@@ -43,14 +42,7 @@ export const OfflineCard: React.FC = () => {
       <h3 className="font-tactical font-bold text-white flex items-center gap-2"><CloudOff className="w-4 h-4 text-emerald-400" />{t('Travail hors ligne', 'Offline work')}</h3>
       <p className="text-[11px] text-slate-400">{t('Quand le réseau est coupé, tu continues à travailler. Tout est gardé sur cet appareil, puis envoyé une seule fois au retour du réseau.', 'When the network is down you keep working. Everything is kept on this device, then sent once when the network returns.')}</p>
 
-      {demo ? (
-        <div className="space-y-2">
-          <p className="text-xs text-amber-300 flex items-start gap-1.5"><FlaskConical className="w-3.5 h-3.5 shrink-0 mt-0.5" />{t('Mode démo : rien n\'est gardé sur l\'appareil. Mais tu peux simuler une coupure pour voir comment ça marche.', 'Demo mode: nothing is kept on the device. But you can simulate a cut to see how it works.')}</p>
-          <button type="button" onClick={() => db.setDemoCut(!db.isDemoCut())} className={`${btn} ${db.isDemoCut() ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-amber-600 border-amber-500 text-white'}`} data-testid="demo-cut-button">
-            {db.isDemoCut() ? t('Rétablir le réseau', 'Restore the network') : t('Simuler une coupure du réseau', 'Simulate a network cut')}
-          </button>
-        </div>
-      ) : (
+      {(
         <>
           <p className="text-sm text-slate-200" data-testid="offline-copy-line">{copyLine(st, lang)}</p>
           {st.can_offline && st.copy_saved_at && !st.locked && <p className="text-[11px] text-slate-400">{t('Dernière copie des données : ', 'Last copy of the data: ')}{new Date(st.copy_saved_at).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>}

@@ -1713,9 +1713,10 @@ export class AppStore {
     }
   }
 
-  // ----- Mode démo : tout se passe dans le navigateur, avec des données inventées (rien n'est envoyé au serveur) -----
+  // ----- Moteur de démo : RÉSERVÉ AUX TESTS (M18.3). Le site n'a plus de mode démo : aucun bouton, aucun lien ; en production cette méthode refuse. -----
   public isDemo(): boolean { return this.demo; }
   public enterDemo(role: 'admin' | 'employee'): User {
+    if ((import.meta as any).env?.PROD) throw new Error('Le mode démo n\'existe plus sur le site (réservé aux tests).');
     this.stopPolling();
     this.resetLocal();
     this.token = null;
@@ -1828,21 +1829,6 @@ export class AppStore {
   }
 
   // Réglages généraux (valeurs par défaut si l'admin n'a rien changé)
-  // Admin : supprime les sessions et avances de démonstration, puis recalcule les totaux des opérateurs
-  public removeDemoData(): number {
-    const before = this.posts.length + this.advanceRequests.length;
-    this.posts = this.posts.filter(p => !p.demo);
-    this.advanceRequests = this.advanceRequests.filter(a => !a.demo);
-    this.users.forEach(u => {
-      if (u.role !== 'employee') return;
-      const done = this.posts.filter(p => p.employee_id === u.id && p.status === 'completed');
-      u.total_score_boosted = done.reduce((a, p) => a + Math.max(0, (p.final_score ?? p.current_score) - p.initial_score), 0);
-      u.total_earnings_ar = done.reduce((a, p) => a + (p.calculated_ar || 0), 0);
-      u.pending_advance_ar = this.advanceRequests.filter(a => a.employee_id === u.id && a.status === 'pending').reduce((x, a) => x + a.amount_ar, 0);
-    });
-    this.notify();
-    return before - (this.posts.length + this.advanceRequests.length);
-  }
 
   // Paie : appel générique aux routes payroll-* du serveur
   public async payrollCall(route: string, body: unknown = {}): Promise<{ success: boolean; data?: any; error?: string }> {

@@ -1,7 +1,7 @@
 // Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur.
 import { db } from '../db/store';
 
-export type PushState = 'unsupported' | 'ios_install' | 'denied' | 'off' | 'on' | 'demo';
+export type PushState = 'unsupported' | 'ios_install' | 'denied' | 'off' | 'on';
 
 const isIos = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = () => typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true);
@@ -27,7 +27,6 @@ async function registration(): Promise<ServiceWorkerRegistration> {
 
 /** État actuel sur cet appareil. */
 export async function pushState(): Promise<PushState> {
-  if (db.isDemo()) return 'demo';
   const sup = pushSupport();
   if (sup !== 'ok') return sup;
   if (Notification.permission === 'denied') return 'denied';

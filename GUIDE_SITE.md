@@ -15,7 +15,7 @@
 - **Langues** : français et anglais. Le français est la source. L'anglais vient soit de `t(fr, en)` écrit dans la page (pages récentes, marquées `data-notranslate` pour que la traduction automatique n'y touche pas), soit de la traduction automatique `src/utils/enTranslate.ts` qui s'appuie sur le dictionnaire `src/utils/enDict.json`. Le chinois n'existe plus dans le code (`HANDOVER.md` en parle encore : cette partie est périmée).
 - **Thème** : clair et sombre, tailles de texte réglables sur l'appareil.
 - **Coût** : tout tourne sur des offres gratuites (Vercel pour le site, Supabase pour la base et le serveur, Cloudinary pour les photos). Voir §9 pour ce qui change en usage commercial.
-- **Mode démo** : le site s'ouvre avec des chiffres inventés, sans aucun appel au serveur. La démo cache ce qui est simulé (IA externe, notifications téléphone, mot de passe, sauvegardes).
+- **Plus de mode démo (M18.3, 2026-10-28)** : plus de bouton « Voir la démo », plus de lien `?demo=`, plus de bandeau, plus de suppression des données de démonstration dans les Réglages. Le site ne montre que la vraie base. Les données inventées servent seulement aux essais automatiques (`src/demo/demoData.ts`).
 
 Ce qui est fait : les modules **M0 à M12** du plan (`TODO_MODULES.md`), la page Direction **M8** (mise à jour avec la comptabilité et le prévu contre réel), le mode hors ligne **M13** (code et serveur jusqu'à M13.7), la comptabilité **M14**, le management **M15** (sauf M15.7, plusieurs sites) et **M16** (code). Ce qui reste : tes essais (M12.6, M13.8, M14.10, M15.9, M16.8), **M17** (étude seulement) et **M18** (retrait de la démo : M18.1 et M18.2 faites, le reste attend ton « GO »).
 
@@ -408,7 +408,7 @@ Tables df_* (Supabase Postgres, aucun accès public : tout passe par df-api)
 - **Lecture** : l'action `state` renvoie, collection par collection, ce qui a changé et la liste des identifiants. Le site la rappelle toutes les ~20 s par personne connectée (quota gratuit de Supabase : environ 500 000 appels par mois).
 - **Écriture** : le site modifie sa copie locale (`store.ts`), puis l'action `sync` envoie les changements. Pour chaque collection, le serveur applique sa fonction `clean…` (ex. `cleanClient`, `cleanLeave`, `cleanReview`) qui **ne fait jamais confiance au navigateur** et peut **refuser** (raison renvoyée, texte clair côté site).
 - **Chiffres officiels** (numéro de facture, de reçu) : attribués par le serveur par des fonctions SQL, jamais par le navigateur.
-- **Démo** : `db.enterDemo('admin' | 'employee')` charge `src/demo/demoData.ts`, rien n'est envoyé.
+- **Moteur de démo réservé aux essais** : `db.enterDemo('admin' | 'employee')` charge `src/demo/demoData.ts` pour les tests ; en production (`import.meta.env.PROD`) elle refuse. Aucun écran du site ne l'appelle (contrôle `check:no-demo`).
 - **Règle d'or du code** : les règles sont écrites **une fois, pures** (sans écran ni serveur) dans `src/utils/`, puis **copiées à l'identique** dans un bloc `BEGIN … / END …` de `df-api`. Un script `check:…` compare les deux copies et refuse toute différence.
 - **Mots de passe** : `scrypt` (`scrypt$sel$hash`), jamais en clair. **Photos** : Cloudinary. **PDF et textes** : bucket `df-files`.
 - **Sauvegardes** : `select public.df_take_backup();` (aussi chaque nuit, toutes les tables `df_*`), restauration depuis la page Réglages (admin).
@@ -667,7 +667,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 2. Migration `supabase/migrations/` (nom `AAAAMMJJ_create_df_xxx.sql`) : `id text primary key`, `data jsonb`, `updated_at`, **RLS activée, aucun droit pour `anon` ni `authenticated`**, retour en arrière écrit en commentaire. Modèle : `supabase/migrations/20261023_create_df_leaves.sql`.
 3. Serveur : entrée dans `T`, bloc `BEGIN … / END …` avec la fonction `clean…`, filtre de lecture dans `state` (qui voit quoi), branche dans `sync` (qui écrit quoi), suppression avec le compte (`purgeEmployee`) si les données sont personnelles.
 4. Site : `COLS`, `SORTERS`, `emptySynced`, champ privé, `arr`/`setArr` et méthodes dans `src/db/store.ts`, type dans `src/types/index.ts` ou dans le fichier de règles.
-5. Démo : données inventées dans `src/demo/demoData.ts`, filtrées par rôle comme le fait le serveur.
+5. Données d'essai : inventées dans `src/demo/demoData.ts`, utilisées par les tests seulement (plus de démo sur le site).
 6. Contrôle : `scripts/check-….ts` compare la copie du serveur à celle du site et vérifie chaque protection.
 
 **Ajouter une page** : écran dans `src/views/…`, import paresseux et branche dans `src/App.tsx` (partie admin ou opérateur), entrée dans `src/components/Sidebar.tsx`, **fiche dans `src/utils/siteKnowledge.ts`** (mode d'emploi en **3 lignes** de 130 caractères au plus, règles de 200 au plus, but de 260 au plus, anglais sans mot français), fichier d'écran dans `PAGE_FILES` de `scripts/make-guide.ts`, nom de la page dans `src/utils/health/menu.ts` si elle a des alertes, puis `npm run guide`.
@@ -770,7 +770,6 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:modules` | Contrôle de l'interrupteur de modules (pages cachées), sans réseau. |
 | `npm run check:purchasing` | Contrôle des règles pures du module 4 (fournisseurs, bons de commande, réception, inventaire, budgets, statistiques), sans réseau. |
 | `npm run check:purchasing-page` | Essai de la page Achats (sans écran réel, sans réseau) : démo admin et opérateur, fournisseurs, FR et EN. Complété à chaque étape du module 4. |
-| `npm run check:demo-simple` | Démo simplifiée : en mode démo, on CACHE ce qui est inutile ou simulé (notifications téléphone, IA externe, sauvegardes, restauration, remise à zéro, |
 | `npm run check:quotes-page` | Essai des devis (M2.9) sans écran réel ni réseau : démo, enregistrement, états, transformation en facture, écran FR et EN. |
 | `npm run check:quotes` | Contrôle des DEVIS (module 2, M2.9), sans réseau : le serveur (bloc QUOTES de df-api/index.ts) est extrait et comparé aux règles du site (src/utils/quotes.ts). |
 | `npm run check:purchasing-server` | Contrôle de la sécurité des fournisseurs, bons de commande et budgets dans le serveur df-api (module 4), sans réseau. |
@@ -797,6 +796,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
+| `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
 | `npm run check:xlsx-a4` | Contrôle des fichiers Excel A4 (Times New Roman 12, un autre fichier si c'est long), sans écran ni réseau. Lancer : npm run check:xlsx-a4 |
 | `npm run check:totp-page` | Contrôle M16.4 (écrans) : la carte « Sécurité en deux étapes » ne montre rien tant que le serveur n'a pas dit « oui » et ne fait aucun appel pendant l'affichage ; le mode démo n'appelle jamais le serveur. |

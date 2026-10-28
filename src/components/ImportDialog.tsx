@@ -46,7 +46,6 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
   const [problem, setProblem] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
-  const demo = db.isDemo();
 
   const preview = useMemo(() => {
     if (!matrix || kind === 'sheet') return null;
@@ -80,9 +79,9 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
       for (const d of okDrafts<any>(preview)) { const r = db.addProduct(d); if (r.success) added++; else failed.push({ label: d.name, why: why(r.error === 'buy' ? 'buy' : r.error === 'sell' ? 'sell' : r.error === 'threshold' ? 'threshold' : r.error) }); }
     } else if (kind === 'employees') {
       for (const d of okDrafts<any>(preview)) {
-        const password = demo ? 'demo-password' : generatePassword(secureRand);
+        const password = generatePassword(secureRand);
         const r = await db.addUser({ username: d.username, name: d.name, phone: d.phone, shift: d.shift, role: 'employee', team: d.team, status: 'active', avatar_url: '', performance_badge: 'Standard' }, password);
-        if (r.success) { added++; if (!demo) creds.push({ username: d.username, name: d.name, password }); } else failed.push({ label: d.username, why: r.error || '' });
+        if (r.success) { added++; creds.push({ username: d.username, name: d.name, password }); } else failed.push({ label: d.username, why: r.error || '' });
         await new Promise(res => setTimeout(res, 25)); // l'identifiant interne d'un compte vient de l'heure : on laisse passer quelques millisecondes
       }
     }
@@ -151,7 +150,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
                       ))}
                     </ul>
                     {preview.rows.length > MAX_SHOWN && <div className="text-xs text-slate-400">{t(`Les ${MAX_SHOWN} premières lignes sont montrées (erreurs d'abord). Toutes les lignes bonnes seront importées.`, `The first ${MAX_SHOWN} rows are shown (errors first). Every good row will be imported.`)}</div>}
-                    {kind === 'employees' && counts!.ok > 0 && !demo && <div className="text-xs text-amber-300">{t("Un mot de passe provisoire sera créé pour chaque compte. Il sera montré une seule fois, à la fin : tu devras le noter ou télécharger la liste.", 'A temporary password will be created for each account. It is shown only once, at the end: you will have to note it or download the list.')}</div>}
+                    {kind === 'employees' && counts!.ok > 0 && <div className="text-xs text-amber-300">{t("Un mot de passe provisoire sera créé pour chaque compte. Il sera montré une seule fois, à la fin : tu devras le noter ou télécharger la liste.", 'A temporary password will be created for each account. It is shown only once, at the end: you will have to note it or download the list.')}</div>}
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
                       <button type="button" className={btnMain} disabled={counts!.ok === 0 || busy} onClick={() => void run()}><Check className="w-4 h-4" />{busy ? t('Import…', 'Importing…') : t(`Importer ${counts!.ok} ligne(s)`, `Import ${counts!.ok} row(s)`)}</button>

@@ -11,7 +11,6 @@ import { showToast } from './ToastHost';
 import { ImportDialog } from './ImportDialog';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
-let demoSeeded = false; // démo : les exemples ne reviennent pas après avoir été supprimés
 const COLOR_CLS: Record<S.CondRule['color'], string> = { red: 'bg-red-500/25 text-red-200', green: 'bg-emerald-500/25 text-emerald-200', amber: 'bg-amber-500/25 text-amber-200', blue: 'bg-sky-500/25 text-sky-200' };
 const btn = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-600 text-slate-200 text-xs font-semibold hover:bg-slate-700/60 disabled:opacity-40 cursor-pointer';
 const inp = 'bg-transparent w-full min-w-0 px-2 py-1.5 text-sm text-slate-100 outline-none focus:bg-sky-500/10';
@@ -55,7 +54,7 @@ export const MySheets: React.FC = () => {
     if (ro || dbl.length) return dbl;
     const old = hasLocal(uid) ? loadSheets(uid) : []; // tableaux rangés sur l'appareil avant le serveur : on les reprend une fois
     if (old.length) return old;
-    return db.isDemo() && !demoSeeded ? S.demoSheets(new Date().toISOString(), lang === 'en' ? 'en' : 'fr') : [];
+    return [];
   });
   const [openId, setOpenId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -73,8 +72,8 @@ export const MySheets: React.FC = () => {
   // enregistrement automatique à chaque changement
   useEffect(() => {
     if (ro) return;
-    if (first.current) { first.current = false; if (!hasLocal(uid) && !(db.isDemo() && sheets.length && !demoSeeded)) return; }
-    db.putMySheets(sheets); demoSeeded = true; clearLocal(uid); setSaveOk(true);
+    if (first.current) { first.current = false; if (!hasLocal(uid)) return; }
+    db.putMySheets(sheets); clearLocal(uid); setSaveOk(true);
   }, [sheets, uid, ro]);
   // un autre appareil (ou le serveur) a changé quelque chose : on met à jour la liste tant qu'aucun tableau n'est ouvert
   useEffect(() => db.subscribe(() => { if (!openRef.current) { const l = fromDb(); setSheets(p => (JSON.stringify(p) === JSON.stringify(l) ? p : l)); } }), []); // eslint-disable-line react-hooks/exhaustive-deps

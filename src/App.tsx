@@ -24,7 +24,6 @@ import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { TourGuide } from './components/TourGuide';
 import { ToastHost } from './components/ToastHost';
 import { BadgeCongrats } from './components/BadgeCongrats';
-import { DemoBanner } from './components/DemoBanner';
 import { useModeSwitchHidden } from './utils/modeSwitch';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
@@ -604,7 +603,6 @@ export default function App() {
       <ToastHost />
       {currentUser.role === 'employee' && <BadgeCongrats />}
       {typeof location !== 'undefined' && /[?&]diag=1/.test(location.search) && <DiagPanel />}
-      <DemoBanner />
       {/* SMOOTH ANIMATED LOGOUT TRANSITION */}
       <LogoutTransition />
     </div>
