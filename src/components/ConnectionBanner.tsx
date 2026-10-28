@@ -5,16 +5,15 @@ import { useApp } from '../context/AppContext';
 import { bannerModel } from '../utils/offlineText';
 import { openOfflineCenter } from './OfflineCenter';
 
-// Bandeau du bas : « Hors ligne : N actions en attente » (avec nouvelle tentative automatique toutes les X secondes, réglable),
-// « Envoi en cours », « À revoir », « Copie verrouillée », puis « Tout est envoyé ». Un seul bandeau à la fois, choisi par `bannerModel` (offlineText.ts).
-export const ConnectionBanner: React.FC = () => {
+// État de la connexion, partagé entre le bandeau du bas (hors ligne, avec ses explications et « Réessayer ») et la pastille du header (tous les états :
+// « Hors ligne », « Envoi en cours », « À revoir », « Copie verrouillée », puis « Tout est envoyé »). Un seul modèle, choisi par `bannerModel` (offlineText.ts).
+// `withCountdown` : seul le bandeau du bas fait le compte à rebours et relance l'envoi (sinon la pastille doublerait les tentatives).
+export function useConnectionModel(withCountdown: boolean) {
   const { lang } = useApp();
-  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [down, setDown] = useState(false);
   const [left, setLeft] = useState(0);
   const [, force] = useState(0);
   const [done, setDone] = useState(false);
-  const [dismissedLock, setDismissedLock] = useState(false);
   const retry = Math.max(5, Math.round(db.getSettings().retry_seconds || 15));
   const hadWork = useRef(false); // il y a eu du travail en attente ou une coupure : on dira « Tout est envoyé » une fois
   const sinceMs = useRef<number | null>(null); // depuis quand des éléments restent non envoyés alors que le réseau est là
@@ -23,18 +22,18 @@ export const ConnectionBanner: React.FC = () => {
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   useEffect(() => {
     const off = () => setDown(true);
-    const on = () => db.retryNow();
+    const on = () => { if (withCountdown) db.retryNow(); };
     window.addEventListener('offline', off);
     window.addEventListener('online', on);
     return () => {
       window.removeEventListener('offline', off);
       window.removeEventListener('online', on);
     };
-  }, []);
+  }, [withCountdown]);
   // Le compteur se rafraîchit chaque seconde (la comparaison des données est limitée à une fois par 0,75 s dans le magasin)
   useEffect(() => { const id = setInterval(() => force(n => n + 1), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
-    if (!down) return;
+    if (!down || !withCountdown) return;
     setLeft(retry);
     const timer = setInterval(() => {
       setLeft(l => {
@@ -46,7 +45,7 @@ export const ConnectionBanner: React.FC = () => {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [down, retry]);
+  }, [down, retry, withCountdown]);
 
   const st = db.getOfflineStatus();
   const un = db.getUnsent();
@@ -65,10 +64,17 @@ export const ConnectionBanner: React.FC = () => {
   }, [allSent]);
 
   const m = bannerModel({
-    down: isDown, unsent: un.count, review: st.review.length, kept: st.enabled && !st.problem, needsCode: st.needs_code, locked: st.locked && !dismissedLock, canOffline: st.can_offline,
+    down: isDown, unsent: un.count, review: st.review.length, kept: st.enabled && !st.problem, needsCode: st.needs_code, locked: st.locked, canOffline: st.can_offline,
     pendingSecs, justDone: done,
   }, lang);
-  if (!m.kind) return null;
+  return { m, un, st, isDown, left, setLeft, retry, lang };
+}
+
+/** Bandeau du bas : seulement « Hors ligne » (avec son explication, le compte à rebours et « Réessayer »). Les autres états sont dans la pastille du header. */
+export const ConnectionBanner: React.FC = () => {
+  const { m, un, st, left, setLeft, retry, lang } = useConnectionModel(true);
+  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  if (m.kind !== 'offline') return null;
 
   const box = 'fixed left-1/2 -translate-x-1/2 bottom-[calc(12px+env(safe-area-inset-bottom,0px))] z-[90] max-w-[92vw] rounded-2xl border px-3 py-2 flex items-center gap-2.5 shadow-2xl text-xs sm:text-sm';
   const small = 'rounded-xl px-2 py-1 font-bold flex items-center gap-1 cursor-pointer shrink-0 text-white';
@@ -88,15 +94,32 @@ export const ConnectionBanner: React.FC = () => {
       </div>
     );
   }
-  if (m.kind === 'done') return <div role="status" aria-live="polite" className={`${box} bg-emerald-950 border-emerald-500/70 text-emerald-100`} data-testid="banner-done"><CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /><span className="font-semibold">{m.text}</span></div>;
-  if (m.kind === 'sending') return <button type="button" onClick={() => openOfflineCenter('pending')} className={`${box} bg-blue-950 border-blue-500/70 text-blue-100 cursor-pointer`} data-testid="banner-sending"><Send className="w-4 h-4 shrink-0 text-blue-400" /><span className="font-semibold">{m.text}</span></button>;
-  if (m.kind === 'review') return <button type="button" onClick={() => openOfflineCenter('review')} className={`${box} bg-amber-950 border-amber-500/70 text-amber-100 cursor-pointer`} data-testid="banner-review"><AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" /><span className="font-semibold">{m.text}</span><span className="text-[11px] text-amber-200/80">{t('Voir', 'View')}</span></button>;
-  return (
-    <div role="status" className={`${box} bg-slate-900 border-slate-500/70 text-slate-100`} data-testid="banner-locked">
-      <Lock className="w-4 h-4 shrink-0 text-slate-300" />
-      <div className="min-w-0"><div className="font-semibold">{m.text}</div>{m.hint && <div className="text-[11px] text-slate-300 leading-snug">{m.hint}</div>}</div>
-      <button type="button" onClick={() => openOfflineCenter('pending')} className={`${small} bg-emerald-600 hover:bg-emerald-500`}>{t('Ouvrir', 'Open')}</button>
-      <button type="button" onClick={() => setDismissedLock(true)} className={`${small} bg-slate-700 hover:bg-slate-600`}>{t('Plus tard', 'Later')}</button>
-    </div>
+};
+
+/** Pastille du header : l'état de l'envoi en un coup d'œil, tous états confondus ; la toucher ouvre le centre « hors ligne ». */
+export const ConnectionChip: React.FC = () => {
+  const { m, un, st, lang } = useConnectionModel(false);
+  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  if (!m.kind) return null;
+  const n = m.kind === 'review' ? st.review.length : m.kind === 'offline' || m.kind === 'sending' ? un.count : 0;
+  const look = {
+    offline: { cls: 'bg-amber-950 border-amber-500/70 text-amber-100', Icon: WifiOff, ic: 'text-amber-400', label: t('Hors ligne', 'Offline') },
+    sending: { cls: 'bg-blue-950 border-blue-500/70 text-blue-100', Icon: Send, ic: 'text-blue-400', label: t('Envoi en cours', 'Sending') },
+    review: { cls: 'bg-amber-950 border-amber-500/70 text-amber-100', Icon: AlertTriangle, ic: 'text-amber-400', label: t('À revoir', 'To review') },
+    locked: { cls: 'bg-slate-800 border-slate-500/70 text-slate-100', Icon: Lock, ic: 'text-slate-300', label: t('Copie verrouillée', 'Copy locked') },
+    done: { cls: 'bg-emerald-950 border-emerald-500/70 text-emerald-100', Icon: CheckCircle2, ic: 'text-emerald-400', label: t('Tout est envoyé', 'Everything is sent') },
+  }[m.kind];
+  const { Icon } = look;
+  const openIt = () => openOfflineCenter(m.kind === 'review' ? 'review' : un.count > 0 || st.locked || st.review.length === 0 ? 'pending' : 'review');
+  const body = (
+    <>
+      <Icon className={`w-4 h-4 shrink-0 ${look.ic} ${m.kind === 'sending' ? 'animate-pulse' : ''}`} aria-hidden="true" />
+      <span className="hidden min-[460px]:inline whitespace-nowrap">{look.label}</span>
+      {n > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white/15 text-[11px] leading-[18px] text-center font-bold">{n}</span>}
+    </>
   );
+  const box = `shrink-0 h-9 px-2.5 rounded-full border flex items-center gap-1.5 text-xs font-bold ${look.cls}`;
+  const title = `${m.text}${m.hint ? ' : ' + m.hint : ''}`;
+  if (m.kind === 'done') return <span role="status" aria-live="polite" title={title} className={box} data-testid="chip-done">{body}</span>;
+  return <button type="button" onClick={openIt} title={title} aria-label={title} className={`${box} cursor-pointer`} data-testid={`chip-${m.kind}`}>{body}</button>;
 };

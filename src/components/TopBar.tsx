@@ -8,6 +8,7 @@ import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '
 import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { beepIfEnabled } from '../utils/notifSound';
+import { ConnectionChip } from './ConnectionBanner';
 
 interface TopBarProps {
   currentUser: User;
@@ -178,6 +179,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             </div>
           )}
         </div>
+
+        <ConnectionChip />
 
         <div ref={bellBox} className="relative shrink-0">
           <button

@@ -63,6 +63,7 @@
     "check:health-accounting": "npx --yes tsx scripts/check-health-accounting.ts",
     "check:health-management": "npx --yes tsx scripts/check-health-management.ts",
     "check:reason-modal": "npx --yes tsx scripts/check-reason-modal.ts",
+    "check:header-status": "esbuild scripts/check-header-status.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-header-status.mjs && node node_modules/.cache/check-header-status.mjs",
     "check:simulation": "npx --yes tsx scripts/check-simulation.ts",
     "check:health-performance": "npx --yes tsx scripts/check-health-performance.ts",
     "check:health-notif": "npx --yes tsx scripts/check-health-notif.ts",

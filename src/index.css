@@ -376,17 +376,21 @@ html { -webkit-tap-highlight-color: rgba(59, 130, 246, 0.22); }
 }
 
 
-/* Tous les formulaires / fenêtres s'ouvrent SOUS le header fixe (jamais derrière), et défilent si trop longs */
+/* Formulaires / fenêtres : le CONTENU s'ouvre sous le header fixe (jamais derrière), et défile si trop long ;
+   le FOND (voile + flou) couvre tout l'écran, header compris (avant 2026-10-28 le fond commençait sous le header : il restait net). */
 body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
-  top: calc(57px + var(--vvt, 0px));
+  top: var(--vvt, 0px);
   bottom: auto;
-  height: calc(var(--vvh, 100dvh) - 57px);
-  max-height: calc(var(--vvh, 100dvh) - 57px);
+  height: var(--vvh, 100dvh);
+  max-height: var(--vvh, 100dvh);
+  padding-top: calc(57px + 1rem);
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow-y: auto;
   align-items: safe center;
   overscroll-behavior: contain;
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
 }
 
 /* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
