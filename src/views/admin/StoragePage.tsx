@@ -4,11 +4,12 @@ import { useApp } from '../../context/AppContext';
 import { todayMada } from '../../utils/stats';
 import { StockTab, type StockFilter } from './StockTab';
 import { StockDashboard } from './StockDashboard';
+import { StockMovements } from './StockMovements';
 
 // Page « Stockage » (responsable seulement) : sa propre page, hors de Statistiques.
-// Étape 1 : Produits (la liste, ses photos, ses graphiques). Étape 2 : Tableau de bord.
-// Étapes suivantes : Mouvements, Analyses (avec leur propre période).
-type Tab = 'dashboard' | 'products';
+// Étape 1 : Produits (la liste, ses photos, ses graphiques). Étape 2 : Tableau de bord. Étape 3 : Mouvements.
+// Étape suivante : Analyses (avec leur propre période).
+type Tab = 'dashboard' | 'products' | 'movements';
 
 export const StoragePage: React.FC = () => {
   const { lang } = useApp();
@@ -34,10 +35,13 @@ export const StoragePage: React.FC = () => {
       <div className="flex gap-1.5" role="tablist">
         {tabBtn('dashboard', 'Tableau de bord', 'Dashboard')}
         {tabBtn('products', 'Produits', 'Products')}
+        {tabBtn('movements', 'Mouvements', 'Movements')}
       </div>
       {tab === 'dashboard'
         ? <StockDashboard lang={l} onOpenProducts={f => open('products', f)} />
-        : <StockTab key={openKey} range={range} lang={l} initialFilter={filter} />}
+        : tab === 'movements'
+          ? <StockMovements lang={l} />
+          : <StockTab key={openKey} range={range} lang={l} initialFilter={filter} />}
     </div>
   );
 };
