@@ -7,13 +7,13 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { compressImageToDataUrl } from '../../utils/imageUtils';
-import { categoryKey, categoryOptions, checkMoveDraft, cleanCategoryName, purchaseAmount, runOutSoon, stockRows, stockValue } from '../../utils/stock';
+import { categoryKey, categoryOptions, checkMoveDraft, cleanCategoryName, DEFAULT_STORAGE_ID, inSpace, purchaseAmount, runOutSoon, stockRows, stockValue } from '../../utils/stock';
 import { StockCategoriesDialog } from './StockCategoriesDialog';
 import type { Product, StockMoveType } from '../../types';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
-interface Props { lang: 'fr' | 'en'; initialFilter?: StockFilter }
+interface Props { lang: 'fr' | 'en'; initialFilter?: StockFilter; spaceId?: string }
 interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string; photo: string }
 export type StockFilter = 'all' | 'low' | 'empty';
 const NEW_CAT = '__new__';
@@ -26,7 +26,7 @@ const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockTab: React.FC<Props> = ({ lang, initialFilter }) => {
+export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAULT_STORAGE_ID }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [pEdit, setPEdit] = useState<ProductEditor | null>(null);
   const [importing, setImporting] = useState(false);
@@ -46,8 +46,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter }) => {
   const [zoom, setZoom] = useState<{ url: string; name: string } | null>(null);
   useLockBodyScroll(!!pEdit || !!mEdit);
 
-  const products = db.getProducts();
-  const moves = db.getStockMoves();
+  const { products, moves } = inSpace(db.getProducts(), db.getStockMoves(), spaceId); // un seul stockage à la fois : jamais mélangés
   const today = todayMada();
   const rows = useMemo(() => stockRows(products, moves), [products, moves]);
   const total = stockValue(rows);
@@ -80,7 +79,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter }) => {
   const rememberCategory = (raw: string) => { const name = cleanCategoryName(raw); const list = db.getStockCategories(); if (name && list.length < 30 && !list.some(c => categoryKey(c) === categoryKey(name))) db.setStockCategories([...list, name]); };
   const saveProduct = (another = false) => {
     if (!pEdit) return;
-    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold, photo_url: pEdit.photo };
+    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold, photo_url: pEdit.photo, storage_id: spaceId };
     if (pEdit.id) {
       const r = db.updateProduct(pEdit.id, draft);
       if (!r.success) { setError(say(r.error)); return; }
@@ -264,7 +263,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter }) => {
         </div>
       )}
 
-      {importing && <ImportDialog kind="products" onClose={() => setImporting(false)} />}
+      {importing && <ImportDialog kind="products" storageId={spaceId} onClose={() => setImporting(false)} />}
       {catOpen && <StockCategoriesDialog lang={lang} onClose={() => setCatOpen(false)} />}
 
       {pEdit && createPortal(

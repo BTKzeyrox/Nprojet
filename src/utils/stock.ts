@@ -7,7 +7,7 @@ export const MAX_QTY = 1_000_000_000;
 export const DEFAULT_UNIT = 'unité';
 export const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-export interface ProductDraft { name: string; category?: string; unit?: string; buy_price?: string | number; sell_price?: string | number; alert_threshold?: string | number; photo_url?: string }
+export interface ProductDraft { name: string; category?: string; unit?: string; buy_price?: string | number; sell_price?: string | number; alert_threshold?: string | number; photo_url?: string; storage_id?: string }
 export type ProductError = 'name' | 'buy' | 'sell' | 'threshold' | 'photo';
 export type ProductResult =
   | { ok: true; clean: { name: string; category: string; unit: string; buy_price_ar: number; sell_price_ar: number; alert_threshold: number; photo_url: string } }
@@ -171,4 +171,42 @@ export function categoryOptions(list: string[], products: { category: string }[]
     if (name && !keys.has(categoryKey(name))) { keys.add(categoryKey(name)); out.push(name); }
   }
   return out;
+}
+
+// ---------- Stockages (Stockage 1, 2…) : chaque produit est dans UN seul stockage, jamais mélangés ----------
+export interface StockSpace { id: string; name: string }
+export const DEFAULT_STORAGE_ID = 'main';
+export const DEFAULT_STOCK_SPACES: StockSpace[] = [{ id: DEFAULT_STORAGE_ID, name: 'Stockage 1' }];
+export const STOCK_SPACE_MAX = 10;
+export const isStorageId = (s: unknown): s is string => typeof s === 'string' && /^[a-z0-9_-]{1,32}$/.test(s);
+/** Le stockage d'un produit ; un produit sans stockage (ancien) est dans le premier. */
+export const productStorage = (p: { storage_id?: string }): string => p.storage_id || DEFAULT_STORAGE_ID;
+/** Nettoie la liste des stockages (même règle que le serveur). Pas une liste ou vide = null (on garde alors celle qui existe, ou la liste par défaut). */
+export function cleanSpaceList(raw: unknown): StockSpace[] | null {
+  if (!Array.isArray(raw)) return null;
+  const ids = new Set<string>(), names = new Set<string>();
+  const out: StockSpace[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== 'object') continue;
+    const { id, name: rawName } = x as { id?: unknown; name?: unknown };
+    if (!isStorageId(id) || typeof rawName !== 'string' || ids.has(id)) continue;
+    const name = cleanCategoryName(rawName);
+    const key = categoryKey(name);
+    if (!name || names.has(key)) continue;
+    ids.add(id); names.add(key); out.push({ id, name });
+    if (out.length >= STOCK_SPACE_MAX) break;
+  }
+  return out.length ? out : null;
+}
+/** Un identifiant libre pour un nouveau stockage : s2, s3… */
+export function newSpaceId(existing: StockSpace[]): string {
+  const used = new Set(existing.map(s => s.id));
+  for (let n = 2; n < 1000; n++) if (!used.has(`s${n}`)) return `s${n}`;
+  return `s${Date.now().toString(36)}`;
+}
+/** Les produits d'UN stockage et leurs mouvements (jamais ceux des autres stockages). */
+export function inSpace<P extends { id: string; storage_id?: string }, M extends { product_id: string }>(products: P[], moves: M[], spaceId: string): { products: P[]; moves: M[] } {
+  const mine = products.filter(p => productStorage(p) === spaceId);
+  const ids = new Set(mine.map(p => p.id));
+  return { products: mine, moves: moves.filter(m => ids.has(m.product_id)) };
 }

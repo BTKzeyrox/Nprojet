@@ -3,10 +3,11 @@ import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import type { StockMoveType } from '../../types';
+import { DEFAULT_STORAGE_ID, inSpace } from '../../utils/stock';
 
 // Onglet « Mouvements » du Stockage (responsable seulement) : tout l'historique du stock, filtrable. Lecture seule :
 // pour corriger un mouvement, on l'ouvre dans l'historique du produit (onglet Produits).
-interface Props { lang: 'fr' | 'en' }
+interface Props { lang: 'fr' | 'en'; spaceId?: string }
 type Period = '7' | '30' | '90' | 'all';
 type TypeFilter = 'all' | StockMoveType;
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
@@ -14,14 +15,13 @@ const field = 'w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-9
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 const PAGE = 40;
 
-export const StockMovements: React.FC<Props> = ({ lang }) => {
+export const StockMovements: React.FC<Props> = ({ lang, spaceId = DEFAULT_STORAGE_ID }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [period, setPeriod] = useState<Period>('30');
   const [type, setType] = useState<TypeFilter>('all');
   const [productId, setProductId] = useState('');
   const [limit, setLimit] = useState(PAGE);
-  const products = db.getProducts();
-  const moves = db.getStockMoves();
+  const { products, moves } = inSpace(db.getProducts(), db.getStockMoves(), spaceId); // un seul stockage à la fois : jamais mélangés
   const today = todayMada();
   const byId = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
   const sortedProducts = useMemo(() => [...products].sort((a, b) => a.name.localeCompare(b.name)), [products]);

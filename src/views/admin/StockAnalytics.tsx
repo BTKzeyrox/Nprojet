@@ -3,21 +3,20 @@ import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { supplierRanking, topPurchased } from '../../utils/purchasing';
-import { categoryKey, stockPeriod, stockRows, topUsed, valueByMonth } from '../../utils/stock';
+import { categoryKey, DEFAULT_STORAGE_ID, inSpace, stockPeriod, stockRows, topUsed, valueByMonth } from '../../utils/stock';
 import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
 import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Analyses » du Stockage (responsable seulement) : les graphiques du stock, avec leur propre période. Lecture seule.
-interface Props { lang: 'fr' | 'en' }
+interface Props { lang: 'fr' | 'en'; spaceId?: string }
 type Period = 'month' | '30' | '90' | '365';
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockAnalytics: React.FC<Props> = ({ lang }) => {
+export const StockAnalytics: React.FC<Props> = ({ lang, spaceId = DEFAULT_STORAGE_ID }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [per, setPer] = useState<Period>('30');
-  const products = db.getProducts();
-  const moves = db.getStockMoves();
+  const { products, moves } = inSpace(db.getProducts(), db.getStockMoves(), spaceId); // un seul stockage à la fois : jamais mélangés
   const today = todayMada();
   const range = useMemo(() => {
     if (per === 'month') return { start: `${today.slice(0, 8)}01`, end: today };

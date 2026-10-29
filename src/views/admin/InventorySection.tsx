@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { db } from '../../db/store';
+import { productStorage } from '../../utils/stock';
 import { useApp } from '../../context/AppContext';
 import { todayMada } from '../../utils/stats';
 import { inventoryAdjustments, inventoryRows } from '../../utils/purchasing';
@@ -15,6 +16,8 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 export const InventorySection: React.FC<{ ver: number }> = ({ ver }) => {
   const { lang } = useApp();
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const spaces = db.getStockSpaces();
+  const sp = (p?: { storage_id?: string }) => (p && spaces.length > 1 ? ` · ${spaces.find(s => s.id === productStorage(p))?.name ?? ''}` : ''); // le nom du stockage, seulement s'il y en a plusieurs
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [date, setDate] = useState(todayMada());
   const [error, setError] = useState('');
@@ -52,7 +55,7 @@ export const InventorySection: React.FC<{ ver: number }> = ({ ver }) => {
             {rows.map(r => (
               <li key={r.product.id} className="border-t border-slate-800 first:border-t-0 py-2 flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-white truncate">{r.product.name}</div>
+                  <div className="text-sm text-white truncate">{r.product.name}{sp(r.product)}</div>
                   <div className="text-[11px] text-slate-400">{t('Le stock indique', 'Stock shows')} {r.expected} {r.product.unit}
                     {r.diff !== null && <b className={r.diff === 0 ? 'text-emerald-400' : 'text-amber-300'}> · {r.diff === 0 ? t('juste', 'correct') : `${t('écart', 'difference')} ${sign(r.diff)}`}</b>}
                     {r.bad && <b className="text-rose-300"> · {t('quantité fausse', 'wrong quantity')}</b>}</div>

@@ -148,10 +148,11 @@ function cleanProduct(rec: any, existing: any, meId: string, now: string): { ok:
   // Photo : vide, ou une adresse envoyée par notre serveur (Cloudinary du site, ou à défaut le stockage Supabase du site)
   const photo = typeof rec.photo_url === "string" ? rec.photo_url.trim() : "";
   if (photo && (photo.length > 500 || !(photo.startsWith(CLD_PREFIX) || photo.includes(`/object/public/${BUCKET}/`)))) return { ok: false, reason: "photo" };
+  const sid = typeof rec.storage_id === "string" && /^[a-z0-9_-]{1,32}$/.test(rec.storage_id) ? rec.storage_id : ""; // le stockage du produit (vide = le premier)
   return {
     ok: true,
     save: {
-      id: rec.id, name, photo_url: photo, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
+      id: rec.id, name, photo_url: photo, storage_id: sid, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
       buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2s(thr),
       created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
     },
@@ -1638,6 +1639,32 @@ function applyStockCategories(saved: any, rec: any, existing: any): any {
   return out;
 }
 // ===== END STOCK_CATEGORIES =====
+// ===== BEGIN STOCK_SPACES (les stockages : admin seulement ; ce bloc est contrôlé par scripts/check-stock-spaces.ts) =====
+function cleanStockSpaces(raw: any): { id: string; name: string }[] | null {
+  if (!Array.isArray(raw)) return null;
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const out: { id: string; name: string }[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== "object" || typeof x.id !== "string" || typeof x.name !== "string") continue;
+    if (!/^[a-z0-9_-]{1,32}$/.test(x.id) || ids.has(x.id)) continue;
+    const name = x.name.replace(/\s+/g, " ").trim().slice(0, 40);
+    const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!name || names.has(key)) continue;
+    ids.add(x.id); names.add(key); out.push({ id: x.id, name });
+    if (out.length >= 10) break;
+  }
+  return out.length ? out : null;
+}
+/** Réglages écrits par l'admin : la liste est revérifiée ; absente, vide ou pas une liste (ancien site) = l'existant est gardé. */
+function applyStockSpaces(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const sent = rec ? cleanStockSpaces(rec.stock_spaces) : null;
+  const list = sent !== null ? sent : cleanStockSpaces(existing && existing.stock_spaces);
+  if (list) out.stock_spaces = list; else delete out.stock_spaces;
+  return out;
+}
+// ===== END STOCK_SPACES =====
 
 // ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
 interface PerformanceConfig {
@@ -2190,7 +2217,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "stock_categories", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "stock_categories", "stock_spaces", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2344,7 +2371,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
-const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories"];
+const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
 const auditCut = (v: unknown, n: number) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 function buildAuditEntry(me: any, action: string, target: any, detail: unknown, at: string, rand: string): any | null {
   if (!AUDIT_ACTIONS.includes(action)) return null;
@@ -3316,7 +3343,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;

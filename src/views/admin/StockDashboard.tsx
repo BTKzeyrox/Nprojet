@@ -3,20 +3,19 @@ import { AlertTriangle, Plus } from 'lucide-react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { runOutSoon, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
+import { DEFAULT_STORAGE_ID, inSpace, runOutSoon, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
 import { LineChart, RankBars } from '../../components/charts/Charts';
 import { monthTitle } from '../../utils/chartData';
 import type { StockFilter } from './StockTab';
 
 // Tableau de bord du Stockage (responsable seulement) : l'essentiel d'un coup d'œil. Lecture seule : rien ne se saisit ici.
-interface Props { lang: 'fr' | 'en'; onOpenProducts: (filter: StockFilter) => void }
+interface Props { lang: 'fr' | 'en'; onOpenProducts: (filter: StockFilter) => void; spaceId?: string }
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockDashboard: React.FC<Props> = ({ lang, onOpenProducts }) => {
+export const StockDashboard: React.FC<Props> = ({ lang, onOpenProducts, spaceId = DEFAULT_STORAGE_ID }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  const products = db.getProducts();
-  const moves = db.getStockMoves();
+  const { products, moves } = inSpace(db.getProducts(), db.getStockMoves(), spaceId); // un seul stockage à la fois : jamais mélangés
   const today = todayMada();
   const rows = useMemo(() => stockRows(products, moves), [products, moves]);
   const total = stockValue(rows);

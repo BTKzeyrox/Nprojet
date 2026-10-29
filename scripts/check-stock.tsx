@@ -179,6 +179,27 @@ ok(db.addProduct({ name: 'Pirate' }).error === 'admin' && db.addStockMove({ prod
   ok(db.getProducts().some(p => p.name === 'Cat test A' && p.category === ''), 'catégories : le produit existe toujours');
   ok(db.setStockCategories([]).success && names().length === 0, 'catégories : liste vide gardée (pas remplacée par la liste par défaut)');
 }
+// ---------- 4c) Stockages : séparés, jamais mélangés ----------
+{
+  db.enterDemo('admin');
+  ok(db.getStockSpaces().length === 1 && db.getStockSpaces()[0].name === 'Stockage 1', 'stockages : un seul « Stockage 1 » au départ');
+  ok(db.getProducts().every(p => (p.storage_id || 'main') === 'main'), 'stockages : les produits existants sont dans le premier');
+  const s2 = db.addStockSpace('Dépôt');
+  ok(s2.success && s2.id === 's2' && db.getStockSpaces().length === 2, 'stockages : création (s2)');
+  ok(db.addStockSpace('depot').error === 'space_exists' && db.addStockSpace('  ').error === 'space_name', 'stockages : nom déjà pris ou vide refusé');
+  const a = db.addProduct({ name: 'Même produit', storage_id: 's2' }), b = db.addProduct({ name: 'Même produit' });
+  ok(a.success && b.success && db.getProducts().find(p => p.id === a.id)!.storage_id === 's2' && db.getProducts().find(p => p.id === b.id)!.storage_id === 'main', 'stockages : un produit va dans le stockage demandé, sinon le premier');
+  ok(db.addProduct({ name: 'Stockage inconnu', storage_id: 'zz9' }).success && db.getProducts().find(p => p.name === 'Stockage inconnu')!.storage_id === 'main', 'stockages : un stockage inconnu = le premier');
+  ok(db.addStockMove({ product_id: a.id!, type: 'in', qty: 5, date: todayMada() }).success, 'stockages : entrée dans le produit du stockage 2');
+  const sp2 = S.inSpace(db.getProducts(), db.getStockMoves(), 's2');
+  ok(sp2.products.length === 1 && sp2.moves.length === 1 && sp2.products[0].id === a.id, 'stockages : le stockage 2 ne voit que son produit et son mouvement');
+  ok(!S.inSpace(db.getProducts(), db.getStockMoves(), 'main').products.some(p => p.id === a.id) && !S.inSpace(db.getProducts(), db.getStockMoves(), 'main').moves.some(m => m.product_id === a.id), 'stockages : le premier ne voit rien du stockage 2');
+  ok(db.updateProduct(a.id!, { name: 'Même produit (modifié)', storage_id: 'main' }).success && db.getProducts().find(p => p.id === a.id)!.storage_id === 's2', 'stockages : modifier un produit ne le change jamais de stockage');
+  ok(db.deleteStockSpace('s2').error === 'space_not_empty', 'stockages : un stockage qui contient des produits ne se supprime pas');
+  ok(db.renameStockSpace('s2', 'Boutique').success && db.getStockSpaces()[1].name === 'Boutique' && db.renameStockSpace('s2', 'Stockage 1').error === 'space_exists', 'stockages : renommer (jamais un nom déjà pris)');
+  ok(db.deleteProduct(a.id!).success && db.deleteStockSpace('s2').success && db.getStockSpaces().length === 1, 'stockages : vide, il se supprime');
+  ok(db.deleteStockSpace('main').error === 'space_last', 'stockages : le dernier stockage ne se supprime pas');
+}
 // ---------- 5) Rendu FR et EN ----------
 db.enterDemo('admin');
 const range = { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-31` };

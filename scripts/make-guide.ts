@@ -19,7 +19,7 @@ export const PAGE_FILES: Record<string, string[]> = {
   history: ['src/views/admin/HistoryPage.tsx'],
   clients: ['src/views/admin/ClientsPage.tsx'],
   invoices: ['src/views/admin/InvoicesView.tsx', 'src/views/admin/QuotesSection.tsx'],
-  storage: ['src/views/admin/StoragePage.tsx', 'src/views/admin/StockDashboard.tsx', 'src/views/admin/StockMovements.tsx', 'src/views/admin/StockAnalytics.tsx', 'src/views/admin/StockCategoriesDialog.tsx', 'src/views/admin/StockTab.tsx'],
+  storage: ['src/views/admin/StoragePage.tsx', 'src/views/admin/StockDashboard.tsx', 'src/views/admin/StockMovements.tsx', 'src/views/admin/StockAnalytics.tsx', 'src/views/admin/StockCategoriesDialog.tsx', 'src/views/admin/StockSpacesDialog.tsx', 'src/views/admin/StockTab.tsx'],
   purchasing: ['src/views/admin/PurchasingPage.tsx', 'src/views/admin/SuppliersSection.tsx', 'src/views/admin/PurchaseOrdersSection.tsx', 'src/views/admin/InventorySection.tsx', 'src/views/admin/BudgetsCard.tsx'],
   performance: ['src/views/admin/PerformancePage.tsx', 'src/views/admin/PerformanceScores.tsx'],
   'my-performance': ['src/components/MyPerformance.tsx'],

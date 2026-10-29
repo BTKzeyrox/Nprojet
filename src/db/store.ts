@@ -12,7 +12,7 @@ import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type
 import { checkTeamGoal, cleanTeamGoals, newTeamGoalId, TEAM_GOAL_ERROR_MESSAGE, type TeamGoal } from '../utils/teamGoals';
 import { checkMonthlyPlan, cleanMonthlyPlan, MONTHLY_PLAN_ERROR_MESSAGE, type MonthlyPlan } from '../utils/budgetPlan';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
-import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, DEFAULT_STOCK_CATEGORIES, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
+import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, cleanSpaceList, DEFAULT_STOCK_CATEGORIES, DEFAULT_STOCK_SPACES, newSpaceId, productStorage, purchaseAmount, quantities, STOCK_SPACE_MAX, type MoveDraft, type ProductDraft, type StockSpace } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
 import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
@@ -1135,6 +1135,40 @@ export class AppStore {
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
 
+  // ----- Stockages (Stockage 1, 2…) : la liste est dans les réglages (admin seulement) ; chaque produit est dans un seul stockage -----
+  public getStockSpaces(): StockSpace[] { return cleanSpaceList(this.getSettings().stock_spaces) ?? DEFAULT_STOCK_SPACES.map(s => ({ ...s })); }
+  public addStockSpace(name: string): { success: boolean; error?: string; id?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const list = this.getStockSpaces();
+    const clean = cleanCategoryName(name);
+    if (!clean) return { success: false, error: 'space_name' };
+    if (list.some(s => categoryKey(s.name) === categoryKey(clean))) return { success: false, error: 'space_exists' };
+    if (list.length >= STOCK_SPACE_MAX) return { success: false, error: 'space_max' };
+    const id = newSpaceId(list);
+    this.updateSettings({ stock_spaces: [...list, { id, name: clean }] });
+    return { success: true, id };
+  }
+  public renameStockSpace(id: string, name: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const list = this.getStockSpaces();
+    if (!list.some(s => s.id === id)) return { success: false, error: 'missing' };
+    const clean = cleanCategoryName(name);
+    if (!clean) return { success: false, error: 'space_name' };
+    if (list.some(s => s.id !== id && categoryKey(s.name) === categoryKey(clean))) return { success: false, error: 'space_exists' };
+    this.updateSettings({ stock_spaces: list.map(s => (s.id === id ? { ...s, name: clean } : s)) });
+    return { success: true };
+  }
+  /** Supprime un stockage VIDE seulement (il en reste toujours au moins un) : jamais de produit perdu ni déplacé en cachette. */
+  public deleteStockSpace(id: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const list = this.getStockSpaces();
+    if (!list.some(s => s.id === id)) return { success: false, error: 'missing' };
+    if (list.length <= 1) return { success: false, error: 'space_last' };
+    if (this.products.some(p => productStorage(p) === id)) return { success: false, error: 'space_not_empty' };
+    this.updateSettings({ stock_spaces: list.filter(s => s.id !== id) });
+    return { success: true };
+  }
+
   // ----- Catégories des produits : liste par défaut, modifiable (enregistrée dans les réglages, admin seulement) -----
   public getStockCategories(): string[] { return cleanCategoryList(this.getSettings().stock_categories) ?? [...DEFAULT_STOCK_CATEGORIES]; }
   public setStockCategories(list: string[]): { success: boolean; error?: string } {
@@ -1174,7 +1208,9 @@ export class AppStore {
     if (!v.ok) return { success: false, error: v.error };
     const now = new Date().toISOString();
     const id = `prod-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.products = [{ id, ...v.clean, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.products];
+    const spaces = this.getStockSpaces();
+    const storage_id = spaces.some(s => s.id === d.storage_id) ? (d.storage_id as string) : spaces[0].id; // un stockage inconnu = le premier
+    this.products = [{ id, ...v.clean, storage_id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.products];
     this.notify();
     return { success: true, id };
   }
