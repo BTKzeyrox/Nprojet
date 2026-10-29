@@ -23,6 +23,9 @@ import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { TypingDots } from './Reactions';
+import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
+import { useNow } from '../utils/useNow';
+import { LiveDot, LiveLine } from './LiveStatus';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
@@ -65,6 +68,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const app = useApp();
   const L = app.theme === 'light';
   const lang = app.lang;
+  const chatLang: 'fr' | 'en' = lang === 'en' ? 'en' : 'fr';
+  const nowMs = useNow(15000); // les statuts changent d'eux-mêmes (En ligne → En pause → Hors ligne)
+  // Statut EN DIRECT d'un opérateur : seul le responsable reçoit les signes de vie ; pour les autres on n'affiche rien plutôt qu'un faux « Hors ligne »
+  const liveOf = (u?: User | null): LiveInfo | null => (isAdmin && u && u.role === 'employee' ? liveStatus(u, db.getPosts(), db.getPresence(), nowMs) : null);
   // Couleurs de la messagerie (clair par défaut, sombre en option)
   const P = {
     root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',
@@ -540,8 +547,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         ) : t.kind === 'pair' ? (
           <span className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-slate-200' : 'bg-slate-800'}`}><EyeOff className={`w-5 h-5 ${P.sub}`} /></span>
         ) : (
-          <span role="button" tabIndex={0} aria-label={`À propos de ${t.title}`} data-row-avatar onClick={e => { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); } }} onTouchStart={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} className="shrink-0 rounded-full">
+          <span role="button" tabIndex={0} aria-label={`À propos de ${t.title}`} data-row-avatar onClick={e => { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); } }} onTouchStart={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} className="relative shrink-0 rounded-full inline-flex">
             <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
+            {(() => { const lv = liveOf(t.user); return lv ? <LiveDot info={lv} lang={chatLang} ring={L ? 'border-white' : 'border-[#0e1622]'} /> : null; })()}
           </span>
         )}
         <span className="min-w-0 flex-1">
@@ -640,7 +648,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
           >
             {current.kind === 'user' ? (
-              <Avatar src={current.user?.avatar_url} name={current.title} className="w-11 h-11 rounded-full ring-2 ring-white/40" />
+              <span className="relative shrink-0 inline-flex">
+                <Avatar src={current.user?.avatar_url} name={current.title} className="w-11 h-11 rounded-full ring-2 ring-white/40" />
+                {(() => { const lv = liveOf(current.user); return lv ? <LiveDot info={lv} lang={chatLang} ring="border-blue-600" /> : null; })()}
+              </span>
             ) : current.kind === 'group' && current.group?.avatar_url ? (
               <img src={current.group.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-white/40" />
             ) : (
@@ -653,7 +664,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <span className="block text-xs text-blue-200" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {typingNames.length > 0
                   ? <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">{typingNames.slice(0, 2).join(', ')}{typingNames.length > 2 ? ' et d’autres' : ''} écrit… <TypingDots /></span>
-                  : current.subtitle}
+                  : (() => { const lv = current.kind === 'user' ? liveOf(current.user) : null; return lv ? <LiveLine info={lv} lang={chatLang} className="text-blue-100" /> : current.subtitle; })()}
               </span>
             </span>
           </button>

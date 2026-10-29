@@ -53,7 +53,9 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
     return acc + Math.max(0, final - s.initial_score);
   }, 0);
 
-  // Présence du jour : arrivée = première connexion ; départ = fin de la dernière session ; connecté = temps cumulé
+  // Présence du jour : 1re connexion = premier contact de l'appli avec le serveur ce jour-là (PAS l'arrivée au travail) ; 1re mission = début de la première mission (c'est elle qui sert au retard) ;
+  // départ = fin de la dernière mission ; connecté = temps cumulé avec l'appli ouverte
+  const tt = (fr: string, en: string) => (appLang === 'en' ? en : fr);
   const hm = (iso: string) => new Date(new Date(iso).getTime() + 3 * 3600 * 1000).toISOString().slice(11, 16); // heure de Madagascar
   const presenceIds = Array.from(new Set([...attendance.map(a => a.user_id), ...shifts.map(s => s.employee_id)]));
   const presenceRows = presenceIds.map(id => {
@@ -64,7 +66,8 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
     return {
       id,
       name: db.getUsers().find(u => u.id === id)?.name || mine[0]?.employee_name || '—',
-      arrival: att ? hm(att.first_seen) : 'non enregistrée',
+      arrival: att ? hm(att.first_seen) : tt('non enregistrée', 'not recorded'),
+      firstMission: mine.length ? mine[0].start_time.slice(0, 5) : '—',
       departure,
       online: att ? formatDuration(att.online_sec) : '—',
     };
@@ -130,13 +133,15 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           )}
           {presenceRows.length > 0 && (
             <div className="bg-slate-900/60 border border-slate-700/80 rounded-lg p-3 space-y-1.5">
-              <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">Présence du jour</div>
+              <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">{tt('Présence du jour', 'Presence of the day')}</div>
+              <div className="text-[10px] text-slate-500 leading-snug">{tt('1re connexion : premier contact de l\'appli avec le serveur ce jour-là (elle peut être plus tôt que le travail). 1re mission : début de la première mission, c\'est elle qui sert au retard.', 'First connection: first time the app contacted the server that day (it can be earlier than the work). First mission: start of the first mission, the one used for lateness.')}</div>
               {presenceRows.map(r => (
                 <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-mono text-slate-300">
                   {isAdmin && <span className="font-bold text-white">{r.name}</span>}
-                  <span>Arrivée : <strong className="text-slate-100">{r.arrival}</strong></span>
-                  <span>Départ : <strong className="text-slate-100">{r.departure}</strong></span>
-                  <span>Connecté : <strong className="text-slate-100">{r.online}</strong></span>
+                  <span>{tt('1re connexion', 'First connection')} : <strong className="text-slate-100">{r.arrival}</strong></span>
+                  <span>{tt('1re mission', 'First mission')} : <strong className="text-slate-100">{r.firstMission}</strong></span>
+                  <span>{tt('Départ', 'Departure')} : <strong className="text-slate-100">{r.departure}</strong></span>
+                  <span>{tt('Connecté', 'Connected')} : <strong className="text-slate-100">{r.online}</strong></span>
                 </div>
               ))}
             </div>

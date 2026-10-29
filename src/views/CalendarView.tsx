@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { isLate } from '../utils/attendance';
+import { dayStatus } from '../utils/dayStatus';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -21,8 +21,13 @@ import {
   ListChecks,
   HandCoins,
   X, CalendarOff } from 'lucide-react';
-import { leaveOn } from '../utils/leaves';
-import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings } from '../types';
+import { leaveOn, LEAVE_TYPE_LABELS, type Leave } from '../utils/leaves';
+import { firstActivityOf, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
+import { liveStatus } from '../utils/presenceStatus';
+import { formatDuration } from '../utils/presence';
+import { useNow } from '../utils/useNow';
+import { LiveLine } from '../components/LiveStatus';
+import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings, AttendanceRow } from '../types';
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { Avatar } from '../components/Avatar';
@@ -66,29 +71,169 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   return <Circle className={c} />;
 };
 
-// Statut d'un jour pour un opérateur
-function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
-  // Congé ACCEPTÉ (M5.2) : le jour n'est ni une absence ni un retard, sauf si une mission a vraiment été travaillée ce jour-là
-  if (onLeave && !shifts.some(s => s.status !== 'rejected' && s.status !== 'force_released')) return 'leave';
-  if (shifts.length > 0) {
-    const hasInProgress = shifts.some(s => s.status === 'active' || s.status === 'pending_start' || s.status === 'pending_end');
-    const isTest = shifts.some(s => s.client_name.toLowerCase().includes('test') || s.account_tag.toLowerCase().includes('qa'));
-    const allCompleted = shifts.every(s => s.status === 'completed');
-    const reached = shifts.some(s => s.status === 'completed' && (s.final_score ?? s.current_score) >= s.target_score);
-    const worked = shifts.filter(s => s.status !== 'rejected' && s.status !== 'force_released');
-    if (isTest) return 'test';
-    if (hasInProgress) return 'in_progress';
-    if (worked.length > 0 && worked.some(s => isLate(s, cfg))) return 'late';
-    if (reached || allCompleted) return 'objective_reached';
-    return 'absent';
-  }
-  // Jour passé (lundi à samedi, dimanche = repos) depuis la première activité, sans aucune session = absence
-  if (firstActivity && dateStr >= firstActivity && dateStr < today) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (new Date(y, m - 1, d).getDay() !== 0) return 'absent';
-  }
-  return 'no_post';
+// ============================ CALENDRIER GLOBAL (tous les employés) : mois, résumé, jour ============================
+type GView = 'month' | 'summary' | 'day';
+interface GlobalCalProps {
+  year: number; month: number; today: string; list: User[]; posts: PostSession[]; leaves: Leave[]; advances: SalaryAdvanceRequest[]; cfg: AppSettings;
+  clientFilter: string; statusFilter: StatusFilter; leaveFilter: LeaveFilter; first: Record<string, string>;
+  onSelectDay: (dateStr: string, shifts: PostSession[]) => void; onPickEmployee: (id: string) => void;
+  st: { L: boolean; card: string; txt: string; sub: string; TINT: Record<DayStatus, string>; pill: (a: boolean) => string; roundBtn: string };
 }
+const GMONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const GDOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const addDay = (d: string, n: number) => new Date(new Date(`${d}T00:00:00Z`).getTime() + n * 86400000).toISOString().slice(0, 10);
+const hmMada = (iso: string) => new Date(new Date(iso).getTime() + 3 * 3600 * 1000).toISOString().slice(11, 16);
+
+const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, posts, leaves, advances, cfg, clientFilter, statusFilter, leaveFilter, first, onSelectDay, onPickEmployee, st }) => {
+  const { L, card, txt, sub, TINT, pill } = st;
+  const lang: 'fr' | 'en' = useApp().lang === 'en' ? 'en' : 'fr';
+  const nowMs = useNow(15000);
+  const [view, setView] = useState<GView>('month');
+  const prefix = `${year}-${pad(month + 1)}-`;
+  const [selDay, setSelDay] = useState<string>(() => (today.startsWith(prefix) ? today : `${prefix}01`));
+  const [att, setAtt] = useState<AttendanceRow[]>([]);
+  const ctx = useMemo(() => ({ posts, leaves, today, cfg, clientFilter }), [posts, leaves, today, cfg, clientFilter]);
+  const gDays = useMemo(() => globalMonth(year, month, list, ctx, first), [year, month, list, ctx, first]);
+  const summary = useMemo(() => globalSummary(year, month, list, ctx, first, advances), [year, month, list, ctx, first, advances]);
+  const rows = useMemo(() => dayView(selDay, list, ctx, first), [selDay, list, ctx, first]);
+  const startDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} Ar`;
+
+  useEffect(() => {
+    if (view !== 'day') return;
+    let alive = true;
+    setAtt([]);
+    db.fetchAttendance(selDay).then(r => { if (alive) setAtt(Array.isArray(r) ? r : []); }).catch(() => { /* hors ligne : pas de ligne de connexion */ });
+    return () => { alive = false; };
+  }, [view, selDay]);
+
+  const tab = (v: GView, label: string) => <button key={v} type="button" onClick={() => setView(v)} className={pill(view === v)} data-testid={`gcal-tab-${v}`}>{label}</button>;
+  const Stat = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
+    <div className={`${card} p-3 min-w-0`}><div className={`text-[11px] leading-tight ${sub}`}>{label}</div><div className={`font-bold text-base leading-tight break-words ${tone || txt}`}>{value}</div></div>
+  );
+  const dominant = (g: ReturnType<typeof globalMonth>[number]): DayStatus => g.absent > 0 ? 'absent' : g.late > 0 ? 'late' : g.present > 0 ? (g.counts.in_progress > 0 ? 'in_progress' : 'objective_reached') : g.onLeave > 0 ? 'leave' : 'no_post';
+  const leaveLabel = (t: string | null) => (t ? (LEAVE_TYPE_LABELS as Record<string, [string, string]>)[t]?.[lang === 'en' ? 1 : 0] || t : '');
+
+  return (
+    <div className="space-y-3" data-testid="global-calendar">
+      <div className="flex flex-wrap items-center gap-1.5">{tab('month', 'Mois')}{tab('summary', 'Résumé')}{tab('day', 'Vue du jour')}
+        {leaveFilter !== 'all' && <span className={`ml-auto text-[11px] font-semibold ${sub}`}>{leaveFilter === 'approved' ? 'Congés acceptés' : 'Demandes de congé en attente'} · {list.length} employé{list.length > 1 ? 's' : ''}</span>}
+      </div>
+
+      {list.length === 0 && <div className={`${card} p-6 text-center text-sm ${sub}`}>Aucun employé ne correspond aux filtres.</div>}
+
+      {list.length > 0 && view === 'month' && (
+        <div className={`${card} p-2 sm:p-3`}>
+          <div className={`grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-[11px] sm:text-xs font-semibold pb-1.5 ${sub}`}>{GDOW.map(d => <div key={d}>{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+            {Array.from({ length: startDow }).map((_, i) => <div key={`e${i}`} />)}
+            {gDays.map(g => {
+              const dom = dominant(g), isToday = g.dateStr === today;
+              const leaveHit = leaveFilter === 'approved' ? g.onLeave > 0 : leaveFilter === 'pending' ? g.pendingLeave > 0 : true;
+              const dim = (statusFilter !== 'all' && g.counts[statusFilter] === 0) || !leaveHit;
+              const names = [...g.leaveNames.map(n => `${n} (congé)`), ...g.pendingNames.map(n => `${n} (demande en attente)`)].join(', ');
+              return (
+                <button type="button" key={g.dateStr} data-testid={`gcal-day-${g.dateStr}`} title={names || undefined}
+                  onClick={() => { setSelDay(g.dateStr); setView('day'); }}
+                  className={`min-h-[64px] sm:min-h-[100px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 text-left transition-all hover:shadow-md ${TINT[dom]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}>
+                  <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center self-start ${isToday ? 'bg-blue-600 text-white' : txt}`}>{g.day}</span>
+                  <span className="flex flex-wrap gap-0.5 sm:gap-1">
+                    {g.present > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-500/20 text-emerald-500" title="Présents">{g.present}<span className="hidden sm:inline"> présents</span></span>}
+                    {g.late > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-500/20 text-amber-500" title="En retard">{g.late}<span className="hidden sm:inline"> retard</span></span>}
+                    {g.absent > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-red-500/20 text-red-500" title="Absents">{g.absent}<span className="hidden sm:inline"> absent{g.absent > 1 ? 's' : ''}</span></span>}
+                    {g.onLeave > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-sky-500/20 text-sky-500" title="En congé">{g.onLeave}<span className="hidden sm:inline"> congé</span></span>}
+                    {g.pendingLeave > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold border border-dashed border-sky-500 text-sky-500" title="Demande de congé en attente">{g.pendingLeave}<span className="hidden sm:inline"> demande</span></span>}
+                  </span>
+                  {g.missions > 0 && <span className={`text-[10px] sm:text-[11px] font-semibold ${sub}`}>{g.missions} mission{g.missions > 1 ? 's' : ''}</span>}
+                  {g.pay > 0 && <span className="hidden sm:block text-[11px] font-bold text-emerald-600">{ar(g.pay)}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {list.length > 0 && view === 'summary' && (
+        <>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2" data-testid="gcal-summary">
+            <Stat label="Employés" value={`${summary.employees}`} />
+            <Stat label="Jours travaillés" value={`${summary.workedDays}`} />
+            <Stat label="Jours d'absence" value={`${summary.absences}`} tone={summary.absences > 0 ? 'text-red-500' : undefined} />
+            <Stat label="Retards" value={`${summary.lateDays}`} tone={summary.lateDays > 0 ? 'text-amber-500' : undefined} />
+            <Stat label="Jours de congé" value={`${summary.leaveDays}${summary.pendingLeaveDays ? ` (+${summary.pendingLeaveDays} en attente)` : ''}`} />
+            <Stat label="Missions" value={`${summary.missions} · ${summary.validated} validées`} />
+            <Stat label="Refusées" value={`${summary.refused}`} tone={summary.refused > 0 ? 'text-amber-500' : undefined} />
+            <Stat label="En cours" value={`${summary.inProgress}`} />
+          </div>
+          <div className={`${card} p-4`}>
+            <div className={`flex items-center gap-2 font-bold text-sm mb-3 ${txt}`}><Wallet className="w-4 h-4 text-emerald-500" /> Paie du mois, tous les employés<span className={`ml-auto text-xs font-semibold ${sub}`}>{GMONTHS[month]} {year}</span></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className={`rounded-2xl p-3 ${L ? 'bg-slate-50' : 'bg-white/5'}`}><div className={`text-[11px] ${sub}`}>Gagné</div><div className={`font-bold text-lg ${txt}`}>{formatCurrencyAr(summary.pay)}</div></div>
+              <div className={`rounded-2xl p-3 ${L ? 'bg-slate-50' : 'bg-white/5'}`}><div className={`text-[11px] ${sub}`}>Avances accordées</div><div className="font-bold text-lg text-amber-500">− {formatCurrencyAr(summary.advApproved)}</div>{summary.advPending > 0 && <div className={`text-[11px] ${sub}`}>{formatCurrencyAr(summary.advPending)} en attente</div>}</div>
+              <div className={`rounded-2xl p-3 ${L ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-500/10 border border-emerald-500/25'}`}><div className={`text-[11px] ${sub}`}>Net à payer</div><div className="font-bold text-lg text-emerald-600">{formatCurrencyAr(summary.net)}</div></div>
+            </div>
+          </div>
+          <div className={`${card} p-3 overflow-x-auto`}>
+            <table className={`w-full text-sm ${txt}`} data-testid="gcal-table">
+              <thead><tr className={`text-left text-[11px] uppercase ${sub}`}><th className="p-2">Employé</th><th className="p-2">Travaillés</th><th className="p-2">Absences</th><th className="p-2">Retards</th><th className="p-2">Congés</th><th className="p-2">Missions</th><th className="p-2">Paie</th></tr></thead>
+              <tbody>
+                {summary.rows.map(r => (
+                  <tr key={r.id} className={`border-t ${L ? 'border-slate-200' : 'border-slate-700/60'}`}>
+                    <td className="p-2"><button type="button" onClick={() => onPickEmployee(r.id)} className="font-semibold text-blue-500 hover:underline cursor-pointer text-left" title="Voir son calendrier">{r.name}</button></td>
+                    <td className="p-2">{r.workedDays}</td>
+                    <td className={`p-2 ${r.absences ? 'text-red-500 font-bold' : ''}`}>{r.absences}</td>
+                    <td className={`p-2 ${r.lateDays ? 'text-amber-500 font-bold' : ''}`}>{r.lateDays}</td>
+                    <td className="p-2">{r.leaveDays}</td>
+                    <td className="p-2">{r.missions} <span className={sub}>({r.validated} validées{r.refused ? `, ${r.refused} refusées` : ''})</span></td>
+                    <td className="p-2 whitespace-nowrap">{ar(r.pay)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {list.length > 0 && view === 'day' && (
+        <div className="space-y-2" data-testid="gcal-dayview">
+          <div className={`${card} p-3 flex items-center justify-between gap-2`}>
+            <button type="button" onClick={() => setSelDay(addDay(selDay, -1))} className={st.roundBtn} aria-label="Jour précédent"><ChevronLeft className="w-5 h-5" /></button>
+            <div className="text-center min-w-0">
+              <div className={`font-bold ${txt}`}>{selDay.split('-').reverse().join('/')}{selDay === today ? ' · aujourd\'hui' : ''}</div>
+              <div className={`text-[11px] ${sub}`}>{GDOW[(new Date(`${selDay}T00:00:00Z`).getUTCDay() + 6) % 7]} · {rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status)).length} présents · {rows.filter(r => r.status === 'absent').length} absents · {rows.filter(r => r.status === 'leave').length} en congé</div>
+            </div>
+            <button type="button" onClick={() => setSelDay(addDay(selDay, 1))} className={st.roundBtn} aria-label="Jour suivant"><ChevronRight className="w-5 h-5" /></button>
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={() => onSelectDay(selDay, posts.filter(p => p.date === selDay))} className={pill(false)}>Détail des missions du jour</button>
+          </div>
+          {rows.map(r => {
+            const a = att.find(x => x.user_id === r.id);
+            const u = list.find(x => x.id === r.id);
+            return (
+              <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
+                  <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>
+                  <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
+                </div>
+                <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs ${sub}`}>
+                  {r.firstStart && <span>1re mission : <strong className={txt}>{r.firstStart}</strong>{r.lateMin > 0 && <span className="text-amber-500 font-bold"> (+{r.lateMin} min de retard)</span>}</span>}
+                  {r.firstStart && <span>Dernière fin : <strong className={txt}>{r.open ? 'en cours' : r.lastEnd || '—'}</strong></span>}
+                  {a && <span>1re connexion : <strong className={txt}>{hmMada(a.first_seen)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
+                  {r.missions > 0 && <span>{r.missions} mission{r.missions > 1 ? 's' : ''} · {r.validated} validée{r.validated > 1 ? 's' : ''}{r.refused ? ` · ${r.refused} refusée${r.refused > 1 ? 's' : ''}` : ''}</span>}
+                  {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
+                  {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
+                </div>
+                {selDay === today && u && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelectDay, initialUserId }) => {
   const L = useApp().theme === 'light';
@@ -106,7 +251,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
-  const [selectedId, setSelectedId] = useState<string>(currentUser?.role === 'employee' ? currentUser.id : initialUserId || '');
+  const [selectedId, setSelectedId] = useState<string>(currentUser?.role === 'employee' ? currentUser.id : initialUserId || 'all'); // responsable : « all » = calendrier GLOBAL de tous les employés (vue par défaut)
+  const [leaveFilter, setLeaveFilter] = useState<LeaveFilter>('all');
 
   useEffect(() => {
     return db.subscribe(() => {
@@ -193,6 +339,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
         const worked = posts.some(p => p.employee_id === u.id && p.date.startsWith(monthPrefix) && p.client_name === clientFilter);
         if (!worked) return false;
       }
+      if (!hasLeaveInMonth(leaves, u.id, year, month, leaveFilter)) return false;
       if (statusFilter !== 'all') {
         const days = buildDays(u.id);
         if (!days.some(d => d.status === statusFilter)) return false;
@@ -200,10 +347,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [operators, posts, search, shiftFilter, statusFilter, clientFilter, year, month]);
+  }, [operators, posts, leaves, search, shiftFilter, statusFilter, leaveFilter, clientFilter, year, month]);
 
   // Opérateur affiché : choix, sinon premier de la liste
-  const activeId = isAdmin ? (list.some(u => u.id === selectedId) ? selectedId : list[0]?.id || '') : currentUser?.id || '';
+  const globalMode = isAdmin && selectedId === 'all';
+  const activeId = globalMode ? '' : isAdmin ? (list.some(u => u.id === selectedId) ? selectedId : list[0]?.id || '') : currentUser?.id || '';
   const activeUser = users.find(u => u.id === activeId) || null;
   const days = activeId ? buildDays(activeId) : [];
 
@@ -313,20 +461,32 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 </div>
               </div>
               <div>
+                <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Congés</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => setLeaveFilter('all')} className={pill(leaveFilter === 'all')}>Tous</button>
+                  <button type="button" onClick={() => setLeaveFilter('approved')} className={pill(leaveFilter === 'approved')} data-testid="leave-filter-approved"><CalendarOff className="w-3.5 h-3.5" /> Acceptés</button>
+                  <button type="button" onClick={() => setLeaveFilter('pending')} className={pill(leaveFilter === 'pending')} data-testid="leave-filter-pending"><Hourglass className="w-3.5 h-3.5" /> En attente</button>
+                </div>
+              </div>
+              <div>
                 <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Mission</div>
                 <select value={clientFilter} onChange={e => setClientFilter(e.target.value)} className={field}>
                   <option value="all">Toutes les missions</option>
                   {clientNames.map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
-              {(search || shiftFilter !== 'all' || statusFilter !== 'all' || clientFilter !== 'all') && (
-                <button onClick={() => { setSearch(''); setShiftFilter('all'); setStatusFilter('all'); setClientFilter('all'); }} className={`w-full rounded-lg border py-2 text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-600 text-slate-300 hover:bg-white/10'}`}>
+              {(search || shiftFilter !== 'all' || statusFilter !== 'all' || clientFilter !== 'all' || leaveFilter !== 'all') && (
+                <button onClick={() => { setSearch(''); setShiftFilter('all'); setStatusFilter('all'); setClientFilter('all'); setLeaveFilter('all'); }} className={`w-full rounded-lg border py-2 text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-600 text-slate-300 hover:bg-white/10'}`}>
                   Réinitialiser les filtres
                 </button>
               )}
             </div>
 
             <div className="max-h-64 lg:max-h-[50vh] overflow-y-auto space-y-1 -mx-1 px-1">
+              <button type="button" onClick={() => setSelectedId('all')} data-testid="select-all-employees" className={`w-full flex items-center gap-2.5 p-2 rounded-2xl text-left transition-colors cursor-pointer ${globalMode ? (L ? 'bg-blue-50 ring-1 ring-blue-300' : 'bg-blue-500/15 ring-1 ring-blue-500/40') : (L ? 'hover:bg-slate-50' : 'hover:bg-white/5')}`}>
+                <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-blue-100 text-blue-600' : 'bg-blue-500/20 text-blue-400'}`}><Users className="w-4 h-4" /></span>
+                <div className="min-w-0 flex-1"><div className={`text-sm font-semibold leading-tight ${txt}`}>Tous les employés</div><div className={`text-[11px] ${sub}`}>Calendrier global · {list.length}</div></div>
+              </button>
               {list.length === 0 && <div className={`p-3 text-sm ${sub}`}>Aucun opérateur trouvé.</div>}
               {list.map(u => (
                 <button key={u.id} onClick={() => setSelectedId(u.id)} className={`w-full flex items-center gap-2.5 p-2 rounded-2xl text-left transition-colors cursor-pointer ${u.id === activeId ? (L ? 'bg-blue-50 ring-1 ring-blue-300' : 'bg-blue-500/15 ring-1 ring-blue-500/40') : (L ? 'hover:bg-slate-100' : 'hover:bg-white/5')}`}>
@@ -349,6 +509,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 <span className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${L ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/15 text-blue-400'}`}><CalendarIcon className="w-5 h-5" /></span>
                 <div className="min-w-0">
                   <h2 className={`text-base sm:text-lg font-bold leading-tight break-words ${txt}`}>{isAdmin ? 'Calendrier' : 'Mon calendrier'}</h2>
+                  {globalMode && <div className={`text-xs break-words ${sub}`}>Tous les employés · {list.length}{clientFilter !== 'all' && <> · {clientFilter}</>}</div>}
                   {activeUser && (
                     <div className={`text-xs break-words ${sub}`}>{activeUser.name}{clientFilter !== 'all' && <> · {clientFilter}</>}</div>
                   )}
@@ -407,7 +568,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           </div>
 
           {/* Grille du mois : une tuile arrondie par jour */}
-          {!activeUser ? (
+          {globalMode ? (
+            <GlobalCalendar year={year} month={month} today={today} list={list} posts={posts} leaves={leaves as Leave[]} advances={advances} cfg={cfg}
+              clientFilter={clientFilter} statusFilter={statusFilter} leaveFilter={leaveFilter} first={firstActivity}
+              onSelectDay={onSelectDay} onPickEmployee={id => setSelectedId(id)}
+              st={{ L, card, txt, sub, TINT, pill, roundBtn }} />
+          ) : !activeUser ? (
             <div className={`${card} p-6 text-center text-sm ${sub}`}>Choisissez un opérateur dans la liste pour afficher son calendrier.</div>
           ) : (
             <div className={`${card} p-2 sm:p-3`}>

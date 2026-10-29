@@ -107,7 +107,8 @@ ok(bal('411') === ti.to_collect, 'compte clients (411) = reste à encaisser des 
 ok(!d0.entries.some(e => e.date > TODAY || e.date < d0.start), 'aucune écriture hors de la période');
 
 // ----- Congés et planning -----
-ok(d0.leaves.length === 3 && ['approved', 'pending'].every(s => d0.leaves.some(l => l.status === s)) && d0.leaves.every(l => ops.has(l.employee_id) && l.days === workingDays(l.start_date, l.end_date, 5) && l.end_date >= l.start_date), 'congés : 3 demandes (acceptées et en attente), jours ouvrés bien comptés');
+ok(d0.leaves.length === 4 && ['approved', 'pending'].every(s => d0.leaves.some(l => l.status === s)) && d0.leaves.every(l => ops.has(l.employee_id) && l.days === workingDays(l.start_date, l.end_date, 5) && l.end_date >= l.start_date), 'congés : 4 demandes (acceptées et en attente), jours ouvrés bien comptés');
+ok(d0.leaves.filter(l => l.status === 'approved' && l.start_date < TODAY).length >= 2 && !d0.posts.some(p => d0.leaves.some(l => l.status === 'approved' && l.employee_id === p.employee_id && p.date >= l.start_date && p.date <= l.end_date)), 'aucune mission un jour de congé accepté (deux congés passés visibles dans le calendrier)');
 ok(d0.shifts.length === 4 * 14 && !dups(d0.shifts.map(s => s.id)) && d0.shifts.every(s => /^sh-.+-\d{8}$/.test(s.id) && ops.has(s.employee_id)), 'planning : 2 semaines pour les 4 opérateurs, identifiants au format du site');
 ok(planConflicts(d0.shifts, d0.leaves as any, { maxPerWeek: 5 }).length === 0, 'planning sans conflit (congé accepté = repos, pas de Nuit puis Jour, 5 jours au plus par semaine)');
 ok(d0.shifts.every(s => dow(s.date) === 0 || dow(s.date) === 6 ? s.kind === 'off' : true), 'week-end : repos');
