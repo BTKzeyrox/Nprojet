@@ -15,6 +15,7 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 const { db } = await import('../src/db/store');
 const S = await import('../src/utils/stock');
 const { StockTab } = await import('../src/views/admin/StockTab');
+const { StockAnalytics } = await import('../src/views/admin/StockAnalytics');
 const { todayMada } = await import('../src/utils/stats');
 
 let fails = 0, n = 0;
@@ -167,17 +168,18 @@ db.enterDemo('admin');
 const range = { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-31` };
 const bad = (html: string) => /NaN|Infinity|undefined|\[object/.test(html);
 for (const lang of ['fr', 'en'] as const) {
-  const html = renderToString(<StockTab range={range} lang={lang} />);
+  const html = renderToString(<StockTab lang={lang} />);
   ok(!bad(html), `${lang} : aucun NaN ni « undefined »`);
   ok(html.includes(lang === 'en' ? 'Stock value' : 'Valeur du stock') && html.includes(lang === 'en' ? 'New product' : 'Nouveau produit') && html.includes(lang === 'en' ? 'Running out soon' : 'Bientôt en rupture'), `${lang} : cartes et boutons dans la bonne langue`);
   ok(html.includes('Papier A4') && (html.includes(lang === 'en' ? 'low stock' : 'stock bas') || html.includes(lang === 'en' ? 'out of stock' : 'en rupture')), `${lang} : produits de la démo et alerte affichés`);
-  ok(html.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && html.includes(lang === 'en' ? 'Most used products' : 'Produits les plus utilisés'), `${lang} : graphiques présents`);
+  const anHtml = renderToString(<StockAnalytics lang={lang} />);
+  ok(!bad(anHtml) && anHtml.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && anHtml.includes(lang === 'en' ? 'Most used products' : 'Produits les plus utilisés'), `${lang} : onglet Analyses : graphiques présents`);
   if (lang === 'fr') ok(!/Stock value|New product|Running out/.test(html), 'fr : pas de texte anglais');
   else ok(!/Nouveau produit|Valeur du stock|Bientôt en rupture|Entrée</.test(html), 'en : pas de texte français dans les cartes');
 }
 (db as any).purchases = [];
 for (const x of db.getProducts()) db.deleteProduct(x.id);
-const emptyHtml = renderToString(<StockTab range={range} lang="fr" />);
+const emptyHtml = renderToString(<StockTab lang="fr" />);
 ok(!bad(emptyHtml) && emptyHtml.includes('Aucun produit pour l&#x27;instant') , 'liste vide : message clair, sans erreur');
 ok(calls === 0, `aucun appel réseau (${calls})`);
 console.log(`\n${n - fails}/${n} contrôles réussis`);

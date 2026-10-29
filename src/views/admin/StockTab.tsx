@@ -6,16 +6,13 @@ import { db } from '../../db/store';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { supplierRanking, topPurchased } from '../../utils/purchasing';
 import { compressImageToDataUrl } from '../../utils/imageUtils';
-import { checkMoveDraft, purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
+import { checkMoveDraft, purchaseAmount, runOutSoon, stockRows, stockValue } from '../../utils/stock';
 import type { Product, StockMoveType } from '../../types';
-import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
-import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
-interface Props { range: { start: string; end: string }; lang: 'fr' | 'en'; initialFilter?: StockFilter }
+interface Props { lang: 'fr' | 'en'; initialFilter?: StockFilter }
 interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string; photo: string }
 export type StockFilter = 'all' | 'low' | 'empty';
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -26,7 +23,7 @@ const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockTab: React.FC<Props> = ({ range, lang, initialFilter }) => {
+export const StockTab: React.FC<Props> = ({ lang, initialFilter }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [pEdit, setPEdit] = useState<ProductEditor | null>(null);
   const [importing, setImporting] = useState(false);
@@ -57,12 +54,7 @@ export const StockTab: React.FC<Props> = ({ range, lang, initialFilter }) => {
     const list = rows.filter(r => (filter === 'all' || (filter === 'empty' ? r.empty : r.low && !r.empty)) && (!k || norm(r.product.name).includes(k) || norm(r.product.category).includes(k)));
     return sortBy === 'qty' ? [...list].sort((a, b) => a.qty - b.qty || a.product.name.localeCompare(b.product.name)) : list;
   }, [rows, query, filter, sortBy]);
-  const period = useMemo(() => stockPeriod(products, moves, range.start, range.end), [products, moves, range.start, range.end]);
-  const months = useMemo(() => valueByMonth(products, moves, today, 12), [products, moves, today]);
-  const used = useMemo(() => topUsed(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
   const soon = useMemo(() => runOutSoon(rows, moves, today), [rows, moves, today]);
-  const suppliersRank = useMemo(() => supplierRanking(db.getSuppliers(), db.getPurchases(), moves, range.start, range.end, today).slice(0, 5), [moves, range.start, range.end, today]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bought = useMemo(() => topPurchased(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
   const ar = (n: number) => formatCurrencyAr(n);
 
   const errors: Record<string, [string, string]> = {
@@ -142,7 +134,7 @@ export const StockTab: React.FC<Props> = ({ range, lang, initialFilter }) => {
           {tile(t('Valeur du stock', 'Stock value'), ar(total), 'text-sky-300')}
           {tile(t('Produits', 'Products'), String(products.length), 'text-white')}
           {tile(t('Sous le seuil', 'Below threshold'), String(red), red > 0 ? 'text-rose-400' : 'text-emerald-400')}
-          {tile(t('Sorties (période)', 'Exits (period)'), `${num(period.qtyOut)}`, 'text-amber-400')}
+          {tile(t('Épuisés', 'Out of stock'), String(emptyCount), emptyCount > 0 ? 'text-rose-400' : 'text-emerald-400')}
         </div>
         <p className="text-[11px] text-slate-500">{t('Valeur = quantité × prix d\'achat. La quantité se calcule avec les entrées, sorties et ajustements : on ne la saisit jamais.', 'Value = quantity × purchase price. The quantity is calculated from entries, exits and adjustments: it is never typed in.')}</p>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -238,47 +230,6 @@ export const StockTab: React.FC<Props> = ({ range, lang, initialFilter }) => {
           </ul>
         )}
       </div>
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Valeur du stock dans le temps', 'Stock value over time')}</h3>
-          <LineChart values={months.values} labels={months.labels} fullLabels={months.keys.map(k => monthTitle(k, lang))} format={v => ar(v)} ariaLabel={t('Valeur du stock à la fin de chaque mois', 'Stock value at the end of each month')} emptyText={t('Pas encore de stock.', 'No stock yet.')} lang={lang} />
-          <p className="text-[11px] text-slate-500">{t('Les 12 derniers mois, avec les prix d\'achat actuels.', 'The last 12 months, using current purchase prices.')}</p>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Produits les plus utilisés (période)', 'Most used products (period)')}</h3>
-          {used.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune sortie sur cette période.', 'No exits in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Produits les plus utilisés', 'Most used products')} barClass="bg-sky-500"
-              items={used.map(u => ({ key: u.product.id, label: u.product.name, value: u.used, valueText: `${num(u.used)} ${u.product.unit}` }))} />
-          )}
-          {period.soldAr > 0 && <p className="text-[11px] text-slate-500">{t(`Valeur des sorties au prix de vente : ${compactNumber(period.soldAr)} Ar.`, `Value of exits at selling price: ${compactNumber(period.soldAr)} Ar.`)}</p>}
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Fournisseurs (période)', 'Suppliers (period)')}</h3>
-          {suppliersRank.length === 0 ? <div className="text-sm text-slate-400">{t('Aucun bon de commande commandé sur cette période.', 'No purchase order placed in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Fournisseurs classés par valeur reçue', 'Suppliers ranked by value received')} barClass="bg-amber-500"
-              items={suppliersRank.map(x => ({ key: x.supplier.id, label: x.supplier.name, value: x.spentAr, valueText: `${compactNumber(x.spentAr)} Ar · ${t(`${x.orders} bon${x.orders > 1 ? 's' : ''}`, `${x.orders} order${x.orders > 1 ? 's' : ''}`)}${x.late > 0 ? ` · ${t(`${x.late} en retard`, `${x.late} late`)}` : ''}` }))} />
-          )}
-          <p className="text-[11px] text-slate-500">{t('Valeur reçue des bons (quantité reçue × prix convenu), classée du plus gros fournisseur au plus petit.', 'Value received from orders (received quantity × agreed price), biggest supplier first.')}</p>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Produits achetés le plus cher (période)', 'Most expensive purchases (period)')}</h3>
-          {bought.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune entrée avec un prix payé sur cette période.', 'No stock entry with a price paid in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Produits achetés le plus cher', 'Most expensive purchases')} barClass="bg-rose-500"
-              items={bought.map(x => ({ key: x.product.id, label: x.product.name, value: x.spentAr, valueText: `${compactNumber(x.spentAr)} Ar · ${t('moy.', 'avg')} ${compactNumber(x.avgUnitCost)} · ${t('dernier', 'last')} ${compactNumber(x.lastUnitCost)}` }))} />
-          )}
-          <p className="text-[11px] text-slate-500">{t('Dépense totale par produit (entrées avec un prix), prix moyen et dernier prix payé par unité.', 'Total spent per product (entries with a price), average and last price paid per unit.')}</p>
-        </div>
-      )}
 
       {products.length > 0 && (
         <div className={card}>

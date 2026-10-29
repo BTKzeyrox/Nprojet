@@ -165,7 +165,7 @@ ok(computeAlerts({ ...alertBase, settings: {}, cash: [] }).every(a => a.id !== '
 // ---------- M4.5 : statistiques d'achat ----------
 {
   const { supplierRanking, topPurchased, poReceivedValue } = await import('../src/utils/purchasing');
-  const { StockTab } = await import('../src/views/admin/StockTab');
+  const { StockAnalytics } = await import('../src/views/admin/StockAnalytics');
   db.enterDemo('admin');
   const range = { start: '2000-01-01', end: todayMada() };
   const rk = supplierRanking(db.getSuppliers(), db.getPurchases(), db.getStockMoves(), range.start, range.end, todayMada());
@@ -178,7 +178,7 @@ ok(computeAlerts({ ...alertBase, settings: {}, cash: [] }).every(a => a.id !== '
   ok(late >= 1, 'démo : au moins un bon en retard compté');
   const tp = topPurchased(db.getProducts(), db.getStockMoves(), range.start, range.end, 5);
   ok(tp.length > 0 && tp.length <= 5 && tp.every((x, i) => i === 0 || tp[i - 1].spentAr >= x.spentAr) && tp.every(x => x.avgUnitCost > 0 && x.lastUnitCost > 0), 'produits achetés le plus cher : au plus 5, du plus cher au moins cher, prix moyen et dernier prix');
-  const renderStock = (lang: 'fr' | 'en') => renderToString(<AppProvider><StockTab range={range} lang={lang} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' ');
+  const renderStock = (lang: 'fr' | 'en') => renderToString(<AppProvider><StockAnalytics lang={lang} /></AppProvider>).replace(/<!-- -->/g, '').replace(/[\u00a0\u202f]/g, ' ');
   mem.delta_lang = 'fr'; const fr = renderStock('fr'); mem.delta_lang = 'en'; const en = renderStock('en');
   ok(!bad(fr) && !bad(en), 'Stock : aucun NaN, « undefined » ni « null » affichés');
   ok(fr.includes('Fournisseurs (période)') && fr.includes('Produits achetés le plus cher') && en.includes('Suppliers (period)') && en.includes('Most expensive purchases'), 'Stock : les 2 cartes d\'achat FR et EN');

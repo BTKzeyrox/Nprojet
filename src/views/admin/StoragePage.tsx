@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
-import { todayMada } from '../../utils/stats';
 import { StockTab, type StockFilter } from './StockTab';
 import { StockDashboard } from './StockDashboard';
 import { StockMovements } from './StockMovements';
+import { StockAnalytics } from './StockAnalytics';
 
 // Page « Stockage » (responsable seulement) : sa propre page, hors de Statistiques.
-// Étape 1 : Produits (la liste, ses photos, ses graphiques). Étape 2 : Tableau de bord. Étape 3 : Mouvements.
-// Étape suivante : Analyses (avec leur propre période).
-type Tab = 'dashboard' | 'products' | 'movements';
+// Produits (liste, photos, entrées/sorties), Tableau de bord, Mouvements (historique), Analyses (graphiques avec leur propre période).
+type Tab = 'dashboard' | 'products' | 'movements' | 'analytics';
 
 export const StoragePage: React.FC = () => {
   const { lang } = useApp();
@@ -21,8 +20,6 @@ export const StoragePage: React.FC = () => {
   const [filter, setFilter] = useState<StockFilter>('all');
   const [openKey, setOpenKey] = useState(0); // change à chaque ouverture de « Produits » pour repartir avec le bon filtre
   const open = (next: Tab, f: StockFilter = 'all') => { setFilter(f); setOpenKey(k => k + 1); setTab(next); };
-  const today = todayMada();
-  const range = { start: `${today.slice(0, 8)}01`, end: today }; // le mois en cours
   const tabBtn = (id: Tab, fr: string, en: string) => (
     <button type="button" role="tab" aria-selected={tab === id} onClick={() => open(id)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-semibold border px-3 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{t(fr, en)}</button>
   );
@@ -36,12 +33,15 @@ export const StoragePage: React.FC = () => {
         {tabBtn('dashboard', 'Tableau de bord', 'Dashboard')}
         {tabBtn('products', 'Produits', 'Products')}
         {tabBtn('movements', 'Mouvements', 'Movements')}
+        {tabBtn('analytics', 'Analyses', 'Analytics')}
       </div>
       {tab === 'dashboard'
         ? <StockDashboard lang={l} onOpenProducts={f => open('products', f)} />
         : tab === 'movements'
           ? <StockMovements lang={l} />
-          : <StockTab key={openKey} range={range} lang={l} initialFilter={filter} />}
+          : tab === 'analytics'
+            ? <StockAnalytics lang={l} />
+            : <StockTab key={openKey} lang={l} initialFilter={filter} />}
     </div>
   );
 };
