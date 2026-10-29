@@ -9,6 +9,9 @@ import { loadSheets, clearLocal, hasLocal } from '../utils/sheetsStore';
 import { downloadExcel, downloadWord, printSheet } from '../utils/sheetExport';
 import { showToast } from './ToastHost';
 import { ImportDialog } from './ImportDialog';
+import { SmartField } from './SmartField';
+import { SheetForm } from './SheetForm';
+import * as A from '../utils/sheetAuto';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
 const COLOR_CLS: Record<S.CondRule['color'], string> = { red: 'bg-red-500/25 text-red-200', green: 'bg-emerald-500/25 text-emerald-200', amber: 'bg-amber-500/25 text-amber-200', blue: 'bg-sky-500/25 text-sky-200' };
@@ -16,26 +19,16 @@ const btn = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border
 const inp = 'bg-transparent w-full min-w-0 px-2 py-1.5 text-sm text-slate-100 outline-none focus:bg-sky-500/10';
 const box = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4';
 
-const Cell: React.FC<{ sheet: S.Sheet; row: S.Row; col: S.Column; shown: string; color: S.CondRule['color'] | null; err: boolean; ro: boolean; onCommit: (v: string) => void; t: (a: string, b: string) => string }> = ({ sheet, row, col, shown, color, err, ro, onCommit, t }) => {
+const Cell: React.FC<{ sheet: S.Sheet; row: S.Row; col: S.Column; shown: string; color: S.CondRule['color'] | null; err: boolean; ro: boolean; lang: A.Lang; today: string; listId?: string; onCommit: (v: string) => void; t: (a: string, b: string) => string }> = ({ sheet, row, col, shown, color, err, ro, lang, today, listId, onCommit, t }) => {
   const raw = row.cells[col.id] ?? '';
-  const [draft, setDraft] = useState<string | null>(null);
   const problem = S.checkCell(sheet, row.id, col.id, raw);
-  const msg = problem && { required: t('Obligatoire', 'Required'), duplicate: t('Doublon', 'Duplicate'), number: t('Pas un nombre', 'Not a number'), date: t('Date AAAA-MM-JJ', 'Date YYYY-MM-DD'), list: t('Pas dans la liste', 'Not in the list') }[problem];
+  const msg = problem && { required: t('Obligatoire', 'Required'), duplicate: t('Doublon', 'Duplicate'), number: t('Pas un nombre', 'Not a number'), date: t('Date invalide (jj/mm/aaaa)', 'Invalid date (dd/mm/yyyy)'), list: t('Pas dans la liste', 'Not in the list'), time: t('Heure invalide (hh:mm)', 'Invalid time (hh:mm)'), phone: t('Numéro invalide', 'Invalid number') }[problem];
   const wrap = `border-r border-b border-slate-700/70 ${color ? COLOR_CLS[color] : ''} ${problem ? 'outline outline-1 outline-red-500/70 -outline-offset-1' : ''}`;
   if (col.type === 'check') return <td className={`${wrap} text-center`}><input type="checkbox" aria-label={col.name} className="w-5 h-5 align-middle" checked={raw === '1'} disabled={ro} onChange={e => onCommit(e.target.checked ? '1' : '')} /></td>;
   if (col.type === 'list' && !isFormula(raw)) return <td className={wrap} title={msg || undefined}><select aria-label={col.name} disabled={ro} className={`${inp} bg-[#0f1722]`} value={raw} onChange={e => onCommit(e.target.value)}><option value="">—</option>{raw && !(col.options || []).includes(raw) && <option value={raw}>{raw}</option>}{(col.options || []).map(o => <option key={o} value={o}>{o}</option>)}</select></td>;
-  const editing = draft !== null;
   return (
     <td className={wrap} title={msg || (isFormula(raw) ? raw : undefined)}>
-      <input
-        aria-label={col.name}
-        type="text" readOnly={ro} inputMode={col.type === 'number' && !editing ? 'decimal' : undefined}
-        className={`${inp} ${col.type === 'number' && !editing ? 'text-right' : ''} ${err && !editing ? 'text-red-300 font-semibold' : ''}`}
-        value={editing ? draft : shown} placeholder={col.type === 'date' ? 'AAAA-MM-JJ' : ''}
-        onFocus={() => { if (!ro) setDraft(raw); }} onChange={e => setDraft(e.target.value)}
-        onBlur={() => { if (draft !== null && draft !== raw) onCommit(draft); setDraft(null); }}
-        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setDraft(raw); (e.target as HTMLInputElement).blur(); } }}
-      />
+      <SmartField col={col} value={raw} shown={shown} lang={lang} today={today} readOnly={ro} err={err} className={inp} listId={listId} onCommit={onCommit} />
     </td>
   );
 };
@@ -65,6 +58,9 @@ export const MySheets: React.FC = () => {
   const [chartCols, setChartCols] = useState<{ label: string; value: string }>({ label: '', value: '' });
   const [newOpts, setNewOpts] = useState('');
   const [saveOk, setSaveOk] = useState(true);
+  const [mode, setModeState] = useState<'grid' | 'form'>('grid'); // vue Grille ou vue Formulaire (choix gardé par tableau sur cet appareil)
+  const readMode = (id: string): 'grid' | 'form' => { try { return localStorage.getItem(`df_sheet_mode_${id}`) === 'form' ? 'form' : 'grid'; } catch { return 'grid'; } };
+  const setMode = (m: 'grid' | 'form') => { setModeState(m); if (openRef.current) { try { localStorage.setItem(`df_sheet_mode_${openRef.current}`, m); } catch { /* ignore */ } } };
   const first = useRef(true);
   const openRef = useRef<string | null>(null);
   openRef.current = openId;
@@ -79,17 +75,18 @@ export const MySheets: React.FC = () => {
   useEffect(() => db.subscribe(() => { if (!openRef.current) { const l = fromDb(); setSheets(p => (JSON.stringify(p) === JSON.stringify(l) ? p : l)); } }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cur = hist?.present;
-  const apply = (fn: (s: S.Sheet) => S.Sheet | null, warn?: string) => {
-    if (!hist) return;
-    if (ro) return;
+  const apply = (fn: (s: S.Sheet) => S.Sheet | null, warn?: string): S.Sheet | null => {
+    if (!hist) return null;
+    if (ro) return null;
     const next = fn(hist.present);
-    if (!next) { if (warn) showToast(warn, 'error'); return; }
-    if (S.sheetChars(next) > S.SHEET_MAX_CHARS) { showToast(t('Ce tableau est trop gros : supprime des lignes ou divise-le en deux.', 'This table is too big: delete rows or split it in two.'), 'error'); return; }
+    if (!next) { if (warn) showToast(warn, 'error'); return null; }
+    if (S.sheetChars(next) > S.SHEET_MAX_CHARS) { showToast(t('Ce tableau est trop gros : supprime des lignes ou divise-le en deux.', 'This table is too big: delete rows or split it in two.'), 'error'); return null; }
     const h = S.pushHistory(hist, next); setHist(h);
     setSheets(l => l.map(x => (x.id === next.id ? next : x)));
+    return next;
   };
   const jump = (h: S.History) => { if (ro) return; setHist(h); setSheets(l => l.map(x => (x.id === h.present.id ? h.present : x))); };
-  const open = (s: S.Sheet) => { openRef.current = s.id; setOpenId(s.id); setHist(S.newHistory(s)); setView({}); setPanel(''); setColEdit(null); };
+  const open = (s: S.Sheet) => { openRef.current = s.id; setOpenId(s.id); setHist(S.newHistory(s)); setView({}); setPanel(''); setColEdit(null); setModeState(readMode(s.id)); };
   const close = () => { openRef.current = null; setOpenId(null); setHist(null); if (ro) setSheets(fromDb()); };
   const addSheet = (s: S.Sheet) => {
     if (sheets.filter(x => !x.deleted_at && !x.post_id).length >= S.LIMITS.sheetsPerPerson) { showToast(t(`${S.LIMITS.sheetsPerPerson} tableaux au maximum : supprime-en un.`, `${S.LIMITS.sheetsPerPerson} tables maximum: delete one.`), 'error'); return; }
@@ -155,11 +152,12 @@ export const MySheets: React.FC = () => {
   const cols = comp.cols, rows = comp.rows;
   const trash = S.trashOf(cur);
   const col = colEdit ? cols.find(c => c.id === colEdit) : undefined;
-  const numCols = cols.filter(c => c.type === 'number'), labelCols = cols.filter(c => c.type !== 'number');
+  const numCols = cols.filter(c => S.isNumType(c.type)), labelCols = cols.filter(c => !S.isNumType(c.type));
   const lc = chartCols.label && cols.some(c => c.id === chartCols.label) ? chartCols.label : labelCols[0]?.id || '';
   const vc = chartCols.value === '' ? '' : cols.some(c => c.id === chartCols.value) ? chartCols.value : '';
   const chart = lc ? S.chartData(comp, lc, vc || undefined) : [];
   const chartMax = Math.max(1, ...chart.map(c => c.value));
+  const formMode = mode === 'form';
   const exportErr = (ok: boolean) => { if (!ok) showToast(t('Fenêtre bloquée : autorise les fenêtres pour ce site.', 'Window blocked: allow pop-ups for this site.'), 'error'); };
   const head = (c: S.Column) => (view.sortCol === c.id ? (view.sortDir === 'desc' ? ' ▼' : ' ▲') : '');
 
@@ -170,16 +168,20 @@ export const MySheets: React.FC = () => {
         <input aria-label={t('Titre', 'Title')} className="flex-1 min-w-[140px] bg-transparent border-b border-slate-600 text-white font-bold text-base outline-none px-1 py-1" maxLength={S.LIMITS.title} defaultValue={cur.title} readOnly={ro} key={cur.id} onBlur={e => { if (e.target.value.trim() && e.target.value !== cur.title) apply(s => S.renameSheet(s, e.target.value, nowIso())); }} />
         {!ro && <><button className={btn} disabled={!hist || !hist.past.length} onClick={() => hist && jump(S.undo(hist))} aria-label={t('Annuler', 'Undo')}><Undo2 className="w-4 h-4" /></button>
         <button className={btn} disabled={!hist || !hist.future.length} onClick={() => hist && jump(S.redo(hist))} aria-label={t('Rétablir', 'Redo')}><Redo2 className="w-4 h-4" /></button></>}
+        <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden" role="group" aria-label={t('Vue', 'View')}>
+          <button className={`px-3 py-2 text-xs font-semibold cursor-pointer ${mode === 'grid' ? 'bg-sky-600 text-white' : 'text-slate-200'}`} aria-pressed={mode === 'grid'} onClick={() => setMode('grid')} data-testid="mode-grid">{t('Grille', 'Grid')}</button>
+          <button className={`px-3 py-2 text-xs font-semibold cursor-pointer ${mode === 'form' ? 'bg-sky-600 text-white' : 'text-slate-200'}`} aria-pressed={mode === 'form'} onClick={() => setMode('form')} data-testid="mode-form">{t('Formulaire', 'Form')}</button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {!ro && <button className={btn} onClick={() => apply(s => S.addRow(s, nowIso()), t('5 000 lignes au maximum.', '5,000 rows maximum.'))}><Plus className="w-3.5 h-3.5" />{t('Ligne', 'Row')}</button>}
-        {!ro && <button className={btn} onClick={() => { apply(s => S.addColumn(s, t('Colonne', 'Column') + ' ' + (S.activeColumns(s).length + 1), 'text', nowIso()), t('200 colonnes au maximum.', '200 columns maximum.')); }}><Plus className="w-3.5 h-3.5" />{t('Colonne', 'Column')}</button>}
-        <div className="relative flex-1 min-w-[120px]"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" /><input aria-label={t('Chercher', 'Search')} className="w-full pl-8 pr-2 py-2 rounded-lg bg-slate-800/60 border border-slate-600 text-xs text-slate-100 outline-none" placeholder={t('Chercher…', 'Search…')} value={view.search || ''} onChange={e => setView(v => ({ ...v, search: e.target.value }))} /></div>
-        <button className={btn} onClick={() => setPanel(p => (p === 'chart' ? '' : 'chart'))}><BarChart3 className="w-3.5 h-3.5" />{t('Graphique', 'Chart')}</button>
-        {!ro && <button className={btn} onClick={() => setPanel(p => (p === 'rules' ? '' : 'rules'))}><Paintbrush className="w-3.5 h-3.5" />{t('Couleurs', 'Colors')}</button>}
+        {!formMode && !ro && <button className={btn} onClick={() => apply(s => A.addRowAuto(s, nowIso(), today), t('5 000 lignes au maximum.', '5,000 rows maximum.'))}><Plus className="w-3.5 h-3.5" />{t('Ligne', 'Row')}</button>}
+        {!formMode && !ro && <button className={btn} onClick={() => { const nx = apply(s => S.addColumn(s, t('Colonne', 'Column') + ' ' + (S.activeColumns(s).length + 1), 'text', nowIso()), t('200 colonnes au maximum.', '200 columns maximum.')); if (nx) setColEdit(S.activeColumns(nx).slice(-1)[0]?.id || null); }}><Plus className="w-3.5 h-3.5" />{t('Colonne', 'Column')}</button>}
+        {!formMode && <div className="relative flex-1 min-w-[120px]"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" /><input aria-label={t('Chercher', 'Search')} className="w-full pl-8 pr-2 py-2 rounded-lg bg-slate-800/60 border border-slate-600 text-xs text-slate-100 outline-none" placeholder={t('Chercher…', 'Search…')} value={view.search || ''} onChange={e => setView(v => ({ ...v, search: e.target.value }))} /></div>}
+        {!formMode && <button className={btn} onClick={() => setPanel(p => (p === 'chart' ? '' : 'chart'))}><BarChart3 className="w-3.5 h-3.5" />{t('Graphique', 'Chart')}</button>}
+        {!formMode && !ro && <button className={btn} onClick={() => setPanel(p => (p === 'rules' ? '' : 'rules'))}><Paintbrush className="w-3.5 h-3.5" />{t('Couleurs', 'Colors')}</button>}
         {!ro && <button className={btn} onClick={() => setPanel(p => (p === 'trash' ? '' : 'trash'))}><Trash2 className="w-3.5 h-3.5" />{t('Corbeille', 'Trash')}{trash.rows.length + trash.columns.length > 0 ? ` (${trash.rows.length + trash.columns.length})` : ''}</button>}
-        <button className={btn} onClick={() => setPanel(p => (p === 'help' ? '' : 'help'))}>ƒx</button>
+        {!formMode && <button className={btn} onClick={() => setPanel(p => (p === 'help' ? '' : 'help'))}>ƒx</button>}
         <button className={btn} onClick={() => setPanel(p => (p === 'export' ? '' : 'export'))}><Download className="w-3.5 h-3.5" />{t('Télécharger', 'Download')}</button>
       </div>
 
@@ -223,16 +225,25 @@ export const MySheets: React.FC = () => {
         </div>
       )}
 
-      {col && (
+      {!formMode && col && (
         <div className="border border-sky-500/50 rounded-lg p-2.5 space-y-2 text-xs text-slate-300">
           <div className="flex flex-wrap items-center gap-2">
             <input aria-label={t('Nom de la colonne', 'Column name')} className="bg-slate-800/60 border border-slate-600 rounded px-2 py-1.5 text-slate-100 w-40" maxLength={S.LIMITS.colName} defaultValue={col.name} key={col.id} onBlur={e => { if (e.target.value.trim() && e.target.value !== col.name) apply(s => S.updateColumn(s, col.id, { name: e.target.value }, nowIso())); }} />
-            <select aria-label="Type" className="bg-[#0f1722] border border-slate-600 rounded px-2 py-1.5" value={col.type} onChange={e => apply(s => S.updateColumn(s, col.id, { type: e.target.value as S.ColType }, nowIso()))}>
-              <option value="text">{t('Texte', 'Text')}</option><option value="number">{t('Nombre', 'Number')}</option><option value="date">Date</option><option value="list">{t('Liste', 'List')}</option><option value="check">{t('Case à cocher', 'Checkbox')}</option>
+            <select aria-label="Type" className="bg-[#0f1722] border border-slate-600 rounded px-2 py-1.5" value={col.type} onChange={e => { const ty = e.target.value as S.ColType; apply(s => { const nx = S.updateColumn(s, col.id, { type: ty }, nowIso()); return nx && ty === 'code' ? A.fillCodes(nx, col.id, nowIso()) || nx : nx; }); }}>
+              <option value="text">{t('Texte', 'Text')}</option><option value="number">{t('Nombre', 'Number')}</option><option value="money">{t('Montant', 'Amount')}</option><option value="date">Date</option><option value="time">{t('Heure', 'Time')}</option><option value="phone">{t('Téléphone', 'Phone')}</option><option value="code">{t('Code (REF001, REF002…)', 'Code (REF001, REF002…)')}</option><option value="list">{t('Liste', 'List')}</option><option value="check">{t('Case à cocher', 'Checkbox')}</option>
             </select>
             <label className="flex items-center gap-1"><input type="checkbox" checked={!!col.required} onChange={e => apply(s => S.updateColumn(s, col.id, { required: e.target.checked }, nowIso()))} />{t('Obligatoire', 'Required')}</label>
             <label className="flex items-center gap-1"><input type="checkbox" checked={!!col.unique} onChange={e => apply(s => S.updateColumn(s, col.id, { unique: e.target.checked }, nowIso()))} />{t('Sans doublon', 'No duplicates')}</label>
           </div>
+          {col.type === 'code' && (
+            <div className="flex flex-wrap items-center gap-2" data-testid="code-settings">
+              <label className="flex items-center gap-1">{t('Début', 'Start')} <input aria-label={t('Début du code', 'Code start')} className="w-20 bg-slate-800/60 border border-slate-600 rounded px-2 py-1.5 text-slate-100" maxLength={S.LIMITS.prefix} placeholder="REF" defaultValue={col.prefix || ''} key={col.id + 'p'} onBlur={e => { if (e.target.value.trim() !== (col.prefix || '')) apply(s => { const nx = S.updateColumn(s, col.id, { prefix: e.target.value }, nowIso()); return nx; }); }} /></label>
+              <label className="flex items-center gap-1">{t('Chiffres', 'Digits')} <select aria-label={t('Nombre de chiffres', 'Number of digits')} className="bg-[#0f1722] border border-slate-600 rounded px-2 py-1.5" value={col.digits || 3} onChange={e => apply(s => S.updateColumn(s, col.id, { digits: Number(e.target.value) }, nowIso()))}>{[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
+              <span className="text-slate-400">{t('Exemple', 'Example')} : {A.codeFor(col, S.activeRows(cur).map(r => r.cells[col.id] ?? ''))}</span>
+              <button className={btn} onClick={() => apply(s => A.fillCodes(s, col.id, nowIso()), t('Toutes les lignes ont déjà un code.', 'All rows already have a code.'))}>{t('Remplir les lignes vides', 'Fill empty rows')}</button>
+            </div>
+          )}
+          {col.type !== 'code' && col.type !== 'check' && <label className="flex items-center gap-1"><input type="checkbox" checked={!!col.repeat} onChange={e => apply(s => S.updateColumn(s, col.id, { repeat: e.target.checked }, nowIso()))} />{t('Une nouvelle ligne reprend la valeur de la ligne du dessus', 'A new row copies the value from the row above')}</label>}
           {col.type === 'list' && <div className="flex items-center gap-2"><input className="flex-1 bg-slate-800/60 border border-slate-600 rounded px-2 py-1.5 text-slate-100" placeholder={t('Choix séparés par une virgule', 'Choices separated by commas')} value={newOpts || (col.options || []).join(', ')} onChange={e => setNewOpts(e.target.value)} /><button className={btn} onClick={() => { apply(s => S.updateColumn(s, col.id, { options: newOpts.split(',') }, nowIso())); setNewOpts(''); }}>OK</button></div>}
           <div className="flex flex-wrap gap-2">
             <button className={btn} onClick={() => setView(v => ({ ...v, sortCol: col.id, sortDir: 'asc' }))}><ArrowUp className="w-3.5 h-3.5" />{t('Trier A→Z', 'Sort A→Z')}</button>
@@ -246,6 +257,8 @@ export const MySheets: React.FC = () => {
         </div>
       )}
 
+      {formMode ? <SheetForm sheet={cur} comp={comp} ro={ro} lang={lang === 'en' ? 'en' : 'fr'} today={today} apply={apply} t={t} now={nowIso} /> : <>
+      {cols.filter(c => c.type === 'text').map(c => <datalist key={c.id} id={`dl-${cur.id}-${c.id}`}>{A.columnSuggestions(cur, c.id).map(v => <option key={v} value={v} />)}</datalist>)}
       {cols.length === 0 ? <p className="text-sm text-slate-400">{t('Ajoute une colonne pour commencer.', 'Add a column to start.')}</p> : (
         <div className="overflow-auto max-h-[65vh] border border-slate-700 rounded-lg">
           <table className="border-collapse text-sm min-w-full">
@@ -262,7 +275,7 @@ export const MySheets: React.FC = () => {
                 return (
                   <tr key={row.id}>
                     <td className="border-r border-b border-slate-700/70 text-center text-[11px] text-slate-500">{ri + 1}</td>
-                    {cols.map((c, ci) => { const v = comp.grid[ri][ci]; return <Cell key={c.id} sheet={cur} row={row} col={c} t={t} err={isErr(v)} ro={ro} shown={showCell(v, c, lang)} color={S.ruleColor(cur, comp, ri, ci)} onCommit={val => apply(s => S.updateCell(s, row.id, c.id, val, nowIso()))} />; })}
+                    {cols.map((c, ci) => { const v = comp.grid[ri][ci]; return <Cell key={c.id} sheet={cur} row={row} col={c} t={t} lang={lang === 'en' ? 'en' : 'fr'} today={today} listId={`dl-${cur.id}-${c.id}`} err={isErr(v)} ro={ro} shown={showCell(v, c, lang)} color={S.ruleColor(cur, comp, ri, ci)} onCommit={val => apply(s => S.updateCell(s, row.id, c.id, val, nowIso()))} />; })}
                     {!ro && <td className="border-b border-slate-700/70 whitespace-nowrap">
                       <button className="p-1.5 text-slate-400 hover:text-sky-300 cursor-pointer" aria-label={t('Dupliquer la ligne', 'Duplicate row')} onClick={() => apply(s => S.duplicateRow(s, row.id, nowIso()), t('5 000 lignes au maximum.', '5,000 rows maximum.'))}><Copy className="w-3.5 h-3.5" /></button>
                       <button className="p-1.5 text-slate-400 hover:text-red-300 cursor-pointer" aria-label={t('Supprimer la ligne', 'Delete row')} onClick={() => apply(s => S.deleteRow(s, row.id, nowIso()))}><Trash2 className="w-3.5 h-3.5" /></button>
@@ -279,6 +292,7 @@ export const MySheets: React.FC = () => {
           </table>
         </div>
       )}
+      </>}
       <p className="text-[11px] text-slate-500">
         {shownRows.length}/{rows.length} {t('ligne(s)', 'row(s)')}{problems > 0 ? ` · ${problems} ${t('case(s) à corriger', 'cell(s) to fix')}` : ''}
         {ro ? ` · ${cur.owner_name || ''} · ${t('lecture seule', 'read only')}` : saveOk ? ` · ${t('enregistré', 'saved')}` : ` · ${t('ENREGISTREMENT IMPOSSIBLE : télécharge ton travail', 'SAVING FAILED: download your work')}`}

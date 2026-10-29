@@ -596,6 +596,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
+| `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
@@ -728,6 +729,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
+| `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |

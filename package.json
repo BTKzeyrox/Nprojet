@@ -45,6 +45,7 @@
     "check:offline-ui": "esbuild scripts/check-offline-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-offline-ui.mjs && node node_modules/.cache/check-offline-ui.mjs",
     "check:offline-server": "npx --yes tsx scripts/check-offline-server.ts",
     "check:no-autoseed": "esbuild scripts/check-no-autoseed.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-no-autoseed.mjs && node node_modules/.cache/check-no-autoseed.mjs",
+    "check:sheet-auto": "npx --yes tsx scripts/check-sheet-auto.ts",
     "check:offline-shell": "npm run -s build && npx --yes tsx scripts/check-offline-shell.ts",
     "check:performance-export": "npx --yes tsx scripts/check-performance-export.ts",
     "check:recognition": "npx --yes tsx scripts/check-recognition.ts",

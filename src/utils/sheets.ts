@@ -2,8 +2,16 @@
 // Aucun accès au réseau ni au navigateur. Le même nettoyage `cleanSheet` sera recopié côté serveur (M12.4).
 import { evalFormula, isErr, isFormula, type Env, type Val, FORMULA_MAX_LEN } from './sheetFormula';
 
-export type ColType = 'text' | 'number' | 'date' | 'list' | 'check';
-export interface Column { id: string; name: string; type: ColType; options?: string[]; required?: boolean; unique?: boolean; deleted_at?: string | null }
+// M19 : 4 types de plus. `code` (préfixe + numéro qui monte tout seul), `phone` (espaces automatiques), `money` (montant, milliers automatiques), `time` (HH:MM).
+export type ColType = 'text' | 'number' | 'date' | 'list' | 'check' | 'code' | 'phone' | 'money' | 'time';
+export interface Column {
+  id: string; name: string; type: ColType; options?: string[]; required?: boolean; unique?: boolean; deleted_at?: string | null;
+  prefix?: string; // code : le début (ex. REF) ; le numéro qui suit monte à chaque nouvelle ligne
+  digits?: number; // code : nombre de chiffres du numéro (3 → 001)
+  repeat?: boolean; // une nouvelle ligne reprend la valeur de la ligne du dessus
+}
+/** Types dont la valeur est un nombre (somme, graphique, tri, couleurs). */
+export const isNumType = (t: ColType | undefined): boolean => t === 'number' || t === 'money';
 export interface Row { id: string; cells: Record<string, string>; deleted_at?: string | null }
 export interface CondRule { id: string; col: string; op: '>' | '<' | '=' | '<>' | 'contains' | 'empty'; value: string; color: 'red' | 'green' | 'amber' | 'blue' }
 export interface Sheet {
@@ -18,10 +26,10 @@ export const SHEET_MAX_CHARS = 1_500_000;
 /** Nombre maximal d'enregistrements par personne, corbeille comprise. */
 export const SHEETS_MAX_RECORDS = 60;
 export const sheetChars = (s: unknown): number => { try { return JSON.stringify(s).length; } catch { return Infinity; } };
-export const LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50, trashDays: 30, history: 50 };
+export const LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, prefix: 12, digits: 8, rules: 20, options: 50, trashDays: 30, history: 50 };
 const COLORS = ['red', 'green', 'amber', 'blue'];
 const OPS = ['>', '<', '=', '<>', 'contains', 'empty'];
-const TYPES: ColType[] = ['text', 'number', 'date', 'list', 'check'];
+const TYPES: ColType[] = ['text', 'number', 'date', 'list', 'check', 'code', 'phone', 'money', 'time'];
 
 let counter = 0;
 export const newId = (p = 'x'): string => `${p}${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -52,6 +60,8 @@ export function cleanSheet(raw: unknown, now = new Date().toISOString()): Sheet 
     if (type === 'list') col.options = (Array.isArray(x.options) ? x.options : []).map(o => clip(o, 60)).filter(Boolean).slice(0, LIMITS.options);
     if (x.required === true) col.required = true;
     if (x.unique === true) col.unique = true;
+    if (type === 'code') { const pf = clip(x.prefix, LIMITS.prefix).trim(); if (pf) col.prefix = pf; const dg = Number(x.digits); if (Number.isInteger(dg) && dg >= 1 && dg <= LIMITS.digits) col.digits = dg; }
+    if (x.repeat === true) col.repeat = true;
     if (typeof x.deleted_at === 'string') col.deleted_at = x.deleted_at.slice(0, 40);
     columns.push(col);
   }
@@ -96,7 +106,7 @@ export function addColumn(s: Sheet, name: string, type: ColType, now: string, op
   if (col.type === 'list') col.options = (options || []).map(o => clip(o, 60).trim()).filter(Boolean).slice(0, LIMITS.options);
   return touch(s, now, { columns: [...s.columns, col] });
 }
-export function updateColumn(s: Sheet, id: string, patch: Partial<Pick<Column, 'name' | 'type' | 'options' | 'required' | 'unique'>>, now: string): Sheet | null {
+export function updateColumn(s: Sheet, id: string, patch: Partial<Pick<Column, 'name' | 'type' | 'options' | 'required' | 'unique' | 'prefix' | 'digits' | 'repeat'>>, now: string): Sheet | null {
   if (!s.columns.some(c => c.id === id)) return null;
   return touch(s, now, { columns: s.columns.map(c => (c.id !== id ? c : {
     ...c,
@@ -104,6 +114,9 @@ export function updateColumn(s: Sheet, id: string, patch: Partial<Pick<Column, '
     type: patch.type && TYPES.includes(patch.type) ? patch.type : c.type,
     options: patch.options ? patch.options.map(o => clip(o, 60).trim()).filter(Boolean).slice(0, LIMITS.options) : c.options,
     required: patch.required ?? c.required, unique: patch.unique ?? c.unique,
+    repeat: patch.repeat ?? c.repeat,
+    prefix: patch.prefix !== undefined ? (clip(patch.prefix, LIMITS.prefix).trim() || undefined) : c.prefix,
+    digits: patch.digits !== undefined ? (Number.isInteger(patch.digits) && patch.digits >= 1 && patch.digits <= LIMITS.digits ? patch.digits : undefined) : c.digits,
   })) });
 }
 export const deleteColumn = (s: Sheet, id: string, now: string): Sheet | null => (s.columns.some(c => c.id === id && !c.deleted_at) ? touch(s, now, { columns: s.columns.map(c => (c.id === id ? { ...c, deleted_at: now } : c)) }) : null);
@@ -175,7 +188,7 @@ export function computeSheet(s: Sheet, today: string): Computed {
   const parseCell = (ci: number, text: string): Val => {
     if (text === '') return null;
     const t = cols[ci].type;
-    if (t === 'number') { const n = Number(text.replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) && /^-?\d/.test(text.trim()) ? n : text; }
+    if (isNumType(t)) { const n = Number(text.replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) && /^-?\d/.test(text.trim()) ? n : text; }
     if (t === 'check') return text === '1' || text.toLowerCase() === 'true' || text === 'vrai';
     return text;
   };
@@ -207,13 +220,15 @@ export function computeSheet(s: Sheet, today: string): Computed {
 }
 
 // ---------- contrôle de saisie ----------
-export type CellProblem = 'required' | 'duplicate' | 'number' | 'date' | 'list' | null;
+export type CellProblem = 'required' | 'duplicate' | 'number' | 'date' | 'list' | 'time' | 'phone' | null;
 export function checkCell(s: Sheet, rowId: string, colId: string, value: string): CellProblem {
   const col = s.columns.find(c => c.id === colId); if (!col) return null;
   const v = value.trim();
   if (v === '') return col.required ? 'required' : null;
   if (isFormula(v)) return null;
-  if (col.type === 'number' && !/^-?\d+([.,]\d+)?$/.test(v.replace(/\s/g, ''))) return 'number';
+  if (isNumType(col.type) && !/^-?\d+([.,]\d+)?$/.test(v.replace(/\s/g, ''))) return 'number';
+  if (col.type === 'time' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return 'time';
+  if (col.type === 'phone' && !(/^\+?[\d ]+$/.test(v) && v.replace(/\D/g, '').length >= 6 && v.replace(/\D/g, '').length <= 15)) return 'phone';
   if (col.type === 'date' && (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(`${v}T00:00:00Z`)))) return 'date';
   if (col.type === 'list' && !(col.options || []).includes(v)) return 'list';
   if (col.unique && activeRows(s).some(r => r.id !== rowId && (r.cells[colId] ?? '').trim().toLowerCase() === v.toLowerCase())) return 'duplicate';
@@ -257,7 +272,7 @@ export interface ColTotal { col: string; sum: number; avg: number | null; min: n
 export function columnTotals(c: Computed, rowsShown?: number[]): ColTotal[] {
   const list = rowsShown ?? c.rows.map((_, i) => i);
   return c.cols.map((col, ci) => {
-    if (col.type !== 'number') return null;
+    if (!isNumType(col.type)) return null;
     const nums = list.map(ri => c.grid[ri][ci]).filter((x): x is number => typeof x === 'number');
     const sum = nums.reduce((a, b) => a + b, 0);
     return { col: col.id, sum, avg: nums.length ? sum / nums.length : null, min: nums.length ? Math.min(...nums) : null, max: nums.length ? Math.max(...nums) : null, count: nums.length };
