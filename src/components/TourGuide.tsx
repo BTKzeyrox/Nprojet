@@ -81,7 +81,7 @@ export const TourReplayCard: React.FC = () => {
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <h3 className="font-tactical font-bold text-white flex items-center gap-2"><HelpCircle className="w-4 h-4 text-emerald-400" />{t('Aide', 'Help')}</h3>
       <p className="text-[11px] text-slate-400">{t("La visite guidée montre où se trouve chaque chose, selon ton rôle.", 'The guided tour shows where everything is, for your role.')}</p>
-      <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))} className="px-3 py-2.5 min-h-[44px] rounded-full border border-slate-600 text-sm font-semibold cursor-pointer text-slate-100 flex items-center gap-1.5"><Compass className="w-4 h-4" />{t('Revoir la visite guidée', 'Replay the guided tour')}</button>
+      <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))} className="px-3 py-2.5 min-h-[44px] rounded-lg border border-slate-600 text-sm font-semibold cursor-pointer text-slate-100 flex items-center gap-1.5"><Compass className="w-4 h-4" />{t('Revoir la visite guidée', 'Replay the guided tour')}</button>
     </section>
   );
 };

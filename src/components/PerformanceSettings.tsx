@@ -114,7 +114,7 @@ export const PerformanceSettings: React.FC<{ lang: string }> = ({ lang }) => {
       <div className={boxCls}>
         <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Award className="w-4 h-4 text-emerald-400" />{t('Performance des salariés', 'Employee performance')}</h3>
         <p className="text-xs text-slate-300">{t('Règle ici comment le score et les badges sont calculés. Les changements valent tout de suite pour tous les scores. Si tu ne sais pas : laisse comme ça.', 'Set here how the score and badges are calculated. Changes apply at once to every score. If unsure: leave it as it is.')}</p>
-        <button type="button" onClick={reset} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer">{t('Remettre les valeurs de départ', 'Reset to starting values')}</button>
+        <button type="button" onClick={reset} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer">{t('Remettre les valeurs de départ', 'Reset to starting values')}</button>
       </div>
 
       {errors.length > 0 && <div role="alert" className="p-3 rounded-2xl border border-red-500/60 bg-red-950 text-red-200 text-sm font-semibold">{t('Rien n\'a été enregistré. À corriger : ', 'Nothing was saved. To fix: ')}{errors.join(' ; ')}</div>}
@@ -156,7 +156,7 @@ export const PerformanceSettings: React.FC<{ lang: string }> = ({ lang }) => {
       </section>
 
       <div className="sticky bottom-2">
-        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-full bg-emerald-600 text-white font-bold text-sm disabled:opacity-40 cursor-pointer">{t('Enregistrer', 'Save')}</button>
+        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 text-white font-bold text-sm disabled:opacity-40 cursor-pointer">{t('Enregistrer', 'Save')}</button>
       </div>
     </div>
   );

@@ -135,7 +135,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
         <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Building2 className="w-4 h-4 text-emerald-400" />{t('Conditions de l\'entreprise', 'Company conditions')}</h3>
         <p className="text-xs text-slate-300">{t('Les règles de l\'entreprise (TVA, délais, congés…) se règlent ici, pas dans le code. Tout est facultatif. Si tu ne sais pas : laisse comme ça.', 'The company rules (VAT, deadlines, leave…) are set here, not in the code. Everything is optional. If you do not know: leave it as it is.')}</p>
         <p className="text-[11px] text-amber-300">{t('À vérifier avec un comptable ou le responsable de l\'entreprise. Gestion Pro ne donne pas de conseil légal.', 'To be checked with an accountant or the company manager. Gestion Pro gives no legal advice.')}</p>
-        <button type="button" onClick={resetDefaults} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer inline-flex items-center gap-2"><RotateCcw className="w-4 h-4" />{t('Valeurs de départ', 'Starting values')}</button>
+        <button type="button" onClick={resetDefaults} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer inline-flex items-center gap-2"><RotateCcw className="w-4 h-4" />{t('Valeurs de départ', 'Starting values')}</button>
       </div>
 
       {bad.length > 0 && <div role="alert" className="p-3 rounded-2xl border border-red-500/60 bg-red-950 text-red-200 text-sm font-semibold">{t('Rien n\'a été enregistré. À corriger : ', 'Nothing was saved. Please fix: ')}{bad.map(labelOf).join(', ')}.</div>}
@@ -201,7 +201,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
       })}
 
       <div className={`${boxCls} p-4 space-y-3`}>
-        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold cursor-pointer inline-flex items-center justify-center gap-2"><Save className="w-4 h-4" />{t('Enregistrer les conditions', 'Save conditions')}</button>
+        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold cursor-pointer inline-flex items-center justify-center gap-2"><Save className="w-4 h-4" />{t('Enregistrer les conditions', 'Save conditions')}</button>
         {touched && <p className="text-[11px] text-amber-300">{t('Modifications non enregistrées.', 'Unsaved changes.')}</p>}
         <button type="button" onClick={() => setShowLog(v => !v)} aria-expanded={showLog} className="min-h-[44px] text-xs font-mono text-slate-300 hover:text-emerald-400 cursor-pointer inline-flex items-center gap-2"><History className="w-4 h-4" />{t('Historique des changements', 'Change history')} ({log.length})</button>
         {showLog && (log.length === 0 ? <p className="text-[11px] text-slate-400">{t('Aucun changement enregistré pour l\'instant.', 'No change recorded yet.')}</p> : (

@@ -511,7 +511,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
 
       {held > 0 && (
         <div className="sticky top-2 z-20 flex justify-center">
-          <button type="button" onClick={showHeld} className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg">
+          <button type="button" onClick={showHeld} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg">
             ↑ {held} nouvelle{held > 1 ? 's' : ''} publication{held > 1 ? 's' : ''}
           </button>
         </div>

@@ -320,7 +320,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 </select>
               </div>
               {(search || shiftFilter !== 'all' || statusFilter !== 'all' || clientFilter !== 'all') && (
-                <button onClick={() => { setSearch(''); setShiftFilter('all'); setStatusFilter('all'); setClientFilter('all'); }} className={`w-full rounded-full border py-2 text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-600 text-slate-300 hover:bg-white/10'}`}>
+                <button onClick={() => { setSearch(''); setShiftFilter('all'); setStatusFilter('all'); setClientFilter('all'); }} className={`w-full rounded-lg border py-2 text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-600 text-slate-300 hover:bg-white/10'}`}>
                   Réinitialiser les filtres
                 </button>
               )}
@@ -359,7 +359,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               <button onClick={goPrev} className={roundBtn} title="Mois précédent" aria-label="Mois précédent"><ChevronLeft className="w-5 h-5" /></button>
               <span className={`font-bold text-base min-w-[9rem] text-center ${txt}`}>{monthNames[month]} {year}</span>
               <button onClick={goNext} className={roundBtn} title="Mois suivant" aria-label="Mois suivant"><ChevronRight className="w-5 h-5" /></button>
-              <button onClick={goToday} className="ml-1 px-4 h-10 rounded-full text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Aujourd'hui</button>
+              <button onClick={goToday} className="ml-1 px-4 h-10 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Aujourd'hui</button>
             </div>
           </div>
 

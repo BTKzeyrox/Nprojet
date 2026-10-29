@@ -149,7 +149,7 @@ export const XYChart: React.FC<XYChartProps> = (p) => {
             const off = hidden.includes(s.key);
             return (
               <button key={s.key} type="button" aria-pressed={!off} onClick={() => toggle(s.key)}
-                className={`min-h-[36px] px-2.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 ${off ? 'border-slate-700 text-slate-500 line-through' : 'border-slate-600 text-slate-200 bg-slate-900/60'}`}>
+                className={`min-h-[36px] px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 ${off ? 'border-slate-700 text-slate-500 line-through' : 'border-slate-600 text-slate-200 bg-slate-900/60'}`}>
                 <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: off ? '#475569' : s.color }} />{s.label}
               </button>
             );

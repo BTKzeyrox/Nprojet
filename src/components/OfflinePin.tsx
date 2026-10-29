@@ -58,7 +58,7 @@ export const PinForm: React.FC<{ mode: 'unlock' | 'create' | 'change'; onDone?: 
       )}
       {wait > 0 && <p className="text-xs text-amber-300" role="status">{t(`Trop d'erreurs. Réessaie dans ${wait} s.`, `Too many mistakes. Try again in ${wait} s.`)}</p>}
       {msg && wait <= 0 && <p className="text-xs text-red-300" role="alert">{msg}</p>}
-      <button type="button" disabled={busy || wait > 0} onClick={() => void submit()} className="w-full px-3 py-2.5 rounded-full border border-emerald-500 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold cursor-pointer disabled:opacity-50">
+      <button type="button" disabled={busy || wait > 0} onClick={() => void submit()} className="w-full px-3 py-2.5 rounded-lg border border-emerald-500 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold cursor-pointer disabled:opacity-50">
         {busy ? t('Un instant…', 'One moment…') : label || (mode === 'unlock' ? t('Ouvrir', 'Open') : t('Enregistrer le code', 'Save the code'))}
       </button>
     </div>

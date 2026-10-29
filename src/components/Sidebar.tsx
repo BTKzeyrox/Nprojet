@@ -250,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-full text-left transition-colors cursor-pointer`}
+                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="df-sb-tile w-9 h-9 rounded-full flex items-center justify-center shrink-0">
@@ -280,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onToggleOperatorMode();
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer ${
                 operatorMode ? 'df-sb-warn' : 'df-sb-btn'
               }`}
             >
@@ -293,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
             >
               <LifeBuoy className="w-4 h-4" />
               <span className="df-sb-text">Signaler un problème</span>
@@ -302,7 +302,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onLogout}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer ${
               'df-sb-danger'
             }`}
           >

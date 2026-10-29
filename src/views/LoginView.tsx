@@ -202,7 +202,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <button onClick={toggleTheme} className={circleBtn} style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title={isLight ? t('theme_switch_dark') : t('theme_switch_light')}>
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
-        <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Change language">
+        <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="h-10 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.16)', color: '#ffffff' }} title="Change language">
           <Globe className="w-3.5 h-3.5" /><span>{lang === 'fr' ? 'EN' : 'FR'}</span>
         </button>
       </div>

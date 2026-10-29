@@ -43,7 +43,7 @@ export const TwoStepDialog: React.FC<{
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={onClose} className={ghost}>Annuler</button>
-              <button type="button" onClick={() => setStep(2)} className="flex-1 min-h-[46px] rounded-full text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Continuer</button>
+              <button type="button" onClick={() => setStep(2)} className="flex-1 min-h-[46px] rounded-lg text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Continuer</button>
             </div>
           </>
         ) : (
@@ -61,7 +61,7 @@ export const TwoStepDialog: React.FC<{
             />
             <div className="flex gap-2">
               <button type="button" onClick={() => { setStep(1); setTyped(''); }} className={ghost}>Retour</button>
-              <button type="button" disabled={!ok} onClick={() => { onConfirm(); onClose(); }} className="flex-1 min-h-[46px] rounded-full text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">{confirmLabel}</button>
+              <button type="button" disabled={!ok} onClick={() => { onConfirm(); onClose(); }} className="flex-1 min-h-[46px] rounded-lg text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">{confirmLabel}</button>
             </div>
           </>
         )}

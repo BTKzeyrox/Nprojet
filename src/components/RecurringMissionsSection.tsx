@@ -140,14 +140,14 @@ export const RecurringMissionsSection: React.FC = () => {
             <div><label className={labelCls}>{t('Fin (facultatif)', 'End (optional)')}</label><input type="date" value={draft.end_date} onChange={e => set({ end_date: e.target.value })} className={inputCls} /></div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
-            <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
+            <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
+            <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
           </div>
         </div>
       ) : (
         <>
           {error && <div role="alert" className="text-xs text-red-400 font-semibold">{error}</div>}
-          <button type="button" onClick={() => { setError(''); setDraft(EMPTY()); }} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvelle règle', 'New rule')}</button>
+          <button type="button" onClick={() => { setError(''); setDraft(EMPTY()); }} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvelle règle', 'New rule')}</button>
         </>
       )}
     </section>

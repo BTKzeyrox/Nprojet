@@ -596,8 +596,8 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             </details>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <button type="button" onClick={() => setShowAdd(false)} className={`px-3 py-2.5 rounded-full border font-semibold cursor-pointer ${isLight ? 'border-slate-300 hover:bg-slate-100' : 'border-slate-600 hover:bg-white/10'}`}>Annuler</button>
-              <button type="submit" className="px-3 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer">Créer la mission</button>
+              <button type="button" onClick={() => setShowAdd(false)} className={`px-3 py-2.5 rounded-lg border font-semibold cursor-pointer ${isLight ? 'border-slate-300 hover:bg-slate-100' : 'border-slate-600 hover:bg-white/10'}`}>Annuler</button>
+              <button type="submit" className="px-3 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer">Créer la mission</button>
             </div>
           </form>
         </div>

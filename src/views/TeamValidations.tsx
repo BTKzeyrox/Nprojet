@@ -71,14 +71,14 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
                 <div className="space-y-2">
                   <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} maxLength={300} placeholder="Motif du refus (obligatoire)" className="w-full rounded-xl bg-slate-900 border border-slate-700 p-2 text-sm text-white" />
                   <div className="flex gap-2">
-                    <button type="button" disabled={busy === p.id || !reason.trim()} onClick={() => void decide(p, false)} className="flex-1 min-h-[44px] rounded-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold">Confirmer le refus</button>
-                    <button type="button" onClick={() => { setRefusing(null); setReason(''); }} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-sm font-semibold">Annuler</button>
+                    <button type="button" disabled={busy === p.id || !reason.trim()} onClick={() => void decide(p, false)} className="flex-1 min-h-[44px] rounded-lg bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold">Confirmer le refus</button>
+                    <button type="button" onClick={() => { setRefusing(null); setReason(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm font-semibold">Annuler</button>
                   </div>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <button type="button" disabled={busy === p.id} onClick={() => void decide(p, true)} className="flex-1 min-h-[44px] rounded-full bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2"><CheckCircle2 className="w-4 h-4" /> Valider</button>
-                  <button type="button" disabled={busy === p.id} onClick={() => { setRefusing(p.id); setReason(''); setError(''); }} className="flex-1 min-h-[44px] rounded-full bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 text-sm font-bold flex items-center justify-center gap-2"><XCircle className="w-4 h-4" /> Refuser</button>
+                  <button type="button" disabled={busy === p.id} onClick={() => void decide(p, true)} className="flex-1 min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2"><CheckCircle2 className="w-4 h-4" /> Valider</button>
+                  <button type="button" disabled={busy === p.id} onClick={() => { setRefusing(p.id); setReason(''); setError(''); }} className="flex-1 min-h-[44px] rounded-lg bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 text-sm font-bold flex items-center justify-center gap-2"><XCircle className="w-4 h-4" /> Refuser</button>
                 </div>
               )}
             </li>

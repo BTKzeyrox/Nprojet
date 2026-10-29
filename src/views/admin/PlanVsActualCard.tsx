@@ -61,7 +61,7 @@ export const PlanVsActualCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
       </div>
       <div className="text-xs font-mono text-slate-400">{t('Dépenses prévues / mois (budgets par catégorie)', 'Planned expenses / month (category budgets)')} : {exp > 0 ? ar(exp) : t('aucun budget réglé', 'no budget set')}</div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer le plan', 'Save plan')}</button>
+        <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer le plan', 'Save plan')}</button>
         {msg && <span role="status" className={`text-xs font-semibold ${msg.ok ? 'text-emerald-300' : 'text-red-400'}`}>{msg.text}</span>}
       </div>
       <ul className="space-y-2">

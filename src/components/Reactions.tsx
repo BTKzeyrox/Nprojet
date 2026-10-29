@@ -34,7 +34,7 @@ export const ReactionChips: React.FC<{ reactions?: Record<string, string[]>; meI
             key={`${e}-${ids.length}-${mine}`}
             type="button"
             onClick={ev => { ev.stopPropagation(); onToggle(e); }}
-            className={`df-chip-pop inline-flex items-center gap-1 h-7 px-2 rounded-full text-xs font-semibold border cursor-pointer transition-colors ${
+            className={`df-chip-pop inline-flex items-center gap-1 h-7 px-2 rounded-lg text-xs font-semibold border cursor-pointer transition-colors ${
               mine
                 ? 'bg-blue-600/15 border-blue-500 text-blue-600'
                 : dark ? 'bg-white/5 border-slate-600 text-slate-200' : 'bg-white border-slate-300 text-slate-700'

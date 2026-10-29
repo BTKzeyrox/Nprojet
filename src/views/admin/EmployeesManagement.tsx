@@ -846,7 +846,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <div className="rounded-lg border border-slate-700 p-2 space-y-1">
                   <p className="text-slate-300 uppercase">Sécurité en deux étapes</p>
                   <p className="text-[11px] text-slate-400">Téléphone perdu et plus de code de secours : remets la double étape à zéro. Il pourra la réactiver ensuite.</p>
-                  <button type="button" className="min-h-[44px] px-3 rounded-full border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer" onClick={async () => {
+                  <button type="button" className="min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer" onClick={async () => {
                     if (!window.confirm('Remettre à zéro la double étape de ce compte ?')) return;
                     const r = await db.totpReset(editingUser.id);
                     alert(r.ok ? 'Double étape remise à zéro.' : (r.error || 'Non modifié.'));

@@ -197,7 +197,7 @@ export const BilledReceivedBars: React.FC<BilledReceivedProps> = ({ labels, full
       <div role="tablist" aria-label={ariaLabel} className="flex gap-1.5">
         {tabs.map(t => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => { setTab(t.id); setIdx(null); }}
-            className={`min-h-[40px] px-3 rounded-full border text-xs font-semibold flex-1 sm:flex-none ${tab === t.id ? 'border-sky-500 bg-sky-500/15 text-white' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>{t.label}</button>
+            className={`min-h-[40px] px-3 rounded-lg border text-xs font-semibold flex-1 sm:flex-none ${tab === t.id ? 'border-sky-500 bg-sky-500/15 text-white' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>{t.label}</button>
         ))}
       </div>
       <div className="flex">

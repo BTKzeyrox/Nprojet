@@ -724,7 +724,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
                         return { WebkitTouchCallout: 'none', backgroundColor: ac.bubbleBg, borderColor: ac.bubbleBorder } as React.CSSProperties;
                       })()}
-                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.8125rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && !msg.message && !msg.reply_to && msg.attachment_url
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
@@ -750,7 +750,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className="relative block w-full text-left mb-1 rounded-lg overflow-hidden cursor-pointer pl-3 pr-2.5 py-1" style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.92)' : ac.quoteBg, color: L ? '#1e293b' : isMe ? '#1e293b' : '#e2e8f0' }}>
                                 <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: ac.bar }} />
                                 <span className="block text-[12px] font-bold leading-tight" style={{ color: isMe ? ac.name : ac.name }}>{msg.reply_to!.sender_name}</span>
-                                <span className="block text-[13px] leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
+                                <span className="block text-xs leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
                               </button>
                             );
                           })()}
@@ -822,7 +822,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </button>
         )}
         {newBelow > 0 && (
-          <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
             <ChevronDown className="w-4 h-4" />{newBelow} nouveau{newBelow > 1 ? 'x' : ''} message{newBelow > 1 ? 's' : ''}
           </button>
         )}
@@ -879,8 +879,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
-                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
-                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
+                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
                 </div>
               </div>
             </div>

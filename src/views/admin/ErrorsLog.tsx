@@ -90,7 +90,7 @@ export const ErrorsLog: React.FC = () => {
   const txt = L ? 'text-slate-900' : 'text-white';
   const sub = L ? 'text-slate-500' : 'text-slate-400';
   const pill = (on: boolean) => `px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-colors ${on ? 'bg-blue-600 border-blue-600 text-white' : L ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100' : 'bg-transparent border-slate-600 text-slate-300 hover:bg-white/10'}`;
-  const btn = 'px-3.5 py-2 rounded-full text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors';
+  const btn = 'px-3.5 py-2 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors';
   const kindCls = KIND_CLS(L);
 
   return (

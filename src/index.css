@@ -260,10 +260,9 @@ input[type="radio"] { border-radius: 9999px; }
 html.theme-light [class*="rounded-xl"][class*="border"],
 html.theme-light [class*="rounded-2xl"][class*="border"] { box-shadow: 0 10px 28px -20px rgba(30, 58, 138, 0.35); }
 
-/* Boutons : capsule pour les petits, retour tactile doux */
+/* Boutons : coins arrondis sobres (8 px, donnés par la classe rounded-lg de chaque bouton) et retour tactile doux. La règle « tout bouton en gélule » a été retirée (2026-10-29). */
 button { transition: transform .12s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
 button:active:not(:disabled) { transform: scale(.97); }
-button[class*="rounded-lg"][class*="px-"]:not([class*="w-full"]):not([class*="flex-col"]) { border-radius: 9999px; }
 
 /* Fond : halos bleus doux, sans motif */
 html.theme-dark .df-bg-app,

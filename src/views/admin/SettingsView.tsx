@@ -38,7 +38,7 @@ const ModeSwitchSection: React.FC = () => {
       <h3 className="font-tactical font-bold text-white flex items-center gap-2"><ArrowLeftRight className="w-4 h-4 text-emerald-400" />Mode responsable / opérateur</h3>
       <p className="text-sm text-slate-300">Le bouton « Vue opérateur » du menu de gauche est actuellement <b className={hidden ? 'text-amber-500' : 'text-emerald-500'}>{hidden ? 'masqué' : 'visible'}</b>.</p>
       <p className="text-[11px] text-slate-400">Il permet au responsable de voir le site comme un opérateur. Réglé sur cet appareil. Pour {hidden ? 'l\'afficher' : 'le masquer'}, il faut une procédure en 2 étapes.</p>
-      <button type="button" onClick={() => setOpen(true)} className={`w-full min-h-[46px] rounded-full text-sm font-bold cursor-pointer border ${hidden ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600' : L ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'}`}>
+      <button type="button" onClick={() => setOpen(true)} className={`w-full min-h-[46px] rounded-lg text-sm font-bold cursor-pointer border ${hidden ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600' : L ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'}`}>
         {hidden ? 'Afficher le bouton…' : 'Masquer le bouton…'}
       </button>
       {open && (hidden ? (
@@ -191,7 +191,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -459,7 +459,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addType(); } }}
             placeholder="Nouveau type, ex: NO READ" className={inputCls}
           />
-          <button type="button" onClick={addType} className="px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
+          <button type="button" onClick={addType} className="px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
             <Plus className="w-5 h-5" />
           </button>
         </div>
@@ -504,7 +504,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -518,7 +518,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {<RestoreSection />}
 
-      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
+      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer
       </button>
     </div>

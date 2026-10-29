@@ -42,9 +42,9 @@ export const OfflineUnlockView: React.FC = () => {
         </div>
         <PinForm mode="unlock" autoFocus />
         <div className="flex flex-col gap-2">
-          <button type="button" disabled={busy} onClick={() => void retry()} className="px-3 py-2.5 rounded-full border border-slate-600 text-slate-200 text-sm font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('Réessayer la connexion', 'Try the connection again')}</button>
+          <button type="button" disabled={busy} onClick={() => void retry()} className="px-3 py-2.5 rounded-lg border border-slate-600 text-slate-200 text-sm font-semibold cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('Réessayer la connexion', 'Try the connection again')}</button>
           {note && <p className="text-xs text-amber-300 text-center" role="status">{note}</p>}
-          <button type="button" onClick={forgot} className="px-3 py-2 rounded-full text-xs text-red-300 cursor-pointer">{t('Code oublié ?', 'Forgot the code?')}</button>
+          <button type="button" onClick={forgot} className="px-3 py-2 rounded-lg text-xs text-red-300 cursor-pointer">{t('Code oublié ?', 'Forgot the code?')}</button>
         </div>
       </div>
       <ConfirmHost />

@@ -204,7 +204,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               {notifs.length > 0 && (
                 <div className={`px-4 py-2 flex items-center justify-between text-xs ${L ? 'bg-slate-50 text-slate-600' : 'bg-white/5 text-slate-300'}`} data-notif-bar>
                   <span>{count > 0 ? `${count} non lue${count > 1 ? 's' : ''}` : 'Tout est lu'}</span>
-                  {count > 0 && <button type="button" onClick={() => { markAllRead(currentUser, notifs); force(n => n + 1); }} className="min-h-[32px] px-3 rounded-full border border-current font-semibold cursor-pointer" data-notif-readall>Tout marquer comme lu</button>}
+                  {count > 0 && <button type="button" onClick={() => { markAllRead(currentUser, notifs); force(n => n + 1); }} className="min-h-[32px] px-3 rounded-lg border border-current font-semibold cursor-pointer" data-notif-readall>Tout marquer comme lu</button>}
                 </div>
               )}
               <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">

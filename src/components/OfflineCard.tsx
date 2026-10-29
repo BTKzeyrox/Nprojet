@@ -20,7 +20,7 @@ export const OfflineCard: React.FC = () => {
 
   const st = db.getOfflineStatus();
   const un = db.getUnsent();
-  const btn = 'px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer disabled:opacity-50';
+  const btn = 'px-3 py-2.5 rounded-lg border text-sm font-semibold cursor-pointer disabled:opacity-50';
   const operator = st.role === 'employee';
   const broken = st.problem === 'corrupt' || st.problem === 'queue_corrupt';
 
