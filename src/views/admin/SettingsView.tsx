@@ -477,7 +477,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {tab === 'data' && <BackupsSection />}
       {tab === 'data' && <AuditSection lang={lang} />}
 
-      {<RestoreSection />}
+      {tab === 'data' && <RestoreSection />}
 
       <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer

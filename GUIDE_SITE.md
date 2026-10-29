@@ -829,6 +829,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:settings-icons` | Réglages : chaque carte a une petite icône devant son titre (même style partout). |
 | `npm run check:header-profile` | Profil dans l'en-tête : pastille pour tous les rôles, formulaire avec statut, mot de passe et vue opérateur (responsable). |
 | `npm run check:header-search` | En-tête sans bouclier, recherche « Rechercher… » avec loupe et croix ; « Signaler un problème » dans le Journal des erreurs. |
+| `npm run check:restore-once` | Réglages : la remise à zéro du site n'apparaît que dans l'onglet Données (et non dans chaque onglet). |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
