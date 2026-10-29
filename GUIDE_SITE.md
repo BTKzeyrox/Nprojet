@@ -272,7 +272,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Le dimanche est un jour de repos.
   - Les heures sont celles de Madagascar (UTC+3).
-  - Calendrier global : chaque case donne le nombre de présents, retards, absents, congés et demandes de congé. C'est la somme exacte des calendriers individuels.
+  - Calendrier global : chaque case montre des chiffres, chacun avec son icône et sa couleur (présents, retards, absents, congés, demandes de congé, missions), sans texte. C'est la somme exacte des calendriers individuels. Un clic sur un jour ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
   - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
   - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
   - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { dayStatus } from '../utils/dayStatus';
 import {
   Calendar as CalendarIcon,
@@ -20,6 +22,9 @@ import {
   CalendarX,
   ListChecks,
   HandCoins,
+  UserCheck,
+  UserX,
+  ClipboardList,
   X, CalendarOff } from 'lucide-react';
 import { leaveOn, LEAVE_TYPE_LABELS, type Leave } from '../utils/leaves';
 import { firstActivityOf, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
@@ -84,6 +89,64 @@ const GDOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const addDay = (d: string, n: number) => new Date(new Date(`${d}T00:00:00Z`).getTime() + n * 86400000).toISOString().slice(0, 10);
 const hmMada = (iso: string) => new Date(new Date(iso).getTime() + 3 * 3600 * 1000).toISOString().slice(11, 16);
 
+interface DayPanelProps {
+  day: string; setDay: (d: string) => void; list: User[]; ctx: { posts: PostSession[]; leaves: Leave[]; today: string; cfg: AppSettings; clientFilter: string };
+  first: Record<string, string>; today: string; posts: PostSession[]; lang: 'fr' | 'en'; nowMs: number; ar: (n: number) => string;
+  onSelectDay: (dateStr: string, shifts: PostSession[]) => void; onPickEmployee: (id: string) => void;
+  st: GlobalCalProps['st'];
+}
+// Détail d'un jour (même contenu dans l'onglet « Vue du jour » et dans la fenêtre ouverte au clic sur une case du mois)
+const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, today, posts, lang, nowMs, ar, onSelectDay, onPickEmployee, st }) => {
+  const { card, txt, sub, TINT, pill } = st;
+  const rows = useMemo(() => dayView(day, list, ctx, first), [day, list, ctx, first]);
+  const [att, setAtt] = useState<AttendanceRow[]>([]);
+  useEffect(() => {
+    let alive = true;
+    setAtt([]);
+    db.fetchAttendance(day).then(r => { if (alive) setAtt(Array.isArray(r) ? r : []); }).catch(() => { /* hors ligne : pas de ligne de connexion */ });
+    return () => { alive = false; };
+  }, [day]);
+  const leaveLabel = (t: string | null) => (t ? (LEAVE_TYPE_LABELS as Record<string, [string, string]>)[t]?.[lang === 'en' ? 1 : 0] || t : '');
+  const nbPresent = rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status)).length;
+  return (
+    <div className="space-y-2" data-testid="gcal-dayview">
+      <div className={`${card} p-3 flex items-center justify-between gap-2`}>
+        <button type="button" onClick={() => setDay(addDay(day, -1))} className={st.roundBtn} aria-label="Jour précédent"><ChevronLeft className="w-5 h-5" /></button>
+        <div className="text-center min-w-0">
+          <div className={`font-bold ${txt}`}>{day.split('-').reverse().join('/')}{day === today ? ' · aujourd\'hui' : ''}</div>
+          <div className={`text-[11px] ${sub}`}>{GDOW[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7]} · {nbPresent} présents · {rows.filter(r => r.status === 'absent').length} absents · {rows.filter(r => r.status === 'leave').length} en congé</div>
+        </div>
+        <button type="button" onClick={() => setDay(addDay(day, 1))} className={st.roundBtn} aria-label="Jour suivant"><ChevronRight className="w-5 h-5" /></button>
+      </div>
+      <div className="flex justify-end">
+        <button type="button" onClick={() => onSelectDay(day, posts.filter(p => p.date === day))} className={pill(false)}>Détail des missions du jour</button>
+      </div>
+      {rows.map(r => {
+        const a = att.find(x => x.user_id === r.id);
+        const u = list.find(x => x.id === r.id);
+        return (
+          <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
+              <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>
+              <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
+            </div>
+            <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs ${sub}`}>
+              {r.firstStart && <span>1re mission : <strong className={txt}>{r.firstStart}</strong>{r.lateMin > 0 && <span className="text-amber-500 font-bold"> (+{r.lateMin} min de retard)</span>}</span>}
+              {r.firstStart && <span>Dernière fin : <strong className={txt}>{r.open ? 'en cours' : r.lastEnd || '—'}</strong></span>}
+              {a && <span>1re connexion : <strong className={txt}>{hmMada(a.first_seen)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
+              {r.missions > 0 && <span>{r.missions} mission{r.missions > 1 ? 's' : ''} · {r.validated} validée{r.validated > 1 ? 's' : ''}{r.refused ? ` · ${r.refused} refusée${r.refused > 1 ? 's' : ''}` : ''}</span>}
+              {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
+              {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
+            </div>
+            {day === today && u && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, posts, leaves, advances, cfg, clientFilter, statusFilter, leaveFilter, first, onSelectDay, onPickEmployee, st }) => {
   const { L, card, txt, sub, TINT, pill } = st;
   const lang: 'fr' | 'en' = useApp().lang === 'en' ? 'en' : 'fr';
@@ -91,28 +154,27 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
   const [view, setView] = useState<GView>('month');
   const prefix = `${year}-${pad(month + 1)}-`;
   const [selDay, setSelDay] = useState<string>(() => (today.startsWith(prefix) ? today : `${prefix}01`));
-  const [att, setAtt] = useState<AttendanceRow[]>([]);
+  const [popDay, setPopDay] = useState<string | null>(null);
   const ctx = useMemo(() => ({ posts, leaves, today, cfg, clientFilter }), [posts, leaves, today, cfg, clientFilter]);
   const gDays = useMemo(() => globalMonth(year, month, list, ctx, first), [year, month, list, ctx, first]);
   const summary = useMemo(() => globalSummary(year, month, list, ctx, first, advances), [year, month, list, ctx, first, advances]);
-  const rows = useMemo(() => dayView(selDay, list, ctx, first), [selDay, list, ctx, first]);
   const startDow = (new Date(year, month, 1).getDay() + 6) % 7;
   const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} Ar`;
 
+  useLockBodyScroll(popDay !== null);
   useEffect(() => {
-    if (view !== 'day') return;
-    let alive = true;
-    setAtt([]);
-    db.fetchAttendance(selDay).then(r => { if (alive) setAtt(Array.isArray(r) ? r : []); }).catch(() => { /* hors ligne : pas de ligne de connexion */ });
-    return () => { alive = false; };
-  }, [view, selDay]);
+    if (!popDay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPopDay(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [popDay]);
 
   const tab = (v: GView, label: string) => <button key={v} type="button" onClick={() => setView(v)} className={pill(view === v)} data-testid={`gcal-tab-${v}`}>{label}</button>;
   const Stat = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
     <div className={`${card} p-3 min-w-0`}><div className={`text-[11px] leading-tight ${sub}`}>{label}</div><div className={`font-bold text-base leading-tight break-words ${tone || txt}`}>{value}</div></div>
   );
   const dominant = (g: ReturnType<typeof globalMonth>[number]): DayStatus => g.absent > 0 ? 'absent' : g.late > 0 ? 'late' : g.present > 0 ? (g.counts.in_progress > 0 ? 'in_progress' : 'objective_reached') : g.onLeave > 0 ? 'leave' : 'no_post';
-  const leaveLabel = (t: string | null) => (t ? (LEAVE_TYPE_LABELS as Record<string, [string, string]>)[t]?.[lang === 'en' ? 1 : 0] || t : '');
+  const panelProps = { list, ctx, first, today, posts, lang, nowMs, st, ar, onSelectDay, onPickEmployee };
 
   return (
     <div className="space-y-3" data-testid="global-calendar">
@@ -134,17 +196,17 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
               const names = [...g.leaveNames.map(n => `${n} (congé)`), ...g.pendingNames.map(n => `${n} (demande en attente)`)].join(', ');
               return (
                 <button type="button" key={g.dateStr} data-testid={`gcal-day-${g.dateStr}`} title={names || undefined}
-                  onClick={() => { setSelDay(g.dateStr); setView('day'); }}
+                  onClick={() => setPopDay(g.dateStr)}
                   className={`min-h-[64px] sm:min-h-[100px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 text-left transition-all hover:shadow-md ${TINT[dom]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}>
                   <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center self-start ${isToday ? 'bg-blue-600 text-white' : txt}`}>{g.day}</span>
                   <span className="flex flex-wrap gap-0.5 sm:gap-1">
-                    {g.present > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-500/20 text-emerald-500" title="Présents">{g.present}<span className="hidden sm:inline"> présents</span></span>}
-                    {g.late > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-500/20 text-amber-500" title="En retard">{g.late}<span className="hidden sm:inline"> retard</span></span>}
-                    {g.absent > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-red-500/20 text-red-500" title="Absents">{g.absent}<span className="hidden sm:inline"> absent{g.absent > 1 ? 's' : ''}</span></span>}
-                    {g.onLeave > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-sky-500/20 text-sky-500" title="En congé">{g.onLeave}<span className="hidden sm:inline"> congé</span></span>}
-                    {g.pendingLeave > 0 && <span className="px-1.5 rounded-full text-[10px] sm:text-[11px] font-bold border border-dashed border-sky-500 text-sky-500" title="Demande de congé en attente">{g.pendingLeave}<span className="hidden sm:inline"> demande</span></span>}
+                    {g.present > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-500/20 text-emerald-500" title="Présents" aria-label={`${g.present} présents`}><UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.present}</span>}
+                    {g.late > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-500/20 text-amber-500" title="En retard" aria-label={`${g.late} en retard`}><Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.late}</span>}
+                    {g.absent > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-red-500/20 text-red-500" title="Absents" aria-label={`${g.absent} absents`}><UserX className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.absent}</span>}
+                    {g.onLeave > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-sky-500/20 text-sky-500" title="En congé" aria-label={`${g.onLeave} en congé`}><CalendarOff className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.onLeave}</span>}
+                    {g.pendingLeave > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border border-dashed border-sky-500 text-sky-500" title="Demandes de congé en attente" aria-label={`${g.pendingLeave} demandes de congé en attente`}><Hourglass className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.pendingLeave}</span>}
+                    {g.missions > 0 && <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`} title="Missions" aria-label={`${g.missions} missions`}><ClipboardList className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.missions}</span>}
                   </span>
-                  {g.missions > 0 && <span className={`text-[10px] sm:text-[11px] font-semibold ${sub}`}>{g.missions} mission{g.missions > 1 ? 's' : ''}</span>}
                   {g.pay > 0 && <span className="hidden sm:block text-[11px] font-bold text-emerald-600">{ar(g.pay)}</span>}
                 </button>
               );
@@ -195,42 +257,17 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
       )}
 
       {list.length > 0 && view === 'day' && (
-        <div className="space-y-2" data-testid="gcal-dayview">
-          <div className={`${card} p-3 flex items-center justify-between gap-2`}>
-            <button type="button" onClick={() => setSelDay(addDay(selDay, -1))} className={st.roundBtn} aria-label="Jour précédent"><ChevronLeft className="w-5 h-5" /></button>
-            <div className="text-center min-w-0">
-              <div className={`font-bold ${txt}`}>{selDay.split('-').reverse().join('/')}{selDay === today ? ' · aujourd\'hui' : ''}</div>
-              <div className={`text-[11px] ${sub}`}>{GDOW[(new Date(`${selDay}T00:00:00Z`).getUTCDay() + 6) % 7]} · {rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status)).length} présents · {rows.filter(r => r.status === 'absent').length} absents · {rows.filter(r => r.status === 'leave').length} en congé</div>
-            </div>
-            <button type="button" onClick={() => setSelDay(addDay(selDay, 1))} className={st.roundBtn} aria-label="Jour suivant"><ChevronRight className="w-5 h-5" /></button>
-          </div>
-          <div className="flex justify-end">
-            <button type="button" onClick={() => onSelectDay(selDay, posts.filter(p => p.date === selDay))} className={pill(false)}>Détail des missions du jour</button>
-          </div>
-          {rows.map(r => {
-            const a = att.find(x => x.user_id === r.id);
-            const u = list.find(x => x.id === r.id);
-            return (
-              <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
-                  <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>
-                  <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
-                </div>
-                <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs ${sub}`}>
-                  {r.firstStart && <span>1re mission : <strong className={txt}>{r.firstStart}</strong>{r.lateMin > 0 && <span className="text-amber-500 font-bold"> (+{r.lateMin} min de retard)</span>}</span>}
-                  {r.firstStart && <span>Dernière fin : <strong className={txt}>{r.open ? 'en cours' : r.lastEnd || '—'}</strong></span>}
-                  {a && <span>1re connexion : <strong className={txt}>{hmMada(a.first_seen)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
-                  {r.missions > 0 && <span>{r.missions} mission{r.missions > 1 ? 's' : ''} · {r.validated} validée{r.validated > 1 ? 's' : ''}{r.refused ? ` · ${r.refused} refusée${r.refused > 1 ? 's' : ''}` : ''}</span>}
-                  {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
-                  {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
-                </div>
-                {selDay === today && u && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
-              </div>
-            );
-          })}
-        </div>
+        <DayPanel day={selDay} setDay={setSelDay} {...panelProps} />
       )}
+
+      {popDay && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={() => setPopDay(null)} data-testid="gcal-popup-backdrop">
+          <div role="dialog" aria-modal="true" aria-label={`Détail du ${popDay.split('-').reverse().join('/')}`} onClick={e => e.stopPropagation()}
+            className={`w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border p-3 sm:p-4 space-y-2 ${L ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`} data-testid="gcal-popup">
+            <div className="flex justify-end"><button type="button" onClick={() => setPopDay(null)} className={st.roundBtn} aria-label="Fermer" data-testid="gcal-popup-close"><X className="w-5 h-5" /></button></div>
+            <DayPanel day={popDay} setDay={setPopDay as (d: string) => void} {...panelProps} />
+          </div>
+        </div>, document.body)}
     </div>
   );
 };
