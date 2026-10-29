@@ -328,7 +328,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <span className="text-sm text-slate-200 inline-flex items-center gap-2"><Eye className="w-4 h-4 text-slate-400" aria-hidden="true" />Mode opérateur</span>
                 <button type="button" role="switch" aria-checked={operatorMode} onClick={onToggleOperatorMode}
                   aria-label={operatorMode ? 'Mode opérateur actif : revenir en mode responsable' : 'Passer en mode opérateur'}
-                  className={`relative w-[52px] h-8 rounded-full border cursor-pointer transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${operatorMode ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-600'}`}>
+                  className={`relative w-[52px] h-8 rounded-lg border cursor-pointer transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${operatorMode ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-600'}`}>
                   <span className={`absolute top-0.5 w-6 h-6 rounded-md bg-white shadow transition-all ${operatorMode ? 'left-[24px]' : 'left-0.5'}`} />
                 </button>
               </div>
