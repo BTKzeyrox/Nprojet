@@ -16,7 +16,11 @@ const comp = readFileSync('src/views/admin/TreasuryCharts.tsx', 'utf8') + readFi
 ok(!/salar|payroll|getPosts|getUsers|advance/i.test(comp), 'graphiques : aucun salaire, aucune paie, aucune mission lue');
 ok(/<TreasuryCharts /.test(readFileSync('src/views/admin/TreasuryPage.tsx', 'utf8')), 'page Trésorerie : graphiques branchés');
 const cal = readFileSync('src/views/CalendarView.tsx', 'utf8');
-ok(/empMonth\(year, month, activeId/.test(cal) && /data-ecal-chips/.test(cal), 'calendrier d\'un employé : mêmes données et pastilles que le global');
+ok(/empMonth\(year, month, activeId/.test(cal), 'calendrier d\'un employé : mêmes données que le global');
+ok(/const CELL_STATUSES: DayStatus\[\] = \['objective_reached', 'late', 'in_progress', 'test', 'absent', 'leave'\]/.test(cal), 'cases : seulement les 6 icônes de la légende');
+ok((cal.match(/data-cal-chips/g) || []).length === 2 && /<StatusChip key=\{k\}/.test(cal), 'calendrier global et calendrier d\'un employé utilisent les mêmes pastilles (icône colorée + chiffre)');
+ok(!/ListChecks className="w-3 h-3"|ar\(g\.pay\)|à rendre'\}\n/.test(cal) && !/data-ecal-chips/.test(cal) && !/mission\{d\.shifts\.length > 1/.test(cal), 'cases : plus de texte, de montant ni de pastille hors légende');
+ok(/data-testid="day-due"/.test(cal), 'les missions à rendre sont dans la fenêtre du jour');
 ok(/setPopDay\(d\.dateStr\)/.test(cal) && /<DayPanel day=\{popDay\}/.test(cal) && /data-testid="ecal-popup"/.test(cal), 'un clic sur un jour ouvre la fenêtre avec flèches jour précédent / suivant');
 ok(/onSelectDay\(d, sh\)/.test(cal), 'le détail des missions du jour reste accessible');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
