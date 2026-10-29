@@ -238,6 +238,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Accès « auto » : la connexion n'est permise que pendant la vacation, avec une marge avant et après.
   - Supprimer un profil est définitif.
   - Import Excel ou CSV : tous les comptes sont des opérateurs ; un mot de passe provisoire est montré une seule fois à la fin (100 comptes au plus).
+  - Statut en direct : En cours (mission ouverte), En ligne (sans mission), En pause (mission ouverte, appli silencieuse 90 s à 30 min), Hors ligne.
 - **Dans le code** : `src/views/admin/EmployeesManagement.tsx`
 
 ### Mon profil  `profile`
@@ -260,15 +261,20 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - On ne modifie que ses propres messages, même l'admin.
   - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
+  - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
 - **Qui** : responsable et opérateur
-- **À quoi ça sert** : Les présences et les retards, jour par jour.
+- **À quoi ça sert** : Les présences et les retards, jour par jour : d'abord tous les employés ensemble (mois, résumé, vue du jour), puis le calendrier d'un employé.
 - **Comment l'utiliser** : 1. Choisir le mois et la personne. 2. Cliquer un jour pour voir les sessions. 3. Repérer les retards.
 - **Règles** :
   - Le dimanche est un jour de repos.
   - Les heures sont celles de Madagascar (UTC+3).
+  - Calendrier global : chaque case donne le nombre de présents, retards, absents, congés et demandes de congé. C'est la somme exacte des calendriers individuels.
+  - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
+  - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
+  - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.
 - **Chiffres et formules** :
   - En retard : Début de la session après l'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.
 - **Réglages liés** (Réglages > Conditions) : `leave.late_limit_time`
@@ -539,6 +545,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `backupExcel.ts` | Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
+| `calendarGlobal.ts` | Calendrier GLOBAL (tous les employés) : mois, résumé et vue du jour. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:calendar-global`. |
 | `chartData.ts` | Données des graphiques : parties réelles, prévision en pointillé, rythme d'un objectif (purs, sans écran). |
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
@@ -550,6 +557,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
+| `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
 | `enTranslate.ts` | Traduction automatique de l'interface en anglais (français → English). |
@@ -602,6 +610,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
+| `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
@@ -636,6 +645,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
+| `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
@@ -766,6 +776,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-accounting` | Contrôle des règles Comptabilité du module 11 (M14.9). Pur, sans réseau. Lancer : npm run check:health-accounting |
 | `npm run check:health-management` | Contrôle des règles du module 15 dans la Santé du site (M15.8) : conflits de planning, paie et dépenses au-dessus du prévu. Pur, sans réseau. |
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
+| `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
+| `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |
 | `npm run check:simulation` | Contrôle du générateur de simulation (module 18, M18.4) : les données inventées doivent être COHÉRENTES entre elles, vues par les vraies règles du site |
 | `npm run check:health-performance` | Contrôle de la règle Performance du module 11 (M11.12). Pur, sans réseau. Lancer : npm run check:health-performance |
