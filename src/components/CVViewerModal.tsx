@@ -9,6 +9,8 @@ import { Avatar } from './Avatar';
 import { useApp } from '../context/AppContext';
 import { badgeAccess, canSeeProfileBadges, usePerformance } from '../utils/usePerformance';
 import { BadgeChips, ScoreRing } from './PerformanceBadges';
+import { ROLE_NAMES } from '../utils/roles';
+import type { ViewAs } from '../utils/roles';
 import { usePresence, setPresence, PRESENCE_LIST, PRESENCE_LABEL, PRESENCE_DOT } from '../utils/availability';
 
 interface ProfileModalProps {
@@ -19,8 +21,8 @@ interface ProfileModalProps {
   onMessage?: (u: User) => void;
   /** Responsable, sur son propre profil : passer en vue opérateur et revenir. */
   canSwitchMode?: boolean;
-  operatorMode?: boolean;
-  onToggleOperatorMode?: () => void;
+  viewAs?: ViewAs;
+  onViewAs?: (r: ViewAs) => void;
 }
 
 /** Mon statut (Disponible / Occupé / Absent) : réglé sur cet appareil. */
@@ -100,7 +102,7 @@ const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, se
 };
 
 // Fenêtre « Profil » : photo, nom, shift, téléphone (plus de CV ni de pièce d'identité)
-export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage, canSwitchMode = false, operatorMode = false, onToggleOperatorMode }) => {
+export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage, canSwitchMode = false, viewAs = 'admin', onViewAs }) => {
   useLockBodyScroll(isOpen);
   const [, force] = useState(0);
   const [error, setError] = useState('');
@@ -323,14 +325,18 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
           <div className="space-y-3 border-t border-slate-700 pt-3">
             <StatusPicker uid={live.id} />
             <PasswordForm uid={live.id} />
-            {canSwitchMode && onToggleOperatorMode && (
-              <div data-mode-switch className="flex items-center justify-between gap-3 min-h-[44px]">
-                <span className="text-sm text-slate-200 inline-flex items-center gap-2"><Eye className="w-4 h-4 text-slate-400" aria-hidden="true" />Mode opérateur</span>
-                <button type="button" role="switch" aria-checked={operatorMode} onClick={onToggleOperatorMode}
-                  aria-label={operatorMode ? 'Mode opérateur actif : revenir en mode responsable' : 'Passer en mode opérateur'}
-                  className={`relative w-[52px] h-8 rounded-lg border cursor-pointer transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${operatorMode ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-600'}`}>
-                  <span className={`absolute top-0.5 w-6 h-6 rounded-md bg-white shadow transition-all ${operatorMode ? 'left-[24px]' : 'left-0.5'}`} />
-                </button>
+            {canSwitchMode && onViewAs && (
+              <div data-view-as className="space-y-1.5">
+                <div className="text-xs text-slate-300 uppercase font-mono inline-flex items-center gap-1.5"><Eye className="w-4 h-4 text-slate-400" aria-hidden="true" />Voir comme</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['admin', 'employee', 'accountant', 'team_lead'] as ViewAs[]).map(r => (
+                    <button key={r} type="button" data-view-as-role={r} aria-pressed={viewAs === r} onClick={() => onViewAs(r)}
+                      className={`min-h-[44px] rounded-lg border text-xs font-bold cursor-pointer ${viewAs === r ? (r === 'admin' ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200' : 'border-amber-500 bg-amber-500/10 text-amber-200') : 'border-slate-600 bg-[#141e2a] text-slate-300'}`}>
+                      {ROLE_NAMES[r][0]}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400">Affichage seulement : tes droits ne changent pas. Choisis « Responsable » pour revenir.</p>
               </div>
             )}
           </div>

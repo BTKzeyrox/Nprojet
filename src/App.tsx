@@ -58,6 +58,7 @@ const StoragePage = lazy(() => import('./views/admin/StoragePage').then(m => ({ 
 const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
+import type { ViewAs } from './utils/roles';
 const TreasuryPage = lazy(() => import('./views/admin/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
@@ -165,7 +166,9 @@ export default function App() {
     document.documentElement.style.setProperty('--sbw', sbWidth);
   }, [sbWidth]);
   // Admin : peut jouer son propre rôle de opérateur, puis revenir en admin
-  const [operatorMode, setOperatorMode] = useState(false);
+  // « Voir comme » (responsable seulement) : affichage d'un autre type de compte, sans changer aucun droit (le serveur reste juge)
+  const [viewAs, setViewAs] = useState<ViewAs>('admin');
+  const operatorMode = viewAs !== 'admin';
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -243,7 +246,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setOperatorMode(false);
+    setViewAs('admin');
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
@@ -353,9 +356,9 @@ export default function App() {
 
   // Utilisateur « vu » par l'interface : en mode opérateur, l'admin est traité comme un opérateur
   const realIsAdmin = currentUser.role === 'admin';
-  const viewUser: User = realIsAdmin && operatorMode ? { ...currentUser, role: 'employee' } : currentUser;
-  const toggleOperatorMode = () => {
-    setOperatorMode(v => !v);
+  const viewUser: User = realIsAdmin && operatorMode ? { ...currentUser, role: viewAs } : currentUser;
+  const changeViewAs = (r: ViewAs) => {
+    setViewAs(r);
     setActiveView('feed');
   };
 
@@ -438,6 +441,8 @@ export default function App() {
                 <SettingsView />
               ) : activeView === 'health' ? (
                 <HealthPage onNavigate={view => setActiveView(view)} />
+              ) : activeView === 'treasury' ? (
+                <TreasuryPage />
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
@@ -579,8 +584,8 @@ export default function App() {
             onClose={() => setCvModalUser(null)}
             user={cvModalUser}
             canSwitchMode={realIsAdmin}
-            operatorMode={operatorMode}
-            onToggleOperatorMode={() => { setCvModalUser(null); toggleOperatorMode(); }}
+            viewAs={viewAs}
+            onViewAs={r => { setCvModalUser(null); changeViewAs(r); }}
             onMessage={u => { setCvModalUser(null); setChatThread(u.id); setActiveView('chat'); }}
           />
         </Suspense>

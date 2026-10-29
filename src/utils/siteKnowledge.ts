@@ -167,7 +167,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'profile', audience: 'employee', title: b('Mon profil', 'My profile'),
     purpose: b('Les informations de l\'employé, qu\'il peut demander à modifier.', 'The employee\'s information, which they can ask to change.'),
     howto: [b('Voir ses informations.', 'View your information.'), b('Demander une modification.', 'Ask for a change.'), b('Attendre l\'accord de l\'admin.', 'Wait for the admin\'s approval.')],
-    rules: [b('Un changement de profil passe par une validation de l\'admin.', 'A profile change goes through admin validation.'), b('Le profil s\'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.', 'Tap your photo at the top right (all roles) to open your profile: status Available / Busy / Away on this device, and password.'), b('Le responsable y trouve la bascule « Mode opérateur » pour voir le site comme un opérateur.', 'The admin also finds the “Operator mode” switch there, to see the site as an operator.')],
+    rules: [b('Un changement de profil passe par une validation de l\'admin.', 'A profile change goes through admin validation.'), b('Le profil s\'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.', 'Tap your photo at the top right (all roles) to open your profile: status Available / Busy / Away on this device, and password.'), b('Le responsable y trouve « Voir comme » : Responsable, Opérateur, Comptable ou Chef d\'équipe (affichage seulement).', 'The admin also finds “View as” there: Admin, Operator, Accountant or Team lead (display only).')],
     figures: [],
   },
   {
@@ -187,7 +187,7 @@ export const SITE_MAP: SitePage[] = [
   },
   {
     id: 'treasury', audience: 'admin', title: b('Trésorerie', 'Treasury'),
-    purpose: b('Pour le Comptable : l\'argent reçu et les dépenses du mois, sans salaires ni paie.', 'For the Accountant: money received and expenses of the month, with no salaries or payroll.'),
+    purpose: b('L\'argent reçu et les dépenses du mois, sans salaires ni paie. Pour le Comptable et le responsable.', 'Money received and expenses of the month, with no salaries or payroll. For the Accountant and the admin.'),
     howto: [b('Choisir le mois avec les flèches.', 'Pick the month with the arrows.'), b('Ajouter un paiement reçu ou une dépense.', 'Add a payment received or an expense.'), b('Filtrer par type ou catégorie, modifier ou supprimer une ligne.', 'Filter by type or category, edit or delete a line.')],
     rules: [b('Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.', 'Balance = money received − expenses. Salaries and payroll stay with the admin.'), b('Les lignes saisies ici sont les mêmes que dans l\'onglet Finances du responsable.', 'Lines entered here are the same as in the admin\'s Finances tab.')],
     conditions: [],

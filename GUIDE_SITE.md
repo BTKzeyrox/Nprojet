@@ -249,7 +249,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Un changement de profil passe par une validation de l'admin.
   - Le profil s'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.
-  - Le responsable y trouve la bascule « Mode opérateur » pour voir le site comme un opérateur.
+  - Le responsable y trouve « Voir comme » : Responsable, Opérateur, Comptable ou Chef d'équipe (affichage seulement).
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/components/CVViewerModal.tsx`
 
 ### Messagerie  `chat`
@@ -283,7 +283,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 
 ### Trésorerie  `treasury`
 - **Qui** : responsable
-- **À quoi ça sert** : Pour le Comptable : l'argent reçu et les dépenses du mois, sans salaires ni paie.
+- **À quoi ça sert** : L'argent reçu et les dépenses du mois, sans salaires ni paie. Pour le Comptable et le responsable.
 - **Comment l'utiliser** : 1. Choisir le mois avec les flèches. 2. Ajouter un paiement reçu ou une dépense. 3. Filtrer par type ou catégorie, modifier ou supprimer une ligne.
 - **Règles** :
   - Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.
