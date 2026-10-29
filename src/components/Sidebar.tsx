@@ -38,6 +38,7 @@ import {
   HeartPulse,
   Award,
   Table2,
+  Landmark,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -109,6 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'clients', label: 'Clients', icon: Building2 },
           { id: 'invoices', label: 'Facturation', icon: Receipt },
           { id: 'accounting', label: 'Comptabilité', icon: BookOpen },
+          ...(isAccountant ? [{ id: 'treasury', label: 'Trésorerie', icon: Landmark }] : []),
           { id: 'purchasing', label: 'Achats', icon: Truck },
           ...(isAdmin ? [{ id: 'storage', label: 'Stockage', icon: Package }] : []),
           { id: 'performance', label: 'Performance', icon: BarChart3 },

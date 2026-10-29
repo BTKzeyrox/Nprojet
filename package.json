@@ -132,6 +132,7 @@
     "check:header-search": "tsx scripts/check-header-search.ts",
     "check:restore-once": "tsx scripts/check-restore-once.ts",
     "check:composer-min": "tsx scripts/check-composer-min.ts",
+    "check:treasury": "tsx scripts/check-treasury.ts",
     "check:notif-read": "esbuild scripts/check-notif-read.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-notif-read.mjs && node node_modules/.cache/check-notif-read.mjs",
     "check:no-demo": "tsx scripts/check-no-demo.ts",
     "check:print-format": "npx --yes tsx scripts/check-print-format.ts",

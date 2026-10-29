@@ -280,11 +280,21 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Réglages liés** (Réglages > Conditions) : `leave.late_limit_time`
 - **Dans le code** : `src/views/CalendarView.tsx`
 
+### Trésorerie  `treasury`
+- **Qui** : responsable
+- **À quoi ça sert** : Pour le Comptable : l'argent reçu et les dépenses du mois, sans salaires ni paie.
+- **Comment l'utiliser** : 1. Choisir le mois avec les flèches. 2. Ajouter un paiement reçu ou une dépense. 3. Filtrer par type ou catégorie, modifier ou supprimer une ligne.
+- **Règles** :
+  - Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.
+  - Les lignes saisies ici sont les mêmes que dans l'onglet Finances du responsable.
+- **Dans le code** : `src/views/admin/TreasuryPage.tsx`, `src/views/admin/FinanceTab.tsx`
+
 ### Comptabilité  `accounting`
 - **Qui** : responsable
 - **À quoi ça sert** : Le journal des écritures (partie double), le grand livre, la balance, le résultat et le bilan. Les écritures viennent des factures, paiements, dépenses, paies et avances.
 - **Comment l'utiliser** : 1. Appuie sur « Générer les écritures » : chaque pièce sans écriture en reçoit une, jamais de doublon. 2. Choisis la période, puis le Journal, le Grand livre, la Balance, le Résultat ou le Bilan. 3. Pour corriger : annule l'écriture (écriture inverse) puis saisis la bonne.
 - **Règles** :
+  - Le Comptable a aussi cette page ; seul le responsable annule une écriture.
   - Une écriture a toujours autant de débit que de crédit ; une écriture enregistrée ne se modifie jamais.
   - Le numéro d'écriture (EC-2026-0001) est donné par le serveur, dans l'ordre des dates.
   - Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.
@@ -842,6 +852,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:header-search` | En-tête sans bouclier, recherche « Rechercher… » avec loupe et croix ; « Signaler un problème » dans le Journal des erreurs. |
 | `npm run check:restore-once` | Réglages : la remise à zéro du site n'apparaît que dans l'onglet Données (et non dans chaque onglet). |
 | `npm run check:composer-min` | Actualités : le formulaire de publication est réduit tant que personne ne veut publier. |
+| `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

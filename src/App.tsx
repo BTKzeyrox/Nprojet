@@ -56,6 +56,7 @@ const StoragePage = lazy(() => import('./views/admin/StoragePage').then(m => ({ 
 const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
+const TreasuryPage = lazy(() => import('./views/admin/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
 const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
@@ -413,6 +414,7 @@ export default function App() {
             /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
             activeView === 'clients' ? <ClientsPage />
               : activeView === 'accounting' ? <AccountingPage />
+              : activeView === 'treasury' ? <TreasuryPage />
               : activeView === 'purchasing' ? <PurchasingPage />
               : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               : activeView === 'settings' ? <SettingsView personalOnly />

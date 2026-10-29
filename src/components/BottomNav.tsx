@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2 } from 'lucide-react';
+import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
@@ -72,6 +72,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
     { id: 'feed', label: 'Actualités', icon: Newspaper },
     { id: 'chat', label: 'Messages', icon: MessageSquare, badge: chatUnread },
     { id: 'invoices', label: 'Facturation', icon: Receipt },
+    { id: 'treasury', label: 'Trésorerie', icon: Landmark },
     { id: 'clients', label: 'Clients', icon: Building2 },
   ];
   // Chef d'équipe : Actualités, Messages, Validations de son équipe

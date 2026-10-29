@@ -33,6 +33,7 @@ export const PAGE_FILES: Record<string, string[]> = {
   calendar: ['src/views/CalendarView.tsx'],
   direction: ['src/views/admin/DirectionPage.tsx'],
   accounting: ['src/views/admin/AccountingPage.tsx'],
+  treasury: ['src/views/admin/TreasuryPage.tsx', 'src/views/admin/FinanceTab.tsx'],
   hr: ['src/views/hr/HrPage.tsx', 'src/views/hr/DossiersSection.tsx', 'src/views/hr/LeavesSection.tsx', 'src/views/hr/ReviewsSection.tsx'],
   advances: ['src/components/PayrollAdmin.tsx', 'src/components/MyPayroll.tsx', 'src/views/admin/EmployeesManagement.tsx'],
   health: ['src/views/admin/HealthPage.tsx'],

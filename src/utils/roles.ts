@@ -32,8 +32,8 @@ export const cleanTeam = (v: unknown): string => String(v ?? '').replace(/[\u000
 export const sameTeam = (a: any, b: any): boolean => { const x = cleanTeam(a && a.team).toLowerCase(), y = cleanTeam(b && b.team).toLowerCase(); return !!x && x === y; };
 /** Qui peut valider ou refuser la session d'un opérateur : l'admin, ou le Chef d'équipe de la même équipe (jamais sa propre session ni celle d'un non-opérateur). */
 export const canDecidePost = (me: any, owner: any): boolean => !!me && !!owner && (me.role === 'admin' || (me.role === 'team_lead' && isOperator(owner.role) && owner.id !== me.id && sameTeam(me, owner)));
-/** Pages du Comptable (identifiants de vue du site). Jamais : paie, comptes, présence, réglages du site, statistiques (elles montrent la paie). */
-export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'accounting', 'clients', 'purchasing', 'chat', 'settings'] as const;
+/** Pages du Comptable (identifiants de vue du site). Jamais : paie, comptes, présence, réglages du site, statistiques (elles montrent la paie : sa « Trésorerie » montre l'argent sans salaires). */
+export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'accounting', 'treasury', 'clients', 'purchasing', 'chat', 'settings'] as const;
 /** Pages du Chef d'équipe : Actualités, Validations de son équipe, Messages, réglages personnels. Jamais l'argent, la paie ni les comptes. */
 export const TEAM_LEAD_VIEWS = ['feed', 'validations', 'chat', 'settings'] as const;
 /** Le Comptable et le Chef d'équipe ne peuvent ouvrir que leurs pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
