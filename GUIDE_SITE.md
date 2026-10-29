@@ -179,16 +179,17 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Stockage  `storage`
 - **Qui** : responsable
 - **À quoi ça sert** : Voir l'essentiel au Tableau de bord, puis gérer tes produits : entrer le stock, chercher un produit, ajouter sa photo.
-- **Comment l'utiliser** : 1. Tableau de bord : chiffres clés, alertes, rupture proche ; toucher Épuisés ou Stock bas ouvre la liste. 2. Produits : nouveau produit = nom + quantité de départ ; chercher, filtrer, −1 / +1 ou Entrée / Sortie. 3. Mouvements : tout l'historique filtré. Analyses : graphiques (valeur, plus utilisés, fournisseurs, achats chers) par période.
+- **Comment l'utiliser** : 1. Tableau de bord : chiffres clés, alertes, rupture proche ; toucher Épuisés ou Stock bas ouvre la liste. 2. Produits : nouveau produit = nom + quantité de départ ; chercher, filtrer, −1 / +1 ou Entrée / Sortie. 3. Catégories : liste par défaut modifiable (bouton Catégories). Mouvements : historique filtré. Analyses : graphiques par période.
 - **Règles** :
   - Stockage est réservé à l'admin : le serveur refuse tout autre accès.
   - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
   - Import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
+  - Seul le nom d'un produit est obligatoire : catégorie, unité, prix, seuil, quantité et photo sont facultatifs.
   - La photo d'un produit est envoyée sur Cloudinary ; le serveur n'accepte que les adresses du site.
 - **Chiffres et formules** :
   - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
   - Quantité en stock : Entrées − sorties ± ajustements.
-- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockDashboard.tsx`, `src/views/admin/StockMovements.tsx`, `src/views/admin/StockAnalytics.tsx`, `src/views/admin/StockTab.tsx`
+- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockDashboard.tsx`, `src/views/admin/StockMovements.tsx`, `src/views/admin/StockAnalytics.tsx`, `src/views/admin/StockCategoriesDialog.tsx`, `src/views/admin/StockTab.tsx`
 
 ### Statistiques  `stats`
 - **Qui** : responsable
@@ -767,6 +768,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-notif` | Contrôle des notifications de la cloche (M11.7 / M9.4) : règles pures + câblage. Lancer : npm run check:health-notif |
 | `npm run check:watch-shared` | Contrôle des seuils de Surveillance PARTAGÉS (Conditions > Surveillance, M11.14 « Accord Surveillance »). Sans réseau. Lancer : npm run check:watch-shared |
 | `npm run check:health-acks-shared` | Contrôle des marques « Ignorer / Vérifié » PARTAGÉES (M11.7 / « Accord Ignorer »). Sans réseau. Lancer : npm run check:health-acks-shared |
+| `npm run check:stock-categories` | Contrôle de la liste des catégories du Stockage (site = serveur). Sans réseau. Lancer : npm run check:stock-categories |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |

@@ -139,3 +139,36 @@ export function stockPeriod(products: Product[], moves: StockMove[], start: stri
 
 /** Montant d'un achat de stock (S3.3) : quantité × prix payé par unité, arrondi à l'Ar. 0 si le prix n'est pas connu. */
 export const purchaseAmount = (qty: number, unitCost?: number): number => Math.round(Math.abs(qty) * (unitCost || 0));
+
+// ---------- Catégories des produits (liste par défaut, modifiable ; enregistrée dans les réglages) ----------
+export const DEFAULT_STOCK_CATEGORIES = ['Papeterie', 'Informatique', 'Matériel et outils', 'Entretien', 'Emballage', 'Alimentation', 'Boissons', 'Autre'];
+export const STOCK_CATEGORY_MAX = 30;
+export const STOCK_CATEGORY_NAME_MAX = 40;
+export const cleanCategoryName = (s: unknown): string => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, STOCK_CATEGORY_NAME_MAX);
+/** Clé de comparaison : sans accent ni majuscule, pour qu'« Électricité » et « electricite » soient la même catégorie. */
+export const categoryKey = (s: unknown): string => cleanCategoryName(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** Nettoie la liste (même règle que le serveur) : noms propres, sans doublon, 30 au plus. Pas une liste = null (une liste vide est gardée). */
+export function cleanCategoryList(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of raw) {
+    if (typeof x !== 'string') continue;
+    const name = cleanCategoryName(x);
+    const key = categoryKey(name);
+    if (!name || seen.has(key)) continue;
+    seen.add(key); out.push(name);
+    if (out.length >= STOCK_CATEGORY_MAX) break;
+  }
+  return out;
+}
+/** La liste à proposer : celle de l'admin, plus les catégories déjà utilisées par des produits mais absentes de la liste (rien ne disparaît). */
+export function categoryOptions(list: string[], products: { category: string }[]): string[] {
+  const out = [...list];
+  const keys = new Set(out.map(categoryKey));
+  for (const p of products) {
+    const name = cleanCategoryName(p.category);
+    if (name && !keys.has(categoryKey(name))) { keys.add(categoryKey(name)); out.push(name); }
+  }
+  return out;
+}

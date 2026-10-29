@@ -163,6 +163,22 @@ db.enterDemo('employee');
 ok(db.getProducts().length === 0 && db.getStockMoves().length === 0, 'démo opérateur : aucun produit ni mouvement visible');
 ok(db.addProduct({ name: 'Pirate' }).error === 'admin' && db.addStockMove({ product_id: 'x', type: 'in', qty: 1, date: today }).error === 'admin' && db.deleteProduct('x').error === 'admin', 'opérateur : ajout, mouvement et suppression refusés');
 
+// ---------- 4b) Catégories : liste par défaut, ajout, renommage, suppression ----------
+{
+  db.enterDemo('admin');
+  const names = () => db.getStockCategories();
+  ok(names().length === 8 && names().includes('Papeterie'), 'catégories : liste par défaut au départ');
+  const p1 = db.addProduct({ name: 'Cat test A', category: 'Papeterie' }); const p2 = db.addProduct({ name: 'Cat test B', category: 'papeterie' }); const p3 = db.addProduct({ name: 'Cat test C' });
+  ok(p1.success && p2.success && p3.success, 'catégories : seul le nom est obligatoire');
+  ok(db.setStockCategories([...names(), 'Électricité']).success && names().includes('Électricité'), 'catégories : ajout enregistré dans les réglages');
+  ok(db.renameStockCategory('Électricité', 'Papeterie').error === 'category_exists', 'catégories : renommer vers un nom déjà pris est refusé');
+  ok(db.renameStockCategory('Papeterie', '  ').error === 'category', 'catégories : nom vide refusé');
+  ok(db.renameStockCategory('Papeterie', 'Fournitures Zéta').success && names().includes('Fournitures Zéta') && !names().includes('Papeterie'), 'catégories : renommée dans la liste');
+  ok(db.getProducts().filter(p => p.category === 'Fournitures Zéta').length >= 2 && !db.getProducts().some(p => p.category.toLowerCase() === 'papeterie'), 'catégories : tous ses produits suivent le renommage (même avec une autre casse)');
+  ok(db.deleteStockCategory('Fournitures Zéta').success && !names().includes('Fournitures Zéta') && !db.getProducts().some(p => p.category === 'Fournitures Zéta'), 'catégories : supprimée de la liste, ses produits restent sans catégorie');
+  ok(db.getProducts().some(p => p.name === 'Cat test A' && p.category === ''), 'catégories : le produit existe toujours');
+  ok(db.setStockCategories([]).success && names().length === 0, 'catégories : liste vide gardée (pas remplacée par la liste par défaut)');
+}
 // ---------- 5) Rendu FR et EN ----------
 db.enterDemo('admin');
 const range = { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-31` };

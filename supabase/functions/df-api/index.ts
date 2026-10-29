@@ -1614,6 +1614,30 @@ function applyHealthAcks(saved: any, rec: any, existing: any): any {
   return out;
 }
 // ===== END HEALTH_ACKS =====
+// ===== BEGIN STOCK_CATEGORIES (liste des catégories du Stockage : admin seulement ; ce bloc est contrôlé par scripts/check-stock-categories.ts) =====
+function cleanStockCategories(raw: any): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of raw) {
+    if (typeof x !== "string") continue;
+    const name = x.replace(/\s+/g, " ").trim().slice(0, 40);
+    const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key); out.push(name);
+    if (out.length >= 30) break;
+  }
+  return out;
+}
+/** Réglages écrits par l'admin : la liste est revérifiée ; absente ou pas une liste (ancien site) = l'existant est gardé. */
+function applyStockCategories(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const sent = rec ? cleanStockCategories(rec.stock_categories) : null;
+  const list = sent !== null ? sent : cleanStockCategories(existing && existing.stock_categories);
+  if (list) out.stock_categories = list; else delete out.stock_categories; // une liste vide est gardée : elle dit « aucune catégorie »
+  return out;
+}
+// ===== END STOCK_CATEGORIES =====
 
 // ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
 interface PerformanceConfig {
@@ -2166,7 +2190,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "stock_categories", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2320,7 +2344,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
-const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
+const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories"];
 const auditCut = (v: unknown, n: number) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 function buildAuditEntry(me: any, action: string, target: any, detail: unknown, at: string, rand: string): any | null {
   if (!AUDIT_ACTIONS.includes(action)) return null;
@@ -3292,7 +3316,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;

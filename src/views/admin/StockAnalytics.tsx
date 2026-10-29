@@ -3,7 +3,7 @@ import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { supplierRanking, topPurchased } from '../../utils/purchasing';
-import { stockPeriod, topUsed, valueByMonth } from '../../utils/stock';
+import { categoryKey, stockPeriod, stockRows, topUsed, valueByMonth } from '../../utils/stock';
 import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
 import { monthTitle } from '../../utils/chartData';
 
@@ -29,6 +29,15 @@ export const StockAnalytics: React.FC<Props> = ({ lang }) => {
   const used = useMemo(() => topUsed(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
   const suppliersRank = useMemo(() => supplierRanking(db.getSuppliers(), db.getPurchases(), moves, range.start, range.end, today).slice(0, 5), [moves, range.start, range.end, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const bought = useMemo(() => topPurchased(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
+  const byCategory = useMemo(() => {
+    const map = new Map<string, { name: string; value: number; n: number }>();
+    for (const r of stockRows(products, moves)) {
+      const key = categoryKey(r.product.category) || '__none__';
+      const cur = map.get(key) || { name: r.product.category.trim() || t('Sans catégorie', 'No category'), value: 0, n: 0 };
+      cur.value += r.value; cur.n += 1; map.set(key, cur);
+    }
+    return [...map.entries()].map(([key, v]) => ({ key, ...v })).filter(x => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 8);
+  }, [products, moves]); // eslint-disable-line react-hooks/exhaustive-deps
   const ar = (n: number) => formatCurrencyAr(n);
   const chip = (on: boolean) => `min-h-[44px] px-3 rounded-lg text-sm font-semibold border ${on ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`;
 
@@ -42,6 +51,15 @@ export const StockAnalytics: React.FC<Props> = ({ lang }) => {
           ))}
         </div>
         <p className="text-[11px] text-slate-400">{t(`Sur la période : ${period.entries} entrée${period.entries > 1 ? 's' : ''}, ${period.exits} sortie${period.exits > 1 ? 's' : ''}.`, `In the period: ${period.entries} ${period.entries === 1 ? 'entry' : 'entries'}, ${period.exits} ${period.exits === 1 ? 'exit' : 'exits'}.`)}</p>
+      </div>
+
+      <div className={card}>
+        <h3 className="text-sm font-bold text-white">{t('Valeur du stock par catégorie', 'Stock value by category')}</h3>
+        {byCategory.length === 0 ? <div className="text-sm text-slate-400">{t('Pas encore de stock en valeur.', 'No stock value yet.')}</div> : (
+          <RankBars lang={lang} ariaLabel={t('Valeur du stock par catégorie', 'Stock value by category')} barClass="bg-emerald-500"
+            items={byCategory.map(x => ({ key: x.key, label: x.name, value: x.value, valueText: `${compactNumber(x.value)} Ar · ${t(`${x.n} produit${x.n > 1 ? 's' : ''}`, `${x.n} product${x.n > 1 ? 's' : ''}`)}` }))} />
+        )}
+        <p className="text-[11px] text-slate-500">{t('Aujourd\'hui : quantité × prix d\'achat, par catégorie.', 'Today: quantity × purchase price, by category.')}</p>
       </div>
 
       {products.length > 0 && (

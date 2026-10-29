@@ -12,7 +12,7 @@ import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type
 import { checkTeamGoal, cleanTeamGoals, newTeamGoalId, TEAM_GOAL_ERROR_MESSAGE, type TeamGoal } from '../utils/teamGoals';
 import { checkMonthlyPlan, cleanMonthlyPlan, MONTHLY_PLAN_ERROR_MESSAGE, type MonthlyPlan } from '../utils/budgetPlan';
 import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
-import { checkMoveDraft, checkProductDraft, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
+import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, DEFAULT_STOCK_CATEGORIES, purchaseAmount, quantities, type MoveDraft, type ProductDraft } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
 import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
@@ -1134,6 +1134,38 @@ export class AppStore {
 
   public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
   public getProducts(): Product[] { return [...this.products]; }
+
+  // ----- Catégories des produits : liste par défaut, modifiable (enregistrée dans les réglages, admin seulement) -----
+  public getStockCategories(): string[] { return cleanCategoryList(this.getSettings().stock_categories) ?? [...DEFAULT_STOCK_CATEGORIES]; }
+  public setStockCategories(list: string[]): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const c = cleanCategoryList(list);
+    if (!c) return { success: false, error: 'category' };
+    this.updateSettings({ stock_categories: c });
+    return { success: true };
+  }
+  /** Renomme une catégorie : la liste ET tous les produits qui la portent. Refuse un nom déjà pris. */
+  public renameStockCategory(from: string, to: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const name = cleanCategoryName(to);
+    if (!name) return { success: false, error: 'category' };
+    const options = categoryOptions(this.getStockCategories(), this.products);
+    if (categoryKey(name) !== categoryKey(from) && options.some(c => categoryKey(c) === categoryKey(name))) return { success: false, error: 'category_exists' };
+    const list = this.getStockCategories();
+    const next = list.some(c => categoryKey(c) === categoryKey(from)) ? list.map(c => (categoryKey(c) === categoryKey(from) ? name : c)) : [...list, name];
+    const now = new Date().toISOString();
+    this.products = this.products.map(p => (categoryKey(p.category) === categoryKey(from) ? { ...p, category: name, updated_at: now } : p));
+    this.updateSettings({ stock_categories: cleanCategoryList(next) ?? [] });
+    return { success: true };
+  }
+  /** Supprime une catégorie de la liste ; les produits qui la portaient restent, sans catégorie. */
+  public deleteStockCategory(name: string): { success: boolean; error?: string } {
+    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
+    const now = new Date().toISOString();
+    this.products = this.products.map(p => (categoryKey(p.category) === categoryKey(name) ? { ...p, category: '', updated_at: now } : p));
+    this.updateSettings({ stock_categories: this.getStockCategories().filter(c => categoryKey(c) !== categoryKey(name)) });
+    return { success: true };
+  }
   public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
 
   public addProduct(d: ProductDraft): { success: boolean; error?: string; id?: string } {
