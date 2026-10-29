@@ -570,6 +570,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
 | `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
+| `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
 | `enTranslate.ts` | Traduction automatique de l'interface en anglais (français → English). |
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
@@ -800,6 +801,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:stock-spaces` | Contrôle des stockages (Stockage 1, 2…) : site = serveur. Sans réseau. Lancer : npm run check:stock-spaces |
 | `npm run check:stock-links` | Contrôle des liens exacts du Stockage (alertes, Santé du site, cloche) et du clignotement de 1,5 s. Sans réseau, sans écran. |
 | `npm run check:alert-links` | Contrôle des liens exacts de TOUTES les alertes et notifications (au-delà du Stockage) et de l'animation unique de 1,5 s. |
+| `npm run check:deep-link` | Contrôle du lien exact des notifications externes (push) : adresse construite par le serveur = lue par l'appli. Sans réseau, sans écran. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |

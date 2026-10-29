@@ -1327,6 +1327,19 @@ function tasksBlockSubmit(contract: any, done: unknown): boolean {
 }
 // ===== END MISSIONS =====
 
+// ===== BEGIN DEEP_LINK (adresse exacte d'une notification externe ; ce bloc est contrôlé par scripts/check-deep-link.ts) =====
+interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
+const DL_VIEW = /^[a-z][a-z-]{0,29}$/;
+const DL_ID = /^[A-Za-z0-9_:.-]{1,80}$/;
+const DL_FIELDS: [keyof DeepLink, string][] = [["go", "go"], ["tab", "tab"], ["filter", "f"], ["nav", "nav"], ["space", "sp"], ["sfilter", "sf"], ["product", "pr"]];
+/** « /?go=<page>&nav=<élément>… » : l'appli ouvre la bonne page et fait clignoter l'élément. Pas de page valable = l'accueil. */
+function deepLinkUrl(link: DeepLink): string {
+  if (!link || typeof link.go !== "string" || !DL_VIEW.test(link.go)) return "/";
+  const p = new URLSearchParams();
+  for (const [k, q] of DL_FIELDS) { const v = (link as any)[k]; if (typeof v === "string" && (k === "go" ? DL_VIEW.test(v) : DL_ID.test(v))) p.set(q, v); }
+  return `/?${p.toString()}`;
+}
+// ===== END DEEP_LINK =====
 // ===== BEGIN PUSH (notifications : règles, chiffrement Web Push et signature VAPID ; ce bloc est contrôlé par scripts/check-push.ts) =====
 // La partie « règles » est copiée de src/utils/pushRules.ts ; `npm run check:push` vérifie qu'elle donne les mêmes résultats que le site.
 const isRealDate = isRealMissionDate;
@@ -3493,7 +3506,7 @@ async function sync(req: any, res: any, me: any) {
       if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {
         // Notification de l'opérateur (M6.4) : début validé, mission validée ou refusée
         const k = pushKindFor(existing.status, toSave.status);
-        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60)));
+        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60), { go: 'active-post' }));
       }
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
@@ -3713,7 +3726,7 @@ async function postDecide(req: any, res: any, me: any) {
   if (plan.contract && cRow) await sb.from(T.contracts).upsert({ id: cRow.id, data: plan.contract, updated_at: now });
   if (plan.employee) await sb.from(T.users).upsert({ id: plan.employee.id, data: plan.employee, updated_at: now });
   const k = pushKindFor(post.status, plan.post.status);
-  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60));
+  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60), { go: 'active-post' });
   await auditLog(me, 'mission_decision', { type: 'posts', id, label: `${auditLabelOf(owner)} · ${post.client_name || post.post_number || id}` }, plan.kind === 'refused' ? `Refusée : ${plan.post.rejection_reason}` : plan.kind === 'start_ok' ? 'Début validé' : 'Mission validée');
   return res.json({ ok: true, kind: plan.kind });
 }
@@ -4897,7 +4910,7 @@ async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: st
   } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120)); return 'fail'; }
 }
 // Prévient des personnes (tous leurs appareils). Rend le nombre d'envois réussis ; ne plante jamais.
-async function pushTo(userIds: string[], text: PushText, tag: string): Promise<number> {
+async function pushTo(userIds: string[], text: PushText, tag: string, link?: DeepLink): Promise<number> {
   try {
     const ids = [...new Set(userIds.map(String))];
     if (!ids.length) return 0;
@@ -4905,7 +4918,7 @@ async function pushTo(userIds: string[], text: PushText, tag: string): Promise<n
     if (!keys) return 0;
     const { data: rows } = await sb.from(PUSH_SUBS).select('id,data').in('data->>user_id', ids);
     const subs = (rows || []) as any[];
-    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: '/', tag }, keys) })));
+    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: link ? deepLinkUrl(link) : '/', tag }, keys) })));
     const dead = results.filter(x => x.res === 'gone').map(x => x.id);
     if (dead.length) await sb.from(PUSH_SUBS).delete().in('id', dead);
     return results.filter(x => x.res === 'ok').length;
@@ -4995,7 +5008,7 @@ async function reportDue(request: Request, res: any) {
     return res.status(500).json({ error: 'écriture impossible' });
   }
   const { data: us } = await sb.from(T.users).select('id').eq('data->>role', 'admin');
-  const sent = await pushTo((us || []).map((r: any) => String(r.id)), reportNotice(due), ('rep-' + due.id).slice(0, 60));
+  const sent = await pushTo((us || []).map((r: any) => String(r.id)), reportNotice(due), ('rep-' + due.id).slice(0, 60), { go: 'stats', tab: 'report' });
   const { data: all } = await sb.from(REPORTS).select('id');
   const old = reportsToPrune((all || []).map((r: any) => ({ id: String(r.id) })));
   if (old.length) await sb.from(REPORTS).delete().in('id', old);
@@ -5065,7 +5078,7 @@ async function pushDue(request: Request, res: any) {
     const seenSet = new Set((seen || []).map((r: any) => r.id));
     for (const r of reminders) {
       if (seenSet.has(r.key)) continue;
-      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60));
+      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60), { go: 'grid', nav: `mission-${r.post_number}` });
       if (n > 0) { await sb.from(PUSH_LOG).upsert({ id: r.key, data: { at: new Date().toISOString(), kind: r.kind, sent: n }, updated_at: new Date().toISOString() }); sent += n; done++; }
     }
   }

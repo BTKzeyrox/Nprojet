@@ -33,12 +33,14 @@ import { DiagPanel } from './components/DiagPanel';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { NAV_TARGET_EVENT, peekNavTarget, flashNav, setChatThread } from './utils/navTarget';
+import { applyDeepLink, captureDeepLink, deepLinkAllowed, parseDeepLinkUrl, takeDeepLink, type DeepLink } from './utils/deepLink';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
 let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir revenir au français)
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
+captureDeepLink(); // lien exact d'une notification externe : lu dès l'ouverture, appliqué une fois connecté
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
@@ -91,6 +93,16 @@ export default function App() {
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
   useEffect(() => { if (isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
+  // Clic sur une notification externe : le bon endroit s'ouvre (au démarrage, ou tout de suite si l'appli est déjà ouverte)
+  useEffect(() => {
+    if (!currentUser) return;
+    const role = currentUser.role;
+    const open = (l: DeepLink | null) => { if (l && deepLinkAllowed(role, l.go)) applyDeepLink(l, view => { setFocusOperatorId(null); setActiveView(view); }); };
+    open(takeDeepLink());
+    const onMessage = (ev: MessageEvent) => { if (ev.data && ev.data.type === 'open-link' && typeof ev.data.url === 'string') open(parseDeepLinkUrl(ev.data.url)); };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [currentUser?.id, currentUser?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
   useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
