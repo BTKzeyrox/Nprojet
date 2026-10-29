@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bug, RefreshCw, Copy, CheckCircle2, RotateCcw, Trash2, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { Bug, RefreshCw, Copy, CheckCircle2, RotateCcw, Trash2, Image as ImageIcon, AlertTriangle, LifeBuoy } from 'lucide-react';
+import { ReportProblemModal } from '../../components/ReportProblemModal';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { copyText } from '../../utils/errorReport';
@@ -40,6 +41,7 @@ export const ErrorsLog: React.FC = () => {
   const [kind, setKind] = useState<'all' | Row['kind']>('all');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState('');
+  const [reporting, setReporting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -103,6 +105,9 @@ export const ErrorsLog: React.FC = () => {
         </div>
         <button type="button" onClick={() => void load()} className={`${btn} ${L ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualiser
+        </button>
+        <button type="button" data-report-problem onClick={() => setReporting(true)} className={`${btn} bg-blue-600 hover:bg-blue-500 text-white`}>
+          <LifeBuoy className="w-3.5 h-3.5" /> Signaler un problème
         </button>
       </div>
 
@@ -183,6 +188,7 @@ export const ErrorsLog: React.FC = () => {
           </div>
         ))
       )}
+      {reporting && <ReportProblemModal onClose={() => { setReporting(false); void load(); }} />}
     </div>
   );
 };

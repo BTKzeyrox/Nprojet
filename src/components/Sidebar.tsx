@@ -248,7 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 4. Bas : vue opérateur, signaler un problème, déconnexion */}
         <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
 
-          {onReportProblem && db.getSettings().err_report_button !== false && (
+          {onReportProblem && !isAdmin && db.getSettings().err_report_button !== false && (
             <button
               type="button"
               onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}

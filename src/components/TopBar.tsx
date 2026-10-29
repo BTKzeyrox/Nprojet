@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, Shield, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -148,11 +148,6 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         <button onClick={onOpenMenu} title="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
-        <div className="flex items-center gap-1.5 shrink-0 md:hidden">
-          <Shield className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
-          <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>GESTION PRO</span>
-        </div>
-
         <div ref={box} className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -160,10 +155,15 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onChange={e => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
-            placeholder={isAdmin ? 'Rechercher une mission, un opérateur, une page…' : 'Rechercher une mission, une page…'}
-            className={`w-full h-9 pl-9 pr-3 rounded-full ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
+            placeholder="Rechercher…"
+            className={`w-full h-9 pl-9 pr-9 rounded-full ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
           style={{ borderRadius: 9999 }}
           />
+          {q && (
+            <button type="button" data-search-clear onClick={() => { setQ(''); setOpen(false); }} title="Effacer" aria-label="Effacer la recherche" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
           {open && q.trim() && (
             <div className={`absolute left-0 right-0 top-full mt-1 df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
               {hits.length === 0 ? (
