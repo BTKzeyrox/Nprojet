@@ -599,6 +599,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
+| `sheetMerge.ts` | Remettre un fichier Excel rempli hors du site dans le tableau d'une mission (module 19, M19.5) : fonction PURE. |
+| `sheetXlsx.ts` | Un tableau → un fichier Excel « comme Excel » (module 19, M19.5) : de VRAIS types de cellules (dates, heures, nombres avec milliers, codes et téléphones en texte |
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
 | `sheetsStore.ts` | « Mes tableaux » : ancien rangement sur l'appareil (avant le serveur). Sert seulement à REPRENDRE une fois les tableaux déjà saisis, puis la copie est retirée. Jamais d'accès sans try/catch. |
 | `siteKnowledge.ts` | Carte du site (module 11, M11.8) : pour CHAQUE page du menu, à quoi elle sert, comment l'utiliser, ses règles et ses chiffres avec leur formule. FR et EN. |
@@ -619,6 +621,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useLockBodyScroll.ts` | — |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
+| `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
 
 **Santé du site : moteur (`src/utils/health/`)**
@@ -730,6 +733,11 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
+| `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |
+| `npm run check:sheet-xlsx` | Contrôle du fichier Excel « comme Excel » (module 19, M19.5) : on fabrique le fichier, on le RELIT avec une vraie bibliothèque Excel et on vérifie les types. Lancer : npm run check:sheet-xlsx |
+| `npm run check:sheet-merge` | Contrôle de « remettre mon fichier Excel » dans le tableau d'une mission (module 19, M19.5). Lancer : npm run check:sheet-merge |
+| `npm run check:work-mode` | Contrôle de « Ma façon de travailler » : sur le site ou sur un Excel externe (module 19, M19.5). Lancer : npm run check:work-mode |
+| `npm run check:work-mode-ui` | Contrôle de la carte « Ma façon de travailler » (module 19, M19.5), rendue en français et en anglais. Lancer : npm run check:work-mode-ui |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |

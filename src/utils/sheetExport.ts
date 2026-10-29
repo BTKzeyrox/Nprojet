@@ -4,6 +4,7 @@ import { exportMatrix, type Sheet } from './sheets';
 import { isErr, showVal, type Val } from './sheetFormula';
 import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 import { downloadWorkbook } from './xlsxA4';
+import { toXSheet } from './sheetXlsx';
 
 const esc = (x: string) => x.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 const cellText = (v: Val, lang: 'fr' | 'en') => (typeof v === 'string' ? v : showVal(v, lang));
@@ -29,7 +30,12 @@ export function excelRows(s: Sheet, today: string, lang: 'fr' | 'en'): (string |
 const save = (blob: Blob, name: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 export async function downloadExcel(s: Sheet, today: string, lang: 'fr' | 'en'): Promise<void> {
   // A4, Times New Roman 12 ; un tableau de plus de 500 lignes donne plusieurs fichiers (-partie-2, …) avec les en-têtes répétés (xlsxA4.ts).
-  await downloadWorkbook([{ name: s.title || 'Tableau', rows: excelRows(s, today, lang) }], fileName(s.title, 'xlsx', today).replace(/\.xlsx$/, ''));
+  // M19 : fichier « comme Excel » : vraies dates, nombres avec milliers, en-tête figé, filtres, listes déroulantes (sheetXlsx.ts)
+  await downloadWorkbook([toXSheet(s, today, lang)], fileName(s.title, 'xlsx', today).replace(/\.xlsx$/, ''));
+}
+/** Modèle Excel à remplir hors du site (mêmes colonnes, mêmes listes) : on le remplit dans Excel puis on le remet au site (import). */
+export async function downloadExcelModel(s: Sheet, today: string, lang: 'fr' | 'en'): Promise<void> {
+  await downloadWorkbook([toXSheet(s, today, lang, { model: true })], fileName(`${s.title || 'Tableau'}-modele`, 'xlsx', today).replace(/\.xlsx$/, ''));
 }
 export function downloadWord(s: Sheet, today: string, lang: 'fr' | 'en', author: string): void {
   save(new Blob(['﻿', sheetHtml(s, today, lang, author, { word: true })], { type: 'application/msword' }), fileName(s.title, 'doc', today));

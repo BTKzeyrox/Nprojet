@@ -8,7 +8,12 @@ export type FileProblem = 'size' | 'type' | 'read';
 export function cellToText(cell: { t?: string; v?: unknown; w?: string; z?: unknown } | undefined, XLSX: any): string {
   if (!cell || cell.v === undefined || cell.v === null) return '';
   if (cell.t === 'n' && typeof cell.v === 'number') {
-    try { if (cell.z && XLSX.SSF.is_date(String(cell.z))) return XLSX.SSF.format('yyyy-mm-dd', cell.v); } catch { /* on garde le nombre */ }
+    try {
+      if (cell.z && XLSX.SSF.is_date(String(cell.z))) {
+        if (cell.v >= 0 && cell.v < 1) return XLSX.SSF.format('hh:mm', cell.v); // une HEURE Excel (fraction de jour) : 09:30, pas le 30/12/1899
+        return XLSX.SSF.format('yyyy-mm-dd', cell.v);
+      }
+    } catch { /* on garde le nombre */ }
     return Number.isFinite(cell.v) ? String(cell.v) : '';
   }
   if (cell.t === 'd' && cell.v instanceof Date && !isNaN(cell.v.getTime())) return cell.v.toISOString().slice(0, 10);

@@ -3,8 +3,17 @@
 // La partie qui découpe et calcule est pure (testée par `npm run check:xlsx-a4`) ; la bibliothèque `exceljs` n'est chargée qu'au clic.
 // Elle remplace `xlsx` pour ÉCRIRE (xlsx gratuit ne sait écrire ni police ni mise en page) ; `xlsx` reste utilisé pour LIRE (importFile.ts).
 
-export type XCell = string | number | boolean | null | undefined;
-export interface XSheet { name: string; rows: XCell[][]; /** Nombre de lignes d'en-tête, répétées en haut de chaque page imprimée et de chaque partie (1 par défaut). */ headerRows?: number }
+export type XCell = string | number | boolean | Date | null | undefined;
+/** Format d'une colonne (M19) : de VRAIS types Excel (date, heure, nombre avec milliers, texte pour garder les zéros) et, si besoin, une liste déroulante. Facultatif : sans lui, rien ne change. */
+export interface XCol { numFmt?: string; list?: string[]; align?: 'left' | 'right' | 'center' }
+export interface XSheet {
+  name: string; rows: XCell[][];
+  /** Nombre de lignes d'en-tête, répétées en haut de chaque page imprimée et de chaque partie (1 par défaut). */
+  headerRows?: number;
+  /** Un format par colonne (même ordre que les cases). */ cols?: (XCol | undefined)[];
+  /** Filtres automatiques sur la ligne d'en-tête (tableaux Excel « vivants »). */ filter?: boolean;
+  /** Les listes déroulantes couvrent aussi ce nombre de lignes vides en plus (modèle à remplir). */ spareRows?: number;
+}
 
 export const EXCEL_FONT = 'Times New Roman';
 export const EXCEL_PT = 12;
@@ -16,9 +25,9 @@ const MAX_COL = 60;
 const MIN_COL = 8;
 const LINE_PT = 15.75; // hauteur d'une ligne de 12 pt
 
-const empty = (v: XCell): boolean => v === '' || v === null || v === undefined || (typeof v === 'number' && !Number.isFinite(v));
+const empty = (v: XCell): boolean => v === '' || v === null || v === undefined || (typeof v === 'number' && !Number.isFinite(v)) || (v instanceof Date && Number.isNaN(v.getTime()));
 const filled = (r: XCell[]): number => r.filter(v => !empty(v)).length;
-const textOf = (v: XCell): string => (empty(v) ? '' : String(v));
+const textOf = (v: XCell): string => (empty(v) ? '' : v instanceof Date ? '00/00/0000' : String(v));
 
 /** Nom de feuille accepté par Excel (31 caractères, sans \ / ? * [ ] :). */
 export const sheetName = (name: string): string => (name || '').replace(/[\\/?*[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Feuille';
@@ -102,9 +111,11 @@ export async function buildWorkbook(sheets: XSheet[]) {
         const v = r[ci];
         if (!tableRow && ci > 0) continue;
         const c = row.getCell(ci + 1);
-        c.value = empty(v) ? null : (v as string | number | boolean);
+        c.value = empty(v) ? null : (v as string | number | boolean | Date);
         c.font = { name: EXCEL_FONT, size: EXCEL_PT, bold: isHead };
-        c.alignment = { vertical: 'top', wrapText: true, horizontal: typeof v === 'number' ? 'right' : 'left' };
+        const fmt = !isHead ? sh.cols?.[ci] : undefined;
+        c.alignment = { vertical: 'top', wrapText: true, horizontal: fmt?.align ?? (typeof v === 'number' || v instanceof Date ? 'right' : 'left') };
+        if (fmt?.numFmt) c.numFmt = fmt.numFmt;
         if (tableRow) c.border = { top: thin, left: thin, bottom: thin, right: thin };
         if (tableRow && isHead) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
       }
@@ -124,6 +135,19 @@ export async function buildWorkbook(sheets: XSheet[]) {
     };
     ws.headerFooter.oddFooter = `&C&"${EXCEL_FONT},Regular"&${EXCEL_PT}Page &P / &N`;
     if (tab && headerRows > 0 && filled(rows[0]) >= 2) ws.views = [{ state: 'frozen', ySplit: headerRows }];
+    // M19 : listes déroulantes (colonnes « liste »), formats de colonne vides jusqu'au bout du modèle, filtres automatiques
+    if (sh.cols && headerRows > 0) {
+      const last = rows.length + Math.max(0, sh.spareRows ?? 0);
+      sh.cols.forEach((fmt, ci) => {
+        if (!fmt || ci >= n) return;
+        if (fmt.numFmt || fmt.align) for (let r = rows.length + 1; r <= last; r++) { const c = ws.getRow(r).getCell(ci + 1); if (fmt.numFmt) c.numFmt = fmt.numFmt; c.font = { name: EXCEL_FONT, size: EXCEL_PT }; }
+        if (fmt.list && fmt.list.length) {
+          const formula = `"${fmt.list.map(o => o.replace(/"/g, '""').replace(/,/g, ' ')).join(',')}"`;
+          if (formula.length <= 255) for (let r = headerRows + 1; r <= last; r++) ws.getRow(r).getCell(ci + 1).dataValidation = { type: 'list', allowBlank: true, formulae: [formula], showErrorMessage: true, errorStyle: 'warning', errorTitle: 'Valeur', error: 'Choisis une valeur de la liste.' };
+        }
+      });
+    }
+    if (sh.filter && tab && headerRows > 0 && n >= 1) ws.autoFilter = { from: { row: headerRows, column: 1 }, to: { row: headerRows, column: n } };
   }
   return wb;
 }

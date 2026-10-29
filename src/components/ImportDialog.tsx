@@ -10,6 +10,7 @@ import {
 } from '../utils/importRules';
 import { downloadCsv, FILE_PROBLEM_TEXT, matrixFromFile } from '../utils/importFile';
 import type { Sheet } from '../utils/sheets';
+import { MERGE_FAIL_TEXT, MERGE_REASON_TEXT, mergeMatrixIntoSheet } from '../utils/sheetMerge';
 
 // Import Excel et CSV (module 16, M16.1) : choisir un fichier, VOIR l'aperçu ligne par ligne, puis valider. Rien n'est écrit avant « Importer ».
 // Les règles sont dans src/utils/importRules.ts ; chaque ligne bonne passe par les mêmes règles que la saisie à la main, le serveur revérifie.
@@ -35,7 +36,7 @@ const TITLE: Record<ImportKind, { fr: string; en: string }> = {
 
 interface Done { added: number; failed: { label: string; why: string }[]; creds: { username: string; name: string; password: string }[] }
 
-export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onSheet?: (s: Sheet) => void }> = ({ kind, onClose, onSheet }) => {
+export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onSheet?: (s: Sheet) => void; /** M19 : remettre un fichier Excel rempli DANS ce tableau (les lignes sont ajoutées, rien n'est remplacé) */ into?: Sheet; onMerge?: (s: Sheet) => void }> = ({ kind, onClose, onSheet, into, onMerge }) => {
   const { lang } = useApp();
   const en = lang === 'en';
   const t = (fr: string, e: string) => (en ? e : fr);
@@ -52,7 +53,8 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
     const existing = { clients: db.getClients().map(c => c.name), products: db.getProducts().map(p => p.name), usernames: db.getUsers().map(u => u.username) };
     return (buildPreview as any)(kind, matrix, existing) as any;
   }, [matrix, kind]);
-  const sheetPrev = useMemo(() => (matrix && kind === 'sheet' ? sheetFromMatrix(matrix, fileName.replace(/\.[^.]+$/, ''), new Date().toISOString()) : null), [matrix, kind, fileName]);
+  const mergePrev = useMemo(() => (matrix && kind === 'sheet' && into ? mergeMatrixIntoSheet(into, matrix, new Date().toISOString(), en ? 'en' : 'fr') : null), [matrix, kind, into, en]);
+  const sheetPrev = useMemo(() => (matrix && kind === 'sheet' && !into ? sheetFromMatrix(matrix, fileName.replace(/\.[^.]+$/, ''), new Date().toISOString()) : null), [matrix, kind, fileName, into]);
 
   const pick = async (f: File | undefined) => {
     if (!f) return;
@@ -99,14 +101,16 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" onClick={onClose} {...(en ? { 'data-notranslate': '' } : {})}>
       <div className="w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[#0f1722] border border-slate-700 p-4 space-y-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-white flex items-center gap-2"><FileSpreadsheet className="w-5 h-5" />{t(TITLE[kind].fr, TITLE[kind].en)}</h2>
+          <h2 className="text-base font-bold text-white flex items-center gap-2"><FileSpreadsheet className="w-5 h-5" />{into ? t('Remettre mon fichier Excel', 'Hand in my Excel file') : t(TITLE[kind].fr, TITLE[kind].en)}</h2>
           <button type="button" aria-label={t('Fermer', 'Close')} onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300"><X className="w-5 h-5" /></button>
         </div>
 
         {!done && (
           <>
             <p className="text-sm text-slate-300">
-              {kind === 'sheet'
+              {kind === 'sheet' && into
+                ? t("Choisis ton fichier Excel rempli (le modèle téléchargé depuis ce tableau). Les lignes sont AJOUTÉES à ton tableau : rien n'est effacé ni remplacé. Tu verras l'aperçu avant.", 'Choose your filled Excel file (the model downloaded from this table). The rows are ADDED to your table: nothing is erased or replaced. You will see a preview first.')
+                : kind === 'sheet'
                 ? t("Choisis un fichier Excel (.xlsx, .xls) ou CSV. La première ligne donne les noms des colonnes. Tu verras l'aperçu avant que le tableau soit créé.", 'Choose an Excel (.xlsx, .xls) or CSV file. The first row holds the column names. You will see a preview before the table is created.')
                 : t("Choisis un fichier Excel (.xlsx, .xls) ou CSV. La première ligne donne les noms des colonnes. Tu verras chaque ligne avant que quoi que ce soit soit enregistré.", 'Choose an Excel (.xlsx, .xls) or CSV file. The first row holds the column names. You will see every row before anything is saved.')}
             </p>
@@ -154,6 +158,34 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
                       <button type="button" className={btnMain} disabled={counts!.ok === 0 || busy} onClick={() => void run()}><Check className="w-4 h-4" />{busy ? t('Import…', 'Importing…') : t(`Importer ${counts!.ok} ligne(s)`, `Import ${counts!.ok} row(s)`)}</button>
+                    </div>
+                  </>}
+              </div>
+            )}
+
+            {/* M19 : aperçu avant d'ajouter les lignes du fichier au tableau */}
+            {mergePrev && (
+              <div className="space-y-2" data-testid="merge-preview">
+                <div className="text-xs text-slate-400">{fileName}</div>
+                {mergePrev.fail
+                  ? <div className="text-sm text-rose-300 flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{MERGE_FAIL_TEXT[mergePrev.fail][en ? 'en' : 'fr']}</div>
+                  : <>
+                    <div className="text-sm text-slate-200">{t(`${mergePrev.added} ligne(s) seront ajoutées. ${mergePrev.matched.length} colonne(s) reconnue(s).`, `${mergePrev.added} row(s) will be added. ${mergePrev.matched.length} column(s) recognised.`)}</div>
+                    {mergePrev.ignored.length > 0 && <div className="text-xs text-amber-300">{t('Colonnes du fichier ignorées (elles n\'existent pas dans le tableau) : ', 'File columns ignored (not in the table): ')}{mergePrev.ignored.join(', ')}</div>}
+                    {mergePrev.missing.length > 0 && <div className="text-xs text-slate-400">{t('Colonnes du tableau absentes du fichier (laissées vides) : ', 'Table columns missing from the file (left empty): ')}{mergePrev.missing.join(', ')}</div>}
+                    {mergePrev.duplicates > 0 && <div className="text-xs text-amber-300">{t(`${mergePrev.duplicates} ligne(s) laissée(s) de côté : la valeur existe déjà dans une colonne « valeur unique ».`, `${mergePrev.duplicates} row(s) left out: the value already exists in a "unique value" column.`)}</div>}
+                    {mergePrev.truncated > 0 && <div className="text-xs text-amber-300">{t(`${mergePrev.truncated} ligne(s) en trop (5 000 lignes au maximum) : elles ne seront pas ajoutées.`, `${mergePrev.truncated} extra row(s) (5,000 rows maximum): they will not be added.`)}</div>}
+                    {mergePrev.shortened > 0 && <div className="text-xs text-amber-300">{t(`${mergePrev.shortened} case(s) trop longue(s) raccourcie(s) à 500 signes.`, `${mergePrev.shortened} cell(s) shortened to 500 characters.`)}</div>}
+                    {mergePrev.problems.length > 0 && (
+                      <div className="text-xs text-amber-300 space-y-1">
+                        <div className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{t(`${mergePrev.problems.length} valeur(s) à corriger après l'ajout (elles sont gardées telles quelles, soulignées en rouge dans le tableau) :`, `${mergePrev.problems.length} value(s) to fix after adding (kept as they are, underlined in red in the table):`)}</div>
+                        <ul className="list-disc pl-8 text-slate-300">{mergePrev.problems.slice(0, 8).map((p, i) => <li key={i}>{t('Ligne', 'Row')} {p.row}, {p.column}{p.value ? ` : « ${p.value} »` : ''} : {MERGE_REASON_TEXT[p.reason][en ? 'en' : 'fr']}</li>)}</ul>
+                        {mergePrev.problems.length > 8 && <div className="text-slate-400">{t(`… et ${mergePrev.problems.length - 8} autre(s).`, `… and ${mergePrev.problems.length - 8} more.`)}</div>}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
+                      <button type="button" className={btnMain} disabled={mergePrev.added === 0} onClick={() => { if (mergePrev.sheet && onMerge) { onMerge(mergePrev.sheet); onClose(); } }} data-testid="merge-confirm"><Check className="w-4 h-4" />{t(`Ajouter ${mergePrev.added} ligne(s) à mon tableau`, `Add ${mergePrev.added} row(s) to my table`)}</button>
                     </div>
                   </>}
               </div>

@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Copy, Download, FileSpreadsheet, FileText, Paintbrush, Plus, Redo2, Search, Table2, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Copy, Download, FileSpreadsheet, FileText, Paintbrush, Plus, Redo2, Search, Table2, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { todayMada } from '../utils/stats';
 import * as S from '../utils/sheets';
 import { FUNCTION_NAMES, isErr, isFormula, showVal } from '../utils/sheetFormula';
 import { loadSheets, clearLocal, hasLocal } from '../utils/sheetsStore';
-import { downloadExcel, downloadWord, printSheet } from '../utils/sheetExport';
+import { downloadExcel, downloadExcelModel, downloadWord, printSheet } from '../utils/sheetExport';
 import { showToast } from './ToastHost';
 import { ImportDialog } from './ImportDialog';
 import { SmartField } from './SmartField';
 import { SheetForm } from './SheetForm';
+import { WorkModeCard } from './WorkModeCard';
 import * as A from '../utils/sheetAuto';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
@@ -51,6 +52,7 @@ export const MySheets: React.FC = () => {
   });
   const [openId, setOpenId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [mergeInto, setMergeInto] = useState<S.Sheet | null>(null); // M19 : remettre un fichier Excel rempli dans CE tableau
   const [hist, setHist] = useState<S.History | null>(null);
   const [view, setView] = useState<S.View>({});
   const [panel, setPanel] = useState<'' | 'trash' | 'rules' | 'chart' | 'help' | 'export'>('');
@@ -93,6 +95,12 @@ export const MySheets: React.FC = () => {
     setSheets(l => [...l, s]); open(s);
   };
 
+  // M19 : le fichier Excel remis est ajouté au tableau ; si le tableau est ouvert, l'ajout entre dans « Annuler / Rétablir »
+  const onMerged = (merged: S.Sheet) => {
+    if (openRef.current === merged.id && hist) apply(() => merged);
+    else setSheets(l => (l.some(x => x.id === merged.id) ? l.map(x => (x.id === merged.id ? merged : x)) : [...l, merged]));
+    showToast(t('Lignes ajoutées à ton tableau.', 'Rows added to your table.'), 'success');
+  };
   const comp = useMemo(() => (cur ? S.computeSheet(cur, today) : null), [cur, today]);
   const shownRows = useMemo(() => (cur && comp ? S.viewRows(cur, comp, view) : []), [cur, comp, view]);
   const totals = useMemo(() => (comp ? S.columnTotals(comp, shownRows) : []), [comp, shownRows]);
@@ -118,9 +126,11 @@ export const MySheets: React.FC = () => {
     return (
       <div className={`${box} space-y-4 max-w-3xl mx-auto`}>
         {importing && !ro && <ImportDialog kind="sheet" onClose={() => setImporting(false)} onSheet={addSheet} />}
+        {mergeInto && !ro && <ImportDialog kind="sheet" into={mergeInto} onClose={() => setMergeInto(null)} onMerge={onMerged} />}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h2 className="font-tactical font-black text-white text-base sm:text-lg flex items-center gap-2"><Table2 className="w-5 h-5" />{ro ? t('Tableaux de l\'équipe', 'Team tables') : t('Mes tableaux', 'My tables')}</h2>
         </div>
+        {!ro && <WorkModeCard uid={uid} lang={lang === 'en' ? 'en' : 'fr'} today={today} onMerge={sh => { setSheets(db.getSheets().filter(x => x.owner_id === uid)); setMergeInto(sh); }} onOpen={sh => { const l = db.getSheets().filter(x => x.owner_id === uid); setSheets(l); open(l.find(x => x.id === sh.id) || sh); }} />}
         <p className="text-xs text-slate-400">{ro ? t('Tu lis les tableaux de tes opérateurs. Tu ne peux rien y modifier.', 'You read your operators\' tables. You cannot change anything in them.') : t('Entre tes données ici comme dans Excel : les formules marchent (=SOMME(B1:B10)). Télécharge ensuite en Excel, Word ou PDF.', 'Enter your data here like in Excel: formulas work (=SUM(B1:B10)). Then download as Excel, Word or PDF.')}</p>
         {!saveOk && <p className="text-xs text-red-300">{t('Cet appareil refuse l\'enregistrement (plein ou navigation privée). Télécharge ton travail avant de quitter.', 'This device refuses saving (full or private browsing). Download your work before leaving.')}</p>}
         {!ro && <div>
@@ -163,6 +173,7 @@ export const MySheets: React.FC = () => {
 
   return (
     <div className={`${box} space-y-3`}>
+      {mergeInto && !ro && <ImportDialog kind="sheet" into={mergeInto} onClose={() => setMergeInto(null)} onMerge={onMerged} />}
       <div className="flex items-center gap-2 flex-wrap">
         <button className={btn} onClick={close} aria-label={t('Retour', 'Back')}><ArrowLeft className="w-4 h-4" />{t('Mes tableaux', 'My tables')}</button>
         <input aria-label={t('Titre', 'Title')} className="flex-1 min-w-[140px] bg-transparent border-b border-slate-600 text-white font-bold text-base outline-none px-1 py-1" maxLength={S.LIMITS.title} defaultValue={cur.title} readOnly={ro} key={cur.id} onBlur={e => { if (e.target.value.trim() && e.target.value !== cur.title) apply(s => S.renameSheet(s, e.target.value, nowIso())); }} />
@@ -188,6 +199,8 @@ export const MySheets: React.FC = () => {
       {panel === 'export' && (
         <div className="flex flex-wrap items-center gap-2 border border-slate-700 rounded-lg p-2.5">
           <button className={btn} onClick={() => { void downloadExcel(cur, today, lang === 'en' ? 'en' : 'fr').catch(() => showToast(t('Export Excel impossible.', 'Excel export failed.'), 'error')); }}>Excel (.xlsx)</button>
+          {!ro && <button className={btn} onClick={() => { void downloadExcelModel(cur, today, lang === 'en' ? 'en' : 'fr').catch(() => showToast(t('Export Excel impossible.', 'Excel export failed.'), 'error')); }} data-testid="export-model"><Download className="w-3.5 h-3.5" />{t('Modèle Excel à remplir', 'Excel model to fill')}</button>}
+          {!ro && <button className={btn} onClick={() => setMergeInto(cur)} data-testid="merge-open"><Upload className="w-3.5 h-3.5" />{t('Remettre mon fichier Excel', 'Hand in my Excel file')}</button>}
           <button className={btn} onClick={() => downloadWord(cur, today, lang === 'en' ? 'en' : 'fr', cur.owner_name || me.name)}><FileText className="w-3.5 h-3.5" />Word (.doc)</button>
           <button className={btn} onClick={() => exportErr(printSheet(cur, today, lang === 'en' ? 'en' : 'fr', cur.owner_name || me.name))}>PDF</button>
           <span className="text-[11px] text-slate-400">{t('Les formules sont téléchargées avec leur résultat.', 'Formulas are downloaded with their result.')}</span>

@@ -24,6 +24,7 @@ import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
 import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
 import { demoSheets, type Sheet } from '../utils/sheets';
 import { buildMissionSheet, needsMissionSheet } from '../utils/missionSheet';
+import { getMissionMode } from '../utils/workMode';
 import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
 import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, planClose, planReopen, closingEntry, type Entry, type CloseState } from '../utils/accounting';
 import { buildEntries } from '../utils/accountingEntries';
@@ -846,14 +847,28 @@ export class AppStore {
   // « Mes tableaux » (module 12). Le serveur revérifie tout (bloc SHEETS) ; ici on range seulement les tableaux de la personne connectée.
   public getSheets(): Sheet[] { return [...this.sheets]; }
   /** M18.6 : prépare le tableau de la session (un seul : identifiant imposé). Seulement pour l'opérateur lui-même ; le serveur revérifie que la session est la sienne. */
-  private prepareMissionSheet(post: PostSession): void {
+  private prepareMissionSheet(post: PostSession, force = false): Sheet | null {
     const me = this.currentUser;
-    if (!me || !needsMissionSheet(post, me.id, me.role, this.sheets.map(x => x.id))) return;
+    if (!me || !needsMissionSheet(post, me.id, me.role, this.sheets.map(x => x.id))) return null;
+    if (!force && getMissionMode(me.id, post.id) === 'excel') return null; // M19 : la personne travaille sur un Excel externe : le site ne prépare rien (elle peut changer d'avis)
     let lang: 'fr' | 'en' = 'fr';
     try { if (globalThis.localStorage?.getItem('delta_lang') === 'en') lang = 'en'; } catch { /* langue par défaut */ }
     const contract = post.post_number != null ? this.contracts.find(c => c.post_number === post.post_number) : undefined;
     const sheet = buildMissionSheet({ postId: post.id, postNumber: post.post_number, date: post.date, type: contract?.post_type, lang, now: post.created_at });
-    if (sheet) this.putMySheets([sheet, ...this.sheets.filter(x => x.owner_id === me.id)]);
+    if (sheet) { this.putMySheets([sheet, ...this.sheets.filter(x => x.owner_id === me.id)]); return this.sheets.find(x => x.id === sheet.id) || null; }
+    return null;
+  }
+  /** M19 : prépare MAINTENANT le tableau d'une de mes sessions (« Travailler sur le site » ou « Remettre mon fichier »). Rien si elle a déjà son tableau ou n'est pas à moi. */
+  public prepareMissionSheetNow(postId: string): Sheet | null {
+    const post = this.posts.find(p => p.id === postId);
+    return post ? this.prepareMissionSheet(post, true) : null;
+  }
+  /** M19 : mes sessions qui n'ont PAS encore de tableau (parce que je travaille sur un Excel externe). */
+  public getMissionsWithoutSheet(): PostSession[] {
+    const me = this.currentUser;
+    if (!me || me.role !== 'employee') return [];
+    const ids = this.sheets.map(x => x.id);
+    return this.posts.filter(p => needsMissionSheet(p, me.id, me.role, ids));
   }
   /** Remplace les tableaux de la personne connectée par cette liste (les autres, vus par l'admin, ne bougent pas). Le lien avec le serveur se fait tout seul. */
   public putMySheets(list: Sheet[]): void {
