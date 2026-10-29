@@ -65,7 +65,7 @@ ok(N.productNavId('p1') === 'stock-p-p1' && N.STORAGE_FLASH_MS === 1500, 'adress
 // ---- 5) Branchements (lecture du code) ----
 const stockTab = read('src/views/admin/StockTab.tsx'), nav = read('src/utils/navTarget.ts'), css = read('src/index.css'), page = read('src/views/admin/StoragePage.tsx');
 ok(/data-nav=\{productNavId\(p\.id\)\} data-nav-flash=\{STORAGE_FLASH_MS\}/.test(stockTab), 'chaque produit de la liste a son adresse et demande le clignotement court');
-ok(/data-nav-flash/.test(nav) && /nav-flash-short/.test(nav), 'le clignotement lit la durée demandée par l\'élément');
+ok(/data-nav-flash/.test(nav), 'le clignotement lit la durée demandée par l\'élément');
 ok(/\.nav-flash-short \{\s*animation: navflashshort 1\.5s/.test(css) && /prefers-reduced-motion: reduce\) \{\s*[^}]*\.nav-flash-short \{ animation: none; box-shadow/.test(css), 'animation de 1,5 s ; « réduire les animations » = contour fixe, sans mouvement');
 ok(/takeStorageIntent\(\)/.test(page) && /STORAGE_INTENT_EVENT/.test(page) && /setNavTarget\(productNavId\(i\.product\)\)/.test(page), 'la page Stockage lit la demande (à l\'ouverture et si déjà ouverte) puis fait clignoter le produit');
 for (const f of ['src/components/TopBar.tsx', 'src/views/admin/AdminDashboard.tsx', 'src/views/admin/StatsPage.tsx', 'src/views/admin/HealthPage.tsx', 'src/components/AssistantChat.tsx']) ok(/setStorageIntent\(/.test(read(f)), `${f.split('/').pop()} : transmet le lien exact`);

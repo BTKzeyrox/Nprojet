@@ -5,6 +5,7 @@ import { computeFinance } from './financeStats';
 import { comparableRanges, daysBetween, periodRange } from './stats';
 import { DEFAULT_STOCK_SPACES, inSpace, stockRows, type StockSpace } from './stock';
 import type { StorageIntent } from './storageNav';
+import type { ValFilter } from './navIntent';
 import { goalRows, monthFigures, type GoalSettings } from './goals';
 import { missionAmount } from './stats';
 import type { StatsTab } from './statsNav';
@@ -12,13 +13,15 @@ import { receivablesAlert, toChase } from './receivables';
 import { budgetRows } from './purchasing';
 import type { Invoice } from '../types';
 import { canonicalClientName, clientMissionsFromPosts, clientReceived, summarizeClients, type ClientRecord } from './clients';
-import { clientBadgeAlert, computeClientBadges } from './clientBadges';
+import { clientBadgeAlert, clientsToWatch, computeClientBadges } from './clientBadges';
 
 export type AlertLevel = 'danger' | 'warn';
 export interface AlertItem {
   id: string; level: AlertLevel; fr: string; en: string;
   go: string; // page à ouvrir (ex. « stats », « advances »)
   tab?: StatsTab; // onglet de la page Statistiques à ouvrir
+  nav?: string; // élément exact à atteindre (data-nav) : défilement + clignotement 1,5 s
+  filter?: ValFilter; // filtre de la page Validations à activer d'abord
   storage?: StorageIntent; // lien exact dans le Stockage : le bon stockage, le bon filtre, le produit à faire clignoter
 }
 
@@ -95,7 +98,8 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   const big = i.advances.filter(a => a.status === 'pending' && (a.amount_ar || 0) > (earned.get(a.employee_id) || 0));
   if (big.length) {
     const names = [...new Set(big.map(a => a.employee_name))];
-    out.push({ id: 'advance-big', level: 'warn', go: 'advances',
+    const biggest = [...big].sort((x, y) => (y.amount_ar || 0) - (x.amount_ar || 0))[0];
+    out.push({ id: 'advance-big', level: 'warn', go: 'advances', nav: `adv-${biggest.id}`,
       fr: `Avance trop grosse : ${big.length} demande${big.length > 1 ? 's' : ''} au-dessus de ce qui est gagné ce mois-ci (${list(names)}).`,
       en: `Advance too large: ${big.length} request${big.length > 1 ? 's' : ''} above what was earned this month (${list(names)}).` });
   }
@@ -158,8 +162,9 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   if (i.invoices && i.invoices.length) {
     const names: Record<string, string> = {};
     for (const c of i.clients || []) names[c.id] = c.name;
-    const ra = receivablesAlert(toChase(i.invoices, i.cash, i.today, names));
-    if (ra) out.push({ id: 'invoices_overdue', level: ra.level, go: 'invoices', fr: ra.fr, en: ra.en });
+    const chase = toChase(i.invoices, i.cash, i.today, names);
+    const ra = receivablesAlert(chase);
+    if (ra) out.push({ id: 'invoices_overdue', level: ra.level, go: 'invoices', ...(chase[0]?.invoices[0] ? { nav: `inv-${chase[0].invoices[0].id}` } : {}), fr: ra.fr, en: ra.en });
   }
 
   // 8. Clients à surveiller (module 3) : facture en retard de plus de 60 jours, ou payeur lent
@@ -167,8 +172,10 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     const prices = { client_price_default_ar: s.client_price_default_ar, client_prices_by_type: s.client_prices_by_type };
     const missions = clientMissionsFromPosts(i.posts, i.contracts, i.clients, prices);
     const summaries = summarizeClients(i.clients, missions, i.today);
-    const ca = clientBadgeAlert(computeClientBadges({ clients: i.clients, summaries, missions, invoices: i.invoices, cash: i.cash, today: i.today }));
-    if (ca) out.push({ id: 'clients_watch', level: ca.level, go: 'clients', fr: `${ca.fr}.`, en: `${ca.en}.` });
+    const badges = computeClientBadges({ clients: i.clients, summaries, missions, invoices: i.invoices, cash: i.cash, today: i.today });
+    const ca = clientBadgeAlert(badges);
+    const worstClient = clientsToWatch(badges)[0];
+    if (ca) out.push({ id: 'clients_watch', level: ca.level, go: 'clients', ...(worstClient ? { nav: `client-${worstClient.id}` } : {}), fr: `${ca.fr}.`, en: `${ca.en}.` });
   }
 
   const order = { danger: 0, warn: 1 } as const;

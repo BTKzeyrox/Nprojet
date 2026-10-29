@@ -4,17 +4,19 @@ import type { HealthAlert } from './health/types';
 
 export const MAX_URGENT_NOTIFS = 5;
 export const SUMMARY_HOUR = 8; // heure de Madagascar
-export interface HealthNotif { id: string; title: string; sub: string; view: string; at: string; tone: 'urgent' | 'info'; thread?: string; storage?: import('./storageNav').StorageIntent }
+export interface HealthNotif { id: string; title: string; sub: string; view: string; at: string; tone: 'urgent' | 'info'; thread?: string; storage?: import('./storageNav').StorageIntent; nav?: string; filter?: import('./navIntent').ValFilter }
 
 /** Heure de Madagascar (UTC+3), entière, pour un instant donné. */
 export const madaHour = (ms: number): number => new Date(ms + 3 * 3600_000).getUTCHours();
 const isSunday = (day: string): boolean => new Date(`${day}T00:00:00Z`).getUTCDay() === 0;
 
 /** Les urgentes (5 au plus, une ligne chacune) puis le résumé du jour : seulement après 08:00, jamais le dimanche, une seule fois par jour (une fois vu, il ne revient pas). */
+/** Une alerte qui sait où mener (un produit du stock, une avance, une facture…) ouvre directement cet endroit ; les autres ouvrent la Santé du site. */
+const direct = (a: HealthAlert): boolean => !!a.go && !a.go.tab && !!(a.go.storage || a.go.nav);
 export function planHealthNotifs(alerts: HealthAlert[], today: string, nowMs: number, seen: string[]): HealthNotif[] {
   const at = new Date(nowMs).toISOString();
   const out: HealthNotif[] = alerts.filter(a => a.severity === 'urgent').slice(0, MAX_URGENT_NOTIFS)
-    .map(a => ({ id: `health-${a.id}`, title: a.title_fr, sub: 'Santé du site : urgent', view: a.go?.storage ? 'storage' : 'health', ...(a.go?.storage ? { storage: a.go.storage } : {}), at, tone: 'urgent' as const })); // une alerte du Stockage ouvre directement le bon produit
+    .map(a => ({ id: `health-${a.id}`, title: a.title_fr, sub: 'Santé du site : urgent', view: direct(a) ? a.go.view : 'health', ...(direct(a) && a.go.storage ? { storage: a.go.storage } : {}), ...(direct(a) && a.go.nav ? { nav: a.go.nav } : {}), ...(direct(a) && a.go.filter ? { filter: a.go.filter as any } : {}), at, tone: 'urgent' as const })); // une alerte du Stockage ouvre directement le bon produit
   const id = `summary-${today}`;
   if (madaHour(nowMs) >= SUMMARY_HOUR && !isSunday(today) && !seen.includes(id)) {
     const n = alerts.filter(a => a.severity !== 'info').length;

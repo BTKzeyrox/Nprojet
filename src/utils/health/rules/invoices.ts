@@ -22,7 +22,7 @@ export const invoiceOverdue: HealthRule = {
       title_fr: `${n} ${plural(n, 'facture en retard de paiement', 'factures en retard de paiement')}`, title_en: `${n} ${plural(n, 'invoice', 'invoices')} overdue`,
       why_fr: `Reste à encaisser : ${ar(total)} ; la plus ancienne a ${oldest} jour(s) de retard.`, why_en: `Left to collect: ${arEn(total)}; the oldest is ${oldest} day(s) late.`,
       todo_fr: 'Relancer les clients concernés (la page Factures prépare le message).', todo_en: 'Remind the clients concerned (the Invoices page prepares the message).',
-      since: rows.map(x => x.i.due_date).sort()[0], value: total, go: GO,
+      since: rows.map(x => x.i.due_date).sort()[0], value: total, go: { ...GO, nav: `inv-${[...rows].sort((a, b) => b.info.days_late - a.info.days_late)[0].i.id}` },
     } as HealthAlert];
   },
 };
@@ -39,7 +39,7 @@ export const invoiceDraftOld: HealthRule = {
       title_fr: `${n} ${plural(n, 'brouillon de facture oublié', 'brouillons de facture oubliés')}`, title_en: `${n} forgotten invoice ${plural(n, 'draft', 'drafts')}`,
       why_fr: `Non émis depuis plus de ${DRAFT_DAYS} jours : l'argent n'est pas encore réclamé au client.`, why_en: `Not issued for more than ${DRAFT_DAYS} days: the client has not been asked to pay yet.`,
       todo_fr: 'Émettre la facture ou supprimer le brouillon.', todo_en: 'Issue the invoice or delete the draft.',
-      since: old.map(i => i.issue_date).sort()[0], value: n, go: GO,
+      since: old.map(i => i.issue_date).sort()[0], value: n, go: { ...GO, nav: `inv-${[...old].sort((a, b) => a.issue_date.localeCompare(b.issue_date))[0].id}` },
     } as HealthAlert];
   },
 };

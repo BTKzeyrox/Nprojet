@@ -114,7 +114,7 @@ export const inactiveWorker: HealthRule = {
         title_fr: `${u.name} n'a plus de mission depuis ${gap} jours`, title_en: `${u.name} has had no missions for ${gap} days`,
         why_fr: `Dernière mission le ${last.split('-').reverse().join('/')}.`, why_en: `Last mission on ${last}.`,
         todo_fr: 'Vérifier si le compte est encore utile.', todo_en: 'Check whether the account is still needed.',
-        since: last, value: gap, go: { view: 'employees' },
+        since: last, value: gap, go: { view: 'employees', nav: `emp-${u.id}` },
       });
     }
     return out;

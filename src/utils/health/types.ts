@@ -14,7 +14,7 @@ export const HEALTH_PAGES = [
 export type HealthPage = typeof HEALTH_PAGES[number];
 
 /** Où mener l'admin : `view` = identifiant de la vue du menu, `tab` et `filter` ouvrent la bonne partie, déjà filtrée. */
-export interface HealthGo { view: string; tab?: string; filter?: string; storage?: import('../storageNav').StorageIntent }
+export interface HealthGo { view: string; tab?: string; filter?: string; storage?: import('../storageNav').StorageIntent; nav?: string }
 
 export interface HealthAlert {
   id: string; // stable : le même problème a toujours le même identifiant (voir alertId)

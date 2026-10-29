@@ -10,6 +10,7 @@ import { AutoReportCard } from './AutoReportCard';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
 import { setStorageIntent } from '../../utils/storageNav';
+import { setNavTarget } from '../../utils/navTarget';
 import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
 import { ActivityGrid } from '../../components/charts/StyledCharts';
 import { variationPct } from '../../utils/chartScale';
@@ -142,7 +143,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         <FinanceTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} salariesAr={ranges.isFuture ? 0 : stats.cur.earned} advancesAr={ranges.isFuture ? 0 : stats.cur.advances} />
       ) : (<>
       {/* Alertes, objectifs du mois et prévision (admin seulement) */}
-      <AlertsList lang={l} hideWhenEmpty onGo={a => { if (a.go === 'stats' && a.tab) setTab(a.tab); else if (a.go !== 'stats') { if (a.storage) setStorageIntent(a.storage); onNavigate?.(a.go); } }} />
+      <AlertsList lang={l} hideWhenEmpty onGo={a => { if (a.go === 'stats' && a.tab) setTab(a.tab); else if (a.go !== 'stats') { if (a.storage) setStorageIntent(a.storage); if (a.nav) setNavTarget(a.nav); onNavigate?.(a.go); } }} />
       <GoalsBars lang={l} hideWhenEmpty />
       <ForecastCard lang={l} />
 

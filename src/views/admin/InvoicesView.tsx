@@ -210,7 +210,7 @@ export const InvoicesView: React.FC = () => {
       ) : (
         <ul className="space-y-2">
           {rows.map(({ inv, info }) => (
-            <li key={inv.id}>
+            <li key={inv.id} data-nav={`inv-${inv.id}`}>
               <button type="button" onClick={() => { setError(''); setOpenId(inv.id); }} className={`${card} w-full text-left cursor-pointer hover:border-emerald-600`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono font-bold text-white text-sm">{inv.number || t('Brouillon', 'Draft')}</span>

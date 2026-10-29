@@ -168,7 +168,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
               const terms = termsOf(c);
               const remaining = Math.max(0, s.revenue_total - m.received);
               return (
-                <li key={c.id} className="border-t border-slate-800 first:border-t-0">
+                <li key={c.id} data-nav={`client-${c.id}`} className="border-t border-slate-800 first:border-t-0">
                   <button type="button" aria-expanded={open} onClick={() => { setOpenId(open ? null : c.id); setConfirmId(null); setError(''); }} className="w-full min-h-[56px] py-2 flex items-center gap-2 text-left">
                     {open ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
                     <div className="min-w-0 flex-1">

@@ -345,7 +345,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             {staff.map(u => {
               const blocked = u.status === 'blocked';
               return (
-                <li key={u.id} className="py-2 flex flex-wrap items-center gap-2 justify-between">
+                <li key={u.id} data-nav={`emp-${u.id}`} className="py-2 flex flex-wrap items-center gap-2 justify-between">
                   <div className="min-w-0">
                     <div className="text-sm text-white font-semibold truncate">{u.name}</div>
                     <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]}{u.team ? ` · équipe ${u.team}` : ''} · @{u.username}{blocked ? ' · bloqué' : ''}</div>

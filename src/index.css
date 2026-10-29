@@ -316,8 +316,9 @@ html.theme-light .df-popover {
   0%, 100% { box-shadow: inset 0 0 0 0 rgba(34, 211, 238, 0); }
   20%, 60% { box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95), inset 0 0 26px rgba(34, 211, 238, 0.55); }
 }
+/* Toutes les alertes et notifications : le clignotement dure 1,5 s (même animation que le Stockage) */
 .nav-flash {
-  animation: navflash 2.8s ease-in-out 1;
+  animation: navflashshort 1.5s ease-in-out 1;
   position: relative;
   z-index: 2;
 }
@@ -333,7 +334,7 @@ html.theme-light .df-popover {
 }
 @media (prefers-reduced-motion: reduce) {
   /* « Réduire les animations » : pas de mouvement, un contour fixe pendant la même durée (1,5 s) */
-  .nav-flash-short { animation: none; box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95); }
+  .nav-flash, .nav-flash-short { animation: none; box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95); }
 }
 
 /* Barre du haut : couleur UNIE (pas de verre, pas de dégradé, pas de reflet, pas de flou) */

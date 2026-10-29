@@ -18,7 +18,7 @@ export const advancePendingOld: HealthRule = {
       why_fr: `La plus ancienne date d'il y a ${duration(top.d * 24, 'fr')} (${top.a.employee_name}). Concerne : ${list([...new Set(old.map(x => x.a.employee_name))])}.`,
       why_en: `The oldest is ${duration(top.d * 24, 'en')} old (${top.a.employee_name}). Concerns: ${list([...new Set(old.map(x => x.a.employee_name))])}.`,
       todo_fr: 'Accepter ou refuser pour que le salarié sache à quoi s\'en tenir.', todo_en: 'Approve or decline so the employee knows where they stand.',
-      since: top.a.request_date.slice(0, 10), value: n, go: { view: 'advances' },
+      since: top.a.request_date.slice(0, 10), value: n, go: { view: 'advances', nav: `adv-${top.a.id}` },
     } as HealthAlert];
   },
 };
@@ -45,7 +45,7 @@ export const advanceTwice: HealthRule = {
         title_fr: `${l[0].employee_name} a demandé ${l.length} avances en 30 jours`, title_en: `${l[0].employee_name} requested ${l.length} advances in 30 days`,
         why_fr: `Total demandé : ${ar}. À comparer avec ce que le salarié a gagné ce mois-ci.`, why_en: `Total requested: ${arEn}. Compare with what the employee earned this month.`,
         todo_fr: 'Regarder la fiche de paie avant d\'accepter une nouvelle avance.', todo_en: 'Check the payroll sheet before approving another advance.',
-        since: l.map(a => a.request_date.slice(0, 10)).sort()[0], value: l.length, go: { view: 'advances' },
+        since: l.map(a => a.request_date.slice(0, 10)).sort()[0], value: l.length, go: { view: 'advances', nav: `adv-${l[l.length - 1].id}` },
       });
     }
     return out;
