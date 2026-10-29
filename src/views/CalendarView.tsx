@@ -27,7 +27,7 @@ import {
   ClipboardList,
   X, CalendarOff } from 'lucide-react';
 import { leaveOn, LEAVE_TYPE_LABELS, type Leave } from '../utils/leaves';
-import { firstActivityOf, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
+import { firstActivityOf, empMonth, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
 import { liveStatus } from '../utils/presenceStatus';
 import { formatDuration } from '../utils/presence';
 import { useNow } from '../utils/useNow';
@@ -429,6 +429,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
 
   const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} Ar`;
 
+  // Calendrier d'UN employé : mêmes pastilles que le calendrier global ; un clic ouvre la fenêtre du jour (flèches jour précédent / suivant)
+  const [popDay, setPopDay] = useState<string | null>(null);
+  const nowMs = useNow(15000);
+  const empCtx = useMemo(() => ({ posts, leaves: leaves as Leave[], today, cfg, clientFilter }), [posts, leaves, today, cfg, clientFilter]);
+  const empDays = useMemo(() => (activeId ? empMonth(year, month, activeId, empCtx, firstActivity) : []), [activeId, year, month, empCtx, firstActivity]);
+  useLockBodyScroll(popDay !== null);
+  useEffect(() => {
+    if (!popDay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPopDay(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [popDay]);
+
   // ---- Style : cartes arrondies, pastilles, jours en tuiles
   const card = `rounded-3xl border ${L ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1b2d] border-slate-700/60'}`;
   const txt = L ? 'text-slate-900' : 'text-white';
@@ -626,7 +639,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                     <div
                       key={d.dateStr}
                       data-nav={`day-${d.dateStr}`}
-                      onClick={() => onSelectDay(d.dateStr, d.shifts)}
+                      data-testid={`ecal-day-${d.dateStr}`}
+                      onClick={() => setPopDay(d.dateStr)}
                       className={`min-h-[56px] sm:min-h-[92px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all hover:shadow-md ${TINT[d.status]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}
                     >
                       <div className="flex items-center justify-between gap-1">
@@ -640,11 +654,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                           ⏰ {dueByDay.get(d.dateStr)} {appLang === 'en' ? 'due' : 'à rendre'}
                         </div>
                       ) : null}
+                      {(() => {
+                        const e = empDays.find(x => x.dateStr === d.dateStr);
+                        const chip = 'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold';
+                        return (
+                          <span className="flex flex-wrap gap-0.5 sm:gap-1" data-ecal-chips>
+                            {d.shifts.length > 0 && <span className={`${chip} ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`} title="Missions" aria-label={`${d.shifts.length} mission${d.shifts.length > 1 ? 's' : ''}`}><ListChecks className="w-3 h-3" />{d.shifts.length}</span>}
+                            {e?.leave && <span className={`${chip} bg-sky-500/20 text-sky-500`} title="En congé" aria-label="En congé"><CalendarOff className="w-3 h-3" /></span>}
+                            {e?.pendingLeave && <span className={`${chip} border border-dashed border-sky-500 text-sky-500`} title="Demande de congé en attente" aria-label="Demande de congé en attente"><Hourglass className="w-3 h-3" /></span>}
+                          </span>
+                        );
+                      })()}
                       {d.shifts.length > 0 && (
                         <>
-                          <div className={`self-start text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${L ? 'bg-white text-slate-700' : 'bg-white/10 text-slate-200'}`}>
-                            {d.shifts.length} mission{d.shifts.length > 1 ? 's' : ''}
-                          </div>
                           {d.gained > 0 && <div className="hidden sm:block text-[11px] text-cyan-600 font-bold">+{formatScoreM(d.gained)}</div>}
                           {isAdmin && (() => { const ar = d.shifts.filter(x => x.status === 'completed').reduce((a, x) => a + (x.calculated_ar || 0), 0); return ar > 0 ? <div className="text-[10px] sm:text-[11px] text-emerald-600 font-bold">{formatCurrencyAr(ar)}</div> : null; })()}
                         </>
@@ -657,6 +679,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           )}
         </div>
       </div>
+      {popDay && activeUser && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={() => setPopDay(null)} data-testid="ecal-popup-backdrop">
+          <div role="dialog" aria-modal="true" aria-label={`Détail du ${popDay.split('-').reverse().join('/')}`} onClick={e => e.stopPropagation()}
+            className={`w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border p-3 sm:p-4 space-y-2 ${L ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`} data-testid="ecal-popup">
+            <div className="flex justify-end"><button type="button" onClick={() => setPopDay(null)} className={roundBtn} aria-label="Fermer" data-testid="ecal-popup-close"><X className="w-5 h-5" /></button></div>
+            <DayPanel day={popDay} setDay={setPopDay as (d: string) => void} list={[activeUser]} ctx={empCtx} first={firstActivity} today={today} posts={posts} lang={appLang === 'en' ? 'en' : 'fr'} nowMs={nowMs} ar={ar}
+              onSelectDay={(d, sh) => { setPopDay(null); onSelectDay(d, sh); }} onPickEmployee={() => undefined} st={{ L, card, txt, sub, TINT, pill, roundBtn }} />
+          </div>
+        </div>, document.body)}
     </div>
   );
 };

@@ -273,7 +273,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le dimanche est un jour de repos.
   - Les heures sont celles de Madagascar (UTC+3).
   - Calendrier global : chaque case montre des chiffres avec leur icône et leur couleur (présents, retards, absents, congés, missions), sans texte. C'est la somme exacte des calendriers individuels.
-  - Un clic sur un jour ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
+  - Un clic sur un jour (calendrier global ou d'un seul employé, mêmes pastilles) ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
   - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
   - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
   - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.
@@ -285,7 +285,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Trésorerie  `treasury`
 - **Qui** : responsable
 - **À quoi ça sert** : L'argent reçu et les dépenses du mois, sans salaires ni paie. Pour le Comptable et le responsable.
-- **Comment l'utiliser** : 1. Choisir le mois avec les flèches. 2. Ajouter un paiement reçu ou une dépense. 3. Filtrer par type ou catégorie, modifier ou supprimer une ligne.
+- **Comment l'utiliser** : 1. Choisir le mois avec les flèches ; lire les graphiques. 2. Ajouter un paiement reçu ou une dépense. 3. Filtrer par type ou catégorie, modifier ou supprimer une ligne.
 - **Règles** :
   - Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.
   - Les lignes saisies ici sont les mêmes que dans l'onglet Finances du responsable.
@@ -656,6 +656,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `totp.ts` | Sécurité en deux étapes (module 16, M16.4) : règles pures, sans écran, sans serveur. |
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
 | `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
+| `treasuryCharts.ts` | Données des graphiques de la Trésorerie : argent reçu et dépenses SEULEMENT (jamais de salaires). Pur : sans écran ni serveur. |
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
@@ -861,6 +862,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:restore-once` | Réglages : la remise à zéro du site n'apparaît que dans l'onglet Données (et non dans chaque onglet). |
 | `npm run check:composer-min` | Actualités : le formulaire de publication est réduit tant que personne ne veut publier. |
 | `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
+| `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
