@@ -19,7 +19,6 @@ import {
   ClipboardCheck,
   History,
   Settings,
-  Eye,
   UserCheck,
   X,
   Sun,
@@ -57,9 +56,6 @@ interface SidebarProps {
   onOpenEmployeeCV?: (employee: User) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
-  canSwitchMode?: boolean; // vrai pour le responsable : peut passer en vue opérateur
-  operatorMode?: boolean;
-  onToggleOperatorMode?: () => void;
   onReportProblem?: () => void; // ouvre « Signaler un problème »
   compact?: boolean; // bande d'icônes seulement
   onToggleCompact?: () => void; // ouvrir / fermer la bande
@@ -76,9 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenEmployeeCV,
   isOpenMobile = false,
   onCloseMobile,
-  canSwitchMode = false,
-  operatorMode = false,
-  onToggleOperatorMode,
   compact = false,
   onToggleCompact,
 }) => {

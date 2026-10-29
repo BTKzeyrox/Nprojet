@@ -247,7 +247,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Un changement de profil passe par une validation de l'admin.
   - Le profil s'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.
-  - Le responsable y trouve « Passer en vue opérateur » / « Retour responsable » et l'affichage de ce bouton.
+  - Le responsable y trouve la bascule « Mode opérateur » pour voir le site comme un opérateur.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/components/CVViewerModal.tsx`
 
 ### Messagerie  `chat`
@@ -580,7 +580,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `missionSheet.ts` | Tableau préparé par mission (module 18, M18.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:mission-sheet`. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
-| `modeSwitch.ts` | Bouton « Vue opérateur / Retour responsable » du menu : visible ou masqué (réglé sur cet appareil). |
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |

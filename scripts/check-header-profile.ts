@@ -1,5 +1,5 @@
 // Profil dans l'en-tête : pastille pour tous les rôles, formulaire avec statut, mot de passe et vue opérateur (responsable).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const r = (f: string) => readFileSync(f, 'utf8');
@@ -10,9 +10,10 @@ ok(!/isAdmin\s*&&[^\n]*data-profile-pill/.test(top), 'pastille non réservée à
 ok(/onOpenProfile=\{\(\) => setCvModalUser\(currentUser\)\}/.test(app), 'App : la pastille ouvre le profil de la vraie personne connectée');
 ok(/canSwitchMode=\{realIsAdmin\}/.test(app) && /onToggleOperatorMode/.test(app), 'App : vue opérateur donnée au formulaire de profil');
 ok(!/Vue opérateur|Retour responsable/.test(side) && !/df-sb-profile/.test(side), 'menu de gauche : plus de bloc profil ni de bouton Vue opérateur');
-ok(/Passer en vue opérateur/.test(modal) && /Retour responsable/.test(modal) && /ModeSwitchSection/.test(modal), 'formulaire : vue opérateur + afficher/masquer le bouton');
+ok(/role="switch"/.test(modal) && /Mode opérateur/.test(modal) && /aria-checked=\{operatorMode\}/.test(modal), 'formulaire : bascule « Mode opérateur »');
+ok(!/Masquer le bouton|ModeSwitchSection|modeSwitchHidden/.test(modal + app) && !existsSync('src/utils/modeSwitch.ts'), 'plus de masquage du bouton (carte, procédure et réglage retirés)');
 ok(/canSwitchMode && onToggleOperatorMode/.test(modal), 'vue opérateur seulement pour le responsable');
-ok(!/ModeSwitchSection/.test(set), 'Réglages : la carte Mode responsable/opérateur est déplacée');
+ok(!/ModeSwitchSection/.test(set), 'Réglages : pas de carte Mode responsable/opérateur');
 ok(/StatusPicker/.test(modal) && /PasswordForm/.test(modal) && /db\.setPassword/.test(modal), 'formulaire : statut + mot de passe');
 ok(/isSelf &&/.test(modal), 'statut et mot de passe seulement sur son propre profil');
 // logique du statut (stockage local simulé)

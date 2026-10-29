@@ -9,7 +9,6 @@ import { Avatar } from './Avatar';
 import { useApp } from '../context/AppContext';
 import { badgeAccess, canSeeProfileBadges, usePerformance } from '../utils/usePerformance';
 import { BadgeChips, ScoreRing } from './PerformanceBadges';
-import { ModeSwitchSection } from './ModeSwitchSection';
 import { usePresence, setPresence, PRESENCE_LIST, PRESENCE_LABEL, PRESENCE_DOT } from '../utils/availability';
 
 interface ProfileModalProps {
@@ -20,7 +19,6 @@ interface ProfileModalProps {
   onMessage?: (u: User) => void;
   /** Responsable, sur son propre profil : passer en vue opérateur et revenir. */
   canSwitchMode?: boolean;
-  modeSwitchHidden?: boolean;
   operatorMode?: boolean;
   onToggleOperatorMode?: () => void;
 }
@@ -102,7 +100,7 @@ const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, se
 };
 
 // Fenêtre « Profil » : photo, nom, shift, téléphone (plus de CV ni de pièce d'identité)
-export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage, canSwitchMode = false, modeSwitchHidden = false, operatorMode = false, onToggleOperatorMode }) => {
+export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage, canSwitchMode = false, operatorMode = false, onToggleOperatorMode }) => {
   useLockBodyScroll(isOpen);
   const [, force] = useState(0);
   const [error, setError] = useState('');
@@ -326,13 +324,13 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
             <StatusPicker uid={live.id} />
             <PasswordForm uid={live.id} />
             {canSwitchMode && onToggleOperatorMode && (
-              <div data-mode-switch className="space-y-2">
-                {(!modeSwitchHidden || operatorMode) && (
-                  <button type="button" onClick={onToggleOperatorMode} className={`w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-bold cursor-pointer ${operatorMode ? 'bg-amber-500/10 border-amber-500/50 text-amber-200' : 'bg-[#141e2a] border-slate-600 text-slate-100'}`}>
-                    <Eye className="w-4 h-4" /> {operatorMode ? 'Retour responsable' : 'Passer en vue opérateur'}
-                  </button>
-                )}
-                {!operatorMode && <ModeSwitchSection />}
+              <div data-mode-switch className="flex items-center justify-between gap-3 min-h-[44px]">
+                <span className="text-sm text-slate-200 inline-flex items-center gap-2"><Eye className="w-4 h-4 text-slate-400" aria-hidden="true" />Mode opérateur</span>
+                <button type="button" role="switch" aria-checked={operatorMode} onClick={onToggleOperatorMode}
+                  aria-label={operatorMode ? 'Mode opérateur actif : revenir en mode responsable' : 'Passer en mode opérateur'}
+                  className={`relative w-[52px] h-8 rounded-full border cursor-pointer transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${operatorMode ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-600'}`}>
+                  <span className={`absolute top-0.5 w-6 h-6 rounded-md bg-white shadow transition-all ${operatorMode ? 'left-[24px]' : 'left-0.5'}`} />
+                </button>
               </div>
             )}
           </div>

@@ -24,7 +24,6 @@ import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { TourGuide } from './components/TourGuide';
 import { ToastHost } from './components/ToastHost';
 import { BadgeCongrats } from './components/BadgeCongrats';
-import { useModeSwitchHidden } from './utils/modeSwitch';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -154,8 +153,6 @@ export default function App() {
   }, [sbWidth]);
   // Admin : peut jouer son propre rôle de opérateur, puis revenir en admin
   const [operatorMode, setOperatorMode] = useState(false);
-  const modeSwitchHidden = useModeSwitchHidden();
-  useEffect(() => { if (modeSwitchHidden) setOperatorMode(false); }, [modeSwitchHidden]);
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -363,9 +360,6 @@ export default function App() {
       {/* Modern Tactical Sidebar */}
       <Sidebar
         currentUser={viewUser}
-        canSwitchMode={realIsAdmin && !modeSwitchHidden}
-        operatorMode={operatorMode}
-        onToggleOperatorMode={toggleOperatorMode}
         activeView={activeView}
         onNavigate={view => {
           if (view === 'profile') {
@@ -571,7 +565,6 @@ export default function App() {
             onClose={() => setCvModalUser(null)}
             user={cvModalUser}
             canSwitchMode={realIsAdmin}
-            modeSwitchHidden={modeSwitchHidden}
             operatorMode={operatorMode}
             onToggleOperatorMode={() => { setCvModalUser(null); toggleOperatorMode(); }}
             onMessage={u => { setCvModalUser(null); setChatThread(u.id); setActiveView('chat'); }}

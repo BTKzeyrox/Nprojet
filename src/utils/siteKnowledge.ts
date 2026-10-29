@@ -167,7 +167,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'profile', audience: 'employee', title: b('Mon profil', 'My profile'),
     purpose: b('Les informations de l\'employé, qu\'il peut demander à modifier.', 'The employee\'s information, which they can ask to change.'),
     howto: [b('Voir ses informations.', 'View your information.'), b('Demander une modification.', 'Ask for a change.'), b('Attendre l\'accord de l\'admin.', 'Wait for the admin\'s approval.')],
-    rules: [b('Un changement de profil passe par une validation de l\'admin.', 'A profile change goes through admin validation.'), b('Le profil s\'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.', 'Tap your photo at the top right (all roles) to open your profile: status Available / Busy / Away on this device, and password.'), b('Le responsable y trouve « Passer en vue opérateur » / « Retour responsable » et l\'affichage de ce bouton.', 'The admin also finds “Switch to operator view” / “Back to admin” there, and the show/hide of that button.')],
+    rules: [b('Un changement de profil passe par une validation de l\'admin.', 'A profile change goes through admin validation.'), b('Le profil s\'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.', 'Tap your photo at the top right (all roles) to open your profile: status Available / Busy / Away on this device, and password.'), b('Le responsable y trouve la bascule « Mode opérateur » pour voir le site comme un opérateur.', 'The admin also finds the “Operator mode” switch there, to see the site as an operator.')],
     figures: [],
   },
   {
