@@ -163,7 +163,7 @@ export const BackupsSection: React.FC = () => {
         </ul>
       )}
 
-      {!verified && <p className="text-[11px] text-amber-300">Pour restaurer, enregistrez et vérifiez votre Gmail dans « Restauration du site » plus bas.</p>}
+      {!verified && <p className="text-[11px] text-amber-300">Pour restaurer, enregistrez et vérifiez votre Gmail dans « Remise à zéro du site » plus bas.</p>}
       {target && (
         <div className="border border-red-700 bg-red-950/30 p-3 space-y-2 rounded-xl">
           <p className="text-xs text-red-200 font-bold">Restaurer la sauvegarde du {fmtDate(target.taken_at)}</p>
