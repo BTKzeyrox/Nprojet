@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, FileText } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { useApp } from '../context/AppContext';
@@ -44,7 +44,7 @@ export const MissionTemplatesSection: React.FC = () => {
 
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-notranslate="">
-      <h3 className="font-tactical font-bold text-white">{t('Modèles de mission', 'Mission templates')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><FileText className="w-4 h-4 text-emerald-400" />{t('Modèles de mission', 'Mission templates')}</h3>
       <p className="text-[11px] text-slate-400">{t('Un modèle garde le titre, le type, la consigne et le justificatif demandé. Il sert dans « Nouvelle mission ». Les modèles sont enregistrés tout de suite.', 'A template keeps the title, type, instruction and required proof. It is used in “New mission”. Templates are saved immediately.')}</p>
       {list.length === 0 && !draft && <p className="text-xs text-slate-500">{t('Aucun modèle. Crée-en un ici, ou depuis une mission (« Enregistrer comme modèle »).', 'No template. Create one here, or from a mission (“Save as template”).')}</p>}
       <ul className="space-y-2">

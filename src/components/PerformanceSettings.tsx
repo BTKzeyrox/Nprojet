@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Award } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { PERFORMANCE_DEFAULTS, cleanPerformanceConfig, type PerformanceConfig } from '../utils/performanceScore';
@@ -111,7 +112,7 @@ export const PerformanceSettings: React.FC<{ lang: string }> = ({ lang }) => {
   return (
     <div className="space-y-3" data-notranslate="">
       <div className={boxCls}>
-        <h3 className="font-tactical font-bold text-white">{t('Performance des salariés', 'Employee performance')}</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Award className="w-4 h-4 text-emerald-400" />{t('Performance des salariés', 'Employee performance')}</h3>
         <p className="text-xs text-slate-300">{t('Règle ici comment le score et les badges sont calculés. Les changements valent tout de suite pour tous les scores. Si tu ne sais pas : laisse comme ça.', 'Set here how the score and badges are calculated. Changes apply at once to every score. If unsure: leave it as it is.')}</p>
         <button type="button" onClick={reset} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer">{t('Remettre les valeurs de départ', 'Reset to starting values')}</button>
       </div>

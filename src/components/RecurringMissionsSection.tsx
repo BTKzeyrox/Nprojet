@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Pencil, Pause, Play } from 'lucide-react';
+import { Plus, Trash2, Pencil, Pause, Play, Repeat } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { useApp } from '../context/AppContext';
@@ -64,7 +64,7 @@ export const RecurringMissionsSection: React.FC = () => {
 
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-notranslate="">
-      <h3 className="font-tactical font-bold text-white">{t('Missions récurrentes', 'Recurring missions')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Repeat className="w-4 h-4 text-emerald-400" />{t('Missions récurrentes', 'Recurring missions')}</h3>
       <p className="text-[11px] text-slate-400">{t('Une règle crée une mission toute seule : chaque jour, certains jours de la semaine, ou un jour du mois, à l\'heure choisie (heure de Madagascar). Si le serveur est arrêté plus de 2 heures, la mission manquée n\'est pas créée après coup. Une règle arrêtée puis relancée ne rattrape rien.', 'A rule creates a mission by itself: every day, on chosen weekdays, or on a day of the month, at the chosen time (Madagascar time). If the server is down for more than 2 hours, the missed mission is not created afterwards. A paused rule that is resumed does not catch up.')}</p>
       {list.length === 0 && !draft && <p className="text-xs text-slate-500">{t('Aucune règle.', 'No rule.')}</p>}
       <ul className="space-y-2">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Plus, X, Save } from 'lucide-react';
+import { Settings, Plus, X, Save, ArrowLeftRight, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
@@ -34,7 +34,7 @@ const ModeSwitchSection: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-      <h3 className="font-tactical font-bold text-white">Mode responsable / opérateur</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><ArrowLeftRight className="w-4 h-4 text-emerald-400" />Mode responsable / opérateur</h3>
       <p className="text-sm text-slate-300">Le bouton « Vue opérateur » du menu de gauche est actuellement <b className={hidden ? 'text-amber-500' : 'text-emerald-500'}>{hidden ? 'masqué' : 'visible'}</b>.</p>
       <p className="text-[11px] text-slate-400">Il permet au responsable de voir le site comme un opérateur. Réglé sur cet appareil. Pour {hidden ? 'l\'afficher' : 'le masquer'}, il faut une procédure en 2 étapes.</p>
       <button type="button" onClick={() => setOpen(true)} className={`w-full min-h-[46px] rounded-full text-sm font-bold cursor-pointer border ${hidden ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600' : L ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'}`}>
@@ -161,7 +161,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
         </div>
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
@@ -179,7 +179,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       <TourReplayCard />
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Volume2 className="w-4 h-4 text-emerald-400" />Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
@@ -231,7 +231,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
@@ -254,7 +254,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Vacations</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-400" />Vacations</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Jour : début</label>
@@ -282,7 +282,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Accès et suivi des opérateurs</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Users className="w-4 h-4 text-emerald-400" />Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Connexion permise avant la vacation (min)</label>
@@ -333,7 +333,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'data' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><LifeBuoy className="w-4 h-4 text-emerald-400" />Secours et maintenance</h3>
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
           <input type="checkbox" checked={s.maintenance_on} onChange={e => set('maintenance_on', e.target.checked)} className="w-4 h-4 accent-amber-500" />
           Site en maintenance (les opérateurs sont déconnectés et refusés, toi tu entres toujours)
@@ -372,7 +372,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Paie</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Wallet className="w-4 h-4 text-emerald-400" />Paie</h3>
         <div>
           <label className={labelCls}>Tarif par mission (Ar)</label>
           <input type="number" min={0} step={100} value={s.price_per_mission} onChange={e => set('price_per_mission', Number(e.target.value))} className={inputCls} />
@@ -383,7 +383,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Prix client</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Tag className="w-4 h-4 text-emerald-400" />Prix client</h3>
         <div>
           <label className={labelCls}>Prix par défaut d'une mission (Ar)</label>
           <input type="number" min={0} step={100} value={s.client_price_default_ar ?? 0} onChange={e => set('client_price_default_ar', Number(e.target.value))} className={inputCls} />
@@ -420,7 +420,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Objectifs et alertes</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Target className="w-4 h-4 text-emerald-400" />Objectifs et alertes</h3>
         <p className="text-[11px] text-slate-400">Objectifs du mois : 0 ou vide = pas d'objectif. Les montants sont vus par le responsable seulement.</p>
         <div>
           <label className={labelCls}>Objectif de missions validées (par mois)</label>
@@ -450,7 +450,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Types de mission</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Layers className="w-4 h-4 text-emerald-400" />Types de mission</h3>
         <div className="flex flex-wrap gap-2">
           {s.post_types.map(t => (
             <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
@@ -482,7 +482,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Règles et options</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-emerald-400" />Règles et options</h3>
         <div>
           <label className={labelCls}>Règles pour les opérateurs (affichées sur leur grille)</label>
           <textarea value={s.rules} onChange={e => set('rules', e.target.value)} rows={5} className={inputCls + ' font-sans'} placeholder="ex: pas de lecture de messages, photo de début obligatoire..." />
@@ -497,7 +497,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Volume2 className="w-4 h-4 text-emerald-400" />Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />

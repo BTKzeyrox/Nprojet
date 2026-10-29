@@ -121,6 +121,7 @@
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",
     "check:export": "npx --yes tsx scripts/check-export.ts",
     "check:chat-about": "esbuild scripts/check-chat-about.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-about.mjs && node node_modules/.cache/check-chat-about.mjs",
+    "check:settings-icons": "tsx scripts/check-settings-icons.ts",
     "check:notif-read": "esbuild scripts/check-notif-read.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-notif-read.mjs && node node_modules/.cache/check-notif-read.mjs",
     "check:no-demo": "tsx scripts/check-no-demo.ts",
     "check:print-format": "npx --yes tsx scripts/check-print-format.ts",

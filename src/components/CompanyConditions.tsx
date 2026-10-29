@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, HelpCircle, Save, RotateCcw, History } from 'lucide-react';
+import { ChevronDown, ChevronRight, HelpCircle, Save, RotateCcw, History, Building2, CalendarDays } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
@@ -132,7 +132,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
   return (
     <div className="space-y-3" data-notranslate="">
       <div className={`${boxCls} p-4 space-y-2`}>
-        <h3 className="font-tactical font-bold text-white">{t('Conditions de l\'entreprise', 'Company conditions')}</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Building2 className="w-4 h-4 text-emerald-400" />{t('Conditions de l\'entreprise', 'Company conditions')}</h3>
         <p className="text-xs text-slate-300">{t('Les règles de l\'entreprise (TVA, délais, congés…) se règlent ici, pas dans le code. Tout est facultatif. Si tu ne sais pas : laisse comme ça.', 'The company rules (VAT, deadlines, leave…) are set here, not in the code. Everything is optional. If you do not know: leave it as it is.')}</p>
         <p className="text-[11px] text-amber-300">{t('À vérifier avec un comptable ou le responsable de l\'entreprise. Gestion Pro ne donne pas de conseil légal.', 'To be checked with an accountant or the company manager. Gestion Pro gives no legal advice.')}</p>
         <button type="button" onClick={resetDefaults} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer inline-flex items-center gap-2"><RotateCcw className="w-4 h-4" />{t('Valeurs de départ', 'Starting values')}</button>
@@ -222,7 +222,7 @@ export const CompanyForEmployee: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) =>
   if (!rules && !hasLeave) return null;
   return (
     <section className={`${boxCls} p-4 space-y-3`} data-notranslate="">
-      <h3 className="font-tactical font-bold text-white">{t('Règlement et congés', 'Rules and leave')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><CalendarDays className="w-4 h-4 text-emerald-400" />{t('Règlement et congés', 'Rules and leave')}</h3>
       {hasLeave && (
         <ul className="text-sm text-slate-200 space-y-1">
           {l.leave_days_per_year > 0 && <li>{t('Jours de congé par an', 'Leave days per year')} : <b>{l.leave_days_per_year}</b></li>}

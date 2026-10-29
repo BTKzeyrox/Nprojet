@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Activity } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { WATCH_FIELDS, checkWatchInput } from '../utils/health/watchPrefs';
@@ -27,7 +28,7 @@ export const WatchSettingsSection: React.FC = () => {
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-watch-settings>
       <button type="button" onClick={() => setOpen(o => !o)} className="w-full min-h-[44px] flex items-center justify-between text-left cursor-pointer" aria-expanded={open}>
-        <h3 className="font-tactical font-bold text-white">{t('Surveillance (seuils de la Santé du site)', 'Monitoring (Site health thresholds)')}</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-400" />{t('Surveillance (seuils de la Santé du site)', 'Monitoring (Site health thresholds)')}</h3>
         <span className="text-slate-400 text-sm">{open ? '▲' : '▼'}</span>
       </button>
       {open && <>
