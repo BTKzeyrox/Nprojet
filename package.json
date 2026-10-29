@@ -81,6 +81,7 @@
     "check:mission-sheet": "esbuild scripts/check-mission-sheet.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-mission-sheet.mjs && node node_modules/.cache/check-mission-sheet.mjs",
     "check:styled-charts": "esbuild scripts/check-styled-charts.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-styled-charts.mjs && node node_modules/.cache/check-styled-charts.mjs",
     "check:ui-sober": "npx --yes tsx scripts/check-ui-sober.ts",
+    "check:topbar-notif": "npx --yes tsx scripts/check-topbar-notif.ts",
     "check:approval-limit": "npx --yes tsx scripts/check-approval-limit.ts",
     "check:auto-report": "npx --yes tsx scripts/check-auto-report.ts",
     "check:auto-report-ui": "esbuild scripts/check-auto-report-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-auto-report-ui.mjs && node node_modules/.cache/check-auto-report-ui.mjs",

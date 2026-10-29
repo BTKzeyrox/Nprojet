@@ -190,7 +190,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         <ConnectionChip />
 
-        <div ref={bellBox} className="relative shrink-0">
+        <div ref={bellBox} className="sm:relative shrink-0">
           <button
             onClick={toggleBell}
             title="Notifications"
@@ -204,7 +204,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             )}
           </button>
           {bellOpen && (
-            <div className={`absolute right-0 top-full mt-2 w-[min(94vw,23rem)] df-notif rounded-2xl overflow-hidden z-50 border-2 ${L ? 'bg-white border-[#0b2a4a]/20' : 'bg-[#0f1e3a] border-blue-400/40'} shadow-[0_18px_50px_-8px_rgba(2,12,40,0.55)]`}>
+            <div className={`absolute max-sm:left-2 max-sm:right-2 sm:right-0 top-full mt-2 sm:w-[23rem] df-notif rounded-2xl overflow-hidden z-50 border-2 ${L ? 'bg-white border-[#0b2a4a]/20' : 'bg-[#0f1e3a] border-blue-400/40'} shadow-[0_18px_50px_-8px_rgba(2,12,40,0.55)]`}>
               <div className={`px-4 py-3 flex items-center justify-between ${L ? 'bg-[#0b2a4a] text-white' : 'bg-[#1d4ed8] text-white'}`}>
                 <span className="text-sm font-bold flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</span>
                 {count > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">{count > 99 ? '99+' : count}</span>}

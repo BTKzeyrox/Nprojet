@@ -806,6 +806,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:mission-sheet` | Contrôle du tableau préparé par mission (M18.6) : règles, serveur (même texte), démo en mémoire, écran. Sans réseau. Lancer : npm run check:mission-sheet |
 | `npm run check:styled-charts` | Contrôle des trois graphiques lisibles et du bouton thème / langue (2026-10-29). Sans réseau. Lancer : npm run check:styled-charts |
 | `npm run check:ui-sober` | Contrôle de l'aspect sobre des boutons et de la taille du texte (2026-10-29). Lancer : npm run check:ui-sober |
+| `npm run check:topbar-notif` | Contrôle du panneau de notifications (2026-10-29) : sur téléphone il s'accroche à la barre du haut, plus à la cloche. Lancer : npm run check:topbar-notif |
 | `npm run check:approval-limit` | Contrôle de la validation à plusieurs niveaux (M15.6) : plafond du Chef d'équipe, copie serveur, garde-fous. Lancer : npm run check:approval-limit |
 | `npm run check:auto-report` | Contrôle du rapport automatique (M15.5, règles pures). Lancer : npm run check:auto-report |
 | `npm run check:auto-report-ui` | Essai du rapport automatique côté site, en mode démo (aucun réseau) : réglage, liste, ouverture, copie figée une seule fois, droits. |
