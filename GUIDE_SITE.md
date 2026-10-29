@@ -251,6 +251,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Discussions entre personnes et groupes, comme une messagerie classique.
 - **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier ou plusieurs photos (album : 4 cases, la 4e avec « +N »). 3. Modifier ou épingler ses propres messages.
 - **Règles** :
+  - Appui long sur une discussion : l'épingler en haut de la liste ou la cacher. Toucher le petit rond de profil : fiche « À propos » avec les actions possibles.
+  - Les discussions épinglées et cachées sont propres à chaque personne, gardées sur son appareil.
   - On ne modifie que ses propres messages, même l'admin.
   - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
@@ -533,6 +535,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chartData.ts` | Données des graphiques : parties réelles, prévision en pointillé, rythme d'un objectif (purs, sans écran). |
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
+| `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
@@ -623,6 +626,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `teamLead.ts` | Sessions en attente (début ou fin) des opérateurs de l'équipe du Chef d'équipe, les plus anciennes d'abord. Rien d'autre : jamais un autre groupe. |
 | `totp.ts` | Sécurité en deux étapes (module 16, M16.4) : règles pures, sans écran, sans serveur. |
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
+| `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
@@ -810,6 +814,8 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
+| `npm run check:chat-about` | Messagerie : discussions épinglées, appui long (épingler / cacher) et fiche « À propos » (clic sur le rond de profil). Règles pures + câblage de l'écran. |
+| `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
 | `npm run check:xlsx-a4` | Contrôle des fichiers Excel A4 (Times New Roman 12, un autre fichier si c'est long), sans écran ni réseau. Lancer : npm run check:xlsx-a4 |

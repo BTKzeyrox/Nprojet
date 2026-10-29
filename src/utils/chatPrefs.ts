@@ -44,3 +44,17 @@ export const initThreadSeen = (uid: string, map: Record<string, number>): Record
   writeJson(key('seen', uid), map);
   return map;
 };
+
+// Discussions épinglées (en haut de la liste) : gardé sur cet appareil, par personne.
+export const getPinnedThreads = (uid: string): string[] => readJson<string[]>(key('pinthreads', uid), []);
+export const togglePinnedThread = (uid: string, thread: string): string[] => {
+  const cur = getPinnedThreads(uid);
+  const next = cur.includes(thread) ? cur.filter(x => x !== thread) : [...cur, thread].slice(-30);
+  writeJson(key('pinthreads', uid), next);
+  return next;
+};
+/** Ordre de la liste : « Groupe général » d'abord, puis les discussions épinglées (dans l'ordre de la liste), puis les autres. */
+export function pinFirst<T extends { id: string }>(list: T[], pinned: string[], general = 'all'): T[] {
+  const rank = (t: T) => (t.id === general ? 0 : pinned.includes(t.id) ? 1 : 2);
+  return list.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map(x => x.t);
+}

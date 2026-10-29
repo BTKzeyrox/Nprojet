@@ -4,7 +4,7 @@ import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { subscribeHealth } from '../utils/healthDb';
-import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
+import { buildNotifications, markSeen, markAllRead, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { beepIfEnabled } from '../utils/notifSound';
@@ -201,17 +201,23 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                 <span className="text-sm font-bold flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</span>
                 {count > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">{count > 99 ? '99+' : count}</span>}
               </div>
+              {notifs.length > 0 && (
+                <div className={`px-4 py-2 flex items-center justify-between text-xs ${L ? 'bg-slate-50 text-slate-600' : 'bg-white/5 text-slate-300'}`} data-notif-bar>
+                  <span>{count > 0 ? `${count} non lue${count > 1 ? 's' : ''}` : 'Tout est lu'}</span>
+                  {count > 0 && <button type="button" onClick={() => { markAllRead(currentUser, notifs); force(n => n + 1); }} className="min-h-[32px] px-3 rounded-full border border-current font-semibold cursor-pointer" data-notif-readall>Tout marquer comme lu</button>}
+                </div>
+              )}
               <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
                 {notifs.length === 0 ? (
                   <div className={`px-3 py-6 text-sm text-center ${L ? 'text-slate-500' : 'text-slate-300'}`}>Rien de nouveau.</div>
                 ) : (
                   notifs.slice(0, 30).map(n => {
                     const tone = n.tone === 'urgent' ? 'bg-red-100 text-red-700' : n.tone === 'bad' ? 'bg-orange-100 text-orange-700' : n.tone === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
-                    const fresh = !isAdmin && !seen.includes(n.id);
+                    const fresh = !seen.includes(n.id);
                     return (
                       <button
                         key={n.id}
-                        onClick={() => { setBellOpen(false); if (n.id.startsWith('summary-')) markSeen(currentUser, [n.id]); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
+                        onClick={() => { setBellOpen(false); markSeen(currentUser, [n.id]); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
                         className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl border cursor-pointer ${fresh ? (L ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/15 border-blue-400/40') : (L ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-white/5 border-white/10 hover:bg-white/10')}`}
                       >
                         <span className={`mt-0.5 w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${tone}`}>
@@ -221,7 +227,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                           <span className={`block text-sm font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{n.title}</span>
                           {n.sub && <span className={`block text-xs mt-0.5 ${L ? 'text-slate-600' : 'text-slate-300'} break-words`}>{n.sub}</span>}
                         </span>
-                        {fresh && <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Nouveau" />}
+                        {fresh ? <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" data-notif-unread /> : <span className={`mt-0.5 text-[10px] shrink-0 ${L ? 'text-slate-400' : 'text-slate-400'}`} data-notif-read>Lue</span>}
                       </button>
                     );
                   })

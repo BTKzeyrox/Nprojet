@@ -102,5 +102,8 @@ export const getSeen = (u: User): string[] => {
 export const markSeen = (u: User, ids: string[]) => {
   try { localStorage.setItem(key(u), JSON.stringify(Array.from(new Set([...getSeen(u), ...ids])).slice(-400))); } catch { /* stockage indisponible */ }
 };
-export const unreadCount = (u: User, list: Notif[]): number =>
-  u.role === 'admin' ? list.length : list.filter(n => !getSeen(u).includes(n.id)).length;
+/** Compteur de la cloche : seulement les notifications PAS ENCORE LUES (pour tous les rôles). Lu = gardé sur cet appareil, par personne. */
+export const unreadCount = (u: User, list: Notif[]): number => { const seen = getSeen(u); return list.filter(n => !seen.includes(n.id)).length; };
+/** Marque toutes les notifications de la liste comme lues (bouton « Tout marquer comme lu »). */
+export const markAllRead = (u: User, list: Notif[]): void => markSeen(u, list.map(n => n.id));
+export const isUnread = (u: User, n: Notif): boolean => !getSeen(u).includes(n.id);

@@ -17,6 +17,9 @@ import { createPortal } from 'react-dom';
 import { askConfirm } from './ConfirmModal';
 import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
+import { getPinnedThreads, togglePinnedThread, pinFirst } from '../utils/chatPrefs';
+import { ChatAbout } from './ChatAbout';
+import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { TypingDots } from './Reactions';
@@ -59,7 +62,9 @@ const dayLabel = (day: string) => {
 
 export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; onOpenProfile?: (u: User) => void; onNavigate?: (view: string) => void }> = ({ currentUser, initialThreadId, onOpenProfile, onNavigate }) => {
   const isAdmin = currentUser.role === 'admin';
-  const L = useApp().theme === 'light';
+  const app = useApp();
+  const L = app.theme === 'light';
+  const lang = app.lang;
   // Couleurs de la messagerie (clair par défaut, sombre en option)
   const P = {
     root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',
@@ -93,6 +98,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [newChat, setNewChat] = useState(false);
   const [groupInfo, setGroupInfo] = useState(false);
   const [threadMenu, setThreadMenu] = useState(false);
+  const [pinnedThreads, setPinnedThreads] = useState<string[]>(() => getPinnedThreads(currentUser.id));
+  const [aboutOf, setAboutOf] = useState<{ id: string; menuOnly: boolean } | null>(null); // fiche « À propos » (clic sur le rond) ou menu d'appui long (menuOnly)
+  const rowPress = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rowLong = useRef(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
@@ -215,9 +224,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const sorted = useMemo(() => {
     const withTs = threads.map(t => ({ t, ts: lastTs(t) }));
     withTs.sort((a, b) => (a.t.id === 'all' ? -1 : b.t.id === 'all' ? 1 : b.ts - a.ts));
-    return withTs;
+    return pinFirst(withTs.map(x => ({ ...x, id: x.t.id })), pinnedThreads).map(({ t, ts }) => ({ t, ts }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, messages]);
+  }, [threads, messages, pinnedThreads]);
   // Cachée = l'heure de masquage est plus récente que le dernier message
   const isArchived = (t: Thread, ts: number) => !!archived[t.id] && archived[t.id] >= ts;
   const shownList = sorted.filter(x => !isArchived(x.t, x.ts)).map(x => x.t);
@@ -411,6 +420,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = null;
   };
+  const startRowPress = (id: string) => {
+    if (rowPress.current) clearTimeout(rowPress.current);
+    rowLong.current = false;
+    rowPress.current = setTimeout(() => { rowLong.current = true; window.getSelection()?.removeAllRanges(); setAboutOf({ id, menuOnly: true }); }, 450);
+  };
+  const stopRowPress = () => { if (rowPress.current) clearTimeout(rowPress.current); rowPress.current = null; };
   const startEdit = (m: ChatMessage) => {
     setMenuMsg(null);
     setReplyTo(null);
@@ -509,8 +524,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       <button
         key={t.id}
         type="button"
-        onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
+        onClick={() => { if (rowLong.current) { rowLong.current = false; return; } setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
+        onTouchStart={() => startRowPress(t.id)} onTouchEnd={stopRowPress} onTouchMove={stopRowPress} onTouchCancel={stopRowPress}
+        onMouseDown={e => { if (e.button === 0) startRowPress(t.id); }} onMouseUp={stopRowPress} onMouseLeave={stopRowPress}
+        onContextMenu={e => { e.preventDefault(); stopRowPress(); rowLong.current = true; setAboutOf({ id: t.id, menuOnly: true }); }}
+        data-thread-row={t.id}
+        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors select-none ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
         {t.kind === 'group' && t.group?.avatar_url ? (
           <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -521,11 +540,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         ) : t.kind === 'pair' ? (
           <span className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-slate-200' : 'bg-slate-800'}`}><EyeOff className={`w-5 h-5 ${P.sub}`} /></span>
         ) : (
-          <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
+          <span role="button" tabIndex={0} aria-label={`À propos de ${t.title}`} data-row-avatar onClick={e => { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); } }} onTouchStart={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} className="shrink-0 rounded-full">
+            <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
+          </span>
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
+            {pinnedThreads.includes(t.id) && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Épinglée" />}<span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
             {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
@@ -685,7 +706,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   {!isMe && showNames && (
                     sameSender
                       ? <span className="w-8 shrink-0" />
-                      : <button type="button" onClick={() => openProfile(msg.sender_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(u => u.id === msg.sender_id)?.avatar_url} name={msg.sender_name} className="w-8 h-8 rounded-full" /></button>
+                      : <button type="button" onClick={() => setAboutOf({ id: msg.sender_id, menuOnly: false })} className="shrink-0 cursor-pointer" title="À propos" data-msg-avatar><Avatar src={users.find(u => u.id === msg.sender_id)?.avatar_url} name={msg.sender_name} className="w-8 h-8 rounded-full" /></button>
                   )}
                   <div className={`flex flex-col min-w-0 max-w-[82%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'}`}>
                     <div
@@ -927,6 +948,22 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         </div>,
         document.body
       )}
+
+      {aboutOf && (() => {
+        const t: Thread | undefined = threads.find(x => x.id === aboutOf.id) || (() => { const u = users.find(x => x.id === aboutOf.id); return u ? { id: u.id, kind: 'user' as const, title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u } : undefined; })();
+        if (!t) return null;
+        const full = aboutThread(t, { viewer: currentUser, pinned: pinnedThreads.includes(t.id), hidden: !!archived[t.id] && archived[t.id] >= lastTs(t), lang: lang === 'en' ? 'en' : 'fr', canOpenFullProfile: !!onOpenProfile });
+        const view = aboutOf.menuOnly ? { ...full, facts: [], actions: full.actions.filter(a => a === 'pin' || a === 'unpin' || a === 'hide' || a === 'show') } : full;
+        const run = (a: AboutAction) => {
+          setAboutOf(null);
+          if (a === 'pin' || a === 'unpin') setPinnedThreads(togglePinnedThread(currentUser.id, t.id));
+          else if (a === 'hide' || a === 'show') toggleArchive(t, a === 'hide');
+          else if (a === 'write') { if (t.kind === 'user' && !threads.some(x => x.id === t.id)) setPickedUsers(p => (p.includes(t.id) ? p : [...p, t.id])); setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }
+          else if (a === 'full_profile' && t.user) openProfile(t.user.id);
+          else if (a === 'group_info') { setThreadId(t.id); setShowList(false); setGroupInfo(true); }
+        };
+        return <ChatAbout thread={t} about={view} onAction={run} onClose={() => setAboutOf(null)} />;
+      })()}
 
       {newChat && (
         <NewChatModal

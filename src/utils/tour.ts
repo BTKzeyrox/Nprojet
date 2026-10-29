@@ -1,9 +1,10 @@
 // Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) :
 // une seule source, donc la visite ne peut pas dire autre chose que l'assistant et le guide. Contrôlé par `npm run check:tour`.
 import { findPage, type Bi } from './siteKnowledge';
+import { TOUR_CONTENT, TOUR_WELCOME_TIPS } from './tourContent';
 
 /** Monter ce numéro refait apparaître la visite pour tout le monde (après un gros changement du site). */
-export const TOUR_VERSION = 1;
+export const TOUR_VERSION = 2;
 export type TourRole = 'admin' | 'employee' | 'accountant' | 'team_lead';
 
 /** Pages montrées, par rôle : seulement celles que ce rôle a vraiment dans son menu. */
@@ -29,6 +30,8 @@ export interface TourStep {
   text: Bi;
   /** Première étape du mode d'emploi de la page : « par où commencer ». */
   tip: Bi | null;
+  /** Astuces du rôle pour cette page (peut être vide). */
+  tips: Bi[];
 }
 
 const isRole = (r: unknown): r is TourRole => r === 'admin' || r === 'employee' || r === 'accountant' || r === 'team_lead';
@@ -36,11 +39,12 @@ const isRole = (r: unknown): r is TourRole => r === 'admin' || r === 'employee' 
 /** Les étapes de la visite : bienvenue, puis une étape par page. Un rôle inconnu est traité comme un opérateur (le moins de droits). */
 export function tourSteps(role: unknown): TourStep[] {
   const r: TourRole = isRole(role) ? role : 'employee';
-  const steps: TourStep[] = [{ page: null, title: WELCOME_TITLE, text: WELCOME[r], tip: null }];
+  const steps: TourStep[] = [{ page: null, title: WELCOME_TITLE, text: WELCOME[r], tip: null, tips: TOUR_WELCOME_TIPS[r] || [] }];
   for (const id of TOUR_PAGES[r]) {
     const p = findPage(id);
     if (!p) continue; // une page retirée du menu ne casse jamais la visite
-    steps.push({ page: id, title: p.title, text: p.purpose, tip: p.howto[0] });
+    const own = TOUR_CONTENT[r][id]; // texte écrit pour CE rôle ; sinon la carte du site
+    steps.push({ page: id, title: p.title, text: own ? own.text : p.purpose, tip: own ? null : p.howto[0], tips: own ? own.tips : [] });
   }
   return steps;
 }

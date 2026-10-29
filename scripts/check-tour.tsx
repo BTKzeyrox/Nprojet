@@ -27,10 +27,22 @@ for (const r of roles) {
   ok(TOUR_PAGES[r].every(id => !!findPage(id)), `${r} : chaque page de la visite a sa fiche dans la carte du site`);
   ok(TOUR_PAGES[r].every(id => viewAllowedFor(r, id)), `${r} : la visite ne montre que des pages que ce rôle peut ouvrir`);
   ok(s.every(x => x.title.fr && x.title.en && x.text.fr && x.text.en), `${r} : chaque étape a un titre et un texte en français et en anglais`);
-  ok(s.slice(1).every(x => x.tip && x.tip.fr && x.tip.en), `${r} : chaque page a son « pour commencer »`);
+  ok(s.slice(1).every(x => (x.tip && x.tip.fr && x.tip.en) || x.tips.length > 0), `${r} : chaque page a son « pour commencer » ou ses astuces`);
   ok(s.every(x => !FR_WORDS.test(x.text.en) && !FR_WORDS.test(x.title.en) && !(x.tip && FR_WORDS.test(x.tip.en))), `${r} : l'anglais ne contient pas de mots français`);
   ok(s.every(x => x.text.fr.length <= 300 && x.text.en.length <= 300), `${r} : textes courts (300 signes au plus)`);
 }
+// ---- guide séparé par rôle (astuces) ----
+for (const r of roles) {
+  const s = tourSteps(r);
+  ok(s.slice(1).every(x => x.tips.length >= 1), `${r} : chaque page a au moins une astuce`);
+  ok(s.every(x => x.tips.every(t => t.fr && t.en && t.fr.length <= 220 && t.en.length <= 220 && !FR_WORDS.test(t.en))), `${r} : astuces courtes, FR et EN, sans mots français dans l'anglais`);
+}
+const adm = tourSteps('admin'), emp = tourSteps('employee');
+ok(adm[0].text.fr !== emp[0].text.fr && JSON.stringify(adm.map(x => x.tips)) !== JSON.stringify(emp.map(x => x.tips)), 'responsable et opérateur : pas le même guide');
+const shared = ['settings'];
+ok(adm.filter(x => x.page && !shared.includes(x.page)).every(x => !emp.some(y => y.page === x.page && y.text.fr === x.text.fr)), 'une page commune a un texte différent selon le rôle');
+ok(emp.every(x => !/Émettre|faire un avoir|un avoir/i.test(x.text.fr)), 'opérateur : aucun mot de gestion (émettre, avoir) dans son guide');
+ok(TOUR_VERSION >= 2, 'version de la visite montée : tout le monde revoit le nouveau guide');
 ok(JSON.stringify(tourSteps('pirate')) === JSON.stringify(tourSteps('employee')) && JSON.stringify(tourSteps(undefined)) === JSON.stringify(tourSteps('employee')), 'rôle inconnu ou absent : visite d\'opérateur (le moins de droits)');
 const money = /(Facturation|Paie|Statistiques|Direction)/;
 ok(tourSteps('employee').every(x => !money.test(x.title.fr) || x.page === 'hr'), 'opérateur : aucune page d\'argent de l\'entreprise dans la visite');

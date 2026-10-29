@@ -49,6 +49,12 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
         </div>
         <h2 className="text-lg font-bold text-white">{L(step.title)}</h2>
         <p className="text-sm text-slate-200">{L(step.text)}</p>
+        {step.tips.length > 0 && (
+          <div className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3 space-y-1.5" data-tour-tips>
+            <div className="font-semibold text-emerald-300">{t('Astuces', 'Tips')}</div>
+            <ul className="list-disc pl-5 space-y-1">{step.tips.map((x, k) => <li key={k}>{L(x)}</li>)}</ul>
+          </div>
+        )}
         {step.tip && <p className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3"><span className="font-semibold text-slate-100">{t('Pour commencer : ', 'To start: ')}</span>{L(step.tip)}</p>}
         <div className="flex gap-1.5 justify-center" aria-hidden="true">{steps.map((_, k) => <span key={k} className={`h-1.5 rounded-full ${k === i ? 'w-5 bg-emerald-400' : 'w-1.5 bg-slate-700'}`} />)}</div>
         <div className="flex flex-wrap gap-2 justify-between">
