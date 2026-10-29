@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { useConfirm } from '../components/ConfirmModal';
@@ -358,6 +358,7 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState<{ d: number; t: number } | null>(null);
+  const [open, setOpen] = useState(false); // formulaire réduit tant que personne ne veut publier
   const fileRef = useRef<HTMLInputElement>(null);
 
   const field = `w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`;
@@ -391,10 +392,29 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
     setTitle(''); setText(''); setPinned(false); setItems([]);
     if (!isAdmin) setInfo('Envoyée au responsable. Elle sera visible par l’équipe après validation.');
     setBusy(false);
+    setOpen(false);
   };
 
+  if (!open) {
+    const hasDraft = !!(title.trim() || text.trim() || items.length);
+    return (
+      <section data-composer-closed className={`border rounded-xl p-3 space-y-2 ${light ? 'bg-white border-slate-200' : 'bg-[#0f1722] border-slate-700'}`}>
+        <button type="button" data-composer-open onClick={() => { setOpen(true); setInfo(''); }} className={`w-full min-h-[44px] flex items-center justify-between gap-3 rounded-lg border px-3 text-left text-sm cursor-pointer ${light ? 'bg-slate-50 border-slate-300 text-slate-500 hover:border-emerald-500' : 'bg-[#0b1118] border-slate-600 text-slate-400 hover:border-emerald-500'}`}>
+          <span className="truncate">{hasDraft ? 'Continuer ma publication…' : isAdmin ? 'Écrire une publication…' : 'Proposer une publication…'}</span>
+          <span className="shrink-0 px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold">{isAdmin ? 'Publier' : 'Proposer'}</span>
+        </button>
+        {info && <div className="text-xs text-emerald-600">{info}</div>}
+      </section>
+    );
+  }
+
   return (
-    <section className={`border rounded-xl p-4 space-y-3 ${light ? 'bg-white border-slate-200' : 'bg-[#0f1722] border-slate-700'}`}>
+    <section data-composer-open-form className={`border rounded-xl p-4 space-y-3 ${light ? 'bg-white border-slate-200' : 'bg-[#0f1722] border-slate-700'}`}>
+      <div className="flex justify-end -mb-1">
+        <button type="button" data-composer-minimize disabled={busy} onClick={() => setOpen(false)} className={`flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg disabled:opacity-40 cursor-pointer ${light ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-300 hover:bg-white/10'}`} aria-label="Réduire le formulaire">
+          <ChevronUp className="w-4 h-4" /> Réduire
+        </button>
+      </div>
       {!isAdmin && <div className={`text-xs ${muted}`}>Propose une publication à l’équipe. Le responsable doit la valider avant qu’elle soit visible.</div>}
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
       <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} placeholder={isAdmin ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
