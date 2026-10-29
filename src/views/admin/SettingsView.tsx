@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ThemeLangControls } from '../../components/ThemeLangControls';
 import { Settings, Plus, X, Save, ArrowLeftRight, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { AppSettings } from '../../types';
@@ -64,7 +65,7 @@ const ModeSwitchSection: React.FC = () => {
 };
 
 export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnly = false }) => {
-  const { theme, toggleTheme, lang, setLang } = useApp();
+  const { theme, lang } = useApp();
   const [sound, setSound] = useSoundPrefs();
   const [soundMsg, setSoundMsg] = useState('');
   const [s, setS] = useState<AppSettings>(db.getSettings());
@@ -163,12 +164,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
-        </div>
+        <ThemeLangControls />
         <FontSizePicker />
       </section>
 
@@ -233,12 +229,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
         <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
-        </div>
+        <ThemeLangControls />
         <FontSizePicker />
       </section>
       )}
