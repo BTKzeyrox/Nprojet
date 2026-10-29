@@ -211,32 +211,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* 2. Profil */}
-        <div className="df-sb-profile shrink-0 mx-3 mb-1 px-3 py-2.5 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative shrink-0">
-              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-9 h-9 rounded-full" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
-            </div>
-            <div className="min-w-0 df-sb-text">
-              <p className="df-sb-title text-sm font-semibold truncate">{currentUser.name}</p>
-              <p className="df-sb-sub text-xs inline-flex items-center gap-1">
-                {isAdmin ? (
-                  'Responsable'
-                ) : isAccountant ? (
-                  'Comptable'
-                ) : isTeamLead ? (
-                  `Chef d'équipe${currentUser.team ? ` · ${currentUser.team}` : ''}`
-                ) : (
-                  <>
-                    {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-                    {currentUser.shift === 'day' ? 'Vacation jour' : 'Vacation nuit'}
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* 3. Navigation */}
         <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3">
@@ -273,21 +247,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 4. Bas : vue opérateur, signaler un problème, déconnexion */}
         <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          {canSwitchMode && onToggleOperatorMode && (
-            <button
-              type="button"
-              onClick={() => {
-                onToggleOperatorMode();
-                if (onCloseMobile) onCloseMobile();
-              }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer ${
-                operatorMode ? 'df-sb-warn' : 'df-sb-btn'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              <span className="df-sb-text">{operatorMode ? 'Retour responsable' : 'Vue opérateur'}</span>
-            </button>
-          )}
 
           {onReportProblem && db.getSettings().err_report_button !== false && (
             <button

@@ -246,6 +246,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Voir ses informations. 2. Demander une modification. 3. Attendre l'accord de l'admin.
 - **Règles** :
   - Un changement de profil passe par une validation de l'admin.
+  - Le profil s'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.
+  - Le responsable y trouve « Passer en vue opérateur » / « Retour responsable » et l'affichage de ce bouton.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/components/CVViewerModal.tsx`
 
 ### Messagerie  `chat`
@@ -532,6 +534,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `attendance.ts` | Retard d'une session (utilisé par le calendrier et par les alertes). Pur, sans écran. |
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `autoReport.ts` | Rapport automatique (module 15, M15.5). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:auto-report`. |
+| `availability.ts` | Statut de disponibilité : choisi par chaque personne, gardé sur CET appareil (pas partagé avec les autres). |
 | `avatarColor.ts` | Couleur d'une personne = couleur dominante de sa photo de profil (rouge sur photo rouge, etc.). |
 | `backupExcel.ts` | Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
@@ -824,6 +827,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
 | `npm run check:chat-about` | Messagerie : discussions épinglées, appui long (épingler / cacher) et fiche « À propos » (clic sur le rond de profil). Règles pures + câblage de l'écran. |
 | `npm run check:settings-icons` | Réglages : chaque carte a une petite icône devant son titre (même style partout). |
+| `npm run check:header-profile` | Profil dans l'en-tête : pastille pour tous les rôles, formulaire avec statut, mot de passe et vue opérateur (responsable). |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

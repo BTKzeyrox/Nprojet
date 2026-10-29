@@ -396,6 +396,8 @@ export default function App() {
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
           currentUser={viewUser}
+          onOpenProfile={() => setCvModalUser(currentUser)}
+          operatorMode={operatorMode}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
           onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}
@@ -568,6 +570,10 @@ export default function App() {
             isOpen={cvModalUser !== null}
             onClose={() => setCvModalUser(null)}
             user={cvModalUser}
+            canSwitchMode={realIsAdmin}
+            modeSwitchHidden={modeSwitchHidden}
+            operatorMode={operatorMode}
+            onToggleOperatorMode={() => { setCvModalUser(null); toggleOperatorMode(); }}
             onMessage={u => { setCvModalUser(null); setChatThread(u.id); setActiveView('chat'); }}
           />
         </Suspense>

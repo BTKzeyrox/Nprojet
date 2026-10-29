@@ -9,12 +9,18 @@ import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { beepIfEnabled } from '../utils/notifSound';
 import { ConnectionChip } from './ConnectionBanner';
+import { Avatar } from './Avatar';
+import { usePresence, PRESENCE_DOT, PRESENCE_LABEL } from '../utils/availability';
 
 interface TopBarProps {
   currentUser: User;
   onOpenMenu: () => void;
   onNavigate: (view: string) => void;
   onOpenOperator: (userId: string) => void;
+  /** Ouvre le formulaire de profil de la personne connectée (tous les rôles). */
+  onOpenProfile: () => void;
+  /** Le responsable est en vue opérateur : la pastille le rappelle. */
+  operatorMode?: boolean;
 }
 
 interface Hit {
@@ -30,7 +36,8 @@ const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', mission: 'Missio
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false }) => {
+  const presence = usePresence(currentUser.id);
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -236,6 +243,18 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          data-profile-pill
+          onClick={onOpenProfile}
+          title={`Mon profil · ${PRESENCE_LABEL[presence]}`}
+          aria-label="Mon profil"
+          className={`relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
+        >
+          <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8 rounded-full" />
+          <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} ${PRESENCE_DOT[presence]}`} />
+        </button>
       </div>
     </header>
     </>
