@@ -3,6 +3,8 @@ import { Settings2 } from 'lucide-react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { inSpace } from '../../utils/stock';
+import { productNavId, STORAGE_INTENT_EVENT, takeStorageIntent } from '../../utils/storageNav';
+import { setNavTarget } from '../../utils/navTarget';
 import { StockTab, type StockFilter } from './StockTab';
 import { StockDashboard } from './StockDashboard';
 import { StockMovements } from './StockMovements';
@@ -30,6 +32,20 @@ export const StoragePage: React.FC = () => {
   const current = spaces.find(s => s.id === spaceId) ?? spaces[0]; // un stockage supprimé ou inconnu = le premier
   const pickSpace = (id: string) => { setSpaceId(id); try { localStorage.setItem(SPACE_KEY, id); } catch { /* stockage indisponible */ } setFilter('all'); setOpenKey(k => k + 1); };
   const open = (next: Tab, f: StockFilter = 'all') => { setFilter(f); setOpenKey(k => k + 1); setTab(next); };
+  // Une alerte ou une notification demande un endroit précis : le bon stockage, l'onglet Produits, le bon filtre, puis le produit clignote (1,5 s)
+  useEffect(() => {
+    const apply = () => {
+      const i = takeStorageIntent();
+      if (!i) return;
+      const list = db.getStockSpaces();
+      if (i.space && list.some(s => s.id === i.space)) { setSpaceId(i.space); try { localStorage.setItem(SPACE_KEY, i.space); } catch { /* stockage indisponible */ } }
+      setTab('products'); setFilter(i.filter ?? 'all'); setOpenKey(k => k + 1);
+      if (i.product) setNavTarget(productNavId(i.product)); // la ligne est cherchée pendant 4 secondes : elle peut arriver après l'ouverture de la page
+    };
+    apply(); // demande faite avant l'ouverture de la page
+    window.addEventListener(STORAGE_INTENT_EVENT, apply); // demande faite page déjà ouverte
+    return () => window.removeEventListener(STORAGE_INTENT_EVENT, apply);
+  }, []);
   const allProducts = db.getProducts();
   const tabBtn = (id: Tab, fr: string, en: string) => (
     <button type="button" role="tab" aria-selected={tab === id} onClick={() => open(id)} className={`flex-1 min-h-[44px] rounded-lg text-xs sm:text-sm font-semibold border px-1.5 sm:px-3 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{t(fr, en)}</button>

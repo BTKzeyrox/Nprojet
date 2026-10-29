@@ -9,6 +9,7 @@ import { respond, helpReply, pageLinks, recapPrintHtml, PRINT_PREFIX, type Reply
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
+import { setStorageIntent, type StorageIntent } from '../utils/storageNav';
 import { isKnownView } from '../utils/health/menu';
 
 const ENABLE_AI = '__enable_ai';
@@ -78,10 +79,11 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     setProblem([r.missing.length ? t(`À remplir : ${names(r.missing)}.`, `To fill in: ${names(r.missing)}.`) : '', r.invalid.length ? t(`Valeur à corriger : ${names(r.invalid)}.`, `Value to fix: ${names(r.invalid)}.`) : ''].filter(Boolean).join(' '));
   };
   const copy = async () => { if (draft == null) return; try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setCopied(false); setProblem(t('Copie impossible ici : sélectionne le texte et copie-le à la main.', 'Copy not possible here: select the text and copy it by hand.')); } };
-  const go = (g: { view: string; tab?: string }) => {
+  const go = (g: { view: string; tab?: string; storage?: StorageIntent }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
+    if (g.storage) setStorageIntent(g.storage);
     if (isKnownView(g.view)) onNavigate?.(g.view);
   };
   const quick = [t('Résumé du jour', 'Daily summary'), t('Quoi faire maintenant ?', 'What to do now?'), t('Suggestions', 'Suggestions'), t('Et si le prix client +5 % ?', 'What if client price +5%?'), t('Aide', 'Help')];

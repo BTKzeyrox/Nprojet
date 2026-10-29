@@ -3,7 +3,8 @@
 import type { CashEntry, ClientContract, PostSession, Product, SalaryAdvanceRequest, StockMove } from '../types';
 import { computeFinance } from './financeStats';
 import { comparableRanges, daysBetween, periodRange } from './stats';
-import { stockRows } from './stock';
+import { DEFAULT_STOCK_SPACES, inSpace, stockRows, type StockSpace } from './stock';
+import type { StorageIntent } from './storageNav';
 import { goalRows, monthFigures, type GoalSettings } from './goals';
 import { missionAmount } from './stats';
 import type { StatsTab } from './statsNav';
@@ -18,6 +19,7 @@ export interface AlertItem {
   id: string; level: AlertLevel; fr: string; en: string;
   go: string; // page à ouvrir (ex. « stats », « advances »)
   tab?: StatsTab; // onglet de la page Statistiques à ouvrir
+  storage?: StorageIntent; // lien exact dans le Stockage : le bon stockage, le bon filtre, le produit à faire clignoter
 }
 
 export interface AlertSettings extends GoalSettings {
@@ -29,6 +31,7 @@ export interface AlertInput {
   today: string; settings: AlertSettings;
   cash: CashEntry[]; posts: PostSession[]; contracts: ClientContract[]; advances: SalaryAdvanceRequest[];
   products: Product[]; moves: StockMove[];
+  spaces?: StockSpace[]; // les stockages : le stock bas se compte stockage par stockage
   clients?: ClientRecord[]; // fiches clients (admin) : l'alerte « pas de paiement » suit chaque fiche
   invoices?: Invoice[]; // factures (module 2) : alerte « factures en retard »
 }
@@ -71,12 +74,18 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
       en: neg ? `Negative cash: ${ar(all.treasury)}.` : `Low cash: ${ar(all.treasury)} (threshold ${ar(low)}).` });
   }
 
-  // 4. Stock bas (même règle que le voyant rouge de l'onglet Stock)
-  const lowRows = stockRows(i.products, i.moves).filter(r => r.low);
-  if (lowRows.length) {
+  // 4. Stock bas, stockage par stockage (même règle que le voyant rouge de l'onglet Produits) : jamais de mélange
+  const spaces = i.spaces && i.spaces.length ? i.spaces : DEFAULT_STOCK_SPACES;
+  for (const sp of spaces) {
+    const mine = inSpace(i.products, i.moves, sp.id);
+    const lowRows = stockRows(mine.products, mine.moves).filter(r => r.low);
+    if (!lowRows.length) continue;
     const names = lowRows.map(r => r.product.name);
-    out.push({ id: 'stock-low', level: lowRows.some(r => r.empty) ? 'danger' : 'warn', go: 'storage',
-      fr: `Stock bas : ${lowRows.length} produit${lowRows.length > 1 ? 's' : ''} (${list(names)}).`, en: `Low stock: ${lowRows.length} product${lowRows.length > 1 ? 's' : ''} (${list(names)}).` });
+    const first = [...lowRows].sort((x, y) => Number(y.empty) - Number(x.empty) || x.qty - y.qty)[0]; // le plus urgent : un produit épuisé d'abord
+    const multi = spaces.length > 1;
+    out.push({ id: multi ? `stock-low-${sp.id}` : 'stock-low', level: lowRows.some(r => r.empty) ? 'danger' : 'warn', go: 'storage',
+      storage: { space: sp.id, filter: first.empty ? 'empty' : 'low', product: first.product.id },
+      fr: `${multi ? `${sp.name} : s` : 'S'}tock bas : ${lowRows.length} produit${lowRows.length > 1 ? 's' : ''} (${list(names)}).`, en: `${multi ? `${sp.name}: l` : 'L'}ow stock: ${lowRows.length} product${lowRows.length > 1 ? 's' : ''} (${list(names)}).` });
   }
 
   // 5. Avance trop grosse : une avance en attente plus grande que ce que la personne a gagné ce mois-ci

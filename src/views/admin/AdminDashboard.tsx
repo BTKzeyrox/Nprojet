@@ -58,6 +58,7 @@ import { clientPriceForType, parsePriceInput } from '../../utils/clientPrice';
 import { AlertsList, GoalsBars } from '../../components/GoalsPanel';
 import { PendingMark } from '../../components/PendingMark';
 import { setStatsTab } from '../../utils/statsNav';
+import { setStorageIntent } from '../../utils/storageNav';
 import { useApp } from '../../context/AppContext';
 
 interface AdminDashboardProps {
@@ -433,7 +434,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Alertes (seulement s'il y en a) et objectifs du mois (seulement s'il y en a de réglés) : responsable seulement */}
-        <AlertsList lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty onGo={a => { if (a.tab) setStatsTab(a.tab); onNavigateTab?.(a.go); }} />
+        <AlertsList lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty onGo={a => { if (a.tab) setStatsTab(a.tab); if (a.storage) setStorageIntent(a.storage); onNavigateTab?.(a.go); }} />
         <GoalsBars lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

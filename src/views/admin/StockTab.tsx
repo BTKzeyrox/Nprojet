@@ -9,6 +9,7 @@ import { todayMada } from '../../utils/stats';
 import { compressImageToDataUrl } from '../../utils/imageUtils';
 import { categoryKey, categoryOptions, checkMoveDraft, cleanCategoryName, DEFAULT_STORAGE_ID, inSpace, purchaseAmount, runOutSoon, stockRows, stockValue } from '../../utils/stock';
 import { StockCategoriesDialog } from './StockCategoriesDialog';
+import { productNavId, STORAGE_FLASH_MS } from '../../utils/storageNav';
 import type { Product, StockMoveType } from '../../types';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
@@ -193,7 +194,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
               const p = r.product;
               const hist = moves.filter(m => m.product_id === p.id).slice(0, 8);
               return (
-                <li key={p.id} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
+                <li key={p.id} data-nav={productNavId(p.id)} data-nav-flash={STORAGE_FLASH_MS} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <span aria-hidden="true" className={`w-3 h-3 rounded-full flex-shrink-0 ${r.low ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                     {p.photo_url && <button type="button" onClick={() => setZoom({ url: p.photo_url || '', name: p.name })} aria-label={t(`Agrandir la photo de ${p.name}`, `Enlarge photo of ${p.name}`)} className="flex-shrink-0"><img src={p.photo_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-slate-700" /></button>}

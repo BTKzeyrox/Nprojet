@@ -17,6 +17,7 @@ export interface Notif {
   filter?: ValFilter; // filtre de la page Validations à activer au clic
   nav?: string; // élément exact à atteindre (data-nav) : défilement + clignotement
   thread?: string; // messagerie : discussion à ouvrir ('all' = groupe)
+  storage?: import('./storageNav').StorageIntent; // Stockage : le bon stockage, le bon filtre, le produit à faire clignoter
 }
 
 // Cloche de l'admin : alertes URGENTES de la Santé du site + résumé du jour (règles pures dans healthNotif.ts). Réglable sur l'appareil (par défaut : oui).

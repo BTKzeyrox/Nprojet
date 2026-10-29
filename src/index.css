@@ -321,6 +321,20 @@ html.theme-light .df-popover {
   position: relative;
   z-index: 2;
 }
+/* Clignotement court (1,5 s) : le Stockage (data-nav-flash="1500") */
+@keyframes navflashshort {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(34, 211, 238, 0); }
+  15%, 70% { box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95), inset 0 0 26px rgba(34, 211, 238, 0.55); }
+}
+.nav-flash-short {
+  animation: navflashshort 1.5s ease-in-out 1;
+  position: relative;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* « Réduire les animations » : pas de mouvement, un contour fixe pendant la même durée (1,5 s) */
+  .nav-flash-short { animation: none; box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95); }
+}
 
 /* Barre du haut : couleur UNIE (pas de verre, pas de dégradé, pas de reflet, pas de flou) */
 header.df-topbar {

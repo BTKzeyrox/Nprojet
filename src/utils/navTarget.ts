@@ -22,10 +22,12 @@ export const flashNav = (nav: string) => {
     const el = Array.from(document.querySelectorAll<HTMLElement>('[data-nav]')).find(e => e.getAttribute('data-nav') === nav);
     if (el) {
       el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      el.classList.remove('nav-flash');
+      const ms = Number(el.getAttribute('data-nav-flash')) || 0; // l'élément peut demander un clignotement court (en millisecondes)
+      const cls = ms > 0 ? 'nav-flash-short' : 'nav-flash';
+      el.classList.remove('nav-flash', 'nav-flash-short');
       void el.offsetWidth; // relance l'animation si on clique deux fois
-      el.classList.add('nav-flash');
-      setTimeout(() => { el.classList.remove('nav-flash'); if (target === nav) target = null; }, 3000);
+      el.classList.add(cls);
+      setTimeout(() => { el.classList.remove(cls); if (target === nav) target = null; }, ms > 0 ? ms : 3000);
       return;
     }
     if (++tries < 40) setTimeout(step, 100);

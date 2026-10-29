@@ -12,6 +12,7 @@ export interface HealthContext {
   now: number; // millisecondes (pour les « depuis N heures »)
   users: User[]; posts: PostSession[]; contracts: ClientContract[]; clients: Client[];
   cash: CashEntry[]; products: Product[]; moves: StockMove[]; advances: SalaryAdvanceRequest[];
+  spaces?: { id: string; name: string }[]; // les stockages : les règles du stock regardent chacun séparément (jamais mélangés)
   settings: Partial<AppSettings>;
   leaves?: Leave[]; // congés (M5.2) : un congé accepté n'est ni une absence ni une inactivité
   thresholds: HealthThresholds;

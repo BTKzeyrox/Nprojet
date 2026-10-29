@@ -182,6 +182,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Tableau de bord : chiffres clés, alertes, rupture proche ; toucher Épuisés ou Stock bas ouvre la liste. 2. Produits : nouveau produit = nom + quantité de départ ; chercher, filtrer, −1 / +1 ou Entrée / Sortie. 3. Catégories : liste par défaut modifiable (bouton Catégories). Mouvements : historique filtré. Analyses : graphiques par période.
 - **Règles** :
   - Stockage est réservé à l'admin : le serveur refuse tout autre accès.
+  - Une alerte de stock (accueil, cloche, Santé du site) ouvre le bon stockage et le bon produit, qui clignote 1,5 s.
   - Les stockages ne se mélangent jamais : chaque produit est dans un seul. « Gérer » crée, renomme, supprime (stockage vide seulement).
   - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
   - Import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
@@ -645,6 +646,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `stats.ts` | Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques. |
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
+| `storageNav.ts` | « Va exactement au bon endroit du Stockage » : une alerte ou une notification dit QUEL stockage, QUEL filtre et QUEL produit. |
 | `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamGoals.ts` | Objectifs par salarié et par équipe (module 15, M15.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:team-goals`. |
@@ -796,6 +798,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-acks-shared` | Contrôle des marques « Ignorer / Vérifié » PARTAGÉES (M11.7 / « Accord Ignorer »). Sans réseau. Lancer : npm run check:health-acks-shared |
 | `npm run check:stock-categories` | Contrôle de la liste des catégories du Stockage (site = serveur). Sans réseau. Lancer : npm run check:stock-categories |
 | `npm run check:stock-spaces` | Contrôle des stockages (Stockage 1, 2…) : site = serveur. Sans réseau. Lancer : npm run check:stock-spaces |
+| `npm run check:stock-links` | Contrôle des liens exacts du Stockage (alertes, Santé du site, cloche) et du clignotement de 1,5 s. Sans réseau, sans écran. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |
