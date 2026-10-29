@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import * as S from '../src/utils/sheets';
 import * as X from '../src/utils/sheetXlsx';
 import { workbookBuffer, type XSheet } from '../src/utils/xlsxA4';
+import { sheetHtml } from '../src/utils/sheetExport';
 
 let fails = 0, n = 0;
 const eq = (got: unknown, want: unknown, name: string) => { n++; const good = JSON.stringify(got) === JSON.stringify(want); if (!good) { fails++; console.log(`ECHEC ${name}\n   obtenu  ${JSON.stringify(got)}\n   attendu ${JSON.stringify(want)}`); } else console.log(`OK    ${name}`); };
@@ -66,6 +67,13 @@ for (const [label, sheet, rowsExpected] of [['fichier', xs, 4], ['modèle', mode
     ok(ws.pageSetup.paperSize === 9, 'fichier : toujours A4');
     eq(ws.getCell('D2').alignment?.horizontal, 'right', 'fichier : les montants sont alignés à droite');
   }
+}
+// ---- Word et PDF : mêmes valeurs que le tableau (date jj/mm/aaaa, milliers), pas la forme technique
+{
+  const html = sheetHtml(sh, TODAY, 'fr', 'Rina', { print: true });
+  ok(html.includes('20/10/2026') && !html.includes('2026-10-20'), 'Word et PDF : la date est en jj/mm/aaaa');
+  ok(html.includes('1 500 000') || html.includes('1\u00a0500\u00a0000') || html.includes('1 500 000'), 'Word et PDF : le montant a ses séparateurs de milliers');
+  ok(html.includes('REF001') && html.includes('034 12 345 67'), 'Word et PDF : code et téléphone');
 }
 // ---- les autres exports de l'appli ne changent pas (pas de filtre, pas de format)
 const plain = await workbookBuffer([{ name: 'Autre', rows: [['A', 'B'], [1, 'x'], [2, 'y']] }]);

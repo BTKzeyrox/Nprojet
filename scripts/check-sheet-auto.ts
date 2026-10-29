@@ -241,5 +241,22 @@ eq(S.activeRows(f).map(r => r.cells[fc]), [undefined, undefined, undefined], 'co
   h = S.undo(h);
   eq(S.activeRows(h.present).map(r => r.cells[fc]), [undefined, undefined, undefined], 'annuler : le remplissage automatique s\'annule d\'un geste');
 }
+// ---- gros tableau (5 000 lignes) : la saisie automatique reste rapide
+{
+  let big = S.emptySheet('Gros', NOW);
+  big = S.addColumn(big, 'Réf', 'code', NOW)!; big = S.addColumn(big, 'Client', 'text', NOW)!;
+  const [bR, bC] = big.columns.map(c => c.id);
+  big = { ...big, rows: Array.from({ length: S.LIMITS.rows - 1 }, (_, i) => ({ id: 'r' + i, cells: { [bR]: 'REF' + String(i + 1).padStart(4, '0'), [bC]: `Client ${i % 300}` } })) };
+  let t0 = Date.now(); const dflt = A.defaultRowCells(big, TODAY); const dt1 = Date.now() - t0;
+  eq(dflt[bR], 'REF5000', 'gros tableau : 4 999 lignes → le code suivant est REF5000');
+  ok(dt1 < 300, `gros tableau : ligne par défaut en moins de 300 ms (${dt1} ms)`);
+  t0 = Date.now(); const sg = A.columnSuggestions(big, bC); const dt2 = Date.now() - t0;
+  ok(sg.length === 30 && dt2 < 400, `gros tableau : suggestions en moins de 400 ms (${dt2} ms)`);
+  t0 = Date.now(); const sg2 = A.suggest(big, bC, 'client 29'); const dt3 = Date.now() - t0;
+  ok(sg2.length > 0 && dt3 < 400, `gros tableau : suggestion pendant la frappe en moins de 400 ms (${dt3} ms)`);
+  const blank = { ...big, rows: big.rows.map(r => ({ ...r, cells: { [bC]: r.cells[bC] } })) };
+  t0 = Date.now(); const filled = A.fillCodes(blank, bR, NOW); const dt4 = Date.now() - t0;
+  ok(!!filled && S.activeRows(filled)[4998].cells[bR] === 'REF4999' && dt4 < 1500, `gros tableau : 4 999 codes remplis d'un coup en moins de 1,5 s (${dt4} ms)`);
+}
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

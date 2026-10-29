@@ -621,10 +621,10 @@ function cleanLeave(rec: any, existing: any, actor: { id: string; name: string; 
 // ===== BEGIN SHEETS (« Mes tableaux » : l'opérateur écrit et lit SES tableaux, l'admin lit tous ; ce bloc est contrôlé par scripts/check-sheets-shared.ts, copie de src/utils/sheets.ts) =====
 const SHEET_MAX_CHARS = 1_500_000;
 const SHEETS_MAX_RECORDS = 60;
-const SHEET_LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, rules: 20, options: 50 };
+const SHEET_LIMITS = { missionSheets: 400, sheetsPerPerson: 20, columns: 200, rows: 5000, cellLen: 500, title: 80, colName: 60, prefix: 12, digits: 8, rules: 20, options: 50 };
 const SHEET_COLORS = ["red", "green", "amber", "blue"];
 const SHEET_OPS = [">", "<", "=", "<>", "contains", "empty"];
-const SHEET_TYPES = ["text", "number", "date", "list", "check"];
+const SHEET_TYPES = ["text", "number", "date", "list", "check", "code", "phone", "money", "time"];
 const sheetClip = (v: unknown, n: number): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "").slice(0, n);
 const sheetChars = (s: unknown): number => { try { return JSON.stringify(s).length; } catch { return Infinity; } };
 function cleanSheet(raw: unknown, now: string): any | null {
@@ -644,6 +644,8 @@ function cleanSheet(raw: unknown, now: string): any | null {
     if (type === "list") col.options = (Array.isArray(x.options) ? x.options : []).map((o: unknown) => sheetClip(o, 60)).filter(Boolean).slice(0, SHEET_LIMITS.options);
     if (x.required === true) col.required = true;
     if (x.unique === true) col.unique = true;
+    if (type === "code") { const pf = sheetClip(x.prefix, SHEET_LIMITS.prefix).trim(); if (pf) col.prefix = pf; const dg = Number(x.digits); if (Number.isInteger(dg) && dg >= 1 && dg <= SHEET_LIMITS.digits) col.digits = dg; }
+    if (x.repeat === true) col.repeat = true;
     if (typeof x.deleted_at === "string") col.deleted_at = x.deleted_at.slice(0, 40);
     columns.push(col);
   }

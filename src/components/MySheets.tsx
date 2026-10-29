@@ -102,6 +102,7 @@ export const MySheets: React.FC = () => {
     showToast(t('Lignes ajoutées à ton tableau.', 'Rows added to your table.'), 'success');
   };
   const comp = useMemo(() => (cur ? S.computeSheet(cur, today) : null), [cur, today]);
+  const textSuggestions = useMemo(() => (cur ? S.activeColumns(cur).filter(c => c.type === 'text').map(c => ({ id: c.id, values: A.columnSuggestions(cur, c.id) })) : []), [cur]); // une fois par version du tableau, pas à chaque frappe
   const shownRows = useMemo(() => (cur && comp ? S.viewRows(cur, comp, view) : []), [cur, comp, view]);
   const totals = useMemo(() => (comp ? S.columnTotals(comp, shownRows) : []), [comp, shownRows]);
   const problems = useMemo(() => (cur ? S.sheetProblems(cur).length : 0), [cur]);
@@ -271,7 +272,7 @@ export const MySheets: React.FC = () => {
       )}
 
       {formMode ? <SheetForm sheet={cur} comp={comp} ro={ro} lang={lang === 'en' ? 'en' : 'fr'} today={today} apply={apply} t={t} now={nowIso} /> : <>
-      {cols.filter(c => c.type === 'text').map(c => <datalist key={c.id} id={`dl-${cur.id}-${c.id}`}>{A.columnSuggestions(cur, c.id).map(v => <option key={v} value={v} />)}</datalist>)}
+      {textSuggestions.map(c => <datalist key={c.id} id={`dl-${cur.id}-${c.id}`}>{c.values.map(v => <option key={v} value={v} />)}</datalist>)}
       {cols.length === 0 ? <p className="text-sm text-slate-400">{t('Ajoute une colonne pour commencer.', 'Add a column to start.')}</p> : (
         <div className="overflow-auto max-h-[65vh] border border-slate-700 rounded-lg">
           <table className="border-collapse text-sm min-w-full">

@@ -13,7 +13,7 @@ const srv = new Function(`${transformSync(m![1], { loader: 'ts' }).code}\nreturn
 const NOW = '2026-10-24T10:00:00.000Z';
 
 ok(srv.SHEET_MAX_CHARS === S.SHEET_MAX_CHARS && srv.SHEETS_MAX_RECORDS === S.SHEETS_MAX_RECORDS, 'mêmes limites de taille');
-ok(['sheetsPerPerson', 'columns', 'rows', 'cellLen', 'title', 'colName', 'rules', 'options'].every(k => srv.SHEET_LIMITS[k] === (S.LIMITS as any)[k]), 'mêmes limites de contenu');
+ok(['sheetsPerPerson', 'columns', 'rows', 'cellLen', 'title', 'colName', 'prefix', 'digits', 'rules', 'options'].every(k => srv.SHEET_LIMITS[k] === (S.LIMITS as any)[k]), 'mêmes limites de contenu');
 
 const good = S.demoSheets(NOW)[0];
 const withOwner = { ...good, owner_id: 'u1', owner_name: 'Ana' };
@@ -22,13 +22,26 @@ const cases: [string, unknown][] = [
   ['tableau valide', good], ['avec propriétaire', withOwner], ['sale', dirty], ['rien', null], ['texte', 'x'], ['sans id', { ...good, id: '' }], ['id trop long', { ...good, id: 'a'.repeat(100) }],
   ['doublons de colonnes', { id: 's', columns: [{ id: 'a', name: 'A' }, { id: 'a', name: 'B' }], rows: [{ id: 'r', cells: {} }, { id: 'r', cells: {} }] }],
   ['règles piégées', { ...good, rules: [{ col: 'nope', op: '>', color: 'red' }, { id: 'r1', col: good.columns[0].id, op: '>', value: '1', color: 'pink' }, { col: good.columns[0].id, op: 'contains', value: 'x', color: 'blue' }] }],
+  ['nouveaux types (M19)', { id: 's', columns: [{ id: 'a', name: 'R', type: 'code', prefix: '  DOS  ', digits: 4, repeat: true }, { id: 'b', name: 'M', type: 'money' }, { id: 'c', name: 'T', type: 'phone', repeat: true }, { id: 'd', name: 'H', type: 'time' }, { id: 'e', name: 'X', type: 'text', prefix: 'ZZ', digits: 3, repeat: true }, { id: 'f', name: 'Y', type: 'code', prefix: 'P'.repeat(40), digits: 99 }, { id: 'g', name: 'Z', type: 'code', digits: '3' }, { id: 'h', name: 'W', type: 'code', digits: 2.5 }, { id: 'i', name: 'V', type: 'code', digits: 0, prefix: 5 }, { id: 'j', name: 'U', type: 'text', repeat: 'oui' }], rows: [] }],
+  ['type inconnu', { id: 's', columns: [{ id: 'a', name: 'A', type: 'datetime' }, { id: 'b', name: 'B', type: 'CODE' }], rows: [] }],
   ['liste sans choix', { id: 's', columns: [{ id: 'a', name: 'L', type: 'list', options: ['A', '', 5, 'B'] }], rows: [] }],
   ['énorme', { id: 's', columns: Array.from({ length: 300 }, (_, i) => ({ id: 'c' + i, name: 'x'.repeat(100) })), rows: Array.from({ length: 6000 }, (_, i) => ({ id: 'r' + i, cells: { c0: 'y'.repeat(900) } })) }],
   ['corbeille', { ...good, deleted_at: NOW, rows: good.rows.map((r, i) => (i ? r : { ...r, deleted_at: NOW })) }],
   ['proto', JSON.parse('{"id":"s","__proto__":{"evil":1},"columns":[{"id":"a","__proto__":{"x":1}}]}')],
 ];
 for (const [name, v] of cases) ok(J(S.cleanSheet(v, NOW)) === J(srv.cleanSheet(v, NOW)), `site = serveur : ${name}`);
-const cleaned = S.cleanSheet(cases[10][1], NOW)!; ok(cleaned.rows.length === 5000 && cleaned.columns.length === 200, 'énorme : coupé à 5 000 lignes et 200 colonnes');
+{
+  const nt = srv.cleanSheet(cases.find(c => c[0] === 'nouveaux types (M19)')![1], NOW);
+  const byId = Object.fromEntries(nt.columns.map((c: any) => [c.id, c]));
+  ok(['code', 'money', 'phone', 'time'].every((t, i) => byId[['a', 'b', 'c', 'd'][i]].type === t), 'serveur : les 4 nouveaux types sont GARDÉS (code, montant, téléphone, heure)');
+  ok(byId.a.prefix === 'DOS' && byId.a.digits === 4 && byId.a.repeat === true, 'serveur : préfixe, chiffres et « reprendre la ligne du dessus » gardés');
+  ok(byId.e.prefix === undefined && byId.e.digits === undefined && byId.e.repeat === true, 'serveur : préfixe et chiffres ignorés hors colonne code, « reprendre » gardé');
+  ok(byId.f.prefix.length === 12 && byId.f.digits === undefined && byId.g.digits === 3 && byId.h.digits === undefined && byId.i.prefix === '5' && byId.i.digits === undefined, 'serveur : préfixe coupé à 12, chiffres hors limites ignorés');
+  ok(byId.j.repeat === undefined, 'serveur : « reprendre » doit être vrai, pas un texte');
+  const ut = srv.cleanSheet(cases.find(c => c[0] === 'type inconnu')![1], NOW);
+  ok(ut.columns[0].type === 'text' && ut.columns[1].type === 'text', 'serveur : un type inconnu devient texte');
+}
+const cleaned = S.cleanSheet(cases.find(c => c[0] === 'énorme')![1], NOW)!; ok(cleaned.rows.length === 5000 && cleaned.columns.length === 200, 'énorme : coupé à 5 000 lignes et 200 colonnes');
 
 // règle d'écriture (serveur)
 const me = { id: 'u1', name: 'Ana', role: 'employee' };

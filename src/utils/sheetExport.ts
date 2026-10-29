@@ -1,6 +1,7 @@
 // « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre).
 // La partie qui fabrique le texte est pure (testée) ; seuls `download*` et `printSheet` touchent le navigateur.
-import { exportMatrix, type Sheet } from './sheets';
+import { activeColumns, exportMatrix, type Sheet } from './sheets';
+import { isoToDisplay, numberToDisplay } from './sheetAuto';
 import { isErr, showVal, type Val } from './sheetFormula';
 import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 import { downloadWorkbook } from './xlsxA4';
@@ -16,7 +17,10 @@ export function sheetHtml(s: Sheet, today: string, lang: 'fr' | 'en', author: st
   const m = exportMatrix(s, today, lang);
   const date = fr ? today.split('-').reverse().join('/') : today;
   const head = `<tr>${m.header.map(h => `<th>${esc(h)}</th>`).join('')}</tr>`;
-  const body = m.rows.map(r => `<tr>${r.map(v => `<td${typeof v === 'number' ? ' class="n"' : ''}>${esc(cellText(v, lang))}</td>`).join('')}</tr>`).join('');
+  // M19 : le Word et le PDF montrent les valeurs comme le tableau (date jj/mm/aaaa, montants avec milliers), pas leur forme technique
+  const cols = activeColumns(s);
+  const shown = (v: Parameters<typeof cellText>[0], ci: number): string => { const c = cols[ci]; if (typeof v === 'string' && c?.type === 'date') return isoToDisplay(v); if (typeof v === 'number' && c?.type === 'money') return numberToDisplay(String(v), lang); return cellText(v, lang); };
+  const body = m.rows.map(r => `<tr>${r.map((v, ci) => `<td${typeof v === 'number' ? ' class="n"' : ''}>${esc(shown(v, ci))}</td>`).join('')}</tr>`).join('');
   const word = opts.word ? ' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"' : '';
   return `<!doctype html><html lang="${fr ? 'fr' : 'en'}"${word}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(s.title)}</title><style>${PRINT_FONT_FACE}body{font-family:${PRINT_FONT};font-size:${PRINT_PT}pt;margin:20px;color:#111}h1{font-size:20px;margin:0 0 4px}p.s{color:#555;margin:0 0 14px;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px 7px;font-size:${PRINT_PT}pt;text-align:left}tr{break-inside:avoid}thead{display:table-header-group}th{background:#e8edf3}td.n{text-align:right}button{margin-top:14px;padding:10px 16px;font-size:15px}@media print{button{display:none}body{margin:0}}@page{size:A4 ${m.header.length > 7 ? 'landscape' : 'portrait'};margin:${PRINT_MARGIN_MM}mm}</style></head><body><h1>${esc(s.title)}</h1><p class="s">${esc(author)} · ${esc(date)} · Gestion Pro · ${m.rows.length} ${esc(t('ligne(s)', 'row(s)'))}</p><table>${head}${body}</table>${opts.print ? `<button onclick="window.print()">${esc(t('Imprimer / enregistrer en PDF', 'Print / save as PDF'))}</button>` : ''}</body></html>`;
 }

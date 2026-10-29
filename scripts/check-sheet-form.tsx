@@ -44,6 +44,16 @@ ok(rowSummary(S.addRow(S.addColumn(S.emptySheet('x', NOW), 'A', 'text', NOW)!, N
 ok(formRows(sh, '').length === 3 && formRows(sh, 'rakoto').length === 2 && formRows(sh, 'RASOA').length === 1 && formRows(sh, 'societe').length === 2 && formRows(sh, 'zzz').length === 0, 'recherche : sans accents ni majuscules');
 ok(formRows(S.deleteRow(sh, S.activeRows(sh)[0].id, NOW)!, '').length === 2, 'recherche : les fiches à la corbeille ne sont pas listées');
 
+// ---- un gros tableau : la liste est limitée à 200 cartes
+{
+  let big = S.addColumn(S.emptySheet('Gros', NOW), 'Client', 'text', NOW)!;
+  big = { ...big, rows: Array.from({ length: 1200 }, (_, i) => ({ id: 'r' + i, cells: { [big.columns[0].id]: `Client ${i}` } })) };
+  const hb = render('fr', <SheetForm sheet={big} comp={S.computeSheet(big, TODAY)} ro={false} lang="fr" today={TODAY} apply={apply} t={(fr) => fr} now={() => NOW} />);
+  ok(count(hb, 'data-testid="form-card"') === 200, 'gros tableau (1 200 lignes) : 200 cartes au plus dans la liste');
+  ok(hb.includes('data-testid="form-more"') && hb.includes('1000 autre(s) fiche(s)'), 'gros tableau : « 1000 autres fiches : utilise la recherche »');
+  ok(hb.includes('Fiche 1 / 1200'), 'gros tableau : la position reste « Fiche 1 / 1200 »');
+  const t0 = Date.now(); for (let i = 0; i < 5; i++) hb.length; ok(Date.now() - t0 < 500, 'gros tableau : rendu rapide');
+}
 for (const lang of ['fr', 'en'] as const) {
   const L = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const h = form(lang);

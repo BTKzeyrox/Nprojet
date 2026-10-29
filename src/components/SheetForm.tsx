@@ -29,6 +29,9 @@ export function formRows(sheet: S.Sheet, search: string): S.Row[] {
   return rows.filter(r => Object.values(r.cells).some(v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)));
 }
 
+/** Cartes affichées dans la liste (un tableau peut avoir 5 000 lignes) : les autres se trouvent avec la recherche ou Précédent/Suivant. */
+export const FORM_LIST_MAX = 200;
+
 export const SheetForm: React.FC<{
   sheet: S.Sheet; comp: S.Computed; ro: boolean; lang: A.Lang; today: string;
   apply: (fn: (s: S.Sheet) => S.Sheet | null, warn?: string) => S.Sheet | null;
@@ -39,10 +42,13 @@ export const SheetForm: React.FC<{
   const box = useRef<HTMLDivElement>(null);
   const list = useMemo(() => formRows(sheet, search), [sheet, search]);
   const cols = comp.cols;
+  const sug = useMemo(() => Object.fromEntries(comp.cols.filter(c => c.type === 'text').map(c => [c.id, A.columnSuggestions(sheet, c.id)])) as Record<string, string[]>, [sheet, comp.cols]); // calculé une fois par version du tableau, pas à chaque frappe
   const cur = list.find(r => r.id === rowId) || list[0] || null;
   const pos = cur ? list.findIndex(r => r.id === cur.id) : -1;
   useEffect(() => { if (cur && cur.id !== rowId) setRowId(cur.id); }, [cur, rowId]);
   const gridIndex = cur ? comp.rows.findIndex(r => r.id === cur.id) : -1;
+  // la liste montre au plus 200 cartes, centrées sur la fiche ouverte (le tableau peut avoir 5 000 lignes)
+  const shownCards = useMemo(() => { if (list.length <= FORM_LIST_MAX) return list; const start = Math.max(0, Math.min(list.length - FORM_LIST_MAX, (pos < 0 ? 0 : pos) - Math.floor(FORM_LIST_MAX / 2))); return list.slice(start, start + FORM_LIST_MAX); }, [list, pos]);
   const go = (d: -1 | 1) => { const n = list[pos + d]; if (n) setRowId(n.id); };
 
   const add = () => { const nx = apply(s => A.addRowAuto(s, now(), today), t('5 000 lignes au maximum.', '5,000 rows maximum.')); if (nx) { const act = S.activeRows(nx); setSearch(''); setRowId(act[act.length - 1]?.id || null); } };
@@ -82,7 +88,7 @@ export const SheetForm: React.FC<{
 
   return (
     <div className="space-y-3" data-testid="sheet-form">
-      {cols.filter(c => c.type === 'text').map(c => <datalist key={c.id} id={`dlf-${sheet.id}-${c.id}`}>{A.columnSuggestions(sheet, c.id).map(v => <option key={v} value={v} />)}</datalist>)}
+      {cols.filter(c => c.type === 'text').map(c => <datalist key={c.id} id={`dlf-${sheet.id}-${c.id}`}>{(sug[c.id] || []).map(v => <option key={v} value={v} />)}</datalist>)}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[140px]"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" /><input type="search" aria-label={t('Chercher une fiche', 'Search a record')} className="w-full pl-8 pr-2 py-2.5 rounded-lg bg-slate-800/60 border border-slate-600 text-sm text-slate-100 outline-none" placeholder={t('Chercher une fiche', 'Search a record')} value={search} onChange={e => setSearch(e.target.value)} /></div>
         {!ro && <button className={btn} onClick={add}><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>}
@@ -92,12 +98,13 @@ export const SheetForm: React.FC<{
         : !cur ? <p className="text-sm text-slate-400">{search ? t('Aucune fiche ne correspond.', 'No record matches.') : t('Aucune fiche pour le moment.', 'No record yet.')}{!ro && !search ? ` ${t('Appuie sur « Ajouter ».', 'Press “Add”.')}` : ''}</p> : (
           <div className="grid gap-3 md:grid-cols-[minmax(0,260px)_1fr]">
             <ul className="order-2 md:order-1 space-y-1.5 max-h-[50vh] md:max-h-[65vh] overflow-auto" aria-label={t('Liste des fiches', 'Records list')}>
-              {list.map(r => (
+              {shownCards.map(r => (
                 <li key={r.id}><button type="button" onClick={() => setRowId(r.id)} className={`w-full text-left rounded-lg border px-3 py-2 cursor-pointer ${r.id === cur.id ? 'border-sky-500 bg-sky-500/10' : 'border-slate-700 hover:bg-slate-700/40'}`} data-testid="form-card">
                   <span className="block text-[11px] text-slate-400">{t('Fiche', 'Record')} {comp.rows.findIndex(x => x.id === r.id) + 1}</span>
                   <span className="block text-sm text-slate-100 truncate">{rowSummary(sheet, r, lang) || t('(vide)', '(empty)')}</span>
                 </button></li>
               ))}
+              {list.length > shownCards.length && <li className="text-[11px] text-slate-400 px-1" data-testid="form-more">{t(`${list.length - shownCards.length} autre(s) fiche(s) : utilise la recherche ou Précédent / Suivant.`, `${list.length - shownCards.length} more record(s): use search or Previous / Next.`)}</li>}
             </ul>
             <div className="order-1 md:order-2 border border-slate-700 rounded-xl p-3 sm:p-4 space-y-3" ref={box} onKeyDown={onKey}>
               <div className="flex items-center gap-2 flex-wrap">

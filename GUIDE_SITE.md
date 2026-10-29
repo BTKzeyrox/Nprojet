@@ -165,14 +165,19 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Mes tableaux  `sheets`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Entrer et suivre tes données comme dans Excel, puis les télécharger en Excel, Word ou PDF.
-- **Comment l'utiliser** : 1. Choisir un modèle (vide, saisie de fiches, suivi de tâches) puis ajouter lignes et colonnes. 2. Écrire une formule avec « = », par exemple =SOMME(B1:B10). 3. Cliquer sur Télécharger pour Excel, Word ou PDF.
+- **Comment l'utiliser** : 1. Choisir un modèle, puis un type par colonne (date, montant, téléphone, code…) : la saisie se met en forme toute seule. 2. Passer de la Grille au Formulaire (une fiche par ligne), ou travailler sur un Excel externe puis « Remettre mon fichier ». 3. Écrire une formule avec « = » (=SOMME(B1:B10)), puis Télécharger en Excel, Word ou PDF.
 - **Règles** :
+  - Date : tape seulement des chiffres (28102026), les « / » arrivent seuls ; « t » donne la date du jour.
+  - Code : REF001 est suivi de REF002. Une nouvelle ligne arrive déjà avec le code suivant, la date du jour et les colonnes « reprendre la ligne du dessus ».
+  - Remettre un fichier Excel AJOUTE des lignes sans rien effacer ; les valeurs à corriger sont gardées et soulignées en rouge.
+  - Le fichier Excel téléchargé a de vrais types (dates, nombres), un en-tête figé, des filtres et des listes déroulantes.
   - Ce que tu supprimes va à la corbeille 30 jours : tu peux le restaurer.
   - Limites : 20 tableaux, 200 colonnes, 5 000 lignes.
   - Une formule en erreur montre #DIV/0!, #REF! ou #NAME? sans rien casser.
   - Le responsable lit les tableaux de l'équipe sans pouvoir les modifier.
   - Importer un fichier Excel ou CSV crée un nouveau tableau (aperçu avant création) : colonnes nombre et date devinées, 5 000 lignes au plus.
 - **Chiffres et formules** :
+  - Types de colonne : Texte, Nombre, Montant (milliers automatiques), Date (jj/mm/aaaa), Heure (hh:mm), Téléphone, Code (REF001, REF002…), Liste, Case à cocher.
   - Formules : SOMME, MOYENNE, MIN, MAX, NB, SI, ET, OU, ARRONDI, RECHERCHEV, SOMME.SI, NB.SI, AUJOURDHUI, JOURS, CONCAT, GAUCHE, DROITE et autres, en français ou en anglais.
 - **Dans le code** : `src/components/MySheets.tsx`
 
