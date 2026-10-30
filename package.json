@@ -153,7 +153,7 @@
     "check:work-days": "tsx scripts/check-work-days.ts",
     "check:access-request": "tsx scripts/check-access-request.ts",
     "check:shift-mode": "tsx scripts/check-shift-mode.ts",
-    "check:mission-quota": "tsx scripts/check-mission-quota.ts",
+    "check:month-level": "tsx scripts/check-month-level.ts",
     "check:notif-read": "esbuild scripts/check-notif-read.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-notif-read.mjs && node node_modules/.cache/check-notif-read.mjs",
     "check:no-demo": "tsx scripts/check-no-demo.ts",
     "check:print-format": "npx --yes tsx scripts/check-print-format.ts",

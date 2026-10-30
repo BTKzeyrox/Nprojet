@@ -1,0 +1,38 @@
+// Niveaux de performance : missions validées du mois, noms et seuils réglables, historique, branchement des écrans. Jamais de blocage, aucune règle serveur.
+import { readFileSync } from 'node:fs';
+import { cleanLevels, levelInfo, levelLine, monthCount, lastMonths, monthLabel, levelNow, LEVEL_DEFAULTS, BADGE_BY_INDEX } from '../src/utils/monthLevel';
+import { filterOperators, OP_FILTERS_DEFAULT } from '../src/utils/operatorList';
+let fails = 0, n = 0;
+const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+const eq = (a: unknown, b: unknown, m: string) => ok(JSON.stringify(a) === JSON.stringify(b), `${m} (${JSON.stringify(a)})`);
+const D = LEVEL_DEFAULTS;
+eq(cleanLevels(undefined), D, 'défauts : À suivre / Standard dès 40 / Excellent dès 60 / Top opérateur dès 80, très faible sous 20');
+eq(cleanLevels({ names: ['Faible', 'Normal', 'Élevé', 'Top'], mins: [30, 50, 70], very_low: 10 }), { names: ['Faible', 'Normal', 'Élevé', 'Top'], mins: [30, 50, 70], very_low: 10 }, 'noms et seuils réglés pris en compte');
+eq(cleanLevels({ mins: [60, 40, 80] }).mins, [40, 60, 80], 'seuils qui ne montent pas : valeurs de départ');
+eq(cleanLevels({ names: ['', 'x'.repeat(30), 'Ok', 5] }).names, ['À suivre', 'Standard', 'Ok', 'Top opérateur'], 'nom vide, trop long ou faux : nom de départ');
+eq(cleanLevels({ mins: [30, 50, 70], very_low: 31 }).very_low, 20, '« très faible » au-dessus du premier seuil : valeur de départ');
+const idx = (c: number) => levelInfo(c, D).index;
+eq([0, 39, 40, 59, 60, 79, 80, 200].map(idx), [0, 0, 1, 1, 2, 2, 3, 3], 'niveaux : 0-39, 40-59, 60-79, 80 et plus');
+const i27 = levelInfo(27, D);
+ok(i27.name === 'À suivre' && i27.next?.missing === 13 && i27.next?.name === 'Standard' && levelLine(i27) === '27 missions ce mois · encore 13 pour Standard', 'progression : « 27 missions ce mois · encore 13 pour Standard »');
+ok(levelInfo(85, D).next === null && /niveau le plus haut/.test(levelLine(levelInfo(85, D))), 'au sommet : plus rien à atteindre');
+ok(levelInfo(19, D).veryLow && !levelInfo(20, D).veryLow, 'très faible : sous 20');
+const P = (id: string, emp: string, date: string, status = 'completed') => ({ id, employee_id: emp, date, status }) as any;
+const posts = [P('1', 'a', '2026-10-02'), P('2', 'a', '2026-10-31'), P('3', 'a', '2026-10-05', 'rejected'), P('4', 'a', '2026-10-06', 'active'), P('5', 'a', '2026-09-30'), P('6', 'b', '2026-10-02')];
+ok(monthCount(posts, 'a', '2026-10') === 2 && monthCount(posts, 'a', '2026-09') === 1, 'compte : seulement les missions validées, du 1er au dernier jour du mois');
+ok(levelNow(posts, 'a', { perf_levels: { names: ['A', 'B', 'C', 'D'], mins: [2, 3, 4], very_low: 1 } }, '2026-10-30').name === 'B', 'niveau du mois en cours avec les réglages');
+eq(lastMonths('2026-02', 4), ['2026-02', '2026-01', '2025-12', '2025-11'], 'historique : les mois passés à rebours, à cheval sur l\'année');
+ok(monthLabel('2026-10') === 'oct. 2026', 'libellé de mois');
+const u = (id: string, b: string) => ({ id, name: id, username: id, phone: '', shift: 'day', performance_badge: b }) as any;
+const live = { status: 'offline' } as any;
+const shown = filterOperators([{ user: u('x', 'Standard'), live, level: 'Top Booster' }, { user: u('y', 'Top Booster'), live }], { ...OP_FILTERS_DEFAULT, level: 'Top Booster' });
+ok(shown.length === 2 && BADGE_BY_INDEX[3] === 'Top Booster', 'liste : le filtre de niveau suit le niveau calculé (sinon celui du compte)');
+const srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), emp = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8'), set = readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
+ok(!/perf_levels|missions_per_day/.test(srv), 'aucune règle serveur : le niveau ne bloque jamais une mission');
+ok(/data-perf-levels/.test(set) && /data-level-name/.test(set) && /data-level-min/.test(set) && /data-level-verylow/.test(set), 'Réglages : noms, seuils et « très faible »');
+ok(/data-level-auto/.test(emp) && !/value=\{editBadge\}/.test(emp) && /levelNow\(posts, id, cfg, today\)/.test(emp), 'fiche : plus de niveau choisi à la main, niveau calculé');
+ok(/data-levels-history/.test(readFileSync('src/views/admin/LevelsHistory.tsx', 'utf8')) && /tab === 'levels' \? <LevelsHistory/.test(readFileSync('src/views/admin/PerformancePage.tsx', 'utf8')), 'Performance : onglet Niveaux avec l\'historique de 6 mois');
+ok(/data-level-line/.test(readFileSync('src/components/OperatorSheet.tsx', 'utf8')) && /data-level-line/.test(readFileSync('src/views/employee/EmployeeDashboard.tsx', 'utf8')), 'fiche et tableau de bord : ligne de progression');
+ok(!/missions_per_day|missionQuota/.test(set + readFileSync('src/views/CalendarView.tsx', 'utf8')), 'la règle « 2 à 5 par jour » est retirée');
+console.log(`\n${n - fails}/${n} contrôles réussis`);
+if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

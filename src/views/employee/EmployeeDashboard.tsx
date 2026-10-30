@@ -50,6 +50,8 @@ import { getGuide, stepOfStatus } from '../../utils/missionGuides';
 import { ScoreInput } from '../../components/ScoreInput';
 import { QueueButton } from '../../components/QueueButton';
 import { PendingMark } from '../../components/PendingMark';
+import { todayMada } from '../../utils/stats';
+import { levelNow, levelLine } from '../../utils/monthLevel';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -559,8 +561,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 TERMINAL OPÉRATEUR: {currentUser.name.toUpperCase()}
               </h2>
               <span className="text-[10px] font-mono uppercase bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
-                {currentUser.performance_badge}
+                {levelNow(db.getPosts(), currentUser.id, db.getSettings(), todayMada()).name}
               </span>
+              <span className="text-[10px] font-mono text-slate-400" data-level-line>{levelLine(levelNow(db.getPosts(), currentUser.id, db.getSettings(), todayMada()))}</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mt-0.5">
               <span>Mission Opérateur</span>

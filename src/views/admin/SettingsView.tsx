@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeLangControls } from '../../components/ThemeLangControls';
-import { Settings, Plus, X, Save, CalendarDays, Clock, ListChecks, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
+import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { cleanWorkDays, DAY_ORDER, DAY_NAMES_FR } from '../../utils/workDays';
-import { cleanQuota } from '../../utils/missionQuota';
 import { cleanShiftMode, SHIFT_MODES, MODE_LABELS } from '../../utils/shiftMode';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
@@ -26,6 +25,7 @@ import { NewsPublishSettings } from '../../components/NewsPublishSettings';
 import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
+import { cleanLevels } from '../../utils/monthLevel';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -250,20 +250,38 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       )}
 
       {tab === 'team' && (
-      <section data-mission-quota className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><ListChecks className="w-4 h-4 text-emerald-400" />Missions par jour</h3>
-        <p className="text-[11px] text-slate-400">Objectif par opérateur et par jour. Il s'affiche dans le détail du jour du calendrier (dans l'objectif, sous le minimum, au-dessus du maximum). Il ne bloque jamais une mission.</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Minimum</label>
-            <input type="number" min={0} max={50} value={cleanQuota(s).min} onChange={e => set('missions_per_day_min', Math.max(0, Math.min(50, Math.floor(Number(e.target.value) || 0))))} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Maximum</label>
-            <input type="number" min={1} max={50} value={cleanQuota(s).max} onChange={e => set('missions_per_day_max', Math.max(1, Math.min(50, Math.floor(Number(e.target.value) || 1))))} className={inputCls} />
-          </div>
-        </div>
-        {Number(s.missions_per_day_max ?? 5) < Number(s.missions_per_day_min ?? 2) && <p className="text-[11px] text-amber-400">Le maximum doit être au moins égal au minimum : sinon 2 et 5 sont utilisés.</p>}
+      <section data-perf-levels className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Target className="w-4 h-4 text-emerald-400" />Niveaux de performance</h3>
+        <p className="text-[11px] text-slate-400">Le niveau de chaque opérateur se calcule tout seul sur ses missions validées du mois (du 1er au dernier jour). Change les noms et les nombres ici ; rien n'est bloqué, c'est un repère.</p>
+        {(() => {
+          const raw = (s.perf_levels || {}) as { names?: string[]; mins?: number[]; very_low?: number };
+          const L = cleanLevels(raw);
+          const names = [...L.names], mins = [...L.mins];
+          const put = (n: string[], m: number[], vl: number) => set('perf_levels', { names: n, mins: m, very_low: vl });
+          const ok = cleanLevels({ names, mins, very_low: L.very_low }).mins.join() === mins.join();
+          return (
+            <div className="space-y-2">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="grid grid-cols-[1fr_96px] gap-2 items-end">
+                  <div>
+                    <label className={labelCls}>{`Niveau ${i + 1} : nom`}</label>
+                    <input type="text" maxLength={24} data-level-name={i} value={names[i]} onChange={e => { const n = [...names]; n[i] = e.target.value; put(n, mins, L.very_low); }} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{i === 0 ? 'dès 0' : 'dès (missions)'}</label>
+                    {i === 0 ? <div className="min-h-[44px] flex items-center text-sm text-slate-400 font-mono">0</div>
+                      : <input type="number" min={1} data-level-min={i} value={mins[i - 1]} onChange={e => { const m = [...mins]; m[i - 1] = Math.floor(Number(e.target.value) || 0); put(names, m, L.very_low); }} className={inputCls} />}
+                  </div>
+                </div>
+              ))}
+              <div>
+                <label className={labelCls}>« Très faible » en dessous de (missions)</label>
+                <input type="number" min={0} data-level-verylow value={L.very_low} onChange={e => put(names, mins, Math.max(0, Math.floor(Number(e.target.value) || 0)))} className={inputCls} />
+              </div>
+              {!ok && <p className="text-[11px] text-amber-400">Les nombres doivent monter d'un niveau à l'autre : sinon les valeurs de départ (40, 60, 80) sont utilisées.</p>}
+            </div>
+          );
+        })()}
       </section>
       )}
 

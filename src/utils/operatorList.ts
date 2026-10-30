@@ -9,7 +9,7 @@ export type OpLevel = 'all' | User['performance_badge'];
 export type OpSort = 'name' | 'level' | 'live' | 'score';
 export interface OpFilters { search: string; shift: OpShift; account: OpAccount; live: 'all' | LiveStatus; level: OpLevel; sort: OpSort }
 export const OP_FILTERS_DEFAULT: OpFilters = { search: '', shift: 'all', account: 'all', live: 'all', level: 'all', sort: 'name' };
-export interface OpItem { user: User; live: LiveInfo }
+export interface OpItem { user: User; live: LiveInfo; /** Niveau calculé sur les missions validées du mois (sinon celui enregistré sur le compte). */ level?: User['performance_badge'] }
 
 /** Texte sans accents, en minuscules, sans espaces en trop : « Rakoto  Éric » → « rakoto eric ». */
 export const normalize = (s: unknown): string => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -29,16 +29,16 @@ export function matchesSearch(u: Pick<User, 'name' | 'username' | 'phone' | 'shi
 }
 
 export function filterOperators(items: OpItem[], f: OpFilters): OpItem[] {
-  const out = items.filter(({ user: u, live }) =>
+  const out = items.filter((item) => { const { user: u, live } = item; return (
     matchesSearch(u, f.search)
     && (f.shift === 'all' || (u.shift === 'night' ? 'night' : 'day') === f.shift)
     && (f.account === 'all' || (f.account === 'blocked') === isBlocked(u))
     && (f.live === 'all' || live.status === f.live)
-    && (f.level === 'all' || u.performance_badge === f.level));
+    && (f.level === 'all' || (item.level ?? u.performance_badge) === f.level)); });
   const byName = (a: OpItem, b: OpItem) => a.user.name.localeCompare(b.user.name, 'fr');
   const score = (x: OpItem) => Number(x.user.total_score_boosted) || 0;
   return out.sort((a, b) =>
-    f.sort === 'level' ? (LEVEL_ORDER[a.user.performance_badge] ?? 9) - (LEVEL_ORDER[b.user.performance_badge] ?? 9) || byName(a, b)
+    f.sort === 'level' ? (LEVEL_ORDER[a.level ?? a.user.performance_badge] ?? 9) - (LEVEL_ORDER[b.level ?? b.user.performance_badge] ?? 9) || byName(a, b)
     : f.sort === 'live' ? LIVE_ORDER[a.live.status] - LIVE_ORDER[b.live.status] || byName(a, b)
     : f.sort === 'score' ? score(b) - score(a) || byName(a, b)
     : byName(a, b));

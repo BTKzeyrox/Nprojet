@@ -6,6 +6,8 @@ import { Avatar } from '../../components/Avatar';
 import { badgeLabel, formatScoreM } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, formatDuration } from '../../utils/presence';
 import { showShift } from '../../utils/shiftMode';
+import { levelNow } from '../../utils/monthLevel';
+import { todayMada } from '../../utils/stats';
 
 interface Props {
   userId: string;
@@ -62,7 +64,7 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
             <span className={`px-1.5 py-0.5 border ${u.status === 'blocked' ? 'border-red-500/60 text-red-300' : 'border-emerald-500/50 text-emerald-300'}`}>{u.status === 'blocked' ? 'Bloqué' : 'Actif'}</span>
             <span className={`px-1.5 py-0.5 border ${ps.status === 'offline' ? 'border-slate-600 text-slate-400' : ps.status === 'waiting' ? 'border-amber-500/60 text-amber-300' : 'border-cyan-500/50 text-cyan-300'}`}>{STATUS_LABEL[ps.status]}</span>
             {ps.onlineSec > 0 && <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">Connecté aujourd'hui : {formatDuration(ps.onlineSec)}</span>}
-            <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">{badgeLabel(u.performance_badge)}</span>
+            <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">{levelNow(db.getPosts(), u.id, db.getSettings(), todayMada()).name}</span>
           </div>
         </div>
       </div>

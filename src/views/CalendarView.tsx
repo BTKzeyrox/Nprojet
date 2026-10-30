@@ -36,8 +36,6 @@ import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings, Attend
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { dayDetail, minutesText } from '../utils/dayDetail';
-import { cleanQuota, quotaState, quotaText } from '../utils/missionQuota';
-import { isWorkDay } from '../utils/workDays';
 import { Avatar } from '../components/Avatar';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { useApp } from '../context/AppContext';
@@ -178,12 +176,6 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                   </div>
                   <div className={box}>
                     <div className={h}>Missions du jour</div>
-                    {(() => {
-                      const q = cleanQuota(ctx.cfg), n = d.totals.counted, qs = quotaState(n, q);
-                      if (day > today || r.leave !== null || (n === 0 && !isWorkDay(day, ctx.cfg.work_days))) return null;
-                      const tone = qs === 'ok' ? 'text-emerald-600' : qs === 'over' ? 'text-amber-600' : day === today ? 'text-amber-600' : 'text-red-500';
-                      return <div className={`font-semibold ${tone}`} data-testid="mission-quota" data-quota={qs}>{quotaText(n, q, day === today)}</div>;
-                    })()}
                     {d.missions.length === 0 ? <div className={sub}>Aucune mission.</div> : d.missions.map(m => (
                       <div key={m.id} className={sub}><strong className={txt}>{m.client}</strong> · {m.start}{m.end ? ` → ${m.end}` : ''}{m.minutes !== null ? ` (${minutesText(m.minutes)})` : ''} · score {formatScoreM(m.scoreFrom)} → {formatScoreM(m.scoreTo)} / {formatScoreM(m.target)} · {stateTxt[m.status]}{m.pay > 0 ? ` · ${ar(m.pay)}` : ''}</div>
                     ))}

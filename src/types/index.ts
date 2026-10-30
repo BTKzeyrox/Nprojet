@@ -44,8 +44,7 @@ export interface AppSettings {
   team_lead_limit_ar?: number; // plafond du Chef d'équipe (M15.6) : au-dessus de ce prix client, la décision revient au responsable ; 0 = pas de plafond ; admin seulement
   alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
   work_days?: number[];
-  missions_per_day_min?: number; // objectif de missions par jour, affichage seulement (défaut 2)
-  missions_per_day_max?: number; // (défaut 5)
+  perf_levels?: { names: string[]; mins: number[]; very_low: number }; // niveaux de performance : 4 noms, missions validées par mois pour les niveaux 2 à 4, seuil « très faible »
   shift_mode?: 'both' | 'normal' | 'day' | 'night'; // « normal » : un seul horaire pour tous ; « day » / « night » : une seule vacation ; « both » : jour et nuit (défaut) // jours de travail : 0 = dimanche … 6 = samedi (défaut lundi à samedi)
   day_shift_start: string; // HH:MM
   day_shift_end: string;

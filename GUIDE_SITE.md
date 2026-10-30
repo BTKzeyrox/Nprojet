@@ -281,7 +281,6 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Les présences et les retards, jour par jour : d'abord tous les employés ensemble (mois, résumé, vue du jour), puis le calendrier d'un employé.
 - **Comment l'utiliser** : 1. Choisir le mois et la personne. 2. Cliquer un jour pour voir les sessions. 3. Repérer les retards.
 - **Règles** :
-  - Objectif de missions par jour (2 à 5, réglable dans Réglages) : indiqué dans le détail du jour, il ne bloque rien.
   - Les jours de repos se règlent dans Réglages (par défaut le dimanche).
   - Les heures sont celles de Madagascar (UTC+3).
   - Calendrier global : chaque case montre des chiffres avec leur icône et leur couleur (présents, retards, absents, congés, missions), sans texte. C'est la somme exacte des calendriers individuels.
@@ -407,6 +406,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Les réglages du site : horaires, prix, objectifs, Conditions de l'entreprise, sauvegardes.
 - **Comment l'utiliser** : 1. Choisir la section à régler. 2. Enregistrer pour appliquer le changement. 3. Faire une sauvegarde avant un gros changement.
 - **Règles** :
+  - Niveaux de performance (Équipe) : calculés sur les missions validées du mois ; noms et seuils réglables (défaut 40, 60, 80).
   - Horaires (Équipe) : « travail normal » (un seul horaire), jour seulement, nuit seulement, ou jour et nuit. Hors « jour et nuit », les mots vacation/jour/nuit disparaissent.
   - Fin des horaires : compte à rebours de 15 min puis déconnexion automatique ; une mission ouverte est gardée.
   - Jours de travail (Équipe) : un jour décoché est un repos, jamais une absence. Le travail fait ce jour-là compte quand même.
@@ -620,11 +620,11 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
-| `missionQuota.ts` | Objectif de missions par jour (2 à 5 par défaut, réglable) : règle pure, affichage seulement. Le site n'empêche jamais une mission : il montre si le jour est dans la cible. |
 | `missionSheet.ts` | Tableau préparé par mission (module 18, M18.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:mission-sheet`. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
+| `monthLevel.ts` | Niveau de performance d'un opérateur = nombre de missions VALIDÉES dans le mois (du 1er au dernier jour, heure de Madagascar). Règle pure, calculée, jamais donnée à la main. |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
 | `newsAccess.ts` | Actualités : qui peut publier, qui peut modifier, qui peut voir (règles pures, copie identique dans supabase/functions/df-api/index.ts, bloc NEWSACCESS ; contrôlé par scripts/check-news-access.ts) |
@@ -911,7 +911,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
 | `npm run check:access-request` | Connexion hors horaires : règles d'heure de fin, copie serveur identique, routes, une demande par personne, formulaire et carte du responsable. |
 | `npm run check:shift-mode` | Modes d'horaires (normal / jour / nuit / jour et nuit), nouveaux horaires, déconnexion forcée et compte à rebours. |
-| `npm run check:mission-quota` | Objectif de missions par jour (2 à 5, réglable) : règle pure, affichage dans le détail du jour, jamais de blocage. |
+| `npm run check:month-level` | Niveaux de performance : missions validées du mois, noms et seuils réglables, historique, branchement des écrans. Jamais de blocage, aucune règle serveur. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

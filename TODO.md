@@ -434,7 +434,10 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - [x] Fiche de la personne : « Déconnecter » (tout de suite ou dans 5 à 60 min), annulable ; le responsable est prévenu d'une mission ouverte ; journal d'audit
 - [ ] Pas fait : mots « vacation » dans les écrans secondaires (Planning RH, exports, Aide) et formulaire d'inscription (avant connexion)
 
-## Objectif de missions par jour (GO 2026-10-30, non testé à l'écran)
-- [x] Réglages > Équipe : minimum et maximum (défaut 2 et 5)
-- [x] Détail du jour du calendrier : « dans l'objectif / sous le minimum / au-dessus du maximum » (affichage seulement, jamais de blocage, aucun changement serveur)
-- [ ] Pas fait : refuser une 6e mission côté serveur (à décider par BTK)
+## Niveaux de performance par mois (GO 2026-10-30, non testé à l'écran)
+- [x] La règle « 2 à 5 missions par jour » est retirée (chacun fait ce qu'il veut)
+- [x] Niveau calculé sur les missions validées du mois : À suivre, Standard dès 40, Excellent dès 60, Top opérateur dès 80 ; « très faible » sous 20
+- [x] Réglages > Équipe : noms des 4 niveaux, seuils et « très faible » réglables
+- [x] Fiche opérateur, page opérateur, tableau de bord de l'opérateur : niveau + « encore X pour Y ». Le choix du niveau à la main est retiré de la fiche
+- [x] Performance > Niveaux : missions et niveau par opérateur sur les 6 derniers mois
+- [ ] Pas fait : exports Excel et assistant utilisent encore le niveau enregistré sur le compte

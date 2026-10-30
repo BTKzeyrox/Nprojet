@@ -20,7 +20,7 @@ export interface DayDetail {
   /** Arrivée = première connexion du jour. Départ = fin de la dernière connexion (déconnexion ou dernier signe de vie) ; null si encore en ligne. */
   arrival: string | null; departure: string | null; departureKind: 'out' | 'lost' | 'live' | 'none';
   connections: ConnectionLine[]; hasConnectionLog: boolean; missions: MissionLine[];
-  totals: { missions: number; counted: number; validated: number; refused: number; running: number; pay: number; gain: number };
+  totals: { missions: number; validated: number; refused: number; running: number; pay: number; gain: number };
 }
 
 const toMin = (hms: string) => { const [h, m] = hms.split(':').map(Number); return h * 60 + m; };
@@ -68,7 +68,7 @@ export function dayDetail(posts: PostSession[], att: AttendanceRow | undefined, 
     firstSeen: att ? hmMada(att.first_seen) : null, lastSeen: att ? hmMada(att.last_seen) : null, onlineSec: att?.online_sec || 0,
     connections: conns, hasConnectionLog: !!att?.sessions?.length, missions,
     totals: {
-      missions: missions.length, counted: missions.filter(m => m.status === 'validated' || m.status === 'running' || m.status === 'waiting').length, validated: missions.filter(m => m.status === 'validated').length, refused: missions.filter(m => m.status === 'refused').length,
+      missions: missions.length, validated: missions.filter(m => m.status === 'validated').length, refused: missions.filter(m => m.status === 'refused').length,
       running: missions.filter(m => m.status === 'running' || m.status === 'waiting').length, pay: missions.reduce((a, m) => a + m.pay, 0),
       gain: missions.filter(m => m.status === 'validated').reduce((a, m) => a + Math.max(0, m.scoreTo - m.scoreFrom), 0),
     },

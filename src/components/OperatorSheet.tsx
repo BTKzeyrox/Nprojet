@@ -10,6 +10,7 @@ import { formatDuration } from '../utils/presence';
 import { todayMada } from '../utils/stats';
 import { effShift, showShift } from '../utils/shiftMode';
 import { madaClock } from '../utils/accessRequest';
+import { levelNow, levelLine } from '../utils/monthLevel';
 
 /** Libellé d'une mission ouverte. */
 const OPEN_LABEL: Record<string, { fr: string; en: string }> = {
@@ -78,7 +79,8 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
             <span className={`px-2 py-1 rounded font-bold border inline-flex items-center gap-1 ${user.shift === 'day' ? 'bg-amber-950/70 border-amber-600/40 text-amber-300' : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'}`}>
               {effShift(user.shift, cfg.shift_mode) === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{showShift(cfg) ? (user.shift === 'day' ? t('Jour', 'Day') : t('Nuit', 'Night')) : t('Horaires', 'Hours')} ({shiftHoursLabel(effShift(user.shift, cfg.shift_mode), cfg)})
             </span>
-            <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{badgeLabel(user.performance_badge)}</span>
+            <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{levelNow(posts, user.id, cfg, todayMada()).name}</span>
+            <span className="text-slate-400" data-level-line>{levelLine(levelNow(posts, user.id, cfg, todayMada()))}</span>
             <span className="text-emerald-400 font-bold">{formatScoreM(user.total_score_boosted)} {t('unités', 'units')}</span>
             {blocked && <span className="px-2 py-1 rounded bg-red-950 border border-red-700 text-red-300 font-bold" data-testid="sheet-blocked">{t('Compte bloqué', 'Account blocked')}</span>}
           </div>

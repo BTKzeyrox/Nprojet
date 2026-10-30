@@ -45,6 +45,8 @@ import { PayrollAdmin } from '../../components/PayrollAdmin';
 import { AdvPayTabs } from '../../components/AdvPayTabs';
 import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 import { effShift, showShift } from '../../utils/shiftMode';
+import { cleanLevels, levelNow, BADGE_BY_INDEX } from '../../utils/monthLevel';
+import { todayMada } from '../../utils/stats';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -288,7 +290,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   // Opérateurs : recherche + filtres + tri (règles pures dans utils/operatorList.ts) ; chacun avec son statut en direct
   const en = lang === 'en';
   const allEmployees = users.filter(u => u.role === 'employee');
-  const items: OpItem[] = allEmployees.map(u => ({ user: u, live: liveStatus(u, posts, presence, nowMs) }));
+  const lvCfg = cleanLevels(cfg.perf_levels), today = todayMada();
+  const lvOf = (id: string) => levelNow(posts, id, cfg, today);
+  const items: OpItem[] = allEmployees.map(u => ({ user: u, live: liveStatus(u, posts, presence, nowMs), level: BADGE_BY_INDEX[lvOf(u.id).index] }));
   const shown = filterOperators(items, filters);
   const counts = liveCounts(items);
   const sheetUser = sheetId ? users.find(u => u.id === sheetId) || null : null;
@@ -360,7 +364,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           {([
             [en ? 'Shift' : 'Vacation', 'shift', [['all', en ? 'All' : 'Toutes'], ['day', en ? 'Day' : 'Jour'], ['night', en ? 'Night' : 'Nuit']]],
             [en ? 'Account' : 'Compte', 'account', [['all', en ? 'All' : 'Tous'], ['active', en ? 'Active' : 'Actifs'], ['blocked', en ? 'Blocked' : 'Bloqués']]],
-            [en ? 'Level' : 'Performance', 'level', [['all', en ? 'All' : 'Tous'], ['Top Booster', badgeLabel('Top Booster')], ['Elite', badgeLabel('Elite')], ['Standard', badgeLabel('Standard')], ['Under Watch', badgeLabel('Under Watch')]]],
+            [en ? 'Level' : 'Performance', 'level', [['all', en ? 'All' : 'Tous'], ['Top Booster', lvCfg.names[3]], ['Elite', lvCfg.names[2]], ['Standard', lvCfg.names[1]], ['Under Watch', lvCfg.names[0]]]],
           ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).filter(([, k]) => k !== 'shift' || showShift(cfg)).map(([title, key, opts]) => (
             <div key={key} className="min-w-0">
               <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">{title}</div>
@@ -424,7 +428,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   )}
                 </div>
                 <div className="text-right shrink-0 hidden min-[420px]:block">
-                  <div className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold whitespace-nowrap">{badgeLabel(emp.performance_badge)}</div>
+                  <div className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold whitespace-nowrap">{lvOf(emp.id).name}</div>
                   <div className="text-emerald-400 text-xs font-bold mt-1 whitespace-nowrap">{formatScoreM(emp.total_score_boosted)} {en ? 'units' : 'unités'}</div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-500 shrink-0" aria-hidden="true" />
@@ -630,19 +634,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
-              <div>
-                <label className="block text-slate-300 uppercase mb-1">Niveau</label>
-                <select
-                  value={editBadge}
-                  onChange={e => setEditBadge(e.target.value as any)}
-                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
-                >
-                  <option value="Top Booster">{badgeLabel('Top Booster')}</option>
-                  <option value="Elite">{badgeLabel('Elite')}</option>
-                  <option value="Standard">{badgeLabel('Standard')}</option>
-                  <option value="Under Watch">{badgeLabel('Under Watch')}</option>
-                </select>
-              </div>
+              <div className="text-[11px] text-slate-400" data-level-auto>Niveau : calculé automatiquement sur les missions validées du mois (seuils dans Réglages).</div>
 
               <OnlineOnlyNote kind="account" />
               <div className="pt-2 flex justify-end gap-2">
