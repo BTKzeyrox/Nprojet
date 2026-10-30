@@ -14,6 +14,7 @@ const A = await import('../src/utils/sheetAuto');
 const { AppProvider } = await import('../src/context/AppContext');
 const { SheetForm, rowSummary, formRows } = await import('../src/components/SheetForm');
 const { SmartField } = await import('../src/components/SmartField');
+const { TypeHintBanner } = await import('../src/components/TypeHintBanner');
 
 let fails = 0, n = 0;
 const ok = (c: boolean, name: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${name}`); } else console.log(`OK    ${name}`); };
@@ -103,6 +104,17 @@ for (const lang of ['fr', 'en'] as const) {
   ok(render(lang, <SmartField col={C('text')} value="" shown="" lang={lang} today={TODAY} listId="dl-x" onCommit={() => {}} />).includes('list="dl-x"'), `${lang} : texte : branché sur sa liste de suggestions`);
   ok(render(lang, <SmartField col={C('date')} value="" shown="" lang={lang} today={TODAY} listId="dl-x" onCommit={() => {}} />).includes('list=') === false, `${lang} : date : pas de liste de suggestions`);
   ok(render(lang, <SmartField col={C('date')} value="2026-10-28" shown="" lang={lang} today={TODAY} readOnly onCommit={() => {}} />).match(/readOnly=""|readonly=""/) !== null, `${lang} : champ en lecture seule`);
+}
+// ---- bandeau « cette colonne ressemble à… » (6 sortes, 2 langues)
+for (const lang of ['fr', 'en'] as const) {
+  const L = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const tt = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const b = (kind: any, sample: string[], options?: string[]) => render(lang, <TypeHintBanner name="Réf" kind={kind} sample={sample} options={options} t={tt} onAccept={() => {}} onDismiss={() => {}} />);
+  const outs = (['code', 'date', 'time', 'phone', 'number', 'list'] as const).map(k => b(k, ['REF001', 'REF002', 'REF003'], ['Oui', 'Non']));
+  ok(outs.every(h => !bad(h) && h.includes('data-testid="type-hint"') && h.includes('type-hint-accept') && h.includes('type-hint-dismiss')), `${lang} : les 6 propositions s'affichent avec Oui / Non merci`);
+  ok(new Set(outs).size === 6, `${lang} : 6 phrases différentes`);
+  ok(outs[0].includes('REF001, REF002, REF003') && outs[5].includes('Oui, Non'), `${lang} : la proposition cite les valeurs de la colonne`);
+  ok(outs[0].includes(L('Oui, transformer', 'Yes, convert')) && outs[0].includes(L('Non merci', 'No thanks')), `${lang} : boutons ${L('Oui, transformer / Non merci', 'Yes, convert / No thanks')}`);
 }
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

@@ -167,6 +167,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Entrer et suivre tes données comme dans Excel, puis les télécharger en Excel, Word ou PDF.
 - **Comment l'utiliser** : 1. Choisir un modèle, puis un type par colonne (date, montant, téléphone, code…) : la saisie se met en forme toute seule. 2. Passer de la Grille au Formulaire (une fiche par ligne), ou travailler sur un Excel externe puis « Remettre mon fichier ». 3. Écrire une formule avec « = » (=SOMME(B1:B10)), puis Télécharger en Excel, Word ou PDF.
 - **Règles** :
+  - Si une colonne texte ressemble à des codes, des dates, des nombres ou à quelques mots qui reviennent, le site propose de la transformer. Rien ne change sans ton clic.
   - Date : tape seulement des chiffres (28102026), les « / » arrivent seuls ; « t » donne la date du jour.
   - Code : REF001 est suivi de REF002. Une nouvelle ligne arrive déjà avec le code suivant, la date du jour et les colonnes « reprendre la ligne du dessus ».
   - Remettre un fichier Excel AJOUTE des lignes sans rien effacer ; les valeurs à corriger sont gardées et soulignées en rouge.
@@ -648,6 +649,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
 | `sheetMerge.ts` | Remettre un fichier Excel rempli hors du site dans le tableau d'une mission (module 19, M19.5) : fonction PURE. |
+| `sheetRetype.ts` | Changer le type d'une colonne SANS casser ce qu'elle contient, et DEVINER le bon type (module 19, suite). |
 | `sheetXlsx.ts` | Un tableau → un fichier Excel « comme Excel » (module 19, M19.5) : de VRAIS types de cellules (dates, heures, nombres avec milliers, codes et téléphones en texte |
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
 | `sheetsStore.ts` | « Mes tableaux » : ancien rangement sur l'appareil (avant le serveur). Sert seulement à REPRENDRE une fois les tableaux déjà saisis, puis la copie est retirée. Jamais d'accès sans try/catch. |
@@ -790,6 +792,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:sheet-merge` | Contrôle de « remettre mon fichier Excel » dans le tableau d'une mission (module 19, M19.5). Lancer : npm run check:sheet-merge |
 | `npm run check:work-mode` | Contrôle de « Ma façon de travailler » : sur le site ou sur un Excel externe (module 19, M19.5). Lancer : npm run check:work-mode |
 | `npm run check:work-mode-ui` | Contrôle de la carte « Ma façon de travailler » (module 19, M19.5), rendue en français et en anglais. Lancer : npm run check:work-mode-ui |
+| `npm run check:sheet-retype` | Contrôle du changement de type d'une colonne et de la proposition automatique (module 19, suite). Lancer : npm run check:sheet-retype |
 | `npm run check:offline-shell` | Contrôle de « l'appli s'ouvre sans réseau » (module 13, M13.4), sans réseau. Lancer : npm run check:offline-shell (construit le site d'abord). |
 | `npm run check:performance-export` | Contrôle de l'export des scores et des badges (module 3, M3.8), sans réseau. Lancer : npm run check:performance-export |
 | `npm run check:recognition` | Contrôle de la reconnaissance (module 3, M3.7), sans réseau. Lancer : npm run check:recognition |

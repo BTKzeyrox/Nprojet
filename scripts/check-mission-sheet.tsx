@@ -12,6 +12,7 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 
 const S = await import('../src/utils/sheets');
 const M = await import('../src/utils/missionSheet');
+const A = await import('../src/utils/sheetAuto');
 const { db } = await import('../src/db/store');
 const { MySheets } = await import('../src/components/MySheets');
 const { AppProvider } = await import('../src/context/AppContext');
@@ -140,5 +141,16 @@ ok(calls === 0, `aucun appel réseau (${calls})`);
 const ui = fs.readFileSync('src/components/MySheets.tsx', 'utf8');
 ok(/x\.deleted_at && !x\.post_id\)\.length >= S\.LIMITS\.sheetsPerPerson/.test(ui), 'écran : seuls les tableaux personnels comptent dans « 20 au maximum »');
 
+// ---- M19 : tableaux préparés plus intelligents
+{
+  const fiches = M.buildMissionSheet({ postId: 'pf', date: '2026-10-28', type: 'Saisie de fiches', now: NOW })!;
+  const qual = M.buildMissionSheet({ postId: 'pq', date: '2026-10-28', type: 'Contrôle qualité', now: NOW })!;
+  ok(S.activeColumns(fiches).some(c => c.name === 'N° de fiche' && c.type === 'code') && S.activeColumns(qual).some(c => c.name === 'N° de dossier' && c.type === 'code'), 'M19 : « N° de fiche » et « N° de dossier » sont des colonnes Code (REF001, REF002…)');
+  const r0 = S.activeRows(fiches)[0].cells, cd = S.activeColumns(fiches).find(c => c.type === 'code')!, dt = S.activeColumns(fiches).find(c => c.type === 'date')!;
+  ok(r0[cd.id] === 'REF001' && r0[dt.id] === '2026-10-28', 'M19 : la première ligne arrive déjà remplie (REF001, date de la mission)');
+  const more = A.addRowAuto(fiches, NOW, '2026-10-29')!;
+  ok(S.activeRows(more)[1].cells[cd.id] === 'REF002', 'M19 : la ligne suivante reçoit REF002');
+  ok(S.activeColumns(M.buildMissionSheet({ postId: 'ps', date: '2026-10-28', type: 'Suivi', now: NOW })!).every(c => c.type !== 'code'), 'M19 : le suivi de tâches n\'a pas de code (rien à numéroter)');
+}
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

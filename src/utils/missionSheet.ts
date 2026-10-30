@@ -3,6 +3,7 @@
 // Identifiant imposé : `sp-` + id de la session, donc un seul tableau par session, même si le site le prépare deux fois. Le lien avec la session (`post_id`) ne change jamais.
 // Le serveur revérifie tout (cleanSheetWrite, bloc SHEETS de df-api) : la session doit être celle de l'opérateur. Le responsable lit ces tableaux, sans les modifier.
 import { addRow, fromTemplate, LIMITS, type ColType, type Sheet, type Template } from './sheets';
+import { addRowAuto } from './sheetAuto';
 
 export const MISSION_SHEET_PREFIX = 'sp-';
 export type MissionModel = 'fiches' | 'qualite' | 'admin' | 'web' | 'aide' | 'suivi';
@@ -29,8 +30,8 @@ interface Col { fr: string; en: string; type: ColType; opts?: { fr: string[]; en
 const STATE: Col = { fr: 'État', en: 'Status', type: 'list', opts: { fr: ['À faire', 'En cours', 'Fait'], en: ['To do', 'In progress', 'Done'] } };
 const NOTE: Col = { fr: 'Remarque', en: 'Note', type: 'text' };
 const MODELS: Record<MissionModel, { fr: string; en: string; cols: Col[] }> = {
-  fiches: { fr: 'Saisie de fiches', en: 'Record entry', cols: [{ fr: 'Date', en: 'Date', type: 'date' }, { fr: 'N° de fiche', en: 'Record no.', type: 'text' }, { fr: 'Nom', en: 'Name', type: 'text' }, { fr: 'Quantité', en: 'Quantity', type: 'number' }, NOTE] },
-  qualite: { fr: 'Contrôle qualité', en: 'Quality check', cols: [{ fr: 'N° de dossier', en: 'File no.', type: 'text' }, { fr: 'Contrôlé', en: 'Checked', type: 'check' }, { fr: 'Erreur trouvée', en: 'Error found', type: 'check' }, { fr: 'Type d\'erreur', en: 'Error type', type: 'text' }, NOTE] },
+  fiches: { fr: 'Saisie de fiches', en: 'Record entry', cols: [{ fr: 'Date', en: 'Date', type: 'date' }, { fr: 'N° de fiche', en: 'Record no.', type: 'code' }, { fr: 'Nom', en: 'Name', type: 'text' }, { fr: 'Quantité', en: 'Quantity', type: 'number' }, NOTE] },
+  qualite: { fr: 'Contrôle qualité', en: 'Quality check', cols: [{ fr: 'N° de dossier', en: 'File no.', type: 'code' }, { fr: 'Contrôlé', en: 'Checked', type: 'check' }, { fr: 'Erreur trouvée', en: 'Error found', type: 'check' }, { fr: 'Type d\'erreur', en: 'Error type', type: 'text' }, NOTE] },
   admin: { fr: 'Tâche administrative', en: 'Admin task', cols: [{ fr: 'Document', en: 'Document', type: 'text' }, { fr: 'Action', en: 'Action', type: 'list', opts: { fr: ['Classer', 'Numéroter', 'Envoyer', 'Archiver'], en: ['File', 'Number', 'Send', 'Archive'] } }, STATE, NOTE] },
   web: { fr: 'Tâche web', en: 'Web task', cols: [{ fr: 'Page ou lien', en: 'Page or link', type: 'text' }, { fr: 'Problème', en: 'Problem', type: 'list', opts: { fr: ['Aucun', 'Lien cassé', 'Prix faux', 'Texte faux'], en: ['None', 'Broken link', 'Wrong price', 'Wrong text'] } }, STATE, NOTE] },
   aide: { fr: 'Demande d\'aide', en: 'Help request', cols: [{ fr: 'Date', en: 'Date', type: 'date' }, { fr: 'Question', en: 'Question', type: 'text' }, { fr: 'Réponse envoyée', en: 'Answer sent', type: 'check' }, { fr: 'Durée (min)', en: 'Duration (min)', type: 'number' }, NOTE] },
@@ -46,7 +47,7 @@ export function missionTemplate(model: MissionModel, lang: 'fr' | 'en' = 'fr'): 
 
 export interface MissionSheetInput { postId: string; postNumber?: number; date: string; type?: unknown; lang?: 'fr' | 'en'; now: string }
 
-/** Le tableau préparé pour une session : titre « Mission n° 4 — 2026-10-28 », colonnes du type de mission, une première ligne vide. Rend null si l'identifiant de session est faux. */
+/** Le tableau préparé pour une session : titre « Mission n° 4 — 2026-10-28 », colonnes du type de mission, une première ligne déjà remplie (code REF001, date de la mission). Rend null si l'identifiant de session est faux. */
 export function buildMissionSheet(i: MissionSheetInput): Sheet | null {
   if (typeof i.postId !== 'string' || !i.postId || missionSheetId(i.postId).length > 60) return null;
   const lang = i.lang === 'en' ? 'en' : 'fr';
@@ -54,7 +55,7 @@ export function buildMissionSheet(i: MissionSheetInput): Sheet | null {
   const num = Number.isInteger(i.postNumber) && (i.postNumber as number) > 0 ? ` ${lang === 'en' ? '#' : 'n° '}${i.postNumber}` : '';
   const title = `${lang === 'en' ? 'Mission' : 'Mission'}${num} — ${String(i.date || '').slice(0, 10)}`.slice(0, LIMITS.title);
   const base = fromTemplate(missionTemplate(model, lang), title, i.now, lang);
-  const withRow = addRow(base, i.now, {}) || base;
+  const withRow = addRowAuto(base, i.now, String(i.date || '').slice(0, 10)) || base; // première ligne déjà remplie : code suivant (REF001), date de la mission
   return { ...withRow, id: missionSheetId(i.postId), post_id: i.postId };
 }
 

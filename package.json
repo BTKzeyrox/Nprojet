@@ -51,6 +51,7 @@
     "check:sheet-merge": "npx --yes tsx scripts/check-sheet-merge.ts",
     "check:work-mode": "esbuild scripts/check-work-mode.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-mode.mjs && node node_modules/.cache/check-work-mode.mjs",
     "check:work-mode-ui": "esbuild scripts/check-work-mode-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-mode-ui.mjs && node node_modules/.cache/check-work-mode-ui.mjs",
+    "check:sheet-retype": "npx --yes tsx scripts/check-sheet-retype.ts",
     "check:offline-shell": "npm run -s build && npx --yes tsx scripts/check-offline-shell.ts",
     "check:performance-export": "npx --yes tsx scripts/check-performance-export.ts",
     "check:recognition": "npx --yes tsx scripts/check-recognition.ts",

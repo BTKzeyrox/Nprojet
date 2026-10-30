@@ -13,6 +13,8 @@ import { SmartField } from './SmartField';
 import { SheetForm } from './SheetForm';
 import { WorkModeCard } from './WorkModeCard';
 import * as A from '../utils/sheetAuto';
+import { applyTypeHint, dismissHint, firstHint, retypeColumn } from '../utils/sheetRetype';
+import { TypeHintBanner } from './TypeHintBanner';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
 const COLOR_CLS: Record<S.CondRule['color'], string> = { red: 'bg-red-500/25 text-red-200', green: 'bg-emerald-500/25 text-emerald-200', amber: 'bg-amber-500/25 text-amber-200', blue: 'bg-sky-500/25 text-sky-200' };
@@ -52,6 +54,7 @@ export const MySheets: React.FC = () => {
   });
   const [openId, setOpenId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [hintTick, setHintTick] = useState(0); // relance la recherche de proposition après un refus
   const [mergeInto, setMergeInto] = useState<S.Sheet | null>(null); // M19 : remettre un fichier Excel rempli dans CE tableau
   const [hist, setHist] = useState<S.History | null>(null);
   const [view, setView] = useState<S.View>({});
@@ -102,6 +105,8 @@ export const MySheets: React.FC = () => {
     showToast(t('Lignes ajoutées à ton tableau.', 'Rows added to your table.'), 'success');
   };
   const comp = useMemo(() => (cur ? S.computeSheet(cur, today) : null), [cur, today]);
+  // proposition automatique : une colonne « texte » qui ressemble à des codes, des dates, des nombres… ou à quelques mots qui reviennent
+  const hint = useMemo(() => (cur && !ro ? firstHint(cur, lang === 'en' ? 'en' : 'fr') : null), [cur, ro, lang, hintTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const textSuggestions = useMemo(() => (cur ? S.activeColumns(cur).filter(c => c.type === 'text').map(c => ({ id: c.id, values: A.columnSuggestions(cur, c.id) })) : []), [cur]); // une fois par version du tableau, pas à chaque frappe
   const shownRows = useMemo(() => (cur && comp ? S.viewRows(cur, comp, view) : []), [cur, comp, view]);
   const totals = useMemo(() => (comp ? S.columnTotals(comp, shownRows) : []), [comp, shownRows]);
@@ -243,7 +248,7 @@ export const MySheets: React.FC = () => {
         <div className="border border-sky-500/50 rounded-lg p-2.5 space-y-2 text-xs text-slate-300">
           <div className="flex flex-wrap items-center gap-2">
             <input aria-label={t('Nom de la colonne', 'Column name')} className="bg-slate-800/60 border border-slate-600 rounded px-2 py-1.5 text-slate-100 w-40" maxLength={S.LIMITS.colName} defaultValue={col.name} key={col.id} onBlur={e => { if (e.target.value.trim() && e.target.value !== col.name) apply(s => S.updateColumn(s, col.id, { name: e.target.value }, nowIso())); }} />
-            <select aria-label="Type" className="bg-[#0f1722] border border-slate-600 rounded px-2 py-1.5" value={col.type} onChange={e => { const ty = e.target.value as S.ColType; apply(s => { const nx = S.updateColumn(s, col.id, { type: ty }, nowIso()); return nx && ty === 'code' ? A.fillCodes(nx, col.id, nowIso()) || nx : nx; }); }}>
+            <select aria-label="Type" className="bg-[#0f1722] border border-slate-600 rounded px-2 py-1.5" value={col.type} onChange={e => { const ty = e.target.value as S.ColType; const r = hist ? retypeColumn(hist.present, col.id, ty, nowIso(), lang === 'en' ? 'en' : 'fr') : null; if (!r) return; apply(() => r.sheet); if (r.kept > 0) showToast(t(`${r.kept} valeur(s) ne conviennent pas à ce type : elles sont gardées telles quelles (soulignées en rouge).`, `${r.kept} value(s) do not fit this type: they are kept as they are (underlined in red).`), 'info'); else if (r.converted > 0) showToast(t(`${r.converted} valeur(s) mises dans la bonne forme.`, `${r.converted} value(s) put in the right form.`), 'success'); }}>
               <option value="text">{t('Texte', 'Text')}</option><option value="number">{t('Nombre', 'Number')}</option><option value="money">{t('Montant', 'Amount')}</option><option value="date">Date</option><option value="time">{t('Heure', 'Time')}</option><option value="phone">{t('Téléphone', 'Phone')}</option><option value="code">{t('Code (REF001, REF002…)', 'Code (REF001, REF002…)')}</option><option value="list">{t('Liste', 'List')}</option><option value="check">{t('Case à cocher', 'Checkbox')}</option>
             </select>
             <label className="flex items-center gap-1"><input type="checkbox" checked={!!col.required} onChange={e => apply(s => S.updateColumn(s, col.id, { required: e.target.checked }, nowIso()))} />{t('Obligatoire', 'Required')}</label>
@@ -271,6 +276,11 @@ export const MySheets: React.FC = () => {
         </div>
       )}
 
+      {!formMode && hint && !ro && (
+        <TypeHintBanner name={hint.name} kind={hint.hint.kind} sample={hint.hint.sample} options={hint.hint.options} t={t}
+          onAccept={() => { const r = applyTypeHint(cur, hint.colId, hint.hint, nowIso(), lang === 'en' ? 'en' : 'fr'); if (r) { apply(() => r.sheet); if (r.kept > 0) showToast(t(`${r.kept} valeur(s) gardées telles quelles (soulignées en rouge).`, `${r.kept} value(s) kept as they are (underlined in red).`), 'info'); } }}
+          onDismiss={() => { dismissHint(cur.id, hint.colId, hint.hint.kind); setHintTick(n => n + 1); }} />
+      )}
       {formMode ? <SheetForm sheet={cur} comp={comp} ro={ro} lang={lang === 'en' ? 'en' : 'fr'} today={today} apply={apply} t={t} now={nowIso} /> : <>
       {textSuggestions.map(c => <datalist key={c.id} id={`dl-${cur.id}-${c.id}`}>{c.values.map(v => <option key={v} value={v} />)}</datalist>)}
       {cols.length === 0 ? <p className="text-sm text-slate-400">{t('Ajoute une colonne pour commencer.', 'Add a column to start.')}</p> : (

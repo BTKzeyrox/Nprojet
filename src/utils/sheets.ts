@@ -321,7 +321,7 @@ export function ruleColor(s: Sheet, c: Computed, ri: number, ci: number): CondRu
 export interface Template { id: string; fr: string; en: string; cols: { name: string; type: ColType; options?: string[] }[] }
 export const TEMPLATES: Template[] = [
   { id: 'blank', fr: 'Tableau vide', en: 'Blank table', cols: [{ name: 'A', type: 'text' }, { name: 'B', type: 'text' }, { name: 'C', type: 'text' }] },
-  { id: 'fiches', fr: 'Saisie de fiches', en: 'Record entry', cols: [{ name: 'Date', type: 'date' }, { name: 'Nom', type: 'text' }, { name: 'Quantité', type: 'number' }, { name: 'Montant', type: 'number' }, { name: 'Remarque', type: 'text' }] },
+  { id: 'fiches', fr: 'Saisie de fiches', en: 'Record entry', cols: [{ name: 'Date', type: 'date' }, { name: 'Nom', type: 'text' }, { name: 'Quantité', type: 'number' }, { name: 'Montant', type: 'money' }, { name: 'Remarque', type: 'text' }] },
   { id: 'suivi', fr: 'Suivi de tâches', en: 'Task tracking', cols: [{ name: 'Tâche', type: 'text' }, { name: 'Date', type: 'date' }, { name: 'État', type: 'list', options: ['À faire', 'En cours', 'Fait'] }, { name: 'Terminé', type: 'check' }] },
 ];
 export function fromTemplate(t: Template, title: string, now: string, lang: 'fr' | 'en' = 'fr'): Sheet {
