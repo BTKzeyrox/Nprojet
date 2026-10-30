@@ -97,7 +97,7 @@ export function teamReply(i: SnapshotInput): Reply {
   const r = periodRange('month', i.today), inR = (d: string) => d >= r.start && d <= r.end;
   const emps = i.users.filter(u => u.role === 'employee' && (u.status === undefined || u.status === 'active')).sort((a, c) => a.name.localeCompare(c.name));
   const sources = b(`d'après la liste des employés actifs et les missions validées du ${dmy(r.start)} au ${dmy(r.end)}`, `based on the active employees list and missions validated from ${dmy(r.start)} to ${dmy(r.end)}`);
-  if (emps.length === 0) return { intent: 'team', empty: true, title: b('Équipe', 'Team'), lines: [b('Aucun employé actif pour le moment.', 'No active employee for now.')], actions: [{ label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources };
+  if (emps.length === 0) return { intent: 'team', empty: true, title: b('Équipe', 'Team'), lines: [b('Aucun employé actif pour le moment.', 'No active employee for now.')], actions: [{ label: b('Ouvrir Opérateurs et sessions', 'Open Operators and sessions'), go: { view: 'employees' } }], sources };
   const count = (id: string) => i.posts.filter(p => p.employee_id === id && p.status === 'completed' && inR(p.date)).length;
   return {
     intent: 'team', title: b(`Équipe : ${emps.length} employé${emps.length > 1 ? 's' : ''} actif${emps.length > 1 ? 's' : ''}`, `Team: ${emps.length} active employee${emps.length > 1 ? 's' : ''}`),
@@ -129,11 +129,13 @@ export function suggestionsReply(i: SnapshotInput, alerts: HealthAlert[]): Reply
 
 // ---------- Liens vers les pages citées dans un texte (réponse de l'IA) ----------
 /** Les pages du site citées entre guillemets « … » dans un texte : au plus 3, sans doublon. Seuls les noms exacts des pages de l'admin comptent. */
+/** Anciens noms de pages que l'assistant ou un texte peut encore citer (une page renommée ne doit pas casser ses liens). */
+const PAGE_ALIASES: Record<string, string[]> = { employees: ['Employés', 'Employees', 'Gestion des Opérateurs', 'Operator management'] }; // « Suivi des sessions » reste le nom de la page « Mission en cours / Suivi des sessions » (2e onglet de la page fusionnée)
 export function pageLinks(text: string, lang: Lang): { label: Bi; go: HealthGo }[] {
   const out: { label: Bi; go: HealthGo }[] = [];
   const quoted = [...String(text || '').matchAll(/[«"“]\s*([^»"”\n]{2,40}?)\s*[»"”]/g)].map(m => normalizeName(m[1]));
   for (const q of quoted) {
-    const page = SITE_MAP.find(p => p.audience !== 'employee' && isKnownView(p.id) && [p.title.fr, p.title.en, ...p.title.fr.split('/'), ...p.title.en.split('/')].some(x => normalizeName(x) === q));
+    const page = SITE_MAP.find(p => p.audience !== 'employee' && isKnownView(p.id) && [p.title.fr, p.title.en, ...p.title.fr.split('/'), ...p.title.en.split('/'), ...(PAGE_ALIASES[p.id] || [])].some(x => normalizeName(x) === q));
     if (page && !out.some(o => o.go.view === page.id)) out.push({ label: b(`Ouvrir ${page.title.fr}`, `Open ${page.title.en}`), go: { view: page.id } });
     if (out.length >= 3) break;
   }

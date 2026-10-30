@@ -1095,5 +1095,9 @@
 "Ce n'est pas ta mission.": "This is not your mission.",
 "La mission n'est plus ouverte.": "The mission is no longer open.",
 "Tâche introuvable.": "Task not found.",
-  "Facturation": "Invoicing"
+  "Facturation": "Invoicing",
+"Opérateurs et sessions": "Operators and sessions",
+"Équipe, statuts et sessions": "Team, statuses and sessions",
+"Opérateurs de l'équipe": "Team operators",
+"Touchez un opérateur pour ouvrir sa fiche : session, profil, modification, accès, blocage.": "Tap an operator to open their sheet: session, profile, edit, access, block."
 }

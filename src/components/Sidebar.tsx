@@ -120,7 +120,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },
         ]),
     ...(isAdmin ? [{ id: 'direction', label: 'Direction', icon: Gauge }] : []),
-    { id: 'active-post', label: isAdmin ? t('nav_active_post_admin') : t('nav_active_post_user'), icon: ClipboardList },
+    // Responsable : « Suivi des sessions » est fusionné dans « Opérateurs et sessions » (deux onglets dans la même page) ; les autres rôles gardent « Ma mission »
+    ...(isAdmin ? [] : [{ id: 'active-post', label: t('nav_active_post_user'), icon: ClipboardList }]),
     isAdmin
       ? { id: 'employees', label: t('nav_employees'), icon: Users }
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
@@ -212,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <nav className="space-y-1.5">
             {navItems.map(item => {
               const Icon = item.icon;
-              const isActive = activeView === item.id;
+              const isActive = activeView === item.id || (isAdmin && item.id === 'employees' && (activeView === 'active-post' || activeView === 'sessions'));
               return (
                 <button
                   key={item.id}

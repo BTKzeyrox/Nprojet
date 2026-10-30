@@ -238,15 +238,17 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - La Santé du site signale une mission en cours depuis plus de 12 h sans fin.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/views/admin/AdminDashboard.tsx`
 
-### Employés  `employees`
+### Opérateurs et sessions  `employees`
 - **Qui** : responsable
-- **À quoi ça sert** : La gestion de l'équipe : profils, accès, état de chacun.
-- **Comment l'utiliser** : 1. Ouvrir un profil pour voir ou modifier les informations. 2. Régler l'accès selon l'heure de la vacation (auto, toujours, bloqué). 3. Bloquer ou supprimer un profil avec confirmation.
+- **À quoi ça sert** : La liste de l'équipe (recherche, filtres, statut en direct) et, dans l'autre onglet, le suivi des sessions en cours.
+- **Comment l'utiliser** : 1. Chercher par nom, identifiant, téléphone, jour ou nuit, puis filtrer : vacation, compte, statut en direct, performance. 2. Toucher un opérateur ouvre sa fiche : session en cours, profil, page, calendrier, message, modification, accès, blocage. 3. L'onglet « Suivi des sessions » montre les sessions en cours, à valider ou refuser.
 - **Règles** :
   - Accès « auto » : la connexion n'est permise que pendant la vacation, avec une marge avant et après.
   - Supprimer un profil est définitif.
   - Import Excel ou CSV : tous les comptes sont des opérateurs ; un mot de passe provisoire est montré une seule fois à la fin (100 comptes au plus).
   - Statut en direct : En cours (mission ouverte), En ligne (sans mission), En pause (mission ouverte, appli silencieuse 90 s à 30 min), Hors ligne.
+  - « Compte actif » veut dire seulement « non bloqué » : cela ne dit rien de la présence, qui est donnée par le statut en direct.
+  - Les boutons de gestion ne sont plus sur chaque ligne : tout passe par la fiche de l'opérateur, avec confirmation pour bloquer et supprimer.
 - **Dans le code** : `src/views/admin/EmployeesManagement.tsx`
 
 ### Mon profil  `profile`
@@ -623,6 +625,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineSync.ts` | Pont entre le magasin de données et la file d'actions hors ligne (module 13, M13.5) : règles pures, sans réseau, sans stockage. |
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
+| `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
 | `payslip.ts` | — |
 | `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
 | `performance.ts` | Statistiques de performance par opérateur (lecture du store, aucun appel serveur). |
@@ -813,6 +816,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-accounting` | Contrôle des règles Comptabilité du module 11 (M14.9). Pur, sans réseau. Lancer : npm run check:health-accounting |
 | `npm run check:health-management` | Contrôle des règles du module 15 dans la Santé du site (M15.8) : conflits de planning, paie et dépenses au-dessus du prévu. Pur, sans réseau. |
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
+| `npm run check:operator-list` | Contrôle de la page « Opérateurs et sessions » : liste compacte (recherche, filtres, tri), fiche opérateur avec les actions, fusion avec le suivi des sessions. |
 | `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
 | `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:news-access` | Contrôle des actualités : qui publie, modifie, voit (règles du site = copie du serveur) + protections du serveur. Lancer : npm run check:news-access |

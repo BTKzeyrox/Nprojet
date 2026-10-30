@@ -69,6 +69,7 @@
     "check:health-accounting": "npx --yes tsx scripts/check-health-accounting.ts",
     "check:health-management": "npx --yes tsx scripts/check-health-management.ts",
     "check:reason-modal": "npx --yes tsx scripts/check-reason-modal.ts",
+    "check:operator-list": "esbuild scripts/check-operator-list.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-operator-list.mjs && node node_modules/.cache/check-operator-list.mjs",
     "check:live-status": "npx --yes tsx scripts/check-live-status.tsx",
     "check:calendar-global": "npx --yes tsx scripts/check-calendar-global.ts",
     "check:news-access": "npx --yes tsx scripts/check-news-access.ts",
