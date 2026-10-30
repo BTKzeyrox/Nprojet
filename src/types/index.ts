@@ -43,7 +43,8 @@ export interface AppSettings {
   alert_unpaid_days?: number; // alerte « client qui n'a pas payé depuis X jours » (30 par défaut)
   team_lead_limit_ar?: number; // plafond du Chef d'équipe (M15.6) : au-dessus de ce prix client, la décision revient au responsable ; 0 = pas de plafond ; admin seulement
   alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
-  work_days?: number[]; // jours de travail : 0 = dimanche … 6 = samedi (défaut lundi à samedi)
+  work_days?: number[];
+  shift_mode?: 'both' | 'normal' | 'day' | 'night'; // « normal » : un seul horaire pour tous ; « day » / « night » : une seule vacation ; « both » : jour et nuit (défaut) // jours de travail : 0 = dimanche … 6 = samedi (défaut lundi à samedi)
   day_shift_start: string; // HH:MM
   day_shift_end: string;
   night_shift_start: string;
@@ -146,6 +147,7 @@ export interface User {
   is_online: boolean;
   team?: string; // équipe (texte court, choisi par l'admin) : un Chef d'équipe valide les sessions des opérateurs de la même équipe
   access_mode?: 'auto' | 'allow' | 'block'; // accès selon le shift : auto (défaut), toute heure, bloqué
+  force_logout_at?: string; // déconnexion forcée par le responsable : heure prévue
   access_until?: string; // autorisation du responsable (demande hors horaires) : connexion permise jusqu'à cette heure
   avatar_url: string;
   phone: string;

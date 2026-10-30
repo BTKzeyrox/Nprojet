@@ -59,7 +59,7 @@ ok(users.length === 5 && items.length === 5 && filterOperators(items, OP_FILTERS
 const stripComments = (h: string): string => h.replace(/<!-- -->/g, ''); // le rendu serveur sépare les morceaux de texte par des commentaires vides
 const cfg = { day_shift_start: '08:00', night_shift_start: '20:00', late_tolerance_min: 15, show_activity_column: true } as any;
 const sheet = (u: any, withOpen = true, chips?: React.ReactNode) => stripComments(renderToString(<OperatorSheet user={u} cfg={cfg} lang="fr" nowMs={NOW} live={liveStatus(u, posts, presence, NOW)} posts={posts} onlineSec={3700} chips={chips}
-  onClose={() => {}} onProfile={() => {}} onEdit={() => {}} onToggleBlock={() => {}} onDelete={() => {}} onSetAccess={() => {}} onOpen={withOpen ? () => {} : undefined} />));
+  onClose={() => {}} onProfile={() => {}} onEdit={() => {}} onToggleBlock={() => {}} onDelete={() => {}} onSetAccess={() => {}} onForceLogout={async () => ({ success: true })} onCancelForce={async () => ({ success: true })} onOpen={withOpen ? () => {} : undefined} />));
 let h = sheet(users[0]);
 ok(['act-profile', 'act-operator', 'act-calendar', 'act-chat', 'act-edit', 'act-block', 'act-access', 'act-delete'].every(k => h.includes(`data-testid="${k}"`)), 'fiche : toutes les actions (profil, page, calendrier, message, modifier, bloquer, accès, supprimer)');
 ok(/role="dialog"/.test(h) && /aria-modal="true"/.test(h) && /data-testid="operator-sheet-close"/.test(h) && /aria-label="Fermer"/.test(h), 'fiche : fenêtre accessible avec un bouton Fermer nommé');

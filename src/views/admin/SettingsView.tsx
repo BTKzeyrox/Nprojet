@@ -3,6 +3,7 @@ import { ThemeLangControls } from '../../components/ThemeLangControls';
 import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { cleanWorkDays, DAY_ORDER, DAY_NAMES_FR } from '../../utils/workDays';
+import { cleanShiftMode, SHIFT_MODES, MODE_LABELS } from '../../utils/shiftMode';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
@@ -47,6 +48,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     return unsub;
   }, [touched]);
 
+  const mode = cleanShiftMode(s.shift_mode);
   const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setTouched(true);
     setSaved(false);
@@ -211,24 +213,33 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-400" />Vacations</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-400" />{mode === 'both' ? 'Vacations' : 'Heures de travail'}</h3>
+        <div data-shift-mode className="grid grid-cols-2 gap-1.5">
+          {SHIFT_MODES.map(m => (
+            <button key={m} type="button" aria-pressed={mode === m} data-mode={m} onClick={() => set('shift_mode', m)}
+              className={`min-h-[44px] px-2 rounded-lg border text-xs font-bold cursor-pointer ${mode === m ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>{MODE_LABELS[m]}</button>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">{mode === 'normal' ? "Un seul horaire pour tout le monde : les mots « jour », « nuit » et « vacation » ne s'affichent plus." : mode === 'both' ? 'Chaque personne a une vacation de jour ou de nuit.' : `Tout le monde suit les horaires ${mode === 'day' ? 'de jour' : 'de nuit'}.`}</p>
         <div className="grid grid-cols-2 gap-3">
+          {mode !== 'night' && (<>
           <div>
-            <label className={labelCls}>Jour : début</label>
+            <label className={labelCls}>{mode === 'both' ? 'Jour : début' : 'Début'}</label>
             <input type="time" value={s.day_shift_start} onChange={e => set('day_shift_start', e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Jour : fin</label>
+            <label className={labelCls}>{mode === 'both' ? 'Jour : fin' : 'Fin'}</label>
             <input type="time" value={s.day_shift_end} onChange={e => set('day_shift_end', e.target.value)} className={inputCls} />
-          </div>
+          </div></>)}
+          {(mode === 'night' || mode === 'both') && (<>
           <div>
-            <label className={labelCls}>Nuit : début</label>
+            <label className={labelCls}>{mode === 'both' ? 'Nuit : début' : 'Début'}</label>
             <input type="time" value={s.night_shift_start} onChange={e => set('night_shift_start', e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Nuit : fin</label>
+            <label className={labelCls}>{mode === 'both' ? 'Nuit : fin' : 'Fin'}</label>
             <input type="time" value={s.night_shift_end} onChange={e => set('night_shift_end', e.target.value)} className={inputCls} />
-          </div>
+          </div></>)}
         </div>
         <div>
           <label className={labelCls}>Tolérance de retard (minutes)</label>
@@ -260,11 +271,11 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Users className="w-4 h-4 text-emerald-400" />Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Connexion permise avant la vacation (min)</label>
+            <label className={labelCls}>Connexion permise avant l'heure de début (min)</label>
             <input type="number" min={0} value={s.access_before_min} onChange={e => set('access_before_min', Number(e.target.value))} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Connexion permise après la vacation (min)</label>
+            <label className={labelCls}>Connexion permise après l'heure de fin (min)</label>
             <input type="number" min={0} value={s.access_after_min} onChange={e => set('access_after_min', Number(e.target.value))} className={inputCls} />
           </div>
           <div>

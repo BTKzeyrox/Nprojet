@@ -4,17 +4,18 @@ import { db } from '../db/store';
 import { askReason } from './ReasonModal';
 import { ACCESS_HOURS, madaClock, shiftEndMs, resolveAccessUntil, untilFromClock } from '../utils/accessRequest';
 import type { AccessRequest, AppSettings } from '../types';
+import { effShift } from '../utils/shiftMode';
 
 const ROLE_FR: Record<string, string> = { employee: 'Opérateur', accountant: 'Comptable', team_lead: "Chef d'équipe" };
 
 // Choix de la fin d'autorisation : fin de la vacation (par défaut), 1/2/4/8/12 h, ou une heure précise
 const EndChoice: React.FC<{ r: AccessRequest; cfg: AppSettings; value: string; onChange: (v: string) => void; clock: string; onClock: (v: string) => void }> = ({ r, cfg, value, onChange, clock, onClock }) => {
   const now = Date.now();
-  const end = resolveAccessUntil(r.shift, cfg, now, 'shift_end', undefined) ?? shiftEndMs(r.shift, cfg, now);
+  const end = resolveAccessUntil(effShift(r.shift, cfg.shift_mode), cfg, now, 'shift_end', undefined) ?? shiftEndMs(effShift(r.shift, cfg.shift_mode), cfg, now);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <select value={value} onChange={e => onChange(e.target.value)} data-access-end className="min-h-[44px] px-2 text-xs font-mono rounded-lg border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer">
-        <option value="shift_end">{`Fin de sa vacation (${madaClock(end)})`}</option>
+        <option value="shift_end">{`Fin de ses horaires (${madaClock(end)})`}</option>
         {ACCESS_HOURS.map(h => <option key={h} value={`h${h}`}>{`${h} heure${h > 1 ? 's' : ''}`}</option>)}
         <option value="clock">Heure précise…</option>
       </select>

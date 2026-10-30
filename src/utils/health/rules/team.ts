@@ -8,7 +8,7 @@ import { dayDiff, isEmployee, isSunday, isWorked, shiftDay } from './common';
 
 const settingsOf = (ctx: HealthContext) => ({
   day_shift_start: ctx.settings.day_shift_start || '08:00', night_shift_start: ctx.settings.night_shift_start || '20:00',
-  late_tolerance_min: typeof ctx.settings.late_tolerance_min === 'number' ? ctx.settings.late_tolerance_min : 15,
+  late_tolerance_min: typeof ctx.settings.late_tolerance_min === 'number' ? ctx.settings.late_tolerance_min : 15, shift_mode: ctx.settings.shift_mode,
 });
 
 /** Jours travaillés (au moins une session ni refusée ni libérée de force) d'un salarié. */

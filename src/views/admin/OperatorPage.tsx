@@ -5,6 +5,7 @@ import { User } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { badgeLabel, formatScoreM } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, formatDuration } from '../../utils/presence';
+import { showShift } from '../../utils/shiftMode';
 
 interface Props {
   userId: string;
@@ -55,7 +56,7 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
         <div className="min-w-0 flex-1">
           <h2 className="font-tactical font-black text-lg text-white truncate">{u.name}</h2>
           <div className="text-xs font-mono text-slate-400 break-words">
-            @{u.username} · {u.phone || 'pas de téléphone'} · {u.shift === 'night' ? 'Nuit' : 'Jour'}
+            @{u.username} · {u.phone || 'pas de téléphone'}{showShift(db.getSettings()) ? ` · ${u.shift === 'night' ? 'Nuit' : 'Jour'}` : ''}
           </div>
           <div className="flex flex-wrap gap-1.5 mt-1.5 text-[10px] font-mono">
             <span className={`px-1.5 py-0.5 border ${u.status === 'blocked' ? 'border-red-500/60 text-red-300' : 'border-emerald-500/50 text-emerald-300'}`}>{u.status === 'blocked' ? 'Bloqué' : 'Actif'}</span>

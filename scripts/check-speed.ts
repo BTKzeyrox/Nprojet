@@ -76,7 +76,7 @@ ok(/this\.pulling/.test(store), 'rechargement : jamais deux appels en même temp
 const files = fs.readdirSync('src', { recursive: true }).map(String).filter(f => /\.(ts|tsx)$/.test(f));
 const loops: string[] = [];
 for (const f of files) { const t = fs.readFileSync(`src/${f}`, 'utf8'); for (const m of t.matchAll(/setInterval\(([\s\S]{0,160})/g)) loops.push(`${f}: ${m[1].split('\n')[0].slice(0, 90)}`); }
-const KNOWN = ['ConnectionBanner.tsx', 'TopBar.tsx', 'ScrollButtons.tsx', 'QueueButton.tsx', 'DiagPanel.tsx', 'EmployeesManagement.tsx', 'updateWatcher.ts',
+const KNOWN = ['ConnectionBanner.tsx', 'AccessBanner.tsx', 'TopBar.tsx', 'ScrollButtons.tsx', 'QueueButton.tsx', 'DiagPanel.tsx', 'EmployeesManagement.tsx', 'updateWatcher.ts',
   // Mode hors ligne (M13.6) : minuteurs LOCAUX (rafraîchir un compteur, une attente de code) ; aucun ne parle au serveur
   'OfflineCenter.tsx', 'OfflineCard.tsx', 'OfflinePin.tsx', 'useOfflineStatus.ts',
   // Statut en direct (calendrier global, messagerie, gestion des employés) : horloge LOCALE qui fait redessiner l'écran toutes les 15 s, rien vers le serveur

@@ -2634,6 +2634,14 @@ export const resolveAccessUntil = (shift: 'day' | 'night', st: any, nowMs: numbe
   return e - nowMs > 14 * 3600000 ? nowMs + 4 * 3600000 : e;
 };
 // ===== END ACCESSUNTIL =====
+// ===== BEGIN SHIFTMODE (copie serveur : mêmes lignes) =====
+const cleanShiftMode = (v: unknown): 'both' | 'normal' | 'day' | 'night' => (v === 'normal' || v === 'day' || v === 'night' ? v : 'both');
+/** La vacation qui compte vraiment pour une personne : en mode normal ou « jour seulement » c'est le jour, en « nuit seulement » la nuit, sinon celle de la personne. */
+const effShift = (shift: unknown, mode: unknown): 'day' | 'night' => {
+  const m = cleanShiftMode(mode);
+  return m === 'night' ? 'night' : m === 'day' || m === 'normal' ? 'day' : shift === 'night' ? 'night' : 'day';
+};
+// ===== END SHIFTMODE =====
 // Opérateur, Comptable et Chef d'équipe (jamais le responsable) : « auto » = seulement pendant sa vacation ET un jour de travail ; « allow » = toute heure ; « block » = jamais.
 // Une session en cours (début ou fin à valider) garde l'accès jusqu'à sa fin.
 async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string; block?: boolean }> {
@@ -2642,7 +2650,7 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string; 
   if (user.access_mode === 'allow') return { ok: true };
   if (user.access_until && Date.parse(user.access_until) > Date.now()) return { ok: true }; // autorisation du responsable (demande hors horaires) encore valable
   const st = await getSettings();
-  const shift: 'day' | 'night' = user.shift === 'night' ? 'night' : 'day';
+  const shift = effShift(user.shift, st.shift_mode);
   const now = new Date();
   if (inShiftWindow(shift, st, now)) {
     if (isWorkDay(workDateOf(shift, now), st.work_days)) return { ok: true };
@@ -3083,7 +3091,7 @@ async function totpReset(req: any, res: any, me: any) {
 
 // ---------- demande de connexion hors horaires (le responsable décide ; une demande en attente par personne) ----------
 const ACCESS_ROLES = ['employee', 'accountant', 'team_lead'];
-const accessShiftOf = (u: any): 'day' | 'night' => (u?.shift === 'night' ? 'night' : 'day');
+const accessShiftOf = (u: any, st: any): 'day' | 'night' => effShift(u?.shift, st?.shift_mode);
 /** Ce que la personne a le droit de voir de sa dernière demande (jamais les données des autres). */
 async function myAccessRequest(userId: string): Promise<any> {
   const { data } = await sb.from(ACCESS_REQ).select('data').eq('id', `acc-${userId}`).maybeSingle();
@@ -3112,10 +3120,11 @@ async function accessRequest(req: any, res: any) {
   if (acc.ok) return res.status(400).json({ error: 'Tu peux déjà te connecter.', code: 'allowed' });
   if (acc.block) return res.status(403).json({ error: acc.message });
   const id = `acc-${user.id}`;
+  const stReq = await getSettings();
   const { data: ex } = await sb.from(ACCESS_REQ).select('data').eq('id', id).maybeSingle();
   if (ex?.data?.status === 'pending') return res.status(409).json({ error: 'Ta demande est déjà en attente. Le responsable doit la valider.', code: 'pending', request: await myAccessRequest(user.id) });
   const now = new Date().toISOString();
-  await sb.from(ACCESS_REQ).upsert({ id, data: { id, user_id: user.id, name: user.name, username: uname, role: user.role, shift: accessShiftOf(user), reason: why, status: 'pending', created_at: now }, updated_at: now });
+  await sb.from(ACCESS_REQ).upsert({ id, data: { id, user_id: user.id, name: user.name, username: uname, role: user.role, shift: accessShiftOf(user, stReq), reason: why, status: 'pending', created_at: now }, updated_at: now });
   await auditLog(user, 'access_request', { type: 'users', id: user.id, label: auditLabelOf(user) }, `Demande hors horaires : ${why}`);
   await later(pushAdmins('validations', notifyText('access', { name: user.name }), `access:${id}`.slice(0, 60), { go: 'validations', filter: 'access', nav: `val-acc-${id}` }));
   return res.json({ ok: true, request: await myAccessRequest(user.id) });
@@ -3143,13 +3152,38 @@ async function accessDecide(req: any, res: any, me: any) {
   if (decision === 'approve' && r.status !== 'pending') return res.status(409).json({ error: 'Cette demande est déjà traitée.' });
   if (decision === 'change' && r.status !== 'approved') return res.status(409).json({ error: 'Aucune autorisation à modifier.' });
   const st = await getSettings();
-  const until = resolveAccessUntil(accessShiftOf(user), st, Date.now(), mode, value);
+  const until = resolveAccessUntil(accessShiftOf(user, st), st, Date.now(), mode, value);
   if (until === null) return res.status(400).json({ error: 'Heure de fin invalide (dans les 48 prochaines heures).' });
   const iso = new Date(until).toISOString();
   await sb.from(T.users).upsert({ id: user.id, data: { ...user, access_until: iso, force_logout_at: undefined }, updated_at: now });
   await save({ ...r, status: 'approved', until: iso, decided_at: now, decided_by: me.id });
   await auditLog(me, decision === 'approve' ? 'access_approved' : 'access_changed', label, `Autorisée jusqu'à ${new Date(until + 3 * 3600000).toISOString().slice(0, 16).replace('T', ' ')} (Madagascar)`);
   return res.json({ ok: true, until: iso });
+}
+
+// ---------- déconnexion forcée par le responsable (dans X minutes, annulable ; une mission ouverte n'est jamais perdue) ----------
+const forcePassed = (u: any) => !!u?.force_logout_at && Date.parse(u.force_logout_at) <= Date.now();
+async function forceLogout(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { userId, minutes, cancel } = req.body || {};
+  const user = typeof userId === 'string' ? await getUserRow(userId) : null;
+  if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
+  if (!ACCESS_ROLES.includes(user.role)) return res.status(400).json({ error: 'Seuls les opérateurs, comptables et chefs d\'équipe peuvent être déconnectés ainsi.' });
+  const label = { type: 'users', id: String(user.id), label: auditLabelOf(user) };
+  const now = new Date().toISOString();
+  if (cancel === true) {
+    const { force_logout_at: _f, ...rest } = user;
+    await sb.from(T.users).upsert({ id: user.id, data: rest, updated_at: now });
+    await auditLog(me, 'force_logout', label, 'Déconnexion annulée');
+    return res.json({ ok: true });
+  }
+  const m = Number(minutes);
+  if (!Number.isInteger(m) || m < 0 || m > 120) return res.status(400).json({ error: 'Délai invalide (0 à 120 minutes).' });
+  const at = new Date(Date.now() + m * 60000).toISOString();
+  await sb.from(T.users).upsert({ id: user.id, data: { ...user, force_logout_at: at }, updated_at: now });
+  const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
+  await auditLog(me, 'force_logout', label, m === 0 ? 'Déconnexion immédiate' : `Déconnexion dans ${m} min`);
+  return res.json({ ok: true, at, open_mission: !!(open && open.length) });
 }
 
 async function login(req: any, res: any) {
@@ -3194,6 +3228,7 @@ async function login(req: any, res: any) {
   if (user.status === 'blocked') return res.status(403).json({ error: 'Compte bloqué par l\'administrateur.' });
   const mm = await maintenanceMessage(user);
   if (mm) return res.status(503).json({ error: mm, code: 'maintenance' });
+  if (forcePassed(user)) { delete user.force_logout_at; delete user.access_until; await sb.from(T.users).upsert({ id: user.id, data: user, updated_at: new Date().toISOString() }); } // déconnexion forcée déjà exécutée : l'autorisation hors horaires est finie aussi
   const acc = await shiftAccess(user);
   if (!acc.ok) return res.status(403).json({ error: acc.message, code: 'shift', can_request: !acc.block, request: acc.block ? null : await myAccessRequest(user.id) });
 
@@ -5547,6 +5582,11 @@ Deno.serve(async (request: Request) => {
     if (action !== "logout") {
       const mm = await maintenanceMessage(me);
       if (mm) return res.status(503).json({ error: mm, code: 'maintenance' });
+      if (forcePassed(me)) {
+        const { force_logout_at: _f, access_until: _a, ...rest } = me;
+        await sb.from(T.users).upsert({ id: me.id, data: rest, updated_at: new Date().toISOString() });
+        return res.status(401).json({ error: "Le responsable t'a déconnecté. Tu peux te reconnecter pendant tes horaires de travail.", code: 'forced' });
+      }
       const acc = await shiftAccess(me);
       if (!acc.ok) return res.status(401).json({ error: acc.message, code: 'shift' });
     }
@@ -5592,6 +5632,7 @@ Deno.serve(async (request: Request) => {
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "access-decide" && req.method === "POST") return await accessDecide(req, res, me);
+    if (action === "force-logout" && req.method === "POST") return await forceLogout(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
     if (action === "invoice-issue" && req.method === "POST") return await invoiceIssue(req, res, me);
     if (action === "invoice-cancel" && req.method === "POST") return await invoiceCancel(req, res, me);

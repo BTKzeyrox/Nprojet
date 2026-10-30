@@ -169,7 +169,7 @@ export function employeeRecap(i: SnapshotInput, userId: string): EmployeeRecap {
   const joined = /^\d{4}-\d{2}-\d{2}$/.test(u.cv_data?.joinedDate || '') ? u.cv_data!.joinedDate : null;
   const first = joined && (!dates[0] || joined < dates[0]) ? joined : dates[0] || null;
   const done = mine.filter(p => p.status === 'completed'), rej = mine.filter(p => p.status === 'rejected');
-  const cfg = { day_shift_start: i.settings?.day_shift_start || '08:00', night_shift_start: i.settings?.night_shift_start || '20:00', late_tolerance_min: typeof i.settings?.late_tolerance_min === 'number' ? i.settings.late_tolerance_min : 15 };
+  const cfg = { day_shift_start: i.settings?.day_shift_start || '08:00', night_shift_start: i.settings?.night_shift_start || '20:00', late_tolerance_min: typeof i.settings?.late_tolerance_min === 'number' ? i.settings.late_tolerance_min : 15, shift_mode: i.settings?.shift_mode };
   const lateDays = new Set(mine.filter(p => p.status !== 'rejected' && p.status !== 'force_released' && isLate(p, cfg)).map(p => p.date)).size;
   const adv = i.advances.filter(a => a.employee_id === userId && Number.isFinite(a.amount_ar));
   const t = first ? days(first, i.today) : null;

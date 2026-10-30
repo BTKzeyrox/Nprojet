@@ -44,6 +44,7 @@ import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 import { PayrollAdmin } from '../../components/PayrollAdmin';
 import { AdvPayTabs } from '../../components/AdvPayTabs';
 import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
+import { effShift, showShift } from '../../utils/shiftMode';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -360,7 +361,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             [en ? 'Shift' : 'Vacation', 'shift', [['all', en ? 'All' : 'Toutes'], ['day', en ? 'Day' : 'Jour'], ['night', en ? 'Night' : 'Nuit']]],
             [en ? 'Account' : 'Compte', 'account', [['all', en ? 'All' : 'Tous'], ['active', en ? 'Active' : 'Actifs'], ['blocked', en ? 'Blocked' : 'Bloqués']]],
             [en ? 'Level' : 'Performance', 'level', [['all', en ? 'All' : 'Tous'], ['Top Booster', badgeLabel('Top Booster')], ['Elite', badgeLabel('Elite')], ['Standard', badgeLabel('Standard')], ['Under Watch', badgeLabel('Under Watch')]]],
-          ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).map(([title, key, opts]) => (
+          ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).filter(([, k]) => k !== 'shift' || showShift(cfg)).map(([title, key, opts]) => (
             <div key={key} className="min-w-0">
               <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">{title}</div>
               <div className="flex flex-wrap gap-1">
@@ -408,7 +409,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                     {blocked && <span className="px-1.5 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 text-[10px] font-bold uppercase">{en ? 'Blocked' : 'Bloqué'}</span>}
                     {!blocked && emp.access_mode === 'block' && <span className="px-1.5 py-0.5 rounded bg-amber-950 border border-amber-700 text-amber-300 text-[10px] font-bold uppercase">{en ? 'Access off' : 'Accès coupé'}</span>}
                   </div>
-                  <div className="text-[11px] text-slate-400 break-words">@{emp.username} · {emp.shift === 'day' ? (en ? 'Day' : 'Jour') : (en ? 'Night' : 'Nuit')} ({shiftHoursLabel(emp.shift === 'night' ? 'night' : 'day', cfg)})</div>
+                  <div className="text-[11px] text-slate-400 break-words">@{emp.username} · {showShift(cfg) ? (emp.shift === 'day' ? (en ? 'Day' : 'Jour') : (en ? 'Night' : 'Nuit')) : (en ? 'Hours' : 'Horaires')} ({shiftHoursLabel(effShift(emp.shift, cfg.shift_mode), cfg)})</div>
                   <div className="text-[11px] mt-0.5 flex flex-wrap items-center gap-x-2"><LiveLine info={live} lang={en ? 'en' : 'fr'} />{mission && <span className="text-slate-400 break-words">· {mission.client_name}</span>}</div>
                   {pend.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
@@ -469,6 +470,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           onToggleBlock={() => { const u = sheetUser, b = u.status === 'blocked'; askConfirm({ title: b ? `Débloquer ${u.name} ?` : `Bloquer ${u.name} ?`, message: b ? 'Le compte pourra de nouveau se connecter.' : 'Le compte ne pourra plus se connecter tant qu\'il est bloqué.', confirmLabel: b ? 'Débloquer' : 'Bloquer', danger: !b, onConfirm: () => handleToggleBlock(u.id) }); }}
           onDelete={() => { const u = sheetUser; setSheetId(null); handleDeleteUser(u); }}
           onSetAccess={mode => db.setAccessMode(sheetUser.id, mode)}
+          onForceLogout={minutes => db.forceLogout(sheetUser.id, { minutes })}
+          onCancelForce={() => db.forceLogout(sheetUser.id, { cancel: true })}
           onOpen={onOpenOperator && sheetUser.role === 'employee' ? view => { const id = sheetUser.id; setSheetId(null); onOpenOperator(id, view); } : undefined} />
       )}
 
@@ -613,6 +616,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
+              {showShift(cfg) && (
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Vacation</label>
                 <select
@@ -620,10 +624,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setEditShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day"> Vacation Jour (08h00 - 18h00)</option>
-                  <option value="night"> Vacation Nuit (20h00 - 06h00)</option>
+                  <option value="day">{` Vacation Jour (${shiftHoursLabel('day', cfg)})`}</option>
+                  <option value="night">{` Vacation Nuit (${shiftHoursLabel('night', cfg)})`}</option>
                 </select>
               </div>
+              )}
 
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Niveau</label>
@@ -748,7 +753,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
-              {newRole === 'employee' && (
+              {newRole === 'employee' && showShift(cfg) && (
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Vacation Initial</label>
                 <select
@@ -756,8 +761,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setNewShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day"> Day Vacation (08h00 - 18h00)</option>
-                  <option value="night"> Night Vacation (20h00 - 06h00)</option>
+                  <option value="day">{` Day Vacation (${shiftHoursLabel('day', cfg)})`}</option>
+                  <option value="night">{` Night Vacation (${shiftHoursLabel('night', cfg)})`}</option>
                 </select>
               </div>
               )}

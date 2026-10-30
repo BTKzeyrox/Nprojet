@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, UserCog, Ban, UserCheck, Trash2, FileText, CalendarDays, MessageSquare, ExternalLink, Sun, Moon, Clock3, ListChecks } from 'lucide-react';
 import type { AppSettings, PostSession, User } from '../types';
 import { Avatar } from './Avatar';
@@ -8,6 +8,8 @@ import { backdropDown, backdropShouldClose } from '../utils/modalGuard';
 import { badgeLabel, formatScoreM, shiftHoursLabel } from '../utils/formatUtils';
 import { formatDuration } from '../utils/presence';
 import { todayMada } from '../utils/stats';
+import { effShift, showShift } from '../utils/shiftMode';
+import { madaClock } from '../utils/accessRequest';
 
 /** Libellé d'une mission ouverte. */
 const OPEN_LABEL: Record<string, { fr: string; en: string }> = {
@@ -29,11 +31,19 @@ export interface OperatorSheetProps {
   onClose: () => void;
   onProfile: () => void; onEdit: () => void; onToggleBlock: () => void; onDelete: () => void;
   onSetAccess: (mode: 'auto' | 'allow' | 'block') => void;
+  /** Déconnexion forcée dans X minutes (0 = tout de suite) et annulation. */
+  onForceLogout: (minutes: number) => Promise<{ success: boolean; error?: string; openMission?: boolean }>;
+  onCancelForce: () => Promise<{ success: boolean; error?: string }>;
   onOpen?: (view: 'operator' | 'calendar' | 'chat') => void;
 }
 
 /** Fiche d'un opérateur : son état, sa session et TOUTES les actions possibles (voir, gérer, supprimer). S'ouvre en touchant une ligne de la liste. */
-export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, nowMs, live, posts, onlineSec, chips, onClose, onProfile, onEdit, onToggleBlock, onDelete, onSetAccess, onOpen }) => {
+export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, nowMs, live, posts, onlineSec, chips, onClose, onProfile, onEdit, onToggleBlock, onDelete, onSetAccess, onForceLogout, onCancelForce, onOpen }) => {
+  const [fMin, setFMin] = useState(10);
+  const [fMsg, setFMsg] = useState<string | null>(null);
+  const [fBusy, setFBusy] = useState(false);
+  const forcedAt = user.force_logout_at && Date.parse(user.force_logout_at) > nowMs ? Date.parse(user.force_logout_at) : 0;
+  const openMission = posts.some(p => p.employee_id === user.id && ['pending_start', 'active', 'pending_end'].includes(p.status));
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const down = useRef(false); // l'appui a commencé sur le fond : seul cas où un clic sur le fond ferme la fiche (voir modalGuard.ts)
   const blocked = user.status === 'blocked';
@@ -66,7 +76,7 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
           {/* Identité */}
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
             <span className={`px-2 py-1 rounded font-bold border inline-flex items-center gap-1 ${user.shift === 'day' ? 'bg-amber-950/70 border-amber-600/40 text-amber-300' : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'}`}>
-              {user.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{user.shift === 'day' ? t('Jour', 'Day') : t('Nuit', 'Night')} ({shiftHoursLabel(user.shift === 'night' ? 'night' : 'day', cfg)})
+              {effShift(user.shift, cfg.shift_mode) === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{showShift(cfg) ? (user.shift === 'day' ? t('Jour', 'Day') : t('Nuit', 'Night')) : t('Horaires', 'Hours')} ({shiftHoursLabel(effShift(user.shift, cfg.shift_mode), cfg)})
             </span>
             <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{badgeLabel(user.performance_badge)}</span>
             <span className="text-emerald-400 font-bold">{formatScoreM(user.total_score_boosted)} {t('unités', 'units')}</span>
@@ -121,11 +131,32 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
             <label className="block text-xs text-slate-400">{t('Accès à l\'application', 'App access')}
               <select value={user.access_mode || 'auto'} onChange={e => onSetAccess(e.target.value as 'auto' | 'allow' | 'block')} data-testid="act-access"
                 className="mt-1 w-full min-h-[46px] px-3 text-sm font-mono rounded-xl border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer">
-                <option value="auto">{t('Pendant sa vacation', 'During its shift')}</option>
+                <option value="auto">{t('Pendant ses horaires de travail', 'During work hours')}</option>
                 <option value="allow">{t('À toute heure', 'At any time')}</option>
                 <option value="block">{t('Bloqué', 'Blocked')}</option>
               </select>
             </label>
+            {user.role !== 'admin' && (
+              <div data-force-logout className="space-y-1.5 pt-1">
+                {forcedAt > 0 ? (
+                  <>
+                    <div className="text-xs text-amber-300 font-mono">{t(`Déconnexion prévue à ${madaClock(forcedAt)}`, `Disconnect planned at ${madaClock(forcedAt)}`)}</div>
+                    <button type="button" disabled={fBusy} data-force-cancel onClick={async () => { setFBusy(true); const r = await onCancelForce(); setFBusy(false); setFMsg(r.success ? null : (r.error || null)); }} className={neutral}>{t('Annuler la déconnexion', 'Cancel the disconnect')}</button>
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-xs text-slate-400">{t('Déconnecter la personne', 'Disconnect the person')}
+                      <select value={fMin} onChange={e => setFMin(Number(e.target.value))} data-force-minutes className="mt-1 w-full min-h-[46px] px-3 text-sm font-mono rounded-xl border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer">
+                        {[0, 5, 10, 15, 30, 60].map(m => <option key={m} value={m}>{m === 0 ? t('Tout de suite', 'Right now') : t(`Dans ${m} minutes`, `In ${m} minutes`)}</option>)}
+                      </select>
+                    </label>
+                    {openMission && <div className="text-[11px] text-amber-300">{t('Une mission est en cours : elle est gardée, rien n\'est perdu. La personne pourra la reprendre à sa reconnexion.', 'A mission is open: it is kept, nothing is lost. The person can resume it after logging in again.')}</div>}
+                    <button type="button" disabled={fBusy} data-force-go onClick={async () => { setFBusy(true); setFMsg(null); const r = await onForceLogout(fMin); setFBusy(false); setFMsg(r.success ? null : (r.error || null)); }} className={`${act} bg-red-950 hover:bg-red-900 border-red-700 text-red-300`}>{t('Déconnecter', 'Disconnect')}</button>
+                  </>
+                )}
+                {fMsg && <div className="text-[11px] text-red-300">{fMsg}</div>}
+              </div>
+            )}
           </section>
 
           {/* Danger */}

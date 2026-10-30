@@ -80,7 +80,7 @@ eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>\s*\) : view
 eq(/viewAllowedFor\(currentUser\.role, it\.id\)/.test(side), true, 'Menu : filtré par rôle');
 eq(/currentUser\?\.role === 'accountant' \? accountantItems/.test(bottom), true, 'Barre du bas : jeu du Comptable');
 eq(/CREATABLE_ROLES\.map/.test(emp) && /role: newRole/.test(emp), true, 'Création de compte : rôle choisi parmi CREATABLE_ROLES');
-eq(/\{newRole === 'employee' && \(/.test(emp), true, 'Création : vacation demandée aux opérateurs seulement');
+eq(/\{newRole === 'employee' \&\& showShift\(cfg\) \&\& \(/.test(emp), true, 'Création : vacation demandée aux opérateurs seulement');
 eq(/const staff = users\.filter\(u => u\.role !== 'employee' && u\.role !== 'admin'\)/.test(emp), true, 'Liste des Comptables et chefs d\'équipe (bloquer, supprimer)');
 eq(/export type UserRole = 'admin' \| 'employee' \| 'accountant' \| 'team_lead'/.test(types), true, 'Type UserRole : 4 rôles');
 // côté site : l'argent est ouvert au Comptable, tout le reste reste réservé au responsable

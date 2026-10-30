@@ -406,6 +406,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Les réglages du site : horaires, prix, objectifs, Conditions de l'entreprise, sauvegardes.
 - **Comment l'utiliser** : 1. Choisir la section à régler. 2. Enregistrer pour appliquer le changement. 3. Faire une sauvegarde avant un gros changement.
 - **Règles** :
+  - Horaires (Équipe) : « travail normal » (un seul horaire), jour seulement, nuit seulement, ou jour et nuit. Hors « jour et nuit », les mots vacation/jour/nuit disparaissent.
+  - Fin des horaires : compte à rebours de 15 min puis déconnexion automatique ; une mission ouverte est gardée.
   - Jours de travail (Équipe) : un jour décoché est un repos, jamais une absence. Le travail fait ce jour-là compte quand même.
   - Une sauvegarde de nuit est faite automatiquement et gardée environ 14 jours.
   - Les changements des Conditions sont notés dans un historique.
@@ -494,7 +496,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -664,6 +666,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheetXlsx.ts` | Un tableau → un fichier Excel « comme Excel » (module 19, M19.5) : de VRAIS types de cellules (dates, heures, nombres avec milliers, codes et téléphones en texte |
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
 | `sheetsStore.ts` | « Mes tableaux » : ancien rangement sur l'appareil (avant le serveur). Sert seulement à REPRENDRE une fois les tableaux déjà saisis, puis la copie est retirée. Jamais d'accès sans try/catch. |
+| `shiftMode.ts` | Mode des horaires (Réglages) : « normal » = un seul horaire pour tous, « day » / « night » = une seule vacation, « both » = jour et nuit. |
 | `siteKnowledge.ts` | Carte du site (module 11, M11.8) : pour CHAQUE page du menu, à quoi elle sert, comment l'utiliser, ses règles et ses chiffres avec leur formule. FR et EN. |
 | `siteSnapshot.ts` | Instantané du site et « Pourquoi ce chiffre ? » (module 11, M11.9). Pur : pas d'écran, pas de serveur. ADMIN SEULEMENT (chiffres d'argent). |
 | `snapshotDb.ts` | Relie l'instantané et « Pourquoi ce chiffre ? » aux données du site. ADMIN SEULEMENT : sans admin, aucune donnée n'est lue. |
@@ -901,6 +904,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
 | `npm run check:access-request` | Connexion hors horaires : règles d'heure de fin, copie serveur identique, routes, une demande par personne, formulaire et carte du responsable. |
+| `npm run check:shift-mode` | Modes d'horaires (normal / jour / nuit / jour et nuit), nouveaux horaires, déconnexion forcée et compte à rebours. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

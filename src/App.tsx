@@ -60,6 +60,7 @@ const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ 
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
 import type { ViewAs } from './utils/roles';
+import { AccessBanner } from './components/AccessBanner';
 const TreasuryPage = lazy(() => import('./views/admin/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
@@ -413,6 +414,8 @@ export default function App() {
           onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}
         />
+
+        {currentUser && currentUser.role !== 'admin' && <AccessBanner user={currentUser} />}
 
         {/* Dynamic Page Content Based on activeView */}
         <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px - var(--bnh, 0px))', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>

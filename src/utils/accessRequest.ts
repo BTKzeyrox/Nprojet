@@ -1,4 +1,5 @@
 // Demande de connexion hors horaires : règles pures (heure de fin d'une autorisation). Le serveur (df-api) a la même copie ; `npm run check:access-request` compare les deux.
+import { effShift } from './shiftMode';
 export const ACCESS_HOURS = [1, 2, 4, 8, 12] as const;
 export type AccessMode = 'shift_end' | 'hours' | 'until';
 
@@ -39,3 +40,12 @@ export const untilFromClock = (clock: string, nowMs: number): number | null => {
   if (t <= local) t += DAY_MS;
   return t - MADA_MS;
 };
+
+/** Fin d'accès prévue pour cette personne (heure de fin + marge après), ou null si rien n'est prévu (accès « toute heure », pas concerné). */
+export const accessEndMs = (u: { role: string; shift?: string; access_mode?: string; access_until?: string }, cfg: any, nowMs: number): number | null => {
+  if (!['employee', 'accountant', 'team_lead'].includes(u.role) || u.access_mode === 'allow' || u.access_mode === 'block') return null;
+  if (u.access_until && Date.parse(u.access_until) > nowMs) return Date.parse(u.access_until);
+  const after = Number.isFinite(Number(cfg.access_after_min)) ? Math.max(0, Number(cfg.access_after_min)) : 60;
+  return shiftEndMs(effShift(u.shift, cfg.shift_mode), cfg, nowMs - after * 60000) + after * 60000;
+};
+

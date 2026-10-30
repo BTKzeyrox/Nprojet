@@ -39,6 +39,7 @@ import { dueSortKey, type MissionPriority } from '../utils/deadlines';
 import { applyTemplate } from '../utils/missionTemplates';
 import { TaskBar, TaskListEditor } from './TaskChecklist';
 import { tasksFromLines } from '../utils/taskList';
+import { showShift } from '../utils/shiftMode';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -362,13 +363,13 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
           {/* Shift Filter */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-slate-400 uppercase mr-1">Vacation:</span>
+            <span className="text-[10px] text-slate-400 uppercase mr-1">{showShift(db.getSettings()) ? 'Vacation:' : 'Filtre:'}</span>
             {[
               { id: 'all', label: 'Tous', icon: null as any },
               { id: 'day', label: 'Jour', icon: Sun },
               { id: 'night', label: 'Nuit', icon: Moon },
               { id: 'urgent', label: 'Urgent', icon: Zap },
-            ].map(f => (
+            ].filter(f => showShift(db.getSettings()) || (f.id !== 'day' && f.id !== 'night')).map(f => (
               <button
                 key={f.id}
                 type="button"

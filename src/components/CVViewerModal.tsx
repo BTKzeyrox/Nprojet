@@ -12,6 +12,7 @@ import { BadgeChips, ScoreRing } from './PerformanceBadges';
 import { ROLE_NAMES } from '../utils/roles';
 import type { ViewAs } from '../utils/roles';
 import { usePresence, setPresence, PRESENCE_LIST, PRESENCE_LABEL, PRESENCE_DOT } from '../utils/availability';
+import { effShift, showShift } from '../utils/shiftMode';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -207,7 +208,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
           {live.role === 'employee' && (
             <div className="flex items-center gap-2 text-slate-300">
               {live.shift === 'day' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-300" />}
-              {live.shift === 'day' ? `Vacation Jour (${shiftHoursLabel('day', db.getSettings())})` : `Vacation Nuit (${shiftHoursLabel('night', db.getSettings())})`}
+              {!showShift(db.getSettings()) ? `Horaires (${shiftHoursLabel(effShift(live.shift, db.getSettings().shift_mode), db.getSettings())})` : live.shift === 'day' ? `Vacation Jour (${shiftHoursLabel('day', db.getSettings())})` : `Vacation Nuit (${shiftHoursLabel('night', db.getSettings())})`}
             </div>
           )}
           {canSeeProfileBadges(me, live) && <ProfileBadges userId={live.id} self={me?.role !== 'admin'} />}

@@ -63,6 +63,7 @@ import { setStorageIntent } from '../../utils/storageNav';
 import { setNavTarget } from '../../utils/navTarget';
 import { setValFilterIntent } from '../../utils/navIntent';
 import { useApp } from '../../context/AppContext';
+import { showShift } from '../../utils/shiftMode';
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -847,7 +848,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <option value="">-- Aucun / Libre --</option>
                         {availableOperators.map(b => (
                           <option key={b.id} value={b.id}>
-                            {b.name} ({b.shift === 'day' ? 'Jour' : 'Nuit'})
+                            {b.name}{showShift(db.getSettings()) ? ` (${b.shift === 'day' ? 'Jour' : 'Nuit'})` : ''}
                           </option>
                         ))}
                       </select>
@@ -1142,7 +1143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
-                <div className="text-slate-300">Vacation souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>
+                {showShift(db.getSettings()) && <div className="text-slate-300">Vacation souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>}
                 {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
                 <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
               </div>
@@ -1774,7 +1775,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          Vacation {emp.shift.toUpperCase()} · {active ? `En cours : ${active.client_name}` : STATUS_LABEL[ps.status]}
+                          {showShift(db.getSettings()) ? `Vacation ${emp.shift.toUpperCase()} · ` : ''}{active ? `En cours : ${active.client_name}` : STATUS_LABEL[ps.status]}
                         </div>
                       </div>
                     </div>

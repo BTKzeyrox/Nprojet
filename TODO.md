@@ -427,4 +427,9 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - [x] Connexion refusée hors horaires : formulaire avec raison obligatoire (une demande en attente par personne), le refus et son motif sont montrés
 - [x] Validations > Hors horaires : autoriser (fin de vacation, 1/2/4/8/12 h, heure précise), refuser avec motif, modifier l'heure de fin ; journal d'audit
 - [x] Table df_access_requests (sans accès public)
-- [ ] Étape 3 : déconnexion forcée avec compte à rebours
+### Étape 3 et horaires (fait le 2026-10-30, non testé à l'écran)
+- [x] Horaires par défaut : jour 08:00–17:00, nuit 19:30–04:30
+- [x] Réglages > Équipe : mode des horaires (travail normal, jour seulement, nuit seulement, jour et nuit) ; hors « jour et nuit », les mots vacation/jour/nuit sont cachés (écrans principaux)
+- [x] Compte à rebours de 15 min puis déconnexion automatique à la fin de l'accès (mission ouverte gardée)
+- [x] Fiche de la personne : « Déconnecter » (tout de suite ou dans 5 à 60 min), annulable ; le responsable est prévenu d'une mission ouverte ; journal d'audit
+- [ ] Pas fait : mots « vacation » dans les écrans secondaires (Planning RH, exports, Aide) et formulaire d'inscription (avant connexion)

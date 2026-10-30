@@ -5,6 +5,7 @@ import type { Leave, LeaveType } from './leaves';
 import { dayStatus } from './dayStatus';
 import { isWorkDay } from './workDays';
 import { toMin } from './attendance';
+import { effShift } from './shiftMode';
 
 export type LeaveFilter = 'all' | 'approved' | 'pending';
 export interface CalCtx { posts: PostSession[]; leaves: Leave[]; today: string; cfg: AppSettings; clientFilter?: string }
@@ -131,7 +132,7 @@ export function dayView(dateStr: string, emps: User[], ctx: CalCtx, first: Recor
     const leave = leaveKind(ctx.leaves, e.id, dateStr, 'approved');
     const status = dayStatus(all, dateStr, first[e.id] || null, ctx.today, ctx.cfg, leave !== null);
     const firstStart = worked.length ? worked[0].start_time.slice(0, 5) : null;
-    const base = e.shift === 'night' ? ctx.cfg.night_shift_start : ctx.cfg.day_shift_start;
+    const base = effShift(e.shift, ctx.cfg.shift_mode) === 'night' ? ctx.cfg.night_shift_start : ctx.cfg.day_shift_start;
     const diff = firstStart ? toMin(firstStart) - toMin(base) : 0;
     const ends = worked.filter(p => p.end_time).map(p => p.end_time!.slice(0, 5)).sort();
     return {

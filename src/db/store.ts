@@ -81,9 +81,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   client_prices_by_type: {},
   work_days: [1, 2, 3, 4, 5, 6],
   day_shift_start: '08:00',
-  day_shift_end: '18:00',
-  night_shift_start: '20:00',
-  night_shift_end: '06:00',
+  day_shift_end: '17:00',
+  night_shift_start: '19:30',
+  night_shift_end: '04:30',
+  shift_mode: 'both',
   late_tolerance_min: 15,
   access_before_min: 60,
   access_after_min: 60,
@@ -394,7 +395,7 @@ export class AppStore {
       }
       if (res.status === 401 && this.token && path !== 'login') {
         // Déconnecté parce que le shift est fini (ou accès bloqué) : on garde le message pour la page de connexion
-        if (data?.code === 'shift' && data.error) { try { sessionStorage.setItem('df_login_notice', String(data.error)); } catch { /* ignore */ } }
+        if ((data?.code === 'shift' || data?.code === 'forced') && data.error) { try { sessionStorage.setItem('df_login_notice', String(data.error)); } catch { /* ignore */ } }
         this.expireSession();
       }
       return { ok: res.ok, status: res.status, data };
@@ -2241,6 +2242,13 @@ export class AppStore {
   public getPasswordResets(): PasswordResetRequest[] {
     if (this.demo) return []; // démo : pas de mot de passe oublié
     return [...this.resets];
+  }
+
+  /** Responsable : déconnecte la personne dans `minutes` minutes (0 = tout de suite), ou annule la déconnexion prévue. */
+  public async forceLogout(userId: string, p: { minutes?: number; cancel?: boolean }): Promise<{ success: boolean; error?: string; at?: string; openMission?: boolean }> {
+    const r = await this.api('force-logout', { method: 'POST', body: JSON.stringify({ userId, ...p }) });
+    if (r.ok) await this.pull(true);
+    return r.ok ? { success: true, at: r.data?.at, openMission: r.data?.open_mission === true } : { success: false, error: r.data?.error || 'Action impossible.' };
   }
 
   public getAccessRequests(): AccessRequest[] {
