@@ -35,6 +35,7 @@ import { LiveLine } from '../components/LiveStatus';
 import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings, AttendanceRow } from '../types';
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
+import { dayDetail, minutesText } from '../utils/dayDetail';
 import { Avatar } from '../components/Avatar';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { useApp } from '../context/AppContext';
@@ -153,6 +154,36 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
               {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
               {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
             </div>
+            {(() => {
+              const d = dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter);
+              if (!d.firstSeen && d.missions.length === 0) return null;
+              const box = `rounded-xl p-2.5 text-xs space-y-1 ${st.L ? 'bg-slate-50' : 'bg-white/5'}`;
+              const h = `text-[11px] font-bold uppercase ${sub}`;
+              const stateTxt = { validated: 'validée', refused: 'refusée', running: 'en cours', waiting: 'en attente de validation', released: 'libérée' } as const;
+              return (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2" data-testid={`day-detail-${r.id}`}>
+                  <div className={box}>
+                    <div className={h}>Connexion</div>
+                    {d.firstSeen ? (
+                      <>
+                        <div className={sub}>Première connexion : <strong className={txt}>{d.firstSeen}</strong> · dernier signe de vie : <strong className={txt}>{d.lastSeen}</strong></div>
+                        <div className={sub}>Temps en ligne : <strong className={txt}>{formatDuration(d.onlineSec)}</strong></div>
+                        {d.hasConnectionLog ? d.connections.map((c, i) => (
+                          <div key={i} className={sub}>Connecté à <strong className={txt}>{c.from}</strong> · {c.state === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <>{c.state === 'out' ? 'déconnecté à' : 'dernier signe de vie à'} <strong className={txt}>{c.to}</strong></>} · {minutesText(c.minutes)}</div>
+                        )) : <div className={sub}>Heures de déconnexion : pas enregistrées pour ce jour (avant la mise à jour).</div>}
+                      </>
+                    ) : <div className={sub}>Aucune connexion enregistrée ce jour-là.</div>}
+                  </div>
+                  <div className={box}>
+                    <div className={h}>Missions du jour</div>
+                    {d.missions.length === 0 ? <div className={sub}>Aucune mission.</div> : d.missions.map(m => (
+                      <div key={m.id} className={sub}><strong className={txt}>{m.client}</strong> · {m.start}{m.end ? ` → ${m.end}` : ''}{m.minutes !== null ? ` (${minutesText(m.minutes)})` : ''} · score {formatScoreM(m.scoreFrom)} → {formatScoreM(m.scoreTo)} / {formatScoreM(m.target)} · {stateTxt[m.status]}{m.pay > 0 ? ` · ${ar(m.pay)}` : ''}</div>
+                    ))}
+                    {d.missions.length > 0 && <div className={`pt-1 border-t ${st.L ? 'border-slate-200' : 'border-white/10'} ${sub}`}>Total : <strong className={txt}>{d.totals.missions}</strong> mission{d.totals.missions > 1 ? 's' : ''} · {d.totals.validated} validée{d.totals.validated > 1 ? 's' : ''}{d.totals.refused ? ` · ${d.totals.refused} refusée${d.totals.refused > 1 ? 's' : ''}` : ''}{d.totals.running ? ` · ${d.totals.running} en cours` : ''} · gain {formatScoreM(d.totals.gain)}{d.totals.pay > 0 ? ` · paie ${ar(d.totals.pay)}` : ''}</div>}
+                  </div>
+                </div>
+              );
+            })()}
             {day === today && u && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
           </div>
         );

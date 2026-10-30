@@ -336,6 +336,8 @@ export interface AttendanceRow {
   first_seen: string;
   last_seen: string;
   online_sec: number;
+  /** Connexions du jour (serveur v52+) : `in` = connexion, `last` = dernier signe de vie, `out` = déconnexion volontaire. Absent sur les anciens jours. */
+  sessions?: { in: string; last: string; out?: string }[];
 }
 
 export interface PresenceRow {

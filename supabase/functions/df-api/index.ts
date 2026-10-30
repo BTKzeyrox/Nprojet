@@ -2610,6 +2610,17 @@ const attendanceDay = (me: any, now: Date): string => {
   return mada.toISOString().slice(0, 10);
 };
 const attMem = new Map<string, { day: string; at: number }>(); // limite les écritures : 1 par minute et par booster
+// Connexions du jour (BTK, 2026-10-29) : une « session » = de la connexion au dernier signe de vie, ou à la déconnexion. Retour : la colonne `sessions` peut rester (vide ou pleine), l'ancien code l'ignore.
+const SESSION_GAP_MS = 150_000; // plus de 150 s sans signe de vie : la session est finie (fin = dernier signe de vie), la suivante est une nouvelle connexion
+const SESSIONS_MAX = 40;
+const nextSessions = (prev: any, now: Date): any[] => {
+  const list = Array.isArray(prev) ? prev.map((x: any) => ({ ...x })) : [];
+  const t = now.toISOString();
+  const last = list[list.length - 1];
+  if (last && !last.out && now.getTime() - new Date(last.last).getTime() <= SESSION_GAP_MS) last.last = t;
+  else list.push({ in: t, last: t });
+  return list.slice(-SESSIONS_MAX);
+};
 async function touchAttendance(me: any, now: Date) {
   const day = attendanceDay(me, now);
   const mem = attMem.get(me.id);
@@ -2620,14 +2631,28 @@ async function touchAttendance(me: any, now: Date) {
     const gap = (now.getTime() - new Date(row.last_seen).getTime()) / 1000;
     if (gap > 0 && gap <= 150) sec += Math.round(gap);
   }
-  await sb.from(ATTENDANCE).upsert({ user_id: me.id, day, first_seen: row?.first_seen ?? now.toISOString(), last_seen: now.toISOString(), online_sec: sec });
+  await sb.from(ATTENDANCE).upsert({ user_id: me.id, day, first_seen: row?.first_seen ?? now.toISOString(), last_seen: now.toISOString(), online_sec: sec, sessions: nextSessions(row?.sessions, now) });
   attMem.set(me.id, { day, at: now.getTime() });
+}
+// Déconnexion : la session ouverte reçoit son heure de fin. N'échoue jamais.
+async function closeAttendanceSession(me: any) {
+  try {
+    const now = new Date();
+    attMem.delete(me.id);
+    const day = attendanceDay(me, now);
+    const { data: row } = await sb.from(ATTENDANCE).select('sessions').eq('user_id', me.id).eq('day', day).maybeSingle();
+    const list = Array.isArray(row?.sessions) ? row.sessions.map((x: any) => ({ ...x })) : [];
+    const last = list[list.length - 1];
+    if (!last || last.out) return;
+    last.out = now.toISOString(); last.last = now.toISOString();
+    await sb.from(ATTENDANCE).update({ sessions: list }).eq('user_id', me.id).eq('day', day);
+  } catch (e) { console.error('attendance logout error:', e); }
 }
 // L'admin voit tous les boosters du jour demandé ; un booster ne voit que le sien.
 async function attendanceRoute(req: any, res: any, me: any) {
   const day = String(req.query.day || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return res.status(400).json({ error: 'Jour invalide.' });
-  let q = sb.from(ATTENDANCE).select('user_id,day,first_seen,last_seen,online_sec').eq('day', day);
+  let q = sb.from(ATTENDANCE).select('user_id,day,first_seen,last_seen,online_sec,sessions').eq('day', day);
   if (me.role !== 'admin') q = q.eq('user_id', me.id);
   const { data } = await q;
   return res.json({ rows: data || [] });
@@ -3821,6 +3846,7 @@ async function logout(_req: any, res: any, me: any) {
   me.is_online = false;
   await sb.from(T.users).upsert({ id: me.id, data: me, updated_at: new Date().toISOString() });
   await sb.from(PRESENCE).update({ last_seen: new Date(0).toISOString(), waiting_since: null }).eq('user_id', me.id);
+  await closeAttendanceSession(me);
   return res.json({ ok: true });
 }
 
