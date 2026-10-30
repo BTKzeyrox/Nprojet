@@ -433,3 +433,8 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - [x] Compte à rebours de 15 min puis déconnexion automatique à la fin de l'accès (mission ouverte gardée)
 - [x] Fiche de la personne : « Déconnecter » (tout de suite ou dans 5 à 60 min), annulable ; le responsable est prévenu d'une mission ouverte ; journal d'audit
 - [ ] Pas fait : mots « vacation » dans les écrans secondaires (Planning RH, exports, Aide) et formulaire d'inscription (avant connexion)
+
+## Objectif de missions par jour (GO 2026-10-30, non testé à l'écran)
+- [x] Réglages > Équipe : minimum et maximum (défaut 2 et 5)
+- [x] Détail du jour du calendrier : « dans l'objectif / sous le minimum / au-dessus du maximum » (affichage seulement, jamais de blocage, aucun changement serveur)
+- [ ] Pas fait : refuser une 6e mission côté serveur (à décider par BTK)

@@ -80,6 +80,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   client_price_default_ar: 0, // à régler dans Réglages > Missions (0 = pas encore réglé)
   client_prices_by_type: {},
   work_days: [1, 2, 3, 4, 5, 6],
+  missions_per_day_min: 2,
+  missions_per_day_max: 5,
   day_shift_start: '08:00',
   day_shift_end: '17:00',
   night_shift_start: '19:30',

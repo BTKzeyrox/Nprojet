@@ -281,7 +281,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Les présences et les retards, jour par jour : d'abord tous les employés ensemble (mois, résumé, vue du jour), puis le calendrier d'un employé.
 - **Comment l'utiliser** : 1. Choisir le mois et la personne. 2. Cliquer un jour pour voir les sessions. 3. Repérer les retards.
 - **Règles** :
-  - Le dimanche est un jour de repos.
+  - Objectif de missions par jour (2 à 5, réglable dans Réglages) : indiqué dans le détail du jour, il ne bloque rien.
+  - Les jours de repos se règlent dans Réglages (par défaut le dimanche).
   - Les heures sont celles de Madagascar (UTC+3).
   - Calendrier global : chaque case montre des chiffres avec leur icône et leur couleur (présents, retards, absents, congés, missions), sans texte. C'est la somme exacte des calendriers individuels.
   - Un clic sur un jour (calendrier global ou d'un seul employé) ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
@@ -619,6 +620,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
+| `missionQuota.ts` | Objectif de missions par jour (2 à 5 par défaut, réglable) : règle pure, affichage seulement. Le site n'empêche jamais une mission : il montre si le jour est dans la cible. |
 | `missionSheet.ts` | Tableau préparé par mission (module 18, M18.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:mission-sheet`. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
@@ -909,6 +911,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
 | `npm run check:access-request` | Connexion hors horaires : règles d'heure de fin, copie serveur identique, routes, une demande par personne, formulaire et carte du responsable. |
 | `npm run check:shift-mode` | Modes d'horaires (normal / jour / nuit / jour et nuit), nouveaux horaires, déconnexion forcée et compte à rebours. |
+| `npm run check:mission-quota` | Objectif de missions par jour (2 à 5, réglable) : règle pure, affichage dans le détail du jour, jamais de blocage. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

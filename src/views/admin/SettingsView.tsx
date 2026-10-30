@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeLangControls } from '../../components/ThemeLangControls';
-import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
+import { Settings, Plus, X, Save, CalendarDays, Clock, ListChecks, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { cleanWorkDays, DAY_ORDER, DAY_NAMES_FR } from '../../utils/workDays';
+import { cleanQuota } from '../../utils/missionQuota';
 import { cleanShiftMode, SHIFT_MODES, MODE_LABELS } from '../../utils/shiftMode';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
@@ -245,6 +246,24 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <label className={labelCls}>Tolérance de retard (minutes)</label>
           <input type="number" min={0} value={s.late_tolerance_min} onChange={e => set('late_tolerance_min', Number(e.target.value))} className={inputCls} />
         </div>
+      </section>
+      )}
+
+      {tab === 'team' && (
+      <section data-mission-quota className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><ListChecks className="w-4 h-4 text-emerald-400" />Missions par jour</h3>
+        <p className="text-[11px] text-slate-400">Objectif par opérateur et par jour. Il s'affiche dans le détail du jour du calendrier (dans l'objectif, sous le minimum, au-dessus du maximum). Il ne bloque jamais une mission.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Minimum</label>
+            <input type="number" min={0} max={50} value={cleanQuota(s).min} onChange={e => set('missions_per_day_min', Math.max(0, Math.min(50, Math.floor(Number(e.target.value) || 0))))} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Maximum</label>
+            <input type="number" min={1} max={50} value={cleanQuota(s).max} onChange={e => set('missions_per_day_max', Math.max(1, Math.min(50, Math.floor(Number(e.target.value) || 1))))} className={inputCls} />
+          </div>
+        </div>
+        {Number(s.missions_per_day_max ?? 5) < Number(s.missions_per_day_min ?? 2) && <p className="text-[11px] text-amber-400">Le maximum doit être au moins égal au minimum : sinon 2 et 5 sont utilisés.</p>}
       </section>
       )}
 
