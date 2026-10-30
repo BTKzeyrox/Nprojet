@@ -159,3 +159,8 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 ## df-api v58 (2026-10-30) — connexion hors horaires (étape 2/3)
 - Commit fd14694. Routes `access-request` (avant connexion, mot de passe vérifié) et `access-decide` (responsable) ; table `df_access_requests` (migration 20261030, appliquée après la sauvegarde n° 74) ; champ `access_until` sur le compte.
 - Retour arrière : redéployer v57 = SHA 269436d54a9ba465a2fed4a91a5be35a70ad2a34 ; la table peut rester (sans effet) ou `drop table public.df_access_requests;`.
+
+## df-api v59 (2026-10-30) — horaires (modes), compte à rebours, déconnexion forcée (étape 3/3)
+- Commit 9c63857. `shift_mode` (normal/jour/nuit/les deux) lu par `shiftAccess` ; route `force-logout` (responsable) ; champ `force_logout_at` ; code 401 `forced` ; après l'heure, `access_until` est effacé.
+- Horaires de la base remplacés après la sauvegarde n° 75 : 08:00–17:00 et 19:30–04:30 (avant : 08:00–18:00 et 20:00–06:00).
+- Retour arrière : redéployer v58 = SHA fd14694a6b4a2a101bc382d258e517eeaf42f1ce ; si besoin remettre les anciens horaires dans Réglages.
