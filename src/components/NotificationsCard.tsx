@@ -21,8 +21,8 @@ export const NotificationsCard: React.FC = () => {
   }, [state]);
   const role = db.getCurrentUser()?.role;
   // Les catégories qui ont un sens pour cette personne (le responsable valide et surveille ; l'opérateur reçoit les réponses à ses demandes)
-  const cats: PushCat[] = role === 'admin' ? ['missions', 'validations', 'security', 'messages'] : ['missions', 'advances', 'messages'];
-  const label = (c: PushCat) => ({ missions: t('Mes missions (validée, refusée, échéances)', 'My missions (approved, refused, deadlines)'), validations: t('À valider (début, fin, avances, inscriptions, profils, mots de passe)', 'To approve (start, end, advances, sign-ups, profiles, passwords)'), advances: t('Réponse à mes avances', 'Answers to my advances'), security: t('Alertes de sécurité', 'Security alerts'), messages: t('Messages reçus', 'Messages received') })[c];
+  const cats: PushCat[] = role === 'admin' ? ['missions', 'validations', 'stock', 'invoices', 'security', 'messages'] : ['missions', 'advances', 'messages'];
+  const label = (c: PushCat) => ({ missions: t('Mes missions (validée, refusée, échéances)', 'My missions (approved, refused, deadlines)'), validations: t('À valider (début, fin, avances, inscriptions, profils, mots de passe) et validations en attente', 'To approve (start, end, advances, sign-ups, profiles, passwords) and waiting approvals'), stock: t('Stock épuisé ou bas (par stockage)', 'Out of stock or low stock (per storage)'), invoices: t('Factures en retard', 'Overdue invoices'), advances: t('Réponse à mes avances', 'Answers to my advances'), security: t('Alertes de sécurité', 'Security alerts'), messages: t('Messages reçus', 'Messages received') })[c];
   const toggle = async (c: PushCat) => {
     const next = off.includes(c) ? off.filter(x => x !== c) : [...off, c];
     const ep = await pushEndpoint();

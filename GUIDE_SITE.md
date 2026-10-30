@@ -653,6 +653,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
+| `pushAlerts.ts` | Notifications externes (push), partie 2b : les alertes CALCULÉES (stock par stockage, avance en attente, validation en attente, facture en retard), |
 | `pushEvents.ts` | Notifications externes (push), partie 2a : les événements de la cloche, envoyés aussi hors de l'appli. Règles pures, sans réseau. |
 | `pushRules.ts` | Notifications push (module 6, M6.4) : règles pures, sans réseau. Contrôlé par `npm run check:push`. |
 | `quotes.ts` | Règles des DEVIS (module 2, M2.9). Fonctions pures, sans écran ni serveur. Copiées dans le bloc QUOTES de supabase/functions/df-api/index.ts |
@@ -847,6 +848,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:alert-links` | Contrôle des liens exacts de TOUTES les alertes et notifications (au-delà du Stockage) et de l'animation unique de 1,5 s. |
 | `npm run check:deep-link` | Contrôle du lien exact des notifications externes (push) : adresse construite par le serveur = lue par l'appli. Sans réseau, sans écran. |
 | `npm run check:push-events` | Contrôle des notifications externes, partie 2a : textes, catégories, interrupteurs et événements. Site = serveur. Sans réseau. |
+| `npm run check:push-alerts` | Contrôle des notifications externes, partie 2b : alertes calculées par la tâche planifiée. Site = serveur, mêmes règles que l'appli, anti-doublon. Sans réseau. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |

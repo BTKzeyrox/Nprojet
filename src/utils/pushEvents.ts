@@ -5,7 +5,7 @@ import type { PushText } from './pushRules';
 
 export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message';
 /** Les catégories qu'on peut couper (appareil par appareil). */
-export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages'] as const;
+export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages', 'stock', 'invoices'] as const;
 export type PushCat = typeof PUSH_CATS[number];
 
 const ncut = (s: unknown, n: number) => String(s ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);

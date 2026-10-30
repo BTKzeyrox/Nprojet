@@ -64,7 +64,12 @@ ok(src.split(guardLine).length - 1 === 1, 'garde « fournisseur utilisé » : la
 // Seconde exception (module 14, M14.3) : la génération des écritures comptables lit la caisse EN LECTURE SEULE, dans la route accounting-sync (admin et Comptable seulement, jamais d'écriture).
 const acctLine = "fetchAll((a, b) => sb.from(T.cash).select('id, data').order('id', { ascending: true }).range(a, b)),";
 ok(src.split(acctLine).length - 1 === 1 && /async function accountingSync\([\s\S]*?acctLine/.test(src.replace(acctLine, 'acctLine')), 'écritures comptables : la seule autre lecture de T.cash, en lecture seule, dans accountingSync');
-ok((src.split(guardLine).join('').split(acctLine).join('').match(/T\.cash/g) || []).length === 0, 'aucun autre accès direct T.cash en dehors de state, sync, la garde fournisseur et la comptabilité');
+// Troisième exception (notifications externes, partie 2b) : la tâche planifiée lit seulement les encaissements LIÉS À UNE FACTURE, EN LECTURE SEULE, pour savoir quelles factures sont en retard.
+// Aucun montant ne sort : le push dit « Facture en retard », le numéro, le client et les jours de retard (contrôlé par check:push-alerts), jamais de somme.
+const pushLine = "fetchAll((a, b) => sb.from(T.cash).select('id, data').eq('data->>kind', 'in').not('data->>invoice_id', 'is', null).order('id', { ascending: true }).range(a, b)),";
+ok(src.split(pushLine).length - 1 === 1 && /async function pushAlertsJob\([\s\S]*?pushLine/.test(src.replace(pushLine, 'pushLine')), 'alertes push : la seule autre lecture de T.cash, en lecture seule, dans pushAlertsJob (encaissements de factures seulement)');
+ok(!/pushAlertsJob[\s\S]{0,4000}T\.cash\)\.(upsert|insert|update|delete)/.test(src), 'alertes push : jamais d\'écriture dans la caisse');
+ok((src.split(guardLine).join('').split(acctLine).join('').split(pushLine).join('').match(/T\.cash/g) || []).length === 0, 'aucun autre accès direct T.cash en dehors de state, sync, la garde fournisseur, la comptabilité et les alertes push');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
