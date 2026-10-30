@@ -17,6 +17,8 @@ export interface MissionLine {
 }
 export interface DayDetail {
   firstSeen: string | null; lastSeen: string | null; onlineSec: number;
+  /** Arrivée = première connexion du jour. Départ = fin de la dernière connexion (déconnexion ou dernier signe de vie) ; null si encore en ligne. */
+  arrival: string | null; departure: string | null; departureKind: 'out' | 'lost' | 'live' | 'none';
   connections: ConnectionLine[]; hasConnectionLog: boolean; missions: MissionLine[];
   totals: { missions: number; validated: number; refused: number; running: number; pay: number; gain: number };
 }
@@ -57,9 +59,14 @@ export function missionLines(posts: PostSession[], empId: string, date: string, 
 
 export function dayDetail(posts: PostSession[], att: AttendanceRow | undefined, empId: string, date: string, nowMs: number, today: string, clientFilter = 'all'): DayDetail {
   const missions = missionLines(posts, empId, date, clientFilter);
+  const conns = connectionLines(att, nowMs, date === today);
+  const lastConn = conns[conns.length - 1];
   return {
+    arrival: att ? hmMada(att.first_seen) : null,
+    departure: lastConn ? lastConn.to : att ? hmMada(att.last_seen) : null,
+    departureKind: lastConn ? lastConn.state : att ? 'lost' : 'none',
     firstSeen: att ? hmMada(att.first_seen) : null, lastSeen: att ? hmMada(att.last_seen) : null, onlineSec: att?.online_sec || 0,
-    connections: connectionLines(att, nowMs, date === today), hasConnectionLog: !!att?.sessions?.length, missions,
+    connections: conns, hasConnectionLog: !!att?.sessions?.length, missions,
     totals: {
       missions: missions.length, validated: missions.filter(m => m.status === 'validated').length, refused: missions.filter(m => m.status === 'refused').length,
       running: missions.filter(m => m.status === 'running' || m.status === 'waiting').length, pay: missions.reduce((a, m) => a + m.pay, 0),

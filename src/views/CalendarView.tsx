@@ -166,10 +166,10 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                     <div className={h}>Connexion</div>
                     {d.firstSeen ? (
                       <>
-                        <div className={sub}>Première connexion : <strong className={txt}>{d.firstSeen}</strong> · dernier signe de vie : <strong className={txt}>{d.lastSeen}</strong></div>
+                        <div className={sub} data-testid="arrival-departure">Arrivée : <strong className={txt}>{d.arrival}</strong> · Départ : {d.departureKind === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <strong className={txt}>{d.departure}</strong>}{d.departureKind === 'lost' && ' (dernier signe de vie)'}</div>
                         <div className={sub}>Temps en ligne : <strong className={txt}>{formatDuration(d.onlineSec)}</strong></div>
                         {d.hasConnectionLog ? d.connections.map((c, i) => (
-                          <div key={i} className={sub}>Connecté à <strong className={txt}>{c.from}</strong> · {c.state === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <>{c.state === 'out' ? 'déconnecté à' : 'dernier signe de vie à'} <strong className={txt}>{c.to}</strong></>} · {minutesText(c.minutes)}</div>
+                          <div key={i} className={sub}>Arrivée à <strong className={txt}>{c.from}</strong> · {c.state === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <>{c.state === 'out' ? 'départ à' : 'dernier signe de vie à'} <strong className={txt}>{c.to}</strong></>} · {minutesText(c.minutes)}</div>
                         )) : <div className={sub}>Heures de déconnexion : pas enregistrées pour ce jour (avant la mise à jour).</div>}
                       </>
                     ) : <div className={sub}>Aucune connexion enregistrée ce jour-là.</div>}

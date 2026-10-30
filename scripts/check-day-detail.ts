@@ -16,8 +16,11 @@ ok(live[1].state === 'live' && live[1].to === null, 'aujourd\'hui, signe de vie 
 ok(d.missions.length === 3 && d.missions[0].minutes === 150 && d.missions[0].status === 'validated' && d.missions[0].pay === 3000, 'mission validée : 08:05 → 10:35 = 150 min, paie 3 000');
 ok(d.missions[1].status === 'refused' && d.missions[2].status === 'running' && d.missions[2].end === null, 'refusée et en cours');
 ok(d.totals.missions === 3 && d.totals.validated === 1 && d.totals.refused === 1 && d.totals.running === 1 && d.totals.pay === 3000 && d.totals.gain === 3000000, 'totaux du jour');
+ok(d.arrival === '08:00' && d.departure === '12:30' && d.departureKind === 'lost', 'arrivée 08:00, départ 12:30 (fin de la dernière connexion)');
+const liveD = dayDetail(posts, att, 'a', '2026-10-28', Date.parse(Z(9, 31)), '2026-10-28');
+ok(liveD.departureKind === 'live' && liveD.departure === null, 'aujourd\'hui et en ligne : pas de départ');
 const old = dayDetail(posts, { ...att, sessions: undefined }, 'a', '2026-10-28', 0, '2026-10-29');
-ok(old.hasConnectionLog === false && old.firstSeen === '08:00', 'ancien jour sans historique : première connexion et dernier signe gardés');
+ok(old.hasConnectionLog === false && old.arrival === '08:00' && old.departure === '12:30', 'ancien jour sans historique : première connexion et dernier signe gardés');
 const srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
 ok(/sessions: nextSessions\(row\?\.sessions, now\)/.test(srv) && /closeAttendanceSession\(me\)/.test(srv) && /online_sec,sessions'/.test(srv), 'serveur : sessions écrites, fermées à la déconnexion et renvoyées');
 ok(/const SESSION_GAP_MS = 150_000/.test(srv) && /const SESSIONS_MAX = 40/.test(srv), 'serveur : coupure à 150 s, 40 sessions au plus par jour');
