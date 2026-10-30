@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Compass, X, HelpCircle } from 'lucide-react';
+import { ArrowRight, Compass, Hand, X, HelpCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useLockBodyScroll } from '../utils/useLockBodyScroll';
-import { markTourSeen, shouldShowTour, tourSteps } from '../utils/tour';
+import { markTourSeen, shouldShowTour } from '../utils/tour';
+import { guideSteps } from '../utils/guideScripts';
+import { bubbleDock, findTarget, holeBox, type Box } from '../utils/guideEngine';
 
-// Visite guidée (module 16, M16.2) : s'ouvre toute seule à la première connexion sur cet appareil, par rôle ; se revoit depuis Réglages.
-// Les textes viennent de la carte du site (src/utils/tour.ts → siteKnowledge.ts). Aucun appel au serveur.
+// Guide interactif (module 16, revu le 2026-10-29) : s'ouvre tout seul à la première connexion sur cet appareil, un guide DIFFÉRENT par rôle (src/utils/guideScripts.ts) ; se revoit depuis Réglages.
+// Chaque étape ouvre la VRAIE page, assombrit le reste et fait clignoter un contour autour de l'élément réel. Toucher l'élément lance une SIMULATION : rien n'est modifié.
+// Aucun appel au serveur, aucune donnée écrite.
 
 const OPEN_EVENT = 'gp-tour-open';
 const store = (): Storage | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
@@ -19,49 +21,100 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
   const t = (fr: string, e: string) => (en ? e : fr);
   const [open, setOpen] = useState(() => shouldShowTour(store(), userId));
   const [i, setI] = useState(0);
-  useLockBodyScroll(open);
+  const [hole, setHole] = useState<Box | null>(null);   // le cadre qui clignote (null = élément pas trouvé ou étape sans élément)
+  const [waiting, setWaiting] = useState(false);        // on cherche encore l'élément (la page vient de s'ouvrir)
+  const [result, setResult] = useState(false);          // la simulation a été lancée
+  const lastPage = useRef<string | null>(null);
+  const steps = guideSteps(role);
+  const step = steps[Math.min(i, steps.length - 1)];
 
   useEffect(() => {
-    const again = () => { setI(0); setOpen(true); };
+    const again = () => { setI(0); lastPage.current = null; setOpen(true); };
     window.addEventListener(OPEN_EVENT, again);
     return () => window.removeEventListener(OPEN_EVENT, again);
   }, []);
 
-  const steps = tourSteps(role);
-  const close = () => { markTourSeen(store(), userId); setOpen(false); };
+  const close = () => {
+    markTourSeen(store(), userId);
+    setOpen(false);
+    if (lastPage.current && lastPage.current !== 'feed') onNavigate('feed'); // retour à l'accueil si on a ouvert d'autres pages
+    lastPage.current = null;
+  };
+
+  // À chaque étape : ouvrir la page (si elle change), puis chercher l'élément et suivre sa position.
   useEffect(() => {
     if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    setResult(false); setHole(null); setWaiting(!!step.target);
+    if (step.page && step.page !== lastPage.current) { onNavigate(step.page); }
+    if (step.page) lastPage.current = step.page;
+    let alive = true, tries = 0, scrolled = false;
+    const tick = () => {
+      if (!alive) return;
+      const el = step.target ? findTarget(document, step.target) : null;
+      if (el) {
+        if (!scrolled) { scrolled = true; try { (el as unknown as Element).scrollIntoView({ block: 'center', behavior: 'auto' }); } catch { /* sans défilement */ } }
+        const r = el.getBoundingClientRect();
+        setHole(holeBox({ left: r.left, top: r.top, width: r.width, height: r.height }, window.innerWidth, window.innerHeight));
+        setWaiting(false);
+      } else {
+        setHole(null);
+        if (++tries > 6) setWaiting(false); // 1,5 s : on affiche le texte « élément absent »
+      }
+    };
+    const first = setTimeout(tick, 120); // laisse le temps à la page de s'afficher
+    const id = setInterval(tick, 250);
+    const onMove = () => tick();
+    window.addEventListener('resize', onMove);
+    window.addEventListener('scroll', onMove, true);
+    return () => { alive = false; clearTimeout(first); clearInterval(id); window.removeEventListener('resize', onMove); window.removeEventListener('scroll', onMove, true); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, i, role]);
+
+  useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowRight' && i < steps.length - 1) setI(x => x + 1);
+      else if (e.key === 'ArrowLeft' && i > 0) setI(x => x - 1);
+    };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   });
   if (!open || typeof document === 'undefined') return null;
 
-  const step = steps[Math.min(i, steps.length - 1)];
   const last = i >= steps.length - 1;
   const L = (b: { fr: string; en: string }) => (en ? b.en : b.fr);
+  const dock = bubbleDock(hole, window.innerHeight);
+  const pos = dock === 'top' ? 'top-[calc(env(safe-area-inset-top)+8px)]' : dock === 'bottom' ? 'bottom-[calc(var(--bnh,0px)+env(safe-area-inset-bottom)+8px)]' : 'top-1/2 -translate-y-1/2';
+  const tap = () => { if (step.action && !result) setResult(true); else if (!last) setI(x => x + 1); };
+  const notFound = !!step.target && !hole && !waiting;
   return createPortal(
-    <div className="fixed inset-0 z-[110] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={t('Visite guidée', 'Guided tour')} {...(en ? { 'data-notranslate': '' } : {})}>
-      <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+    <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }} role="dialog" aria-modal="true" aria-label={t('Guide interactif', 'Interactive guide')} data-notranslate="" data-guide-ui="">
+      {hole
+        ? <div className="gp-tour-ring" style={{ left: hole.left, top: hole.top, width: hole.width, height: hole.height }} role="button" tabIndex={0}
+            aria-label={step.action ? L(step.action.hint) : t('Élément montré par le guide', 'Item shown by the guide')}
+            onClick={tap} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); } }} />
+        : <div className="absolute inset-0 bg-black/65" />}
+      <div className={`fixed left-2 right-2 mx-auto max-w-md max-h-[46vh] overflow-y-auto rounded-2xl bg-[#0f1722] border border-slate-700 shadow-2xl p-3 space-y-2 ${pos}`}>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold"><Compass className="w-4 h-4" />{t('Visite guidée', 'Guided tour')} · {Math.min(i + 1, steps.length)}/{steps.length}</div>
-          <button type="button" aria-label={t('Passer la visite', 'Skip the tour')} onClick={close} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300"><X className="w-5 h-5" /></button>
+          <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold"><Compass className="w-4 h-4" />{t('Guide', 'Guide')} · {Math.min(i + 1, steps.length)}/{steps.length}</div>
+          <button type="button" aria-label={t('Passer le guide', 'Skip the guide')} onClick={close} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300"><X className="w-5 h-5" /></button>
         </div>
-        <h2 className="text-lg font-bold text-white">{L(step.title)}</h2>
-        <p className="text-sm text-slate-200">{L(step.text)}</p>
-        {step.tips.length > 0 && (
-          <div className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3 space-y-1.5" data-tour-tips>
-            <div className="font-semibold text-emerald-300">{t('Astuces', 'Tips')}</div>
-            <ul className="list-disc pl-5 space-y-1">{step.tips.map((x, k) => <li key={k}>{L(x)}</li>)}</ul>
+        <h2 className="text-base font-bold text-white">{L(step.title)}</h2>
+        <p className="text-sm text-slate-200" aria-live="polite">{L(step.text)}</p>
+        {notFound && step.missing && <p className="text-xs text-amber-200 rounded-lg bg-amber-500/10 border border-amber-500/30 p-2">{L(step.missing)}</p>}
+        {hole && step.action && !result && <p className="text-sm text-emerald-200 rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-2 flex items-center gap-2"><Hand className="w-4 h-4 shrink-0" />{L(step.action.hint)}</p>}
+        {result && step.action && (
+          <div className="text-sm rounded-lg bg-emerald-500/15 border border-emerald-500/40 p-2 space-y-1" role="status">
+            <div className="text-[11px] font-semibold text-emerald-300">{t('Simulation : rien n\'est modifié', 'Simulation: nothing is changed')}</div>
+            <div className="text-slate-100">{L(step.action.result)}</div>
           </div>
         )}
-        {step.tip && <p className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3"><span className="font-semibold text-slate-100">{t('Pour commencer : ', 'To start: ')}</span>{L(step.tip)}</p>}
         <div className="flex gap-1.5 justify-center" aria-hidden="true">{steps.map((_, k) => <span key={k} className={`h-1.5 rounded-full ${k === i ? 'w-5 bg-emerald-400' : 'w-1.5 bg-slate-700'}`} />)}</div>
         <div className="flex flex-wrap gap-2 justify-between">
           <button type="button" className={btn} onClick={close}>{t('Passer', 'Skip')}</button>
           <div className="flex flex-wrap gap-2 justify-end">
             {i > 0 && <button type="button" className={btn} onClick={() => setI(i - 1)}>{t('Précédent', 'Back')}</button>}
-            {step.page && <button type="button" className={btn} onClick={() => { const p = step.page as string; close(); onNavigate(p); }}>{t('Ouvrir cette page', 'Open this page')}</button>}
             {last
               ? <button type="button" className={btnMain} onClick={close}>{t('Terminer', 'Done')}</button>
               : <button type="button" className={btnMain} onClick={() => setI(i + 1)}>{t('Suivant', 'Next')}<ArrowRight className="w-4 h-4" /></button>}

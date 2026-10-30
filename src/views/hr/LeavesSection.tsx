@@ -62,7 +62,7 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
         </div>
       )}
       <div className={card}>
-        <p className="text-sm font-bold text-white">{isAdmin ? t('Enregistrer un congé', 'Record a leave') : t('Demander un congé', 'Request leave')}</p>
+        <p data-tour="leave-request" className="text-sm font-bold text-white">{isAdmin ? t('Enregistrer un congé', 'Record a leave') : t('Demander un congé', 'Request leave')}</p>
         {isAdmin && (
           <div><label className={lbl}>{t('Salarié', 'Employee')}</label>
             <select className={field} value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>

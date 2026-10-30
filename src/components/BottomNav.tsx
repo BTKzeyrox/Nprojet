@@ -96,7 +96,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
         {shownItems.map(it => {
           const I = it.icon;
           return (
-            <button key={it.id} type="button" onClick={() => onNavigate(it.id)} className={btn(activeView === it.id)} aria-current={activeView === it.id ? 'page' : undefined}>
+            <button key={it.id} type="button" data-tour={`nav-${it.id}`} onClick={() => onNavigate(it.id)} className={btn(activeView === it.id)} aria-current={activeView === it.id ? 'page' : undefined}>
               <I className="w-5 h-5" />
               <span className="truncate max-w-full">{it.label}</span>
               {!!it.badge && it.badge > 0 && (
@@ -107,7 +107,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
             </button>
           );
         })}
-        <button type="button" onClick={onOpenMenu} className={btn(false)}>
+        <button type="button" data-tour="nav-menu" onClick={onOpenMenu} className={btn(false)}>
           <Menu className="w-5 h-5" />
           <span>Menu</span>
         </button>

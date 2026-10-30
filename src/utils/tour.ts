@@ -4,7 +4,7 @@ import { findPage, type Bi } from './siteKnowledge';
 import { TOUR_CONTENT, TOUR_WELCOME_TIPS } from './tourContent';
 
 /** Monter ce numéro refait apparaître la visite pour tout le monde (après un gros changement du site). */
-export const TOUR_VERSION = 2;
+export const TOUR_VERSION = 3; // 3 = guide interactif (2026-10-29) : tout le monde le revoit une fois
 export type TourRole = 'admin' | 'employee' | 'accountant' | 'team_lead';
 
 /** Pages montrées, par rôle : seulement celles que ce rôle a vraiment dans son menu. */

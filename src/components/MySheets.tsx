@@ -140,7 +140,7 @@ export const MySheets: React.FC = () => {
         <p className="text-xs text-slate-400">{ro ? t('Tu lis les tableaux de tes opérateurs. Tu ne peux rien y modifier.', 'You read your operators\' tables. You cannot change anything in them.') : t('Entre tes données ici comme dans Excel : les formules marchent (=SOMME(B1:B10)). Télécharge ensuite en Excel, Word ou PDF.', 'Enter your data here like in Excel: formulas work (=SUM(B1:B10)). Then download as Excel, Word or PDF.')}</p>
         {!saveOk && <p className="text-xs text-red-300">{t('Cet appareil refuse l\'enregistrement (plein ou navigation privée). Télécharge ton travail avant de quitter.', 'This device refuses saving (full or private browsing). Download your work before leaving.')}</p>}
         {!ro && <div>
-          <p className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
+          <p data-tour="sheets-new" className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
           <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={() => setImporting(true)}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
         </div>}
         {list.length === 0 && missionList.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (

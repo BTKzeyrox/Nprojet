@@ -217,6 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <button
                   key={item.id}
+                  data-tour={`nav-${item.id}`}
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
