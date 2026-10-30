@@ -19,6 +19,7 @@ import { NotificationsCard } from '../../components/NotificationsCard';
 import { OfflineCard } from '../../components/OfflineCard';
 import { TourReplayCard } from '../../components/TourGuide';
 import { TwoStepCard } from '../../components/TwoStepCard';
+import { NewsPublishSettings } from '../../components/NewsPublishSettings';
 import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
@@ -89,6 +90,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
     delete (general as { team_goals?: unknown }).team_goals; // les objectifs s'enregistrent tout de suite aussi
     delete (general as { recurring_missions?: unknown }).recurring_missions; // les règles récurrentes s'enregistrent tout de suite aussi
     delete (general as { auto_report?: unknown }).auto_report; // le rapport automatique s'enregistre tout de suite aussi (Statistiques > Rapport)
+    delete (general as { news_publish?: unknown }).news_publish; // les Publications des équipes s'enregistrent tout de suite (jamais écrasées par une vieille copie)
     delete (general as { mission_templates?: unknown }).mission_templates; // les modèles de mission s'enregistrent tout de suite (jamais écrasés par une vieille copie)
     db.updateSettings({
       ...general,
@@ -203,6 +205,8 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {tab === 'general' && <SignupSettings />}
       {tab === 'general' && <WatchSettingsSection />}
       {tab === 'general' && <AiSettingsSection />}
+
+      {tab === 'team' && <NewsPublishSettings />}
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">

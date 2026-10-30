@@ -1,3 +1,4 @@
+import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
 import type { Role as OfflineRole } from '../utils/offline';
@@ -1293,11 +1294,14 @@ export class AppStore {
   }
 
   public getNews(): NewsPost[] {
-    return [...this.news];
+    return this.news.filter(n => canSeeNews(n, this.currentUser)); // même tri que le serveur : seulement les publications de son public
   }
 
+  /** Réglage « Publications des équipes » (qui peut publier et modifier). */
+  public getNewsPolicy(): NewsPolicy { return cleanNewsPolicy(this.getSettings().news_publish); }
+
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[] }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[] }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
@@ -1306,7 +1310,7 @@ export class AppStore {
     const rec: NewsPost = {
       id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
       text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
-      loves: [], comments: [], shares: 0,
+      loves: [], comments: [], shares: 0, ...(cleanAudience(p.audience) ? { audience: cleanAudience(p.audience) } : {}),
     };
     this.news = [rec, ...this.news].sort(SORTERS.news!);
     this.notify();
@@ -1314,8 +1318,25 @@ export class AppStore {
   }
 
   // L'employé propose une publication : le serveur la garde « en attente » jusqu'à la décision du responsable
-  public submitNews(p: { title: string; text: string; files?: NewsAttachment[] }) {
-    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [] });
+  public submitNews(p: { title: string; text: string; files?: NewsAttachment[]; audience?: NewsRole[] }) {
+    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [], audience: p.audience || [] });
+  }
+
+  // Modifier une publication déjà publiée : le responsable (envoyé avec la synchro) ou son auteur si le responsable l'a autorisé (le serveur vérifie)
+  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[] }): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const n = this.news.find(x => x.id === id);
+    if (!me || !n) return { success: false, error: 'Publication introuvable.' };
+    if (!canEditNews(n, me, this.getNewsPolicy())) return { success: false, error: 'Tu ne peux pas modifier cette publication.' };
+    const text = p.text.trim().slice(0, 2000), title = p.title.trim().slice(0, 120);
+    if (!text && !(n.files || []).length) return { success: false, error: 'Écris un texte ou garde un fichier.' };
+    if (me.role !== 'admin') return this.newsCall('news-edit', { id, title, text, audience: p.audience || [] });
+    const aud = cleanAudience(p.audience);
+    const { audience: _old, ...rest } = n;
+    const changed = text !== n.text || title !== (n.title || '');
+    this.news = this.news.map(x => (x.id === id ? { ...rest, title, text, ...(changed ? { edited_at: new Date().toISOString() } : {}), ...(aud ? { audience: aud } : {}) } : x));
+    this.notify();
+    return { success: true };
   }
 
   // Le responsable valide ou refuse une publication en attente (motif obligatoire au refus)
@@ -1561,9 +1582,12 @@ export class AppStore {
       }
       case 'news-submit': {
         if (!me) return fail('Connexion perdue.');
+        const mode = publishModeFor(me.role, this.getSettings().news_publish);
+        if (mode === 'off') return fail('Le responsable n’a pas autorisé ton rôle à publier.');
+        const aud = cleanAudience(body.audience);
         const n: NewsPost = {
           id: `demo_n${Date.now()}`, author_id: me.id, author_name: me.name, author_role: me.role, title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 4000),
-          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: me.role === 'admin' ? 'published' : 'pending',
+          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: mode === 'direct' ? 'published' : 'pending', ...(aud ? { audience: aud } : {}),
         };
         this.news = [n, ...this.news];
         return keep(n);
@@ -1571,6 +1595,15 @@ export class AppStore {
       case 'news-decision': {
         const n = post(body.id); if (!n) return fail('Publication introuvable.');
         if (body.decision === 'approve') { n.status = 'published'; n.created_at = nowIso; } else { n.status = 'rejected'; n.reject_reason = String(body.reason || ''); }
+        return keep(n);
+      }
+      case 'news-edit': {
+        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
+        if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas modifier cette publication.');
+        const aud = cleanAudience(body.audience);
+        const { audience: _old, ...rest } = n;
+        Object.assign(n, rest, { title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 2000), edited_at: nowIso });
+        if (aud) n.audience = aud; else delete n.audience;
         return keep(n);
       }
       case 'news-withdraw': return ok();
