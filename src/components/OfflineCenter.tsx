@@ -82,9 +82,9 @@ export const OfflineCenterView: React.FC<{ tab: 'pending' | 'review'; onTab: (t:
   const copy = async (op: OfflineOp) => { const text = db.offlineCopyText(op.id, lang) || ''; showToast((await copyToClipboard(text)) ? t('Texte copié.', 'Text copied.') : t('Copie impossible : sélectionne le texte à la main.', 'Copy failed: select the text by hand.'), 'info'); };
 
   const tabBtn = (id: 'pending' | 'review', label: string, n: number) => (
-    <button type="button" role="tab" aria-selected={tab === id} onClick={() => onTab(id)} className={`flex-1 px-3 py-2 rounded-full border text-sm font-semibold cursor-pointer ${tab === id ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-200'}`}>{label} ({n})</button>
+    <button type="button" role="tab" aria-selected={tab === id} onClick={() => onTab(id)} className={`flex-1 px-3 py-2 rounded-lg border text-sm font-semibold cursor-pointer ${tab === id ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-200'}`}>{label} ({n})</button>
   );
-  const btn = 'px-3 py-2 rounded-full border text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5';
+  const btn = 'px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5';
 
   return (
     <div className="fixed inset-0 z-[105] flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-3" onClick={() => onClose()} role="dialog" aria-modal="true" aria-label={t('Hors ligne', 'Offline')} data-testid="offline-center">

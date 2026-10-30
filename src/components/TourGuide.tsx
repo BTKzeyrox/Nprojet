@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Compass, X } from 'lucide-react';
+import { ArrowRight, Compass, X, HelpCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { markTourSeen, shouldShowTour, tourSteps } from '../utils/tour';
@@ -49,6 +49,12 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
         </div>
         <h2 className="text-lg font-bold text-white">{L(step.title)}</h2>
         <p className="text-sm text-slate-200">{L(step.text)}</p>
+        {step.tips.length > 0 && (
+          <div className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3 space-y-1.5" data-tour-tips>
+            <div className="font-semibold text-emerald-300">{t('Astuces', 'Tips')}</div>
+            <ul className="list-disc pl-5 space-y-1">{step.tips.map((x, k) => <li key={k}>{L(x)}</li>)}</ul>
+          </div>
+        )}
         {step.tip && <p className="text-sm text-slate-300 rounded-lg bg-slate-900/60 p-3"><span className="font-semibold text-slate-100">{t('Pour commencer : ', 'To start: ')}</span>{L(step.tip)}</p>}
         <div className="flex gap-1.5 justify-center" aria-hidden="true">{steps.map((_, k) => <span key={k} className={`h-1.5 rounded-full ${k === i ? 'w-5 bg-emerald-400' : 'w-1.5 bg-slate-700'}`} />)}</div>
         <div className="flex flex-wrap gap-2 justify-between">
@@ -73,9 +79,9 @@ export const TourReplayCard: React.FC = () => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
-      <h3 className="font-tactical font-bold text-white">{t('Aide', 'Help')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><HelpCircle className="w-4 h-4 text-emerald-400" />{t('Aide', 'Help')}</h3>
       <p className="text-[11px] text-slate-400">{t("La visite guidée montre où se trouve chaque chose, selon ton rôle.", 'The guided tour shows where everything is, for your role.')}</p>
-      <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))} className="px-3 py-2.5 min-h-[44px] rounded-full border border-slate-600 text-sm font-semibold cursor-pointer text-slate-100 flex items-center gap-1.5"><Compass className="w-4 h-4" />{t('Revoir la visite guidée', 'Replay the guided tour')}</button>
+      <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))} className="px-3 py-2.5 min-h-[44px] rounded-lg border border-slate-600 text-sm font-semibold cursor-pointer text-slate-100 flex items-center gap-1.5"><Compass className="w-4 h-4" />{t('Revoir la visite guidée', 'Replay the guided tour')}</button>
     </section>
   );
 };

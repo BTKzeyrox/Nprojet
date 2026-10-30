@@ -29,7 +29,7 @@ const existing = () => ({ clients: db.getClients().map(c => c.name), products: d
 db.enterDemo('admin');
 for (const lang of ['fr', 'en'] as const) {
   const label = lang === 'en' ? 'Import (Excel, CSV)' : 'Importer (Excel, CSV)';
-  const c = page(<ClientsPage />, lang), s = page(<StockTab range={range} lang={lang} />, lang);
+  const c = page(<ClientsPage />, lang), s = page(<StockTab lang={lang} />, lang);
   ok(!bad(c) && c.includes(label), `${lang} : page Clients : bouton d'import, aucune erreur affichée`);
   ok(!bad(s) && s.includes(label), `${lang} : Stock : bouton d'import, aucune erreur affichée`);
   ok(c.includes('min-h-[44px]') && s.includes('min-h-[44px]'), `${lang} : cibles tactiles de 44 px`);

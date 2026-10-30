@@ -139,9 +139,9 @@ export const PayrollAdmin: React.FC = () => {
           )}
           {status === 'open' && <span className="text-xs font-mono text-slate-400 self-center">La période se clôture après son dernier jour.</span>}
           {status === 'closed' && (
-            <button type="button" disabled={busy} onClick={reopen} className="rounded-full inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"><Unlock className="w-4 h-4" />Rouvrir (motif)</button>
+            <button type="button" disabled={busy} onClick={reopen} className="rounded-lg inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"><Unlock className="w-4 h-4" />Rouvrir (motif)</button>
           )}
-          <button type="button" disabled={!slips.length} onClick={exportCsv} className="rounded-full inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
+          <button type="button" disabled={!slips.length} onClick={exportCsv} className="rounded-lg inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export const PayrollAdmin: React.FC = () => {
 <button type="button" onClick={() => void exportSlipPdf(open, lang)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
 <button type="button" onClick={() => void downloadSlipExcel(open, lang === 'en' ? 'en' : 'fr')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Download className="w-4 h-4" />Excel</button>
               {isClosed && open.paid && (
-                <button type="button" className="rounded-full px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
+                <button type="button" className="rounded-lg px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
               )}
             </div>
             <p className="text-[10px] text-slate-500">Ce document n'est pas un bulletin de paie légal : les cotisations sociales ne sont pas calculées.</p>
@@ -259,7 +259,7 @@ const AmountModal: React.FC<{ slip: Slip; type: 'bonus' | 'penalty'; onClose: ()
         <div><label className="block text-slate-300 uppercase mb-1">Montant (Ar)</label><input type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} className={inp} autoFocus /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Motif (obligatoire)</label><textarea rows={2} maxLength={200} value={reason} onChange={e => setReason(e.target.value)} className={inp} /></div>
         {type === 'penalty' && <p className="text-[11px] text-amber-300">Vérifie avec un comptable ou l'Inspection du travail que cette retenue est permise.</p>}
-        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-full px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" disabled={!ok} className="rounded-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-sm font-bold text-white cursor-pointer">Ajouter</button></div>
+        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-lg px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" disabled={!ok} className="rounded-lg px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-sm font-bold text-white cursor-pointer">Ajouter</button></div>
       </form>
     </Shell>
   );
@@ -276,7 +276,7 @@ const PayModal: React.FC<{ slip: Slip; methods: string[]; onClose: () => void; o
         <div><label className="block text-slate-300 uppercase mb-1">Date</label><input type="date" max={dayMada()} value={date} onChange={e => setDate(e.target.value)} className={inp} /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Mode de paiement</label><select value={method} onChange={e => setMethod(e.target.value)} className={inp}>{methods.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
         <div><label className="block text-slate-300 uppercase mb-1">Référence (facultatif)</label><input type="text" maxLength={60} value={ref} onChange={e => setRef(e.target.value)} className={inp} placeholder="n° de transaction" /></div>
-        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-full px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" className="rounded-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">Marquer payé</button></div>
+        <div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-lg px-3 py-2.5 bg-[#141e2a] border border-slate-600 text-sm cursor-pointer">Annuler</button><button type="submit" className="rounded-lg px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">Marquer payé</button></div>
       </form>
     </Shell>
   );

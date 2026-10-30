@@ -106,7 +106,7 @@ ok(b1.alerts.every(x => alertProblem(x) === null), 'ensemble : format commun res
 ok(JSON.stringify(b1.alerts.map(x => x.id)) === JSON.stringify(b2.alerts.map(x => x.id)), 'ensemble : même résultat quel que soit l\'ordre des données');
 ok(b1.alerts.every(x => !/[À-ÿ]/.test(x.title_en + x.why_en + (x.todo_en || '')) || /Rivage|Papier/.test(x.title_en + x.why_en)), 'ensemble : pas d\'accent français dans l\'anglais (hors noms)');
 const frozen = JSON.stringify(big); run(big); ok(JSON.stringify(big) === frozen, 'ensemble : aucune donnée modifiée');
-ok(b1.alerts.every(x => x.go.view === 'clients' || (x.go.view === 'stats' && (x.go.tab === 'finance' || x.go.tab === 'stock'))), 'ensemble : chaque alerte mène à une vraie page');
+ok(b1.alerts.every(x => x.go.view === 'clients' || x.go.view === 'storage' || (x.go.view === 'stats' && x.go.tab === 'finance')), 'ensemble : chaque alerte mène à une vraie page');
 
 // ---------- Démo ----------
 const demo = buildDemoData();

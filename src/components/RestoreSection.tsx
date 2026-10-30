@@ -9,7 +9,7 @@ type Step = 'idle' | 'warn' | 'code';
 const btn = 'w-full min-h-[46px] px-4 text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const inputCls = 'w-full bg-[#0d1622] border border-slate-600 p-2.5 text-white text-sm';
 
-/** Restauration du site (remise à zéro) : Gmail vérifié, 2 confirmations, code reçu par mail. */
+/** Remise à zéro du site : Gmail vérifié, 2 confirmations, code reçu par mail. */
 export const RestoreSection: React.FC = () => {
   const [email, setEmail] = useState('');
   const [savedEmail, setSavedEmail] = useState('');
@@ -69,15 +69,15 @@ export const RestoreSection: React.FC = () => {
   return (
     <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-4">
       <h3 className="font-tactical font-bold text-white flex items-center gap-2">
-        <RotateCcw className="w-4 h-4 text-red-400" /> Restauration du site
+        <RotateCcw className="w-4 h-4 text-red-400" /> Remise à zéro du site
       </h3>
       <p className="text-[11px] text-slate-400 leading-relaxed">
-        La restauration est une <b className="text-red-300">remise à zéro définitive</b> : elle efface tous les opérateurs, sessions, historiques,
+        La remise à zéro est une <b className="text-red-300">remise à zéro définitive</b> : elle efface tous les opérateurs, sessions, historiques,
         avances, paies et messages. Elle garde votre compte responsable, les Réglages et les missions (volumes remis au début).
         Téléchargez d'abord une sauvegarde.
       </p>
       <p className="text-[11px] text-emerald-300/90 leading-relaxed">
-        Vos finances (paiements reçus et dépenses) et votre stock sont gardés : la remise à zéro ne les efface pas. Les salaires calculés repartent à 0, car les missions sont effacées.
+        Vos finances (paiements reçus et dépenses) et votre stock sont gardés : elle ne les efface pas. Les salaires calculés repartent à 0, car les missions sont effacées.
       </p>
 
       <button type="button" onClick={backup} className={`${btn} bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200`}>
@@ -103,7 +103,7 @@ export const RestoreSection: React.FC = () => {
         )}
       </div>
 
-      {/* 2. Restauration : 2 confirmations puis code par mail */}
+      {/* 2. Remise à zéro : 2 confirmations puis code par mail */}
       <div className="space-y-2 border-t border-slate-800 pt-3">
         <button
           type="button"
@@ -111,20 +111,20 @@ export const RestoreSection: React.FC = () => {
           onClick={() => { setStep('warn'); setWord(''); setResetCode(''); setMsg(null); }}
           className={`${btn} bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-200`}
         >
-          <ShieldAlert className="w-4 h-4" /> Restaurer le site (remise à zéro)
+          <ShieldAlert className="w-4 h-4" /> Remettre le site à zéro
         </button>
         {!verified && <p className="text-[11px] text-amber-300">Enregistrez et vérifiez votre Gmail pour activer ce bouton.</p>}
 
         {step === 'warn' && (
           <div className="border border-red-700 bg-red-950/30 p-3 space-y-2">
             <p className="text-xs text-red-200 font-bold">Confirmation 1 sur 2</p>
-            <p className="text-[11px] text-slate-300">Tout sera effacé, sans retour possible. Écrivez le mot <b>RESTAURER</b> pour continuer.</p>
-            <input value={word} onChange={e => setWord(e.target.value)} placeholder="RESTAURER" autoCapitalize="characters" className={inputCls} />
+            <p className="text-[11px] text-slate-300">Tout sera effacé, sans retour possible. Écrivez le mot <b>EFFACER</b> pour continuer.</p>
+            <input value={word} onChange={e => setWord(e.target.value)} placeholder="EFFACER" autoCapitalize="characters" className={inputCls} />
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setStep('idle')} className={`${btn} bg-slate-800 border border-slate-600 text-slate-200`}>Annuler</button>
               <button
                 type="button"
-                disabled={word.trim() !== 'RESTAURER' || busy}
+                disabled={word.trim() !== 'EFFACER' || busy}
                 onClick={() =>
                   askConfirm({
                     title: 'Dernière chance',
@@ -150,7 +150,7 @@ export const RestoreSection: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setStep('idle')} className={`${btn} bg-slate-800 border border-slate-600 text-slate-200`}>Annuler</button>
               <button type="button" disabled={resetCode.length !== 6 || busy} onClick={execute} className={`${btn} bg-red-700 hover:bg-red-600 text-white`}>
-                Effacer et restaurer
+                Tout effacer
               </button>
             </div>
           </div>

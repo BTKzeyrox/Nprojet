@@ -5,12 +5,15 @@ import { useApp } from '../../context/AppContext';
 import { computeStats, comparableRanges, periodLabel, shiftAnchor, todayMada, variation, type StatsGranularity } from '../../utils/stats';
 import { StatCard } from '../../components/StatCard';
 import { FinanceTab } from './FinanceTab';
-import { StockTab } from './StockTab';
 import { ReportTab } from './ReportTab';
 import { AutoReportCard } from './AutoReportCard';
 import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel';
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
+import { setStorageIntent } from '../../utils/storageNav';
+import { setNavTarget } from '../../utils/navTarget';
 import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
+import { ActivityGrid } from '../../components/charts/StyledCharts';
+import { variationPct } from '../../utils/chartScale';
 import { pacePerBar } from '../../utils/chartData';
 import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
@@ -123,7 +126,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
 
       {/* Quatre onglets : les chiffres de l'activité, l'argent (paiements reçus, dépenses), le stock et le rapport du mois */}
       <div className="grid grid-cols-4 gap-1.5" role="tablist" aria-label={l === 'en' ? 'Section' : 'Rubrique'} {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
-        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['stock', 'Stock'], ['report', l === 'en' ? 'Report' : 'Rapport']] as [StatsTab, string][]).map(([id, label]) => (
+        {([['stats', l === 'en' ? 'Statistics' : 'Statistiques'], ['finance', 'Finances'], ['report', l === 'en' ? 'Report' : 'Rapport']] as [StatsTab, string][]).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`min-h-[44px] rounded-lg text-xs sm:text-sm font-semibold border transition-colors px-0.5 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
             {label}
@@ -136,13 +139,11 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
           <ReportTab anchor={anchor} lang={l} />
           <AutoReportCard lang={l} />
         </>
-      ) : tab === 'stock' ? (
-        <StockTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} />
       ) : tab === 'finance' ? (
         <FinanceTab range={{ start: ranges.cur.start, end: ranges.cur.end }} lang={l} salariesAr={ranges.isFuture ? 0 : stats.cur.earned} advancesAr={ranges.isFuture ? 0 : stats.cur.advances} />
       ) : (<>
       {/* Alertes, objectifs du mois et prévision (admin seulement) */}
-      <AlertsList lang={l} hideWhenEmpty onGo={a => { if (a.go === 'stats' && a.tab) setTab(a.tab); else if (a.go !== 'stats') onNavigate?.(a.go); }} />
+      <AlertsList lang={l} hideWhenEmpty onGo={a => { if (a.go === 'stats' && a.tab) setTab(a.tab); else if (a.go !== 'stats') { if (a.storage) setStorageIntent(a.storage); if (a.nav) setNavTarget(a.nav); onNavigate?.(a.go); } }} />
       <GoalsBars lang={l} hideWhenEmpty />
       <ForecastCard lang={l} />
 
@@ -167,12 +168,21 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
 
       {/* Missions : faites sur la période, par type, et ce qui reste à faire */}
       <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`} raw={l === 'en'}>
-        <XYChart labels={stats.labels} fullLabels={stats.fullLabels} lang={l} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'}
-          summary="sum" showAverage legend={!ranges.isFuture} variationBetween={ranges.isFuture ? undefined : ['done', 'prev']} refLines={paceLine}
-          series={[
-            { key: 'done', label: l === 'en' ? 'Missions done' : 'Missions faites', values: stats.series.done, kind: 'bar' },
-            ...(ranges.isFuture ? [] : [{ key: 'prev', label: l === 'en' ? 'Previous period' : 'Période d\'avant', values: stats.series.prevDone, kind: 'line' as const, dashed: true, color: '#f59e0b' }]),
-          ]} />
+        <ActivityGrid labels={stats.labels} fullLabels={stats.fullLabels} values={stats.series.done} lang={l} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} />
+        {(() => {
+          // Ce que l'ancien graphique montrait en plus : la période d'avant et le rythme de l'objectif
+          const prevTotal = stats.series.prevDone.reduce((x: number, v) => x + (Number(v) || 0), 0);
+          const delta = variationPct(stats.cur.done, prevTotal);
+          const pace = paceLine.length ? Math.round(paceLine[0].value * 10) / 10 : 0;
+          if (ranges.isFuture || (prevTotal === 0 && pace === 0)) return null;
+          return (
+            <p {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-slate-400">
+              {prevTotal > 0 && (l === 'en' ? `Previous period: ${prevTotal}${delta === null ? '' : ` (${delta > 0 ? '+' : ''}${delta} %)`}` : `Période d'avant : ${prevTotal}${delta === null ? '' : ` (${delta > 0 ? '+' : ''}${delta} %)`}`)}
+              {prevTotal > 0 && pace > 0 ? ' · ' : ''}
+              {pace > 0 && (l === 'en' ? `Goal pace: ${String(pace)} / day` : `Rythme de l'objectif : ${String(pace).replace('.', ',')} / jour`)}
+            </p>
+          );
+        })()}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.done}</div><div className="text-[11px] text-slate-400">Validées</div></div>
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.cur.rejected}</div><div className="text-[11px] text-slate-400">Refusées</div></div>

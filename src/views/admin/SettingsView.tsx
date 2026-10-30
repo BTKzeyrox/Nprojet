@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Plus, X, Save } from 'lucide-react';
+import { ThemeLangControls } from '../../components/ThemeLangControls';
+import { Settings, Plus, X, Save, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
@@ -9,8 +10,6 @@ import { AuditSection } from '../../components/AuditSection';
 import { askConfirm } from '../../components/ConfirmModal';
 import { useApp } from '../../context/AppContext';
 import { FontSizePicker } from '../../components/FontSizePicker';
-import { TwoStepDialog } from '../../components/TwoStepDialog';
-import { setModeSwitchHidden, useModeSwitchHidden } from '../../utils/modeSwitch';
 import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 import { CompanyConditions, CompanyForEmployee } from '../../components/CompanyConditions';
 import { PerformanceSettings } from '../../components/PerformanceSettings';
@@ -27,44 +26,8 @@ import { WatchSettingsSection } from '../../components/WatchSettingsSection';
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
 
-// Bouton « Vue opérateur » du menu : l'afficher ou le masquer demande une procédure en 2 étapes
-const ModeSwitchSection: React.FC = () => {
-  const L = useApp().theme === 'light';
-  const hidden = useModeSwitchHidden();
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-      <h3 className="font-tactical font-bold text-white">Mode responsable / opérateur</h3>
-      <p className="text-sm text-slate-300">Le bouton « Vue opérateur » du menu de gauche est actuellement <b className={hidden ? 'text-amber-500' : 'text-emerald-500'}>{hidden ? 'masqué' : 'visible'}</b>.</p>
-      <p className="text-[11px] text-slate-400">Il permet au responsable de voir le site comme un opérateur. Réglé sur cet appareil. Pour {hidden ? 'l\'afficher' : 'le masquer'}, il faut une procédure en 2 étapes.</p>
-      <button type="button" onClick={() => setOpen(true)} className={`w-full min-h-[46px] rounded-full text-sm font-bold cursor-pointer border ${hidden ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600' : L ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'}`}>
-        {hidden ? 'Afficher le bouton…' : 'Masquer le bouton…'}
-      </button>
-      {open && (hidden ? (
-        <TwoStepDialog
-          title="Afficher le bouton « Vue opérateur »"
-          intro={['Le bouton « Vue opérateur » reviendra en bas du menu de gauche.', 'Il permet de voir le site comme un opérateur, puis de revenir en mode responsable.']}
-          word="AFFICHER"
-          confirmLabel="Afficher le bouton"
-          onConfirm={() => setModeSwitchHidden(false)}
-          onClose={() => setOpen(false)}
-        />
-      ) : (
-        <TwoStepDialog
-          title="Masquer le bouton « Vue opérateur »"
-          intro={['Le bouton « Vue opérateur » disparaîtra du menu de gauche, sur cet appareil.', 'Si vous êtes en vue opérateur, vous revenez automatiquement en mode responsable.', 'Pour le faire revenir : Réglages, Général, « Afficher le bouton… », puis la même procédure en 2 étapes.']}
-          word="MASQUER"
-          confirmLabel="Masquer le bouton"
-          onConfirm={() => setModeSwitchHidden(true)}
-          onClose={() => setOpen(false)}
-        />
-      ))}
-    </section>
-  );
-};
-
 export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnly = false }) => {
-  const { theme, toggleTheme, lang, setLang } = useApp();
+  const { theme, lang } = useApp();
   const [sound, setSound] = useSoundPrefs();
   const [soundMsg, setSoundMsg] = useState('');
   const [s, setS] = useState<AppSettings>(db.getSettings());
@@ -161,14 +124,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
         </div>
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
-        </div>
+        <ThemeLangControls />
         <FontSizePicker />
       </section>
 
@@ -179,7 +137,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       <TourReplayCard />
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Volume2 className="w-4 h-4 text-emerald-400" />Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
@@ -195,7 +153,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -231,19 +189,13 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Apparence et langue</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Palette className="w-4 h-4 text-emerald-400" />Apparence et langue</h3>
         <p className="text-[11px] text-slate-400">Réglé sur cet appareil, enregistré tout de suite.</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => theme !== 'light' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'light' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème clair</button>
-          <button type="button" onClick={() => theme !== 'dark' && toggleTheme()} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${theme === 'dark' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Thème sombre</button>
-          <button type="button" onClick={() => setLang('fr')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'fr' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>Français</button>
-          <button type="button" onClick={() => setLang('en')} className={`px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer ${lang === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600 text-slate-300'}`}>English</button>
-        </div>
+        <ThemeLangControls />
         <FontSizePicker />
       </section>
       )}
 
-      {tab === 'general' && <ModeSwitchSection />}
       {tab === 'general' && <NotificationsCard />}
       {tab === 'general' && <OfflineCard />}
       {tab === 'general' && <TwoStepCard />}
@@ -254,7 +206,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Vacations</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-400" />Vacations</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Jour : début</label>
@@ -282,7 +234,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'team' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Accès et suivi des opérateurs</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Users className="w-4 h-4 text-emerald-400" />Accès et suivi des opérateurs</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Connexion permise avant la vacation (min)</label>
@@ -333,7 +285,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'data' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><LifeBuoy className="w-4 h-4 text-emerald-400" />Secours et maintenance</h3>
         <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
           <input type="checkbox" checked={s.maintenance_on} onChange={e => set('maintenance_on', e.target.checked)} className="w-4 h-4 accent-amber-500" />
           Site en maintenance (les opérateurs sont déconnectés et refusés, toi tu entres toujours)
@@ -372,7 +324,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Paie</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Wallet className="w-4 h-4 text-emerald-400" />Paie</h3>
         <div>
           <label className={labelCls}>Tarif par mission (Ar)</label>
           <input type="number" min={0} step={100} value={s.price_per_mission} onChange={e => set('price_per_mission', Number(e.target.value))} className={inputCls} />
@@ -383,7 +335,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Prix client</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Tag className="w-4 h-4 text-emerald-400" />Prix client</h3>
         <div>
           <label className={labelCls}>Prix par défaut d'une mission (Ar)</label>
           <input type="number" min={0} step={100} value={s.client_price_default_ar ?? 0} onChange={e => set('client_price_default_ar', Number(e.target.value))} className={inputCls} />
@@ -420,7 +372,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Objectifs et alertes</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Target className="w-4 h-4 text-emerald-400" />Objectifs et alertes</h3>
         <p className="text-[11px] text-slate-400">Objectifs du mois : 0 ou vide = pas d'objectif. Les montants sont vus par le responsable seulement.</p>
         <div>
           <label className={labelCls}>Objectif de missions validées (par mois)</label>
@@ -450,7 +402,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Types de mission</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Layers className="w-4 h-4 text-emerald-400" />Types de mission</h3>
         <div className="flex flex-wrap gap-2">
           {s.post_types.map(t => (
             <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
@@ -468,7 +420,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addType(); } }}
             placeholder="Nouveau type, ex: NO READ" className={inputCls}
           />
-          <button type="button" onClick={addType} className="px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
+          <button type="button" onClick={addType} className="px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
             <Plus className="w-5 h-5" />
           </button>
         </div>
@@ -482,7 +434,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'missions' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Règles et options</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-emerald-400" />Règles et options</h3>
         <div>
           <label className={labelCls}>Règles pour les opérateurs (affichées sur leur grille)</label>
           <textarea value={s.rules} onChange={e => set('rules', e.target.value)} rows={5} className={inputCls + ' font-sans'} placeholder="ex: pas de lecture de messages, photo de début obligatoire..." />
@@ -497,7 +449,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
       {tab === 'general' && (
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
-        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Volume2 className="w-4 h-4 text-emerald-400" />Son des notifications</h3>
         <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
         <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
@@ -513,7 +465,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             unlockSound();
             setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
           }}
-          className="px-4 py-2 rounded-full border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+          className="px-4 py-2 rounded-lg border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
         >
           Tester le son
         </button>
@@ -525,9 +477,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {tab === 'data' && <BackupsSection />}
       {tab === 'data' && <AuditSection lang={lang} />}
 
-      {<RestoreSection />}
+      {tab === 'data' && <RestoreSection />}
 
-      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
+      <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">
         <Save className="w-4 h-4" /> Enregistrer
       </button>
     </div>

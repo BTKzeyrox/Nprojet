@@ -34,7 +34,10 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { badgeLabel, formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
-import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../../utils/presence';
+import { getPresenceStatus, formatDuration } from '../../utils/presence';
+import { liveStatus } from '../../utils/presenceStatus';
+import { useNow } from '../../utils/useNow';
+import { LiveDot, LiveLine } from '../../components/LiveStatus';
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 import { PayrollAdmin } from '../../components/PayrollAdmin';
 import { AdvPayTabs } from '../../components/AdvPayTabs';
@@ -66,6 +69,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   section = 'employees',
 }) => {
   const { lang } = useApp();
+  const nowMs = useNow(15000); // les statuts en direct changent d'eux-mêmes (En ligne → En pause → Hors ligne)
   const perf = usePerformance();
   const badgesOn = badgeAccess().enabled;
   /** Badges calculés du salarié (module 3) : rien si le module est désactivé ou s'il n'a aucun badge. */
@@ -341,7 +345,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             {staff.map(u => {
               const blocked = u.status === 'blocked';
               return (
-                <li key={u.id} className="py-2 flex flex-wrap items-center gap-2 justify-between">
+                <li key={u.id} data-nav={`emp-${u.id}`} className="py-2 flex flex-wrap items-center gap-2 justify-between">
                   <div className="min-w-0">
                     <div className="text-sm text-white font-semibold truncate">{u.name}</div>
                     <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]}{u.team ? ` · équipe ${u.team}` : ''} · @{u.username}{blocked ? ' · bloqué' : ''}</div>
@@ -533,12 +537,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                         <div className="flex items-center gap-3">
                           <div className="relative shrink-0">
                             <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8 sm:w-9 sm:h-9" />
-                            <span
-                              title={STATUS_LABEL[getPresenceStatus(emp, db.getPosts(), db.getPresence()).status]}
-                              className={`absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full border border-slate-900 ${
-                                STATUS_DOT[getPresenceStatus(emp, db.getPosts(), db.getPresence()).status]
-                              }`}
-                            />
+                            <LiveDot info={liveStatus(emp, db.getPosts(), db.getPresence(), nowMs)} lang={lang === 'en' ? 'en' : 'fr'} />
                           </div>
                           <div>
                             <div className="font-bold text-white text-xs sm:text-sm">
@@ -547,6 +546,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                             <div className="text-[11px] text-slate-400">
                               @{emp.username} · {emp.phone}
                             </div>
+                            <LiveLine info={liveStatus(emp, db.getPosts(), db.getPresence(), nowMs)} lang={lang === 'en' ? 'en' : 'fr'} className="text-[11px] mt-0.5" />
                             {chipsFor(emp.id, 'mt-1')}
                           </div>
                         </div>
@@ -607,13 +607,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                       {/* Activité : statut en direct, temps connecté, actions à valider */}
                       {cfg.show_activity_column && (() => {
                         const pr = getPresenceStatus(emp, posts, presence);
+                        const live = liveStatus(emp, posts, presence, nowMs);
                         const pend = pendingOf(emp.id);
                         return (
                           <td className="p-3 align-top">
-                            <div className="flex items-center gap-1.5 whitespace-nowrap">
-                              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[pr.status]}`} />
-                              <span className="text-[11px] font-bold text-slate-200">{STATUS_LABEL[pr.status]}</span>
-                            </div>
+                            <LiveLine info={live} lang={lang === 'en' ? 'en' : 'fr'} className="text-[11px]" />
                             <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">Connecté aujourd'hui : {formatDuration(pr.onlineSec)}</div>
                             {pend.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1.5">
@@ -846,7 +844,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <div className="rounded-lg border border-slate-700 p-2 space-y-1">
                   <p className="text-slate-300 uppercase">Sécurité en deux étapes</p>
                   <p className="text-[11px] text-slate-400">Téléphone perdu et plus de code de secours : remets la double étape à zéro. Il pourra la réactiver ensuite.</p>
-                  <button type="button" className="min-h-[44px] px-3 rounded-full border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer" onClick={async () => {
+                  <button type="button" className="min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer" onClick={async () => {
                     if (!window.confirm('Remettre à zéro la double étape de ce compte ?')) return;
                     const r = await db.totpReset(editingUser.id);
                     alert(r.ok ? 'Double étape remise à zéro.' : (r.error || 'Non modifié.'));

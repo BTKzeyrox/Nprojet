@@ -17,6 +17,7 @@ export interface Notif {
   filter?: ValFilter; // filtre de la page Validations à activer au clic
   nav?: string; // élément exact à atteindre (data-nav) : défilement + clignotement
   thread?: string; // messagerie : discussion à ouvrir ('all' = groupe)
+  storage?: import('./storageNav').StorageIntent; // Stockage : le bon stockage, le bon filtre, le produit à faire clignoter
 }
 
 // Cloche de l'admin : alertes URGENTES de la Santé du site + résumé du jour (règles pures dans healthNotif.ts). Réglable sur l'appareil (par défaut : oui).
@@ -102,5 +103,8 @@ export const getSeen = (u: User): string[] => {
 export const markSeen = (u: User, ids: string[]) => {
   try { localStorage.setItem(key(u), JSON.stringify(Array.from(new Set([...getSeen(u), ...ids])).slice(-400))); } catch { /* stockage indisponible */ }
 };
-export const unreadCount = (u: User, list: Notif[]): number =>
-  u.role === 'admin' ? list.length : list.filter(n => !getSeen(u).includes(n.id)).length;
+/** Compteur de la cloche : seulement les notifications PAS ENCORE LUES (pour tous les rôles). Lu = gardé sur cet appareil, par personne. */
+export const unreadCount = (u: User, list: Notif[]): number => { const seen = getSeen(u); return list.filter(n => !seen.includes(n.id)).length; };
+/** Marque toutes les notifications de la liste comme lues (bouton « Tout marquer comme lu »). */
+export const markAllRead = (u: User, list: Notif[]): void => markSeen(u, list.map(n => n.id));
+export const isUnread = (u: User, n: Notif): boolean => !getSeen(u).includes(n.id);

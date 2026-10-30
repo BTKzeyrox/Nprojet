@@ -30,7 +30,7 @@ export const validationWait: HealthRule = {
       why_fr: `La plus ancienne attend depuis ${duration(old.h, 'fr')} (${userName(ctx, old.p.employee_id, old.p.employee_name)}). Concerne : ${who}.`,
       why_en: `The oldest has been waiting for ${duration(old.h, 'en')} (${userName(ctx, old.p.employee_id, old.p.employee_name)}). Concerns: ${who}.`,
       todo_fr: 'Valider ou refuser (avec un motif) pour que le salarié soit payé.', todo_en: 'Validate or refuse (with a reason) so the employee gets paid.',
-      since: madaDay(old.ms), value: n, go: { view: 'validations' },
+      since: madaDay(old.ms), value: n, go: { view: 'validations', filter: old.p.status === 'pending_start' ? 'starts' : 'ends', nav: `val-post-${old.p.id}` },
     } as HealthAlert];
   },
 };

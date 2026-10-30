@@ -155,7 +155,7 @@ self.addEventListener('push', (e) => {
     icon: '/icon-192.png',
     badge: '/favicon-32.png',
     tag: typeof d.tag === 'string' ? d.tag : undefined,
-    data: { url: typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/' },
+    data: { url: typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//') ? d.url : '/' }, // lien exact : /?go=…
   }));
 });
 
@@ -163,7 +163,8 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    for (const c of list) { if ('focus' in c) return c.focus(); }
+    // Appli déjà ouverte : on lui dit où aller (sans recharger) puis on la montre ; sinon on l'ouvre directement au bon endroit
+    for (const c of list) { if ('focus' in c) { try { c.postMessage({ type: 'open-link', url: url }); } catch (_) { /* ignore */ } return c.focus(); } }
     return self.clients.openWindow(url);
   }));
 });

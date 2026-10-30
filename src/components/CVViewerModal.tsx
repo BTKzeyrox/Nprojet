@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Camera, Image as ImageIcon, Sun, Moon, Phone, MessageCircle } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Sun, Moon, Phone, MessageCircle, Eye, KeyRound } from 'lucide-react';
 import { User } from '../types';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { compressImageToDataUrl } from '../utils/imageUtils';
@@ -9,6 +9,7 @@ import { Avatar } from './Avatar';
 import { useApp } from '../context/AppContext';
 import { badgeAccess, canSeeProfileBadges, usePerformance } from '../utils/usePerformance';
 import { BadgeChips, ScoreRing } from './PerformanceBadges';
+import { usePresence, setPresence, PRESENCE_LIST, PRESENCE_LABEL, PRESENCE_DOT } from '../utils/availability';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -16,7 +17,69 @@ interface ProfileModalProps {
   user: User | null;
   /** Bouton « Message » : ouvre la discussion privée avec cette personne (absent sur son propre profil). */
   onMessage?: (u: User) => void;
+  /** Responsable, sur son propre profil : passer en vue opérateur et revenir. */
+  canSwitchMode?: boolean;
+  operatorMode?: boolean;
+  onToggleOperatorMode?: () => void;
 }
+
+/** Mon statut (Disponible / Occupé / Absent) : réglé sur cet appareil. */
+const StatusPicker: React.FC<{ uid: string }> = ({ uid }) => {
+  const cur = usePresence(uid);
+  return (
+    <div data-status-picker className="space-y-1.5">
+      <div className="text-xs text-slate-300 uppercase font-mono">Mon statut</div>
+      <div className="grid grid-cols-3 gap-2">
+        {PRESENCE_LIST.map(p => (
+          <button key={p} type="button" data-status={p} onClick={() => setPresence(uid, p)} aria-pressed={cur === p}
+            className={`min-h-[44px] rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${cur === p ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200' : 'border-slate-600 bg-[#141e2a] text-slate-300'}`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${PRESENCE_DOT[p]}`} />{PRESENCE_LABEL[p]}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-slate-400">Réglé sur cet appareil.</p>
+    </div>
+  );
+};
+
+/** Changer mon mot de passe (ancien + nouveau). */
+const PasswordForm: React.FC<{ uid: string }> = ({ uid }) => {
+  const [open, setOpen] = useState(false);
+  const [cur, setCur] = useState('');
+  const [nw, setNw] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setMsg(null);
+    if (nw.length < 6) return setMsg({ ok: false, t: 'Le nouveau mot de passe doit avoir au moins 6 caractères.' });
+    setBusy(true);
+    const r = await db.setPassword(uid, nw, cur);
+    setBusy(false);
+    if (!r.success) return setMsg({ ok: false, t: r.error || 'Changement impossible.' });
+    setCur(''); setNw(''); setOpen(false);
+    setMsg({ ok: true, t: 'Mot de passe changé.' });
+  };
+  const inp = 'rounded-lg w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none';
+  return (
+    <div data-password-form className="space-y-2">
+      {!open ? (
+        <button type="button" onClick={() => { setOpen(true); setMsg(null); }} className="rounded-lg w-full min-h-[44px] px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer flex items-center justify-center gap-2">
+          <KeyRound className="w-4 h-4" /> Changer mon mot de passe
+        </button>
+      ) : (
+        <div className="space-y-2 text-xs font-mono">
+          <input type="password" autoComplete="current-password" value={cur} onChange={e => setCur(e.target.value)} placeholder="Mot de passe actuel" className={inp} />
+          <input type="password" autoComplete="new-password" value={nw} onChange={e => setNw(e.target.value)} placeholder="Nouveau mot de passe" className={inp} />
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => { setOpen(false); setCur(''); setNw(''); }} className="rounded-lg min-h-[44px] bg-[#141e2a] border border-slate-600 text-sm font-semibold cursor-pointer">Annuler</button>
+            <button type="button" disabled={busy || !cur || !nw} onClick={save} className="rounded-lg min-h-[44px] bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">{busy ? 'Envoi…' : 'Changer'}</button>
+          </div>
+        </div>
+      )}
+      {msg && <div className={`text-xs ${msg.ok ? 'text-emerald-300' : 'text-red-400'}`}>{msg.t}</div>}
+    </div>
+  );
+};
 
 /** Score et badges calculés (module 3). Montré au responsable et à la personne elle-même, JAMAIS à un collègue (D8). */
 const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, self }) => {
@@ -26,7 +89,7 @@ const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, se
   const p = res.employees.get(userId);
   if (!p || !access.enabled || (self && !access.seesBadges)) return null;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/50 p-2.5">
+    <div className="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/50 p-2.5">
       <span className="text-white"><ScoreRing score={p.score} size={48} tone={self ? 'neutral' : 'color'} /></span>
       <div className="min-w-0 text-xs space-y-1">
         <div className="font-bold text-slate-100">Performance</div>
@@ -37,7 +100,7 @@ const ProfileBadges: React.FC<{ userId: string; self: boolean }> = ({ userId, se
 };
 
 // Fenêtre « Profil » : photo, nom, shift, téléphone (plus de CV ni de pièce d'identité)
-export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage }) => {
+export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onMessage, canSwitchMode = false, operatorMode = false, onToggleOperatorMode }) => {
   useLockBodyScroll(isOpen);
   const [, force] = useState(0);
   const [error, setError] = useState('');
@@ -69,6 +132,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   const live = db.getUsers().find(u => u.id === user.id) || user;
   const isSelfOperator = !!me && me.id === live.id && me.role === 'employee';
   const canEdit = !!me && me.role === 'admin';
+  const isSelf = !!me && me.id === live.id;
   const myReq = isSelfOperator ? db.getProfileRequests().find(r => r.user_id === live.id) : undefined;
   const pending = myReq && myReq.status === 'pending' ? myReq : undefined;
   const refused = myReq && myReq.status === 'rejected' ? myReq : undefined;
@@ -124,7 +188,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
       >
         <div className="flex items-start justify-between gap-2">
           <h2 className="font-tactical font-bold text-lg">Profil</h2>
-          <button onClick={onClose} className="rounded-xl p-1 text-slate-400 hover:text-white" aria-label="Fermer">
+          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:text-white" aria-label="Fermer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -154,7 +218,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
         </div>
 
         {onMessage && !!me && me.id !== live.id && live.status !== 'blocked' && (
-          <button type="button" onClick={() => onMessage(live)} className="rounded-xl w-full min-h-[44px] px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer flex items-center justify-center gap-2">
+          <button type="button" onClick={() => onMessage(live)} className="rounded-lg w-full min-h-[44px] px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer flex items-center justify-center gap-2">
             <MessageCircle className="w-4 h-4" /> Message
           </button>
         )}
@@ -165,14 +229,14 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               <button
                 type="button"
                 onClick={() => camRef.current?.click()}
-                className="rounded-xl flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+                className="rounded-lg flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
               >
                 <Camera className="w-4 h-4 shrink-0" /> Prendre une photo
               </button>
               <button
                 type="button"
                 onClick={() => galRef.current?.click()}
-                className="rounded-xl flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
+                className="rounded-lg flex items-center justify-center gap-2 px-2 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold text-center leading-tight"
               >
                 <ImageIcon className="w-4 h-4 shrink-0" /> Changer la photo
               </button>
@@ -185,12 +249,12 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
         {isSelfOperator && (
           <div className="space-y-2">
             {refused && !pending && (
-              <div className="rounded-xl p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">
+              <div className="rounded-lg p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">
                 Modification refusée : {refused.reason || 'sans motif'}
               </div>
             )}
             {pending && (
-              <div className="rounded-xl p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs leading-relaxed">
+              <div className="rounded-lg p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs leading-relaxed">
                 Modification en attente de validation par l'administrateur : {pending.name} · @{pending.username}
                 {pending.avatar_url !== pending.old.avatar_url ? ' · nouvelle photo' : ''}
               </div>
@@ -199,7 +263,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
               <button
                 type="button"
                 onClick={() => { setEditing(true); setInfo(''); }}
-                className="rounded-xl w-full px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer"
+                className="rounded-lg w-full px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer"
               >
                 {pending ? 'Modifier ma demande' : 'Modifier mon profil'}
               </button>
@@ -209,10 +273,10 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <div className="flex items-center gap-3">
                   <Avatar src={fAvatar || live.avatar_url} name={fName || live.name} className="w-14 h-14 text-lg" />
                   <div className="grid grid-cols-2 gap-2 flex-1">
-                    <button type="button" disabled={busy} onClick={() => camRef.current?.click()} className="rounded-xl px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => camRef.current?.click()} className="rounded-lg px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
                       Photo
                     </button>
-                    <button type="button" disabled={busy} onClick={() => galRef.current?.click()} className="rounded-xl px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => galRef.current?.click()} className="rounded-lg px-2 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold cursor-pointer disabled:opacity-50">
                       Galerie
                     </button>
                   </div>
@@ -221,15 +285,15 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={pickForRequest} />
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Nom</label>
-                  <input value={fName} onChange={e => setFName(e.target.value)} className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fName} onChange={e => setFName(e.target.value)} className="rounded-lg w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
-                  <input value={fUser} onChange={e => setFUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fUser} onChange={e => setFUser(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} className="rounded-lg w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
-                  <input value={fPhone} onChange={e => setFPhone(e.target.value)} inputMode="tel" className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                  <input value={fPhone} onChange={e => setFPhone(e.target.value)} inputMode="tel" className="rounded-lg w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
@@ -239,20 +303,36 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                     value={fNote}
                     onChange={e => setFNote(e.target.value)}
                     placeholder="Un mot pour le responsable (facultatif)"
-                    className="rounded-xl w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" onClick={() => { setEditing(false); setError(''); }} className="rounded-xl px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
+                  <button type="button" onClick={() => { setEditing(false); setError(''); }} className="rounded-lg px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
                     Annuler
                   </button>
-                  <button type="button" disabled={busy} onClick={sendRequest} className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
+                  <button type="button" disabled={busy} onClick={sendRequest} className="rounded-lg px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
                     {busy ? 'Envoi…' : 'Envoyer'}
                   </button>
                 </div>
               </div>
             )}
-            {info && <div className="p-2.5 bg-emerald-950 border rounded-xl border-emerald-500/50 text-emerald-200 text-xs leading-relaxed">{info}</div>}
+            {info && <div className="p-2.5 bg-emerald-950 border rounded-lg border-emerald-500/50 text-emerald-200 text-xs leading-relaxed">{info}</div>}
+          </div>
+        )}
+        {isSelf && (
+          <div className="space-y-3 border-t border-slate-700 pt-3">
+            <StatusPicker uid={live.id} />
+            <PasswordForm uid={live.id} />
+            {canSwitchMode && onToggleOperatorMode && (
+              <div data-mode-switch className="flex items-center justify-between gap-3 min-h-[44px]">
+                <span className="text-sm text-slate-200 inline-flex items-center gap-2"><Eye className="w-4 h-4 text-slate-400" aria-hidden="true" />Mode opérateur</span>
+                <button type="button" role="switch" aria-checked={operatorMode} onClick={onToggleOperatorMode}
+                  aria-label={operatorMode ? 'Mode opérateur actif : revenir en mode responsable' : 'Passer en mode opérateur'}
+                  className={`relative w-[52px] h-8 rounded-lg border cursor-pointer transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${operatorMode ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-600'}`}>
+                  <span className={`absolute top-0.5 w-6 h-6 rounded-md bg-white shadow transition-all ${operatorMode ? 'left-[24px]' : 'left-0.5'}`} />
+                </button>
+              </div>
+            )}
           </div>
         )}
         {error && <div className="text-sm text-red-400">{error}</div>}

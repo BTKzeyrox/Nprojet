@@ -45,7 +45,7 @@ export function getHealth(): HealthView {
   const st: any = db.getSettings(), thresholds = healthThresholds({ watch: { ...(st.company?.watch || {}), ...loadWatchPrefs(me.id) } }); // réglages Surveillance de cet appareil par-dessus ceux de l'entreprise
   const ctx: HealthContext = {
     today: todayMada(), now: Date.now(), users: db.getUsers(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(),
-    cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), advances: db.getAdvanceRequests(), purchases: db.getPurchases(), invoices: db.getInvoices(), entries: db.getEntries(), shifts: db.getShifts(), planningMax: db.getPlanningMaxPerWeek(), leaves: db.getLeaves(), settings: st, thresholds,
+    cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), spaces: db.getStockSpaces(), advances: db.getAdvanceRequests(), purchases: db.getPurchases(), invoices: db.getInvoices(), entries: db.getEntries(), shifts: db.getShifts(), planningMax: db.getPlanningMaxPerWeek(), leaves: db.getLeaves(), settings: st, thresholds,
     backups: external.backups, errors: external.errors, audit: external.audit,
   };
   const run = runHealth(ctx, ALL_RULES);

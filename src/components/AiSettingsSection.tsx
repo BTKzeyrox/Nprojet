@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Bot } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { aiOptIn, setAiOptIn } from '../utils/aiAssist';
@@ -17,7 +18,7 @@ export const AiSettingsSection: React.FC = () => {
   }, []);
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-ai-settings>
-      <h3 className="font-tactical font-bold text-white">{t('IA externe pour l\'assistant (facultatif)', 'External AI for the assistant (optional)')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Bot className="w-4 h-4 text-emerald-400" />{t('IA externe pour l\'assistant (facultatif)', 'External AI for the assistant (optional)')}</h3>
       <p className="text-sm text-slate-300">{t('Quand l\'assistant ne comprend pas une question, il peut la poser à une IA (Gemini). Sans cette case, rien ne sort du site.', 'When the assistant does not understand a question, it can ask an AI (Gemini). Without this box, nothing leaves the site.')}</p>
       <p className="text-xs text-amber-300 leading-relaxed">{t('Confidentialité : seuls partent votre question et un résumé SANS noms (chiffres globaux). Avec l\'offre gratuite de Google, ces textes peuvent servir à améliorer ses produits et être lus par des relecteurs. N\'écrivez pas de noms, de numéros ni d\'informations sensibles dans vos questions. L\'IA peut se tromper : vérifiez avant d\'agir.', 'Privacy: only your question and a summary WITHOUT names (overall figures) are sent. With Google\'s free plan, these texts may be used to improve its products and be read by reviewers. Do not write names, numbers or sensitive information in your questions. The AI can be wrong: check before acting.')}</p>
       <label className="flex items-center gap-3 min-h-[44px] cursor-pointer text-sm text-white">

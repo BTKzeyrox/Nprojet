@@ -2,10 +2,10 @@
 // Limites écrites : « valeur du stock qui chute » vient avec M11.6 (statistique) ; l'achat sans mouvement est un simple signal.
 import { alertId, hasEnough, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
-import { stockRows } from '../../stock';
+import { DEFAULT_STOCK_SPACES, inSpace, stockRows } from '../../stock';
 import { dayDiff, list, plural } from './common';
 
-const GO = { view: 'stats', tab: 'stock' };
+const GO = { view: 'storage' };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const negativeQty: HealthRule = {
@@ -96,4 +96,28 @@ export const purchaseNoMove: HealthRule = {
   },
 };
 
-export const STOCK_RULES: HealthRule[] = [negativeQty, outOfStock, lowStock, dormant, purchaseNoMove];
+/** Une règle du stock vue stockage par stockage : jamais de mélange. Avec plusieurs stockages, chaque alerte porte le nom du stockage,
+ *  son propre identifiant (stock:<règle>:<stockage>) et un lien exact : le bon stockage, le bon filtre, le produit le plus urgent. */
+const perSpace = (rule: HealthRule): HealthRule => ({
+  id: rule.id, page: rule.page,
+  run: (ctx) => {
+    const spaces = ctx.spaces && ctx.spaces.length ? ctx.spaces : DEFAULT_STOCK_SPACES;
+    const multi = spaces.length > 1;
+    const out: HealthAlert[] = [];
+    for (const sp of spaces) {
+      const mine = inSpace(ctx.products, ctx.moves, sp.id);
+      const rows = stockRows(mine.products, mine.moves);
+      for (const a of rule.run({ ...ctx, products: mine.products, moves: mine.moves })) {
+        const first = a.rule === 'negative' ? rows.find(r => r.negative)
+          : a.rule === 'empty' ? rows.find(r => r.qty === 0)
+          : a.rule === 'low' ? rows.filter(r => r.low && r.qty > 0).sort((x, y) => x.qty - y.qty)[0]
+          : undefined;
+        const filter = a.rule === 'empty' ? 'empty' : a.rule === 'low' ? 'low' : 'all';
+        out.push({ ...a, ...(multi ? { id: alertId('stock', a.rule, sp.id), title_fr: `${sp.name} : ${a.title_fr}`, title_en: `${sp.name}: ${a.title_en}` } : {}), go: { view: 'storage', storage: { space: sp.id, filter, ...(first ? { product: first.product.id } : {}) } } });
+      }
+    }
+    return out;
+  },
+});
+
+export const STOCK_RULES: HealthRule[] = [perSpace(negativeQty), perSpace(outOfStock), perSpace(lowStock), perSpace(dormant), purchaseNoMove];

@@ -1,23 +1,24 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, FileSpreadsheet, History, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { AlertTriangle, FileSpreadsheet, History, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
 import { ImportDialog } from '../../components/ImportDialog';
 import { db } from '../../db/store';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { supplierRanking, topPurchased } from '../../utils/purchasing';
 import { compressImageToDataUrl } from '../../utils/imageUtils';
-import { checkMoveDraft, purchaseAmount, runOutSoon, stockPeriod, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
+import { categoryKey, categoryOptions, checkMoveDraft, cleanCategoryName, DEFAULT_STORAGE_ID, inSpace, purchaseAmount, runOutSoon, stockRows, stockValue } from '../../utils/stock';
+import { StockCategoriesDialog } from './StockCategoriesDialog';
+import { productNavId, STORAGE_FLASH_MS } from '../../utils/storageNav';
 import type { Product, StockMoveType } from '../../types';
-import { LineChart, RankBars, compactNumber } from '../../components/charts/Charts';
-import { monthTitle } from '../../utils/chartData';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
-interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
+interface Props { lang: 'fr' | 'en'; initialFilter?: StockFilter; spaceId?: string }
 interface ProductEditor { id?: string; name: string; category: string; unit: string; buy: string; sell: string; threshold: string; qty: string; photo: string }
-type StockFilter = 'all' | 'low' | 'empty';
+export type StockFilter = 'all' | 'low' | 'empty';
+const NEW_CAT = '__new__';
+const NONE_CAT = '__none__';
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 interface MoveEditor { product: Product; type: StockMoveType; qty: string; date: string; cost: string; note: string; expense: boolean; supplier: string }
 
@@ -26,7 +27,7 @@ const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
 const num = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
-export const StockTab: React.FC<Props> = ({ range, lang }) => {
+export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAULT_STORAGE_ID }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [pEdit, setPEdit] = useState<ProductEditor | null>(null);
   const [importing, setImporting] = useState(false);
@@ -36,37 +37,36 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   const [confirmMove, setConfirmMove] = useState<string | null>(null);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<StockFilter>('all');
+  const [filter, setFilter] = useState<StockFilter>(initialFilter ?? 'all');
   const [sortBy, setSortBy] = useState<'name' | 'qty'>('name');
   const [added, setAdded] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [catFilter, setCatFilter] = useState('');
+  const [catOpen, setCatOpen] = useState(false);
+  const [catMode, setCatMode] = useState<'list' | 'new'>('list');
   const [zoom, setZoom] = useState<{ url: string; name: string } | null>(null);
   useLockBodyScroll(!!pEdit || !!mEdit);
 
-  const products = db.getProducts();
-  const moves = db.getStockMoves();
+  const { products, moves } = inSpace(db.getProducts(), db.getStockMoves(), spaceId); // un seul stockage à la fois : jamais mélangés
   const today = todayMada();
   const rows = useMemo(() => stockRows(products, moves), [products, moves]);
   const total = stockValue(rows);
   const red = rows.filter(r => r.low).length;
   const emptyCount = rows.filter(r => r.empty).length;
   const lowCount = rows.filter(r => r.low && !r.empty).length;
-  const categories = useMemo(() => Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [products]);
+  const catOptions = categoryOptions(db.getStockCategories(), products); // la liste de l'admin + les catégories déjà utilisées
+  const catValue = pEdit ? (catOptions.find(c => categoryKey(c) === categoryKey(pEdit.category)) ?? '') : '';
   const shown = useMemo(() => {
     const k = norm(query);
-    const list = rows.filter(r => (filter === 'all' || (filter === 'empty' ? r.empty : r.low && !r.empty)) && (!k || norm(r.product.name).includes(k) || norm(r.product.category).includes(k)));
+    const list = rows.filter(r => (filter === 'all' || (filter === 'empty' ? r.empty : r.low && !r.empty)) && (!catFilter || (catFilter === NONE_CAT ? !r.product.category.trim() : categoryKey(r.product.category) === categoryKey(catFilter))) && (!k || norm(r.product.name).includes(k) || norm(r.product.category).includes(k)));
     return sortBy === 'qty' ? [...list].sort((a, b) => a.qty - b.qty || a.product.name.localeCompare(b.product.name)) : list;
-  }, [rows, query, filter, sortBy]);
-  const period = useMemo(() => stockPeriod(products, moves, range.start, range.end), [products, moves, range.start, range.end]);
-  const months = useMemo(() => valueByMonth(products, moves, today, 12), [products, moves, today]);
-  const used = useMemo(() => topUsed(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
+  }, [rows, query, filter, sortBy, catFilter]);
   const soon = useMemo(() => runOutSoon(rows, moves, today), [rows, moves, today]);
-  const suppliersRank = useMemo(() => supplierRanking(db.getSuppliers(), db.getPurchases(), moves, range.start, range.end, today).slice(0, 5), [moves, range.start, range.end, today]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bought = useMemo(() => topPurchased(products, moves, range.start, range.end, 5), [products, moves, range.start, range.end]);
   const ar = (n: number) => formatCurrencyAr(n);
 
   const errors: Record<string, [string, string]> = {
     name: ['Écris le nom du produit.', 'Enter the product name.'], buy: ['Prix d\'achat invalide.', 'Invalid purchase price.'], sell: ['Prix de vente invalide.', 'Invalid selling price.'],
+    category: ['Écris un nom de catégorie.', 'Enter a category name.'], category_exists: ['Cette catégorie existe déjà.', 'This category already exists.'],
     photo: ['Photo refusée : renvoie-la.', 'Photo rejected: send it again.'], threshold: ['Seuil d\'alerte invalide.', 'Invalid alert threshold.'], type: ['Type inconnu.', 'Unknown type.'],
     qty: ['Entre une quantité (pas 0 ; une entrée et une sortie sont positives).', 'Enter a quantity (not 0; entries and exits are positive).'],
     date: ['Choisis une date valide.', 'Choose a valid date.'], cost: ['Prix payé invalide, ou à remplir pour créer la dépense.', 'Invalid price paid, or fill it in to create the expense.'],
@@ -75,14 +75,16 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
   };
   const say = (code?: string) => { const m = errors[code || ''] || ['Impossible d\'enregistrer.', 'Could not save.']; return t(m[0], m[1]); };
 
-  const newProduct = () => { setError(''); setAdded(''); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '', qty: '', photo: '' }); };
-  const editProduct = (p: Product) => { setError(''); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '', qty: '', photo: p.photo_url || '' }); };
+  const newProduct = () => { setError(''); setAdded(''); setCatMode('list'); setPEdit({ name: '', category: '', unit: '', buy: '', sell: '', threshold: '', qty: '', photo: '' }); };
+  const editProduct = (p: Product) => { setError(''); setCatMode('list'); setConfirmId(null); setPEdit({ id: p.id, name: p.name, category: p.category, unit: p.unit, buy: p.buy_price_ar ? String(p.buy_price_ar) : '', sell: p.sell_price_ar ? String(p.sell_price_ar) : '', threshold: p.alert_threshold ? String(p.alert_threshold) : '', qty: '', photo: p.photo_url || '' }); };
+  const rememberCategory = (raw: string) => { const name = cleanCategoryName(raw); const list = db.getStockCategories(); if (name && list.length < 30 && !list.some(c => categoryKey(c) === categoryKey(name))) db.setStockCategories([...list, name]); };
   const saveProduct = (another = false) => {
     if (!pEdit) return;
-    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold, photo_url: pEdit.photo };
+    const draft = { name: pEdit.name, category: pEdit.category, unit: pEdit.unit, buy_price: pEdit.buy, sell_price: pEdit.sell, alert_threshold: pEdit.threshold, photo_url: pEdit.photo, storage_id: spaceId };
     if (pEdit.id) {
       const r = db.updateProduct(pEdit.id, draft);
       if (!r.success) { setError(say(r.error)); return; }
+      rememberCategory(pEdit.category);
       setPEdit(null);
       return;
     }
@@ -95,6 +97,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
     }
     const r = db.addProduct(draft);
     if (!r.success || !r.id) { setError(say(r.error)); return; }
+    rememberCategory(pEdit.category);
     if (startQty > 0) {
       const m = db.addStockMove({ product_id: r.id, type: 'in', qty: startQty, date: today, note: t('Stock de départ', 'Starting stock') });
       if (!m.success) { setPEdit(null); setError(t('Produit créé, mais la quantité n\'a pas été ajoutée : utilise « Entrée ».', 'Product created, but the quantity was not added: use “Entry”.')); return; }
@@ -142,12 +145,13 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
           {tile(t('Valeur du stock', 'Stock value'), ar(total), 'text-sky-300')}
           {tile(t('Produits', 'Products'), String(products.length), 'text-white')}
           {tile(t('Sous le seuil', 'Below threshold'), String(red), red > 0 ? 'text-rose-400' : 'text-emerald-400')}
-          {tile(t('Sorties (période)', 'Exits (period)'), `${num(period.qtyOut)}`, 'text-amber-400')}
+          {tile(t('Épuisés', 'Out of stock'), String(emptyCount), emptyCount > 0 ? 'text-rose-400' : 'text-emerald-400')}
         </div>
         <p className="text-[11px] text-slate-500">{t('Valeur = quantité × prix d\'achat. La quantité se calcule avec les entrées, sorties et ajustements : on ne la saisit jamais.', 'Value = quantity × purchase price. The quantity is calculated from entries, exits and adjustments: it is never typed in.')}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <button type="button" onClick={newProduct} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau produit', 'New product')}</button>
           <button type="button" onClick={() => setImporting(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
+          <button type="button" onClick={() => setCatOpen(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><Tag className="w-4 h-4" />{t('Catégories', 'Categories')}</button>
         </div>
       </div>
 
@@ -165,6 +169,11 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
             <Search aria-hidden="true" className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={t('Rechercher un produit ou une catégorie', 'Search a product or category')} aria-label={t('Rechercher un produit', 'Search a product')} className={`${field} pl-9`} />
           </div>
+          <select value={catFilter} onChange={e => setCatFilter(e.target.value)} aria-label={t('Catégorie', 'Category')} className={field}>
+            <option value="">{t('Toutes les catégories', 'All categories')}</option>
+            <option value={NONE_CAT}>{t('Sans catégorie', 'No category')}</option>
+            {catOptions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
           <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('Filtrer', 'Filter')}>
             {([['all', t('Tous', 'All'), rows.length], ['low', t('Stock bas', 'Low'), lowCount], ['empty', t('Épuisés', 'Out'), emptyCount]] as [StockFilter, string, number][]).map(([id, label, n]) => (
               <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`min-h-[44px] px-3 rounded-lg text-sm font-semibold border ${filter === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{label} ({n})</button>
@@ -185,7 +194,7 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
               const p = r.product;
               const hist = moves.filter(m => m.product_id === p.id).slice(0, 8);
               return (
-                <li key={p.id} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
+                <li key={p.id} data-nav={productNavId(p.id)} data-nav-flash={STORAGE_FLASH_MS} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <span aria-hidden="true" className={`w-3 h-3 rounded-full flex-shrink-0 ${r.low ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                     {p.photo_url && <button type="button" onClick={() => setZoom({ url: p.photo_url || '', name: p.name })} aria-label={t(`Agrandir la photo de ${p.name}`, `Enlarge photo of ${p.name}`)} className="flex-shrink-0"><img src={p.photo_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-slate-700" /></button>}
@@ -241,47 +250,6 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
 
       {products.length > 0 && (
         <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Valeur du stock dans le temps', 'Stock value over time')}</h3>
-          <LineChart values={months.values} labels={months.labels} fullLabels={months.keys.map(k => monthTitle(k, lang))} format={v => ar(v)} ariaLabel={t('Valeur du stock à la fin de chaque mois', 'Stock value at the end of each month')} emptyText={t('Pas encore de stock.', 'No stock yet.')} lang={lang} />
-          <p className="text-[11px] text-slate-500">{t('Les 12 derniers mois, avec les prix d\'achat actuels.', 'The last 12 months, using current purchase prices.')}</p>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Produits les plus utilisés (période)', 'Most used products (period)')}</h3>
-          {used.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune sortie sur cette période.', 'No exits in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Produits les plus utilisés', 'Most used products')} barClass="bg-sky-500"
-              items={used.map(u => ({ key: u.product.id, label: u.product.name, value: u.used, valueText: `${num(u.used)} ${u.product.unit}` }))} />
-          )}
-          {period.soldAr > 0 && <p className="text-[11px] text-slate-500">{t(`Valeur des sorties au prix de vente : ${compactNumber(period.soldAr)} Ar.`, `Value of exits at selling price: ${compactNumber(period.soldAr)} Ar.`)}</p>}
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Fournisseurs (période)', 'Suppliers (period)')}</h3>
-          {suppliersRank.length === 0 ? <div className="text-sm text-slate-400">{t('Aucun bon de commande commandé sur cette période.', 'No purchase order placed in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Fournisseurs classés par valeur reçue', 'Suppliers ranked by value received')} barClass="bg-amber-500"
-              items={suppliersRank.map(x => ({ key: x.supplier.id, label: x.supplier.name, value: x.spentAr, valueText: `${compactNumber(x.spentAr)} Ar · ${t(`${x.orders} bon${x.orders > 1 ? 's' : ''}`, `${x.orders} order${x.orders > 1 ? 's' : ''}`)}${x.late > 0 ? ` · ${t(`${x.late} en retard`, `${x.late} late`)}` : ''}` }))} />
-          )}
-          <p className="text-[11px] text-slate-500">{t('Valeur reçue des bons (quantité reçue × prix convenu), classée du plus gros fournisseur au plus petit.', 'Value received from orders (received quantity × agreed price), biggest supplier first.')}</p>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
-          <h3 className="text-sm font-bold text-white">{t('Produits achetés le plus cher (période)', 'Most expensive purchases (period)')}</h3>
-          {bought.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune entrée avec un prix payé sur cette période.', 'No stock entry with a price paid in this period.')}</div> : (
-            <RankBars lang={lang} ariaLabel={t('Produits achetés le plus cher', 'Most expensive purchases')} barClass="bg-rose-500"
-              items={bought.map(x => ({ key: x.product.id, label: x.product.name, value: x.spentAr, valueText: `${compactNumber(x.spentAr)} Ar · ${t('moy.', 'avg')} ${compactNumber(x.avgUnitCost)} · ${t('dernier', 'last')} ${compactNumber(x.lastUnitCost)}` }))} />
-          )}
-          <p className="text-[11px] text-slate-500">{t('Dépense totale par produit (entrées avec un prix), prix moyen et dernier prix payé par unité.', 'Total spent per product (entries with a price), average and last price paid per unit.')}</p>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className={card}>
           <h3 className="text-sm font-bold text-white">{t('Bientôt en rupture', 'Running out soon')}</h3>
           {soon.length === 0 ? <div className="text-sm text-slate-400">{t('Rien d\'urgent : aucun produit ne sera vide dans les 14 prochains jours (selon les sorties des 30 derniers jours).', 'Nothing urgent: no product will run out in the next 14 days (based on exits in the last 30 days).')}</div> : (
             <ul>
@@ -296,7 +264,8 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
         </div>
       )}
 
-      {importing && <ImportDialog kind="products" onClose={() => setImporting(false)} />}
+      {importing && <ImportDialog kind="products" storageId={spaceId} onClose={() => setImporting(false)} />}
+      {catOpen && <StockCategoriesDialog lang={lang} onClose={() => setCatOpen(false)} />}
 
       {pEdit && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" onClick={() => setPEdit(null)} {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -328,10 +297,20 @@ export const StockTab: React.FC<Props> = ({ range, lang }) => {
               <summary className="min-h-[44px] flex items-center text-sm text-slate-300 cursor-pointer">{t('Plus de détails (catégorie, unité, prix, alerte)', 'More details (category, unit, prices, alert)')}</summary>
               <div className="space-y-3 pt-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block text-xs text-slate-400">{t('Catégorie', 'Category')}
-                    <input list="stock-categories" value={pEdit.category} maxLength={40} onChange={e => setPEdit({ ...pEdit, category: e.target.value })} className={`${field} mt-1`} />
-                    <datalist id="stock-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
-                  </label>
+                  <div className="block text-xs text-slate-400">
+                    <label>{t('Catégorie (facultatif)', 'Category (optional)')}
+                      {catMode === 'list' ? (
+                        <select value={catValue} onChange={e => { if (e.target.value === NEW_CAT) { setCatMode('new'); setPEdit({ ...pEdit, category: '' }); } else setPEdit({ ...pEdit, category: e.target.value }); }} className={`${field} mt-1`}>
+                          <option value="">{t('Aucune', 'None')}</option>
+                          {catOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                          <option value={NEW_CAT}>{t('+ Nouvelle catégorie…', '+ New category…')}</option>
+                        </select>
+                      ) : (
+                        <input autoFocus value={pEdit.category} maxLength={40} placeholder={t('Nom de la catégorie', 'Category name')} onChange={e => setPEdit({ ...pEdit, category: e.target.value })} className={`${field} mt-1`} />
+                      )}
+                    </label>
+                    {catMode === 'new' && <button type="button" onClick={() => setCatMode('list')} className="min-h-[44px] text-sky-300 underline">{t('Choisir dans la liste', 'Pick from the list')}</button>}
+                  </div>
                   <label className="block text-xs text-slate-400">{t('Unité', 'Unit')}
                     <input value={pEdit.unit} maxLength={16} placeholder={t('unité', 'unit')} onChange={e => setPEdit({ ...pEdit, unit: e.target.value })} className={`${field} mt-1`} />
                   </label>

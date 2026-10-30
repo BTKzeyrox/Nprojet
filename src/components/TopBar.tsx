@@ -1,20 +1,27 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, Shield, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { subscribeHealth } from '../utils/healthDb';
-import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
+import { buildNotifications, markSeen, markAllRead, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
+import { setStorageIntent } from '../utils/storageNav';
 import { beepIfEnabled } from '../utils/notifSound';
 import { ConnectionChip } from './ConnectionBanner';
+import { Avatar } from './Avatar';
+import { usePresence, PRESENCE_DOT, PRESENCE_LABEL } from '../utils/availability';
 
 interface TopBarProps {
   currentUser: User;
   onOpenMenu: () => void;
   onNavigate: (view: string) => void;
   onOpenOperator: (userId: string) => void;
+  /** Ouvre le formulaire de profil de la personne connectée (tous les rôles). */
+  onOpenProfile: () => void;
+  /** Le responsable est en vue opérateur : la pastille le rappelle. */
+  operatorMode?: boolean;
 }
 
 interface Hit {
@@ -30,7 +37,8 @@ const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', mission: 'Missio
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false }) => {
+  const presence = usePresence(currentUser.id);
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -141,11 +149,6 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         <button onClick={onOpenMenu} title="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
-        <div className="flex items-center gap-1.5 shrink-0 md:hidden">
-          <Shield className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
-          <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>GESTION PRO</span>
-        </div>
-
         <div ref={box} className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -153,10 +156,15 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onChange={e => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
-            placeholder={isAdmin ? 'Rechercher une mission, un opérateur, une page…' : 'Rechercher une mission, une page…'}
-            className={`w-full h-9 pl-9 pr-3 rounded-full ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
+            placeholder="Rechercher…"
+            className={`w-full h-9 pl-9 pr-9 rounded-full ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
           style={{ borderRadius: 9999 }}
           />
+          {q && (
+            <button type="button" data-search-clear onClick={() => { setQ(''); setOpen(false); }} title="Effacer" aria-label="Effacer la recherche" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
           {open && q.trim() && (
             <div className={`absolute left-0 right-0 top-full mt-1 df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
               {hits.length === 0 ? (
@@ -182,7 +190,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         <ConnectionChip />
 
-        <div ref={bellBox} className="relative shrink-0">
+        <div ref={bellBox} className="sm:relative shrink-0">
           <button
             onClick={toggleBell}
             title="Notifications"
@@ -196,22 +204,28 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             )}
           </button>
           {bellOpen && (
-            <div className={`absolute right-0 top-full mt-2 w-[min(94vw,23rem)] df-notif rounded-2xl overflow-hidden z-50 border-2 ${L ? 'bg-white border-[#0b2a4a]/20' : 'bg-[#0f1e3a] border-blue-400/40'} shadow-[0_18px_50px_-8px_rgba(2,12,40,0.55)]`}>
+            <div className={`absolute max-sm:left-2 max-sm:right-2 sm:right-0 top-full mt-2 sm:w-[23rem] df-notif rounded-2xl overflow-hidden z-50 border-2 ${L ? 'bg-white border-[#0b2a4a]/20' : 'bg-[#0f1e3a] border-blue-400/40'} shadow-[0_18px_50px_-8px_rgba(2,12,40,0.55)]`}>
               <div className={`px-4 py-3 flex items-center justify-between ${L ? 'bg-[#0b2a4a] text-white' : 'bg-[#1d4ed8] text-white'}`}>
                 <span className="text-sm font-bold flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</span>
                 {count > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">{count > 99 ? '99+' : count}</span>}
               </div>
+              {notifs.length > 0 && (
+                <div className={`px-4 py-2 flex items-center justify-between text-xs ${L ? 'bg-slate-50 text-slate-600' : 'bg-white/5 text-slate-300'}`} data-notif-bar>
+                  <span>{count > 0 ? `${count} non lue${count > 1 ? 's' : ''}` : 'Tout est lu'}</span>
+                  {count > 0 && <button type="button" onClick={() => { markAllRead(currentUser, notifs); force(n => n + 1); }} className="min-h-[32px] px-3 rounded-lg border border-current font-semibold cursor-pointer" data-notif-readall>Tout marquer comme lu</button>}
+                </div>
+              )}
               <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
                 {notifs.length === 0 ? (
                   <div className={`px-3 py-6 text-sm text-center ${L ? 'text-slate-500' : 'text-slate-300'}`}>Rien de nouveau.</div>
                 ) : (
                   notifs.slice(0, 30).map(n => {
                     const tone = n.tone === 'urgent' ? 'bg-red-100 text-red-700' : n.tone === 'bad' ? 'bg-orange-100 text-orange-700' : n.tone === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
-                    const fresh = !isAdmin && !seen.includes(n.id);
+                    const fresh = !seen.includes(n.id);
                     return (
                       <button
                         key={n.id}
-                        onClick={() => { setBellOpen(false); if (n.id.startsWith('summary-')) markSeen(currentUser, [n.id]); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
+                        onClick={() => { setBellOpen(false); markSeen(currentUser, [n.id]); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); if (n.storage) setStorageIntent(n.storage); onNavigate(n.view); }}
                         className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl border cursor-pointer ${fresh ? (L ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/15 border-blue-400/40') : (L ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-white/5 border-white/10 hover:bg-white/10')}`}
                       >
                         <span className={`mt-0.5 w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${tone}`}>
@@ -221,7 +235,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                           <span className={`block text-sm font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{n.title}</span>
                           {n.sub && <span className={`block text-xs mt-0.5 ${L ? 'text-slate-600' : 'text-slate-300'} break-words`}>{n.sub}</span>}
                         </span>
-                        {fresh && <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Nouveau" />}
+                        {fresh ? <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" data-notif-unread /> : <span className={`mt-0.5 text-[10px] shrink-0 ${L ? 'text-slate-400' : 'text-slate-400'}`} data-notif-read>Lue</span>}
                       </button>
                     );
                   })
@@ -230,6 +244,18 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          data-profile-pill
+          onClick={onOpenProfile}
+          title={`Mon profil · ${PRESENCE_LABEL[presence]}`}
+          aria-label="Mon profil"
+          className={`relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
+        >
+          <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8 rounded-full" />
+          <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} ${PRESENCE_DOT[presence]}`} />
+        </button>
       </div>
     </header>
     </>

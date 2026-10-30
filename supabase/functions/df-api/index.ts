@@ -148,10 +148,11 @@ function cleanProduct(rec: any, existing: any, meId: string, now: string): { ok:
   // Photo : vide, ou une adresse envoyée par notre serveur (Cloudinary du site, ou à défaut le stockage Supabase du site)
   const photo = typeof rec.photo_url === "string" ? rec.photo_url.trim() : "";
   if (photo && (photo.length > 500 || !(photo.startsWith(CLD_PREFIX) || photo.includes(`/object/public/${BUCKET}/`)))) return { ok: false, reason: "photo" };
+  const sid = typeof rec.storage_id === "string" && /^[a-z0-9_-]{1,32}$/.test(rec.storage_id) ? rec.storage_id : ""; // le stockage du produit (vide = le premier)
   return {
     ok: true,
     save: {
-      id: rec.id, name, photo_url: photo, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
+      id: rec.id, name, photo_url: photo, storage_id: sid, category: String(rec.category || "").trim().slice(0, 40), unit: String(rec.unit || "").trim().slice(0, 16) || "unité",
       buy_price_ar: Math.round(buy), sell_price_ar: Math.round(sell), alert_threshold: round2s(thr),
       created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now,
     },
@@ -1328,6 +1329,19 @@ function tasksBlockSubmit(contract: any, done: unknown): boolean {
 }
 // ===== END MISSIONS =====
 
+// ===== BEGIN DEEP_LINK (adresse exacte d'une notification externe ; ce bloc est contrôlé par scripts/check-deep-link.ts) =====
+interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
+const DL_VIEW = /^[a-z][a-z-]{0,29}$/;
+const DL_ID = /^[A-Za-z0-9_:.-]{1,80}$/;
+const DL_FIELDS: [keyof DeepLink, string][] = [["go", "go"], ["tab", "tab"], ["filter", "f"], ["nav", "nav"], ["space", "sp"], ["sfilter", "sf"], ["product", "pr"]];
+/** « /?go=<page>&nav=<élément>… » : l'appli ouvre la bonne page et fait clignoter l'élément. Pas de page valable = l'accueil. */
+function deepLinkUrl(link: DeepLink): string {
+  if (!link || typeof link.go !== "string" || !DL_VIEW.test(link.go)) return "/";
+  const p = new URLSearchParams();
+  for (const [k, q] of DL_FIELDS) { const v = (link as any)[k]; if (typeof v === "string" && (k === "go" ? DL_VIEW.test(v) : DL_ID.test(v))) p.set(q, v); }
+  return `/?${p.toString()}`;
+}
+// ===== END DEEP_LINK =====
 // ===== BEGIN PUSH (notifications : règles, chiffrement Web Push et signature VAPID ; ce bloc est contrôlé par scripts/check-push.ts) =====
 // La partie « règles » est copiée de src/utils/pushRules.ts ; `npm run check:push` vérifie qu'elle donne les mêmes résultats que le site.
 const isRealDate = isRealMissionDate;
@@ -1616,6 +1630,56 @@ function applyHealthAcks(saved: any, rec: any, existing: any): any {
   return out;
 }
 // ===== END HEALTH_ACKS =====
+// ===== BEGIN STOCK_CATEGORIES (liste des catégories du Stockage : admin seulement ; ce bloc est contrôlé par scripts/check-stock-categories.ts) =====
+function cleanStockCategories(raw: any): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of raw) {
+    if (typeof x !== "string") continue;
+    const name = x.replace(/\s+/g, " ").trim().slice(0, 40);
+    const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key); out.push(name);
+    if (out.length >= 30) break;
+  }
+  return out;
+}
+/** Réglages écrits par l'admin : la liste est revérifiée ; absente ou pas une liste (ancien site) = l'existant est gardé. */
+function applyStockCategories(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const sent = rec ? cleanStockCategories(rec.stock_categories) : null;
+  const list = sent !== null ? sent : cleanStockCategories(existing && existing.stock_categories);
+  if (list) out.stock_categories = list; else delete out.stock_categories; // une liste vide est gardée : elle dit « aucune catégorie »
+  return out;
+}
+// ===== END STOCK_CATEGORIES =====
+// ===== BEGIN STOCK_SPACES (les stockages : admin seulement ; ce bloc est contrôlé par scripts/check-stock-spaces.ts) =====
+function cleanStockSpaces(raw: any): { id: string; name: string }[] | null {
+  if (!Array.isArray(raw)) return null;
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const out: { id: string; name: string }[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== "object" || typeof x.id !== "string" || typeof x.name !== "string") continue;
+    if (!/^[a-z0-9_-]{1,32}$/.test(x.id) || ids.has(x.id)) continue;
+    const name = x.name.replace(/\s+/g, " ").trim().slice(0, 40);
+    const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!name || names.has(key)) continue;
+    ids.add(x.id); names.add(key); out.push({ id: x.id, name });
+    if (out.length >= 10) break;
+  }
+  return out.length ? out : null;
+}
+/** Réglages écrits par l'admin : la liste est revérifiée ; absente, vide ou pas une liste (ancien site) = l'existant est gardé. */
+function applyStockSpaces(saved: any, rec: any, existing: any): any {
+  const out = { ...saved };
+  const sent = rec ? cleanStockSpaces(rec.stock_spaces) : null;
+  const list = sent !== null ? sent : cleanStockSpaces(existing && existing.stock_spaces);
+  if (list) out.stock_spaces = list; else delete out.stock_spaces;
+  return out;
+}
+// ===== END STOCK_SPACES =====
 
 // ===== BEGIN PERFORMANCE (réglages de la performance des salariés : le serveur revérifie tout ; ce bloc est contrôlé par scripts/check-performance-config.ts et copie src/utils/performanceScore.ts) =====
 interface PerformanceConfig {
@@ -2168,7 +2232,7 @@ function cleanMonthlyPlan(raw: unknown): { revenue_ar: number; payroll_ar: numbe
 
 // ===== BEGIN PRIVACY (prix client et objectifs d'argent : jamais envoyés à un employé ; ce bloc est contrôlé par scripts/check-phase4.ts) =====
 // Réglages que seul l'admin reçoit : prix client, objectifs du mois, seuils d'alerte.
-const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
+const SETTINGS_ADMIN_KEYS: string[] = ["client_price_default_ar", "team_lead_limit_ar", "client_prices_by_type", "goal_missions", "goal_profit_ar", "goal_max_expenses_ar", "alert_unpaid_days", "stock_categories", "stock_spaces", "alert_low_cash_ar", "acct_close", "auto_report", "monthly_plan", "team_goals", "recurring_missions", "mission_templates", "budgets", "health_acks"];
 /** Réglages envoyés à un employé : sans prix client ni objectifs. L'admin reçoit tout. */
 const stripSettings = (rec: any, me: any) => {
   if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
@@ -2322,7 +2386,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
-const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks"];
+const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
 const auditCut = (v: unknown, n: number) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 function buildAuditEntry(me: any, action: string, target: any, detail: unknown, at: string, rand: string): any | null {
   if (!AUDIT_ACTIONS.includes(action)) return null;
@@ -3294,7 +3358,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
@@ -3444,7 +3508,7 @@ async function sync(req: any, res: any, me: any) {
       if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {
         // Notification de l'opérateur (M6.4) : début validé, mission validée ou refusée
         const k = pushKindFor(existing.status, toSave.status);
-        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60)));
+        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60), { go: 'active-post' }));
       }
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
@@ -3664,7 +3728,7 @@ async function postDecide(req: any, res: any, me: any) {
   if (plan.contract && cRow) await sb.from(T.contracts).upsert({ id: cRow.id, data: plan.contract, updated_at: now });
   if (plan.employee) await sb.from(T.users).upsert({ id: plan.employee.id, data: plan.employee, updated_at: now });
   const k = pushKindFor(post.status, plan.post.status);
-  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60));
+  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60), { go: 'active-post' });
   await auditLog(me, 'mission_decision', { type: 'posts', id, label: `${auditLabelOf(owner)} · ${post.client_name || post.post_number || id}` }, plan.kind === 'refused' ? `Refusée : ${plan.post.rejection_reason}` : plan.kind === 'start_ok' ? 'Début validé' : 'Mission validée');
   return res.json({ ok: true, kind: plan.kind });
 }
@@ -4848,7 +4912,7 @@ async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: st
   } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120)); return 'fail'; }
 }
 // Prévient des personnes (tous leurs appareils). Rend le nombre d'envois réussis ; ne plante jamais.
-async function pushTo(userIds: string[], text: PushText, tag: string): Promise<number> {
+async function pushTo(userIds: string[], text: PushText, tag: string, link?: DeepLink): Promise<number> {
   try {
     const ids = [...new Set(userIds.map(String))];
     if (!ids.length) return 0;
@@ -4856,7 +4920,7 @@ async function pushTo(userIds: string[], text: PushText, tag: string): Promise<n
     if (!keys) return 0;
     const { data: rows } = await sb.from(PUSH_SUBS).select('id,data').in('data->>user_id', ids);
     const subs = (rows || []) as any[];
-    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: '/', tag }, keys) })));
+    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: link ? deepLinkUrl(link) : '/', tag }, keys) })));
     const dead = results.filter(x => x.res === 'gone').map(x => x.id);
     if (dead.length) await sb.from(PUSH_SUBS).delete().in('id', dead);
     return results.filter(x => x.res === 'ok').length;
@@ -4946,7 +5010,7 @@ async function reportDue(request: Request, res: any) {
     return res.status(500).json({ error: 'écriture impossible' });
   }
   const { data: us } = await sb.from(T.users).select('id').eq('data->>role', 'admin');
-  const sent = await pushTo((us || []).map((r: any) => String(r.id)), reportNotice(due), ('rep-' + due.id).slice(0, 60));
+  const sent = await pushTo((us || []).map((r: any) => String(r.id)), reportNotice(due), ('rep-' + due.id).slice(0, 60), { go: 'stats', tab: 'report' });
   const { data: all } = await sb.from(REPORTS).select('id');
   const old = reportsToPrune((all || []).map((r: any) => ({ id: String(r.id) })));
   if (old.length) await sb.from(REPORTS).delete().in('id', old);
@@ -5016,7 +5080,7 @@ async function pushDue(request: Request, res: any) {
     const seenSet = new Set((seen || []).map((r: any) => r.id));
     for (const r of reminders) {
       if (seenSet.has(r.key)) continue;
-      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60));
+      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60), { go: 'grid', nav: `mission-${r.post_number}` });
       if (n > 0) { await sb.from(PUSH_LOG).upsert({ id: r.key, data: { at: new Date().toISOString(), kind: r.kind, sent: n }, updated_at: new Date().toISOString() }); sent += n; done++; }
     }
   }

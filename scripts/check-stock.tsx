@@ -15,6 +15,7 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 const { db } = await import('../src/db/store');
 const S = await import('../src/utils/stock');
 const { StockTab } = await import('../src/views/admin/StockTab');
+const { StockAnalytics } = await import('../src/views/admin/StockAnalytics');
 const { todayMada } = await import('../src/utils/stats');
 
 let fails = 0, n = 0;
@@ -162,22 +163,60 @@ db.enterDemo('employee');
 ok(db.getProducts().length === 0 && db.getStockMoves().length === 0, 'démo opérateur : aucun produit ni mouvement visible');
 ok(db.addProduct({ name: 'Pirate' }).error === 'admin' && db.addStockMove({ product_id: 'x', type: 'in', qty: 1, date: today }).error === 'admin' && db.deleteProduct('x').error === 'admin', 'opérateur : ajout, mouvement et suppression refusés');
 
+// ---------- 4b) Catégories : liste par défaut, ajout, renommage, suppression ----------
+{
+  db.enterDemo('admin');
+  const names = () => db.getStockCategories();
+  ok(names().length === 8 && names().includes('Papeterie'), 'catégories : liste par défaut au départ');
+  const p1 = db.addProduct({ name: 'Cat test A', category: 'Papeterie' }); const p2 = db.addProduct({ name: 'Cat test B', category: 'papeterie' }); const p3 = db.addProduct({ name: 'Cat test C' });
+  ok(p1.success && p2.success && p3.success, 'catégories : seul le nom est obligatoire');
+  ok(db.setStockCategories([...names(), 'Électricité']).success && names().includes('Électricité'), 'catégories : ajout enregistré dans les réglages');
+  ok(db.renameStockCategory('Électricité', 'Papeterie').error === 'category_exists', 'catégories : renommer vers un nom déjà pris est refusé');
+  ok(db.renameStockCategory('Papeterie', '  ').error === 'category', 'catégories : nom vide refusé');
+  ok(db.renameStockCategory('Papeterie', 'Fournitures Zéta').success && names().includes('Fournitures Zéta') && !names().includes('Papeterie'), 'catégories : renommée dans la liste');
+  ok(db.getProducts().filter(p => p.category === 'Fournitures Zéta').length >= 2 && !db.getProducts().some(p => p.category.toLowerCase() === 'papeterie'), 'catégories : tous ses produits suivent le renommage (même avec une autre casse)');
+  ok(db.deleteStockCategory('Fournitures Zéta').success && !names().includes('Fournitures Zéta') && !db.getProducts().some(p => p.category === 'Fournitures Zéta'), 'catégories : supprimée de la liste, ses produits restent sans catégorie');
+  ok(db.getProducts().some(p => p.name === 'Cat test A' && p.category === ''), 'catégories : le produit existe toujours');
+  ok(db.setStockCategories([]).success && names().length === 0, 'catégories : liste vide gardée (pas remplacée par la liste par défaut)');
+}
+// ---------- 4c) Stockages : séparés, jamais mélangés ----------
+{
+  db.enterDemo('admin');
+  ok(db.getStockSpaces().length === 1 && db.getStockSpaces()[0].name === 'Stockage 1', 'stockages : un seul « Stockage 1 » au départ');
+  ok(db.getProducts().every(p => (p.storage_id || 'main') === 'main'), 'stockages : les produits existants sont dans le premier');
+  const s2 = db.addStockSpace('Dépôt');
+  ok(s2.success && s2.id === 's2' && db.getStockSpaces().length === 2, 'stockages : création (s2)');
+  ok(db.addStockSpace('depot').error === 'space_exists' && db.addStockSpace('  ').error === 'space_name', 'stockages : nom déjà pris ou vide refusé');
+  const a = db.addProduct({ name: 'Même produit', storage_id: 's2' }), b = db.addProduct({ name: 'Même produit' });
+  ok(a.success && b.success && db.getProducts().find(p => p.id === a.id)!.storage_id === 's2' && db.getProducts().find(p => p.id === b.id)!.storage_id === 'main', 'stockages : un produit va dans le stockage demandé, sinon le premier');
+  ok(db.addProduct({ name: 'Stockage inconnu', storage_id: 'zz9' }).success && db.getProducts().find(p => p.name === 'Stockage inconnu')!.storage_id === 'main', 'stockages : un stockage inconnu = le premier');
+  ok(db.addStockMove({ product_id: a.id!, type: 'in', qty: 5, date: todayMada() }).success, 'stockages : entrée dans le produit du stockage 2');
+  const sp2 = S.inSpace(db.getProducts(), db.getStockMoves(), 's2');
+  ok(sp2.products.length === 1 && sp2.moves.length === 1 && sp2.products[0].id === a.id, 'stockages : le stockage 2 ne voit que son produit et son mouvement');
+  ok(!S.inSpace(db.getProducts(), db.getStockMoves(), 'main').products.some(p => p.id === a.id) && !S.inSpace(db.getProducts(), db.getStockMoves(), 'main').moves.some(m => m.product_id === a.id), 'stockages : le premier ne voit rien du stockage 2');
+  ok(db.updateProduct(a.id!, { name: 'Même produit (modifié)', storage_id: 'main' }).success && db.getProducts().find(p => p.id === a.id)!.storage_id === 's2', 'stockages : modifier un produit ne le change jamais de stockage');
+  ok(db.deleteStockSpace('s2').error === 'space_not_empty', 'stockages : un stockage qui contient des produits ne se supprime pas');
+  ok(db.renameStockSpace('s2', 'Boutique').success && db.getStockSpaces()[1].name === 'Boutique' && db.renameStockSpace('s2', 'Stockage 1').error === 'space_exists', 'stockages : renommer (jamais un nom déjà pris)');
+  ok(db.deleteProduct(a.id!).success && db.deleteStockSpace('s2').success && db.getStockSpaces().length === 1, 'stockages : vide, il se supprime');
+  ok(db.deleteStockSpace('main').error === 'space_last', 'stockages : le dernier stockage ne se supprime pas');
+}
 // ---------- 5) Rendu FR et EN ----------
 db.enterDemo('admin');
 const range = { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-31` };
 const bad = (html: string) => /NaN|Infinity|undefined|\[object/.test(html);
 for (const lang of ['fr', 'en'] as const) {
-  const html = renderToString(<StockTab range={range} lang={lang} />);
+  const html = renderToString(<StockTab lang={lang} />);
   ok(!bad(html), `${lang} : aucun NaN ni « undefined »`);
   ok(html.includes(lang === 'en' ? 'Stock value' : 'Valeur du stock') && html.includes(lang === 'en' ? 'New product' : 'Nouveau produit') && html.includes(lang === 'en' ? 'Running out soon' : 'Bientôt en rupture'), `${lang} : cartes et boutons dans la bonne langue`);
   ok(html.includes('Papier A4') && (html.includes(lang === 'en' ? 'low stock' : 'stock bas') || html.includes(lang === 'en' ? 'out of stock' : 'en rupture')), `${lang} : produits de la démo et alerte affichés`);
-  ok(html.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && html.includes(lang === 'en' ? 'Most used products' : 'Produits les plus utilisés'), `${lang} : graphiques présents`);
+  const anHtml = renderToString(<StockAnalytics lang={lang} />);
+  ok(!bad(anHtml) && anHtml.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && anHtml.includes(lang === 'en' ? 'Most used products' : 'Produits les plus utilisés'), `${lang} : onglet Analyses : graphiques présents`);
   if (lang === 'fr') ok(!/Stock value|New product|Running out/.test(html), 'fr : pas de texte anglais');
   else ok(!/Nouveau produit|Valeur du stock|Bientôt en rupture|Entrée</.test(html), 'en : pas de texte français dans les cartes');
 }
 (db as any).purchases = [];
 for (const x of db.getProducts()) db.deleteProduct(x.id);
-const emptyHtml = renderToString(<StockTab range={range} lang="fr" />);
+const emptyHtml = renderToString(<StockTab lang="fr" />);
 ok(!bad(emptyHtml) && emptyHtml.includes('Aucun produit pour l&#x27;instant') , 'liste vide : message clair, sans erreur');
 ok(calls === 0, `aucun appel réseau (${calls})`);
 console.log(`\n${n - fails}/${n} contrôles réussis`);

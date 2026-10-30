@@ -19,7 +19,6 @@ import {
   ClipboardCheck,
   History,
   Settings,
-  Eye,
   UserCheck,
   X,
   Sun,
@@ -35,9 +34,11 @@ import {
   Building2,
   Receipt,
   Truck,
+  Package,
   HeartPulse,
   Award,
   Table2,
+  Landmark,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -56,9 +57,6 @@ interface SidebarProps {
   onOpenEmployeeCV?: (employee: User) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
-  canSwitchMode?: boolean; // vrai pour le responsable : peut passer en vue opérateur
-  operatorMode?: boolean;
-  onToggleOperatorMode?: () => void;
   onReportProblem?: () => void; // ouvre « Signaler un problème »
   compact?: boolean; // bande d'icônes seulement
   onToggleCompact?: () => void; // ouvrir / fermer la bande
@@ -75,9 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenEmployeeCV,
   isOpenMobile = false,
   onCloseMobile,
-  canSwitchMode = false,
-  operatorMode = false,
-  onToggleOperatorMode,
   compact = false,
   onToggleCompact,
 }) => {
@@ -115,7 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'clients', label: 'Clients', icon: Building2 },
           { id: 'invoices', label: 'Facturation', icon: Receipt },
           { id: 'accounting', label: 'Comptabilité', icon: BookOpen },
+          ...(isAccountant ? [{ id: 'treasury', label: 'Trésorerie', icon: Landmark }] : []),
           { id: 'purchasing', label: 'Achats', icon: Truck },
+          ...(isAdmin ? [{ id: 'storage', label: 'Stockage', icon: Package }] : []),
           { id: 'performance', label: 'Performance', icon: BarChart3 },
           { id: 'stats', label: 'Statistiques', icon: TrendingUp, badge: alertCount > 0 ? String(alertCount) : undefined, tone: 'alert' as const },
         ]
@@ -209,32 +206,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* 2. Profil */}
-        <div className="df-sb-profile shrink-0 mx-3 mb-1 px-3 py-2.5 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative shrink-0">
-              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-9 h-9 rounded-full" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
-            </div>
-            <div className="min-w-0 df-sb-text">
-              <p className="df-sb-title text-sm font-semibold truncate">{currentUser.name}</p>
-              <p className="df-sb-sub text-xs inline-flex items-center gap-1">
-                {isAdmin ? (
-                  'Responsable'
-                ) : isAccountant ? (
-                  'Comptable'
-                ) : isTeamLead ? (
-                  `Chef d'équipe${currentUser.team ? ` · ${currentUser.team}` : ''}`
-                ) : (
-                  <>
-                    {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-                    {currentUser.shift === 'day' ? 'Vacation jour' : 'Vacation nuit'}
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* 3. Navigation */}
         <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3">
@@ -248,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-full text-left transition-colors cursor-pointer`}
+                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="df-sb-tile w-9 h-9 rounded-full flex items-center justify-center shrink-0">
@@ -271,27 +242,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 4. Bas : vue opérateur, signaler un problème, déconnexion */}
         <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          {canSwitchMode && onToggleOperatorMode && (
-            <button
-              type="button"
-              onClick={() => {
-                onToggleOperatorMode();
-                if (onCloseMobile) onCloseMobile();
-              }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
-                operatorMode ? 'df-sb-warn' : 'df-sb-btn'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              <span className="df-sb-text">{operatorMode ? 'Retour responsable' : 'Vue opérateur'}</span>
-            </button>
-          )}
 
-          {onReportProblem && db.getSettings().err_report_button !== false && (
+          {onReportProblem && !isAdmin && db.getSettings().err_report_button !== false && (
             <button
               type="button"
               onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer df-sb-btn`}
             >
               <LifeBuoy className="w-4 h-4" />
               <span className="df-sb-text">Signaler un problème</span>
@@ -300,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onLogout}
-            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full border text-sm font-semibold transition-colors cursor-pointer ${
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors cursor-pointer ${
               'df-sb-danger'
             }`}
           >

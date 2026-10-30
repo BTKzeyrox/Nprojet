@@ -8,8 +8,8 @@ import { prettySecret } from '../utils/totp';
 // Le secret est montré UNE fois, au moment de l'ajouter dans l'appli d'authentification ; les codes de secours aussi.
 type Step = 'idle' | 'password' | 'scan' | 'codes' | 'off' | 'new-codes';
 const input = 'w-full min-h-[44px] bg-[#141e2a] border border-slate-600 rounded-lg px-3 text-white text-sm focus:border-emerald-500 focus:outline-none';
-const btn = 'min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50';
-const btnMain = 'min-h-[44px] px-4 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50';
+const btn = 'min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50';
+const btnMain = 'min-h-[44px] px-4 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50';
 
 export const TwoStepCard: React.FC = () => {
   const { lang } = useApp();

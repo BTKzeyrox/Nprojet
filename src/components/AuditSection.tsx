@@ -42,7 +42,7 @@ export const AuditSection: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
         <label className="text-[11px] text-slate-400">{t('Du', 'From')}<input type="date" value={from} onChange={e => { setFrom(e.target.value); setShown(50); }} className={`${fld} mt-1`} /></label>
         <label className="text-[11px] text-slate-400">{t('Au', 'To')}<input type="date" value={to} onChange={e => { setTo(e.target.value); setShown(50); }} className={`${fld} mt-1`} /></label>
       </div>
-      <button type="button" onClick={() => void load()} className="w-full min-h-[44px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4" /> {t('Actualiser', 'Refresh')}</button>
+      <button type="button" onClick={() => void load()} className="w-full min-h-[44px] px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4" /> {t('Actualiser', 'Refresh')}</button>
 
       {rows === null && <div className="text-sm text-slate-400">{t('Chargement…', 'Loading…')}</div>}
       {err && <div className="text-sm text-red-300">{err}</div>}
@@ -62,7 +62,7 @@ export const AuditSection: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
           </ul>
         </div>
       ))}
-      {filtered.length > shown && <button type="button" onClick={() => setShown(s => s + 50)} className="w-full min-h-[44px] rounded-full border border-slate-600 text-slate-200 text-sm font-semibold">{t('Voir plus', 'Show more')} ({filtered.length - shown})</button>}
+      {filtered.length > shown && <button type="button" onClick={() => setShown(s => s + 50)} className="w-full min-h-[44px] rounded-lg border border-slate-600 text-slate-200 text-sm font-semibold">{t('Voir plus', 'Show more')} ({filtered.length - shown})</button>}
     </section>
   );
 };

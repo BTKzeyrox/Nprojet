@@ -12,7 +12,7 @@ export const SignupSettings: React.FC = () => {
   const open = db.getSettings().signup_open !== false;
   const pending = db.getSignupRequests().length;
   const set = (v: boolean) => db.updateSettings({ signup_open: v });
-  const btn = 'px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer min-h-[44px]';
+  const btn = 'px-3 py-2.5 rounded-lg border text-sm font-semibold cursor-pointer min-h-[44px]';
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-testid="signup-settings" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <h3 className="font-tactical font-bold text-white flex items-center gap-2"><UserPlus className="w-4 h-4 text-emerald-400" />{t('Inscriptions', 'Sign-ups')}</h3>

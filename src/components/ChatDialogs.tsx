@@ -29,7 +29,7 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
 };
 
 const fieldCls = (L: boolean) => `w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 ${L ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-[#0a1424] border-slate-600 text-white'}`;
-const btnCls = 'w-full min-h-[46px] px-4 rounded-full text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
+const btnCls = 'w-full min-h-[46px] px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
 
 const PersonRow: React.FC<{ u: User; right?: React.ReactNode; onClick?: () => void }> = ({ u, right, onClick }) => {
   const L = useL();
@@ -245,8 +245,8 @@ export const GroupInfoModal: React.FC<{
             <div className="space-y-2">
               <textarea autoFocus value={desc} onChange={e => setDesc(e.target.value)} maxLength={200} rows={3} placeholder="À quoi sert ce groupe ?" className={`w-full rounded-2xl border px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-500 ${L ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setEditDesc(false)} className={`flex-1 py-2 rounded-full text-xs font-bold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
-                <button type="button" onClick={saveDesc} className="flex-1 py-2 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Enregistrer</button>
+                <button type="button" onClick={() => setEditDesc(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                <button type="button" onClick={saveDesc} className="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Enregistrer</button>
               </div>
             </div>
           ) : (
@@ -261,7 +261,7 @@ export const GroupInfoModal: React.FC<{
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold">{group.members.length} membres</span>
         {canManage && (
-          <button type="button" onClick={() => setAdding(a => !a)} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={() => setAdding(a => !a)} className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
             <UserPlus className="w-3.5 h-3.5" /> Ajouter
           </button>
         )}

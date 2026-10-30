@@ -71,7 +71,7 @@ export interface Explanation {
 const dmy = (d: string) => d.split('-').reverse().join('/');
 const TOP = 10;
 /** Carte du site : nom et formule d'un chiffre (page « stats » ou « advances »). */
-const card = (name: string): { name: Bi; formula: Bi } => { const f = findPage('stats')?.figures.find(x => x.name.fr === name); return f ? { name: f.name, formula: f.formula } : { name: { fr: name, en: name }, formula: { fr: '', en: '' } }; };
+const card = (name: string): { name: Bi; formula: Bi } => { const f = findPage('stats')?.figures.find(x => x.name.fr === name) || findPage('storage')?.figures.find(x => x.name.fr === name); return f ? { name: f.name, formula: f.formula } : { name: { fr: name, en: name }, formula: { fr: '', en: '' } }; };
 const top = (xs: ExplainLine[]): ExplainLine[] => [...xs].sort((a, b) => b.value - a.value || (a.date || '').localeCompare(b.date || '') || a.label.localeCompare(b.label)).slice(0, TOP);
 
 export function explainFigure(id: FigureId, i: SnapshotInput, r?: { start: string; end: string }): Explanation {

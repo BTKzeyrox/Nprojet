@@ -24,7 +24,6 @@ import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { TourGuide } from './components/TourGuide';
 import { ToastHost } from './components/ToastHost';
 import { BadgeCongrats } from './components/BadgeCongrats';
-import { useModeSwitchHidden } from './utils/modeSwitch';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -34,12 +33,14 @@ import { DiagPanel } from './components/DiagPanel';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { NAV_TARGET_EVENT, peekNavTarget, flashNav, setChatThread } from './utils/navTarget';
+import { applyDeepLink, captureDeepLink, deepLinkAllowed, parseDeepLinkUrl, takeDeepLink, type DeepLink } from './utils/deepLink';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
 let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir revenir au français)
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
+captureDeepLink(); // lien exact d'une notification externe : lu dès l'ouverture, appliqué une fois connecté
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
@@ -53,9 +54,11 @@ const MyPerformance = lazy(() => import('./components/MyPerformance').then(m => 
 const PerformancePage = lazy(() => import('./views/admin/PerformancePage').then(m => ({ default: m.PerformancePage })));
 const InvoicesView = lazy(() => import('./views/admin/InvoicesView').then(m => ({ default: m.InvoicesView })));
 const PurchasingPage = lazy(() => import('./views/admin/PurchasingPage').then(m => ({ default: m.PurchasingPage })));
+const StoragePage = lazy(() => import('./views/admin/StoragePage').then(m => ({ default: m.StoragePage })));
 const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
+const TreasuryPage = lazy(() => import('./views/admin/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
 const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
@@ -90,6 +93,16 @@ export default function App() {
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
   useEffect(() => { if (isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
+  // Clic sur une notification externe : le bon endroit s'ouvre (au démarrage, ou tout de suite si l'appli est déjà ouverte)
+  useEffect(() => {
+    if (!currentUser) return;
+    const role = currentUser.role;
+    const open = (l: DeepLink | null) => { if (l && deepLinkAllowed(role, l.go)) applyDeepLink(l, view => { setFocusOperatorId(null); setActiveView(view); }); };
+    open(takeDeepLink());
+    const onMessage = (ev: MessageEvent) => { if (ev.data && ev.data.type === 'open-link' && typeof ev.data.url === 'string') open(parseDeepLinkUrl(ev.data.url)); };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [currentUser?.id, currentUser?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
   useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
@@ -153,8 +166,6 @@ export default function App() {
   }, [sbWidth]);
   // Admin : peut jouer son propre rôle de opérateur, puis revenir en admin
   const [operatorMode, setOperatorMode] = useState(false);
-  const modeSwitchHidden = useModeSwitchHidden();
-  useEffect(() => { if (modeSwitchHidden) setOperatorMode(false); }, [modeSwitchHidden]);
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -362,9 +373,6 @@ export default function App() {
       {/* Modern Tactical Sidebar */}
       <Sidebar
         currentUser={viewUser}
-        canSwitchMode={realIsAdmin && !modeSwitchHidden}
-        operatorMode={operatorMode}
-        onToggleOperatorMode={toggleOperatorMode}
         activeView={activeView}
         onNavigate={view => {
           if (view === 'profile') {
@@ -395,6 +403,8 @@ export default function App() {
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
           currentUser={viewUser}
+          onOpenProfile={() => setCvModalUser(currentUser)}
+          operatorMode={operatorMode}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
           onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}
@@ -416,6 +426,7 @@ export default function App() {
             /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
             activeView === 'clients' ? <ClientsPage />
               : activeView === 'accounting' ? <AccountingPage />
+              : activeView === 'treasury' ? <TreasuryPage />
               : activeView === 'purchasing' ? <PurchasingPage />
               : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
               : activeView === 'settings' ? <SettingsView personalOnly />
@@ -447,6 +458,8 @@ export default function App() {
                 <ClientsPage />
               ) : activeView === 'purchasing' ? (
                 <PurchasingPage />
+              ) : activeView === 'storage' ? (
+                <StoragePage />
               ) : activeView === 'invoices' ? (
                 <InvoicesView />
               ) : activeView === 'stats' ? (
@@ -565,6 +578,9 @@ export default function App() {
             isOpen={cvModalUser !== null}
             onClose={() => setCvModalUser(null)}
             user={cvModalUser}
+            canSwitchMode={realIsAdmin}
+            operatorMode={operatorMode}
+            onToggleOperatorMode={() => { setCvModalUser(null); toggleOperatorMode(); }}
             onMessage={u => { setCvModalUser(null); setChatThread(u.id); setActiveView('chat'); }}
           />
         </Suspense>

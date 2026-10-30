@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Pencil, Pause, Play } from 'lucide-react';
+import { Plus, Trash2, Pencil, Pause, Play, Repeat } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { useApp } from '../context/AppContext';
@@ -64,7 +64,7 @@ export const RecurringMissionsSection: React.FC = () => {
 
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-notranslate="">
-      <h3 className="font-tactical font-bold text-white">{t('Missions récurrentes', 'Recurring missions')}</h3>
+      <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Repeat className="w-4 h-4 text-emerald-400" />{t('Missions récurrentes', 'Recurring missions')}</h3>
       <p className="text-[11px] text-slate-400">{t('Une règle crée une mission toute seule : chaque jour, certains jours de la semaine, ou un jour du mois, à l\'heure choisie (heure de Madagascar). Si le serveur est arrêté plus de 2 heures, la mission manquée n\'est pas créée après coup. Une règle arrêtée puis relancée ne rattrape rien.', 'A rule creates a mission by itself: every day, on chosen weekdays, or on a day of the month, at the chosen time (Madagascar time). If the server is down for more than 2 hours, the missed mission is not created afterwards. A paused rule that is resumed does not catch up.')}</p>
       {list.length === 0 && !draft && <p className="text-xs text-slate-500">{t('Aucune règle.', 'No rule.')}</p>}
       <ul className="space-y-2">
@@ -140,14 +140,14 @@ export const RecurringMissionsSection: React.FC = () => {
             <div><label className={labelCls}>{t('Fin (facultatif)', 'End (optional)')}</label><input type="date" value={draft.end_date} onChange={e => set({ end_date: e.target.value })} className={inputCls} /></div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
-            <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
+            <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
+            <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
           </div>
         </div>
       ) : (
         <>
           {error && <div role="alert" className="text-xs text-red-400 font-semibold">{error}</div>}
-          <button type="button" onClick={() => { setError(''); setDraft(EMPTY()); }} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvelle règle', 'New rule')}</button>
+          <button type="button" onClick={() => { setError(''); setDraft(EMPTY()); }} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvelle règle', 'New rule')}</button>
         </>
       )}
     </section>

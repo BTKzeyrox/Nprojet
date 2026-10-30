@@ -36,7 +36,7 @@ const TITLE: Record<ImportKind, { fr: string; en: string }> = {
 
 interface Done { added: number; failed: { label: string; why: string }[]; creds: { username: string; name: string; password: string }[] }
 
-export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onSheet?: (s: Sheet) => void; /** M19 : remettre un fichier Excel rempli DANS ce tableau (les lignes sont ajoutées, rien n'est remplacé) */ into?: Sheet; onMerge?: (s: Sheet) => void }> = ({ kind, onClose, onSheet, into, onMerge }) => {
+export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onSheet?: (s: Sheet) => void; storageId?: string; /** M19 : remettre un fichier Excel rempli DANS ce tableau (les lignes sont ajoutées, rien n'est remplacé) */ into?: Sheet; onMerge?: (s: Sheet) => void }> = ({ kind, onClose, onSheet, storageId, into, onMerge }) => {
   const { lang } = useApp();
   const en = lang === 'en';
   const t = (fr: string, e: string) => (en ? e : fr);
@@ -50,7 +50,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
 
   const preview = useMemo(() => {
     if (!matrix || kind === 'sheet') return null;
-    const existing = { clients: db.getClients().map(c => c.name), products: db.getProducts().map(p => p.name), usernames: db.getUsers().map(u => u.username) };
+    const existing = { clients: db.getClients().map(c => c.name), products: db.getProducts().filter(p => !storageId || (p.storage_id || 'main') === storageId).map(p => p.name), usernames: db.getUsers().map(u => u.username) };
     return (buildPreview as any)(kind, matrix, existing) as any;
   }, [matrix, kind]);
   const mergePrev = useMemo(() => (matrix && kind === 'sheet' && into ? mergeMatrixIntoSheet(into, matrix, new Date().toISOString(), en ? 'en' : 'fr') : null), [matrix, kind, into, en]);
@@ -78,7 +78,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
     if (kind === 'clients') {
       for (const d of okDrafts<any>(preview)) { const r = db.addClient(d); if (r.success) added++; else failed.push({ label: d.name, why: why(r.error === 'duplicate' ? 'exists' : r.error) }); }
     } else if (kind === 'products') {
-      for (const d of okDrafts<any>(preview)) { const r = db.addProduct(d); if (r.success) added++; else failed.push({ label: d.name, why: why(r.error === 'buy' ? 'buy' : r.error === 'sell' ? 'sell' : r.error === 'threshold' ? 'threshold' : r.error) }); }
+      for (const d of okDrafts<any>(preview)) { const r = db.addProduct(storageId ? { ...d, storage_id: storageId } : d); if (r.success) added++; else failed.push({ label: d.name, why: why(r.error === 'buy' ? 'buy' : r.error === 'sell' ? 'sell' : r.error === 'threshold' ? 'threshold' : r.error) }); }
     } else if (kind === 'employees') {
       for (const d of okDrafts<any>(preview)) {
         const password = generatePassword(secureRand);

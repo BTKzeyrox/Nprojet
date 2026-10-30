@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';
+import { productStorage } from '../../utils/stock';
 import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
@@ -40,6 +41,8 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
   const { orders, suppliers, products } = data;
   const supName = (id: string) => suppliers.find(s => s.id === id)?.name || '—';
   const prod = (id: string) => products.find(p => p.id === id);
+  const spaces = db.getStockSpaces();
+  const sp = (p?: { storage_id?: string }) => (p && spaces.length > 1 ? ` · ${spaces.find(s => s.id === productStorage(p))?.name ?? ''}` : ''); // le nom du stockage, seulement s'il y en a plusieurs
   const ar = (n: number) => formatCurrencyAr(n);
   const lbl = (s: PurchaseStatus) => (lang === 'en' ? LABEL[s][1] : LABEL[s][0]);
   const lateCount = orders.filter(o => isLate(o, today)).length;
@@ -131,7 +134,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                       <ul className="rounded-lg bg-slate-900/60 border border-slate-800 divide-y divide-slate-800">
                         {o.lines.map(l => (
                           <li key={l.product_id} className="p-2 text-sm flex items-center gap-2">
-                            <div className="min-w-0 flex-1"><div className="text-white truncate">{prod(l.product_id)?.name || t('Produit supprimé', 'Deleted product')}</div>
+                            <div className="min-w-0 flex-1"><div className="text-white truncate">{prod(l.product_id)?.name || t('Produit supprimé', 'Deleted product')}{sp(prod(l.product_id))}</div>
                               <div className="text-[11px] text-slate-400">{l.qty} {prod(l.product_id)?.unit || ''} × {l.unit_cost_ar > 0 ? ar(l.unit_cost_ar) : t('prix à compléter', 'price to fill in')}{o.status !== 'draft' ? ` · ${t('reçu', 'received')} ${l.received_qty}/${l.qty}` : ''}</div></div>
                             <div className="text-sm font-semibold text-slate-100 whitespace-nowrap">{ar(lineTotal(l))}</div>
                           </li>
@@ -185,7 +188,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                   <div className="flex items-center gap-2">
                     <select value={l.product_id} aria-label={t('Produit', 'Product')} onChange={e => { const p = prod(e.target.value); setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, product_id: e.target.value, cost: x.cost || (p?.buy_price_ar ? String(p.buy_price_ar) : '') } : x) }); }} className={field}>
                       <option value="">{t('Produit…', 'Product…')}</option>
-                      {products.filter(p => p.id === l.product_id || !editor.lines.some(x => x.product_id === p.id)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      {products.filter(p => p.id === l.product_id || !editor.lines.some(x => x.product_id === p.id)).map(p => <option key={p.id} value={p.id}>{p.name}{sp(p)}</option>)}
                     </select>
                     {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={() => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
                   </div>
@@ -218,7 +221,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
             </div>
             <p className="text-[12px] text-slate-400">{t('Écris la quantité reçue maintenant pour chaque ligne (0 ou vide = rien reçu). Tu peux recevoir en plusieurs fois.', 'Enter the quantity received now for each line (0 or empty = nothing received). You can receive in several steps.')}</p>
             {recvOrder.lines.filter(l => remainingQty(l) > 0).map(l => (
-              <label key={l.product_id} className="block text-xs text-slate-400">{prod(l.product_id)?.name || '—'} · {t('reste', 'left')} {remainingQty(l)} {prod(l.product_id)?.unit || ''}
+              <label key={l.product_id} className="block text-xs text-slate-400">{prod(l.product_id)?.name || '—'}{sp(prod(l.product_id))} · {t('reste', 'left')} {remainingQty(l)} {prod(l.product_id)?.unit || ''}
                 <input inputMode="decimal" value={recv.qty[l.product_id] ?? ''} onChange={e => setRecv({ ...recv, qty: { ...recv.qty, [l.product_id]: e.target.value } })} className={`${field} mt-1`} />
               </label>
             ))}

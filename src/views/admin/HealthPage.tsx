@@ -6,6 +6,9 @@ import { getHealth, loadHealthExternal, ackAlert, unack, subscribeHealth } from 
 import { HEALTH_PAGES, type HealthAlert, type HealthPage as Page, type HealthSeverity } from '../../utils/health/types';
 import { pageStates } from '../../utils/health/registry';
 import { setStatsTab, type StatsTab } from '../../utils/statsNav';
+import { setStorageIntent } from '../../utils/storageNav';
+import { setNavTarget } from '../../utils/navTarget';
+import { setValFilterIntent, type ValFilter } from '../../utils/navIntent';
 import { isKnownView } from '../../utils/health/menu';
 
 const PAGE_LABEL: Record<Page, { fr: string; en: string }> = {
@@ -51,6 +54,9 @@ export const HealthPage: React.FC<{ onNavigate?: (view: string) => void }> = ({ 
 
   const open = (a: HealthAlert) => {
     if (a.go.view === 'stats' && a.go.tab) setStatsTab(a.go.tab as StatsTab);
+    if (a.go.storage) setStorageIntent(a.go.storage);
+    if (a.go.filter) setValFilterIntent(a.go.filter as ValFilter);
+    if (a.go.nav) setNavTarget(a.go.nav);
     if (isKnownView(a.go.view)) onNavigate?.(a.go.view);
   };
   const confirmAck = (a: HealthAlert) => {

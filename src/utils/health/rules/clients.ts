@@ -32,7 +32,7 @@ export const strategicSilent: HealthRule = {
         id: alertId('clients', 'strategic-silent', c.id), page: 'clients', rule: 'strategic-silent', severity: s.days_since_last >= 2 * T ? 'urgent' : 'watch',
         title_fr: `Client stratégique silencieux : ${c.name}`, title_en: `Silent strategic client: ${c.name}`,
         why_fr: `Aucune mission depuis ${s.days_since_last} jours alors que c'est l'un de vos meilleurs clients.`, why_en: `No mission for ${s.days_since_last} days although this is one of your best clients.`,
-        todo_fr: 'Prendre des nouvelles du client.', todo_en: 'Check in with the client.', since: s.last_date, value: s.days_since_last, go: GO,
+        todo_fr: 'Prendre des nouvelles du client.', todo_en: 'Check in with the client.', since: s.last_date, value: s.days_since_last, go: { view: 'clients', nav: `client-${c.id}` },
       } as HealthAlert);
     }
     return out;

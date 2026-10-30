@@ -135,12 +135,12 @@ export const BackupsSection: React.FC = () => {
         </div>
       )}
 
-      <button type="button" disabled={busy} onClick={now} className="w-full min-h-[46px] px-4 rounded-full bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+      <button type="button" disabled={busy} onClick={now} className="w-full min-h-[46px] px-4 rounded-lg bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
         <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /> Sauvegarder maintenant
       </button>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <button type="button" disabled={busy} onClick={exportAll} className="min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
+        <button type="button" disabled={busy} onClick={exportAll} className="min-h-[46px] px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
         {<label className={`min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}><Database className="w-4 h-4" /> Importer un fichier d'export<input type="file" accept=".json,application/json" className="sr-only" onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} /></label>}
       </div>
 
@@ -152,10 +152,10 @@ export const BackupsSection: React.FC = () => {
                 <div className="text-sm text-white">{fmtDate(r.taken_at)}</div>
                 <div className="text-[11px] text-slate-400">{fmtSize(r.bytes)}</div>
               </div>
-              <button type="button" disabled={downloading === r.id} onClick={() => download(r)} className="shrink-0 px-3 py-2 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+              <button type="button" disabled={downloading === r.id} onClick={() => download(r)} className="shrink-0 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
                 <Download className="w-3.5 h-3.5" /> Télécharger
               </button>
-              <button type="button" disabled={!verified || busy} onClick={() => { setTarget(r); setStep('warn'); setWord(''); setCode(''); setMsg(null); }} className="shrink-0 px-3 py-2 rounded-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="button" disabled={!verified || busy} onClick={() => { setTarget(r); setStep('warn'); setWord(''); setCode(''); setMsg(null); }} className="shrink-0 px-3 py-2 rounded-lg bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                 <RotateCcw className="w-3.5 h-3.5" /> Restaurer
               </button>
             </li>
@@ -163,7 +163,7 @@ export const BackupsSection: React.FC = () => {
         </ul>
       )}
 
-      {!verified && <p className="text-[11px] text-amber-300">Pour restaurer, enregistrez et vérifiez votre Gmail dans « Restauration du site » plus bas.</p>}
+      {!verified && <p className="text-[11px] text-amber-300">Pour restaurer, enregistrez et vérifiez votre Gmail dans « Remise à zéro du site » plus bas.</p>}
       {target && (
         <div className="border border-red-700 bg-red-950/30 p-3 space-y-2 rounded-xl">
           <p className="text-xs text-red-200 font-bold">Restaurer la sauvegarde du {fmtDate(target.taken_at)}</p>

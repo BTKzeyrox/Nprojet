@@ -14,7 +14,7 @@ import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
 // Les salaires viennent des missions validées (calculés, jamais saisis) ; les avances sont des salaires versés d'avance : elles ne s'ajoutent pas.
-interface Props { range: { start: string; end: string }; lang: 'fr' | 'en'; salariesAr: number; advancesAr: number }
+interface Props { range: { start: string; end: string }; lang: 'fr' | 'en'; salariesAr: number; advancesAr: number; /** Trésorerie du Comptable : argent reçu et dépenses seulement, jamais de salaires ni de paie. */ moneyOnly?: boolean }
 interface Editor { id?: string; kind: CashKind; amount: string; date: string; category: string; custom: string; client: string; note: string; supplier: string }
 
 const CUSTOM = '__custom';
@@ -23,7 +23,8 @@ const field = 'w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-9
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
 const fmtDate = (d: string) => d.split('-').reverse().join('/');
 
-export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesAr }) => {
+export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr: salariesIn, advancesAr: advancesIn, moneyOnly = false }) => {
+  const salariesAr = moneyOnly ? 0 : salariesIn, advancesAr = moneyOnly ? 0 : advancesIn;
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const moneyGate = useOnlineOnly('money'); // l'argent ne se saisit qu'en ligne : bouton grisé hors ligne, avec la raison
   const [kind, setKind] = useState<'all' | CashKind>('all');
@@ -77,27 +78,31 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr, advancesA
   return (
     <div className="space-y-3" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className={card}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className={`grid grid-cols-2 ${moneyOnly ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-2`}>
           {tile(t('Argent reçu', 'Money received'), ar(money.received), 'text-emerald-400')}
           {tile(t('Dépenses', 'Expenses'), ar(money.spent), 'text-rose-400')}
-          {tile(t('Salaires (calculés)', 'Salaries (calculated)'), ar(money.salaries), 'text-amber-400')}
+          {!moneyOnly && tile(t('Salaires (calculés)', 'Salaries (calculated)'), ar(money.salaries), 'text-amber-400')}
           {tile(t('Solde', 'Balance'), ar(money.net), money.net < 0 ? 'text-rose-400' : 'text-sky-300')}
         </div>
+        {moneyOnly
+          ? <p className="text-[11px] text-slate-500">{t('Solde = argent reçu − dépenses.', 'Balance = money received − expenses.')}</p>
+          : (
         <p className="text-[11px] text-slate-500">
           {t('Solde = argent reçu − dépenses − salaires. Les salaires viennent des missions validées de la période.', 'Balance = money received − expenses − salaries. Salaries come from the missions validated in the period.')}
           {advancesAr > 0 && ` ${t(`Avances versées : ${ar(advancesAr)} (déjà comprises dans les salaires).`, `Advances paid: ${ar(advancesAr)} (already included in salaries).`)}`}
         </p>
+          )}
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => open('in')} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Paiement reçu', 'Payment received')}</button>
           <button type="button" onClick={() => open('out')} className="min-h-[44px] rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Dépense', 'Expense')}</button>
         </div>
       </div>
 
-      <FinanceInsights range={range} lang={lang} />
+      {!moneyOnly && <FinanceInsights range={range} lang={lang} />}
 
-      <BudgetsCard lang={lang} />
+      {!moneyOnly && <BudgetsCard lang={lang} />}
 
-      <PlanVsActualCard lang={lang} />
+      {!moneyOnly && <PlanVsActualCard lang={lang} />}
 
       <div className={card}>
         <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={t('Type', 'Type')}>

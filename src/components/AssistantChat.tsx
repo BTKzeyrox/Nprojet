@@ -9,6 +9,9 @@ import { respond, helpReply, pageLinks, recapPrintHtml, PRINT_PREFIX, type Reply
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
+import { setStorageIntent, type StorageIntent } from '../utils/storageNav';
+import { setNavTarget } from '../utils/navTarget';
+import { setValFilterIntent, type ValFilter } from '../utils/navIntent';
 import { isKnownView } from '../utils/health/menu';
 
 const ENABLE_AI = '__enable_ai';
@@ -78,10 +81,13 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     setProblem([r.missing.length ? t(`À remplir : ${names(r.missing)}.`, `To fill in: ${names(r.missing)}.`) : '', r.invalid.length ? t(`Valeur à corriger : ${names(r.invalid)}.`, `Value to fix: ${names(r.invalid)}.`) : ''].filter(Boolean).join(' '));
   };
   const copy = async () => { if (draft == null) return; try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setCopied(false); setProblem(t('Copie impossible ici : sélectionne le texte et copie-le à la main.', 'Copy not possible here: select the text and copy it by hand.')); } };
-  const go = (g: { view: string; tab?: string }) => {
+  const go = (g: { view: string; tab?: string; storage?: StorageIntent; nav?: string; filter?: string }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
+    if (g.storage) setStorageIntent(g.storage);
+    if (g.filter) setValFilterIntent(g.filter as ValFilter);
+    if (g.nav) setNavTarget(g.nav);
     if (isKnownView(g.view)) onNavigate?.(g.view);
   };
   const quick = [t('Résumé du jour', 'Daily summary'), t('Quoi faire maintenant ?', 'What to do now?'), t('Suggestions', 'Suggestions'), t('Et si le prix client +5 % ?', 'What if client price +5%?'), t('Aide', 'Help')];
@@ -127,7 +133,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           </div>
         )}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className={`shrink-0 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q}</button>)}</div>
+          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q}</button>)}</div>
         <form onSubmit={e => { e.preventDefault(); ask(text); inputRef.current?.focus(); }}>
           <div className={`flex items-center gap-1.5 rounded-3xl border pl-3 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
             <input ref={inputRef} type="text" value={text} onChange={e => setText(e.target.value)} enterKeyHint="send" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-1 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none' }} />

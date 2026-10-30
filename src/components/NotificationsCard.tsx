@@ -26,7 +26,7 @@ export const NotificationsCard: React.FC = () => {
     setBusy(false);
   };
 
-  const btn = 'px-3 py-2.5 rounded-full border text-sm font-semibold cursor-pointer disabled:opacity-50';
+  const btn = 'px-3 py-2.5 rounded-lg border text-sm font-semibold cursor-pointer disabled:opacity-50';
   return (
     <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl" data-testid="notifications-card">
       <h3 className="font-tactical font-bold text-white flex items-center gap-2"><Bell className="w-4 h-4 text-emerald-400" />{t('Notifications', 'Notifications')}</h3>

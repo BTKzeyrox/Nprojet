@@ -25,7 +25,7 @@ ok(planHealthNotifs([A('a', 'urgent')], SUN, at(SUN, '03:00'), []).some(x => x.t
 const nt = readFileSync('src/utils/notifications.ts', 'utf8'), tb = readFileSync('src/components/TopBar.tsx', 'utf8'), ws = readFileSync('src/components/WatchSettingsSection.tsx', 'utf8');
 ok(/role === 'admin'\) out\.push\(\.\.\.healthNotifications/.test(nt) && /user\.role !== 'admin' \|\| !healthNotifOn/.test(nt), 'câblage : réservé à l\'admin (un opérateur ne reçoit rien)');
 ok(/catch \{ return \[\]; \}/.test(nt), 'câblage : une erreur de la Santé du site ne fait pas tomber la cloche');
-ok(/startsWith\('summary-'\)\) markSeen/.test(tb), 'câblage : toucher le résumé le marque comme vu');
+ok(/markSeen\(currentUser, \[n\.id\]\)/.test(tb), 'câblage : toucher une notification (dont le résumé) la marque comme lue');
 ok(/healthNotifOn/.test(ws) && /setHealthNotif/.test(ws), 'réglage : case à cocher dans Réglages > Surveillance');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);

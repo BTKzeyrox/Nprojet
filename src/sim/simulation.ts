@@ -98,6 +98,16 @@ export function buildSimulation(opts: SimOptions): SimData {
     priority: i % 5 === 0 ? 'Urgente' : 'Normale', region_server: '', client_id: m.client,
   }));
 
+  // ----- Congés (décrits ici pour que personne ne travaille un jour de congé accepté) : un à venir (planning), deux passés dont une maladie, un en attente -----
+  const opAt = (i: number): SimOperator | undefined => operators[Math.min(i, operators.length - 1)];
+  const leaveSpecs: { id: string; op: SimOperator | undefined; type: Leave['type']; from: number; len: number; status: Leave['status']; reason: string }[] = [
+    { id: 'sim-lv1', op: operators[0], type: 'paid', from: 9, len: 3, status: 'approved', reason: 'Voyage en famille' },
+    { id: 'sim-lv2', op: opAt(2), type: 'sick', from: -25, len: 2, status: 'approved', reason: 'Grippe' },
+    { id: 'sim-lv3', op: operators[1], type: 'paid', from: 16, len: 2, status: 'pending', reason: 'Mariage d\'un cousin' },
+    { id: 'sim-lv4', op: opAt(3), type: 'paid', from: -13, len: 2, status: 'approved', reason: 'Démarches familiales' },
+  ];
+  const onApprovedLeave = (opId: string, date: string): boolean => leaveSpecs.some(l => l.status === 'approved' && l.op?.id === opId && date >= shift(today, l.from) && date <= shift(today, l.from + l.len - 1));
+
   // ----- Missions faites par les opérateurs : 60 jours, jamais le dimanche, ~9 % refusées -----
   const posts: PostSession[] = [];
   let n = 0;
@@ -125,6 +135,7 @@ export function buildSimulation(opts: SimOptions): SimData {
   for (let date = start; date < today; date = shift(date, 1)) {
     if (dow(date) === 0) continue;
     for (const op of operators) {
+      if (onApprovedLeave(op.id, date)) continue; // en congé accepté : aucune mission
       if (r() > (op.shift === 'day' ? 0.86 : 0.8)) continue; // quelques jours de repos
       // Une mission par jour et par opérateur : le site juge le retard sur l'heure de début de CHAQUE session, une 2e mission en milieu de journée passerait pour un retard
       posts.push(mk(op, Math.floor(r() * MISSIONS.length), date, 0, r() < 0.09 ? 'rejected' : 'completed', 20 + Math.floor(r() * 70), r() < 0.03));
@@ -218,17 +229,14 @@ export function buildSimulation(opts: SimOptions): SimData {
   const cap = cleanEntry({ id: 'je-manual-sim-capital', date: start, journal: 'OD', label: 'Capital de départ (simulation)', lines: [{ account: '512', debit: 3000000, credit: 0 }, { account: '531', debit: 300000, credit: 0 }, { account: '101', debit: 0, credit: 3300000 }], source: { type: 'manual', id: 'sim-capital' } }); // la caisse (531) reçoit des espèces au départ : sans elles, les dépenses payées en espèces la rendraient négative
   const entries = assignNumbers(cap.ok ? [...built, cap.entry] : built, []).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.id < b.id ? 1 : -1));
 
-  // ----- Congés : un accepté à venir, une maladie passée, un en attente -----
+  // ----- Congés : créés depuis les spécifications ci-dessus -----
   const leaves: Leave[] = [];
-  const leave = (id: string, op: SimOperator | undefined, type: Leave['type'], from: number, len: number, status: Leave['status'], reason: string): void => {
-    if (!op) return;
-    const s = shift(today, from), e = shift(today, from + len - 1);
-    leaves.push({ id, employee_id: op.id, employee_name: op.name, type, start_date: s, end_date: e, days: workingDays(s, e, 5), status, reason, created_by: op.id, created_at: iso(shift(today, status === 'pending' ? -1 : Math.min(from, 0) - 3), 10), updated_at: iso(shift(today, status === 'pending' ? -1 : Math.min(from, 0) - 3), 10),
-      ...(status === 'approved' ? { decided_by: adminId, decided_at: iso(shift(today, -2), 11) } : {}) });
-  };
-  leave('sim-lv1', operators[0], 'paid', 9, 3, 'approved', 'Voyage en famille');
-  leave('sim-lv2', operators[Math.min(2, operators.length - 1)], 'sick', -25, 2, 'approved', 'Grippe');
-  leave('sim-lv3', operators[1], 'paid', 16, 2, 'pending', 'Mariage d\'un cousin');
+  for (const l of leaveSpecs) {
+    if (!l.op) continue;
+    const s0 = shift(today, l.from), e0 = shift(today, l.from + l.len - 1), asked = iso(shift(today, l.status === 'pending' ? -1 : Math.min(l.from, 0) - 3), 10);
+    leaves.push({ id: l.id, employee_id: l.op.id, employee_name: l.op.name, type: l.type, start_date: s0, end_date: e0, days: workingDays(s0, e0, 5), status: l.status, reason: l.reason, created_by: l.op.id, created_at: asked, updated_at: asked,
+      ...(l.status === 'approved' ? { decided_by: adminId, decided_at: iso(shift(today, -2), 11) } : {}) });
+  }
 
   // ----- Planning : cette semaine et la suivante (lundi à vendredi sur la vacation de chacun, week-end en repos, repos pendant un congé accepté) -----
   const shifts: Shift[] = [];

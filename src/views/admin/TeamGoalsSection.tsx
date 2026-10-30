@@ -109,12 +109,12 @@ export const TeamGoalsSection: React.FC = () => {
             <label className="flex items-center gap-2 text-sm text-slate-200"><input type="checkbox" checked={draft.allMonths} onChange={e => set({ allMonths: e.target.checked })} className="w-5 h-5" />{t('Chaque mois', 'Every month')}</label>
             {!draft.allMonths && <div><label className={labelCls}>{t('Mois', 'Month')}</label><input type="month" value={draft.month} onChange={e => set({ month: e.target.value })} className={inputCls} /></div>}
             <div className="flex gap-2">
-              <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
-              <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-full border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
+              <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => { setError(''); setDraft(EMPTY(month)); }} className="min-h-[44px] px-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvel objectif', 'New goal')}</button>
+          <button type="button" onClick={() => { setError(''); setDraft(EMPTY(month)); }} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold inline-flex items-center gap-2"><Plus className="w-4 h-4" />{t('Nouvel objectif', 'New goal')}</button>
         )}
       </div>
     </div>

@@ -17,9 +17,15 @@ import { createPortal } from 'react-dom';
 import { askConfirm } from './ConfirmModal';
 import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
+import { getPinnedThreads, togglePinnedThread, pinFirst } from '../utils/chatPrefs';
+import { ChatAbout } from './ChatAbout';
+import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { TypingDots } from './Reactions';
+import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
+import { useNow } from '../utils/useNow';
+import { LiveDot, LiveLine } from './LiveStatus';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
@@ -59,7 +65,13 @@ const dayLabel = (day: string) => {
 
 export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; onOpenProfile?: (u: User) => void; onNavigate?: (view: string) => void }> = ({ currentUser, initialThreadId, onOpenProfile, onNavigate }) => {
   const isAdmin = currentUser.role === 'admin';
-  const L = useApp().theme === 'light';
+  const app = useApp();
+  const L = app.theme === 'light';
+  const lang = app.lang;
+  const chatLang: 'fr' | 'en' = lang === 'en' ? 'en' : 'fr';
+  const nowMs = useNow(15000); // les statuts changent d'eux-mêmes (En ligne → En pause → Hors ligne)
+  // Statut EN DIRECT d'un opérateur : seul le responsable reçoit les signes de vie ; pour les autres on n'affiche rien plutôt qu'un faux « Hors ligne »
+  const liveOf = (u?: User | null): LiveInfo | null => (isAdmin && u && u.role === 'employee' ? liveStatus(u, db.getPosts(), db.getPresence(), nowMs) : null);
   // Couleurs de la messagerie (clair par défaut, sombre en option)
   const P = {
     root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',
@@ -93,6 +105,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [newChat, setNewChat] = useState(false);
   const [groupInfo, setGroupInfo] = useState(false);
   const [threadMenu, setThreadMenu] = useState(false);
+  const [pinnedThreads, setPinnedThreads] = useState<string[]>(() => getPinnedThreads(currentUser.id));
+  const [aboutOf, setAboutOf] = useState<{ id: string; menuOnly: boolean } | null>(null); // fiche « À propos » (clic sur le rond) ou menu d'appui long (menuOnly)
+  const rowPress = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rowLong = useRef(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
@@ -215,9 +231,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const sorted = useMemo(() => {
     const withTs = threads.map(t => ({ t, ts: lastTs(t) }));
     withTs.sort((a, b) => (a.t.id === 'all' ? -1 : b.t.id === 'all' ? 1 : b.ts - a.ts));
-    return withTs;
+    return pinFirst(withTs.map(x => ({ ...x, id: x.t.id })), pinnedThreads).map(({ t, ts }) => ({ t, ts }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, messages]);
+  }, [threads, messages, pinnedThreads]);
   // Cachée = l'heure de masquage est plus récente que le dernier message
   const isArchived = (t: Thread, ts: number) => !!archived[t.id] && archived[t.id] >= ts;
   const shownList = sorted.filter(x => !isArchived(x.t, x.ts)).map(x => x.t);
@@ -411,6 +427,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = null;
   };
+  const startRowPress = (id: string) => {
+    if (rowPress.current) clearTimeout(rowPress.current);
+    rowLong.current = false;
+    rowPress.current = setTimeout(() => { rowLong.current = true; window.getSelection()?.removeAllRanges(); setAboutOf({ id, menuOnly: true }); }, 450);
+  };
+  const stopRowPress = () => { if (rowPress.current) clearTimeout(rowPress.current); rowPress.current = null; };
   const startEdit = (m: ChatMessage) => {
     setMenuMsg(null);
     setReplyTo(null);
@@ -509,8 +531,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       <button
         key={t.id}
         type="button"
-        onClick={() => { setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
+        onClick={() => { if (rowLong.current) { rowLong.current = false; return; } setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
+        onTouchStart={() => startRowPress(t.id)} onTouchEnd={stopRowPress} onTouchMove={stopRowPress} onTouchCancel={stopRowPress}
+        onMouseDown={e => { if (e.button === 0) startRowPress(t.id); }} onMouseUp={stopRowPress} onMouseLeave={stopRowPress}
+        onContextMenu={e => { e.preventDefault(); stopRowPress(); rowLong.current = true; setAboutOf({ id: t.id, menuOnly: true }); }}
+        data-thread-row={t.id}
+        className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors select-none ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
         {t.kind === 'group' && t.group?.avatar_url ? (
           <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -521,11 +547,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         ) : t.kind === 'pair' ? (
           <span className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-slate-200' : 'bg-slate-800'}`}><EyeOff className={`w-5 h-5 ${P.sub}`} /></span>
         ) : (
-          <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
+          <span role="button" tabIndex={0} aria-label={`À propos de ${t.title}`} data-row-avatar onClick={e => { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); setAboutOf({ id: t.id, menuOnly: false }); } }} onTouchStart={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} className="relative shrink-0 rounded-full inline-flex">
+            <Avatar src={t.user?.avatar_url} name={t.title} className="w-12 h-12 rounded-full ring-2 ring-offset-2 ring-slate-200" />
+            {(() => { const lv = liveOf(t.user); return lv ? <LiveDot info={lv} lang={chatLang} ring={L ? 'border-white' : 'border-[#0e1622]'} /> : null; })()}
+          </span>
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
+            {pinnedThreads.includes(t.id) && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Épinglée" />}<span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
             {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
@@ -619,7 +648,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
           >
             {current.kind === 'user' ? (
-              <Avatar src={current.user?.avatar_url} name={current.title} className="w-11 h-11 rounded-full ring-2 ring-white/40" />
+              <span className="relative shrink-0 inline-flex">
+                <Avatar src={current.user?.avatar_url} name={current.title} className="w-11 h-11 rounded-full ring-2 ring-white/40" />
+                {(() => { const lv = liveOf(current.user); return lv ? <LiveDot info={lv} lang={chatLang} ring="border-blue-600" /> : null; })()}
+              </span>
             ) : current.kind === 'group' && current.group?.avatar_url ? (
               <img src={current.group.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-white/40" />
             ) : (
@@ -632,7 +664,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <span className="block text-xs text-blue-200" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {typingNames.length > 0
                   ? <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">{typingNames.slice(0, 2).join(', ')}{typingNames.length > 2 ? ' et d’autres' : ''} écrit… <TypingDots /></span>
-                  : current.subtitle}
+                  : (() => { const lv = current.kind === 'user' ? liveOf(current.user) : null; return lv ? <LiveLine info={lv} lang={chatLang} className="text-blue-100" /> : current.subtitle; })()}
               </span>
             </span>
           </button>
@@ -685,7 +717,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   {!isMe && showNames && (
                     sameSender
                       ? <span className="w-8 shrink-0" />
-                      : <button type="button" onClick={() => openProfile(msg.sender_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(u => u.id === msg.sender_id)?.avatar_url} name={msg.sender_name} className="w-8 h-8 rounded-full" /></button>
+                      : <button type="button" onClick={() => setAboutOf({ id: msg.sender_id, menuOnly: false })} className="shrink-0 cursor-pointer" title="À propos" data-msg-avatar><Avatar src={users.find(u => u.id === msg.sender_id)?.avatar_url} name={msg.sender_name} className="w-8 h-8 rounded-full" /></button>
                   )}
                   <div className={`flex flex-col min-w-0 max-w-[82%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'}`}>
                     <div
@@ -703,7 +735,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
                         return { WebkitTouchCallout: 'none', backgroundColor: ac.bubbleBg, borderColor: ac.bubbleBorder } as React.CSSProperties;
                       })()}
-                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-sm leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.8125rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && !msg.message && !msg.reply_to && msg.attachment_url
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
@@ -729,7 +761,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className="relative block w-full text-left mb-1 rounded-lg overflow-hidden cursor-pointer pl-3 pr-2.5 py-1" style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.92)' : ac.quoteBg, color: L ? '#1e293b' : isMe ? '#1e293b' : '#e2e8f0' }}>
                                 <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: ac.bar }} />
                                 <span className="block text-[12px] font-bold leading-tight" style={{ color: isMe ? ac.name : ac.name }}>{msg.reply_to!.sender_name}</span>
-                                <span className="block text-[13px] leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
+                                <span className="block text-xs leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
                               </button>
                             );
                           })()}
@@ -801,7 +833,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </button>
         )}
         {newBelow > 0 && (
-          <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); setNewBelow(0); }} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
             <ChevronDown className="w-4 h-4" />{newBelow} nouveau{newBelow > 1 ? 'x' : ''} message{newBelow > 1 ? 's' : ''}
           </button>
         )}
@@ -858,8 +890,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
-                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
-                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
+                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
                 </div>
               </div>
             </div>
@@ -927,6 +959,22 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         </div>,
         document.body
       )}
+
+      {aboutOf && (() => {
+        const t: Thread | undefined = threads.find(x => x.id === aboutOf.id) || (() => { const u = users.find(x => x.id === aboutOf.id); return u ? { id: u.id, kind: 'user' as const, title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u } : undefined; })();
+        if (!t) return null;
+        const full = aboutThread(t, { viewer: currentUser, pinned: pinnedThreads.includes(t.id), hidden: !!archived[t.id] && archived[t.id] >= lastTs(t), lang: lang === 'en' ? 'en' : 'fr', canOpenFullProfile: !!onOpenProfile });
+        const view = aboutOf.menuOnly ? { ...full, facts: [], actions: full.actions.filter(a => a === 'pin' || a === 'unpin' || a === 'hide' || a === 'show') } : full;
+        const run = (a: AboutAction) => {
+          setAboutOf(null);
+          if (a === 'pin' || a === 'unpin') setPinnedThreads(togglePinnedThread(currentUser.id, t.id));
+          else if (a === 'hide' || a === 'show') toggleArchive(t, a === 'hide');
+          else if (a === 'write') { if (t.kind === 'user' && !threads.some(x => x.id === t.id)) setPickedUsers(p => (p.includes(t.id) ? p : [...p, t.id])); setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }
+          else if (a === 'full_profile' && t.user) openProfile(t.user.id);
+          else if (a === 'group_info') { setThreadId(t.id); setShowList(false); setGroupInfo(true); }
+        };
+        return <ChatAbout thread={t} about={view} onAction={run} onClose={() => setAboutOf(null)} />;
+      })()}
 
       {newChat && (
         <NewChatModal

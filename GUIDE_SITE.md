@@ -181,15 +181,30 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Formules : SOMME, MOYENNE, MIN, MAX, NB, SI, ET, OU, ARRONDI, RECHERCHEV, SOMME.SI, NB.SI, AUJOURDHUI, JOURS, CONCAT, GAUCHE, DROITE et autres, en français ou en anglais.
 - **Dans le code** : `src/components/MySheets.tsx`
 
+### Stockage  `storage`
+- **Qui** : responsable
+- **À quoi ça sert** : Choisir un stockage (Stockage 1, 2…), voir l'essentiel au Tableau de bord, puis gérer ses produits : entrer le stock, chercher, photo.
+- **Comment l'utiliser** : 1. Tableau de bord : chiffres clés, alertes, rupture proche ; toucher Épuisés ou Stock bas ouvre la liste. 2. Produits : nouveau produit = nom + quantité de départ ; chercher, filtrer, −1 / +1 ou Entrée / Sortie. 3. Catégories : liste par défaut modifiable (bouton Catégories). Mouvements : historique filtré. Analyses : graphiques par période.
+- **Règles** :
+  - Stockage est réservé à l'admin : le serveur refuse tout autre accès.
+  - Une alerte de stock (accueil, cloche, Santé du site) ouvre le bon stockage et le bon produit, qui clignote 1,5 s.
+  - Les stockages ne se mélangent jamais : chaque produit est dans un seul. « Gérer » crée, renomme, supprime (stockage vide seulement).
+  - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
+  - Import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
+  - Seul le nom d'un produit est obligatoire : catégorie, unité, prix, seuil, quantité et photo sont facultatifs.
+  - La photo d'un produit est envoyée sur Cloudinary ; le serveur n'accepte que les adresses du site.
+- **Chiffres et formules** :
+  - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
+  - Quantité en stock : Entrées − sorties ± ajustements.
+- **Dans le code** : `src/views/admin/StoragePage.tsx`, `src/views/admin/StockDashboard.tsx`, `src/views/admin/StockMovements.tsx`, `src/views/admin/StockAnalytics.tsx`, `src/views/admin/StockCategoriesDialog.tsx`, `src/views/admin/StockSpacesDialog.tsx`, `src/views/admin/StockTab.tsx`
+
 ### Statistiques  `stats`
 - **Qui** : responsable
-- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances, stock et rapport du mois.
-- **Comment l'utiliser** : 1. Choisir l'onglet (Statistiques, Finances, Stock, Rapport) puis la période. 2. Saisir les entrées et dépenses dans l'onglet Finances. 3. Saisir les entrées, sorties et ajustements dans l'onglet Stock.
+- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances et rapport du mois.
+- **Comment l'utiliser** : 1. Choisir l'onglet (Statistiques, Finances, Rapport) puis la période. 2. Saisir les entrées et dépenses dans l'onglet Finances. 3. Lire le rapport du mois dans l'onglet Rapport.
 - **Règles** :
-  - Finances et Stock sont réservés à l'admin : le serveur refuse tout autre accès.
-  - La quantité en stock n'est jamais saisie : elle se calcule avec les mouvements.
+  - Finances est réservé à l'admin : le serveur refuse tout autre accès.
   - Les avances sont déjà dans les salaires : elles ne sont pas comptées deux fois.
-  - Stock : import Excel ou CSV des produits (nom, prix, seuil) ; les quantités ne s'importent pas, on les ajoute par des entrées.
   - Prévu contre réel (Finances, 6 mois) : dépenses prévues = total des budgets par catégorie ; revenus et paie prévus = deux montants mensuels du responsable ; le réel est calculé, jamais saisi.
   - Rapport automatique : arrêté, chaque semaine ou chaque mois, à une heure de Madagascar ; le serveur crée la fiche de la période finie et prévient. Aucun e-mail.
   - La copie figée du rapport est posée une seule fois, à la première ouverture. Une période manquée (serveur arrêté plus de 2 h) n'est pas rattrapée.
@@ -200,10 +215,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Dépenses : Dépenses saisies + salaires (les avances sont déjà dans les salaires).
   - Bénéfice : Encaissé − dépenses.
   - Marge : Bénéfice ÷ encaissé, en %. Vide si rien n'est encaissé.
-  - Valeur du stock : Pour chaque produit : quantité (jamais négative) × prix d'achat ; puis la somme.
-  - Quantité en stock : Entrées − sorties ± ajustements.
   - Écart prévu contre réel : Revenus : réel − prévu (positif = mieux que prévu). Dépenses et paie : prévu − réel (négatif = plafond dépassé). « À surveiller » à 80 % du plafond ; « rien de prévu » quand le prévu vaut 0.
-- **Dans le code** : `src/views/admin/StatsPage.tsx`, `src/views/admin/FinanceTab.tsx`, `src/views/admin/StockTab.tsx`, `src/views/admin/ReportTab.tsx`
+- **Dans le code** : `src/views/admin/StatsPage.tsx`, `src/views/admin/FinanceTab.tsx`, `src/views/admin/ReportTab.tsx`
 
 ### Missions  `grid`
 - **Qui** : opérateur
@@ -231,6 +244,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Accès « auto » : la connexion n'est permise que pendant la vacation, avec une marge avant et après.
   - Supprimer un profil est définitif.
   - Import Excel ou CSV : tous les comptes sont des opérateurs ; un mot de passe provisoire est montré une seule fois à la fin (100 comptes au plus).
+  - Statut en direct : En cours (mission ouverte), En ligne (sans mission), En pause (mission ouverte, appli silencieuse 90 s à 30 min), Hors ligne.
 - **Dans le code** : `src/views/admin/EmployeesManagement.tsx`
 
 ### Mon profil  `profile`
@@ -239,6 +253,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Comment l'utiliser** : 1. Voir ses informations. 2. Demander une modification. 3. Attendre l'accord de l'admin.
 - **Règles** :
   - Un changement de profil passe par une validation de l'admin.
+  - Le profil s'ouvre en touchant sa photo, en haut à droite (tous les rôles) : statut Disponible / Occupé / Absent sur cet appareil, et mot de passe.
+  - Le responsable y trouve la bascule « Mode opérateur » pour voir le site comme un opérateur.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/components/CVViewerModal.tsx`
 
 ### Messagerie  `chat`
@@ -246,28 +262,45 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Discussions entre personnes et groupes, comme une messagerie classique.
 - **Comment l'utiliser** : 1. Choisir une discussion ou un groupe. 2. Écrire et joindre un fichier ou plusieurs photos (album : 4 cases, la 4e avec « +N »). 3. Modifier ou épingler ses propres messages.
 - **Règles** :
+  - Appui long sur une discussion : l'épingler en haut de la liste ou la cacher. Toucher le petit rond de profil : fiche « À propos » avec les actions possibles.
+  - Les discussions épinglées et cachées sont propres à chaque personne, gardées sur son appareil.
   - On ne modifie que ses propres messages, même l'admin.
   - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
+  - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
 - **Qui** : responsable et opérateur
-- **À quoi ça sert** : Les présences et les retards, jour par jour.
+- **À quoi ça sert** : Les présences et les retards, jour par jour : d'abord tous les employés ensemble (mois, résumé, vue du jour), puis le calendrier d'un employé.
 - **Comment l'utiliser** : 1. Choisir le mois et la personne. 2. Cliquer un jour pour voir les sessions. 3. Repérer les retards.
 - **Règles** :
   - Le dimanche est un jour de repos.
   - Les heures sont celles de Madagascar (UTC+3).
+  - Calendrier global : chaque case montre des chiffres, chacun avec son icône et sa couleur (présents, retards, absents, congés, demandes de congé, missions), sans texte. C'est la somme exacte des calendriers individuels. Un clic sur un jour ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
+  - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
+  - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
+  - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.
 - **Chiffres et formules** :
   - En retard : Début de la session après l'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.
 - **Réglages liés** (Réglages > Conditions) : `leave.late_limit_time`
 - **Dans le code** : `src/views/CalendarView.tsx`
+
+### Trésorerie  `treasury`
+- **Qui** : responsable
+- **À quoi ça sert** : Pour le Comptable : l'argent reçu et les dépenses du mois, sans salaires ni paie.
+- **Comment l'utiliser** : 1. Choisir le mois avec les flèches. 2. Ajouter un paiement reçu ou une dépense. 3. Filtrer par type ou catégorie, modifier ou supprimer une ligne.
+- **Règles** :
+  - Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.
+  - Les lignes saisies ici sont les mêmes que dans l'onglet Finances du responsable.
+- **Dans le code** : `src/views/admin/TreasuryPage.tsx`, `src/views/admin/FinanceTab.tsx`
 
 ### Comptabilité  `accounting`
 - **Qui** : responsable
 - **À quoi ça sert** : Le journal des écritures (partie double), le grand livre, la balance, le résultat et le bilan. Les écritures viennent des factures, paiements, dépenses, paies et avances.
 - **Comment l'utiliser** : 1. Appuie sur « Générer les écritures » : chaque pièce sans écriture en reçoit une, jamais de doublon. 2. Choisis la période, puis le Journal, le Grand livre, la Balance, le Résultat ou le Bilan. 3. Pour corriger : annule l'écriture (écriture inverse) puis saisis la bonne.
 - **Règles** :
+  - Le Comptable a aussi cette page ; seul le responsable annule une écriture.
   - Une écriture a toujours autant de débit que de crédit ; une écriture enregistrée ne se modifie jamais.
   - Le numéro d'écriture (EC-2026-0001) est donné par le serveur, dans l'ordre des dates.
   - Le Comptable lit et saisit ; seul le responsable annule. Les écritures de paie ne montrent aucun nom.
@@ -485,6 +518,8 @@ Chaque module suit la même méthode (`TODO_MODULES.md`, « démarche commune »
 | **M15.6 Validation à plusieurs niveaux** (M15 en cours ; **en ligne depuis le 2026-10-27, serveur v46 ; essai de BTK à faire en M15.9**) | Un plafond réglable en Ar (Réglages > Missions > « Plafond du Chef d'équipe », 0 = aucun). Le montant comparé est le **prix client** de la mission (la paie est la même pour toutes). Au-dessus du plafond (strictement), le Chef d'équipe ne peut ni valider un début, ni valider une fin, ni refuser : le serveur répond 403 sans dire le montant ; le responsable n'est jamais bloqué. Le plafond n'est jamais envoyé au Chef d'équipe. **Limite :** le Chef d'équipe voit l'erreur au moment de décider, sa liste ne marque pas ces missions à l'avance. | `src/utils/approvalLimit.ts` | pas de nouvelle table ; réglage `team_lead_limit_ar` (admin seulement) ; bloc `LEADLIMIT` et `postDecide` de `df-api` | `npm run check:approval-limit` |
 | **M15.8 Santé du site, carte du site et démo du module 15** (M15 en cours ; code fait le 2026-10-27, rien à déployer) | La Santé du site signale (à voir) les conflits du planning des 14 prochains jours et la paie ou les dépenses du mois en cours au-dessus du prévu ; la carte du site et l'assistant décrivent les missions récurrentes, le planning, le prévu contre réel, le rapport automatique et le plafond du Chef d'équipe ; la démo montre une règle récurrente. **Limites :** pas d'alerte pour le rapport automatique ni pour le plafond ; l'alerte ouvre la page, pas l'onglet. | `src/utils/health/rules/management.ts`, `src/utils/siteKnowledge.ts` | pas de nouvelle table ni de changement du serveur | `npm run check:health-management`, `npm run check:site-map` |
 | **M18.6 Tableau préparé par mission** (**en ligne depuis le 2026-10-28, serveur v49 ; essai de BTK à faire avec `operator1`**) | Quand un opérateur démarre une session, le site lui prépare UN tableau dans « Mes tableaux » (groupe « Tableaux de mes missions »), avec les colonnes du type de la mission (saisie de fiches, contrôle qualité, administratif, web, aide ; inconnu = suivi de tâches), titre « Mission n° … — date » et une première ligne vide. Un seul par session (identifiant `sp-` + id de la session). Ne compte pas dans les 20 tableaux personnels (limite propre : 400). Le serveur vérifie que la session est celle de l'opérateur ; le lien ne change jamais. Le responsable lit ces tableaux, sans les modifier. | `src/utils/missionSheet.ts`, `src/utils/sheets.ts`, `src/components/MySheets.tsx` | table `df_sheets` (champ `post_id`, pas de nouvelle table) ; `cleanSheetWrite` du bloc SHEETS de `df-api` | `npm run check:mission-sheet`, `check:sheets-shared` |
+| **Graphiques lisibles et thème/langue** (2026-10-29, demande de BTK, hors modules) | Trois graphiques redessinés, un style chacun : **« Argent reçu et dépenses »** (Statistiques de l'argent) = 3 gros chiffres (reçu, dépenses, solde) + 2 courbes douces avec zone colorée ; **« Facturé et reçu »** = barres larges avec onglets (Les deux / Facturé / Reçu), le reçu dans le facturé, défilement horizontal au-delà de ~12 jours ; **« Missions faites »** (Statistiques) = calendrier de carrés (plus c'est foncé, plus il y a de missions ; total, moyenne, meilleur). Toucher un point, une barre ou un carré affiche le détail SOUS le graphique. L'ancienne comparaison « période d'avant » et le « rythme de l'objectif » deviennent une ligne de texte sous le calendrier. Les autres graphiques (Bénéfice cumulé, Missions par type, Stock) ne changent pas. **Réglages > Apparence et langue** : un interrupteur soleil / lune pour le thème et une petite liste Français / English (au lieu de 4 gros boutons). | `src/components/charts/StyledCharts.tsx`, `src/components/ThemeLangControls.tsx` | aucune (site seulement) | `npm run check:styled-charts` |
+| **Boutons sobres et taille du texte** (2026-10-29, demande de BTK, hors modules) | La règle globale du CSS qui mettait TOUS les boutons en gélule est retirée : les boutons ont des coins arrondis de 8 px ; 75 boutons avec texte qui avaient `rounded-full` passent en `rounded-lg`. Les ronds d'icône, les points et l'interrupteur soleil/lune gardent leur forme ronde. **Les hauteurs de 44 px et les ronds de 40 px sont gardés** : plusieurs contrôles d'accessibilité du projet exigent des cibles tactiles d'au moins 44 px. **Taille du texte (Réglages)** : Très petite (80 %), Petite (90 %), Normale (100 %), Grande (110 %) ; « Très grande » (120 %) est retirée et devient « Grande » pour ceux qui l'avaient choisie. **Messagerie** : texte des bulles de 14 px à 13 px (en rem, il suit la taille choisie), message cité de 13 px à 12 px. | `src/index.css`, `src/utils/fontSize.ts`, `src/components/FontSizePicker.tsx`, `src/components/ChatView.tsx` | aucune (site seulement) | `npm run check:ui-sober` |
 | **M16 Facilité et sécurité** (en cours) | M16.1 fait : import Excel et CSV (clients, produits, salariés, tableaux) avec aperçu ligne par ligne. M16.2 faite : visite guidée par rôle à la première connexion sur un appareil (textes pris dans la carte du site), à revoir dans Réglages. M16.3 faite : après 5 mots de passe ratés sur un compte (ou 20 depuis une même adresse), la connexion est refusée pendant 1 minute, puis 2, 4… jusqu'à 30 minutes (5 minutes pour le responsable) ; jamais définitif, un bon mot de passe ne passe pas pendant le délai ; le début de chaque délai est écrit dans le journal d'audit. M16.4 faite : sécurité en deux étapes facultative (Réglages) pour le responsable et le Comptable : code à 6 chiffres d'une application d'authentification après le mot de passe, 8 codes de secours à usage unique, le responsable peut remettre à zéro celle d'un Comptable. M16.5 faite : « Exporter toutes les données » (fichier complet) et « Importer un fichier d'export » dans Réglages > Sauvegardes ; un fichier importé s'ajoute à la liste, la reprise se fait par « Restaurer » avec toutes ses protections. M16.7 faite : la Santé du site (page Système) signale les délais de connexion des dernières 24 h ; tout le module est dans la carte du site, l'assistant et ce guide. M16.6 faite (liens) : dans Factures > À relancer, « Envoyer par WhatsApp » et « Envoyer par SMS » ouvrent le message de relance déjà écrit (numéro du client mis au format Madagascar) ; la personne appuie sur « envoyer » ; aucun envoi automatique. Le reste ( export complet, WhatsApp) à venir | `src/utils/importRules.ts`, `src/utils/importFile.ts`, `src/utils/tour.ts`, `src/components/TourGuide.tsx`, `src/utils/loginGuard.ts`, `src/utils/totp.ts`, `src/components/TwoStepCard.tsx` | `df_login_attempts` (compteurs d'essais), `df_totp` (secret et empreintes des codes de secours ; serveur seulement ; la visite est gardée sur l'appareil ; l'import réutilise les règles de saisie, le serveur revérifie) | `npm run check:import`, `npm run check:import-page`, `npm run check:tour`, `npm run check:login-guard`, `npm run check:totp`, `npm run check:totp-page`, `npm run check:export` |
 
 Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la version, le commit et le retour en arrière). Exemples : M5.1 et M5.2 en v26, M5.4 en v29 (sauvegarde n° 35), Mes tableaux en v31.
@@ -521,13 +556,16 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `attendance.ts` | Retard d'une session (utilisé par le calendrier et par les alertes). Pur, sans écran. |
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `autoReport.ts` | Rapport automatique (module 15, M15.5). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:auto-report`. |
+| `availability.ts` | Statut de disponibilité : choisi par chaque personne, gardé sur CET appareil (pas partagé avec les autres). |
 | `avatarColor.ts` | Couleur d'une personne = couleur dominante de sa photo de profil (rouge sur photo rouge, etc.). |
 | `backupExcel.ts` | Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
+| `calendarGlobal.ts` | Calendrier GLOBAL (tous les employés) : mois, résumé et vue du jour. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:calendar-global`. |
 | `chartData.ts` | Données des graphiques : parties réelles, prévision en pointillé, rythme d'un objectif (purs, sans écran). |
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
+| `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
@@ -535,7 +573,9 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
+| `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
+| `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
 | `enTranslate.ts` | Traduction automatique de l'interface en anglais (français → English). |
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
@@ -565,7 +605,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `missionSheet.ts` | Tableau préparé par mission (module 18, M18.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:mission-sheet`. |
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
-| `modeSwitch.ts` | Bouton « Vue opérateur / Retour responsable » du menu : visible ou masqué (réglé sur cet appareil). |
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
@@ -588,6 +627,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
+| `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
@@ -615,15 +655,18 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `stats.ts` | Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques. |
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
+| `storageNav.ts` | « Va exactement au bon endroit du Stockage » : une alerte ou une notification dit QUEL stockage, QUEL filtre et QUEL produit. |
 | `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamGoals.ts` | Objectifs par salarié et par équipe (module 15, M15.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:team-goals`. |
 | `teamLead.ts` | Sessions en attente (début ou fin) des opérateurs de l'équipe du Chef d'équipe, les plus anciennes d'abord. Rien d'autre : jamais un autre groupe. |
 | `totp.ts` | Sécurité en deux étapes (module 16, M16.4) : règles pures, sans écran, sans serveur. |
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
+| `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
 | `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
 | `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
 | `useLockBodyScroll.ts` | — |
+| `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
 | `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
@@ -761,17 +804,27 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-accounting` | Contrôle des règles Comptabilité du module 11 (M14.9). Pur, sans réseau. Lancer : npm run check:health-accounting |
 | `npm run check:health-management` | Contrôle des règles du module 15 dans la Santé du site (M15.8) : conflits de planning, paie et dépenses au-dessus du prévu. Pur, sans réseau. |
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
+| `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
+| `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |
 | `npm run check:simulation` | Contrôle du générateur de simulation (module 18, M18.4) : les données inventées doivent être COHÉRENTES entre elles, vues par les vraies règles du site |
 | `npm run check:health-performance` | Contrôle de la règle Performance du module 11 (M11.12). Pur, sans réseau. Lancer : npm run check:health-performance |
 | `npm run check:health-notif` | Contrôle des notifications de la cloche (M11.7 / M9.4) : règles pures + câblage. Lancer : npm run check:health-notif |
 | `npm run check:watch-shared` | Contrôle des seuils de Surveillance PARTAGÉS (Conditions > Surveillance, M11.14 « Accord Surveillance »). Sans réseau. Lancer : npm run check:watch-shared |
 | `npm run check:health-acks-shared` | Contrôle des marques « Ignorer / Vérifié » PARTAGÉES (M11.7 / « Accord Ignorer »). Sans réseau. Lancer : npm run check:health-acks-shared |
+| `npm run check:stock-categories` | Contrôle de la liste des catégories du Stockage (site = serveur). Sans réseau. Lancer : npm run check:stock-categories |
+| `npm run check:stock-spaces` | Contrôle des stockages (Stockage 1, 2…) : site = serveur. Sans réseau. Lancer : npm run check:stock-spaces |
+| `npm run check:stock-links` | Contrôle des liens exacts du Stockage (alertes, Santé du site, cloche) et du clignotement de 1,5 s. Sans réseau, sans écran. |
+| `npm run check:alert-links` | Contrôle des liens exacts de TOUTES les alertes et notifications (au-delà du Stockage) et de l'animation unique de 1,5 s. |
+| `npm run check:deep-link` | Contrôle du lien exact des notifications externes (push) : adresse construite par le serveur = lue par l'appli. Sans réseau, sans écran. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |
 | `npm run check:recurring` | Contrôle des missions récurrentes (M15.1). Lancer : npm run check:recurring |
 | `npm run check:mission-sheet` | Contrôle du tableau préparé par mission (M18.6) : règles, serveur (même texte), démo en mémoire, écran. Sans réseau. Lancer : npm run check:mission-sheet |
+| `npm run check:styled-charts` | Contrôle des trois graphiques lisibles et du bouton thème / langue (2026-10-29). Sans réseau. Lancer : npm run check:styled-charts |
+| `npm run check:ui-sober` | Contrôle de l'aspect sobre des boutons et de la taille du texte (2026-10-29). Lancer : npm run check:ui-sober |
+| `npm run check:topbar-notif` | Contrôle du panneau de notifications (2026-10-29) : sur téléphone il s'accroche à la barre du haut, plus à la cloche. Lancer : npm run check:topbar-notif |
 | `npm run check:approval-limit` | Contrôle de la validation à plusieurs niveaux (M15.6) : plafond du Chef d'équipe, copie serveur, garde-fous. Lancer : npm run check:approval-limit |
 | `npm run check:auto-report` | Contrôle du rapport automatique (M15.5, règles pures). Lancer : npm run check:auto-report |
 | `npm run check:auto-report-ui` | Essai du rapport automatique côté site, en mode démo (aucun réseau) : réglage, liste, ouverture, copie figée une seule fois, droits. |
@@ -815,6 +868,14 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
 | `npm run check:export` | Contrôle M16.5 : validation du fichier d'export, copie serveur identique, route backup-import (admin, jamais d'écrasement), écrans. |
+| `npm run check:chat-about` | Messagerie : discussions épinglées, appui long (épingler / cacher) et fiche « À propos » (clic sur le rond de profil). Règles pures + câblage de l'écran. |
+| `npm run check:settings-icons` | Réglages : chaque carte a une petite icône devant son titre (même style partout). |
+| `npm run check:header-profile` | Profil dans l'en-tête : pastille pour tous les rôles, formulaire avec statut, mot de passe et vue opérateur (responsable). |
+| `npm run check:header-search` | En-tête sans bouclier, recherche « Rechercher… » avec loupe et croix ; « Signaler un problème » dans le Journal des erreurs. |
+| `npm run check:restore-once` | Réglages : la remise à zéro du site n'apparaît que dans l'onglet Données (et non dans chaque onglet). |
+| `npm run check:composer-min` | Actualités : le formulaire de publication est réduit tant que personne ne veut publier. |
+| `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
+| `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |
 | `npm run check:xlsx-a4` | Contrôle des fichiers Excel A4 (Times New Roman 12, un autre fichier si c'est long), sans écran ni réseau. Lancer : npm run check:xlsx-a4 |
