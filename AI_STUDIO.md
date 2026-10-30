@@ -155,3 +155,7 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 ## df-api v57 (2026-10-30) — accès par vacation et jours de travail (étape 1/3)
 - Commit 269436d. `shiftAccess` : opérateur, comptable, chef d'équipe (jamais l'admin) ; jours de travail (`work_days` des Réglages, défaut lundi–samedi) ; mission ouverte garde l'accès.
 - Sauvegarde faite avant (`df_take_backup`). Retour arrière : redéployer v56 = SHA 1976b581d08eb160c25b5715ce9905ede6ed8527.
+
+## df-api v58 (2026-10-30) — connexion hors horaires (étape 2/3)
+- Commit fd14694. Routes `access-request` (avant connexion, mot de passe vérifié) et `access-decide` (responsable) ; table `df_access_requests` (migration 20261030, appliquée après la sauvegarde n° 74) ; champ `access_until` sur le compte.
+- Retour arrière : redéployer v57 = SHA 269436d54a9ba465a2fed4a91a5be35a70ad2a34 ; la table peut rester (sans effet) ou `drop table public.df_access_requests;`.
