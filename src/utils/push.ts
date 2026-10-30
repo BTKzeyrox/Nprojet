@@ -55,6 +55,14 @@ export async function enablePush(): Promise<string> {
   } catch (e) { return String((e as Error)?.message || 'error').slice(0, 120); }
 }
 
+/** L'adresse d'abonnement de cet appareil (pour ses interrupteurs), ou '' s'il n'est pas abonné. */
+export async function pushEndpoint(): Promise<string> {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    return (await reg?.pushManager.getSubscription())?.endpoint || '';
+  } catch { return ''; }
+}
+
 /** Désactive les notifications sur cet appareil. */
 export async function disablePush(): Promise<void> {
   try {

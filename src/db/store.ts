@@ -3093,6 +3093,12 @@ export class AppStore {
     if (this.demo) return;
     await this.api('push-unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) });
   }
+  /** Interrupteurs par catégorie de cet appareil : sans `off` on lit ; avec `off` on enregistre (catégories coupées). */
+  public async pushPrefs(endpoint: string, off?: string[]): Promise<{ ok: boolean; off: string[]; error?: string }> {
+    if (this.demo) return { ok: false, off: [], error: 'Indisponible en mode démo.' };
+    const r = await this.api('push-prefs', { method: 'POST', body: JSON.stringify(off === undefined ? { endpoint } : { endpoint, off }) });
+    return r.ok ? { ok: true, off: Array.isArray(r.data?.off) ? r.data.off : [] } : { ok: false, off: [], error: r.data?.error || 'Erreur.' };
+  }
   public async pushTest(): Promise<{ ok: boolean; sent: number; error?: string }> {
     if (this.demo) return { ok: false, sent: 0, error: 'Indisponible en mode démo.' };
     const r = await this.api('push-test', { method: 'POST', body: '{}' });

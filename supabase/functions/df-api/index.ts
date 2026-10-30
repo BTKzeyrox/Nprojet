@@ -1328,10 +1328,10 @@ function tasksBlockSubmit(contract: any, done: unknown): boolean {
 // ===== END MISSIONS =====
 
 // ===== BEGIN DEEP_LINK (adresse exacte d'une notification externe ; ce bloc est contrôlé par scripts/check-deep-link.ts) =====
-interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
+interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string; thread?: string }
 const DL_VIEW = /^[a-z][a-z-]{0,29}$/;
 const DL_ID = /^[A-Za-z0-9_:.-]{1,80}$/;
-const DL_FIELDS: [keyof DeepLink, string][] = [["go", "go"], ["tab", "tab"], ["filter", "f"], ["nav", "nav"], ["space", "sp"], ["sfilter", "sf"], ["product", "pr"]];
+const DL_FIELDS: [keyof DeepLink, string][] = [["go", "go"], ["tab", "tab"], ["filter", "f"], ["nav", "nav"], ["space", "sp"], ["sfilter", "sf"], ["product", "pr"], ["thread", "th"]];
 /** « /?go=<page>&nav=<élément>… » : l'appli ouvre la bonne page et fait clignoter l'élément. Pas de page valable = l'accueil. */
 function deepLinkUrl(link: DeepLink): string {
   if (!link || typeof link.go !== "string" || !DL_VIEW.test(link.go)) return "/";
@@ -1470,6 +1470,42 @@ async function vapidHeader(endpoint: string, subject: string, publicKey: string,
   return `vapid t=${head}.${claims}.${b64uEnc(sig)}, k=${publicKey}`;
 }
 // ===== END PUSH =====
+// ===== BEGIN NOTIFY (notifications externes, partie 2a : textes, catégories ; ce bloc est contrôlé par scripts/check-push-events.ts) =====
+type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message";
+const PUSH_CATS = ["missions", "validations", "advances", "security", "messages"] as const;
+type PushCat = typeof PUSH_CATS[number];
+const ncut = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+function notifyCat(kind: NotifyKind): PushCat {
+  if (kind === "advance_ok" || kind === "advance_no") return "advances";
+  if (kind === "security") return "security";
+  if (kind === "message") return "messages";
+  return "validations";
+}
+/** Texte d'un push (les deux langues). Jamais de montant ni de contenu de message : un push s'affiche sur l'écran verrouillé. */
+function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean }): PushText {
+  const name = ncut(m.name, 60) || "—";
+  const client = ncut(m.client, 60);
+  const who = client ? `${name} · ${client}` : name;
+  switch (kind) {
+    case "val_start": return { fr: { title: "Début à valider", body: who }, en: { title: "Start to approve", body: who } };
+    case "val_end": return { fr: { title: "Fin à valider", body: who }, en: { title: "End to approve", body: who } };
+    case "advance_new": return { fr: { title: "Avance à valider", body: name }, en: { title: "Advance to approve", body: name } };
+    case "advance_ok": return { fr: { title: "Avance acceptée", body: "Ta demande d'avance a été acceptée." }, en: { title: "Advance approved", body: "Your advance request was approved." } };
+    case "advance_no": { const r = ncut(m.reason, 100); return { fr: { title: "Avance refusée", body: r ? `Motif : ${r}` : "Ta demande d'avance a été refusée." }, en: { title: "Advance refused", body: r ? `Reason: ${r}` : "Your advance request was refused." } }; }
+    case "signup": return { fr: { title: "Inscription à valider", body: name }, en: { title: "Sign-up to approve", body: name } };
+    case "reset": return { fr: { title: "Mot de passe oublié (urgent)", body: name }, en: { title: "Forgotten password (urgent)", body: name } };
+    case "profile": return { fr: { title: "Changement de profil à valider", body: name }, en: { title: "Profile change to approve", body: name } };
+    case "security": return { fr: { title: "Alerte de sécurité", body: name }, en: { title: "Security alert", body: name } };
+    case "message": { const t = m.group ? `${name} · groupe` : name; const te = m.group ? `${name} · group` : name; return { fr: { title: t, body: "Nouveau message" }, en: { title: te, body: "New message" } }; }
+  }
+}
+/** Les catégories coupées sur un appareil : seulement des catégories connues, sans doublon. */
+function cleanPushOff(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const known = PUSH_CATS as readonly string[];
+  return [...new Set(raw.filter((x): x is string => typeof x === "string" && known.includes(x)))];
+}
+// ===== END NOTIFY =====
 
 // ===== BEGIN SUPPLIERS (fournisseurs, bons de commande et budgets : réservé à l'administrateur ; ce bloc est contrôlé par scripts/check-purchasing-server.ts) =====
 const PUR_MAX_LEAD = 365;
@@ -3506,8 +3542,19 @@ async function sync(req: any, res: any, me: any) {
       if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {
         // Notification de l'opérateur (M6.4) : début validé, mission validée ou refusée
         const k = pushKindFor(existing.status, toSave.status);
-        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60), { go: 'active-post' }));
+        if (k && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], pushText(k, { post_number: toSave.post_number, title: toSave.client_name, reason: toSave.rejection_reason }), `${k}:${rec.id}`.slice(0, 60), { go: 'active-post' }, 'missions'));
       }
+      // Notifications externes (partie 2a) : ce que la cloche montre arrive aussi hors de l'appli, avec le lien exact ; jamais de montant ni de texte de message
+      if (col === 'posts' && !admin && toSave && (toSave.status === 'pending_start' || toSave.status === 'pending_end') && (!existing || existing.status !== toSave.status)) {
+        const kind: NotifyKind = toSave.status === 'pending_start' ? 'val_start' : 'val_end';
+        pushJobs.push(pushAdmins(notifyCat(kind), notifyText(kind, { name: toSave.employee_name, client: toSave.client_name }), `${kind}:${rec.id}`.slice(0, 60), { go: 'validations', filter: toSave.status === 'pending_start' ? 'starts' : 'ends', nav: `val-post-${rec.id}` }));
+      }
+      if (col === 'advances' && toSave) {
+        if (!existing && !admin && toSave.status === 'pending') pushJobs.push(pushAdmins('validations', notifyText('advance_new', { name: toSave.employee_name }), `adv_new:${rec.id}`.slice(0, 60), { go: 'validations', filter: 'advances', nav: `val-adv-${rec.id}` }));
+        else if (existing && existing.status === 'pending' && (toSave.status === 'approved' || toSave.status === 'rejected') && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], notifyText(toSave.status === 'approved' ? 'advance_ok' : 'advance_no', { reason: toSave.admin_notes }), `adv_${toSave.status}:${rec.id}`.slice(0, 60), { go: 'advances', nav: `adv-${rec.id}` }, 'advances'));
+      }
+      if (col === 'securityLogs' && !existing && toSave) pushJobs.push(pushAdmins('security', notifyText('security', { name: toSave.employee_name }), `sec:${rec.id}`.slice(0, 60), { go: 'security', nav: `sec-${rec.id}` }));
+      if (col === 'messages' && !existing && toSave && toSave.sender_id) pushJobs.push(pushMessage(toSave));
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
 
@@ -3726,7 +3773,7 @@ async function postDecide(req: any, res: any, me: any) {
   if (plan.contract && cRow) await sb.from(T.contracts).upsert({ id: cRow.id, data: plan.contract, updated_at: now });
   if (plan.employee) await sb.from(T.users).upsert({ id: plan.employee.id, data: plan.employee, updated_at: now });
   const k = pushKindFor(post.status, plan.post.status);
-  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60), { go: 'active-post' });
+  if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60), { go: 'active-post' }, 'missions');
   await auditLog(me, 'mission_decision', { type: 'posts', id, label: `${auditLabelOf(owner)} · ${post.client_name || post.post_number || id}` }, plan.kind === 'refused' ? `Refusée : ${plan.post.rejection_reason}` : plan.kind === 'start_ok' ? 'Début validé' : 'Mission validée');
   return res.json({ ok: true, kind: plan.kind });
 }
@@ -3813,6 +3860,7 @@ async function profileRequest(req: any, res: any, me: any) {
     },
     updated_at: new Date().toISOString(),
   });
+  await later(pushAdmins('validations', notifyText('profile', { name: me.name }), `profile:${id}`.slice(0, 60), { go: 'validations', filter: 'profiles', nav: `val-prf-${id}` }));
   return res.json({ ok: true });
 }
 
@@ -3869,6 +3917,7 @@ async function forgot(req: any, res: any) {
         },
         updated_at: new Date().toISOString(),
       });
+      await later(pushAdmins('validations', notifyText('reset', { name: user.name }), `reset:${id}`.slice(0, 60), { go: 'validations', filter: 'resets', nav: `val-rst-${id}` }));
     }
   }
   // Même réponse dans tous les cas : on ne révèle pas quels pseudos existent
@@ -3932,6 +3981,7 @@ async function signup(req: any, res: any) {
     data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(), ip_hash: ipHash, note: noteOf(req.body) },
     updated_at: new Date().toISOString(),
   });
+  await later(pushAdmins('validations', notifyText('signup', { name }), `signup:${id}`.slice(0, 60), { go: 'validations', filter: 'signups', nav: `val-sig-${id}` }));
   return res.json({ ok: true });
 }
 
@@ -4910,19 +4960,32 @@ async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: st
   } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120)); return 'fail'; }
 }
 // Prévient des personnes (tous leurs appareils). Rend le nombre d'envois réussis ; ne plante jamais.
-async function pushTo(userIds: string[], text: PushText, tag: string, link?: DeepLink): Promise<number> {
+async function pushTo(userIds: string[], text: PushText, tag: string, link?: DeepLink, cat?: PushCat): Promise<number> {
   try {
     const ids = [...new Set(userIds.map(String))];
     if (!ids.length) return 0;
     const keys = await pushKeys();
     if (!keys) return 0;
     const { data: rows } = await sb.from(PUSH_SUBS).select('id,data').in('data->>user_id', ids);
-    const subs = (rows || []) as any[];
+    const subs = ((rows || []) as any[]).filter(r => !(cat && Array.isArray(r.data?.off) && r.data.off.includes(cat))); // la catégorie coupée sur cet appareil n'y arrive pas
     const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: link ? deepLinkUrl(link) : '/', tag }, keys) })));
     const dead = results.filter(x => x.res === 'gone').map(x => x.id);
     if (dead.length) await sb.from(PUSH_SUBS).delete().in('id', dead);
     return results.filter(x => x.res === 'ok').length;
   } catch (e) { console.error('pushTo error:', String((e as any)?.message || e).slice(0, 120)); return 0; }
+}
+// Prévient tous les responsables (leurs appareils où la catégorie n'est pas coupée)
+async function pushAdmins(cat: PushCat, text: PushText, tag: string, link: DeepLink): Promise<number> {
+  const { data: us } = await sb.from(T.users).select('id').eq('data->>role', 'admin');
+  return await pushTo((us || []).map((r: any) => String(r.id)), text, tag, link, cat);
+}
+// Message reçu : le destinataire, ou tout le monde sauf l'auteur pour le groupe général (comme la cloche) ; le texte du message n'est jamais envoyé
+async function pushMessage(m: any): Promise<number> {
+  const group = !m.recipient_id || m.recipient_id === 'all';
+  let ids: string[] = [];
+  if (group) { const { data: us } = await sb.from(T.users).select('id,data'); ids = (us || []).filter((r: any) => String(r.id) !== String(m.sender_id) && r.data?.status !== 'blocked').map((r: any) => String(r.id)); }
+  else if (String(m.recipient_id) !== String(m.sender_id)) ids = [String(m.recipient_id)];
+  return await pushTo(ids, notifyText('message', { name: m.sender_name, group }), `msg:${m.id}`.slice(0, 60), { go: 'chat', thread: group ? 'all' : String(m.sender_id) }, 'messages');
 }
 // Un résultat envoyé « en arrière-plan » quand c'est possible, pour ne pas ralentir la réponse
 function later(p: Promise<unknown>): Promise<unknown> { const rt = (globalThis as any).EdgeRuntime; if (rt && typeof rt.waitUntil === 'function') { rt.waitUntil(p); return Promise.resolve(); } return p; }
@@ -4945,8 +5008,23 @@ async function pushSubscribeRoute(req: any, res: any, me: any) {
   const id = subId(sub.endpoint);
   const { data: mine } = await sb.from(PUSH_SUBS).select('id').eq('data->>user_id', me.id);
   if ((mine || []).filter((r: any) => r.id !== id).length >= PUSH_MAX_SUBS) return res.status(400).json({ error: `${PUSH_MAX_SUBS} appareils au maximum. Désactive les notifications sur un autre appareil.` });
-  await sb.from(PUSH_SUBS).upsert({ id, data: { user_id: me.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, created: new Date().toISOString() }, updated_at: new Date().toISOString() });
+  const { data: prev } = await sb.from(PUSH_SUBS).select('data').eq('id', id).maybeSingle();
+  const off = cleanPushOff((prev as any)?.data?.off); // se réabonner ne remet pas les interrupteurs à zéro
+  await sb.from(PUSH_SUBS).upsert({ id, data: { user_id: me.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, created: new Date().toISOString(), ...(off.length ? { off } : {}) }, updated_at: new Date().toISOString() });
   return res.json({ ok: true });
+}
+// Interrupteurs par catégorie, appareil par appareil : { endpoint, off? } ; sans « off » on lit seulement ; l'appareil doit appartenir à la personne
+async function pushPrefsRoute(req: any, res: any, me: any) {
+  const endpoint = typeof req.body?.endpoint === 'string' ? req.body.endpoint : '';
+  if (!endpoint || endpoint.length > 2000) return res.status(400).json({ error: 'Appareil invalide.' });
+  const id = subId(endpoint);
+  const { data: row } = await sb.from(PUSH_SUBS).select('data').eq('id', id).maybeSingle();
+  if (!row || (row as any).data?.user_id !== me.id) return res.status(404).json({ error: 'Appareil inconnu.' });
+  if (req.body?.off === undefined) return res.json({ ok: true, off: cleanPushOff((row as any).data?.off) });
+  const off = cleanPushOff(req.body.off);
+  const next = { ...(row as any).data }; delete next.off; if (off.length) next.off = off;
+  await sb.from(PUSH_SUBS).upsert({ id, data: next, updated_at: new Date().toISOString() });
+  return res.json({ ok: true, off });
 }
 async function pushUnsubscribeRoute(req: any, res: any, me: any) {
   const ep = typeof req.body?.endpoint === 'string' ? req.body.endpoint.trim().slice(0, 600) : '';
@@ -5078,7 +5156,7 @@ async function pushDue(request: Request, res: any) {
     const seenSet = new Set((seen || []).map((r: any) => r.id));
     for (const r of reminders) {
       if (seenSet.has(r.key)) continue;
-      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60), { go: 'grid', nav: `mission-${r.post_number}` });
+      const n = await pushTo([...r.user_ids, ...(r.admins ? adminIds : [])], pushText(r.kind, { post_number: r.post_number, title: r.title, due: r.due }), r.key.slice(0, 60), { go: 'grid', nav: `mission-${r.post_number}` }, 'missions');
       if (n > 0) { await sb.from(PUSH_LOG).upsert({ id: r.key, data: { at: new Date().toISOString(), kind: r.kind, sent: n }, updated_at: new Date().toISOString() }); sent += n; done++; }
     }
   }
@@ -5262,6 +5340,7 @@ Deno.serve(async (request: Request) => {
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
     if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);
+    if (action === "push-prefs" && req.method === "POST") return await pushPrefsRoute(req, res, me);
     if (action === "push-unsubscribe" && req.method === "POST") return await pushUnsubscribeRoute(req, res, me);
     if (action === "push-test" && req.method === "POST") return await pushTestRoute(req, res, me);
     if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);

@@ -481,7 +481,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -629,6 +629,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
+| `pushEvents.ts` | Notifications externes (push), partie 2a : les événements de la cloche, envoyés aussi hors de l'appli. Règles pures, sans réseau. |
 | `pushRules.ts` | Notifications push (module 6, M6.4) : règles pures, sans réseau. Contrôlé par `npm run check:push`. |
 | `quotes.ts` | Règles des DEVIS (module 2, M2.9). Fonctions pures, sans écran ni serveur. Copiées dans le bloc QUOTES de supabase/functions/df-api/index.ts |
 | `receivables.ts` | Créances et relances (module 2, M2.7) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:receivables`. |
@@ -805,6 +806,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:stock-links` | Contrôle des liens exacts du Stockage (alertes, Santé du site, cloche) et du clignotement de 1,5 s. Sans réseau, sans écran. |
 | `npm run check:alert-links` | Contrôle des liens exacts de TOUTES les alertes et notifications (au-delà du Stockage) et de l'animation unique de 1,5 s. |
 | `npm run check:deep-link` | Contrôle du lien exact des notifications externes (push) : adresse construite par le serveur = lue par l'appli. Sans réseau, sans écran. |
+| `npm run check:push-events` | Contrôle des notifications externes, partie 2a : textes, catégories, interrupteurs et événements. Site = serveur. Sans réseau. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |

@@ -76,6 +76,7 @@
     "check:stock-links": "npx --yes tsx scripts/check-stock-links.ts",
     "check:alert-links": "npx --yes tsx scripts/check-alert-links.ts",
     "check:deep-link": "npx --yes tsx scripts/check-deep-link.ts",
+    "check:push-events": "npx --yes tsx scripts/check-push-events.ts",
     "check:speed": "npx --yes tsx scripts/check-speed.ts",
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
