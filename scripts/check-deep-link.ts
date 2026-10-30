@@ -21,7 +21,7 @@ const srv = new Function(`${transformSync(m![1], { loader: 'ts' }).code}\nreturn
 const cases: [string, any][] = [
   ['page seule', { go: 'advances' }], ['page + élément', { go: 'advances', nav: 'adv-x2' }], ['mission', { go: 'grid', nav: 'mission-12' }],
   ['validations', { go: 'validations', filter: 'ends', nav: 'val-post-7' }], ['rapport', { go: 'stats', tab: 'report' }],
-  ['stock', { go: 'storage', space: 's2', sfilter: 'empty', product: 'p9' }], ['identifiant avec : et .', { go: 'health', nav: 'a:b.c-d_e' }],
+  ['stock', { go: 'storage', space: 's2', sfilter: 'empty', product: 'p9' }], ['messagerie (groupe)', { go: 'chat', thread: 'all' }], ['messagerie (discussion)', { go: 'chat', thread: 'u-12' }], ['discussion piégée', { go: 'chat', thread: 'a b' }], ['identifiant avec : et .', { go: 'health', nav: 'a:b.c-d_e' }],
   ['page fausse', { go: 'Pas Valable' }], ['page vide', { go: '' }], ['page absente', {}], ['null', null], ['page en majuscules', { go: 'ADMIN' }],
   ['valeur piégée', { go: 'advances', nav: 'x" onload="evil()' }], ['adresse externe', { go: 'advances', nav: '//evil.com/x' }], ['trop long', { go: 'advances', nav: 'a'.repeat(200) }],
   ['espaces', { go: 'advances', nav: 'a b' }], ['champ en trop', { go: 'advances', extra: 'x' }], ['nombre', { go: 'advances', nav: 5 }],
@@ -41,6 +41,7 @@ ok(D.parseDeepLinkUrl('/?go=chat&nav=x1')?.nav === 'x1' && D.parseDeepLinkUrl('/
 D.captureDeepLink();
 ok(g.__url === '/?diag=1#a', 'ouverture : le lien est retiré de l\'adresse (les autres paramètres restent, un rechargement ne le rejoue pas)');
 const taken = D.takeDeepLink();
+ok(D.parseDeepLink('?go=chat&th=u-12')?.thread === 'u-12' && D.deepLinkUrl({ go: 'chat', thread: 'u-12' }) === '/?go=chat&th=u-12', 'messagerie : la discussion à ouvrir est lue et écrite (th)');
 ok(!!taken && taken.go === 'advances' && taken.nav === 'adv-x2' && taken.filter === 'ends' && taken.space === 's2' && taken.sfilter === 'empty' && taken.product === 'p9', 'ouverture : tous les champs sont lus');
 ok(D.takeDeepLink() === null, 'ouverture : le lien n\'est appliqué qu\'une fois');
 ok(D.deepLinkAllowed('admin', 'storage') && D.deepLinkAllowed('admin', 'validations') && D.deepLinkAllowed('admin', 'advances'), 'rôles : le responsable ouvre les pages du menu');

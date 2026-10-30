@@ -45,9 +45,10 @@ h = html(<ConnectionChip />);
 ok(/data-testid="chip-locked"/.test(h) && /verrouillée/.test(h), 'copie verrouillée : pastille correspondante');
 ok(/<button/.test(h) && /aria-label=/.test(h) && /title=/.test(h), 'pastille cliquable (bouton) avec nom accessible et infobulle');
 
-// ----- le bandeau du bas ne garde que « Hors ligne » -----
+// ----- le bandeau du bas est retiré (la relance automatique reste, sans rien afficher) -----
 setState({ down: true, unsent: 2 });
-ok(/data-testid="banner-offline"/.test(html(<ConnectionBanner />)), 'bandeau du bas : « Hors ligne » toujours là, avec ses explications');
+ok(html(<ConnectionBanner />) === '', 'bandeau du bas RETIRÉ (2026-10-29) : hors ligne, plus aucun rectangle jaune affiché');
+ok(/data-testid="chip-offline"/.test(html(<ConnectionChip />)), 'hors ligne : la pastille du header reste le seul indicateur visible');
 setState({ review: 2 });
 ok(html(<ConnectionBanner />) === '', 'bandeau du bas : plus de bandeau « À revoir » (il est dans le header)');
 setState({ locked: true });
@@ -57,6 +58,12 @@ reset();
 // ----- branchement et code -----
 const src = read('src/components/ConnectionBanner.tsx'), top = read('src/components/TopBar.tsx');
 ok(/<ConnectionChip \/>/.test(top) && /import \{ ConnectionChip \} from '\.\/ConnectionBanner'/.test(top), 'le header (TopBar) affiche la pastille');
+const app = read('src/App.tsx');
+const bannerPart = src.slice(src.indexOf('export const ConnectionBanner'), src.indexOf('export const ConnectionChip'));
+ok(/<ConnectionBanner \/>/.test(app), 'le composant du bas reste monté dans l\'application (c\'est lui qui relance les envois)');
+ok(/useConnectionModel\(true\);\s*return null;/.test(bannerPart), 'le composant du bas appelle la relance automatique (useConnectionModel(true)) et n\'affiche rien');
+ok(!/banner-offline|Réessayer|Nouvelle tentative dans|<button/.test(bannerPart), 'le composant du bas ne contient plus ni texte, ni bouton « Réessayer », ni compte à rebours affiché');
+ok(/setInterval\(/.test(src) && /db\.retryNow\(\)/.test(src) && /addEventListener\('online'/.test(src), 'la relance automatique (toutes les N secondes et au retour du réseau) est gardée');
 ok(/useConnectionModel\(true\)/.test(src) && /useConnectionModel\(false\)/.test(src) && /if \(!down \|\| !withCountdown\) return;/.test(src) && /if \(withCountdown\) db\.retryNow\(\)/.test(src), 'une seule des deux vues relance l\'envoi (la pastille ne double pas les tentatives)');
 ok(/data-testid="chip-done"/.test(src) && /Tout est envoyé/.test(src) && /Everything is sent/.test(src), '« Tout est envoyé » existe dans la pastille, en français et en anglais');
 ok(['offline', 'sending', 'review', 'locked', 'done'].every(k => new RegExp(`${k}: \\{ cls:`).test(src)), 'les 5 états ont leur apparence dans la pastille');

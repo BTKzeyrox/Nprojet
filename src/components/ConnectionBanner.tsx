@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { WifiOff, RefreshCw, CheckCircle2, Send, AlertTriangle, Lock } from 'lucide-react';
+import { WifiOff, CheckCircle2, Send, AlertTriangle, Lock } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { bannerModel } from '../utils/offlineText';
 import { openOfflineCenter } from './OfflineCenter';
 
-// État de la connexion, partagé entre le bandeau du bas (hors ligne, avec ses explications et « Réessayer ») et la pastille du header (tous les états :
+// État de la connexion, partagé entre le composant invisible du bas (qui relance les envois ; son bandeau jaune est retiré) et la pastille du header (tous les états :
 // « Hors ligne », « Envoi en cours », « À revoir », « Copie verrouillée », puis « Tout est envoyé »). Un seul modèle, choisi par `bannerModel` (offlineText.ts).
-// `withCountdown` : seul le bandeau du bas fait le compte à rebours et relance l'envoi (sinon la pastille doublerait les tentatives).
+// `withCountdown` : seul le composant du bas fait le compte à rebours et relance l'envoi (sinon la pastille doublerait les tentatives).
 export function useConnectionModel(withCountdown: boolean) {
   const { lang } = useApp();
   const [down, setDown] = useState(false);
@@ -70,30 +70,12 @@ export function useConnectionModel(withCountdown: boolean) {
   return { m, un, st, isDown, left, setLeft, retry, lang };
 }
 
-/** Bandeau du bas : seulement « Hors ligne » (avec son explication, le compte à rebours et « Réessayer »). Les autres états sont dans la pastille du header. */
+/** Le bandeau jaune du bas (« Hors ligne », explication, compte à rebours, « Réessayer ») est RETIRÉ (2026-10-29, demande de BTK). Le composant reste monté dans App.tsx
+ *  parce que `useConnectionModel(true)` fait le travail invisible : la relance automatique des envois (toutes les `retry_seconds` secondes) et la relance au retour du réseau.
+ *  L'état hors ligne reste visible dans la pastille du header (ConnectionChip), qui ouvre le centre hors ligne. */
 export const ConnectionBanner: React.FC = () => {
-  const { m, un, st, left, setLeft, retry, lang } = useConnectionModel(true);
-  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  if (m.kind !== 'offline') return null;
-
-  const box = 'fixed left-1/2 -translate-x-1/2 bottom-[calc(12px+env(safe-area-inset-bottom,0px))] z-[90] max-w-[92vw] rounded-2xl border px-3 py-2 flex items-center gap-2.5 shadow-2xl text-xs sm:text-sm';
-  const small = 'rounded-xl px-2 py-1 font-bold flex items-center gap-1 cursor-pointer shrink-0 text-white';
-  if (m.kind === 'offline') {
-    return (
-      <div role="status" aria-live="polite" className={`${box} bg-amber-950 border-amber-500/70 text-amber-100`} data-testid="banner-offline">
-        <WifiOff className="w-4 h-4 shrink-0 text-amber-400" />
-        <div className="min-w-0">
-          <div className="font-semibold">{m.text}</div>
-          {m.hint && <div className="text-[11px] text-amber-200/90 leading-snug">{m.hint}</div>}
-          {!db.isDemoCut() && <div className="text-[11px] text-amber-200/70">{t(`Nouvelle tentative dans ${left} s`, `Next try in ${left} s`)}</div>}
-        </div>
-        <div className="flex flex-col gap-1 shrink-0">
-          {(un.count > 0 || st.review.length > 0 || st.locked) && <button type="button" onClick={() => openOfflineCenter(un.count > 0 || st.locked ? 'pending' : 'review')} className={`${small} bg-slate-700 hover:bg-slate-600`}>{t('Voir', 'View')}</button>}
-          {!db.isDemoCut() && <button type="button" onClick={() => { db.retryNow(); setLeft(retry); }} className={`${small} bg-amber-600 hover:bg-amber-500`}><RefreshCw className="w-3.5 h-3.5" />{t('Réessayer', 'Retry')}</button>}
-        </div>
-      </div>
-    );
-  }
+  useConnectionModel(true);
+  return null;
 };
 
 /** Pastille du header : l'état de l'envoi en un coup d'œil, tous états confondus ; la toucher ouvre le centre « hors ligne ». */

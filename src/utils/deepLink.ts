@@ -1,22 +1,22 @@
 // Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche.
-// Format : /?go=<page>&tab=…&f=<filtre Validations>&nav=<élément>&sp=<stockage>&sf=<filtre Stock>&pr=<produit>
+// Format : /?go=<page>&tab=…&f=<filtre Validations>&nav=<élément>&sp=<stockage>&sf=<filtre Stock>&pr=<produit>&th=<discussion>
 // Le serveur (bloc DEEP_LINK de df-api) construit les mêmes adresses ; `check:deep-link` compare les deux.
-import { setNavTarget } from './navTarget';
+import { setNavTarget, setChatThread } from './navTarget';
 import { setValFilterIntent, type ValFilter } from './navIntent';
 import { setStorageIntent, type StorageFilter } from './storageNav';
 import { setStatsTab, type StatsTab } from './statsNav';
 import { isKnownView } from './health/menu';
 
-export interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
+export interface DeepLink { go: string; tab?: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string; thread?: string }
 const RE_VIEW = /^[a-z][a-z-]{0,29}$/;
 const RE_ID = /^[A-Za-z0-9_:.-]{1,80}$/;
-const FIELDS: [keyof DeepLink, string][] = [['go', 'go'], ['tab', 'tab'], ['filter', 'f'], ['nav', 'nav'], ['space', 'sp'], ['sfilter', 'sf'], ['product', 'pr']];
+const FIELDS: [keyof DeepLink, string][] = [['go', 'go'], ['tab', 'tab'], ['filter', 'f'], ['nav', 'nav'], ['space', 'sp'], ['sfilter', 'sf'], ['product', 'pr'], ['thread', 'th']];
 
 /** Ne garde que des valeurs sûres (pages et identifiants simples). Pas de page = pas de lien. */
 export function cleanDeepLink(x: Partial<DeepLink> | null | undefined): DeepLink | null {
   if (!x || typeof x.go !== 'string' || !RE_VIEW.test(x.go)) return null;
   const out: DeepLink = { go: x.go };
-  for (const k of ['tab', 'filter', 'nav', 'space', 'sfilter', 'product'] as const) { const v = x[k]; if (typeof v === 'string' && RE_ID.test(v)) out[k] = v; }
+  for (const k of ['tab', 'filter', 'nav', 'space', 'sfilter', 'product', 'thread'] as const) { const v = x[k]; if (typeof v === 'string' && RE_ID.test(v)) out[k] = v; }
   return out;
 }
 export function deepLinkUrl(link: DeepLink): string {
@@ -58,6 +58,7 @@ export function applyDeepLink(link: DeepLink, navigate: (view: string) => void):
   if (link.go === 'stats' && link.tab) setStatsTab(link.tab as StatsTab);
   if (link.filter) setValFilterIntent(link.filter as ValFilter);
   if (link.go === 'storage' && (link.space || link.sfilter || link.product)) setStorageIntent({ space: link.space, filter: link.sfilter as StorageFilter | undefined, product: link.product });
+  if (link.go === 'chat' && link.thread) setChatThread(link.thread);
   if (link.nav) setNavTarget(link.nav);
   navigate(link.go);
 }

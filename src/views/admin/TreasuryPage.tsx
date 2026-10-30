@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Landmark } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { periodRange, shiftAnchor, todayMada } from '../../utils/stats';
 import { FinanceTab } from './FinanceTab';
+import { TreasuryCharts } from './TreasuryCharts';
 
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -28,6 +29,7 @@ export const TreasuryPage: React.FC = () => {
         <div data-notranslate="" className="text-base sm:text-lg font-bold text-white capitalize truncate">{label}</div>
         <button type="button" aria-label={l === 'en' ? 'Next month' : 'Mois suivant'} disabled={atPresent} onClick={() => setAnchor(shiftAnchor('month', anchor, 1))} className={nav}><ChevronRight className="w-5 h-5" /></button>
       </div>
+      <TreasuryCharts range={{ start: range.start, end: range.end }} lang={l} />
       <FinanceTab range={{ start: range.start, end: range.end }} lang={l} salariesAr={0} advancesAr={0} moneyOnly />
     </div>
   );

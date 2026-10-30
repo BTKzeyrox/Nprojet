@@ -38,6 +38,8 @@ export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'accounting', 'treasury', '
 export const TEAM_LEAD_VIEWS = ['feed', 'validations', 'chat', 'settings'] as const;
 /** Le Comptable et le Chef d'équipe ne peuvent ouvrir que leurs pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
 export const viewAllowedFor = (role: unknown, view: string): boolean => role === 'accountant' ? (ACCOUNTANT_VIEWS as readonly string[]).includes(view) : role === 'team_lead' ? (TEAM_LEAD_VIEWS as readonly string[]).includes(view) : true;
+/** « Voir comme » du responsable : l'écran d'un type de compte (affichage seulement). */
+export type ViewAs = Role;
 export const ROLE_NAMES: Record<Role, [string, string]> = {
   admin: ['Responsable', 'Manager'], accountant: ['Comptable', 'Accountant'], team_lead: ["Chef d'équipe", 'Team lead'], employee: ['Opérateur', 'Operator'],
 };

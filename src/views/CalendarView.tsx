@@ -27,7 +27,7 @@ import {
   ClipboardList,
   X, CalendarOff } from 'lucide-react';
 import { leaveOn, LEAVE_TYPE_LABELS, type Leave } from '../utils/leaves';
-import { firstActivityOf, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
+import { firstActivityOf, empMonth, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
 import { liveStatus } from '../utils/presenceStatus';
 import { formatDuration } from '../utils/presence';
 import { useNow } from '../utils/useNow';
@@ -76,6 +76,18 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   return <Circle className={c} />;
 };
 
+/** Dans une case de jour : seulement ces icônes colorées (celles de la légende) avec un chiffre, sans texte. Le reste est dans la fenêtre du jour. */
+const CELL_STATUSES: DayStatus[] = ['objective_reached', 'late', 'in_progress', 'test', 'absent', 'leave'];
+const CHIP_CLS: Record<string, string> = {
+  objective_reached: 'bg-emerald-500/20 text-emerald-600', late: 'bg-amber-500/20 text-amber-600', in_progress: 'bg-cyan-500/20 text-cyan-600',
+  test: 'bg-purple-500/20 text-purple-600', absent: 'bg-red-500/20 text-red-600', leave: 'bg-sky-500/20 text-sky-600',
+};
+const StatusChip: React.FC<{ status: DayStatus; n: number }> = ({ status, n }) => (
+  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${CHIP_CLS[status] || ''}`} title={STATUS_META[status].label} aria-label={`${STATUS_META[status].label} : ${n}`}>
+    <StatusIcon status={status} className="w-3 h-3" />{n}
+  </span>
+);
+
 // ============================ CALENDRIER GLOBAL (tous les employés) : mois, résumé, jour ============================
 type GView = 'month' | 'summary' | 'day';
 interface GlobalCalProps {
@@ -107,6 +119,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
     return () => { alive = false; };
   }, [day]);
   const leaveLabel = (t: string | null) => (t ? (LEAVE_TYPE_LABELS as Record<string, [string, string]>)[t]?.[lang === 'en' ? 1 : 0] || t : '');
+  const due = db.getContracts().filter(c => c.due_date === day && !(c.target_score > c.initial_score && (c.current_score ?? c.initial_score) >= c.target_score)).length; // missions à rendre ce jour (pas dans la case : trop de contenu)
   const nbPresent = rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status)).length;
   return (
     <div className="space-y-2" data-testid="gcal-dayview">
@@ -118,6 +131,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
         </div>
         <button type="button" onClick={() => setDay(addDay(day, 1))} className={st.roundBtn} aria-label="Jour suivant"><ChevronRight className="w-5 h-5" /></button>
       </div>
+      {due > 0 && <div className={`${card} px-3 py-2 text-xs ${sub}`} data-testid="day-due">Missions à rendre ce jour : <strong className={txt}>{due}</strong></div>}
       <div className="flex justify-end">
         <button type="button" onClick={() => onSelectDay(day, posts.filter(p => p.date === day))} className={pill(false)}>Détail des missions du jour</button>
       </div>
@@ -199,15 +213,9 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
                   onClick={() => setPopDay(g.dateStr)}
                   className={`min-h-[64px] sm:min-h-[100px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 text-left transition-all hover:shadow-md ${TINT[dom]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}>
                   <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center self-start ${isToday ? 'bg-blue-600 text-white' : txt}`}>{g.day}</span>
-                  <span className="flex flex-wrap gap-0.5 sm:gap-1">
-                    {g.present > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-500/20 text-emerald-500" title="Présents" aria-label={`${g.present} présents`}><UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.present}</span>}
-                    {g.late > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-500/20 text-amber-500" title="En retard" aria-label={`${g.late} en retard`}><Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.late}</span>}
-                    {g.absent > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-red-500/20 text-red-500" title="Absents" aria-label={`${g.absent} absents`}><UserX className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.absent}</span>}
-                    {g.onLeave > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-sky-500/20 text-sky-500" title="En congé" aria-label={`${g.onLeave} en congé`}><CalendarOff className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.onLeave}</span>}
-                    {g.pendingLeave > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border border-dashed border-sky-500 text-sky-500" title="Demandes de congé en attente" aria-label={`${g.pendingLeave} demandes de congé en attente`}><Hourglass className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.pendingLeave}</span>}
-                    {g.missions > 0 && <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`} title="Missions" aria-label={`${g.missions} missions`}><ClipboardList className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{g.missions}</span>}
+                  <span className="flex flex-wrap gap-0.5 sm:gap-1" data-cal-chips>
+                    {CELL_STATUSES.filter(k => g.counts[k] > 0).map(k => <StatusChip key={k} status={k} n={g.counts[k]} />)}
                   </span>
-                  {g.pay > 0 && <span className="hidden sm:block text-[11px] font-bold text-emerald-600">{ar(g.pay)}</span>}
                 </button>
               );
             })}
@@ -429,6 +437,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
 
   const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} Ar`;
 
+  // Calendrier d'UN employé : mêmes pastilles que le calendrier global ; un clic ouvre la fenêtre du jour (flèches jour précédent / suivant)
+  const [popDay, setPopDay] = useState<string | null>(null);
+  const nowMs = useNow(15000);
+  const empCtx = useMemo(() => ({ posts, leaves: leaves as Leave[], today, cfg, clientFilter }), [posts, leaves, today, cfg, clientFilter]);
+  const empDays = useMemo(() => (activeId ? empMonth(year, month, activeId, empCtx, firstActivity) : []), [activeId, year, month, empCtx, firstActivity]);
+  useLockBodyScroll(popDay !== null);
+  useEffect(() => {
+    if (!popDay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPopDay(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [popDay]);
+
   // ---- Style : cartes arrondies, pastilles, jours en tuiles
   const card = `rounded-3xl border ${L ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1b2d] border-slate-700/60'}`;
   const txt = L ? 'text-slate-900' : 'text-white';
@@ -626,28 +647,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                     <div
                       key={d.dateStr}
                       data-nav={`day-${d.dateStr}`}
-                      onClick={() => onSelectDay(d.dateStr, d.shifts)}
+                      data-testid={`ecal-day-${d.dateStr}`}
+                      onClick={() => setPopDay(d.dateStr)}
                       className={`min-h-[56px] sm:min-h-[92px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 transition-all hover:shadow-md ${TINT[d.status]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center ${isToday ? 'bg-blue-600 text-white' : txt}`}>{d.day}</span>
-                        <span className={`${STATUS_META[d.status].color} ${d.status === 'in_progress' ? 'animate-pulse' : ''} ${d.status === 'no_post' ? 'opacity-30' : ''}`} title={STATUS_META[d.status].label}>
-                          <StatusIcon status={d.status} className="w-3.5 h-3.5" />
+                      <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center self-start ${isToday ? 'bg-blue-600 text-white' : txt}`}>{d.day}</span>
+                      {d.status !== 'no_post' && (
+                        <span className="flex flex-wrap gap-0.5 sm:gap-1" data-cal-chips>
+                          <StatusChip status={d.status} n={['objective_reached', 'in_progress', 'test'].includes(d.status) ? Math.max(1, d.shifts.length) : 1} />
                         </span>
-                      </div>
-                      {dueByDay.get(d.dateStr) ? (
-                        <div data-notranslate="" className={`self-start text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${d.dateStr < today ? 'bg-red-500/15 text-red-400 border-red-500/40' : 'bg-amber-500/15 text-amber-500 border-amber-500/40'}`} title={appLang === 'en' ? 'Missions due this day' : 'Missions à rendre ce jour'}>
-                          ⏰ {dueByDay.get(d.dateStr)} {appLang === 'en' ? 'due' : 'à rendre'}
-                        </div>
-                      ) : null}
-                      {d.shifts.length > 0 && (
-                        <>
-                          <div className={`self-start text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${L ? 'bg-white text-slate-700' : 'bg-white/10 text-slate-200'}`}>
-                            {d.shifts.length} mission{d.shifts.length > 1 ? 's' : ''}
-                          </div>
-                          {d.gained > 0 && <div className="hidden sm:block text-[11px] text-cyan-600 font-bold">+{formatScoreM(d.gained)}</div>}
-                          {isAdmin && (() => { const ar = d.shifts.filter(x => x.status === 'completed').reduce((a, x) => a + (x.calculated_ar || 0), 0); return ar > 0 ? <div className="text-[10px] sm:text-[11px] text-emerald-600 font-bold">{formatCurrencyAr(ar)}</div> : null; })()}
-                        </>
                       )}
                     </div>
                   );
@@ -657,6 +665,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
           )}
         </div>
       </div>
+      {popDay && activeUser && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={() => setPopDay(null)} data-testid="ecal-popup-backdrop">
+          <div role="dialog" aria-modal="true" aria-label={`Détail du ${popDay.split('-').reverse().join('/')}`} onClick={e => e.stopPropagation()}
+            className={`w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border p-3 sm:p-4 space-y-2 ${L ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`} data-testid="ecal-popup">
+            <div className="flex justify-end"><button type="button" onClick={() => setPopDay(null)} className={roundBtn} aria-label="Fermer" data-testid="ecal-popup-close"><X className="w-5 h-5" /></button></div>
+            <DayPanel day={popDay} setDay={setPopDay as (d: string) => void} list={[activeUser]} ctx={empCtx} first={firstActivity} today={today} posts={posts} lang={appLang === 'en' ? 'en' : 'fr'} nowMs={nowMs} ar={ar}
+              onSelectDay={(d, sh) => { setPopDay(null); onSelectDay(d, sh); }} onPickEmployee={() => undefined} st={{ L, card, txt, sub, TINT, pill, roundBtn }} />
+          </div>
+        </div>, document.body)}
     </div>
   );
 };

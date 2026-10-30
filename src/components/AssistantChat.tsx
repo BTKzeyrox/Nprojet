@@ -7,6 +7,7 @@ import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, pageLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
+import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
 import { setStorageIntent, type StorageIntent } from '../utils/storageNav';
@@ -31,6 +32,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
+  const mountedAt = useRef(Date.now()); // seuls les messages arrivés après l'ouverture jouent l'animation d'entrée
   const inflight = useRef(false); // garde synchrone : l'état `busy` arrive trop tard si on touche deux fois vite
   const lastQ = useRef<{ q: string; at: number }>({ q: '', at: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,16 +106,16 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2 ${area}`} aria-live="polite">
         {msgs.length === 0 && <p className={`text-sm text-center py-6 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Posez une question ou touchez un bouton. Je ne devine pas, je montre toujours d\'où viennent les chiffres, et je ne fais rien tout seul.', 'Ask a question or tap a button. I do not guess, I always show where figures come from, and I never act on my own.')}</p>}
         {msgs.map(m => m.who === 'me' ? (
-          <div key={m.id} className="ml-auto max-w-[85%] w-fit rounded-2xl rounded-br-md bg-emerald-700 text-white text-[15px] px-3.5 py-2 shadow-sm">{m.text}</div>
+          <div key={m.id} className={`ml-auto max-w-[85%] w-fit rounded-2xl rounded-br-md bg-emerald-700 text-white text-[0.8125rem] leading-relaxed px-3 py-1.5 shadow-sm ${m.at >= mountedAt.current ? 'df-msg-in-right' : ''}`}>{m.text}</div>
         ) : m.reply && (
-          <div key={m.id} className={`max-w-[92%] w-fit rounded-2xl rounded-bl-md border px-3.5 py-2 space-y-1.5 text-[15px] shadow-sm ${bubbleBot}`}>
+          <div key={m.id} className={`max-w-[92%] w-fit rounded-2xl rounded-bl-md border px-3 py-1.5 space-y-1.5 text-[0.8125rem] leading-relaxed shadow-sm ${bubbleBot} ${m.at >= mountedAt.current ? 'df-msg-in-left' : ''}`}>
             {(l === 'en' ? m.reply.title.en : m.reply.title.fr) && <div className="font-bold">{l === 'en' ? m.reply.title.en : m.reply.title.fr}</div>}
             {m.reply.lines.map((x, j) => <p key={j}>{l === 'en' ? x.en : x.fr}</p>)}
             {m.reply.actions.length > 0 && <div className="flex flex-wrap gap-2 pt-1">{m.reply.actions.map((a, j) => <button key={j} type="button" onClick={() => go(a.go)} className="min-h-[40px] px-3 rounded-lg border border-sky-500/60 bg-sky-600/20 hover:bg-sky-600/30 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer">{l === 'en' ? a.label.en : a.label.fr}<ChevronRight className="w-4 h-4" /></button>)}</div>}
             {(l === 'en' ? m.reply.sources.en : m.reply.sources.fr) && <p className={`text-[11px] ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Source : ', 'Source: ')}{l === 'en' ? m.reply.sources.en : m.reply.sources.fr}</p>}
           </div>
         ))}
-        {busy && <div className={`w-fit rounded-2xl border px-3 py-2 text-sm ${bubbleBot}`} aria-label={t('L\'assistant écrit', 'Assistant is typing')}>…</div>}
+        {busy && <div className={`df-msg-in-left w-fit rounded-2xl rounded-bl-md border px-3 py-2 text-[0.8125rem] flex items-center gap-2 shadow-sm ${bubbleBot}`} role="status" aria-label={t('L\'assistant écrit', 'Assistant is typing')}><TypingDots /><span className={`text-[11px] ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('L\'assistant écrit…', 'Assistant is typing…')}</span></div>}
         <div ref={end} />
       </div>
       <div className={`px-3 pt-2 pb-3 border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`}>

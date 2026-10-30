@@ -8,11 +8,12 @@ const modal = r('src/components/CVViewerModal.tsx'), set = r('src/views/admin/Se
 ok(/data-profile-pill/.test(top) && /onClick=\{onOpenProfile\}/.test(top), 'en-tête : pastille profil cliquable');
 ok(!/isAdmin\s*&&[^\n]*data-profile-pill/.test(top), 'pastille non réservée à l\'admin (tous les rôles)');
 ok(/onOpenProfile=\{\(\) => setCvModalUser\(currentUser\)\}/.test(app), 'App : la pastille ouvre le profil de la vraie personne connectée');
-ok(/canSwitchMode=\{realIsAdmin\}/.test(app) && /onToggleOperatorMode/.test(app), 'App : vue opérateur donnée au formulaire de profil');
+ok(/onViewAs=/.test(app), 'App : « Voir comme » donné au formulaire de profil');
 ok(!/Vue opérateur|Retour responsable/.test(side) && !/df-sb-profile/.test(side), 'menu de gauche : plus de bloc profil ni de bouton Vue opérateur');
-ok(/role="switch"/.test(modal) && /Mode opérateur/.test(modal) && /aria-checked=\{operatorMode\}/.test(modal), 'formulaire : bascule « Mode opérateur »');
+ok(/data-view-as/.test(modal) && /Voir comme/.test(modal) && /'admin', 'employee', 'accountant', 'team_lead'/.test(modal), 'formulaire : « Voir comme » Responsable / Opérateur / Comptable / Chef d\'équipe');
+ok(/role: viewAs/.test(app) && /canSwitchMode=\{realIsAdmin\}/.test(app), 'App : l\'affichage suit le choix, réservé au vrai responsable');
 ok(!/Masquer le bouton|ModeSwitchSection|modeSwitchHidden/.test(modal + app) && !existsSync('src/utils/modeSwitch.ts'), 'plus de masquage du bouton (carte, procédure et réglage retirés)');
-ok(/canSwitchMode && onToggleOperatorMode/.test(modal), 'vue opérateur seulement pour le responsable');
+ok(/canSwitchMode && onViewAs/.test(modal), '« Voir comme » seulement pour le responsable');
 ok(!/ModeSwitchSection/.test(set), 'Réglages : pas de carte Mode responsable/opérateur');
 ok(/StatusPicker/.test(modal) && /PasswordForm/.test(modal) && /db\.setPassword/.test(modal), 'formulaire : statut + mot de passe');
 ok(/isSelf &&/.test(modal), 'statut et mot de passe seulement sur son propre profil');
