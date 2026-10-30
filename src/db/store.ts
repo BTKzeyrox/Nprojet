@@ -77,6 +77,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   price_per_mission: 5000,
   client_price_default_ar: 0, // à régler dans Réglages > Missions (0 = pas encore réglé)
   client_prices_by_type: {},
+  work_days: [1, 2, 3, 4, 5, 6],
   day_shift_start: '08:00',
   day_shift_end: '18:00',
   night_shift_start: '20:00',
@@ -2818,7 +2819,7 @@ export class AppStore {
   // Admin : accès d'un opérateur selon son shift (auto / toute heure / bloqué)
   public setAccessMode(userId: string, mode: 'auto' | 'allow' | 'block'): { success: boolean } {
     const user = this.users.find(u => u.id === userId);
-    if (!user || user.role !== 'employee') return { success: false };
+    if (!user || user.role === 'admin') return { success: false }; // le responsable n'est jamais limité
     if (mode === 'auto') delete user.access_mode;
     else user.access_mode = mode;
     this.notify();

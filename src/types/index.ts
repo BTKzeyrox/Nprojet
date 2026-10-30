@@ -28,6 +28,7 @@ export interface AppSettings {
   alert_unpaid_days?: number; // alerte « client qui n'a pas payé depuis X jours » (30 par défaut)
   team_lead_limit_ar?: number; // plafond du Chef d'équipe (M15.6) : au-dessus de ce prix client, la décision revient au responsable ; 0 = pas de plafond ; admin seulement
   alert_low_cash_ar?: number; // alerte « trésorerie basse » sous ce montant (0 par défaut = seulement si négative)
+  work_days?: number[]; // jours de travail : 0 = dimanche … 6 = samedi (défaut lundi à samedi)
   day_shift_start: string; // HH:MM
   day_shift_end: string;
   night_shift_start: string;

@@ -2595,15 +2595,37 @@ const inShiftWindow = (shift: 'day' | 'night', st: any, now: Date): boolean => {
   const m = (now.getUTCHours() * 60 + now.getUTCMinutes() + 180) % 1440;
   return from <= to ? m >= from && m < to : m >= from || m < to;
 };
-// Booster : « auto » = seulement pendant son shift ; « allow » = toute heure ; « block » = jamais.
+// ===== BEGIN WORKDAYS (jours de travail réglables ; copie de src/utils/workDays.ts, comparée par scripts/check-work-days.ts) =====
+const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5, 6];
+const cleanWorkDays = (v) => {
+  if (!Array.isArray(v)) return [...DEFAULT_WORK_DAYS];
+  const out = [...new Set(v.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b);
+  return out.length ? out : [...DEFAULT_WORK_DAYS];
+};
+const weekdayOf = (dateStr) => new Date(`${dateStr}T00:00:00Z`).getUTCDay();
+const isWorkDay = (dateStr, workDays) => cleanWorkDays(workDays).includes(weekdayOf(dateStr));
+// Jour de travail d'un instant : le shift de nuit commence la veille au soir, donc avant midi (heure de Madagascar) = jour précédent.
+const workDateOf = (shift, now) => {
+  const mada = new Date(now.getTime() + 3 * 3600 * 1000);
+  if (shift === 'night' && mada.getUTCHours() < 12) mada.setUTCDate(mada.getUTCDate() - 1);
+  return mada.toISOString().slice(0, 10);
+};
+// ===== END WORKDAYS =====
+// Opérateur, Comptable et Chef d'équipe (jamais le responsable) : « auto » = seulement pendant sa vacation ET un jour de travail ; « allow » = toute heure ; « block » = jamais.
 // Une session en cours (début ou fin à valider) garde l'accès jusqu'à sa fin.
 async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }> {
-  if (user.role !== 'employee') return { ok: true };
+  if (user.role === 'admin' || !['employee', 'accountant', 'team_lead'].includes(user.role)) return { ok: true };
   if (user.access_mode === 'block') return { ok: false, message: "Ton accès est bloqué par l'administrateur." };
   if (user.access_mode === 'allow') return { ok: true };
   const st = await getSettings();
   const shift: 'day' | 'night' = user.shift === 'night' ? 'night' : 'day';
-  if (inShiftWindow(shift, st, new Date())) return { ok: true };
+  const now = new Date();
+  if (inShiftWindow(shift, st, now)) {
+    if (isWorkDay(workDateOf(shift, now), st.work_days)) return { ok: true };
+    const { data: openRest } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
+    if (openRest && openRest.length) return { ok: true };
+    return { ok: false, message: "Aujourd'hui n'est pas un jour de travail. Si tu dois travailler, contacte l'administrateur." };
+  }
   const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
   if (open && open.length) return { ok: true };
   const from = shift === 'night' ? st.night_shift_start || '20:00' : st.day_shift_start || '08:00';

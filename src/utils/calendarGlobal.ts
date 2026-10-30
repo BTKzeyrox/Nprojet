@@ -3,6 +3,7 @@
 import type { AppSettings, DayStatus, PostSession, User } from '../types';
 import type { Leave, LeaveType } from './leaves';
 import { dayStatus } from './dayStatus';
+import { isWorkDay } from './workDays';
 import { toMin } from './attendance';
 
 export type LeaveFilter = 'all' | 'approved' | 'pending';
@@ -13,7 +14,7 @@ const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 export const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const OPEN = ['active', 'pending_start', 'pending_end'];
 const WORKED_STATUS: DayStatus[] = ['objective_reached', 'late', 'in_progress', 'test'];
-const isSunday = (dateStr: string) => { const [y, m, d] = dateStr.split('-').map(Number); return new Date(y, m - 1, d).getDay() === 0; };
+const isRestDay = (dateStr: string, workDays?: unknown) => !isWorkDay(dateStr, workDays); // jour de repos = jour non coché dans Réglages
 
 /** Première date d'activité de chaque employé (début du suivi des absences). */
 export function firstActivityOf(posts: PostSession[]): Record<string, string> {
@@ -94,7 +95,7 @@ export function globalSummary(year: number, month: number, emps: User[], ctx: Ca
       workedDays: days.filter(d => WORKED_STATUS.includes(d.status)).length,
       absences: days.filter(d => d.status === 'absent').length,
       lateDays: days.filter(d => d.status === 'late').length,
-      leaveDays: days.filter(d => d.status === 'leave' && !isSunday(d.dateStr)).length,
+      leaveDays: days.filter(d => d.status === 'leave' && !isRestDay(d.dateStr, (ctx.cfg as any).work_days)).length,
       missions: mine.length,
       validated: mine.filter(p => p.status === 'completed').length,
       refused: mine.filter(p => p.status === 'rejected').length,
@@ -106,7 +107,7 @@ export function globalSummary(year: number, month: number, emps: User[], ctx: Ca
   const myAdv = advances.filter(a => ids.has(a.employee_id) && a.request_date.startsWith(prefix));
   const advApproved = myAdv.filter(a => a.status === 'approved').reduce((a, x) => a + x.amount_ar, 0);
   const advPending = myAdv.filter(a => a.status === 'pending').reduce((a, x) => a + x.amount_ar, 0);
-  const pendingLeaveDays = emps.reduce((a, e) => a + empMonth(year, month, e.id, ctx, first).filter(d => d.pendingLeave && !isSunday(d.dateStr)).length, 0);
+  const pendingLeaveDays = emps.reduce((a, e) => a + empMonth(year, month, e.id, ctx, first).filter(d => d.pendingLeave && !isRestDay(d.dateStr, (ctx.cfg as any).work_days)).length, 0);
   const inProgress = ctx.posts.filter(p => ids.has(p.employee_id) && p.date.startsWith(prefix) && OPEN.includes(p.status) && (!ctx.clientFilter || ctx.clientFilter === 'all' || p.client_name === ctx.clientFilter)).length;
   const pay = sum(r => r.pay);
   return {

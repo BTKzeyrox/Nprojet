@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeLangControls } from '../../components/ThemeLangControls';
-import { Settings, Plus, X, Save, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
+import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
+import { cleanWorkDays, DAY_ORDER, DAY_NAMES_FR } from '../../utils/workDays';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { RestoreSection } from '../../components/RestoreSection';
@@ -233,6 +234,24 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           <label className={labelCls}>Tolérance de retard (minutes)</label>
           <input type="number" min={0} value={s.late_tolerance_min} onChange={e => set('late_tolerance_min', Number(e.target.value))} className={inputCls} />
         </div>
+      </section>
+      )}
+
+      {tab === 'team' && (
+      <section data-work-days className="bg-[#0f1722] border border-slate-700 p-4 space-y-3 rounded-2xl">
+        <h3 className="font-tactical font-bold text-white flex items-center gap-2"><CalendarDays className="w-4 h-4 text-emerald-400" />Jours de travail</h3>
+        <p className="text-[11px] text-slate-400">Coche les jours où l'équipe travaille. Un jour décoché est un jour de repos : pas d'absence ni de retard, et les opérateurs, comptables et chefs d'équipe ne peuvent pas se connecter (sauf accès « toute heure » ou autorisation du responsable). Un travail fait un jour de repos est quand même compté.</p>
+        <div className="grid grid-cols-7 gap-1.5">
+          {DAY_ORDER.map(d => {
+            const on = cleanWorkDays(s.work_days).includes(d);
+            return (
+              <button key={d} type="button" aria-pressed={on} data-work-day={d}
+                onClick={() => { const cur = cleanWorkDays(s.work_days); const next = on ? cur.filter(x => x !== d) : [...cur, d]; if (next.length) set('work_days', next.sort((a, b) => a - b)); }}
+                className={`min-h-[44px] rounded-lg border text-xs font-bold cursor-pointer ${on ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-400'}`}>{DAY_NAMES_FR[d]}</button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-slate-500">Au moins un jour. N'oublie pas « Enregistrer » en bas de la page.</p>
       </section>
       )}
 

@@ -405,6 +405,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Les réglages du site : horaires, prix, objectifs, Conditions de l'entreprise, sauvegardes.
 - **Comment l'utiliser** : 1. Choisir la section à régler. 2. Enregistrer pour appliquer le changement. 3. Faire une sauvegarde avant un gros changement.
 - **Règles** :
+  - Jours de travail (Équipe) : un jour décoché est un repos, jamais une absence. Le travail fait ce jour-là compte quand même.
   - Une sauvegarde de nuit est faite automatiquement et gardée environ 14 jours.
   - Les changements des Conditions sont notés dans un historique.
   - Le responsable peut cacher des pages du menu (Conditions > Pages du menu) ; rien n'est supprimé.
@@ -683,6 +684,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
+| `workDays.ts` | Jours de travail réglables (Réglages) : 0 = dimanche … 6 = samedi. Par défaut lundi à samedi (le dimanche est un jour de repos). Pur : sans écran ni serveur. |
 | `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
 
@@ -895,6 +897,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
+| `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

@@ -1,6 +1,7 @@
 // Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran.
 import type { AppSettings, DayStatus, PostSession } from '../types';
 import { isLate } from './attendance';
+import { isWorkDay } from './workDays';
 
 export function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
   // Congé ACCEPTÉ (M5.2) : le jour n'est ni une absence ni un retard, sauf si une mission a vraiment été travaillée ce jour-là
@@ -17,10 +18,9 @@ export function dayStatus(shifts: PostSession[], dateStr: string, firstActivity:
     if (reached || allCompleted) return 'objective_reached';
     return 'absent';
   }
-  // Jour passé (lundi à samedi, dimanche = repos) depuis la première activité, sans aucune session = absence
+  // Jour passé qui est un jour de travail (Réglages ; par défaut lundi à samedi) depuis la première activité, sans aucune session = absence
   if (firstActivity && dateStr >= firstActivity && dateStr < today) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (new Date(y, m - 1, d).getDay() !== 0) return 'absent';
+    if (isWorkDay(dateStr, (cfg as any).work_days)) return 'absent';
   }
   return 'no_post';
 }

@@ -56,7 +56,7 @@ eq(stateSrc.includes('isOperator(me.role)) await touchPresence'), true, 'state :
 const syncSrc = fn('sync');
 eq(syncSrc.includes('!canWriteMoneyCol(me.role, col)'), true, 'sync : écriture d\'argent filtrée par rôle');
 eq((syncSrc.match(/isMoneyRole\(me\.role\) && MONEY_COLS\.includes\(col\)/g) || []).length, 2, 'sync : le Comptable passe seulement sur les collections d\'argent (écriture et suppression)');
-eq(/user\.role !== 'employee'\) return \{ ok: true \}/.test(src), true, 'vacations : seulement les opérateurs');
+eq(src.includes("['employee', 'accountant', 'team_lead'].includes(user.role)") && src.includes("user.role === 'admin'"), true, 'vacations : opérateur, comptable et chef d\'équipe (jamais le responsable)');
 eq(/!isOperator\(user\.role\)\) return null/.test(src), true, 'maintenance : seulement les opérateurs');
 const cu = fn('createUser');
 eq(cu.includes("me.role !== 'admin'"), true, 'création de compte : admin seulement');
