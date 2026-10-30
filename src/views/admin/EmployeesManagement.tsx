@@ -35,7 +35,9 @@ import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { badgeLabel, formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
 import { getPresenceStatus, formatDuration } from '../../utils/presence';
-import { liveStatus } from '../../utils/presenceStatus';
+import { liveStatus, LIVE_META } from '../../utils/presenceStatus';
+import { filterOperators, liveCounts, activeFilterCount, OP_FILTERS_DEFAULT, type OpFilters, type OpItem, type OpSort } from '../../utils/operatorList';
+import { OperatorSheet } from '../../components/OperatorSheet';
 import { useNow } from '../../utils/useNow';
 import { LiveDot, LiveLine } from '../../components/LiveStatus';
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
@@ -46,6 +48,7 @@ import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
   onNavigate?: (view: string) => void; // pastilles « à valider » cliquables
+  onOpenOperator?: (id: string, view: 'operator' | 'calendar' | 'chat') => void; // fiche : page de l'opérateur, son calendrier, lui écrire
   section?: 'employees' | 'advances';
 }
 
@@ -66,6 +69,7 @@ const phoneIsComplete = (v: string) => phoneDigits(v).length === 12;
 export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onOpenEmployeeCV,
   onNavigate,
+  onOpenOperator,
   section = 'employees',
 }) => {
   const { lang } = useApp();
@@ -85,8 +89,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests());
   const [cfg, setCfg] = useState<AppSettings>(db.getSettings());
   const [, setTick] = useState(0); // rafraîchit les statuts même sans nouvelle donnée
-  const [shiftFilter, setShiftFilter] = useState<'all' | 'day' | 'night' | 'blocked'>('all');
-  const [searchFilter, setSearchFilter] = useState('');
+  const [filters, setFilters] = useState<OpFilters>(OP_FILTERS_DEFAULT);
+  const [sheetId, setSheetId] = useState<string | null>(null); // opérateur dont la fiche est ouverte
 
   // Edit User Modal
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -280,20 +284,13 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   // Comptables et chefs d'équipe : ils ne sont ni dans les vacations ni dans la paie, on les gère ici
   const staff = users.filter(u => u.role !== 'employee' && u.role !== 'admin');
 
-  // Filtered employees
-  const employees = users
-    .filter(u => u.role === 'employee')
-    .filter(u => {
-      if (shiftFilter === 'day') return u.shift === 'day' && u.status !== 'blocked';
-      if (shiftFilter === 'night') return u.shift === 'night' && u.status !== 'blocked';
-      if (shiftFilter === 'blocked') return u.status === 'blocked';
-      return true;
-    })
-    .filter(u => {
-      if (!searchFilter.trim()) return true;
-      const q = searchFilter.toLowerCase();
-      return u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
-    });
+  // Opérateurs : recherche + filtres + tri (règles pures dans utils/operatorList.ts) ; chacun avec son statut en direct
+  const en = lang === 'en';
+  const allEmployees = users.filter(u => u.role === 'employee');
+  const items: OpItem[] = allEmployees.map(u => ({ user: u, live: liveStatus(u, posts, presence, nowMs) }));
+  const shown = filterOperators(items, filters);
+  const counts = liveCounts(items);
+  const sheetUser = sheetId ? users.find(u => u.id === sheetId) || null : null;
 
   const pendingAdvances = advances.filter(a => a.status === 'pending');
 
@@ -310,10 +307,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-bold font-tactical text-white">
-              Gestion de l'Équipe &amp; Opérateurs Opérateurs
+              Opérateurs de l'équipe
             </h2>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Affectation des vacations, consultation des profils, badges de performance et surveillance des accès.
+              Touchez un opérateur pour ouvrir sa fiche : session, profil, modification, accès, blocage.
             </p>
           </div>
         </div>
@@ -338,386 +335,142 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         {importing && <ImportDialog kind="employees" onClose={() => setImporting(false)} />}
       </div>
 
+      {/* ===== LISTE DES OPÉRATEURS : compacte, sans boutons de gestion sur chaque ligne. Toucher une ligne ouvre la fiche (OperatorSheet) avec toutes les actions. ===== */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="live-counters">
+        {(['working', 'online', 'pause', 'offline'] as const).map(s => (
+          <button key={s} type="button" onClick={() => setFilters(f => ({ ...f, live: f.live === s ? 'all' : s }))} data-testid={`live-counter-${s}`}
+            className={`min-h-[52px] px-3 py-2 rounded-xl border flex items-center gap-2.5 text-left cursor-pointer transition-colors ${filters.live === s ? 'bg-slate-700 border-slate-400' : 'bg-[#131c28] border-slate-800 hover:border-slate-600'}`}>
+            <span className={`w-3 h-3 rounded-full shrink-0 ${LIVE_META[s].dot}`} aria-hidden="true" />
+            <span className="min-w-0"><span className={`block text-lg font-bold leading-none ${LIVE_META[s].text}`}>{counts[s]}</span><span className="block text-[11px] text-slate-400 leading-tight">{LIVE_META[s][en ? 'en' : 'fr']}</span></span>
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-[#131c28] p-3 rounded-xl border border-slate-800 space-y-3">
+        <div className="relative">
+          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+          <input type="search" value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} data-testid="op-search"
+            placeholder={en ? 'Search an operator: name, username, phone, day or night…' : 'Rechercher un opérateur : nom, identifiant, téléphone, jour ou nuit…'}
+            aria-label={en ? 'Search an operator' : 'Rechercher un opérateur'}
+            className="w-full min-h-[48px] pl-10 pr-11 rounded-xl bg-slate-900 border border-slate-600 text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:border-emerald-500" />
+          {filters.search && <button type="button" onClick={() => setFilters(f => ({ ...f, search: '' }))} aria-label={en ? 'Clear search' : 'Effacer la recherche'} className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full text-slate-300 hover:bg-slate-700 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>}
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2.5 text-xs">
+          {([
+            [en ? 'Shift' : 'Vacation', 'shift', [['all', en ? 'All' : 'Toutes'], ['day', en ? 'Day' : 'Jour'], ['night', en ? 'Night' : 'Nuit']]],
+            [en ? 'Account' : 'Compte', 'account', [['all', en ? 'All' : 'Tous'], ['active', en ? 'Active' : 'Actifs'], ['blocked', en ? 'Blocked' : 'Bloqués']]],
+            [en ? 'Level' : 'Performance', 'level', [['all', en ? 'All' : 'Tous'], ['Top Booster', badgeLabel('Top Booster')], ['Elite', badgeLabel('Elite')], ['Standard', badgeLabel('Standard')], ['Under Watch', badgeLabel('Under Watch')]]],
+          ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).map(([title, key, opts]) => (
+            <div key={key} className="min-w-0">
+              <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">{title}</div>
+              <div className="flex flex-wrap gap-1">
+                {opts.map(([val, label]) => (
+                  <button key={val} type="button" onClick={() => setFilters(f => ({ ...f, [key]: val }))} data-testid={`op-filter-${key}-${val}`} aria-pressed={filters[key] === val}
+                    className={`min-h-[36px] px-3 rounded-lg border font-semibold cursor-pointer whitespace-nowrap ${filters[key] === val ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <label className="min-w-0 text-[10px] font-mono uppercase text-slate-500">{en ? 'Sort by' : 'Trier par'}
+            <select value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value as OpSort }))} data-testid="op-sort"
+              className="mt-1 block min-h-[36px] px-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-200 text-xs normal-case cursor-pointer">
+              <option value="name">{en ? 'Name' : 'Nom'}</option>
+              <option value="live">{en ? 'Live status' : 'Statut en direct'}</option>
+              <option value="level">{en ? 'Level' : 'Niveau'}</option>
+              <option value="score">{en ? 'Units' : 'Unités'}</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+          <span data-testid="op-count">{shown.length} {en ? 'of' : 'sur'} {allEmployees.length} {en ? 'operators' : 'opérateurs'}</span>
+          {activeFilterCount(filters) > 0 && <button type="button" onClick={() => setFilters(OP_FILTERS_DEFAULT)} data-testid="op-reset" className="min-h-[36px] px-3 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-700 cursor-pointer">{en ? 'Reset filters' : 'Réinitialiser les filtres'}</button>}
+        </div>
+      </div>
+
+      <ul className="space-y-2" data-testid="op-list">
+        {shown.length === 0 && <li className="p-6 text-center text-sm text-slate-400 bg-[#0f1722] rounded-xl border border-slate-800">{allEmployees.length === 0 ? (en ? 'No operator yet.' : 'Aucun opérateur pour le moment.') : (en ? 'No operator matches the filters.' : 'Aucun opérateur ne correspond à la recherche ou aux filtres.')}</li>}
+        {shown.map(({ user: emp, live }) => {
+          const blocked = emp.status === 'blocked';
+          const pend = pendingOf(emp.id);
+          const mission = live.openMission ? posts.find(p => p.employee_id === emp.id && ['active', 'pending_start', 'pending_end'].includes(p.status)) : undefined;
+          return (
+            <li key={emp.id} data-nav={`emp-${emp.id}`}>
+              <div role="button" tabIndex={0} aria-label={`${emp.name} : ${en ? 'open the sheet' : 'ouvrir la fiche'}`} data-testid={`op-row-${emp.id}`}
+                onClick={() => setSheetId(emp.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSheetId(emp.id); } }}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${blocked ? 'bg-red-950/20 border-red-900/60 hover:border-red-700' : 'bg-[#0f1722] border-slate-800 hover:border-slate-500'}`}>
+                <span className="relative shrink-0 inline-flex">
+                  <Avatar src={emp.avatar_url} name={emp.name} className="w-12 h-12 rounded-full ring-2 ring-slate-700" />
+                  <LiveDot info={live} lang={en ? 'en' : 'fr'} ring="border-[#0f1722]" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-bold text-white break-words">{emp.name}</span>
+                    {blocked && <span className="px-1.5 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 text-[10px] font-bold uppercase">{en ? 'Blocked' : 'Bloqué'}</span>}
+                    {!blocked && emp.access_mode === 'block' && <span className="px-1.5 py-0.5 rounded bg-amber-950 border border-amber-700 text-amber-300 text-[10px] font-bold uppercase">{en ? 'Access off' : 'Accès coupé'}</span>}
+                  </div>
+                  <div className="text-[11px] text-slate-400 break-words">@{emp.username} · {emp.shift === 'day' ? (en ? 'Day' : 'Jour') : (en ? 'Night' : 'Nuit')} ({shiftHoursLabel(emp.shift === 'night' ? 'night' : 'day', cfg)})</div>
+                  <div className="text-[11px] mt-0.5 flex flex-wrap items-center gap-x-2"><LiveLine info={live} lang={en ? 'en' : 'fr'} />{mission && <span className="text-slate-400 break-words">· {mission.client_name}</span>}</div>
+                  {pend.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
+                      {pend.map(b => {
+                        const cls = 'px-1.5 py-0.5 text-[10px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 whitespace-nowrap';
+                        const text = `${b.label}${b.n > 1 ? ` (${b.n})` : ''}`;
+                        return cfg.badges_clickable && onNavigate
+                          ? <button key={b.key} type="button" onClick={() => { setValFilterIntent(b.filter); onNavigate('validations'); }} className={`${cls} cursor-pointer hover:bg-amber-900`} title="Ouvrir la page Validations">{text}</button>
+                          : <span key={b.key} className={cls}>{text}</span>;
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0 hidden min-[420px]:block">
+                  <div className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold whitespace-nowrap">{badgeLabel(emp.performance_badge)}</div>
+                  <div className="text-emerald-400 text-xs font-bold mt-1 whitespace-nowrap">{formatScoreM(emp.total_score_boosted)} {en ? 'units' : 'unités'}</div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-500 shrink-0" aria-hidden="true" />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
       {staff.length > 0 && (
-        <div className="bg-[#131c28] p-3 rounded-xl border border-slate-800 space-y-2">
-          <div className="text-xs font-mono font-bold text-slate-300 uppercase">Comptables et chefs d'équipe ({staff.length})</div>
-          <ul className="divide-y divide-slate-800">
-            {staff.map(u => {
-              const blocked = u.status === 'blocked';
-              return (
-                <li key={u.id} data-nav={`emp-${u.id}`} className="py-2 flex flex-wrap items-center gap-2 justify-between">
-                  <div className="min-w-0">
-                    <div className="text-sm text-white font-semibold truncate">{u.name}</div>
-                    <div className="text-[11px] text-slate-400">{ROLE_NAMES[roleOf(u.role)][0]}{u.team ? ` · équipe ${u.team}` : ''} · @{u.username}{blocked ? ' · bloqué' : ''}</div>
+        <div className="bg-[#131c28] p-3 rounded-xl border border-slate-800 space-y-2" data-testid="staff-list">
+          <div className="text-xs font-mono font-bold text-slate-300 uppercase">{en ? 'Accountants and team leads' : 'Comptables et chefs d\'équipe'} ({staff.length})</div>
+          <ul className="space-y-1.5">
+            {staff.map(u => (
+              <li key={u.id} data-nav={`emp-${u.id}`}>
+                <div role="button" tabIndex={0} data-testid={`staff-row-${u.id}`} onClick={() => setSheetId(u.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSheetId(u.id); } }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-[#0f1722] border border-slate-800 hover:border-slate-500 cursor-pointer">
+                  <Avatar src={u.avatar_url} name={u.name} className="w-10 h-10 rounded-full ring-2 ring-slate-700 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-white font-semibold break-words">{u.name}</div>
+                    <div className="text-[11px] text-slate-400 break-words">{ROLE_NAMES[roleOf(u.role)][0]}{u.team ? ` · équipe ${u.team}` : ''} · @{u.username}{u.status === 'blocked' ? ` · ${en ? 'blocked' : 'bloqué'}` : ''}</div>
                   </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => handleOpenEdit(u)} className="min-h-[44px] px-3 rounded text-sm font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600">Modifier</button>
-                    <button
-                      type="button"
-                      onClick={() => askConfirm({ title: blocked ? `Débloquer ${u.name} ?` : `Bloquer ${u.name} ?`, message: blocked ? 'Le compte pourra de nouveau se connecter.' : 'Le compte ne pourra plus se connecter tant qu\'il est bloqué.', confirmLabel: blocked ? 'Débloquer' : 'Bloquer', danger: !blocked, onConfirm: () => handleToggleBlock(u.id) })}
-                      className="min-h-[44px] px-3 rounded text-sm font-bold bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700"
-                    >{blocked ? 'Débloquer' : 'Bloquer'}</button>
-                    <button type="button" onClick={() => handleDeleteUser(u)} className="min-h-[44px] px-3 rounded text-sm font-bold bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800">Supprimer</button>
-                  </div>
-                </li>
-              );
-            })}
+                  <ChevronRight className="w-5 h-5 text-slate-500 shrink-0" aria-hidden="true" />
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
       )}
 
-      {/* FILTER BAR: Shift Selector & Live Search */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#131c28] p-3 rounded-xl border border-slate-800 text-xs font-mono">
-        {/* Shift Filter buttons with horizontal scroll on mobile */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
-          <button
-            onClick={() => setShiftFilter('all')}
-            className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
-              shiftFilter === 'all'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Tous ({users.filter(u => u.role === 'employee').length})
-          </button>
-          <button
-            onClick={() => setShiftFilter('day')}
-            className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
-              shiftFilter === 'day'
-                ? 'bg-amber-600 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sun className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Day Vacation ({users.filter(u => u.role === 'employee' && u.shift === 'day' && u.status !== 'blocked').length})
-          </button>
-          <button
-            onClick={() => setShiftFilter('night')}
-            className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
-              shiftFilter === 'night'
-                ? 'bg-indigo-600 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Moon className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Night Vacation ({users.filter(u => u.role === 'employee' && u.shift === 'night' && u.status !== 'blocked').length})
-          </button>
-          <button
-            onClick={() => setShiftFilter('blocked')}
-            className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
-              shiftFilter === 'blocked'
-                ? 'bg-red-600 text-white font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Ban className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Bloqués ({users.filter(u => u.role === 'employee' && u.status === 'blocked').length})
-          </button>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative w-full md:w-64">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={e => setSearchFilter(e.target.value)}
-            placeholder="Filtrer par nom / pseudo..."
-            className="w-full bg-[#0b1018] border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
-          />
-        </div>
-      </div>
-
-      {/* EMPLOYEES TABLE WITH HORIZONTAL SCROLL SAFEGUARD */}
-      <div className="bg-[#0f1722] border border-slate-800 rounded-xl shadow-xl overflow-hidden">
-        <div className="rounded-xl sm:hidden px-3 py-1.5 bg-[#121c27] border-b border-slate-800 text-[10px] font-mono text-slate-400 flex items-center justify-between">
-          <span>Défiler horizontalement →</span>
-          <span className="text-emerald-400">{employees.length} opérateur(s)</span>
-        </div>
-
-        {/* Téléphone : une carte par opérateur, gros boutons avec texte */}
-        <div className="md:hidden divide-y divide-slate-800/80">
-          {employees.length === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500">Aucun employé ne correspond aux filtres sélectionnés.</div>
-          ) : (
-            employees.map(emp => {
-              const isBlocked = emp.status === 'blocked';
-              const btn = 'flex items-center justify-center gap-2 min-h-[46px] px-3 text-sm font-bold rounded cursor-pointer';
-              return (
-                <div key={emp.id} className={`p-3 space-y-3 ${isBlocked ? 'bg-red-950/20' : ''}`}>
-                  <div className="flex items-center gap-3">
-                    <Avatar src={emp.avatar_url} name={emp.name} className="w-11 h-11 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-white text-sm break-words">{emp.name}</div>
-                      <div className="text-[11px] text-slate-400 break-all">@{emp.username} · {emp.phone}</div>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase shrink-0 ${isBlocked ? 'bg-red-600 text-white' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
-                      {isBlocked ? 'Bloqué' : 'Actif'}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
-                    <span className={`px-2 py-1 rounded font-bold border ${emp.shift === 'day' ? 'bg-amber-950/70 border-amber-600/40 text-amber-300' : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'}`}>
-                      {emp.shift === 'day' ? `Jour (${shiftHoursLabel('day', cfg)})` : `Nuit (${shiftHoursLabel('night', cfg)})`}
-                    </span>
-                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{badgeLabel(emp.performance_badge)}</span>
-                    <span className="text-emerald-400 font-bold">{formatScoreM(emp.total_score_boosted)} unités</span>
-                  </div>
-                  {chipsFor(emp.id, '')}
-                  <select
-                    value={emp.access_mode || 'auto'}
-                    onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
-                    className="w-full min-h-[46px] px-3 text-sm font-mono rounded border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer"
-                  >
-                    <option value="auto">Accès : vacation</option>
-                    <option value="allow">Accès : toute heure</option>
-                    <option value="block">Accès : bloqué</option>
-                  </select>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => onOpenEmployeeCV(emp)} className={`${btn} bg-slate-800 hover:bg-slate-700 text-cyan-300`}>
-                      <FileText className="w-5 h-5" /> Profil
-                    </button>
-                    <button type="button" onClick={() => handleOpenEdit(emp)} className={`${btn} bg-slate-800 hover:bg-slate-700 text-slate-100`}>
-                      <Edit className="w-5 h-5" /> Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        askConfirm({
-                          title: isBlocked ? `Débloquer ${emp.name} ?` : `Bloquer ${emp.name} ?`,
-                          message: isBlocked ? "L'employé pourra de nouveau se connecter." : "L'employé ne pourra plus se connecter tant qu'il est bloqué.",
-                          confirmLabel: isBlocked ? 'Débloquer' : 'Bloquer',
-                          danger: !isBlocked,
-                          onConfirm: () => handleToggleBlock(emp.id),
-                        })
-                      }
-                      className={`${btn} ${isBlocked ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700'}`}
-                    >
-                      {isBlocked ? <UserCheck className="w-5 h-5" /> : <Ban className="w-5 h-5" />} {isBlocked ? 'Débloquer' : 'Bloquer'}
-                    </button>
-                    <button type="button" onClick={() => handleDeleteUser(emp)} className={`${btn} bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800`}>
-                      <Trash2 className="w-5 h-5" /> Supprimer
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left text-xs font-mono text-slate-300">
-            <thead className="bg-[#121c27] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="p-3 pl-4 sm:pl-6">Opérateur</th>
-                <th className="p-3">Vacation</th>
-                <th className="p-3">Niveau</th>
-                <th className="p-3">Quantité totale</th>
-                <th className="p-3">Statut</th>
-                {cfg.show_activity_column && <th className="p-3">Activité</th>}
-                <th className="p-3 pr-4 sm:pr-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {employees.length === 0 ? (
-                <tr>
-                  <td colSpan={cfg.show_activity_column ? 8 : 7} className="p-8 text-center text-slate-500">
-                    Aucun employé ne correspond aux filtres sélectionnés.
-                  </td>
-                </tr>
-              ) : (
-                employees.map(emp => {
-                  const isBlocked = emp.status === 'blocked';
-
-                  return (
-                    <tr
-                      key={emp.id}
-                      className={`hover:bg-[#141f2d] transition-colors ${
-                        isBlocked ? 'bg-red-950/20' : ''
-                      }`}
-                    >
-                      {/* Name & Avatar */}
-                      <td className="p-3 pl-4 sm:pl-6">
-                        <div className="flex items-center gap-3">
-                          <div className="relative shrink-0">
-                            <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8 sm:w-9 sm:h-9" />
-                            <LiveDot info={liveStatus(emp, db.getPosts(), db.getPresence(), nowMs)} lang={lang === 'en' ? 'en' : 'fr'} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-white text-xs sm:text-sm">
-                              {emp.name}
-                            </div>
-                            <div className="text-[11px] text-slate-400">
-                              @{emp.username} · {emp.phone}
-                            </div>
-                            <LiveLine info={liveStatus(emp, db.getPosts(), db.getPresence(), nowMs)} lang={lang === 'en' ? 'en' : 'fr'} className="text-[11px] mt-0.5" />
-                            {chipsFor(emp.id, 'mt-1')}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Shift */}
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border whitespace-nowrap ${
-                            emp.shift === 'day'
-                              ? 'bg-amber-950/70 border-amber-600/40 text-amber-300'
-                              : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'
-                          }`}
-                        >
-                          {emp.shift === 'day' ? (
-                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Vacation Jour ({shiftHoursLabel('day', cfg)})</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Vacation Nuit ({shiftHoursLabel('night', cfg)})</span>
-                          )}
-                        </span>
-                      </td>
-
-                      {/* Performance Badge */}
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border whitespace-nowrap ${
-                            emp.performance_badge === 'Top Booster'
-                              ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
-                              : emp.performance_badge === 'Elite'
-                              ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300'
-                              : emp.performance_badge === 'Under Watch'
-                              ? 'bg-red-950/80 border-red-500/50 text-red-300'
-                              : 'bg-slate-800 border-slate-700 text-slate-300'
-                          }`}
-                        >
-                          {badgeLabel(emp.performance_badge)}
-                        </span>
-                      </td>
-
-                      {/* Total Boosted Score */}
-                      <td className="p-3 text-emerald-400 font-bold whitespace-nowrap">
-                        {formatScoreM(emp.total_score_boosted)} unités
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-3 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            isBlocked
-                              ? 'bg-red-600 text-white animate-pulse'
-                              : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                          }`}
-                        >
-                          {isBlocked ? 'Bloqué' : 'Actif'}
-                        </span>
-                      </td>
-
-                      {/* Activité : statut en direct, temps connecté, actions à valider */}
-                      {cfg.show_activity_column && (() => {
-                        const pr = getPresenceStatus(emp, posts, presence);
-                        const live = liveStatus(emp, posts, presence, nowMs);
-                        const pend = pendingOf(emp.id);
-                        return (
-                          <td className="p-3 align-top">
-                            <LiveLine info={live} lang={lang === 'en' ? 'en' : 'fr'} className="text-[11px]" />
-                            <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">Connecté aujourd'hui : {formatDuration(pr.onlineSec)}</div>
-                            {pend.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {pend.map(b => {
-                                  const cls = 'px-1.5 py-0.5 text-[10px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 whitespace-nowrap';
-                                  const text = `${b.label}${b.n > 1 ? ` (${b.n})` : ''}`;
-                                  return cfg.badges_clickable && onNavigate ? (
-                                    <button
-                                      key={b.key}
-                                      type="button"
-                                      onClick={() => { setValFilterIntent(b.filter); onNavigate('validations'); }}
-                                      className={`${cls} cursor-pointer hover:bg-amber-900`}
-                                      title="Ouvrir la page Validations"
-                                    >
-                                      {text}
-                                    </button>
-                                  ) : (
-                                    <span key={b.key} className={cls}>{text}</span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })()}
-
-                      {/* Profile Actions: [ View CV ], [ Edit Info ], [ Block/Unblock ], [ Delete Profile ] */}
-                      <td className="p-3 pr-4 sm:pr-6 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Accès selon le shift : auto / toute heure / bloqué */}
-                          <select
-                            value={emp.access_mode || 'auto'}
-                            onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
-                            className={`px-1.5 py-1 text-[11px] font-mono rounded border cursor-pointer focus:outline-none ${
-                              emp.access_mode === 'block'
-                                ? 'bg-red-950 text-red-300 border-red-800'
-                                : emp.access_mode === 'allow'
-                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                : 'bg-slate-800 text-slate-200 border-slate-600'
-                            }`}
-                            title="Accès selon l'heure de la vacation"
-                          >
-                            <option value="auto">Accès : vacation</option>
-                            <option value="allow">Accès : toute heure</option>
-                            <option value="block">Accès : bloqué</option>
-                          </select>
-
-                          {/* View CV button */}
-                          <button
-                            onClick={() => onOpenEmployeeCV(emp)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded transition-colors"
-                            title="Voir le profil"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Edit Info button */}
-                          <button
-                            onClick={() => handleOpenEdit(emp)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors"
-                            title="Modifier les informations"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Block/Unblock button */}
-                          <button
-                            onClick={() =>
-                              askConfirm({
-                                title: isBlocked ? `Débloquer ${emp.name} ?` : `Bloquer ${emp.name} ?`,
-                                message: isBlocked
-                                  ? "L'employé pourra de nouveau se connecter."
-                                  : "L'employé ne pourra plus se connecter tant qu'il est bloqué.",
-                                confirmLabel: isBlocked ? 'Débloquer' : 'Bloquer',
-                                danger: !isBlocked,
-                                onConfirm: () => handleToggleBlock(emp.id),
-                              })
-                            }
-                            className={`p-1.5 rounded transition-colors ${
-                              isBlocked
-                                ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
-                                : 'bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700'
-                            }`}
-                            title={isBlocked ? 'Débloquer l\'accès' : 'Bloquer le compte'}
-                          >
-                            {isBlocked ? <UserCheck className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
-                          </button>
-
-                          {/* Delete Profile button with confirmation prompt */}
-                          <button
-                            onClick={() => handleDeleteUser(emp)}
-                            className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 rounded transition-colors"
-                            title="Supprimer définitivement le profil"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {sheetUser && (
+        <OperatorSheet user={sheetUser} cfg={cfg} lang={en ? 'en' : 'fr'} nowMs={nowMs} live={liveStatus(sheetUser, posts, presence, nowMs)} posts={posts}
+          onlineSec={getPresenceStatus(sheetUser, posts, presence).onlineSec}
+          chips={(() => { const pend = pendingOf(sheetUser.id); return pend.length ? (
+            <div className="flex flex-wrap gap-1">{pend.map(b => {
+              const cls = 'px-2 py-1 text-[11px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 rounded';
+              const text = `${b.label}${b.n > 1 ? ` (${b.n})` : ''}`;
+              return onNavigate ? <button key={b.key} type="button" onClick={() => { setValFilterIntent(b.filter); setSheetId(null); onNavigate('validations'); }} className={`${cls} cursor-pointer hover:bg-amber-900`}>{text}</button> : <span key={b.key} className={cls}>{text}</span>;
+            })}</div>) : null; })()}
+          onClose={() => setSheetId(null)}
+          onProfile={() => { setSheetId(null); onOpenEmployeeCV(sheetUser); }}
+          onEdit={() => { const u = sheetUser; setSheetId(null); handleOpenEdit(u); }}
+          onToggleBlock={() => { const u = sheetUser, b = u.status === 'blocked'; askConfirm({ title: b ? `Débloquer ${u.name} ?` : `Bloquer ${u.name} ?`, message: b ? 'Le compte pourra de nouveau se connecter.' : 'Le compte ne pourra plus se connecter tant qu\'il est bloqué.', confirmLabel: b ? 'Débloquer' : 'Bloquer', danger: !b, onConfirm: () => handleToggleBlock(u.id) }); }}
+          onDelete={() => { const u = sheetUser; setSheetId(null); handleDeleteUser(u); }}
+          onSetAccess={mode => db.setAccessMode(sheetUser.id, mode)}
+          onOpen={onOpenOperator && sheetUser.role === 'employee' ? view => { const id = sheetUser.id; setSheetId(null); onOpenOperator(id, view); } : undefined} />
+      )}
 
         </>
       )}

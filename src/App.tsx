@@ -9,6 +9,7 @@ import { BottomNav } from './components/BottomNav';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
+import { OperatorsTabs } from './components/OperatorsTabs';
 import { OfflineCenter } from './components/OfflineCenter';
 import { OfflineUnlockView } from './components/OfflineUnlockView';
 import { ReportProblemModal } from './components/ReportProblemModal';
@@ -419,7 +420,7 @@ export default function App() {
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
-            <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+            <FeedView key={viewUser.role} currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'team_lead' ? (
             /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */
             activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
@@ -446,7 +447,10 @@ export default function App() {
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
-                <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
+                <>
+                  <OperatorsTabs active="operators" onChange={view => setActiveView(view)} />
+                  <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} onOpenOperator={(id, view) => { setFocusOperatorId(id); setActiveView(view); }} />
+                </>
               ) : activeView === 'sheets' ? (
                 <MySheets />
               ) : activeView === 'accounting' ? (
@@ -488,6 +492,8 @@ export default function App() {
                 <ChatView currentUser={viewUser} initialThreadId={focusOperatorId || undefined} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : (
                 /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
+                <>
+                {(activeView === 'active-post' || activeView === 'sessions') && <OperatorsTabs active="sessions" onChange={view => setActiveView(view)} />}
                 <AdminDashboard
                   currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
@@ -507,6 +513,7 @@ export default function App() {
                   }
                   onNavigateTab={tab => setActiveView(tab)}
                 />
+                </>
               )}
             </>
           ) : (

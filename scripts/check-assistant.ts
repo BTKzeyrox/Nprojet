@@ -155,6 +155,7 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   const L1 = pageLinks('Va voir « Clients » puis « Statistiques », ou « Clients » encore.', 'fr');
   ok(L1.length === 2 && L1[0].go.view === 'clients' && L1[1].go.view === 'stats', 'liens : les pages citées entre « » deviennent des boutons, sans doublon');
   ok(pageLinks('Ouvre "Employés" ou "Payroll".', 'en').map(x => x.go.view).join() === 'employees,advances', 'liens : guillemets droits et noms anglais acceptés');
+  ok(pageLinks('Ouvre « Opérateurs et sessions » ou « Gestion des Opérateurs » ou « Employés » ou « Suivi des sessions ».', 'fr').map(x => x.go.view).join() === 'employees,active-post', 'liens : le nouveau nom de la page et ses anciens noms (Gestion des Opérateurs, Employés) mènent à la même page sans doublon ; « Suivi des sessions » mène au suivi des sessions');
   ok(pageLinks('Va dans « Page inventée » ou « Mon avis ».', 'fr').length === 0 && pageLinks('', 'fr').length === 0 && pageLinks('Clients sans guillemets', 'fr').length === 0, 'liens : un nom qui n\'est pas une page (ou sans guillemets) ne donne aucun bouton');
   ok(pageLinks('« Clients » « Statistiques » « Employés » « Validations » « Historique »', 'fr').length === 3, 'liens : 3 boutons au plus');
   ok(pageLinks('« Santé du site »', 'fr').every(x => isKnownView(x.go.view)) && pageLinks('« Réglages »', 'fr').every(x => isKnownView(x.go.view)), 'liens : seulement des pages qui existent');

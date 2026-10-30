@@ -16,6 +16,7 @@ export interface PasswordResetRequest {
 
 export interface AppSettings {
   id: 'general';
+  news_publish?: { employee: 'off' | 'review' | 'direct'; team_lead: 'off' | 'review' | 'direct'; accountant: 'off' | 'review' | 'direct'; allow_edit: boolean }; // « Publications des équipes » : qui peut publier dans les Actualités (absent = seul le responsable)
   price_per_million: number; // Ar pour 1M de score (sert encore aux pénalités automatiques)
   price_per_mission: number; // Ar versés pour chaque mission validée (tarif fixe, quelle que soit la quantité)
   client_price_default_ar?: number; // Ar payés par le client pour une mission validée (prix par défaut, 0 = pas encore réglé)
@@ -336,6 +337,8 @@ export interface AttendanceRow {
   first_seen: string;
   last_seen: string;
   online_sec: number;
+  /** Connexions du jour (serveur v52+) : `in` = connexion, `last` = dernier signe de vie, `out` = déconnexion volontaire. Absent sur les anciens jours. */
+  sessions?: { in: string; last: string; out?: string }[];
 }
 
 export interface PresenceRow {
@@ -392,6 +395,8 @@ export interface NewsPost {
   reject_reason?: string;
   submitted_at?: string;
   files_removed?: number; // fichiers supprimés au refus
+  audience?: ('employee' | 'team_lead' | 'accountant')[]; // qui peut voir la publication (absent = tout le monde ; le responsable et l'auteur voient toujours)
+  edited_at?: string; // dernière modification du texte, du titre ou du public (une publication déjà publiée)
 }
 
 /** Fiche client (module 1) : visible par l'admin seulement. Le statut n'est jamais stocké : il se calcule (src/utils/clients.ts). */

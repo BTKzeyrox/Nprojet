@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { useConfirm } from '../components/ConfirmModal';
@@ -10,6 +10,7 @@ import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
+import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -58,8 +59,59 @@ const timeAgo = (iso: string) => {
 };
 
 const PREVIEW_COMMENTS = 2; // commentaires montrés sous la publication sans rien ouvrir
+// « Visible par » : Tous (par défaut) ou un mélange de rôles. Le responsable et l'auteur voient toujours la publication.
+const AudiencePicker: React.FC<{ value: NewsRole[]; onChange: (v: NewsRole[]) => void; disabled?: boolean; light: boolean }> = ({ value, onChange, disabled, light }) => {
+  const all = value.length === 0;
+  const chip = (on: boolean) => `inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer disabled:opacity-50 ${on ? 'bg-emerald-600 text-white border-emerald-600' : light ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50' : 'bg-white/5 text-slate-200 border-white/20 hover:bg-white/10'}`;
+  const toggle = (r: NewsRole) => {
+    const next = value.includes(r) ? value.filter(x => x !== r) : [...value, r];
+    onChange(next.length === AUDIENCE_ROLES.length ? [] : next); // les trois rôles = tous
+  };
+  return (
+    <div data-audience-picker className="space-y-1.5">
+      <div className={`flex items-center gap-1.5 text-xs font-semibold ${light ? 'text-slate-600' : 'text-slate-300'}`}><Eye className="w-3.5 h-3.5" />Visible par</div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Visible par">
+        <button type="button" disabled={disabled} aria-pressed={all} onClick={() => onChange([])} className={chip(all)} data-audience="all">Tous</button>
+        {AUDIENCE_ROLES.map(r => <button key={r} type="button" disabled={disabled} aria-pressed={value.includes(r)} onClick={() => toggle(r)} className={chip(value.includes(r))} data-audience={r}>{roleLabel(r, 'fr')}</button>)}
+      </div>
+      <div className={`text-[11px] ${light ? 'text-slate-500' : 'text-slate-400'}`}>{all ? 'Toute l’équipe la voit.' : `Seulement : ${audienceLabel(value, 'fr')}. Toi et le responsable la voyez toujours.`}</div>
+    </div>
+  );
+};
+
+// Modifier une publication déjà publiée (texte, titre, public) ; les fichiers, réactions et commentaires ne changent pas
+const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void }> = ({ post, light, onDone }) => {
+  const [title, setTitle] = useState(post.title || '');
+  const [text, setText] = useState(post.text || '');
+  const [aud, setAud] = useState<NewsRole[]>(cleanAudience(post.audience) || []);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const field = `w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`;
+  const save = async () => {
+    if (busy) return;
+    setBusy(true); setErr('');
+    const r = await db.editNews(post.id, { title, text, audience: aud });
+    setBusy(false);
+    if (!r.success) { setErr(r.error || 'Impossible de modifier.'); return; }
+    onDone();
+  };
+  return (
+    <div data-post-editor className="space-y-2">
+      <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
+      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} />
+      <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
+      {err && <div className="text-xs text-red-500" role="alert">{err}</div>}
+      <div className="flex gap-2">
+        <button type="button" disabled={busy || (!text.trim() && !(post.files || []).length)} onClick={() => void save()} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />}Enregistrer</button>
+        <button type="button" disabled={busy} onClick={onDone} className={`px-4 py-2 rounded-lg text-sm font-semibold ${light ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
+      </div>
+    </div>
+  );
+};
+
 const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: boolean; onAsk: ReturnType<typeof useConfirm>['ask']; onOpenProfile?: (u: User) => void }> = ({ post, me, isAdmin, light, onAsk, onOpenProfile }) => {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -76,6 +128,9 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const status = post.status || 'published';
   const published = status === 'published';
   const mine = post.author_id === me.id;
+  const canEdit = published && canEditNews(post, me, db.getNewsPolicy());
+  const personAuthor = !!post.author_role && post.author_role !== 'admin'; // opérateur, chef d'équipe ou comptable : photo et nom de la personne
+  const restricted = !!cleanAudience(post.audience);
   const files = post.files || [];
   const images = files.filter(f => f.kind === 'image');
   const others = files.filter(f => f.kind !== 'image');
@@ -187,15 +242,16 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   return (
     <article className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
       <header className="flex items-center gap-3">
-        {post.author_role === 'employee'
+        {personAuthor
           ? <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(x => x.id === post.author_id)?.avatar_url} name={post.author_name || '?'} className="w-10 h-10 rounded-full" /></button>
           : <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">GP</div></button>}
         <div className="min-w-0 flex-1">
-          {post.author_role === 'employee'
+          {personAuthor
             ? <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Opérateur'}</button>
             : <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Responsable'}</button>}
-          <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}</div>
+          <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}{post.edited_at ? ' · modifiée' : ''}{restricted && (isAdmin || mine) ? <span data-audience-badge className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold"><Eye className="w-3 h-3" />{audienceLabel(post.audience, 'fr')}</span> : null}</div>
         </div>
+        {canEdit && !editing && <button type="button" data-edit-news title="Modifier" aria-label="Modifier cette publication" onClick={() => setEditing(true)} className={`p-2 rounded-lg ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><Pencil className="w-4 h-4" /></button>}
         {!isAdmin && post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
         {isAdmin && (
           <div className="flex items-center gap-1">
@@ -245,8 +301,10 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
         </div>
       )}
 
+      {editing ? <PostEditor post={post} light={light} onDone={() => setEditing(false)} /> : <>
       {post.title && <h2 className="font-bold text-base sm:text-lg leading-snug break-words">{post.title}</h2>}
       {post.text && <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">{post.text}</p>}
+      </>}
 
       {images.length > 0 && (
         <ImageCarousel images={images} onOpen={url => setLb({ url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} />
@@ -348,7 +406,9 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
 };
 
 // Zone de publication : le responsable publie tout de suite, l'opérateur envoie pour validation
-const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, light }) => {
+const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: boolean }> = ({ isAdmin, mode, light }) => {
+  const direct = mode === 'direct'; // le responsable, ou un rôle que le responsable a autorisé à publier sans validation
+  const [aud, setAud] = useState<NewsRole[]>([]); // vide = visible par tous
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [pinned, setPinned] = useState(false);
@@ -386,11 +446,12 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
     setProgress(null);
     if (!up.ok) { setErr(up.error); setBusy(false); return; }
     const r = isAdmin
-      ? db.publishNews({ title, text, pinned, files: up.files })
-      : await db.submitNews({ title, text, files: up.files });
+      ? db.publishNews({ title, text, pinned, files: up.files, audience: aud })
+      : await db.submitNews({ title, text, files: up.files, audience: aud });
     if (!r.success) { setErr(r.error || 'Impossible de publier.'); setBusy(false); return; }
-    setTitle(''); setText(''); setPinned(false); setItems([]);
-    if (!isAdmin) setInfo('Envoyée au responsable. Elle sera visible par l’équipe après validation.');
+    setTitle(''); setText(''); setPinned(false); setItems([]); setAud([]);
+    if (!direct) setInfo('Envoyée au responsable. Elle sera visible par l’équipe après validation.');
+    else if (!isAdmin) setInfo('Publiée.');
     setBusy(false);
     setOpen(false);
   };
@@ -400,8 +461,8 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
     return (
       <section data-composer-closed className={`border rounded-xl p-3 space-y-2 ${light ? 'bg-white border-slate-200' : 'bg-[#0f1722] border-slate-700'}`}>
         <button type="button" data-composer-open onClick={() => { setOpen(true); setInfo(''); }} className={`w-full min-h-[44px] flex items-center justify-between gap-3 rounded-lg border px-3 text-left text-sm cursor-pointer ${light ? 'bg-slate-50 border-slate-300 text-slate-500 hover:border-emerald-500' : 'bg-[#0b1118] border-slate-600 text-slate-400 hover:border-emerald-500'}`}>
-          <span className="truncate">{hasDraft ? 'Continuer ma publication…' : isAdmin ? 'Écrire une publication…' : 'Proposer une publication…'}</span>
-          <span className="shrink-0 px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold">{isAdmin ? 'Publier' : 'Proposer'}</span>
+          <span className="truncate">{hasDraft ? 'Continuer ma publication…' : direct ? 'Écrire une publication…' : 'Proposer une publication…'}</span>
+          <span className="shrink-0 px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold">{direct ? 'Publier' : 'Proposer'}</span>
         </button>
         {info && <div className="text-xs text-emerald-600">{info}</div>}
       </section>
@@ -415,9 +476,10 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
           <ChevronUp className="w-4 h-4" /> Réduire
         </button>
       </div>
-      {!isAdmin && <div className={`text-xs ${muted}`}>Propose une publication à l’équipe. Le responsable doit la valider avant qu’elle soit visible.</div>}
+      {!direct && <div className={`text-xs ${muted}`}>Propose une publication à l’équipe. Le responsable doit la valider avant qu’elle soit visible.</div>}
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
-      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} placeholder={isAdmin ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
+      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} placeholder={direct ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
+      <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
 
       {items.length > 0 && (
         <ul className="space-y-1.5">
@@ -454,7 +516,7 @@ const Composer: React.FC<{ isAdmin: boolean; light: boolean }> = ({ isAdmin, lig
         </div>
         <button type="button" onClick={() => void submit()} disabled={busy || preparing || (!text.trim() && items.length === 0)} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">
           {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-          {busy ? (progress ? `Envoi ${progress.d}/${progress.t}…` : 'Envoi…') : isAdmin ? 'Publier' : 'Envoyer pour validation'}
+          {busy ? (progress ? `Envoi ${progress.d}/${progress.t}…` : 'Envoi…') : direct ? 'Publier' : 'Envoyer pour validation'}
         </button>
       </div>
       {err && <div className="text-xs text-red-500">{err}</div>}
@@ -472,9 +534,13 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   const knownRef = useRef<Set<string> | null>(null);
 
   const isAdmin = currentUser.role === 'admin';
+  const pubMode = publishModeFor(currentUser.role, db.getNewsPolicy()); // direct (responsable ou réglage), review (validation) ou off (ne peut pas publier)
   const listOf = () => {
     const a = db.getNews();
-    return isAdmin ? a.filter(p => p.status !== 'pending') : a;
+    // Aperçu du responsable (bascule opérateur / chef d'équipe / comptable) : on simule ce rôle, avec un autre compte, pour ne voir que ce que ce rôle verrait vraiment
+    const preview = db.getCurrentUser()?.role === 'admin' && currentUser.role !== 'admin';
+    const seen = preview ? a.filter(p => canSeeNews(p, { id: '__apercu__', role: currentUser.role })) : a;
+    return isAdmin ? seen.filter(p => p.status !== 'pending') : seen;
   };
   if (knownRef.current === null) knownRef.current = new Set(listOf().map(p => p.id));
 
@@ -537,7 +603,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
         </div>
       )}
 
-      <Composer isAdmin={isAdmin} light={light} />
+      {pubMode !== 'off' && <Composer isAdmin={isAdmin} mode={pubMode === 'direct' ? 'direct' : 'review'} light={light} />}
 
       {queue.length > 0 && (
         <section className="space-y-3">

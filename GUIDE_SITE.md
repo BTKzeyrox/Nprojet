@@ -44,10 +44,12 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Actualités  `feed`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Les annonces de l'équipe : ce qu'il faut savoir avant de travailler.
-- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Un employé peut proposer une publication. 3. L'admin accepte ou refuse, avec un motif.
+- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Écrire une publication si ton rôle y est autorisé, puis choisir « Visible par ». 3. Le crayon modifie une publication publiée, si l'admin l'a permis.
 - **Règles** :
-  - Une publication d'employé n'est visible de tous qu'après acceptation par l'admin.
-  - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire (comme Facebook) ; toucher un nom ouvre son profil, avec « Message ».
+  - Réglage par rôle (Réglages > Équipe) : ne publie pas, validation par l'admin, ou publie directement. Par défaut : validation.
+  - « Visible par » : le serveur ne donne la publication qu'aux rôles choisis ; l'auteur et l'admin la voient toujours.
+  - Modifier une publication publiée : seulement les siennes, si « Peut modifier » est coché. Elle reste publiée, « modifiée » s'affiche.
+  - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire ; toucher un nom ouvre son profil.
 - **Dans le code** : `src/views/FeedView.tsx`
 
 ### Tableau de bord  `dashboard`
@@ -237,15 +239,17 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - La Santé du site signale une mission en cours depuis plus de 12 h sans fin.
 - **Dans le code** : `src/views/employee/EmployeeDashboard.tsx`, `src/views/admin/AdminDashboard.tsx`
 
-### Employés  `employees`
+### Opérateurs et sessions  `employees`
 - **Qui** : responsable
-- **À quoi ça sert** : La gestion de l'équipe : profils, accès, état de chacun.
-- **Comment l'utiliser** : 1. Ouvrir un profil pour voir ou modifier les informations. 2. Régler l'accès selon l'heure de la vacation (auto, toujours, bloqué). 3. Bloquer ou supprimer un profil avec confirmation.
+- **À quoi ça sert** : La liste de l'équipe (recherche, filtres, statut en direct) et, dans l'autre onglet, le suivi des sessions en cours.
+- **Comment l'utiliser** : 1. Chercher par nom, identifiant, téléphone, jour ou nuit, puis filtrer : vacation, compte, statut en direct, performance. 2. Toucher un opérateur ouvre sa fiche : session en cours, profil, page, calendrier, message, modification, accès, blocage. 3. L'onglet « Suivi des sessions » montre les sessions en cours, à valider ou refuser.
 - **Règles** :
   - Accès « auto » : la connexion n'est permise que pendant la vacation, avec une marge avant et après.
   - Supprimer un profil est définitif.
   - Import Excel ou CSV : tous les comptes sont des opérateurs ; un mot de passe provisoire est montré une seule fois à la fin (100 comptes au plus).
   - Statut en direct : En cours (mission ouverte), En ligne (sans mission), En pause (mission ouverte, appli silencieuse 90 s à 30 min), Hors ligne.
+  - « Compte actif » veut dire seulement « non bloqué » : cela ne dit rien de la présence, qui est donnée par le statut en direct.
+  - Les boutons de gestion ne sont plus sur chaque ligne : tout passe par la fiche de l'opérateur, avec confirmation pour bloquer et supprimer.
 - **Dans le code** : `src/views/admin/EmployeesManagement.tsx`
 
 ### Mon profil  `profile`
@@ -279,7 +283,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Le dimanche est un jour de repos.
   - Les heures sont celles de Madagascar (UTC+3).
   - Calendrier global : chaque case montre des chiffres avec leur icône et leur couleur (présents, retards, absents, congés, missions), sans texte. C'est la somme exacte des calendriers individuels.
-  - Un clic sur un jour (calendrier global ou d'un seul employé, mêmes pastilles) ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
+  - Un clic sur un jour (calendrier global ou d'un seul employé) ouvre une fenêtre avec le détail de ce jour (flèches jour précédent / suivant) ; on reste sur le mois.
+  - Dans cette fenêtre : heures d'arrivée et de départ, temps en ligne, et chaque mission (heures, durée, score, paie).
   - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
   - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
   - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.
@@ -487,7 +492,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -576,6 +581,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
+| `dayDetail.ts` | Détail complet d'un employé pour un jour : connexions (heures de connexion et de déconnexion) et missions. Pur : sans écran ni serveur. |
 | `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
 | `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
@@ -611,6 +617,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
+| `newsAccess.ts` | Actualités : qui peut publier, qui peut modifier, qui peut voir (règles pures, copie identique dans supabase/functions/df-api/index.ts, bloc NEWSACCESS ; contrôlé par scripts/check-news-access.ts) |
 | `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
 | `notifications.ts` | — |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
@@ -619,6 +626,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineSync.ts` | Pont entre le magasin de données et la file d'actions hors ligne (module 13, M13.5) : règles pures, sans réseau, sans stockage. |
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
+| `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
 | `payslip.ts` | — |
 | `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
 | `performance.ts` | Statistiques de performance par opérateur (lecture du store, aucun appel serveur). |
@@ -811,8 +819,10 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:health-accounting` | Contrôle des règles Comptabilité du module 11 (M14.9). Pur, sans réseau. Lancer : npm run check:health-accounting |
 | `npm run check:health-management` | Contrôle des règles du module 15 dans la Santé du site (M15.8) : conflits de planning, paie et dépenses au-dessus du prévu. Pur, sans réseau. |
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
+| `npm run check:operator-list` | Contrôle de la page « Opérateurs et sessions » : liste compacte (recherche, filtres, tri), fiche opérateur avec les actions, fusion avec le suivi des sessions. |
 | `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
 | `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
+| `npm run check:news-access` | Contrôle des actualités : qui publie, modifie, voit (règles du site = copie du serveur) + protections du serveur. Lancer : npm run check:news-access |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |
 | `npm run check:simulation` | Contrôle du générateur de simulation (module 18, M18.4) : les données inventées doivent être COHÉRENTES entre elles, vues par les vraies règles du site |
 | `npm run check:health-performance` | Contrôle de la règle Performance du module 11 (M11.12). Pur, sans réseau. Lancer : npm run check:health-performance |
@@ -884,6 +894,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:composer-min` | Actualités : le formulaire de publication est réduit tant que personne ne veut publier. |
 | `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
+| `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

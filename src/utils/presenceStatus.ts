@@ -14,11 +14,13 @@ const OPEN = ['pending_start', 'active', 'pending_end'];
 export type LiveStatus = 'working' | 'online' | 'pause' | 'offline';
 export interface LiveInfo { status: LiveStatus; waiting: boolean; openMission: boolean; silentMin: number | null }
 
-export function liveStatus(user: Pick<User, 'id' | 'is_online'>, posts: PostSession[], presence: PresenceRow[], now = Date.now()): LiveInfo {
+export function liveStatus(user: Pick<User, 'id'> & Partial<Pick<User, 'is_online'>>, posts: PostSession[], presence: PresenceRow[], now = Date.now()): LiveInfo {
   const row = presence.find(r => r.user_id === user.id);
   const last = row ? new Date(row.last_seen).getTime() : NaN;
   const silentMs = row && Number.isFinite(last) ? Math.max(0, now - last) : null;
-  const fresh = silentMs !== null ? silentMs < FRESH_MS : !!user.is_online; // pas de ligne de présence : ancien indicateur de connexion
+  // Pas de ligne de présence = l'appli n'a jamais donné signe de vie : HORS LIGNE. On ne se fie PAS à l'ancien indicateur `is_online` : il reste bloqué sur « vrai » quand
+  // quelqu'un ferme l'appli sans se déconnecter (cas réel : un compte « en ligne » depuis des jours).
+  const fresh = silentMs !== null && silentMs < FRESH_MS;
   const openMission = posts.some(p => p.employee_id === user.id && OPEN.includes(p.status));
   const waiting = fresh && !!row?.waiting_since && !openMission;
   const silentMin = silentMs === null ? null : Math.floor(silentMs / 60000);

@@ -32,9 +32,9 @@ ok(live(U(), open(), [row(PAUSE_MAX_MS)]).status === 'pause' && live(U(), open()
 ok(live(U(), [], [row(FRESH_MS - 1000)]).status === 'online' && live(U(), [], [row(FRESH_MS)]).status === 'offline', 'sans mission : 89 s = en ligne ; 90 s = hors ligne');
 
 // ----- pas de ligne de présence / données abîmées -----
-ok(live(U('u1', true), [], []).status === 'online' && live(U('u1', false), [], []).status === 'offline', 'sans ligne de présence : on retombe sur l\'ancien indicateur de connexion');
-ok(live(U('u1', true), open(), []).status === 'working' && live(U('u1', false), open(), []).status === 'offline', 'sans ligne de présence, avec mission : en cours si connecté, sinon hors ligne');
-ok(live(U(), [], [{ user_id: 'u1', last_seen: 'pas-une-date' } as any]).status === 'offline' && live(U('u1', true), [], [{ user_id: 'u1', last_seen: 'pas-une-date' } as any]).status === 'online', 'date illisible : traitée comme « pas de ligne », jamais de plantage');
+ok(live(U('u1', true), [], []).status === 'offline' && live(U('u1', false), [], []).status === 'offline', 'sans ligne de présence : HORS LIGNE, même si l\'ancien indicateur « en ligne » est resté bloqué sur vrai');
+ok(live(U('u1', true), open(), []).status === 'offline' && live(U('u1', true), open(), []).openMission, 'sans ligne de présence, avec mission ouverte : hors ligne (mission encore ouverte)');
+ok(live(U('u1', true), [], [{ user_id: 'u1', last_seen: 'pas-une-date' } as any]).status === 'offline' && live(U(), [], [{ user_id: 'u1', last_seen: 'pas-une-date' } as any]).status === 'offline', 'date illisible : hors ligne, jamais de plantage');
 ok(live(U(), [], [{ ...row(0), last_seen: new Date(NOW + 60_000).toISOString() }]).status === 'online', 'horloge en avance (futur) : traité comme actif, pas d\'erreur négative');
 ok(['working', 'online', 'pause', 'offline'].every(s => (live(U(), s === 'working' || s === 'pause' ? open() : [], [row(s === 'working' ? 1000 : s === 'online' ? 1000 : s === 'pause' ? 300_000 : 3_600_000)]).status === s)), 'les 4 statuts sont tous atteignables');
 
@@ -55,8 +55,8 @@ ok(/title="En ligne"/.test(renderToString(<LiveDot info={live(U(), [], [row(1000
 const rd = (p: string) => fs.readFileSync(p, 'utf8');
 const chat = rd('src/components/ChatView.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), cal = rd('src/views/CalendarView.tsx'), modal = rd('src/components/DayDetailsModal.tsx'), speed = rd('scripts/check-speed.ts');
 ok(/const liveOf = \(u\?: User \| null\): LiveInfo \| null => \(isAdmin && u && u\.role === 'employee'/.test(chat) && (chat.match(/liveOf\(/g) || []).length >= 3, 'messagerie : statut affiché seulement pour le responsable et pour des opérateurs (jamais un faux « Hors ligne » pour les autres rôles) — liste, photo et en-tête');
-ok(/<LiveLine info=\{liveStatus\(emp, db\.getPosts\(\), db\.getPresence\(\), nowMs\)\}/.test(emp) && /<LiveDot info=\{liveStatus\(emp/.test(emp), 'gestion des employés : point sur la photo et ligne de statut sous le nom (toujours visible)');
-ok(!/cfg\.show_activity_column[\s\S]{0,40}<LiveLine info=\{liveStatus\(emp, db\.getPosts\(\)/.test(emp), 'gestion des employés : la ligne sous le nom ne dépend pas du réglage de la colonne Activité');
+ok(/const items: OpItem\[\] = allEmployees\.map\(u => \(\{ user: u, live: liveStatus\(u, posts, presence, nowMs\) \}\)\)/.test(emp) && /<LiveDot info=\{live\}/.test(emp) && /<LiveLine info=\{live\}/.test(emp), 'gestion des employés : point sur la photo et ligne de statut dans chaque ligne de la liste (toujours visibles)');
+ok(!/show_activity_column[\s\S]{0,200}data-testid=\{`op-row-/.test(emp), 'gestion des employés : le statut de la ligne ne dépend pas du réglage de la colonne Activité');
 ok(/useState<string>\(currentUser\?\.role === 'employee' \? currentUser\.id : initialUserId \|\| 'all'\)/.test(cal) && /data-testid="select-all-employees"/.test(cal) && /<GlobalCalendar/.test(cal), 'calendrier : le responsable arrive sur le calendrier GLOBAL ; « Tous les employés » dans la liste');
 ok(/data-testid="leave-filter-approved"/.test(cal) && /data-testid="leave-filter-pending"/.test(cal) && /hasLeaveInMonth\(leaves, u\.id, year, month, leaveFilter\)/.test(cal), 'calendrier : filtre Congés (acceptés / en attente) branché sur la liste des employés');
 ok(['gcal-tab-month', 'gcal-tab-summary', 'gcal-tab-day'].every(k => cal.includes(`gcal-tab-${k.slice(9)}`) || cal.includes('data-testid={`gcal-tab-${v}`}')) && /Vue du jour/.test(cal) && /Résumé/.test(cal), 'calendrier global : onglets Mois, Résumé, Vue du jour');

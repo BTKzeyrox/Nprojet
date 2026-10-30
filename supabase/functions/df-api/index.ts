@@ -79,6 +79,41 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
   };
 }
 // ===== END DECIDE =====
+// ===== BEGIN NEWSACCESS (actualités : qui publie, modifie, voit ; copie de src/utils/newsAccess.ts, contrôlée par scripts/check-news-access.ts) =====
+const NEWS_AUDIENCE_ROLES = ["employee", "team_lead", "accountant"];
+const newsIsMode = (v: unknown): boolean => v === "off" || v === "review" || v === "direct";
+const cleanNewsPolicy = (v: any): any => {
+  if (!v || typeof v !== "object") return { employee: "review", team_lead: "review", accountant: "review", allow_edit: false }; // réglage jamais touché : comme avant (les trois rôles proposent, le responsable valide)
+  const o = v;
+  return { employee: newsIsMode(o.employee) ? o.employee : "off", team_lead: newsIsMode(o.team_lead) ? o.team_lead : "off", accountant: newsIsMode(o.accountant) ? o.accountant : "off", allow_edit: o.allow_edit === true };
+};
+const cleanAudience = (v: unknown): string[] | undefined => {
+  if (!Array.isArray(v)) return undefined;
+  const out = NEWS_AUDIENCE_ROLES.filter((r) => v.includes(r));
+  return out.length === 0 || out.length === NEWS_AUDIENCE_ROLES.length ? undefined : out;
+};
+const publishModeFor = (role: unknown, policy: unknown): string => {
+  if (role === "admin") return "direct";
+  if (role !== "employee" && role !== "team_lead" && role !== "accountant") return "off";
+  return cleanNewsPolicy(policy)[role as string];
+};
+const canSeeNews = (post: any, me: any): boolean => {
+  if (!post || !me) return false;
+  if (me.role === "admin") return true;
+  if (post.author_id && post.author_id === me.id) return true;
+  if (post.status !== undefined && post.status !== "published") return false;
+  const aud = cleanAudience(post.audience);
+  return !aud || (me.role === "employee" || me.role === "team_lead" || me.role === "accountant" ? aud.includes(me.role) : false);
+};
+const canEditNews = (post: any, me: any, policy: unknown): boolean => {
+  if (!post || !me) return false;
+  if (me.role === "admin") return true;
+  if (post.author_id !== me.id) return false;
+  if (post.status !== undefined && post.status !== "published") return false;
+  return cleanNewsPolicy(policy).allow_edit && publishModeFor(me.role, policy) !== "off";
+};
+// ===== END NEWSACCESS =====
+
 // ===== BEGIN LEADLIMIT (plafond du Chef d'équipe, M15.6 : copie exacte de src/utils/approvalLimit.ts ; ce bloc est contrôlé par scripts/check-approval-limit.ts) =====
 const TEAM_LEAD_LIMIT_MAX = 1000000000;
 
@@ -2610,6 +2645,17 @@ const attendanceDay = (me: any, now: Date): string => {
   return mada.toISOString().slice(0, 10);
 };
 const attMem = new Map<string, { day: string; at: number }>(); // limite les écritures : 1 par minute et par booster
+// Connexions du jour (BTK, 2026-10-29) : une « session » = de la connexion au dernier signe de vie, ou à la déconnexion. Retour : la colonne `sessions` peut rester (vide ou pleine), l'ancien code l'ignore.
+const SESSION_GAP_MS = 150_000; // plus de 150 s sans signe de vie : la session est finie (fin = dernier signe de vie), la suivante est une nouvelle connexion
+const SESSIONS_MAX = 40;
+const nextSessions = (prev: any, now: Date): any[] => {
+  const list = Array.isArray(prev) ? prev.map((x: any) => ({ ...x })) : [];
+  const t = now.toISOString();
+  const last = list[list.length - 1];
+  if (last && !last.out && now.getTime() - new Date(last.last).getTime() <= SESSION_GAP_MS) last.last = t;
+  else list.push({ in: t, last: t });
+  return list.slice(-SESSIONS_MAX);
+};
 async function touchAttendance(me: any, now: Date) {
   const day = attendanceDay(me, now);
   const mem = attMem.get(me.id);
@@ -2620,14 +2666,28 @@ async function touchAttendance(me: any, now: Date) {
     const gap = (now.getTime() - new Date(row.last_seen).getTime()) / 1000;
     if (gap > 0 && gap <= 150) sec += Math.round(gap);
   }
-  await sb.from(ATTENDANCE).upsert({ user_id: me.id, day, first_seen: row?.first_seen ?? now.toISOString(), last_seen: now.toISOString(), online_sec: sec });
+  await sb.from(ATTENDANCE).upsert({ user_id: me.id, day, first_seen: row?.first_seen ?? now.toISOString(), last_seen: now.toISOString(), online_sec: sec, sessions: nextSessions(row?.sessions, now) });
   attMem.set(me.id, { day, at: now.getTime() });
+}
+// Déconnexion : la session ouverte reçoit son heure de fin. N'échoue jamais.
+async function closeAttendanceSession(me: any) {
+  try {
+    const now = new Date();
+    attMem.delete(me.id);
+    const day = attendanceDay(me, now);
+    const { data: row } = await sb.from(ATTENDANCE).select('sessions').eq('user_id', me.id).eq('day', day).maybeSingle();
+    const list = Array.isArray(row?.sessions) ? row.sessions.map((x: any) => ({ ...x })) : [];
+    const last = list[list.length - 1];
+    if (!last || last.out) return;
+    last.out = now.toISOString(); last.last = now.toISOString();
+    await sb.from(ATTENDANCE).update({ sessions: list }).eq('user_id', me.id).eq('day', day);
+  } catch (e) { console.error('attendance logout error:', e); }
 }
 // L'admin voit tous les boosters du jour demandé ; un booster ne voit que le sien.
 async function attendanceRoute(req: any, res: any, me: any) {
   const day = String(req.query.day || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return res.status(400).json({ error: 'Jour invalide.' });
-  let q = sb.from(ATTENDANCE).select('user_id,day,first_seen,last_seen,online_sec').eq('day', day);
+  let q = sb.from(ATTENDANCE).select('user_id,day,first_seen,last_seen,online_sec,sessions').eq('day', day);
   if (me.role !== 'admin') q = q.eq('user_id', me.id);
   const { data } = await q;
   return res.json({ rows: data || [] });
@@ -3222,10 +3282,19 @@ async function state(req: any, res: any, me: any) {
       }
       return q;
     };
-    const [{ data: changed }, { data: ids }] = await Promise.all([
-      scope(sb.from(T[col]).select('data').gte('updated_at', since)),
-      scope(sb.from(T[col]).select('id')),
-    ]);
+    let changed: any[] | null, ids: any[] | null;
+    if (col === 'news' && !admin) {
+      // Actualités : chacun ne reçoit que les publications de son public (le tri se fait ici, pas à l'écran). Le serveur envoie aussi la liste des numéros visibles : le reste disparaît chez lui.
+      const { data: nrows } = await scope(sb.from(T.news).select('id, data, updated_at'));
+      const seen = (nrows || []).filter((r: any) => canSeeNews(r.data, me));
+      changed = seen.filter((r: any) => String(r.updated_at) >= since).map((r: any) => ({ data: r.data }));
+      ids = seen.map((r: any) => ({ id: r.id }));
+    } else {
+      [{ data: changed }, { data: ids }] = await Promise.all([
+        scope(sb.from(T[col]).select('data').gte('updated_at', since)),
+        scope(sb.from(T[col]).select('id')),
+      ]);
+    }
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'reviews' && me.role !== 'admin') recs = recs.map((r: any) => { const { improvements: _hidden, ...mine } = r; return mine; }); // jamais les « points à améliorer » côté salarié (D9)
@@ -3394,7 +3463,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = { ...toSave, news_publish: cleanNewsPolicy(rec.news_publish === undefined ? existing?.news_publish : rec.news_publish) }; toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
@@ -3516,6 +3585,8 @@ async function sync(req: any, res: any, me: any) {
           author_role: existing?.author_role || 'admin',
           title: String(rec.title || '').slice(0, 120), text: String(rec.text || '').slice(0, NEWS_MAX_TEXT),
           created_at: existing?.created_at || rec.created_at || now, pinned: !!rec.pinned,
+          ...(cleanAudience(rec.audience === undefined ? existing?.audience : rec.audience) ? { audience: cleanAudience(rec.audience === undefined ? existing?.audience : rec.audience) } : {}), // ancien site qui n'envoie pas le public : on garde l'existant
+          ...(existing && (String(rec.text || '').slice(0, NEWS_MAX_TEXT) !== String(existing.text || '') || String(rec.title || '').slice(0, 120) !== String(existing.title || '')) && (existing.status || 'published') === 'published' ? { edited_at: now } : (existing?.edited_at ? { edited_at: existing.edited_at } : {})),
           status: existing?.status || 'published',
           files: existing ? (Array.isArray(existing.files) ? existing.files : []) : cleanFiles(rec.files, me.id),
           loves: Array.isArray(existing?.loves) ? existing.loves : [], comments: Array.isArray(existing?.comments) ? existing.comments : [],
@@ -3821,6 +3892,7 @@ async function logout(_req: any, res: any, me: any) {
   me.is_online = false;
   await sb.from(T.users).upsert({ id: me.id, data: me, updated_at: new Date().toISOString() });
   await sb.from(PRESENCE).update({ last_seen: new Date(0).toISOString(), waiting_since: null }).eq('user_id', me.id);
+  await closeAttendanceSession(me);
   return res.json({ ok: true });
 }
 
@@ -4811,6 +4883,7 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
     shares: Number(row.data.shares) || 0,
   };
   if (d.status && d.status !== 'published') return res.status(400).json({ error: 'Cette publication n’est pas encore validée.' });
+  if (!canSeeNews(d, me)) return res.status(404).json({ error: 'Publication introuvable.' }); // hors public : comme si elle n'existait pas
   if (kind === 'react') {
     d.loves = d.loves.includes(me.id) ? d.loves.filter((x: string) => x !== me.id) : [...d.loves, me.id];
   } else if (kind === 'comment') {
@@ -4856,21 +4929,50 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
 }
 
 // L'employé propose une publication : elle reste « en attente » jusqu'à la décision du responsable
+async function newsPolicy(): Promise<any> {
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  return cleanNewsPolicy((st?.data as any)?.news_publish);
+}
 async function newsSubmit(req: any, res: any, me: any) {
   if (me.role === 'admin') return res.status(403).json({ error: 'Le responsable publie directement.' });
+  const mode = publishModeFor(me.role, await newsPolicy());
+  if (mode === 'off') return res.status(403).json({ error: 'Le responsable n’a pas autorisé ton rôle à publier.' });
   const b = req.body || {};
   const text = String(b.text || '').trim().slice(0, NEWS_MAX_TEXT);
   const files = cleanFiles(b.files, me.id);
   if (!text && !files.length) return res.status(400).json({ error: 'Écris un texte ou joins un fichier.' });
-  const { count } = await sb.from(T.news).select('id', { count: 'exact', head: true }).eq('data->>author_id', me.id).eq('data->>status', 'pending');
-  if ((count || 0) >= NEWS_MAX_PENDING) return res.status(400).json({ error: `Tu as déjà ${NEWS_MAX_PENDING} publications en attente. Attends la décision du responsable.` });
+  if (mode === 'review') {
+    const { count } = await sb.from(T.news).select('id', { count: 'exact', head: true }).eq('data->>author_id', me.id).eq('data->>status', 'pending');
+    if ((count || 0) >= NEWS_MAX_PENDING) return res.status(400).json({ error: `Tu as déjà ${NEWS_MAX_PENDING} publications en attente. Attends la décision du responsable.` });
+  }
   const now = new Date().toISOString();
   const id = `news-${Date.now()}-${randomBytes(3).toString('hex')}`;
+  const aud = cleanAudience(b.audience);
   const d = {
-    id, author_id: me.id, author_name: String(me.name || '').slice(0, 80), author_role: 'employee',
-    title: String(b.title || '').trim().slice(0, 120), text, created_at: now, submitted_at: now, pinned: false, status: 'pending',
+    id, author_id: me.id, author_name: String(me.name || '').slice(0, 80), author_role: me.role === 'employee' ? 'employee' : me.role,
+    title: String(b.title || '').trim().slice(0, 120), text, created_at: now, submitted_at: now, pinned: false, status: mode === 'direct' ? 'published' : 'pending',
+    ...(aud ? { audience: aud } : {}),
     files, loves: [], comments: [], shares: 0,
   };
+  await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  return res.json({ ok: true, news: d });
+}
+
+// L'auteur modifie sa publication déjà publiée (texte, titre, public) si le responsable l'a autorisé. Les fichiers, réactions et commentaires ne changent jamais ici.
+async function newsEdit(req: any, res: any, me: any) {
+  const { id } = req.body || {};
+  if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  if (!canEditNews(row.data, me, await newsPolicy())) return res.status(403).json({ error: 'Tu ne peux pas modifier cette publication.' });
+  const b = req.body || {};
+  const text = String(b.text ?? row.data.text ?? '').trim().slice(0, NEWS_MAX_TEXT);
+  const files = Array.isArray(row.data.files) ? row.data.files : [];
+  if (!text && !files.length) return res.status(400).json({ error: 'Écris un texte ou garde un fichier.' });
+  const now = new Date().toISOString();
+  const aud = b.audience === undefined ? cleanAudience(row.data.audience) : cleanAudience(b.audience);
+  const { audience: _old, ...rest } = row.data;
+  const d: any = { ...rest, title: String(b.title ?? row.data.title ?? '').trim().slice(0, 120), text, edited_at: now, ...(aud ? { audience: aud } : {}) };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
   return res.json({ ok: true, news: d });
 }
@@ -5355,6 +5457,7 @@ Deno.serve(async (request: Request) => {
     if (action === "news-submit" && req.method === "POST") return await newsSubmit(req, res, me);
     if (action === "news-decision" && req.method === "POST") return await newsDecision(req, res, me);
     if (action === "news-withdraw" && req.method === "POST") return await newsWithdraw(req, res, me);
+    if (action === "news-edit" && req.method === "POST") return await newsEdit(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "totp-status" && req.method === "GET") return await totpStatus(req, res, me);
