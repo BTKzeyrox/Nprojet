@@ -44,13 +44,12 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Actualités  `feed`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Les annonces de l'équipe : ce qu'il faut savoir avant de travailler.
-- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Écrire une publication si ton rôle y est autorisé (Réglages > Équipe > Publications des équipes) ; choisir « Visible par » : Tous, ou un mélange d'opérateurs, chefs d'équipe et comptables. 3. Le crayon modifie une publication déjà publiée, si le responsable l'a autorisé. 4. Selon le réglage, une publication passe par la validation de l'admin (accepter ou refuser, avec un motif) ou part directement.
+- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Écrire une publication si ton rôle y est autorisé, puis choisir « Visible par ». 3. Le crayon modifie une publication publiée, si l'admin l'a permis.
 - **Règles** :
-  - Réglage par rôle (opérateurs, chefs d'équipe, comptables) : ne publie pas, passe par la validation, ou publie directement. Par défaut : validation. L'admin publie et voit toujours tout.
-  - « Visible par » : le serveur ne donne la publication qu'aux rôles choisis ; l'auteur et l'admin la voient toujours. Une publication sans choix est visible de tous. Réactions, commentaires et partages sont refusés à qui ne la voit pas.
-  - Modifier une publication publiée : seulement les siennes, si la case « Peut modifier » est cochée et si le rôle peut encore publier ; elle reste publiée et affiche « modifiée ». L'admin modifie toutes les publications, même le public.
-  - Une publication d'employé n'est visible de tous qu'après acceptation par l'admin (sauf rôle réglé sur « publie directement »).
-  - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire (comme Facebook) ; toucher un nom ouvre son profil, avec « Message ».
+  - Réglage par rôle (Réglages > Équipe) : ne publie pas, validation par l'admin, ou publie directement. Par défaut : validation.
+  - « Visible par » : le serveur ne donne la publication qu'aux rôles choisis ; l'auteur et l'admin la voient toujours.
+  - Modifier une publication publiée : seulement les siennes, si « Peut modifier » est coché. Elle reste publiée, « modifiée » s'affiche.
+  - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire ; toucher un nom ouvre son profil.
 - **Dans le code** : `src/views/FeedView.tsx`
 
 ### Tableau de bord  `dashboard`
