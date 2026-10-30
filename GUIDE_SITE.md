@@ -69,11 +69,12 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Tout ce que l'admin doit accepter ou refuser : débuts et fins de mission, avances, inscriptions, réinitialisations de mot de passe, changements de profil.
 - **Comment l'utiliser** : 1. Ouvrir une demande et regarder les preuves. 2. Accepter, ou refuser en donnant un motif. 3. La pastille du menu tombe à zéro quand tout est traité.
 - **Règles** :
+  - Connexion hors horaires : la personne écrit une raison ; tu autorises (fin de vacation, 1 à 12 h ou heure précise) ou tu refuses avec un motif.
   - Un refus demande un motif si le réglage « motif de refus obligatoire » est activé.
   - Le prix de la mission est figé au moment de la validation.
   - La Santé du site signale une mission en attente depuis plus de 24 h (réglable).
 - **Chiffres et formules** :
-  - Pastille Validations : Débuts à valider + fins à valider + avances en attente + inscriptions + réinitialisations + demandes de profil.
+  - Pastille Validations : Débuts à valider + fins à valider + avances en attente + inscriptions + réinitialisations + connexions hors horaires + demandes de profil.
 - **Réglages liés** (Réglages > Conditions) : `missions.validation_hours`, `missions.refusal_reason_required`
 - **Dans le code** : `src/views/admin/AdminDashboard.tsx`, src/views/TeamValidations.tsx (Chef d'équipe)
 
@@ -493,7 +494,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -552,6 +553,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 
 | Fichier | Rôle |
 |---|---|
+| `accessRequest.ts` | Demande de connexion hors horaires : règles pures (heure de fin d'une autorisation). Le serveur (df-api) a la même copie ; `npm run check:access-request` compare les deux. |
 | `accounting.ts` | Comptabilité (module 14, M14.1) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:accounting`. |
 | `accountingEntries.ts` | Écritures AUTOMATIQUES (module 14, M14.2) : règles pures qui transforment chaque pièce du site en écriture comptable. Sans écran, sans serveur, sans table. |
 | `accountingExport.ts` | Export pour le comptable (module 14, M14.8) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:accounting-export`. |
@@ -898,6 +900,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
+| `npm run check:access-request` | Connexion hors horaires : règles d'heure de fin, copie serveur identique, routes, une demande par personne, formulaire et carte du responsable. |
 | `npm run check:notif-read` | Cloche de notifications : « lu / pas encore lu » pour TOUS les rôles, gardé sur l'appareil (aucun serveur). |
 | `npm run check:no-demo` | M18.3 : le site n'a plus de mode démo (aucun bouton, aucun lien, aucun bandeau, entrée du store fermée en production). |
 | `npm run check:print-format` | Contrôle des règles d'impression (A4, Times New Roman, taille normale, coupure propre), sans écran ni réseau. Lancer : npm run check:print-format |

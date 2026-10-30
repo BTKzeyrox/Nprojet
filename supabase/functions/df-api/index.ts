@@ -1508,7 +1508,7 @@ async function vapidHeader(endpoint: string, subject: string, publicKey: string,
 }
 // ===== END PUSH =====
 // ===== BEGIN NOTIFY (notifications externes, partie 2a : textes, catégories ; ce bloc est contrôlé par scripts/check-push-events.ts) =====
-type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message";
+type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message" | "access";
 const PUSH_CATS = ["missions", "validations", "advances", "security", "messages"] as const;
 type PushCat = typeof PUSH_CATS[number];
 const ncut = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
@@ -1531,6 +1531,7 @@ function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reaso
     case "advance_no": { const r = ncut(m.reason, 100); return { fr: { title: "Avance refusée", body: r ? `Motif : ${r}` : "Ta demande d'avance a été refusée." }, en: { title: "Advance refused", body: r ? `Reason: ${r}` : "Your advance request was refused." } }; }
     case "signup": return { fr: { title: "Inscription à valider", body: name }, en: { title: "Sign-up to approve", body: name } };
     case "reset": return { fr: { title: "Mot de passe oublié (urgent)", body: name }, en: { title: "Forgotten password (urgent)", body: name } };
+    case "access": return { fr: { title: "Connexion hors horaires à valider", body: name }, en: { title: "Out-of-hours login to approve", body: name } };
     case "profile": return { fr: { title: "Changement de profil à valider", body: name }, en: { title: "Profile change to approve", body: name } };
     case "security": return { fr: { title: "Alerte de sécurité", body: name }, en: { title: "Security alert", body: name } };
     case "message": { const t = m.group ? `${name} · groupe` : name; const te = m.group ? `${name} · group` : name; return { fr: { title: t, body: "Nouveau message" }, en: { title: te, body: "New message" } }; }
@@ -2454,7 +2455,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
@@ -2498,6 +2499,7 @@ const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
 const SECRET = createHash("sha256").update("df-session:" + SB_KEY).digest("hex");
 const RESETS = "df_resets";
+const ACCESS_REQ = "df_access_requests"; // demandes de connexion hors horaires (une ligne par personne)
 const SIGNUPS = "df_signups";
 const PROFILE_REQ = "df_profile_requests";
 const PRESENCE = "df_presence";
@@ -2611,12 +2613,34 @@ const workDateOf = (shift, now) => {
   return mada.toISOString().slice(0, 10);
 };
 // ===== END WORKDAYS =====
+// ===== BEGIN ACCESSUNTIL (copie serveur : mêmes lignes) =====
+const hhmm = (s: unknown, dflt: number) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : dflt;
+};
+/** Prochaine fin de vacation (heure de Madagascar), strictement après `nowMs`. */
+export const shiftEndMs = (shift: 'day' | 'night', st: any, nowMs: number): number => {
+  const endMin = shift === 'night' ? hhmm(st?.night_shift_end, 6 * 60) : hhmm(st?.day_shift_end, 18 * 60);
+  const local = nowMs + 3 * 3600 * 1000;
+  let end = Math.floor(local / 86400000) * 86400000 + endMin * 60000;
+  if (end <= local) end += 86400000;
+  return end - 3 * 3600 * 1000;
+};
+/** Fin d'une autorisation : fin de vacation (si elle est à plus de 14 h, 4 h à la place), 1/2/4/8/12 h, ou une heure précise (dans les 48 h). null = demande invalide. */
+export const resolveAccessUntil = (shift: 'day' | 'night', st: any, nowMs: number, mode: unknown, value: unknown): number | null => {
+  if (mode === 'hours') { const h = Number(value); return [1, 2, 4, 8, 12].includes(h) ? nowMs + h * 3600000 : null; }
+  if (mode === 'until') { const t = typeof value === 'number' ? value : Date.parse(String(value || '')); return Number.isFinite(t) && t > nowMs && t <= nowMs + 48 * 3600000 ? t : null; }
+  const e = shiftEndMs(shift, st, nowMs);
+  return e - nowMs > 14 * 3600000 ? nowMs + 4 * 3600000 : e;
+};
+// ===== END ACCESSUNTIL =====
 // Opérateur, Comptable et Chef d'équipe (jamais le responsable) : « auto » = seulement pendant sa vacation ET un jour de travail ; « allow » = toute heure ; « block » = jamais.
 // Une session en cours (début ou fin à valider) garde l'accès jusqu'à sa fin.
-async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }> {
+async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string; block?: boolean }> {
   if (user.role === 'admin' || !['employee', 'accountant', 'team_lead'].includes(user.role)) return { ok: true };
-  if (user.access_mode === 'block') return { ok: false, message: "Ton accès est bloqué par l'administrateur." };
+  if (user.access_mode === 'block') return { ok: false, block: true, message: "Ton accès est bloqué par l'administrateur." };
   if (user.access_mode === 'allow') return { ok: true };
+  if (user.access_until && Date.parse(user.access_until) > Date.now()) return { ok: true }; // autorisation du responsable (demande hors horaires) encore valable
   const st = await getSettings();
   const shift: 'day' | 'night' = user.shift === 'night' ? 'night' : 'day';
   const now = new Date();
@@ -3057,6 +3081,77 @@ async function totpReset(req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+// ---------- demande de connexion hors horaires (le responsable décide ; une demande en attente par personne) ----------
+const ACCESS_ROLES = ['employee', 'accountant', 'team_lead'];
+const accessShiftOf = (u: any): 'day' | 'night' => (u?.shift === 'night' ? 'night' : 'day');
+/** Ce que la personne a le droit de voir de sa dernière demande (jamais les données des autres). */
+async function myAccessRequest(userId: string): Promise<any> {
+  const { data } = await sb.from(ACCESS_REQ).select('data').eq('id', `acc-${userId}`).maybeSingle();
+  const d = data?.data;
+  if (!d) return null;
+  return { status: d.status, reason: d.reason_refused || undefined, created_at: d.created_at, until: d.until || undefined };
+}
+async function accessRequest(req: any, res: any) {
+  const { username, password } = req.body || {};
+  const why = String(req.body?.reason || '').trim().slice(0, 300);
+  if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) return res.status(400).json({ error: 'Pseudo et mot de passe requis.' });
+  if (why.length < 5) return res.status(400).json({ error: 'Écris la raison de ta demande (5 caractères minimum).' });
+  const uname = username.trim().toLowerCase();
+  const gd = await guardCheck(uname, String(req.headers?.ip || ''));
+  if (gd.blocked) return res.status(429).json({ error: retryMessage(gd.waitSec), code: 'locked', retry_after: gd.waitSec });
+  const { data: cred } = await sb.from('df_credentials').select('*').eq('username', uname).maybeSingle();
+  if (!cred || !checkPw(password, cred.password_hash)) {
+    await sleep(500);
+    await guardFail(uname, String(req.headers?.ip || ''), false);
+    return res.status(401).json({ error: 'Pseudo ou mot de passe incorrect.' });
+  }
+  const user = await getUserRow(cred.user_id);
+  if (!user || user.status === 'blocked') return res.status(403).json({ error: 'Compte bloqué par l\'administrateur.' });
+  if (!ACCESS_ROLES.includes(user.role)) return res.status(400).json({ error: 'Cette demande ne concerne pas ce compte.' });
+  const acc = await shiftAccess(user);
+  if (acc.ok) return res.status(400).json({ error: 'Tu peux déjà te connecter.', code: 'allowed' });
+  if (acc.block) return res.status(403).json({ error: acc.message });
+  const id = `acc-${user.id}`;
+  const { data: ex } = await sb.from(ACCESS_REQ).select('data').eq('id', id).maybeSingle();
+  if (ex?.data?.status === 'pending') return res.status(409).json({ error: 'Ta demande est déjà en attente. Le responsable doit la valider.', code: 'pending', request: await myAccessRequest(user.id) });
+  const now = new Date().toISOString();
+  await sb.from(ACCESS_REQ).upsert({ id, data: { id, user_id: user.id, name: user.name, username: uname, role: user.role, shift: accessShiftOf(user), reason: why, status: 'pending', created_at: now }, updated_at: now });
+  await auditLog(user, 'access_request', { type: 'users', id: user.id, label: auditLabelOf(user) }, `Demande hors horaires : ${why}`);
+  await later(pushAdmins('validations', notifyText('access', { name: user.name }), `access:${id}`.slice(0, 60), { go: 'validations', filter: 'access', nav: `val-acc-${id}` }));
+  return res.json({ ok: true, request: await myAccessRequest(user.id) });
+}
+/** Le responsable décide : approve (fin de vacation, 1/2/4/8/12 h ou heure précise), refuse (motif), change (nouvelle heure de fin d'une autorisation donnée). */
+async function accessDecide(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { id, decision, mode, value } = req.body || {};
+  if (typeof id !== 'string' || !['approve', 'refuse', 'change'].includes(decision)) return res.status(400).json({ error: 'Demande invalide.' });
+  const { data: row } = await sb.from(ACCESS_REQ).select('data').eq('id', id).maybeSingle();
+  const r = row?.data;
+  if (!r) return res.status(404).json({ error: 'Demande introuvable.' });
+  const user = await getUserRow(r.user_id);
+  if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
+  const now = new Date().toISOString();
+  const save = (d: any) => sb.from(ACCESS_REQ).upsert({ id, data: d, updated_at: now });
+  const label = { type: 'users', id: String(user.id), label: auditLabelOf(user) };
+  if (decision === 'refuse') {
+    if (r.status !== 'pending') return res.status(409).json({ error: 'Cette demande est déjà traitée.' });
+    if (reasonOf(req.body).length < 3) return res.status(400).json({ error: REASON_ERR });
+    await save({ ...r, status: 'refused', reason_refused: reasonOf(req.body), decided_at: now, decided_by: me.id });
+    await auditLog(me, 'access_refused', label, `Refusée : ${reasonOf(req.body)}`);
+    return res.json({ ok: true });
+  }
+  if (decision === 'approve' && r.status !== 'pending') return res.status(409).json({ error: 'Cette demande est déjà traitée.' });
+  if (decision === 'change' && r.status !== 'approved') return res.status(409).json({ error: 'Aucune autorisation à modifier.' });
+  const st = await getSettings();
+  const until = resolveAccessUntil(accessShiftOf(user), st, Date.now(), mode, value);
+  if (until === null) return res.status(400).json({ error: 'Heure de fin invalide (dans les 48 prochaines heures).' });
+  const iso = new Date(until).toISOString();
+  await sb.from(T.users).upsert({ id: user.id, data: { ...user, access_until: iso, force_logout_at: undefined }, updated_at: now });
+  await save({ ...r, status: 'approved', until: iso, decided_at: now, decided_by: me.id });
+  await auditLog(me, decision === 'approve' ? 'access_approved' : 'access_changed', label, `Autorisée jusqu'à ${new Date(until + 3 * 3600000).toISOString().slice(0, 16).replace('T', ' ')} (Madagascar)`);
+  return res.json({ ok: true, until: iso });
+}
+
 async function login(req: any, res: any) {
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
@@ -3100,7 +3195,7 @@ async function login(req: any, res: any) {
   const mm = await maintenanceMessage(user);
   if (mm) return res.status(503).json({ error: mm, code: 'maintenance' });
   const acc = await shiftAccess(user);
-  if (!acc.ok) return res.status(403).json({ error: acc.message, code: 'shift' });
+  if (!acc.ok) return res.status(403).json({ error: acc.message, code: 'shift', can_request: !acc.block, request: acc.block ? null : await myAccessRequest(user.id) });
 
   user.is_online = true;
   await sb.from(T.users).upsert({ id: user.id, data: user, updated_at: new Date().toISOString() });
@@ -3330,6 +3425,11 @@ async function state(req: any, res: any, me: any) {
     const { data: rs } = await sb.from(RESETS).select('data').order('updated_at', { ascending: true });
     resets = (rs || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
   }
+  let accessRequests: any[] = [];
+  if (admin) {
+    const { data: ar } = await sb.from(ACCESS_REQ).select('data').order('updated_at', { ascending: true });
+    accessRequests = (ar || []).map((x: any) => x.data).filter((x: any) => x.status === 'pending' || (x.status === 'approved' && Date.parse(x.until || '') > Date.now()));
+  }
   void maybePurge();
   let signups: any[] = [];
   if (admin) {
@@ -3345,7 +3445,7 @@ async function state(req: any, res: any, me: any) {
   if (!admin) readsQ = readsQ.in('thread', [me.id, ...myGroupIds]);
   const { data: readRows } = await readsQ;
   const reads = (readRows || []).map((r: any) => ({ user_id: r.user_id, thread: r.thread, ms: Number(r.ms) }));
-  return res.json({ serverTime, me, collections: out, reads, resets, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
+  return res.json({ serverTime, me, collections: out, reads, resets, accessRequests, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
 }
 
 // ---------- « est en train d'écrire… » : signe très court (6 s), lu toutes les 2-3 s par la messagerie ouverte ----------
@@ -5435,6 +5535,7 @@ Deno.serve(async (request: Request) => {
   try {
     if (action === "login" && req.method === "POST") return await login(req, res);
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
+    if (action === "access-request" && req.method === "POST") return await accessRequest(req, res);
     if (action === "signup" && req.method === "POST") return await signup(req, res);
     if (action === "report-error" && req.method === "POST" && req.headers.actionId) return await onceRoute(action, req, res, null);
     if (action === "report-error" && req.method === "POST") return await reportError(req, res);
@@ -5490,6 +5591,7 @@ Deno.serve(async (request: Request) => {
     if (action === "totp-reset" && req.method === "POST") return await totpReset(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
+    if (action === "access-decide" && req.method === "POST") return await accessDecide(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
     if (action === "invoice-issue" && req.method === "POST") return await invoiceIssue(req, res, me);
     if (action === "invoice-cancel" && req.method === "POST") return await invoiceCancel(req, res, me);

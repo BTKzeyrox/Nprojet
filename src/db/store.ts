@@ -41,6 +41,8 @@ import {
   ShiftType,
   ClientContract,
   PasswordResetRequest,
+  AccessRequest,
+  AccessRequestState,
   SignupRequest,
   AppSettings,
   ProfileChangeRequest,
@@ -190,6 +192,7 @@ export class AppStore {
   private shifts: Shift[] = []; // planning des équipes (M15.2) : le responsable voit et écrit tout, un salarié ne reçoit que SON planning
   private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
   private resets: PasswordResetRequest[] = [];
+  private accessRequests: AccessRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
   private presence: PresenceRow[] = []; // admin : tous les opérateurs
@@ -317,6 +320,7 @@ export class AppStore {
     this.since = '';
     this.dirty = false;
     this.resets = [];
+    this.accessRequests = [];
     this.signups = [];
     this.profileRequests = [];
     this.presence = [];
@@ -576,6 +580,12 @@ export class AppStore {
         this.resets = next;
         changedAny = true;
       }
+    }
+
+    // Demandes de connexion hors horaires (admin seulement)
+    if (Array.isArray(r.data.accessRequests)) {
+      const next = r.data.accessRequests as AccessRequest[];
+      if (JSON.stringify(next) !== JSON.stringify(this.accessRequests)) { this.accessRequests = next; changedAny = true; }
     }
 
     // Demandes d'inscription (admin seulement)
@@ -1518,9 +1528,9 @@ export class AppStore {
   }
 
   // --- AUTHENTICATION ---
-  public async login(username: string, password: string, code?: string): Promise<{ success: boolean; error?: string; user?: User; needsCode?: boolean }> {
+  public async login(username: string, password: string, code?: string): Promise<{ success: boolean; error?: string; user?: User; needsCode?: boolean; canRequestAccess?: boolean; accessRequest?: AccessRequestState | null }> {
     const r = await this.api('login', { method: 'POST', body: JSON.stringify(code ? { username, password, code } : { username, password }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.', needsCode: r.data?.code === 'totp_required' };
+    if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.', needsCode: r.data?.code === 'totp_required', canRequestAccess: r.data?.code === 'shift' && r.data?.can_request === true, accessRequest: r.data?.request ?? null };
     this.stopPolling();
     void this.offline.onSessionExpired(); // une autre personne se connecte : les actions en attente de la précédente sont gardées
     this.resetLocal();
@@ -2231,6 +2241,24 @@ export class AppStore {
   public getPasswordResets(): PasswordResetRequest[] {
     if (this.demo) return []; // démo : pas de mot de passe oublié
     return [...this.resets];
+  }
+
+  public getAccessRequests(): AccessRequest[] {
+    if (this.demo) return [];
+    return [...this.accessRequests];
+  }
+
+  /** Décision du responsable : autoriser (fin de vacation, durée ou heure précise), refuser (motif), ou changer l'heure de fin. */
+  public async decideAccess(id: string, p: { decision: 'approve' | 'refuse' | 'change'; mode?: 'shift_end' | 'hours' | 'until'; value?: number | string; reason?: string }): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('access-decide', { method: 'POST', body: JSON.stringify({ id, ...p }) });
+    if (r.ok) await this.pull(true);
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Action impossible.' };
+  }
+
+  /** Page de connexion : la personne (qui a prouvé son mot de passe) demande à se connecter hors de ses horaires, avec une raison. */
+  public async requestAccess(username: string, password: string, reason: string): Promise<{ success: boolean; error?: string; request?: AccessRequestState | null }> {
+    const r = await this.api('access-request', { method: 'POST', body: JSON.stringify({ username, password, reason }) });
+    return r.ok ? { success: true, request: r.data?.request ?? null } : { success: false, error: r.data?.error || 'Envoi impossible.', request: r.data?.request ?? null };
   }
 
   public async decidePasswordReset(id: string, approve: boolean, reason?: string): Promise<boolean> {

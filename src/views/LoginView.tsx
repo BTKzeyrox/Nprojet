@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { db } from '../db/store';
-import { User } from '../types';
+import { User, AccessRequestState } from '../types';
 import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
 import { useApp } from '../context/AppContext';
 
@@ -137,9 +137,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
   // Double étape (M16.4) : le serveur demande un code après le bon mot de passe
   const [needCode, setNeedCode] = useState(false);
   const [loginCode, setLoginCode] = useState('');
+  // Connexion refusée hors des horaires : la personne peut demander une autorisation au responsable (raison obligatoire)
+  const [axCan, setAxCan] = useState(false);
+  const [axReq, setAxReq] = useState<AccessRequestState | null>(null);
+  const [axReason, setAxReason] = useState('');
+  const [axBusy, setAxBusy] = useState(false);
+  const [axErr, setAxErr] = useState<string | null>(null);
+  const sendAccessRequest = async () => {
+    setAxErr(null);
+    if (axReason.trim().length < 5) { setAxErr(lang === 'en' ? 'Write the reason (5 characters minimum).' : 'Écris la raison (5 caractères minimum).'); return; }
+    setAxBusy(true);
+    const r = await db.requestAccess(username.trim(), password, axReason.trim());
+    setAxBusy(false);
+    if (r.request !== undefined && r.request !== null) setAxReq(r.request);
+    if (!r.success) { setAxErr(r.error || null); return; }
+    setAxReason('');
+  };
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
+    setAxCan(false); setAxReq(null); setAxErr(null);
 
     if (!username.trim() || !password) {
       setErrorMsg(lang === 'en' ? 'Please enter your username and password.' : 'Veuillez saisir votre pseudo et votre mot de passe.');
@@ -151,6 +168,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLoading(false);
 
     if (result.needsCode) { setNeedCode(true); setErrorMsg(needCode ? (result.error || null) : null); return; } // double étape : on demande le code
+    if (!result.success && result.canRequestAccess) { setAxCan(true); setAxReq(result.accessRequest ?? null); }
     if (!result.success || !result.user) {
       setErrorMsg(result.error || (lang === 'en' ? 'Authentication failed' : "Erreur d'authentification"));
       return;
@@ -226,6 +244,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
           {mode === 'login' && (
             <>
               {errorMsg && errBox(errorMsg)}
+              {axCan && (
+                <div className="mb-4 p-3 rounded-2xl border space-y-2" style={{ backgroundColor: C.field, borderColor: C.line }} data-access-request>
+                  {axReq?.status === 'pending' ? (
+                    <div className="text-[13px] font-semibold" style={{ color: C.text }}>{lang === 'en' ? 'Your request is waiting for the manager. Try to log in again once it is approved.' : "Ta demande est en attente du responsable. Reconnecte-toi quand elle est validée."}</div>
+                  ) : (
+                    <>
+                      {axReq?.status === 'refused' && <div className="text-[13px] font-semibold" style={{ color: C.errText }}>{lang === 'en' ? 'Refused' : 'Demande refusée'}{axReq.reason ? ` : ${axReq.reason}` : ''}</div>}
+                      <label className={labelCls} htmlFor="ax-reason">{lang === 'en' ? 'Ask the manager to let you in (reason required)' : "Demander au responsable de t'autoriser (raison obligatoire)"}</label>
+                      <textarea id="ax-reason" value={axReason} onChange={e => setAxReason(e.target.value)} rows={3} maxLength={300}
+                        className="w-full rounded-2xl border p-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500/50" style={{ backgroundColor: C.card, borderColor: C.line, color: C.text }}
+                        placeholder={lang === 'en' ? 'Why do you need to work now?' : 'Pourquoi dois-tu travailler maintenant ?'} />
+                      {axErr && <div className="text-[13px] font-semibold" style={{ color: C.errText }}>{axErr}</div>}
+                      <button type="button" onClick={() => void sendAccessRequest()} disabled={axBusy}
+                        className="w-full h-12 rounded-2xl text-[15px] font-bold cursor-pointer disabled:opacity-60" style={{ background: btnGrad, color: '#ffffff' }}>
+                        {axBusy ? '…' : (lang === 'en' ? 'Send my request' : 'Envoyer ma demande')}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className={labelCls}>{t('username_label')}</label>

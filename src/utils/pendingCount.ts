@@ -8,6 +8,7 @@ export const countPending = () => {
   const advances = db.getAdvanceRequests().filter(a => a.status === 'pending').length;
   const signups = db.getSignupRequests().length;
   const resets = db.getPasswordResets().length;
+  const access = db.getAccessRequests().filter(a => a.status === 'pending').length;
   const profiles = db.getProfileRequests().filter(x => x.status === 'pending').length;
-  return { starts, ends, advances, signups, resets, profiles, total: starts + ends + advances + signups + resets + profiles };
+  return { starts, ends, advances, signups, resets, access, profiles, total: starts + ends + advances + signups + resets + access + profiles };
 };

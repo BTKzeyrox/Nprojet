@@ -3,6 +3,21 @@ import type { RecurringRule } from '../utils/recurring';
 import type { AutoReportSetting } from '../utils/autoReport';
 import type { TeamGoal } from '../utils/teamGoals';
 import type { MonthlyPlan } from '../utils/budgetPlan';
+// Demande de connexion hors horaires (vue du responsable) : en attente, ou autorisée et encore valable
+export interface AccessRequest {
+  id: string;
+  user_id: string;
+  name: string;
+  username: string;
+  role: string;
+  shift: 'day' | 'night';
+  reason: string;
+  status: 'pending' | 'approved';
+  created_at: string;
+  until?: string;
+}
+// Ce que la personne voit de sa dernière demande (page de connexion)
+export interface AccessRequestState { status: 'pending' | 'approved' | 'refused'; reason?: string; created_at?: string; until?: string }
 export interface PasswordResetRequest {
   id: string;
   user_id: string;
@@ -131,6 +146,7 @@ export interface User {
   is_online: boolean;
   team?: string; // équipe (texte court, choisi par l'admin) : un Chef d'équipe valide les sessions des opérateurs de la même équipe
   access_mode?: 'auto' | 'allow' | 'block'; // accès selon le shift : auto (défaut), toute heure, bloqué
+  access_until?: string; // autorisation du responsable (demande hors horaires) : connexion permise jusqu'à cette heure
   avatar_url: string;
   phone: string;
   cv_url?: string;

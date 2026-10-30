@@ -31,7 +31,7 @@ import {
   KeyRound,
   UserPlus,
 } from 'lucide-react';
-import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest, SignupRequest } from '../../types';
+import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, AccessRequest, ProfileChangeRequest, SignupRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { ClientPicker } from '../../components/ClientPicker';
@@ -45,6 +45,7 @@ import { readCompany } from '../../utils/companyRules';
 import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
+import { AccessRequestsCard } from '../../components/AccessRequestsCard';
 import { countPending } from '../../utils/pendingCount';
 import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
 import { PostsGrid20 } from '../../components/PostsGrid20';
@@ -96,11 +97,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
   const [resets, setResets] = useState<PasswordResetRequest[]>(db.getPasswordResets());
+  const [accessReqs, setAccessReqs] = useState<AccessRequest[]>(db.getAccessRequests());
   const [signups, setSignups] = useState<SignupRequest[]>(db.getSignupRequests());
   const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests().filter(x => x.status === 'pending'));
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [advances, setAdvances] = useState(db.getAdvanceRequests());
-  const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'profiles'>('all');
+  const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'access' | 'profiles'>('all');
   // Clic sur une notification : ouvre Validations avec le bon filtre
   useEffect(() => {
     const apply = () => {
@@ -204,6 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setPosts(db.getPosts());
       setSecurityLogs(db.getSecurityLogs());
       setResets(db.getPasswordResets());
+      setAccessReqs(db.getAccessRequests());
       setSignups(db.getSignupRequests());
       setProfileReqs(db.getProfileRequests().filter(x => x.status === 'pending'));
       setAdvances(db.getAdvanceRequests());
@@ -1102,6 +1105,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               ['advances', 'Avances', pend.advances],
               ['signups', 'Inscriptions', pend.signups],
               ['resets', 'Mots de passe', pend.resets],
+              ['access', 'Hors horaires', pend.access],
               ['profiles', 'Profils', pend.profiles],
             ] as const).map(([key, label, n]) => (
               <button
@@ -1171,6 +1175,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           ))}
         </div>
       )}
+
+      {(valFilter === 'all' || valFilter === 'access') && <AccessRequestsCard requests={accessReqs} cfg={db.getSettings()} />}
 
       {/* URGENT : demandes de nouveau mot de passe */}
       {(valFilter === 'all' || valFilter === 'resets') && resets.length > 0 && (

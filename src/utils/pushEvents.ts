@@ -3,7 +3,7 @@
 // Confidentialité : un push s'affiche sur l'écran verrouillé. On n'y écrit jamais un montant, un motif de refus de paie ni le texte d'un message.
 import type { PushText } from './pushRules';
 
-export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'profile' | 'security' | 'message';
+export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message';
 /** Les catégories qu'on peut couper (appareil par appareil). */
 export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages'] as const;
 export type PushCat = typeof PUSH_CATS[number];
@@ -29,6 +29,7 @@ export function notifyText(kind: NotifyKind, m: { name?: string; client?: string
     case 'advance_ok': return { fr: { title: 'Avance acceptée', body: 'Ta demande d\'avance a été acceptée.' }, en: { title: 'Advance approved', body: 'Your advance request was approved.' } };
     case 'advance_no': { const r = ncut(m.reason, 100); return { fr: { title: 'Avance refusée', body: r ? `Motif : ${r}` : 'Ta demande d\'avance a été refusée.' }, en: { title: 'Advance refused', body: r ? `Reason: ${r}` : 'Your advance request was refused.' } }; }
     case 'signup': return { fr: { title: 'Inscription à valider', body: name }, en: { title: 'Sign-up to approve', body: name } };
+    case 'access': return { fr: { title: 'Connexion hors horaires à valider', body: name }, en: { title: 'Out-of-hours login to approve', body: name } };
     case 'reset': return { fr: { title: 'Mot de passe oublié (urgent)', body: name }, en: { title: 'Forgotten password (urgent)', body: name } };
     case 'profile': return { fr: { title: 'Changement de profil à valider', body: name }, en: { title: 'Profile change to approve', body: name } };
     case 'security': return { fr: { title: 'Alerte de sécurité', body: name }, en: { title: 'Security alert', body: name } };

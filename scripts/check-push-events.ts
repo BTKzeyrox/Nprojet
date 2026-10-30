@@ -13,7 +13,7 @@ const m = /\/\/ ===== BEGIN NOTIFY[^\n]*\n([\s\S]*?)\/\/ ===== END NOTIFY =====/
 ok(!!m, 'bloc « NOTIFY » trouvé dans le serveur');
 const srv = new Function(`${transformSync(m![1], { loader: 'ts' }).code}\nreturn { notifyText, notifyCat, cleanPushOff, PUSH_CATS };`)() as any;
 
-const kinds: NotifyKind[] = ['val_start', 'val_end', 'advance_new', 'advance_ok', 'advance_no', 'signup', 'reset', 'profile', 'security', 'message'];
+const kinds: NotifyKind[] = ['val_start', 'val_end', 'advance_new', 'advance_ok', 'advance_no', 'signup', 'reset', 'access', 'profile', 'security', 'message'];
 const ctxs = [{ name: 'Rina', client: 'Acme', reason: 'Plafond atteint', group: false }, { name: 'Rina', group: true }, {}, { name: 'x'.repeat(200), client: 'y'.repeat(200), reason: 'z'.repeat(300) }, { name: 'Ligne\nsuivante\u0007', client: 'A\tB' }];
 for (const k of kinds) for (const [i, c] of ctxs.entries()) ok(J(notifyText(k, c)) === J(srv.notifyText(k, c)), `site = serveur : ${k} (cas ${i + 1})`);
 for (const k of kinds) ok(notifyCat(k) === srv.notifyCat(k), `catégorie site = serveur : ${k}`);

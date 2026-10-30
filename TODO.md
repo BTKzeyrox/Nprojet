@@ -423,5 +423,8 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 ### Étape 1 (fait le 2026-10-30)
 - [x] Réglages > Équipe : jours de travail (7 cases, défaut lundi à samedi) ; un jour décoché = repos, jamais une absence
 - [x] Contrôle de connexion par vacation étendu aux comptables et chefs d'équipe (accès : auto / toute heure / bloqué, réglable dans Employés) ; le responsable n'est jamais limité
-- [ ] Étape 2 : demande de connexion hors horaires avec motif, validation dans Validations
+### Étape 2 (fait le 2026-10-30, non testé à l'écran)
+- [x] Connexion refusée hors horaires : formulaire avec raison obligatoire (une demande en attente par personne), le refus et son motif sont montrés
+- [x] Validations > Hors horaires : autoriser (fin de vacation, 1/2/4/8/12 h, heure précise), refuser avec motif, modifier l'heure de fin ; journal d'audit
+- [x] Table df_access_requests (sans accès public)
 - [ ] Étape 3 : déconnexion forcée avec compte à rebours
