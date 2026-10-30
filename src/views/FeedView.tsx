@@ -10,7 +10,7 @@ import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
-import { AUDIENCE_ROLES, audienceLabel, canEditNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
+import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -537,7 +537,10 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   const pubMode = publishModeFor(currentUser.role, db.getNewsPolicy()); // direct (responsable ou réglage), review (validation) ou off (ne peut pas publier)
   const listOf = () => {
     const a = db.getNews();
-    return isAdmin ? a.filter(p => p.status !== 'pending') : a;
+    // Aperçu du responsable (bascule opérateur / chef d'équipe / comptable) : on simule ce rôle, avec un autre compte, pour ne voir que ce que ce rôle verrait vraiment
+    const preview = db.getCurrentUser()?.role === 'admin' && currentUser.role !== 'admin';
+    const seen = preview ? a.filter(p => canSeeNews(p, { id: '__apercu__', role: currentUser.role })) : a;
+    return isAdmin ? seen.filter(p => p.status !== 'pending') : seen;
   };
   if (knownRef.current === null) knownRef.current = new Set(listOf().map(p => p.id));
 

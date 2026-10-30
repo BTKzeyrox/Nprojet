@@ -419,7 +419,7 @@ export default function App() {
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
-            <FeedView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+            <FeedView key={viewUser.role} currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'team_lead' ? (
             /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */
             activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
