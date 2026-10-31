@@ -450,4 +450,5 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - [x] (2026-10-31) Calendrier global : chaque case du mois affiche le total de missions du jour (tous les opérateurs affichés)
 - [x] (2026-10-31) Calendrier global, case du jour : icône « présent » (à l'heure, un retard n'est plus compté présent), icône « missions faites » (validées) séparée, plus le texte « N missions »
 - [x] (2026-10-31) Mode « travail normal » : plus de mots ni badges jour/nuit dans le calendrier global (ligne opérateur + filtre), le détail d'un jour et la liste des missions du tableau de bord
-- [ ] Pas fait : la simulation contient encore des missions le samedi (à régénérer si besoin) ; le formulaire d'inscription demande encore Jour/Nuit
+- [x] (2026-10-31) Simulation régénérée selon les jours de travail (lundi à vendredi, option `workDays` / `--workdays=1,2,3,4,5`) : plus aucune mission le week-end, niveaux 84/64/44/24 gardés ; à refaire si les jours de travail changent
+- [ ] Pas fait : le formulaire d'inscription (avant connexion) demande encore Jour/Nuit : il faudrait un petit changement de df-api (réglage public), à décider avec BTK

@@ -11,7 +11,8 @@ const operators: SimOperator[] = [
   { id: 'user-emp-operator3', name: 'Opérateur 3', username: 'operator3', shift: 'night', monthly: 44 },
   { id: 'user-emp-operator4', name: 'Opérateur 4', username: 'operator4', shift: 'night', monthly: 24 },
 ];
-const sim = buildSimulation({ today, adminId: 'user-admin-1', adminName: 'Admin', operators });
+const wdArg = (process.argv.find(a => a.startsWith('--workdays=')) || '').slice(11).split(',').filter(Boolean).map(Number); // ex. --workdays=1,2,3,4,5 (lundi à vendredi)
+const sim = buildSimulation({ today, adminId: 'user-admin-1', adminName: 'Admin', operators, workDays: wdArg.length ? wdArg : undefined });
 
 const lit = (v: unknown): string => {
   const j = JSON.stringify(v);

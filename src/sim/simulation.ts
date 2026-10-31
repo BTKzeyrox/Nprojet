@@ -29,7 +29,7 @@ export const SIM_OPERATORS: SimOperator[] = [
   { id: 'sim-op3', name: 'Fidy Rakotoarisoa', username: 'fidy', shift: 'night', monthly: 44 },
   { id: 'sim-op4', name: 'Lalaina Ravelona', username: 'lalaina', shift: 'night', monthly: 24 },
 ];
-export interface SimOptions { today: string; adminId?: string; adminName?: string; operators?: SimOperator[] }
+export interface SimOptions { today: string; adminId?: string; adminName?: string; operators?: SimOperator[]; /** Jours de travail (0 = dimanche … 6 = samedi) ; par défaut lundi à samedi. La simulation ne met aucune mission les autres jours. */ workDays?: number[] }
 
 export interface SimData {
   today: string; start: string; adminId: string; operators: SimOperator[];
@@ -84,6 +84,8 @@ export function buildSimulation(opts: SimOptions): SimData {
   // Début : il y a 60 jours, mais jamais au milieu d'un mois presque fini (un mois de 2 jours ne ferait qu'une facture ridicule) : on passe alors au 1er du mois suivant.
   let start = shift(today, -(SIM_DAYS - 1));
   if (Number(lastOf(monthOf(start)).slice(8)) - Number(start.slice(8)) < 9) start = firstOf(nextMonth(monthOf(start)));
+  const wdays = opts.workDays && opts.workDays.length ? opts.workDays : [1, 2, 3, 4, 5, 6];
+  const isWd = (d: string): boolean => wdays.includes(dow(d));
   const adminId = opts.adminId || 'admin', adminName = opts.adminName || 'Responsable';
   const operators = (opts.operators && opts.operators.length ? opts.operators : SIM_OPERATORS).map(o => ({ ...o }));
   const r = rng(seedOf(today));
@@ -141,7 +143,7 @@ export function buildSimulation(opts: SimOptions): SimData {
   for (const month of months) {
     const from = start > firstOf(month) ? start : firstOf(month), to = lastOf(month);
     const monthDays: string[] = [];
-    for (let d = firstOf(month); d <= to; d = shift(d, 1)) if (dow(d) !== 0) monthDays.push(d);
+    for (let d = firstOf(month); d <= to; d = shift(d, 1)) if (isWd(d)) monthDays.push(d);
     const upTo = shift(today, -1);
     for (const op of operators) {
       const days = monthDays.filter(d => d >= from && d <= upTo && !onApprovedLeave(op.id, d));
@@ -173,7 +175,7 @@ export function buildSimulation(opts: SimOptions): SimData {
   }
   // Aujourd'hui : une mission en cours, une à valider, une qui demande à démarrer (le circuit de validation est visible)
   const live: [number, number, PostSession['status']][] = [[0, 0, 'active'], [1, 5, 'pending_end'], [operators.length - 1, 8, 'pending_start']];
-  live.forEach(([who, mi, status], i) => { if (dow(today) !== 0 && operators[who]) posts.push(mk(operators[who], mi, today, i, status, 40)); });
+  live.forEach(([who, mi, status], i) => { if (isWd(today) && operators[who]) posts.push(mk(operators[who], mi, today, i, status, 40)); });
 
   // ----- Argent : dépenses mensuelles + paiements des factures (ci-dessous) -----
   const cash: CashEntry[] = [];

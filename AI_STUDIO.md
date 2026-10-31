@@ -169,3 +169,8 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Sauvegarde n° 78 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures) ont été supprimées puis recréées ; réglages `monthly_plan` (2 000 000 / 1 100 000) et compteurs mis à jour.
 - Résultat vérifié en base : validées par mois Opérateur 1/2/3/4 = 84/64/44/24 (sept.), 80/61/42/23 (oct.), 1 à 5 missions par jour.
 - Retour arrière : restaurer la sauvegarde n° 78.
+
+## Simulation rechargée selon les jours de travail (2026-10-31) — pas de changement de df-api
+- Sauvegarde n° 80 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures) refaites, générées avec `--workdays=1,2,3,4,5`.
+- Vérifié en base : validées par mois Opérateur 1/2/3/4 = 84/64/44/24 (sept.), 81/62/42/23 (oct.), aucune mission samedi/dimanche, 5 missions par jour au maximum.
+- Retour arrière : restaurer la sauvegarde n° 80.
