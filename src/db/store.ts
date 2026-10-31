@@ -64,6 +64,7 @@ import {
   NewsAttachment,
 } from '../types';
 import { clientPriceForContract } from '../utils/clientPrice';
+import { cleanShiftMode } from '../utils/shiftMode';
 
 const TOKEN_KEY = 'df_session_token_v2';
 // Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
@@ -2227,6 +2228,15 @@ export class AppStore {
   public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string; note?: string }): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('signup', { method: 'POST', body: JSON.stringify(p) });
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
+  }
+
+  /** Public (avant connexion) : le mode des horaires, pour que le formulaire d'inscription cache Jour / Nuit quand il ne sert à rien. Sans réponse : « both » (le formulaire reste comme avant). */
+  public async getSignupInfo(): Promise<{ shift_mode: 'both' | 'normal' | 'day' | 'night' }> {
+    if (this.demo) return { shift_mode: 'both' };
+    try {
+      const r = await this.apiRaw('signup-info');
+      return { shift_mode: r.ok ? cleanShiftMode(r.data?.shift_mode) : 'both' };
+    } catch { return { shift_mode: 'both' }; }
   }
 
   public getSignupRequests(): SignupRequest[] {

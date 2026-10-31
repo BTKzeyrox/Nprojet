@@ -13,7 +13,7 @@ t('profil : Message ouvre la discussion privée', /onMessage=\{u => \{ setCvModa
 t('messagerie : plus de réactions emoji', !/EmojiPicker|ReactionChips/.test(chat));
 t('login : le bouton « afficher » du navigateur est caché', /input::-ms-reveal/.test(css));
 t('login / inscription / oubli : un seul œil par paire de champs', (login.match(/\{eyeBtn\(/g) || []).length === 3);
-t('inscription : choix de la vacation Jour / Nuit envoyé au serveur', /role="radiogroup"/.test(login) && /setSgShift\(v\)/.test(login) && /shift: sgShift/.test(login));
+t('inscription : choix de la vacation Jour / Nuit envoyé au serveur', /role="radiogroup"/.test(login) && /setSgShift\(v\)/.test(login) && /shift: effShift\(sgShift, sgMode\)/.test(login));
 // Réponses aux commentaires (comme Facebook, 2 niveaux)
 const api = r('supabase/functions/df-api/index.ts'), store = r('src/db/store.ts'), types = r('src/types/index.ts');
 const na = api.slice(api.indexOf('async function newsAction'), api.indexOf('async function newsAction') + 4200);

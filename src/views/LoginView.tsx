@@ -19,6 +19,7 @@ import { db } from '../db/store';
 import { User, AccessRequestState } from '../types';
 import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
 import { useApp } from '../context/AppContext';
+import { effShift, showShift, type ShiftMode } from '../utils/shiftMode';
 
 interface LoginViewProps {
   onLoginSuccess: (user: User) => void;
@@ -79,6 +80,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [sgUser, setSgUser] = useState('');
   const [sgPhone, setSgPhone] = useState('261 ');
   const [sgShift, setSgShift] = useState<'day' | 'night'>('day');
+  const [sgMode, setSgMode] = useState<ShiftMode | null>(null); // mode des horaires (Réglages) ; null = pas encore connu ou pas de réponse : Jour / Nuit reste proposé
+  useEffect(() => { let on = true; db.getSignupInfo().then(i => { if (on) setSgMode(i.shift_mode); }); return () => { on = false; }; }, []);
   const [sgPass, setSgPass] = useState('');
   const [sgPass2, setSgPass2] = useState('');
   const [sgNote, setSgNote] = useState('');
@@ -107,7 +110,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       username: sgUser.trim().toLowerCase(),
       password: sgPass,
       phone: phoneIsEmpty(sgPhone) ? '' : sgPhone,
-      shift: sgShift,
+      shift: effShift(sgShift, sgMode),
       note: sgNote.trim(),
     });
     setSgBusy(false);
@@ -398,7 +401,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <input type="tel" inputMode="numeric" maxLength={16} placeholder="261 34 12 345 67" value={sgPhone} onChange={e => setSgPhone(formatPhone(e.target.value))} className={fieldCls} style={fieldStyle} />
                   </div>
                 </div>
-                <div>
+                {showShift({ shift_mode: sgMode }) && <div data-testid="signup-shift">
                   <label className={labelCls}>Vacation</label>
                   <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Vacation">
                     {([['day', 'Jour', Sun], ['night', 'Nuit', Moon]] as const).map(([v, label, Icon]) => (
@@ -408,7 +411,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     ))}
                   </div>
                   <p className="text-[12px] mt-1" style={{ color: C.sub }}>Les heures de chaque vacation sont fixées par le responsable.</p>
-                </div>
+                </div>}
                 <div>
                   <label className={labelCls}>Mot de passe (6 caractères min.)</label>
                   <div className="relative">

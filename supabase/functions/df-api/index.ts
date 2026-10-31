@@ -4302,6 +4302,13 @@ async function resetDecision(req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+// ---------- inscription : ce qu'il faut savoir AVANT la connexion (lecture seule, rien de personnel) ----------
+// Le formulaire d'inscription s'affiche avant la connexion : il demande seulement le mode des horaires (Réglages) pour savoir s'il doit proposer Jour / Nuit.
+async function signupInfo(res: any) {
+  const st = await getSettings();
+  return res.json({ shift_mode: cleanShiftMode(st.shift_mode) });
+}
+
 // ---------- inscription (validation par l'admin) ----------
 async function signup(req: any, res: any) {
   const b = req.body || {};
@@ -5765,6 +5772,7 @@ Deno.serve(async (request: Request) => {
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
     if (action === "access-request" && req.method === "POST") return await accessRequest(req, res);
     if (action === "signup" && req.method === "POST") return await signup(req, res);
+    if (action === "signup-info" && req.method === "GET") return await signupInfo(res);
     if (action === "report-error" && req.method === "POST" && req.headers.actionId) return await onceRoute(action, req, res, null);
     if (action === "report-error" && req.method === "POST") return await reportError(req, res);
     if (action === "push-due" && req.method === "POST") return await pushDue(request, res);

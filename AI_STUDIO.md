@@ -179,3 +179,8 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Sauvegarde n° 81 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures, congés) refaites ; planning (`df_shifts`) inchangé (mêmes jours de repos).
 - Vérifié en base : 0 mission le week-end, 0 congé commençant/finissant le week-end, 0 mission pendant un congé accepté ; validées 84/64/44/24 (sept.), 81/62/42/23 (oct.).
 - Retour arrière : restaurer la sauvegarde n° 81.
+
+## df-api v62 (2026-10-31) — route publique `signup-info` (formulaire d'inscription)
+- Ajout seulement : `GET signup-info` (avant connexion, lecture seule) renvoie `{ shift_mode }` ; rien d'autre ne change. Base = v61 en ligne (SHA ea34b7bdb4fa8486d8103b5b90e49b7975abdb5b), dont le contenu est identique à `main` avant ce changement.
+- Le formulaire d'inscription (LoginView) cache Jour / Nuit quand le mode n'est pas « jour et nuit » ; sans réponse du serveur, il reste comme avant.
+- Retour arrière : redéployer v61 = SHA ea34b7bdb4fa8486d8103b5b90e49b7975abdb5b (le formulaire garde alors Jour / Nuit, rien d'autre ne casse).
