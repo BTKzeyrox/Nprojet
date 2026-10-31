@@ -5252,14 +5252,42 @@ async function newsEdit(req: any, res: any, me: any) {
   if (!canEditNews(row.data, me, await newsPolicy())) return res.status(403).json({ error: 'Tu ne peux pas modifier cette publication.' });
   const b = req.body || {};
   const text = String(b.text ?? row.data.text ?? '').trim().slice(0, NEWS_MAX_TEXT);
-  const files = Array.isArray(row.data.files) ? row.data.files : [];
+  const oldFiles: any[] = Array.isArray(row.data.files) ? row.data.files : [];
+  // Fichiers : `files` absent = on garde ; sinon la liste envoyée décide. Un fichier déjà là se garde par son adresse ; un nouveau doit avoir été envoyé par la personne qui modifie. Les fichiers retirés sont supprimés pour de bon.
+  let files = oldFiles;
+  if (Array.isArray(b.files)) {
+    const have = new Map(oldFiles.map((f: any) => [String(f?.url), f]));
+    files = [];
+    for (const f of b.files as any[]) {
+      const old = f && have.get(String(f.url));
+      if (old) { if (!files.includes(old)) files.push(old); continue; }
+      files.push(...cleanFiles([f], me.id));
+      if (files.length >= NEWS_MAX_FILES) break;
+    }
+    files = files.slice(0, NEWS_MAX_FILES);
+  }
   if (!text && !files.length) return res.status(400).json({ error: 'Écris un texte ou garde un fichier.' });
   const now = new Date().toISOString();
   const aud = b.audience === undefined ? cleanAudience(row.data.audience) : cleanAudience(b.audience);
   const { audience: _old, ...rest } = row.data;
-  const d: any = { ...rest, title: String(b.title ?? row.data.title ?? '').trim().slice(0, 120), text, edited_at: now, ...(aud ? { audience: aud } : {}) };
+  const d: any = { ...rest, title: String(b.title ?? row.data.title ?? '').trim().slice(0, 120), text, files, edited_at: now, ...(aud ? { audience: aud } : {}) };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  const kept = new Set(files.map((f: any) => String(f?.url)));
+  const gone = oldFiles.filter((f: any) => !kept.has(String(f?.url)));
+  if (gone.length) await dropFiles(gone);
   return res.json({ ok: true, news: d });
+}
+
+// L'auteur supprime sa publication déjà publiée (même droit que la modification) : la publication, ses commentaires et tous ses fichiers disparaissent
+async function newsDelete(req: any, res: any, me: any) {
+  const { id } = req.body || {};
+  if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
+  if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  if (!canEditNews(row.data, me, await newsPolicy())) return res.status(403).json({ error: 'Tu ne peux pas supprimer cette publication.' });
+  await dropFiles(newsFilesOf(row.data));
+  await sb.from(T.news).delete().eq('id', id);
+  return res.json({ ok: true, deleted: id });
 }
 
 // Le responsable valide ou refuse (motif obligatoire au refus ; les fichiers d'une publication refusée sont supprimés)
@@ -5786,6 +5814,7 @@ Deno.serve(async (request: Request) => {
     if (action === "news-decision" && req.method === "POST") return await newsDecision(req, res, me);
     if (action === "news-withdraw" && req.method === "POST") return await newsWithdraw(req, res, me);
     if (action === "news-edit" && req.method === "POST") return await newsEdit(req, res, me);
+    if (action === "news-delete" && req.method === "POST") return await newsDelete(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "totp-status" && req.method === "GET") return await totpStatus(req, res, me);
