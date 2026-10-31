@@ -174,3 +174,8 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Sauvegarde n° 80 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures) refaites, générées avec `--workdays=1,2,3,4,5`.
 - Vérifié en base : validées par mois Opérateur 1/2/3/4 = 84/64/44/24 (sept.), 81/62/42/23 (oct.), aucune mission samedi/dimanche, 5 missions par jour au maximum.
 - Retour arrière : restaurer la sauvegarde n° 80.
+
+## Congés de simulation sur des jours de travail (2026-10-31) — pas de changement de df-api
+- Sauvegarde n° 81 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures, congés) refaites ; planning (`df_shifts`) inchangé (mêmes jours de repos).
+- Vérifié en base : 0 mission le week-end, 0 congé commençant/finissant le week-end, 0 mission pendant un congé accepté ; validées 84/64/44/24 (sept.), 81/62/42/23 (oct.).
+- Retour arrière : restaurer la sauvegarde n° 81.

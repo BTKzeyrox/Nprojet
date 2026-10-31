@@ -148,5 +148,19 @@ for (const t of ['2026-10-01', '2026-10-02', '2026-01-03', '2027-03-31', '2028-0
   ok(good, `${t} (${['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'][dow(t)]}) : données cohérentes (${d.posts.length} missions, ${iss.length} factures, du ${d.start})`);
 }
 
+// ----- Jours de travail (Réglages) : la simulation les suit (option workDays) -----
+for (const wd of [[1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]]) {
+  for (const t of ['2026-10-28', '2026-10-31', '2026-11-04']) {
+    const d = buildSimulation({ today: t, workDays: wd }), isWd = (x: string) => wd.includes(dow(x));
+    const approved = d.leaves.filter(l => l.status === 'approved');
+    const good = d.posts.every(p => isWd(p.date))
+      && d.leaves.every(l => isWd(l.start_date) && isWd(l.end_date))
+      && d.posts.every(p => !approved.some(l => l.employee_id === p.employee_id && p.date >= l.start_date && p.date <= l.end_date))
+      && d.operators.every(o => { const per = new Map<string, number>(); for (const p of d.posts.filter(p => p.employee_id === o.id)) per.set(p.date, (per.get(p.date) || 0) + 1); return [...per.values()].every(n => n <= 5); });
+    ok(good, `jours de travail ${wd.join('')} le ${t} : aucune mission ni congé en dehors de ces jours, aucune mission pendant un congé accepté, 5 par jour au plus`);
+  }
+}
+ok(JSON.stringify(buildSimulation({ today: '2026-10-28' })) === JSON.stringify(buildSimulation({ today: '2026-10-28', workDays: [1, 2, 3, 4, 5, 6] })), 'sans option : lundi à samedi, comme avant');
+
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);

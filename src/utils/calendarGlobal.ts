@@ -24,7 +24,8 @@ export function firstActivityOf(posts: PostSession[]): Record<string, string> {
   return map;
 }
 
-const leaveKind = (leaves: Leave[], empId: string, date: string, status: 'approved' | 'pending'): LeaveType | null => {
+const leaveKind = (leaves: Leave[], empId: string, date: string, status: 'approved' | 'pending', workDays?: unknown): LeaveType | null => {
+  if (!isWorkDay(date, workDays)) return null; // un jour de repos (Réglages) n'est jamais « en congé »
   for (const l of leaves) if (l.employee_id === empId && l.status === status && l.start_date <= date && date <= l.end_date) return l.type;
   return null;
 };
@@ -37,14 +38,14 @@ export function empMonth(year: number, month: number, empId: string, ctx: CalCtx
     const dateStr = ymd(year, month, i + 1);
     const all = mine.filter(p => p.date === dateStr);
     const shown = ctx.clientFilter && ctx.clientFilter !== 'all' ? all.filter(p => p.client_name === ctx.clientFilter) : all;
-    const leave = leaveKind(ctx.leaves, empId, dateStr, 'approved');
+    const leave = leaveKind(ctx.leaves, empId, dateStr, 'approved', (ctx.cfg as any).work_days);
     return {
       dateStr, day: i + 1,
       status: dayStatus(all, dateStr, first[empId] || null, ctx.today, ctx.cfg, leave !== null),
       missions: shown.length,
       validated: shown.filter(p => p.status === 'completed').length,
       pay: shown.filter(p => p.status === 'completed').reduce((a, p) => a + (p.calculated_ar || 0), 0),
-      leave, pendingLeave: leaveKind(ctx.leaves, empId, dateStr, 'pending') !== null,
+      leave, pendingLeave: leaveKind(ctx.leaves, empId, dateStr, 'pending', (ctx.cfg as any).work_days) !== null,
     };
   });
 }
@@ -129,14 +130,14 @@ export function dayView(dateStr: string, emps: User[], ctx: CalCtx, first: Recor
   const rows: DayRow[] = emps.map(e => {
     const all = ctx.posts.filter(p => p.employee_id === e.id && p.date === dateStr);
     const worked = all.filter(p => p.status !== 'rejected' && p.status !== 'force_released').sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const leave = leaveKind(ctx.leaves, e.id, dateStr, 'approved');
+    const leave = leaveKind(ctx.leaves, e.id, dateStr, 'approved', (ctx.cfg as any).work_days);
     const status = dayStatus(all, dateStr, first[e.id] || null, ctx.today, ctx.cfg, leave !== null);
     const firstStart = worked.length ? worked[0].start_time.slice(0, 5) : null;
     const base = effShift(e.shift, ctx.cfg.shift_mode) === 'night' ? ctx.cfg.night_shift_start : ctx.cfg.day_shift_start;
     const diff = firstStart ? toMin(firstStart) - toMin(base) : 0;
     const ends = worked.filter(p => p.end_time).map(p => p.end_time!.slice(0, 5)).sort();
     return {
-      id: e.id, name: e.name, shift: e.shift === 'night' ? 'night' : 'day', status, leave, pendingLeave: leaveKind(ctx.leaves, e.id, dateStr, 'pending') !== null,
+      id: e.id, name: e.name, shift: e.shift === 'night' ? 'night' : 'day', status, leave, pendingLeave: leaveKind(ctx.leaves, e.id, dateStr, 'pending', (ctx.cfg as any).work_days) !== null,
       firstStart, lastEnd: ends.length ? ends[ends.length - 1] : null, open: all.some(p => OPEN.includes(p.status)),
       lateMin: status === 'late' && diff > 0 && diff < 12 * 60 ? diff : 0,
       missions: all.length, validated: all.filter(p => p.status === 'completed').length, refused: all.filter(p => p.status === 'rejected').length,

@@ -72,11 +72,19 @@ const empty = globalSummary(2026, 9, [], ctx, first, advances);
 ok(empty.employees === 0 && empty.pay === 0 && empty.net === 0 && globalMonth(2026, 9, [], ctx, first).every(d => d.present === 0 && d.pay === 0), 'aucun employé : tout à zéro, aucun plantage');
 ok([sm.pay, sm.net, sm.workedDays, sm.absences].every(Number.isFinite), 'résumé : aucun NaN');
 
-// Un congé qui couvre un dimanche : le dimanche s'affiche « en congé » mais ne compte pas dans les jours de congé du résumé (c'est un repos)
+// Un congé qui couvre un jour de repos : ce jour n'est JAMAIS « en congé » (ni dans la case, ni dans le résumé, ni dans la vue du jour)
 {
   const d = [U('d', 'Dia', 'day')], lv = [L('lx', 'd', '2026-10-09', '2026-10-12')], cx = { posts: [P('q', 'd', '2026-10-05', 'completed')], leaves: lv, today: TODAY, cfg };
   const fd = firstActivityOf(cx.posts), gd = globalMonth(2026, 9, d, cx, fd), sd = globalSummary(2026, 9, d, cx, fd);
-  ok(gd[10].onLeave === 1 && sd.leaveDays === 3, 'congé du vendredi 9 au lundi 12 : le dimanche 11 est affiché en congé, mais le résumé compte 3 jours (vendredi, samedi, lundi)');
+  ok(gd[8].onLeave === 1 && gd[9].onLeave === 1 && gd[10].onLeave === 0 && gd[11].onLeave === 1 && sd.leaveDays === 3, 'congé du vendredi 9 au lundi 12 (repos = dimanche) : vendredi, samedi et lundi en congé, le dimanche 11 pas en congé ; le résumé compte 3 jours');
+  ok(gd[10].leaveNames.length === 0 && dayView('2026-10-11', d, cx, fd)[0].status !== 'leave' && dayView('2026-10-11', d, cx, fd)[0].leave === null, 'le dimanche 11 : personne n\'est nommé en congé, la vue du jour ne le met pas en congé');
+  // Réglages : lundi à vendredi seulement → le samedi et le dimanche ne sont plus en congé non plus
+  const cf = { ...cfg, work_days: [1, 2, 3, 4, 5] } as any, cy = { ...cx, cfg: cf }, gf = globalMonth(2026, 9, d, cy, fd), sf = globalSummary(2026, 9, d, cy, fd);
+  ok(gf[8].onLeave === 1 && gf[9].onLeave === 0 && gf[10].onLeave === 0 && gf[11].onLeave === 1 && sf.leaveDays === 2, 'lundi à vendredi cochés : le samedi 10 et le dimanche 11 ne sont pas en congé ; le résumé compte 2 jours (vendredi, lundi)');
+  ok(dayStatus([], '2026-10-10', '2026-10-01', TODAY, cf, true) === 'no_post' && dayStatus([], '2026-10-09', '2026-10-01', TODAY, cf, true) === 'leave', 'dayStatus : un jour de repos n\'est pas « en congé » même si un congé le couvre ; un jour de travail l\'est');
+  // Une demande en attente sur un jour de repos n'est pas montrée non plus
+  const lp = [L('lp', 'd', '2026-10-09', '2026-10-12', 'pending')], gp = globalMonth(2026, 9, d, { ...cy, leaves: lp }, fd);
+  ok(gp[8].pendingLeave === 1 && gp[9].pendingLeave === 0 && gp[10].pendingLeave === 0 && gp[11].pendingLeave === 1, 'demande en attente : montrée vendredi et lundi seulement (pas le week-end)');
 }
 
 // ----- Vue du jour -----

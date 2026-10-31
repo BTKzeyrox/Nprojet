@@ -5,7 +5,7 @@ import { isWorkDay } from './workDays';
 
 export function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
   // Congé ACCEPTÉ (M5.2) : le jour n'est ni une absence ni un retard, sauf si une mission a vraiment été travaillée ce jour-là
-  if (onLeave && !shifts.some(s => s.status !== 'rejected' && s.status !== 'force_released')) return 'leave';
+  if (onLeave && isWorkDay(dateStr, (cfg as any).work_days) && !shifts.some(s => s.status !== 'rejected' && s.status !== 'force_released')) return 'leave';
   if (shifts.length > 0) {
     const hasInProgress = shifts.some(s => s.status === 'active' || s.status === 'pending_start' || s.status === 'pending_end');
     const isTest = shifts.some(s => s.client_name.toLowerCase().includes('test') || s.account_tag.toLowerCase().includes('qa'));

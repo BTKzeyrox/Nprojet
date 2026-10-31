@@ -110,7 +110,14 @@ export function buildSimulation(opts: SimOptions): SimData {
     { id: 'sim-lv3', op: operators[1], type: 'paid', from: 16, len: 2, status: 'pending', reason: 'Mariage d\'un cousin' },
     { id: 'sim-lv4', op: opAt(3), type: 'paid', from: -13, len: 2, status: 'approved', reason: 'Démarches familiales' },
   ];
-  const onApprovedLeave = (opId: string, date: string): boolean => leaveSpecs.some(l => l.status === 'approved' && l.op?.id === opId && date >= shift(today, l.from) && date <= shift(today, l.from + l.len - 1));
+  // Un congé commence et finit un jour de travail (jamais seulement le week-end) : on recule la fin / avance le début jusqu'à un jour de travail
+  const leaveSpan = (l: { from: number; len: number }): [string, string] => {
+    let a = shift(today, l.from), b = shift(today, l.from + l.len - 1);
+    while (!isWd(a)) a = shift(a, 1);
+    while (b > a && !isWd(b)) b = shift(b, -1);
+    return [a, b < a ? a : b];
+  };
+  const onApprovedLeave = (opId: string, date: string): boolean => leaveSpecs.some(l => { const [a, b] = leaveSpan(l); return l.status === 'approved' && l.op?.id === opId && date >= a && date <= b; });
 
   // ----- Missions faites par les opérateurs : 60 jours, jamais le dimanche, ~9 % refusées -----
   const posts: PostSession[] = [];
@@ -265,7 +272,7 @@ export function buildSimulation(opts: SimOptions): SimData {
   const leaves: Leave[] = [];
   for (const l of leaveSpecs) {
     if (!l.op) continue;
-    const s0 = shift(today, l.from), e0 = shift(today, l.from + l.len - 1), asked = iso(shift(today, l.status === 'pending' ? -1 : Math.min(l.from, 0) - 3), 10);
+    const [s0, e0] = leaveSpan(l), asked = iso(shift(today, l.status === 'pending' ? -1 : Math.min(l.from, 0) - 3), 10);
     leaves.push({ id: l.id, employee_id: l.op.id, employee_name: l.op.name, type: l.type, start_date: s0, end_date: e0, days: workingDays(s0, e0, 5), status: l.status, reason: l.reason, created_by: l.op.id, created_at: asked, updated_at: asked,
       ...(l.status === 'approved' ? { decided_by: adminId, decided_at: iso(shift(today, -2), 11) } : {}) });
   }
