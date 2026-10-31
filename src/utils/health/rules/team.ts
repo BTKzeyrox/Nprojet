@@ -2,7 +2,7 @@
 // Dimanche = repos. Un jour de congé ACCEPTÉ (module 5) ne compte pas comme absence ; une demande en attente ou refusée ne change rien.
 import { alertId, hasEnough, type HealthContext, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
-import { isLate } from '../../attendance';
+import { isLateDay } from '../../attendance';
 import { leaveOn } from '../../leaves';
 import { dayDiff, isEmployee, isSunday, isWorked, shiftDay } from './common';
 
@@ -59,7 +59,7 @@ export const lateOften: HealthRule = {
     for (const u of ctx.users.filter(isEmployee)) {
       const mine = ctx.posts.filter(p => p.employee_id === u.id && p.date >= from && p.date <= ctx.today && isWorked(p));
       if (!hasEnough(new Set(mine.map(p => p.date)).size, N)) continue; // pas assez de jours travaillés pour juger
-      const lateDays = [...new Set(mine.filter(p => isLate(p, cfg)).map(p => p.date))].sort();
+      const lateDays = [...new Set(mine.map(p => p.date))].filter(d => isLateDay(mine.filter(p => p.date === d), cfg)).sort();
       if (lateDays.length < N) continue;
       out.push({
         id: alertId('team', 'late-often', u.id), page: 'team', rule: 'late-often', severity: lateDays.length >= N + 2 ? 'urgent' : 'watch',

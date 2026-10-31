@@ -1,6 +1,6 @@
 // Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran.
 import type { AppSettings, DayStatus, PostSession } from '../types';
-import { isLate } from './attendance';
+import { isLateDay } from './attendance';
 import { isWorkDay } from './workDays';
 
 export function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings, onLeave = false): DayStatus {
@@ -14,7 +14,7 @@ export function dayStatus(shifts: PostSession[], dateStr: string, firstActivity:
     const worked = shifts.filter(s => s.status !== 'rejected' && s.status !== 'force_released');
     if (isTest) return 'test';
     if (hasInProgress) return 'in_progress';
-    if (worked.length > 0 && worked.some(s => isLate(s, cfg))) return 'late';
+    if (worked.length > 0 && isLateDay(worked, cfg)) return 'late';
     if (reached || allCompleted) return 'objective_reached';
     return 'absent';
   }

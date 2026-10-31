@@ -18,14 +18,16 @@ export const SIM_PAY_PER_MISSION = 5000; // Ar versés à l'opérateur par missi
 /** Prix facturés au client, par type de mission (les types sans prix propre prennent le prix par défaut). Aucun prix propre à un client : factures et Finances donnent ainsi le même chiffre. */
 export const SIM_PRICES = { client_price_default_ar: 8000, client_prices_by_type: { 'CONTRÔLE QUALITÉ': 10000, 'WEB': 13000, 'ADMINISTRATIF': 9000, 'AIDE': 7000 } as Record<string, number> };
 export const SIM_BUDGETS: Record<string, number> = { Loyer: 25000, Internet: 12000, Achats: 9000, Transport: 8000 };
-export const SIM_MONTHLY_PLAN = { revenue_ar: 700000, payroll_ar: 420000 };
+export const SIM_MONTHLY_PLAN = { revenue_ar: 2000000, payroll_ar: 1100000 };
 
-export interface SimOperator { id: string; name: string; username: string; shift: 'day' | 'night' }
+/** `monthly` : missions validées visées par mois (le niveau de performance : ~84 Top, ~64 Excellent, ~44 Standard, ~24 À suivre). Chaque jour travaillé compte de 1 à 5 missions. */
+export interface SimOperator { id: string; name: string; username: string; shift: 'day' | 'night'; monthly?: number }
+export const SIM_DAY_MAX = 5;
 export const SIM_OPERATORS: SimOperator[] = [
-  { id: 'sim-op1', name: 'Hanitra Rasoamanana', username: 'hanitra', shift: 'day' },
-  { id: 'sim-op2', name: 'Mamy Randrianasolo', username: 'mamy', shift: 'day' },
-  { id: 'sim-op3', name: 'Fidy Rakotoarisoa', username: 'fidy', shift: 'night' },
-  { id: 'sim-op4', name: 'Lalaina Ravelona', username: 'lalaina', shift: 'night' },
+  { id: 'sim-op1', name: 'Hanitra Rasoamanana', username: 'hanitra', shift: 'day', monthly: 84 },
+  { id: 'sim-op2', name: 'Mamy Randrianasolo', username: 'mamy', shift: 'day', monthly: 64 },
+  { id: 'sim-op3', name: 'Fidy Rakotoarisoa', username: 'fidy', shift: 'night', monthly: 44 },
+  { id: 'sim-op4', name: 'Lalaina Ravelona', username: 'lalaina', shift: 'night', monthly: 24 },
 ];
 export interface SimOptions { today: string; adminId?: string; adminName?: string; operators?: SimOperator[] }
 
@@ -116,10 +118,11 @@ export function buildSimulation(opts: SimOptions): SimData {
     const base = (op.shift === 'day' ? 8 : 20) * 60, minutes = base + (late ? 20 + Math.floor(r() * 25) : -15 + Math.floor(r() * 26));
     return [Math.floor(minutes / 60), minutes % 60];
   };
-  const mk = (op: SimOperator, mi: number, date: string, _k: number, status: PostSession['status'], qty: number, late = false): PostSession => {
+  const mk = (op: SimOperator, mi: number, date: string, _k: number, status: PostSession['status'], qty: number, late = false, atH?: number, atM?: number): PostSession => {
     const m = MISSIONS[mi];
-    const [startH, startM] = startAt(op, late);
-    const endH = (startH + 1 + Math.floor(r() * 3)) % 24, endM = Math.floor(r() * 50);
+    const [startH, startM] = atH === undefined ? startAt(op, late) : [atH, atM as number];
+    const endMin = startH * 60 + startM + 30 + Math.floor(r() * 71);
+    const endH = Math.floor(endMin / 60) % 24, endM = endMin % 60;
     const decided = status === 'completed' || status === 'rejected';
     n++;
     return {
@@ -132,13 +135,40 @@ export function buildSimulation(opts: SimOptions): SimData {
       created_at: iso(date, startH % 24, startM), updated_at: iso(date, (startH + 2) % 24, endM),
     } as PostSession;
   };
-  for (let date = start; date < today; date = shift(date, 1)) {
-    if (dow(date) === 0) continue;
+  // Chaque mois et chaque opérateur : `monthly` missions validées, réparties sur les jours de travail, de 1 à 5 par jour (quelques jours sans mission). Le mois en cours compte presque tout son objectif (il finit dans 1 à 2 jours).
+  const months: string[] = [];
+  for (let m = monthOf(start); m <= monthOf(today); m = nextMonth(m)) months.push(m);
+  for (const month of months) {
+    const from = start > firstOf(month) ? start : firstOf(month), to = lastOf(month);
+    const monthDays: string[] = [];
+    for (let d = firstOf(month); d <= to; d = shift(d, 1)) if (dow(d) !== 0) monthDays.push(d);
+    const upTo = shift(today, -1);
     for (const op of operators) {
-      if (onApprovedLeave(op.id, date)) continue; // en congé accepté : aucune mission
-      if (r() > (op.shift === 'day' ? 0.86 : 0.8)) continue; // quelques jours de repos
-      // Une mission par jour et par opérateur : le site juge le retard sur l'heure de début de CHAQUE session, une 2e mission en milieu de journée passerait pour un retard
-      posts.push(mk(op, Math.floor(r() * MISSIONS.length), date, 0, r() < 0.09 ? 'rejected' : 'completed', 20 + Math.floor(r() * 70), r() < 0.03));
+      const days = monthDays.filter(d => d >= from && d <= upTo && !onApprovedLeave(op.id, d));
+      if (!days.length) continue;
+      const share = Math.min(1, days.length / monthDays.length + 0.1);
+      const M = Math.min(days.length * SIM_DAY_MAX, Math.round((op.monthly ?? 40) * share));
+      if (M <= 0) continue;
+      const avg = Math.min(4.5, Math.max(1, M / (days.length * 0.8)));
+      const A = Math.max(Math.ceil(M / SIM_DAY_MAX), Math.min(days.length, M, Math.round(M / avg)));
+      const pool = [...days];
+      const active: string[] = [];
+      while (active.length < A) active.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+      const perDay = new Map<string, number>(active.map(d => [d, 1]));
+      for (let left = M - A; left > 0;) { const d = active[Math.floor(r() * active.length)]; if ((perDay.get(d) as number) < SIM_DAY_MAX) { perDay.set(d, (perDay.get(d) as number) + 1); left--; } }
+      for (const date of active.sort()) {
+        const k = perDay.get(date) as number;
+        const extraRejected = k < SIM_DAY_MAX && r() < 0.06; // de temps en temps une mission refusée en plus (elle ne compte pas dans le niveau)
+        let [h, mi] = startAt(op, r() < 0.03);
+        for (let q = 0; q < k + (extraRejected ? 1 : 0); q++) {
+          const rejected = extraRejected && q === k;
+          const p = mk(op, Math.floor(r() * MISSIONS.length), date, 0, rejected ? 'rejected' : 'completed', 20 + Math.floor(r() * 70), false, h, mi);
+          posts.push(p);
+          // La mission suivante commence un peu après la fin de celle-ci (durée de 30 à 100 minutes, pause de 5 à 20 minutes)
+          const total = h * 60 + mi + 30 + Math.floor(r() * 71) + 5 + Math.floor(r() * 16);
+          h = Math.floor(total / 60) % 24; mi = total % 60;
+        }
+      }
     }
   }
   // Aujourd'hui : une mission en cours, une à valider, une qui demande à démarrer (le circuit de validation est visible)

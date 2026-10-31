@@ -8,7 +8,7 @@ import { trialBalance, incomeStatement } from '../src/utils/accounting';
 import { buildEntries } from '../src/utils/accountingEntries';
 import { planConflicts } from '../src/utils/planning';
 import { workingDays } from '../src/utils/leaves';
-import { isLate } from '../src/utils/attendance';
+import { isLate, isLateDay } from '../src/utils/attendance';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
@@ -41,15 +41,21 @@ ok(d0.posts.every(p => ops.has(p.employee_id) && p.date >= d0.start && p.date <=
 ok(d0.posts.every(p => dow(p.date) !== 0), 'aucune mission le dimanche');
 ok(d0.posts.every(p => d0.contracts.some(c => c.post_number === p.post_number && c.client_name === p.client_name && c.client_id === p.client_id)), 'chaque mission faite correspond à une mission du tableau (numéro, titre, client)');
 const done = d0.posts.filter(p => p.status === 'completed'), rej = d0.posts.filter(p => p.status === 'rejected'), live = d0.posts.filter(p => !['completed', 'rejected'].includes(p.status));
-ok(rej.length / (done.length + rej.length) >= 0.04 && rej.length / (done.length + rej.length) <= 0.15, `environ 9 % de refus (${rej.length} sur ${done.length + rej.length})`);
+ok(rej.length / (done.length + rej.length) >= 0.01 && rej.length / (done.length + rej.length) <= 0.15, `quelques refus (${rej.length} sur ${done.length + rej.length})`);
 ok(rej.every(p => !!p.rejection_reason && p.calculated_ar === 0) && done.every(p => p.calculated_ar === SIM_PAY_PER_MISSION), 'refus : motif écrit et rien à payer ; validée : le prix de la mission');
 ok(d0.operators.every(o => done.filter(p => p.employee_id === o.id).length >= 20), 'chaque opérateur a au moins 20 missions validées');
 const cfg = { day_shift_start: '08:00', night_shift_start: '20:00', late_tolerance_min: 15 } as any;
-ok(done.every(p => p.shift_type === (d0.operators.find(o => o.id === p.employee_id)!.shift) && (p.shift_type === 'day' ? Number(p.start_time!.slice(0, 2)) >= 7 && Number(p.start_time!.slice(0, 2)) < 9 : Number(p.start_time!.slice(0, 2)) >= 19 && Number(p.start_time!.slice(0, 2)) < 21)), 'vacation cohérente : le jour commence vers 8 h, la nuit vers 20 h');
-const late = d0.posts.filter(p => isLate(p, cfg));
-ok(late.length / d0.posts.length < 0.1, `ponctualité : ${late.length} retard(s) sur ${d0.posts.length} missions (moins de 10 %)`);
+const firstOfDay = (o: string, d: string) => done.filter(p => p.employee_id === o && p.date === d).sort((a, b) => ((p: any) => (p.shift_type === 'night' && p.start_time < '12:00' ? '9' : '0') + p.start_time)(a).localeCompare(((p: any) => (p.shift_type === 'night' && p.start_time < '12:00' ? '9' : '0') + p.start_time)(b)))[0];
+ok(done.every(p => p.shift_type === (d0.operators.find(o => o.id === p.employee_id)!.shift)) && d0.operators.every(o => [...new Set(done.filter(p => p.employee_id === o.id).map(p => p.date))].every(d => { const f = firstOfDay(o.id, d), h = Number(f.start_time!.slice(0, 2)); return f.shift_type === 'day' ? h >= 7 && h < 9 : h >= 19 && h < 21; })), 'vacation cohérente : la 1re mission du jour commence vers 8 h (jour) ou 20 h (nuit)');
+const dayKeys = [...new Set(d0.posts.map(p => `${p.employee_id}|${p.date}`))];
+const late = dayKeys.map(k => { const [e, d] = k.split('|'); return { employee_id: e, date: d, late: isLateDay(d0.posts.filter(p => p.employee_id === e && p.date === d), cfg) }; }).filter(x => x.late);
+ok(late.length / dayKeys.length < 0.1, `ponctualité : ${late.length} jour(s) en retard sur ${dayKeys.length} jours travaillés (moins de 10 %)`);
 ok(d0.operators.every(o => { const days = [...new Set(late.filter(p => p.employee_id === o.id).map(p => p.date))].sort(); return days.every(dd => days.filter(x => x >= dd && dayDiff(dd, x) < 7).length < 3); }), 'jamais 3 retards en 7 jours pour le même opérateur (pas de fausse alerte « souvent en retard »)');
-ok(d0.operators.every(o => { const days = d0.posts.filter(p => p.employee_id === o.id).map(p => p.date); return days.length === new Set(days).size; }), 'au plus une mission par opérateur et par jour');
+ok(d0.operators.every(o => { const per = new Map<string, number>(); for (const p of d0.posts.filter(p => p.employee_id === o.id && p.status !== 'active' && p.status !== 'pending_end' && p.status !== 'pending_start')) per.set(p.date, (per.get(p.date) || 0) + 1); return [...per.values()].every(n => n >= 1 && n <= 5); }), 'de 1 à 5 missions par opérateur et par jour travaillé');
+const monthDone = (o: string, m: string) => done.filter(p => p.employee_id === o && p.date.startsWith(m)).length;
+const fullMonth = d0.start.slice(0, 7);
+ok(d0.operators.every(o => Math.abs(monthDone(o.id, fullMonth) - (o.monthly ?? 40)) <= 6), 'chaque opérateur est proche de son niveau mensuel (84, 64, 44, 24) le premier mois');
+ok(monthDone(d0.operators[0].id, fullMonth) >= 80 && monthDone(d0.operators[3].id, fullMonth) < 40, 'niveaux visibles : le 1er opérateur au niveau le plus haut, le dernier le plus bas');
 ok(d0.operators.every(o => new Set(d0.posts.filter(p => p.employee_id === o.id).map(p => p.client_id)).size === 2), 'chaque opérateur travaille pour les deux clients');
 ok(live.length === 3 && live.every(p => p.date === TODAY) && ['active', 'pending_end', 'pending_start'].every(s => live.some(p => p.status === s)), 'aujourd\'hui : une mission en cours, une à valider, une qui demande à démarrer');
 ok(!dups(d0.posts.map(p => p.id)), 'identifiants de missions uniques');
@@ -127,7 +133,7 @@ ok(!/demo|démo|kiot|radama|tokiherivola|rivage|delta services|horizon|lumière/
 ok(SIM_OPERATORS.every(o => o.name.split(' ').length === 2) && new Set(SIM_OPERATORS.map(o => o.username)).size === 4, 'noms d\'opérateurs : prénom et nom, identifiants de connexion distincts');
 
 // ----- Comptes réels : on peut brancher les vrais identifiants -----
-const real = [{ id: 'u-real-1', name: 'Opérateur 1', username: 'operator1', shift: 'day' as const }, { id: 'u-real-2', name: 'Opérateur 2', username: 'operator2', shift: 'day' as const }, { id: 'u-real-3', name: 'Opérateur 3', username: 'operator3', shift: 'night' as const }, { id: 'u-real-4', name: 'Opérateur 4', username: 'operator4', shift: 'night' as const }];
+const real = [{ id: 'u-real-1', name: 'Opérateur 1', username: 'operator1', shift: 'day' as const, monthly: 84 }, { id: 'u-real-2', name: 'Opérateur 2', username: 'operator2', shift: 'day' as const, monthly: 64 }, { id: 'u-real-3', name: 'Opérateur 3', username: 'operator3', shift: 'night' as const, monthly: 44 }, { id: 'u-real-4', name: 'Opérateur 4', username: 'operator4', shift: 'night' as const, monthly: 24 }];
 const dr = buildSimulation({ today: TODAY, adminId: 'u-admin', adminName: 'Admin', operators: real });
 ok(dr.posts.every(p => real.some(o => o.id === p.employee_id)) && dr.shifts.every(s => real.some(o => o.id === s.employee_id)) && dr.cash.every(c => c.created_by === 'u-admin') && trialBalance(dr.entries).balanced, 'avec les vrais identifiants des comptes : tout leur est rattaché, comptabilité équilibrée');
 ok(JSON.stringify(dr.posts.map(p => [p.date, p.post_number, p.status])) === JSON.stringify(d0.posts.map(p => [p.date, p.post_number, p.status])), 'les identifiants choisis ne changent pas les données (mêmes dates, missions, statuts)');
