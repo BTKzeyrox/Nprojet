@@ -247,6 +247,7 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
                   <span className="flex flex-wrap gap-0.5 sm:gap-1" data-cal-chips>
                     {CELL_STATUSES.filter(k => g.counts[k] > 0).map(k => <StatusChip key={k} status={k} n={g.counts[k]} />)}
                   </span>
+                  {g.missions > 0 && <span className={`text-[10px] sm:text-[11px] leading-tight ${sub}`} data-testid={`gcal-missions-${g.dateStr}`}>{g.missions} mission{g.missions > 1 ? 's' : ''}</span>}
                 </button>
               );
             })}
