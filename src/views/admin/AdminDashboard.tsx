@@ -1542,7 +1542,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {isStart ? 'Demande de départ' : 'Travail terminé à vérifier'}
                           </span>
                           <span className="text-xs font-mono text-slate-400">
-                            Vacation {post.shift_type.toUpperCase()} · Reçu à {post.start_time}
+                            {showShift(db.getSettings()) ? `Vacation ${post.shift_type.toUpperCase()} · ` : ''}Reçu à {post.start_time}
                           </span>
                         </div>
                         <h4 className="text-base font-bold text-white mt-1">

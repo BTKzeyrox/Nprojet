@@ -39,6 +39,7 @@ import { dayDetail, minutesText } from '../utils/dayDetail';
 import { Avatar } from '../components/Avatar';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { useApp } from '../context/AppContext';
+import { showShift } from '../utils/shiftMode';
 
 interface CalendarViewProps {
   currentUser: User | null;
@@ -153,7 +154,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
           <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
-              <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>
+              {showShift(db.getSettings()) && <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>}
               <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
             </div>
             <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs ${sub}`}>
@@ -543,14 +544,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
             </div>
 
             <div className="space-y-3">
-              <div>
+              {showShift(db.getSettings()) && <div>
                 <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Vacation</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setShiftFilter('all')} className={pill(shiftFilter === 'all')}>Tous</button>
                   <button onClick={() => setShiftFilter('day')} className={pill(shiftFilter === 'day')}><Sun className="w-3.5 h-3.5" /> Jour</button>
                   <button onClick={() => setShiftFilter('night')} className={pill(shiftFilter === 'night')}><Moon className="w-3.5 h-3.5" /> Nuit</button>
                 </div>
-              </div>
+              </div>}
               <div>
                 <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Statut du mois</div>
                 <div className="flex flex-wrap gap-1.5">

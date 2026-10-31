@@ -7,6 +7,7 @@ import { formatScoreM } from '../utils/formatUtils';
 import { proofsOf } from '../utils/proofs';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
+import { showShift } from '../utils/shiftMode';
 
 interface DayDetailsModalProps {
   isOpen: boolean;
@@ -176,9 +177,9 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         <div>
                           <div className="font-semibold text-white text-sm flex items-center gap-2">
                             <span>{shift.employee_name}</span>
-                            <span className="text-xs font-mono uppercase bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">
+                            {showShift(db.getSettings()) && <span className="text-xs font-mono uppercase bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">
                               Vacation {shift.shift_type.toUpperCase()}
-                            </span>
+                            </span>}
                             <span
                               className={`text-[11px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
                                 shift.status === 'completed'
