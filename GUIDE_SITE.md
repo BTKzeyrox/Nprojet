@@ -49,7 +49,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Réglage par rôle (Réglages > Équipe) : ne publie pas, validation par l'admin, ou publie directement. Par défaut : validation.
   - « Visible par » : le serveur ne donne la publication qu'aux rôles choisis ; l'auteur et l'admin la voient toujours.
   - Modifier ou supprimer une publication publiée : seulement les siennes, si « Peut modifier » est coché. Épingler : l'admin seul.
-  - Partager : envoyer dans un message, copier le lien ou le partage du téléphone. Le lien ouvre la publication ; hors public, « introuvable ».
+  - Partager : cocher une ou plusieurs personnes puis Envoyer, ou copier le lien. Il s'affiche « Voir la publication » ; hors public : « introuvable ».
   - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire ; toucher un nom ouvre son profil.
 - **Dans le code** : `src/views/FeedView.tsx`
 

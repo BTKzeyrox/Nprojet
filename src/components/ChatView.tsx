@@ -22,7 +22,7 @@ import { ChatAbout } from './ChatAbout';
 import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
-import { splitLinks } from '../utils/newsLink';
+import { LinkedText } from './LinkedText';
 import { applyDeepLink, deepLinkAllowed } from '../utils/deepLink';
 import { TypingDots } from './Reactions';
 import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
@@ -789,9 +789,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
                           )}
-                          {!isAlbum && msg.message && <span className="whitespace-pre-line">{splitLinks(msg.message, typeof window !== 'undefined' ? window.location.origin : '').map((part, i) => part.kind === 'link'
-                            ? <a key={i} href={part.text} data-msg-link onClick={e => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); e.stopPropagation(); if (deepLinkAllowed(currentUser.role, part.link.go)) applyDeepLink(part.link, v => onNavigate?.(v)); }} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} className="underline font-semibold break-all cursor-pointer">{part.text}</a>
-                            : <React.Fragment key={i}>{part.text}</React.Fragment>)}</span>}
+                          {!isAlbum && msg.message && <span className="whitespace-pre-line"><LinkedText text={msg.message} onOpen={link => { if (deepLinkAllowed(currentUser.role, link.go)) applyDeepLink(link, v => onNavigate?.(v)); }} /></span>}
                         </>
                       )}
                     </div>

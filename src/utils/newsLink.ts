@@ -23,6 +23,12 @@ export function newsShareText(post: { id: string; title?: string; text?: string;
   return body ? `${body}\n${url}` : url;
 }
 
+/** Nom affiché à la place de l'adresse longue : « Voir la publication » pour une publication, sinon le nom de la page. */
+export function linkLabel(link: DeepLink, lang: 'fr' | 'en' = 'fr'): string {
+  if (newsIdFromNav(link.nav)) return lang === 'en' ? 'View the post' : 'Voir la publication';
+  return lang === 'en' ? 'Open the page' : 'Ouvrir la page';
+}
+
 export type LinkPart = { kind: 'text'; text: string } | { kind: 'link'; text: string; link: DeepLink };
 const URL_RE = /https?:\/\/[^\s<>"']+/g;
 

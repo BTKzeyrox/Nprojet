@@ -1,5 +1,5 @@
 // Contrôle du lien vers une publication et de sa lecture dans un message. Lancer : npm run check:news-link
-import { newsLink, newsNavId, newsIdFromNav, newsShareText, splitLinks } from '../src/utils/newsLink';
+import { newsLink, newsNavId, newsIdFromNav, newsShareText, splitLinks, linkLabel } from '../src/utils/newsLink';
 import { parseDeepLinkUrl, deepLinkAllowed } from '../src/utils/deepLink';
 
 let fails = 0, total = 0;
@@ -48,6 +48,12 @@ eq(two.filter(x => x.kind === 'link').length, 2, 'deux liens dans un message');
 eq(splitLinks(`(${lk})`, O).map(x => x.kind), ['text', 'link', 'text'], 'lien entre parenthèses');
 eq(splitLinks(lk, '').every(x => x.kind === 'text'), true, 'sans adresse du site : jamais de lien');
 eq(splitLinks(`${O}/?go=feed&nav=news:a<img src=x onerror=1>`, O).every(x => x.kind === 'text' || (x.kind === 'link' && !x.text.includes('<'))), true, 'balise dans un lien : jamais gardée');
+
+// ---- Nom affiché à la place de l'adresse ----
+eq(linkLabel({ go: 'feed', nav: 'news:n1' }), 'Voir la publication', 'nom du lien : publication (fr)');
+eq(linkLabel({ go: 'feed', nav: 'news:n1' }, 'en'), 'View the post', 'nom du lien : publication (en)');
+eq(linkLabel({ go: 'chat' }), 'Ouvrir la page', 'nom du lien : autre page');
+ok(!linkLabel({ go: 'feed', nav: 'news:n1' }).includes('http') && !linkLabel({ go: 'feed', nav: 'news:n1' }).includes('/?'), 'nom du lien : jamais une adresse');
 
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);
