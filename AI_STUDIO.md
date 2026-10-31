@@ -183,4 +183,5 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 ## df-api v62 (2026-10-31) — route publique `signup-info` (formulaire d'inscription)
 - Ajout seulement : `GET signup-info` (avant connexion, lecture seule) renvoie `{ shift_mode }` ; rien d'autre ne change. Base = v61 en ligne (SHA ea34b7bdb4fa8486d8103b5b90e49b7975abdb5b), dont le contenu est identique à `main` avant ce changement.
 - Le formulaire d'inscription (LoginView) cache Jour / Nuit quand le mode n'est pas « jour et nuit » ; sans réponse du serveur, il reste comme avant.
+- Déployé le 2026-10-31 : commit 405feff1401ce6db05f311b522c74331a32bcb56 (version 62), sauvegarde n° 82 avant. Essai réel depuis la base (pg_net) : `GET signup-info` = 200 `{"shift_mode":"normal"}` ; `GET state` sans connexion = 401 ; `POST signup-info` = 401 (la route n'est publique qu'en lecture).
 - Retour arrière : redéployer v61 = SHA ea34b7bdb4fa8486d8103b5b90e49b7975abdb5b (le formulaire garde alors Jour / Nuit, rien d'autre ne casse).
