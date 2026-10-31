@@ -15,8 +15,8 @@ export const LinkedText: React.FC<{ text: string; lang?: 'fr' | 'en'; onOpen?: (
           <a key={i} href={part.text} data-msg-link title={linkLabel(part.link, lang)}
             onClick={e => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); e.stopPropagation(); onOpen?.(part.link); }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 my-0.5 px-3 min-h-[36px] rounded-lg bg-black/15 hover:bg-black/25 border border-white/20 text-[0.8125rem] font-semibold no-underline cursor-pointer align-middle">
-            <Icon className="w-4 h-4 shrink-0" />{linkLabel(part.link, lang)}
+            className="inline-flex items-center gap-1.5 my-1 px-3 min-h-[38px] rounded-lg bg-white hover:bg-slate-100 text-slate-900 ring-1 ring-slate-300 shadow-sm text-[0.8125rem] font-bold no-underline cursor-pointer align-middle">
+            <Icon className="w-4 h-4 shrink-0 text-emerald-600" />{linkLabel(part.link, lang)}
           </a>
         );
       })}
