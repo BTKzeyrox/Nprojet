@@ -76,8 +76,8 @@ export async function uploadAttachments(
   onProgress?.(done, total);
   for (const it of items) {
     if (it.url) continue;
-    const url = await db.uploadFile(it.dataUrl);
-    if (!url) return { ok: false, error: `Envoi impossible pour « ${it.name} ». Réessaie.` };
+    const url = await db.uploadFile(it.dataUrl, 3); // publications : jusqu'à 3 essais (4G faible)
+    if (!url) return { ok: false, error: `Envoi impossible pour « ${it.name} »${db.lastUploadError ? ` (${db.lastUploadError.replace(/\.$/, '')})` : ''}. Appuie sur Publier pour réessayer : les photos déjà envoyées ne sont pas renvoyées.` };
     it.url = url;
     done += 1;
     onProgress?.(done, total);

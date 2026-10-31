@@ -2094,9 +2094,20 @@ export class AppStore {
   }
 
   // Envoie un fichier (data URL) vers Supabase Storage. Retourne le lien public, ou null si échec.
-  public async uploadFile(dataUrl: string): Promise<string | null> {
-    const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
-    return r.ok && r.data?.url ? String(r.data.url) : null;
+  /** Raison du dernier échec d'envoi de fichier (pour la montrer à la personne). */
+  public lastUploadError = '';
+  /** Envoie un fichier. Avec `tries` > 1 (publications), un échec de connexion ou de serveur (réseau coupé, 4G faible, erreur 5xx, trop de demandes) est réessayé ; une erreur claire (fichier trop gros, type refusé) ne l'est pas. */
+  public async uploadFile(dataUrl: string, tries = 1): Promise<string | null> {
+    this.lastUploadError = '';
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
+      if (r.ok && r.data?.url) return String(r.data.url);
+      const transient = r.status === 0 || r.status >= 500 || r.status === 429;
+      this.lastUploadError = String(r.data?.error || (r.status === 0 ? 'Réseau indisponible.' : `Erreur ${r.status}.`));
+      if (!transient || attempt === tries || this.demo) break;
+      await new Promise(res => setTimeout(res, 700 * attempt));
+    }
+    return null;
   }
 
   // --- Restauration du site (remise à zéro) : Gmail admin + code par mail ---
