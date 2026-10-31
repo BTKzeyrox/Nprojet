@@ -80,10 +80,28 @@ export function holeBox(r: Box, vw: number, vh: number, pad = 6): Box {
   return { left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 
-/** Où poser la bulle d'explication : du côté OPPOSÉ à l'élément (jamais dessus). Pas d'élément = au centre. */
-export function bubbleDock(hole: Box | null, vh: number): 'top' | 'bottom' | 'center' {
-  if (!hole) return 'center';
+/** Où poser la bulle d'explication : du côté OPPOSÉ à l'élément (jamais dessus). Pas d'élément : EN BAS (la vraie page reste visible) ; au centre seulement pour l'écran de bienvenue (`welcome`). */
+export function bubbleDock(hole: Box | null, vh: number, welcome = false): 'top' | 'bottom' | 'center' {
+  if (!hole) return welcome ? 'center' : 'bottom';
   return hole.top + hole.height / 2 > vh / 2 ? 'top' : 'bottom';
+}
+
+// ---- Lecteur « vidéo courte » (M20.3) ----
+export const SCENE_MIN_MS = 4000;
+export const SCENE_MAX_MS = 7000;
+/** Durée d'une scène : le temps de lire (40 ms par lettre) + 3 s, plus 1,5 s s'il y a une simulation ; entre 4 et 7 secondes. */
+export function sceneDuration(step: Pick<GuideStep, 'text' | 'title' | 'action'>, lang: 'fr' | 'en' = 'fr'): number {
+  const chars = String((lang === 'en' ? step.text.en : step.text.fr) ?? '').length + (step.action ? String(lang === 'en' ? step.action.result.en : step.action.result.fr).length / 2 : 0);
+  const ms = 3000 + Math.round(chars * 40) + (step.action ? 1500 : 0);
+  return Math.max(SCENE_MIN_MS, Math.min(SCENE_MAX_MS, ms));
+}
+export interface SceneEvent { at: number; kind: 'finger' | 'tap' | 'result' | 'end' }
+/** La suite d'une scène, en millisecondes depuis son début : le doigt part, touche, le résultat apparaît, puis la scène finit. Sans simulation : seulement la fin. */
+export function sceneEvents(step: Pick<GuideStep, 'action'>, durationMs: number): SceneEvent[] {
+  const end: SceneEvent = { at: durationMs, kind: 'end' };
+  if (!step.action) return [end];
+  const tap = Math.min(2600, Math.max(1800, Math.round(durationMs * 0.4)));
+  return [{ at: 700, kind: 'finger' }, { at: tap, kind: 'tap' }, { at: tap + 250, kind: 'result' }, end];
 }
 
 // ---- Validité d'un guide (contrôlée par check:guide-tour) ----

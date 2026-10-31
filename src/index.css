@@ -914,9 +914,21 @@ input::-ms-clear { display: none; }
 input[type="password"]::-webkit-credentials-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; position: absolute; right: 0; }
 
 /* Guide interactif (2026-10-29) : le cadre qui clignote autour de l'élément montré ; le reste de l'écran est assombri par l'ombre géante. */
-.gp-tour-ring { position: fixed; z-index: 1; border-radius: 10px; cursor: pointer; outline: 3px solid #34d399; outline-offset: 0; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45); animation: gp-tour-blink 1.1s ease-in-out infinite; }
+.gp-tour-ring { position: fixed; z-index: 1; border-radius: 10px; cursor: pointer; outline: 3px solid #34d399; outline-offset: 0; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.28); animation: gp-tour-blink 1.1s ease-in-out infinite; }
 @keyframes gp-tour-blink {
-  0%, 100% { outline-color: #34d399; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45), 0 0 0 7px rgba(52, 211, 153, 0.55); }
-  50% { outline-color: rgba(52, 211, 153, 0.12); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(52, 211, 153, 0); }
+  0%, 100% { outline-color: #34d399; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.28), 0 0 0 7px rgba(52, 211, 153, 0.55); }
+  50% { outline-color: rgba(52, 211, 153, 0.12); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(52, 211, 153, 0); }
 }
-@media (prefers-reduced-motion: reduce) { .gp-tour-ring { animation: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45), 0 0 0 5px rgba(52, 211, 153, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .gp-tour-ring { animation: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.28), 0 0 0 5px rgba(52, 211, 153, 0.6); } }
+
+/* Guide « vidéo courte » (2026-10-30) : progression par scène, doigt animé et onde au toucher. */
+.gp-seg { flex: 1; height: 5px; border-radius: 3px; background: rgba(15, 23, 42, 0.18); overflow: hidden; }
+.gp-seg > span { display: block; height: 100%; background: #059669; }
+.gp-seg > .gp-seg-fill { width: 0; animation: gp-seg-grow linear forwards; }
+@keyframes gp-seg-grow { to { width: 100%; } }
+.gp-finger { position: fixed; z-index: 3; pointer-events: none; width: 40px; height: 40px; margin: -6px 0 0 -14px; transition: left 0.9s cubic-bezier(0.4, 0, 0.2, 1), top 0.9s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5)); }
+.gp-finger.tap { animation: gp-finger-tap 0.35s ease-out; }
+@keyframes gp-finger-tap { 0% { transform: scale(1); } 40% { transform: scale(0.8); } 100% { transform: scale(1); } }
+.gp-ripple { position: fixed; z-index: 2; pointer-events: none; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 9999px; border: 3px solid #34d399; animation: gp-ripple 0.6s ease-out forwards; }
+@keyframes gp-ripple { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(2.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gp-finger { transition: none; } .gp-finger.tap, .gp-ripple { animation: none; } .gp-seg > .gp-seg-fill { animation: none; width: 100%; } }

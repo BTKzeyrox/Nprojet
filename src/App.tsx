@@ -373,7 +373,7 @@ export default function App() {
     }`}>
       
       {/* Visite guidée (M16.2) : première connexion sur cet appareil, par rôle ; se revoit dans Réglages */}
-      <TourGuide userId={currentUser.id} role={currentUser.role} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} />
+      <TourGuide userId={realIsAdmin && operatorMode ? `${currentUser.id}~${viewAs}` : currentUser.id} role={realIsAdmin && operatorMode ? viewAs : currentUser.role} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} />
 
       {/* Modern Tactical Sidebar */}
       <Sidebar

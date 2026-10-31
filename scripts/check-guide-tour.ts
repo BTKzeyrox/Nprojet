@@ -1,7 +1,7 @@
 // Contrôle du guide interactif (2026-10-29) : 4 guides différents, chaque élément visé existe dans le code, simulation sans écriture. Lancer : npm run check:guide-tour
 import fs from 'node:fs';
 import path from 'node:path';
-import { bubbleDock, findTarget, guideProblems, holeBox, norm, type ElLike, type GuideStep } from '../src/utils/guideEngine';
+import { bubbleDock, findTarget, guideProblems, holeBox, norm, sceneDuration, sceneEvents, SCENE_MAX_MS, SCENE_MIN_MS, type ElLike, type GuideStep } from '../src/utils/guideEngine';
 import { GUIDE_SCRIPTS, allGuideProblems, guideSteps } from '../src/utils/guideScripts';
 import { TOUR_PAGES, TOUR_VERSION } from '../src/utils/tour';
 
@@ -45,19 +45,22 @@ for (const f of walk('src')) src[f.replace(/\\/g, '/')] = fs.readFileSync(f, 'ut
 const all = Object.values(src).join('\n');
 const dict = JSON.parse(src['src/utils/enDict.json']) as Record<string, string>;
 const FILE: Record<string, string> = {
-  'admin:dashboard': 'src/views/admin/AdminDashboard.tsx', 'admin:validate': 'src/views/admin/AdminDashboard.tsx', 'admin:clients': 'src/views/admin/ClientsPage.tsx', 'admin:invoices': 'src/views/admin/InvoicesView.tsx',
+  'admin:dashboard': 'src/views/admin/AdminDashboard.tsx', 'admin:validate': 'src/views/admin/AdminDashboard.tsx', 'admin:advance': 'src/views/admin/AdminDashboard.tsx', 'admin:clients': 'src/views/admin/ClientsPage.tsx', 'admin:invoices': 'src/views/admin/InvoicesView.tsx',
   'admin:stats': 'src/views/admin/StatsPage.tsx', 'admin:employees': 'src/views/admin/EmployeesManagement.tsx', 'admin:health': 'src/views/admin/HealthPage.tsx', 'admin:settings': 'src/views/admin/SettingsView.tsx',
   'team_lead:validate': 'src/views/TeamValidations.tsx', 'team_lead:refuse': 'src/views/TeamValidations.tsx', 'team_lead:limit': 'src/views/TeamValidations.tsx', 'team_lead:settings': 'src/views/admin/SettingsView.tsx',
   'accountant:invoice-new': 'src/views/admin/InvoicesView.tsx', 'accountant:invoice-issue': 'src/views/admin/InvoicesView.tsx', 'accountant:clients': 'src/views/admin/ClientsPage.tsx', 'accountant:purchasing': 'src/views/admin/PurchasingPage.tsx', 'accountant:settings': 'src/views/admin/SettingsView.tsx',
   'employee:feed': 'src/views/FeedView.tsx', 'employee:take': 'src/components/PostsGrid20.tsx', 'employee:finish': 'src/views/employee/EmployeeDashboard.tsx', 'employee:pay': 'src/views/employee/EmployeeDashboard.tsx', 'employee:settings': 'src/views/admin/SettingsView.tsx',
 };
+const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Le texte doit être un VRAI libellé (entre guillemets ou entre balises), pas un morceau de phrase : « Valider » dans « Valider cette session ? » ne compte pas.
+const exactIn = (hay: string, text: string) => new RegExp('[\'"`>]\\s*' + esc(text) + '\\s*[\'"`<{]').test(hay);
 let textsChecked = 0, badTexts: string[] = [];
 for (const r of roles) for (const s of GUIDE_SCRIPTS[r]) {
   for (const t of s.target?.texts || []) {
     textsChecked++;
     const file = FILE[`${r}:${s.id}`];
     const hay = file ? src[file] : all;
-    const frOk = !!hay && hay.includes(t.fr);
+    const frOk = !!hay && exactIn(hay, t.fr);
     const enOk = all.includes(t.en) || dict[t.fr] === t.en;
     if (!file) badTexts.push(`${r}:${s.id} (pas de fichier attendu)`);
     else if (!frOk) badTexts.push(`${r}:${s.id} « ${t.fr} » absent de ${file}`);
@@ -96,7 +99,7 @@ ok(findTarget(root([own as ElLike, pageEl]), X([{ fr: 'Émettre', en: 'Issue' }]
 ok(findTarget(root([own as ElLike]), X([{ fr: 'Émettre', en: 'Issue' }])) === null, 'moteur : seul le texte du guide contient le mot → rien n\'est trouvé (pas de contour sur le guide)');
 ok(/data-guide-ui=""/.test(src['src/components/TourGuide.tsx']), 'composant : l\'écran du guide porte data-guide-ui');
 ok(/findTarget\(document, step\.target, \{ width: window\.innerWidth, height: window\.innerHeight \}\)/.test(src['src/components/TourGuide.tsx']), 'composant : la recherche connaît la taille de la fenêtre (éléments hors écran ignorés)');
-ok(/hb\.width < 8 \|\| hb\.height < 8/.test(src['src/components/TourGuide.tsx']) && /bg-black\/40/.test(src['src/components/TourGuide.tsx']) && !/bg-black\/65/.test(src['src/components/TourGuide.tsx']), 'composant : cadre trop petit (< 8 px) = pas de cadre, et le fond sans cadre est léger (40 %), jamais un écran noir pour rien');
+ok(/hb\.width < 8 \|\| hb\.height < 8/.test(src['src/components/TourGuide.tsx']) && /step\.page \? '' : 'bg-black\/35'/.test(src['src/components/TourGuide.tsx']) && !/bg-black\/(65|40)/.test(src['src/components/TourGuide.tsx']), 'composant : cadre trop petit (< 8 px) = pas de cadre ; une scène sur une page ne l\'assombrit JAMAIS (seule la bienvenue a un fond léger de 35 %)');
 // Le défaut vu sur téléphone : le menu latéral fermé (poussé hors de l'écran à gauche) contient aussi « Tableau de bord »
 const VIEW = { width: 390, height: 844 };
 const at = (text: string, box: { left: number; top: number; width: number; height: number }, closestMap: Record<string, boolean> = {}) => ({ textContent: text, getBoundingClientRect: () => box, closest: (sel: string) => (closestMap[sel] ? {} : null) }) as ElLike;
@@ -117,7 +120,7 @@ const h = holeBox({ left: 0, top: 0, width: 50, height: 30 }, 400, 800);
 ok(h.left >= 2 && h.top >= 2 && h.width > 50 && h.height > 30, 'cadre : un peu plus grand que l\'élément, jamais hors écran à gauche ou en haut');
 const h2 = holeBox({ left: 380, top: 790, width: 100, height: 100 }, 400, 800);
 ok(h2.left + h2.width <= 398 && h2.top + h2.height <= 798 && h2.width >= 0 && h2.height >= 0, 'cadre : jamais hors écran à droite ou en bas');
-ok(bubbleDock({ left: 0, top: 600, width: 50, height: 40 }, 800) === 'top' && bubbleDock({ left: 0, top: 100, width: 50, height: 40 }, 800) === 'bottom' && bubbleDock(null, 800) === 'center', 'bulle : du côté OPPOSÉ à l\'élément (jamais dessus), au centre s\'il n\'y a pas d\'élément');
+ok(bubbleDock({ left: 0, top: 600, width: 50, height: 40 }, 800) === 'top' && bubbleDock({ left: 0, top: 100, width: 50, height: 40 }, 800) === 'bottom', 'bulle : du côté OPPOSÉ à l\'élément (jamais dessus)');
 const bad: GuideStep[] = [{ id: 'a', page: 'x', target: { texts: [{ fr: 'Valider', en: '' }] }, title: { fr: 't', en: 't' }, text: { fr: 't', en: 't' } }];
 ok(guideProblems('test', bad).length >= 3, 'contrôle de validité : un guide mal écrit est repéré (première étape, anglais manquant, « élément absent » manquant, moins de 4 étapes)');
 
@@ -132,7 +135,45 @@ ok(/markTourSeen\(store\(\), userId\)/.test(comp) && TOUR_VERSION >= 3, 'composa
 const css = fs.readFileSync('src/index.css', 'utf8');
 ok(/\.gp-tour-ring \{[^}]*animation: gp-tour-blink/.test(css) && /@keyframes gp-tour-blink/.test(css), 'CSS : le contour clignote (animation gp-tour-blink)');
 ok(/@media \(prefers-reduced-motion: reduce\) \{ \.gp-tour-ring \{ animation: none/.test(css), 'CSS : le clignotement s\'arrête si l\'appareil demande moins d\'animations');
-ok(/box-shadow: 0 0 0 100vmax rgba\(0, 0, 0, 0\.45\)/.test(css) && !/rgba\(0, 0, 0, 0\.62\)/.test(css), 'CSS : le reste de l\'écran est assombri à 45 % seulement (avant 62 %), le cadre reste lumineux');
+ok(/box-shadow: 0 0 0 100vmax rgba\(0, 0, 0, 0\.28\)/.test(css) && !/rgba\(0, 0, 0, 0\.(62|45)\)/.test(css), 'CSS : le reste de l\'écran est assombri à 28 % seulement (avant 62 % puis 45 %), le cadre reste lumineux');
+
+// ---- 7. M20.1 : bulle visible, jamais au milieu quand il y a une page
+ok(bubbleDock(null, 800) === 'bottom' && bubbleDock(null, 800, true) === 'center', 'bulle : sans élément trouvé elle va EN BAS (la page reste visible) ; au centre seulement pour la bienvenue');
+const fullSrc = src['src/components/TourGuide.tsx'];
+const bubbleSrc = fullSrc.slice(0, fullSrc.indexOf('/** Carte « Aide » des Réglages')); // le composant du guide, sans la carte « Revoir la visite » des Réglages
+ok(/bubbleDock\(hole, window\.innerHeight, !step\.page\)/.test(bubbleSrc), 'composant : la bulle ne se centre que sur l\'écran de bienvenue (étape sans page)');
+const bubbleDiv = (bubbleSrc.match(/className=\{`fixed left-2 right-2[^`]*`\}/) || [''])[0];
+ok(/bg-\[#f8fafc\]/.test(bubbleDiv) && /border-\[#10b981\]/.test(bubbleDiv) && !/bg-\[#0f1722\]/.test(bubbleSrc), 'composant : bulle CLAIRE (fond #f8fafc, cadre vert) : plus sombre sur sombre');
+ok(!/\b(text|bg|border)-slate-/.test(bubbleSrc.slice(bubbleSrc.indexOf('return createPortal'))), 'composant : la bulle utilise des couleurs fixes (aucune classe slate que le thème clair changerait)');
+
+// ---- 8. M20.2 : détection par compte et « Voir comme »
+const app = src['src/App.tsx'];
+ok(/<TourGuide userId=\{realIsAdmin && operatorMode \? `\$\{currentUser\.id\}~\$\{viewAs\}` : currentUser\.id\} role=\{realIsAdmin && operatorMode \? viewAs : currentUser\.role\}/.test(app), '« Voir comme » : le guide reçoit le rôle REGARDÉ et une clé « compte~rôle » (une ouverture par rôle regardé)');
+ok(/\}, \[userId, role\]\);/.test(bubbleSrc) && /setOpen\(shouldShowTour\(store\(\), userId\)\)/.test(bubbleSrc), 'composant : changement de compte ou de rôle regardé → on regarde si ce guide doit s\'ouvrir (sans recharger la page)');
+import { tourKey, shouldShowTour, markTourSeen } from '../src/utils/tour';
+const memStore = (() => { const m: Record<string, string> = {}; return { getItem: (k: string) => m[k] ?? null, setItem: (k: string, v: string) => { m[k] = v; } }; })();
+for (const r of roles) { const uid = `nouveau-${r}`; const first = shouldShowTour(memStore, uid); markTourSeen(memStore, uid); ok(first && !shouldShowTour(memStore, uid), `nouveau compte ${r} : le guide s'ouvre une fois, jamais deux fois`); }
+markTourSeen(memStore, 'admin-1');
+ok(!shouldShowTour(memStore, 'admin-1') && shouldShowTour(memStore, 'admin-1~accountant') && shouldShowTour(memStore, 'admin-1~team_lead'), '« Voir comme » : le guide de chaque rôle regardé s\'ouvre UNE fois, même si le responsable a déjà vu le sien');
+ok(tourKey('admin-1~accountant') !== tourKey('admin-1') && /_v3_/.test(tourKey('x')), 'clés de suivi distinctes par rôle regardé ; version 3');
+
+// ---- 9. M20.3 : lecteur « vidéo courte »
+const durs = roles.flatMap(r => GUIDE_SCRIPTS[r].flatMap(st => [sceneDuration(st, 'fr'), sceneDuration(st, 'en')]));
+ok(durs.every(d => d >= SCENE_MIN_MS && d <= SCENE_MAX_MS) && SCENE_MIN_MS === 4000 && SCENE_MAX_MS === 7000, `chaque scène dure de 4 à 7 secondes (${Math.min(...durs)} à ${Math.max(...durs)} ms)`);
+const plain = GUIDE_SCRIPTS.employee[0], withAct = GUIDE_SCRIPTS.admin.find(st => st.action)!;
+ok(sceneDuration(withAct, 'fr') >= sceneDuration({ ...withAct, action: undefined }, 'fr'), 'une scène avec simulation dure au moins autant qu\'une scène sans');
+ok(sceneEvents(plain, 5000).length === 1 && sceneEvents(plain, 5000)[0].kind === 'end' && sceneEvents(plain, 5000)[0].at === 5000, 'scène sans simulation : seulement la fin');
+const evs = sceneEvents(withAct, 6000);
+ok(evs.map(e => e.kind).join() === 'finger,tap,result,end' && evs.every((e, k) => k === 0 || e.at > evs[k - 1].at) && evs[evs.length - 1].at === 6000 && evs[2].at < 6000, 'scène avec simulation : le doigt part, touche, le résultat apparaît, puis la scène finit (dans cet ordre, avant la fin)');
+ok(/playing, setPlaying\] = useState\(\(\) => !prefersReduced\(\)\)/.test(bubbleSrc), 'lecteur : lecture automatique par défaut, sauf si l\'appareil demande moins d\'animations');
+ok(/elapsed\.current \+= Date\.now\(\) - startedAt/.test(bubbleSrc) && /ev\.at < elapsed\.current/.test(bubbleSrc), 'lecteur : la pause garde le temps déjà joué ; à la reprise, ce qui a déjà eu lieu n\'est pas rejoué');
+ok(/aria-label=\{playing \? t\('Pause', 'Pause'\) : t\('Lecture', 'Play'\)\}/.test(bubbleSrc) && /Scène précédente/.test(bubbleSrc) && /Scène suivante/.test(bubbleSrc) && /Liste des scènes/.test(bubbleSrc) && /Rejouer/.test(bubbleSrc), 'lecteur : pause / lecture, précédent, suivant, liste des scènes et « Rejouer » ont un nom accessible');
+ok(/min-h-\[44px\] min-w-\[44px\]/.test(bubbleSrc), 'lecteur : boutons d\'au moins 44 px');
+ok(/gp-seg-fill/.test(bubbleSrc) && /animationPlayState: playing && !showList \? 'running' : 'paused'/.test(bubbleSrc), 'lecteur : une barre de progression par scène, qui s\'arrête en pause');
+ok(/\.gp-finger \{[^}]*transition: left/.test(css) && /@keyframes gp-ripple/.test(css) && /@keyframes gp-seg-grow/.test(css), 'CSS : doigt qui glisse, onde au toucher, progression');
+ok(/prefers-reduced-motion: reduce\) \{ \.gp-finger \{ transition: none; \}[^}]*\}[^}]*\.gp-seg > \.gp-seg-fill \{ animation: none; width: 100%/.test(css) && /prefersReduced\(\) \? 'hidden' : 'tap'/.test(bubbleSrc), 'sans animation si l\'appareil le demande : pas de doigt, pas d\'onde, barre pleine, pas de lecture automatique');
+ok(/Pointer/.test(bubbleSrc) && /gp-ripple/.test(bubbleSrc) && /finger === 'tap'/.test(bubbleSrc), 'composant : doigt (icône Pointer) et onde au toucher');
+ok(!/\bdb\./.test(bubbleSrc) && !/fetch\(/.test(bubbleSrc), 'lecteur : toujours aucune lecture ni écriture de données');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
