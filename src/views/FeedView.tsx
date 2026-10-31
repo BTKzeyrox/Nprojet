@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye, MoreVertical } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { useConfirm } from '../components/ConfirmModal';
@@ -10,6 +10,9 @@ import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
+import { NewsShareSheet } from '../components/NewsShareSheet';
+import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
+import { newsIdFromNav, newsNavId } from '../utils/newsLink';
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
@@ -84,27 +87,97 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
   const [title, setTitle] = useState(post.title || '');
   const [text, setText] = useState(post.text || '');
   const [aud, setAud] = useState<NewsRole[]>(cleanAudience(post.audience) || []);
+  const [kept, setKept] = useState<NewsAttachment[]>(post.files || []); // fichiers déjà joints (la croix les retire)
+  const [items, setItems] = useState<DraftAttachment[]>([]); // nouveaux fichiers à ajouter
+  const [preparing, setPreparing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
   const field = `w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`;
+  const muted = light ? 'text-slate-500' : 'text-slate-400';
+  const empty = !text.trim() && kept.length === 0 && items.length === 0;
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!list.length) return;
+    setErr(''); setPreparing(true);
+    const ok: DraftAttachment[] = [], errors: string[] = [];
+    for (const f of list) { try { ok.push(await prepareAttachment(f)); } catch (x) { errors.push((x as Error).message); } }
+    setItems(prev => [...prev, ...ok]);
+    if (errors.length) setErr(errors.join(' '));
+    setPreparing(false);
+  };
   const save = async () => {
-    if (busy) return;
+    if (busy || preparing || empty) return;
     setBusy(true); setErr('');
-    const r = await db.editNews(post.id, { title, text, audience: aud });
+    const up = await uploadAttachments(items, () => undefined);
+    if (!up.ok) { setErr(up.error); setBusy(false); return; }
+    const r = await db.editNews(post.id, { title, text, audience: aud, files: [...kept, ...up.files] });
     setBusy(false);
     if (!r.success) { setErr(r.error || 'Impossible de modifier.'); return; }
     onDone();
   };
+  const row = `flex items-center gap-2.5 rounded-lg p-1.5 pr-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`;
   return (
     <div data-post-editor className="space-y-2">
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
       <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} />
+      {(kept.length > 0 || items.length > 0) && (
+        <ul className="space-y-1.5" data-editor-files>
+          {kept.map(f => (
+            <li key={f.url} className={row}>
+              {f.kind === 'image' ? <img src={f.url} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
+              <div className="min-w-0 flex-1"><div className="text-sm truncate">{f.name}</div><div className={`text-xs ${muted}`}>{f.size ? fmtBytes(f.size) : ''}</div></div>
+              <button type="button" disabled={busy} onClick={() => setKept(prev => prev.filter(x => x.url !== f.url))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
+            </li>
+          ))}
+          {items.map(it => (
+            <li key={it.key} className={row}>
+              {it.kind === 'image' ? <img src={it.dataUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
+              <div className="min-w-0 flex-1"><div className="text-sm truncate">{it.name}</div><div className={`text-xs ${muted}`}>{fmtBytes(it.after)} · nouveau</div></div>
+              <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div>
+        <input ref={fileRef} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void onPick(e)} />
+        <button type="button" disabled={busy || preparing} onClick={() => fileRef.current?.click()} data-add-file className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`}>
+          {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}{preparing ? 'Préparation…' : 'Ajouter une photo / un fichier'}
+        </button>
+      </div>
       <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
       {err && <div className="text-xs text-red-500" role="alert">{err}</div>}
       <div className="flex gap-2">
-        <button type="button" disabled={busy || (!text.trim() && !(post.files || []).length)} onClick={() => void save()} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />}Enregistrer</button>
+        <button type="button" disabled={busy || preparing || empty} onClick={() => void save()} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />}Enregistrer</button>
         <button type="button" disabled={busy} onClick={onDone} className={`px-4 py-2 rounded-lg text-sm font-semibold ${light ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
       </div>
+    </div>
+  );
+};
+
+// Menu « ⋮ » d'une publication : Modifier, Supprimer, Épingler (seulement les actions permises à la personne)
+const PostMenu: React.FC<{ light: boolean; busy?: boolean; items: { key: string; label: string; icon: React.ReactNode; danger?: boolean; onClick: () => void }[] }> = ({ light, items, busy }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent | TouchEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away); document.addEventListener('touchstart', away); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('touchstart', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  if (items.length === 0) return null;
+  return (
+    <div ref={ref} className="relative shrink-0" data-post-menu>
+      <button type="button" disabled={busy} aria-haspopup="menu" aria-expanded={open} aria-label="Actions de la publication" title="Actions" onClick={() => setOpen(v => !v)} className={`min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg cursor-pointer disabled:opacity-50 ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><MoreVertical className="w-5 h-5" /></button>
+      {open && (
+        <div role="menu" className={`absolute right-0 top-full mt-1 z-30 min-w-[190px] rounded-xl border shadow-xl py-1 ${light ? 'bg-white border-slate-200' : 'bg-[#16212e] border-slate-700'}`}>
+          {items.map(it => (
+            <button key={it.key} type="button" role="menuitem" data-menu-item={it.key} onClick={() => { setOpen(false); it.onClick(); }} className={`w-full min-h-[44px] px-3 flex items-center gap-2.5 text-sm text-left cursor-pointer ${it.danger ? 'text-red-500' : ''} ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}>{it.icon}{it.label}</button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -112,6 +185,7 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
 const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: boolean; onAsk: ReturnType<typeof useConfirm>['ask']; onOpenProfile?: (u: User) => void }> = ({ post, me, isAdmin, light, onAsk, onOpenProfile }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -158,15 +232,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
     return r;
   };
 
-  const share = async () => {
-    const url = `${window.location.origin}/`;
-    const body = `${post.title ? post.title + ' — ' : ''}${post.text.slice(0, 140)}${post.text.length > 140 ? '…' : ''}`;
-    try {
-      if (navigator.share) await navigator.share({ title: post.title || 'Gestion Pro', text: body, url });
-      else { await navigator.clipboard.writeText(`${body}\n${url}`); setMsg('Lien copié.'); }
-    } catch { return; } // partage annulé
-    void run(() => db.shareNews(post.id));
-  };
+  const share = () => setShareOpen(true); // feuille de partage : message, copier le lien, partage du téléphone
 
   const pickComment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
@@ -240,7 +306,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   };
 
   return (
-    <article className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
+    <article data-nav={newsNavId(post.id)} className={`border rounded-xl p-4 sm:p-5 space-y-3 ${card}`}>
       <header className="flex items-center gap-3">
         {personAuthor
           ? <button type="button" onClick={() => openProfile(post.author_id)} className="shrink-0 cursor-pointer" title="Voir le profil"><Avatar src={users.find(x => x.id === post.author_id)?.avatar_url} name={post.author_name || '?'} className="w-10 h-10 rounded-full" /></button>
@@ -251,14 +317,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             : <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Responsable'}</button>}
           <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}{post.edited_at ? ' · modifiée' : ''}{restricted && (isAdmin || mine) ? <span data-audience-badge className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold"><Eye className="w-3 h-3" />{audienceLabel(post.audience, 'fr')}</span> : null}</div>
         </div>
-        {canEdit && !editing && <button type="button" data-edit-news title="Modifier" aria-label="Modifier cette publication" onClick={() => setEditing(true)} className={`p-2 rounded-lg ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><Pencil className="w-4 h-4" /></button>}
-        {!isAdmin && post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
-        {isAdmin && (
-          <div className="flex items-center gap-1">
-            {published && <button type="button" title={post.pinned ? 'Retirer l’épingle' : 'Épingler'} onClick={() => db.togglePinNews(post.id)} className={`flex flex-col items-center px-2 py-1 rounded-lg ${post.pinned ? 'text-amber-500' : ''} ${light ? 'hover:bg-slate-100' : 'hover:bg-white/5'}`}><Pin className="w-4 h-4" fill={post.pinned ? 'currentColor' : 'none'} />{post.pinned && <span className="text-[9px] leading-none font-bold">Épinglée</span>}</button>}
-            <button type="button" title="Supprimer" onClick={() => onAsk({ title: 'Supprimer cette publication ?', message: 'Les commentaires seront supprimés aussi.', confirmLabel: 'Supprimer', danger: true, onConfirm: () => db.deleteNews(post.id) })} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
-          </div>
-        )}
+        {post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
+        <PostMenu light={light} busy={busy} items={[
+          ...(canEdit && !editing ? [{ key: 'edit', label: 'Modifier', icon: <Pencil className="w-4 h-4" />, onClick: () => setEditing(true) }] : []),
+          ...(isAdmin && published ? [{ key: 'pin', label: post.pinned ? 'Retirer l’épingle' : 'Épingler', icon: <Pin className="w-4 h-4" fill={post.pinned ? 'currentColor' : 'none'} />, onClick: () => db.togglePinNews(post.id) }] : []),
+          ...(isAdmin || canEdit ? [{ key: 'delete', label: 'Supprimer', icon: <Trash2 className="w-4 h-4" />, danger: true, onClick: () => onAsk({ title: 'Supprimer cette publication ?', message: 'Les commentaires et les fichiers joints seront supprimés aussi.', confirmLabel: 'Supprimer', danger: true, onConfirm: () => void run(() => db.deleteNewsPost(post.id)) }) }] : []),
+        ]} />
       </header>
 
       {!published && (
@@ -332,11 +396,12 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           <Heart className="w-3.5 h-3.5 shrink-0" fill={loved ? 'currentColor' : 'none'} />J’adore
         </button>
         <button type="button" onClick={() => setOpen(v => !v)} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
-        <button type="button" onClick={() => void share()} className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
+        <button type="button" onClick={share} data-share-open className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
       </div>
       </>)}
 
       {msg && <div className="text-xs text-amber-600">{msg}</div>}
+      {shareOpen && <NewsShareSheet post={post} me={me} light={light} onClose={() => setShareOpen(false)} onShared={() => { void run(() => db.shareNews(post.id)); }} />}
 
       {published && (open || post.comments.length > 0) && (
         <div className="space-y-3 pt-1">
@@ -571,6 +636,25 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isAdmin, currentUser.id]);
 
+  // Lien direct vers une publication (message, partage) : on la montre même si elle était « retenue » derrière la pastille ; si elle n'existe pas ou n'est pas pour toi, on le dit
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const apply = () => {
+      const id = newsIdFromNav(peekNavTarget());
+      if (!id) return;
+      setMissing(false);
+      knownRef.current?.add(id);
+      force(n => n + 1);
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (!listOf().some(p => p.id === id)) setMissing(true); }, 3500);
+    };
+    apply();
+    window.addEventListener(NAV_TARGET_EVENT, apply);
+    return () => { window.removeEventListener(NAV_TARGET_EVENT, apply); clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const known = knownRef.current;
   const all = db.getNews();
   const queue = isAdmin ? all.filter(p => p.status === 'pending').sort((a, b) => String(a.submitted_at || a.created_at).localeCompare(String(b.submitted_at || b.created_at))) : [];
@@ -594,6 +678,13 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
           <p className={`text-xs ${light ? 'text-slate-500' : 'text-slate-400'}`}>Annonces et publications de l’équipe</p>
         </div>
       </div>
+
+      {missing && (
+        <div role="status" data-news-missing className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm ${light ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-200'}`}>
+          <span className="flex-1">Publication introuvable : elle a été supprimée, ou elle n’est pas visible pour toi.</span>
+          <button type="button" onClick={() => setMissing(false)} aria-label="Fermer" className="shrink-0 p-1 cursor-pointer"><X className="w-4 h-4" /></button>
+        </div>
+      )}
 
       {held > 0 && (
         <div className="sticky top-2 z-20 flex justify-center">

@@ -85,6 +85,11 @@ has(/async function newsEdit[\s\S]*?canEditNews\(/, 'news-edit : le serveur vér
 has(/async function newsAction[\s\S]*?canSeeNews\(/, 'réactions, commentaires, partages : refusés hors public');
 has(/audience: cleanAudience\(/, 'le public est nettoyé avant d\'être gardé');
 has(/news_publish/, 'le réglage est géré par le serveur');
+has(/async function newsDelete[\s\S]*?canEditNews\(row\.data, me, await newsPolicy\(\)\)[\s\S]*?dropFiles\(newsFilesOf\(row\.data\)\)/, 'news-delete : même droit que la modification, fichiers supprimés avec la publication');
+has(/action === "news-delete"/, 'news-delete : route branchée');
+has(/async function newsEdit[\s\S]*?cleanFiles\(\[f\], me\.id\)/, 'news-edit : un nouveau fichier doit appartenir à la personne qui modifie');
+has(/async function newsEdit[\s\S]*?dropFiles\(gone\)/, 'news-edit : les fichiers retirés sont supprimés pour de bon');
+has(/async function newsEdit[\s\S]*?if \(!text && !files\.length\)/, 'news-edit : une publication ne peut pas devenir vide');
 
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);

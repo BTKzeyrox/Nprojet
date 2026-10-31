@@ -1334,20 +1334,30 @@ export class AppStore {
     return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [], audience: p.audience || [] });
   }
 
-  // Modifier une publication déjà publiée : le responsable (envoyé avec la synchro) ou son auteur si le responsable l'a autorisé (le serveur vérifie)
-  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[] }): Promise<{ success: boolean; error?: string }> {
+  // Modifier une publication déjà publiée (texte, titre, public, fichiers) : le responsable ou son auteur si le responsable l'a autorisé. Tout passe par le serveur, qui vérifie le droit et supprime les fichiers retirés.
+  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[]; files?: NewsAttachment[] }): Promise<{ success: boolean; error?: string }> {
     const me = this.currentUser;
     const n = this.news.find(x => x.id === id);
     if (!me || !n) return { success: false, error: 'Publication introuvable.' };
     if (!canEditNews(n, me, this.getNewsPolicy())) return { success: false, error: 'Tu ne peux pas modifier cette publication.' };
     const text = p.text.trim().slice(0, 2000), title = p.title.trim().slice(0, 120);
-    if (!text && !(n.files || []).length) return { success: false, error: 'Écris un texte ou garde un fichier.' };
-    if (me.role !== 'admin') return this.newsCall('news-edit', { id, title, text, audience: p.audience || [] });
-    const aud = cleanAudience(p.audience);
-    const { audience: _old, ...rest } = n;
-    const changed = text !== n.text || title !== (n.title || '');
-    this.news = this.news.map(x => (x.id === id ? { ...rest, title, text, ...(changed ? { edited_at: new Date().toISOString() } : {}), ...(aud ? { audience: aud } : {}) } : x));
-    this.notify();
+    const files = p.files ?? (n.files || []);
+    if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou garde un fichier.' };
+    return this.newsCall('news-edit', { id, title, text, audience: p.audience || [], files });
+  }
+
+  // Supprimer une publication déjà publiée : le responsable (synchro habituelle) ou son auteur si le responsable l'a autorisé (route du serveur)
+  public async deleteNewsPost(id: string): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const n = this.news.find(x => x.id === id);
+    if (!me || !n) return { success: false, error: 'Publication introuvable.' };
+    if (me.role === 'admin') { this.deleteNews(id); return { success: true }; }
+    if (!canEditNews(n, me, this.getNewsPolicy())) return { success: false, error: 'Tu ne peux pas supprimer cette publication.' };
+    const r = await this.api('news-delete', { method: 'POST', body: JSON.stringify({ id }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
+    this.news = this.news.filter(x => x.id !== id);
+    this.synced.news.delete(id);
+    this.emit();
     return { success: true };
   }
 
@@ -1614,9 +1624,15 @@ export class AppStore {
         if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas modifier cette publication.');
         const aud = cleanAudience(body.audience);
         const { audience: _old, ...rest } = n;
-        Object.assign(n, rest, { title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 2000), edited_at: nowIso });
+        Object.assign(n, rest, { title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 2000), edited_at: nowIso, ...(Array.isArray(body.files) ? { files: body.files } : {}) });
         if (aud) n.audience = aud; else delete n.audience;
         return keep(n);
+      }
+      case 'news-delete': {
+        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
+        if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas supprimer cette publication.');
+        this.news = this.news.filter(x => x.id !== body.id);
+        return ok({ deleted: body.id });
       }
       case 'news-withdraw': return ok();
       case 'upload': return ok({ url: String(body.dataUrl || '') }); // le fichier reste dans la page (aucun envoi)
