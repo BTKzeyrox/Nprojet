@@ -25,7 +25,7 @@ import {
   UserCheck,
   UserX,
   ClipboardList,
-  X, CalendarOff } from 'lucide-react';
+  X, CalendarOff, ClipboardCheck } from 'lucide-react';
 import { leaveOn, LEAVE_TYPE_LABELS, type Leave } from '../utils/leaves';
 import { firstActivityOf, empMonth, globalMonth, globalSummary, dayView, hasLeaveInMonth, type LeaveFilter } from '../utils/calendarGlobal';
 import { liveStatus } from '../utils/presenceStatus';
@@ -88,6 +88,16 @@ const StatusChip: React.FC<{ status: DayStatus; n: number }> = ({ status, n }) =
     <StatusIcon status={status} className="w-3 h-3" />{n}
   </span>
 );
+
+/** Case du jour (calendrier global) : « présent » = à l'heure (un retard n'est pas compté ici) ; « missions faites » = validées, jamais mélangées aux présents. */
+const CellChip: React.FC<{ kind: 'present' | 'done'; n: number }> = ({ kind, n }) => {
+  const label = kind === 'present' ? 'Présent' : 'Missions faites';
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${kind === 'present' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-indigo-500/20 text-indigo-600'}`} title={label} aria-label={`${label} : ${n}`}>
+      {kind === 'present' ? <UserCheck className="w-3 h-3 shrink-0" /> : <ClipboardCheck className="w-3 h-3 shrink-0" />}{n}
+    </span>
+  );
+};
 
 // ============================ CALENDRIER GLOBAL (tous les employés) : mois, résumé, jour ============================
 type GView = 'month' | 'summary' | 'day';
@@ -245,9 +255,9 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
                   className={`min-h-[64px] sm:min-h-[100px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border cursor-pointer flex flex-col gap-1 text-left transition-all hover:shadow-md ${TINT[dom]} ${isToday ? 'ring-2 ring-blue-500' : ''} ${dim ? 'opacity-30' : ''}`}>
                   <span className={`text-[11px] sm:text-xs font-bold min-w-[1.5rem] h-6 px-1 rounded-full flex items-center justify-center self-start ${isToday ? 'bg-blue-600 text-white' : txt}`}>{g.day}</span>
                   <span className="flex flex-wrap gap-0.5 sm:gap-1" data-cal-chips>
-                    {CELL_STATUSES.filter(k => g.counts[k] > 0).map(k => <StatusChip key={k} status={k} n={g.counts[k]} />)}
+                    {CELL_STATUSES.filter(k => g.counts[k] > 0).map(k => k === 'objective_reached' ? <CellChip key={k} kind="present" n={g.counts[k]} /> : <StatusChip key={k} status={k} n={g.counts[k]} />)}
+                    {g.validated > 0 && <CellChip kind="done" n={g.validated} />}
                   </span>
-                  {g.missions > 0 && <span className={`text-[10px] sm:text-[11px] leading-tight ${sub}`} data-testid={`gcal-missions-${g.dateStr}`}>{g.missions} mission{g.missions > 1 ? 's' : ''}</span>}
                 </button>
               );
             })}
