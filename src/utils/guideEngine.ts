@@ -33,14 +33,26 @@ export const TEXT_SELECTOR = 'button, a, [role="tab"], [role="button"], h1, h2, 
 /** Les éléments du guide lui-même (la bulle, le cadre) ne sont jamais visés : leur texte contient souvent le mot cherché. */
 export const GUIDE_UI_SELECTOR = '[data-guide-ui]';
 const isGuideUi = (el: ElLike): boolean => typeof el.closest === 'function' && !!el.closest(GUIDE_UI_SELECTOR);
-const isVisible = (el: ElLike): boolean => { if (isGuideUi(el)) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+export interface View { width: number; height: number }
+/** Visible = pas dans le guide, pas dans une zone cachée, de taille non nulle ET au moins la moitié de sa surface DANS la fenêtre (un menu fermé, poussé hors de l'écran, n'est pas visible). */
+const isVisible = (el: ElLike, view?: View): boolean => {
+  if (isGuideUi(el)) return false;
+  if (typeof el.closest === 'function' && el.closest('[aria-hidden="true"], [inert]')) return false;
+  const r = el.getBoundingClientRect();
+  if (!(r.width > 0 && r.height > 0)) return false;
+  if (!view) return true;
+  const w = Math.min(r.left + r.width, view.width) - Math.max(r.left, 0);
+  const h = Math.min(r.top + r.height, view.height) - Math.max(r.top, 0);
+  return w > 0 && h > 0 && (w * h) / (r.width * r.height) >= 0.5;
+};
+const inMain = (el: ElLike): boolean => typeof el.closest === 'function' && !!el.closest('main, [role="main"]');
 
-/** Trouve l'élément à faire clignoter : d'abord le repère `data-tour` (le premier visible), sinon le texte le plus précis (égal d'abord, puis le plus court). */
-export function findTarget(root: RootLike, target: GuideTarget | null | undefined): ElLike | null {
+/** Trouve l'élément à faire clignoter : d'abord le repère `data-tour` (le premier visible), sinon le texte le plus précis (égal d'abord, puis le plus court, le contenu de la page avant les menus). `view` = la taille de la fenêtre : un élément hors écran n'est jamais choisi. */
+export function findTarget(root: RootLike, target: GuideTarget | null | undefined, view?: View): ElLike | null {
   if (!target) return null;
   if (target.tour && /^[a-z0-9-]+$/.test(target.tour)) {
     const list = root.querySelectorAll(`[data-tour="${target.tour}"]`);
-    for (let i = 0; i < list.length; i++) if (isVisible(list[i])) return list[i];
+    for (let i = 0; i < list.length; i++) if (isVisible(list[i], view)) return list[i];
   }
   if (target.texts && target.texts.length) {
     const wanted = target.texts.flatMap(b => [b.fr, b.en]).map(norm).filter(x => x.length >= 3);
@@ -49,10 +61,10 @@ export function findTarget(root: RootLike, target: GuideTarget | null | undefine
     for (let i = 0; i < list.length; i++) {
       const el = list[i];
       const txt = norm(el.textContent);
-      if (!txt || !isVisible(el)) continue;
+      if (!txt || !isVisible(el, view)) continue;
       for (const w of wanted) {
         if (!txt.includes(w)) continue;
-        const score = (txt === w ? 0 : 1000) + txt.length; // le texte le plus exact et le plus court gagne
+        const score = (txt === w ? 0 : 1000) + txt.length + (inMain(el) ? 0 : 5000); // le texte le plus exact et le plus court gagne ; le contenu de la page passe avant les menus
         if (score < bestScore) { best = el; bestScore = score; }
       }
     }

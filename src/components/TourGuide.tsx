@@ -50,11 +50,13 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
     let alive = true, tries = 0, scrolled = false;
     const tick = () => {
       if (!alive) return;
-      const el = step.target ? findTarget(document, step.target) : null;
+      const el = step.target ? findTarget(document, step.target, { width: window.innerWidth, height: window.innerHeight }) : null;
       if (el) {
         if (!scrolled) { scrolled = true; try { (el as unknown as Element).scrollIntoView({ block: 'center', behavior: 'auto' }); } catch { /* sans défilement */ } }
         const r = el.getBoundingClientRect();
-        setHole(holeBox({ left: r.left, top: r.top, width: r.width, height: r.height }, window.innerWidth, window.innerHeight));
+        const hb = holeBox({ left: r.left, top: r.top, width: r.width, height: r.height }, window.innerWidth, window.innerHeight);
+        if (hb.width < 8 || hb.height < 8) { setHole(null); if (++tries > 6) setWaiting(false); return; } // cadre trop petit : jamais d'écran assombri sans trou visible
+        setHole(hb);
         setWaiting(false);
       } else {
         setHole(null);
@@ -94,7 +96,7 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
         ? <div className="gp-tour-ring" style={{ left: hole.left, top: hole.top, width: hole.width, height: hole.height }} role="button" tabIndex={0}
             aria-label={step.action ? L(step.action.hint) : t('Élément montré par le guide', 'Item shown by the guide')}
             onClick={tap} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); } }} />
-        : <div className="absolute inset-0 bg-black/65" />}
+        : <div className="absolute inset-0 bg-black/40" />}
       <div className={`fixed left-2 right-2 mx-auto max-w-md max-h-[46vh] overflow-y-auto rounded-2xl bg-[#0f1722] border border-slate-700 shadow-2xl p-3 space-y-2 ${pos}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold"><Compass className="w-4 h-4" />{t('Guide', 'Guide')} · {Math.min(i + 1, steps.length)}/{steps.length}</div>

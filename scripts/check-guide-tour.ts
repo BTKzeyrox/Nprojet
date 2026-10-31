@@ -95,6 +95,24 @@ const pageEl = el('Émettre');
 ok(findTarget(root([own as ElLike, pageEl]), X([{ fr: 'Émettre', en: 'Issue' }])) === pageEl, 'moteur : les éléments du guide lui-même (bulle, titre) ne sont JAMAIS visés');
 ok(findTarget(root([own as ElLike]), X([{ fr: 'Émettre', en: 'Issue' }])) === null, 'moteur : seul le texte du guide contient le mot → rien n\'est trouvé (pas de contour sur le guide)');
 ok(/data-guide-ui=""/.test(src['src/components/TourGuide.tsx']), 'composant : l\'écran du guide porte data-guide-ui');
+ok(/findTarget\(document, step\.target, \{ width: window\.innerWidth, height: window\.innerHeight \}\)/.test(src['src/components/TourGuide.tsx']), 'composant : la recherche connaît la taille de la fenêtre (éléments hors écran ignorés)');
+ok(/hb\.width < 8 \|\| hb\.height < 8/.test(src['src/components/TourGuide.tsx']) && /bg-black\/40/.test(src['src/components/TourGuide.tsx']) && !/bg-black\/65/.test(src['src/components/TourGuide.tsx']), 'composant : cadre trop petit (< 8 px) = pas de cadre, et le fond sans cadre est léger (40 %), jamais un écran noir pour rien');
+// Le défaut vu sur téléphone : le menu latéral fermé (poussé hors de l'écran à gauche) contient aussi « Tableau de bord »
+const VIEW = { width: 390, height: 844 };
+const at = (text: string, box: { left: number; top: number; width: number; height: number }, closestMap: Record<string, boolean> = {}) => ({ textContent: text, getBoundingClientRect: () => box, closest: (sel: string) => (closestMap[sel] ? {} : null) }) as ElLike;
+const T = X([{ fr: 'Tableau de bord', en: 'Dashboard' }]);
+const sidebarClosed = at('Tableau de bord', { left: -305, top: 520, width: 288, height: 40 });
+const pageTitle = at('Tableau de bord', { left: 20, top: 180, width: 300, height: 40 }, { 'main, [role="main"]': true });
+ok(findTarget(root([sidebarClosed, pageTitle]), T, VIEW) === pageTitle, 'défaut corrigé : le menu fermé (hors écran à gauche) est ignoré, le guide entoure le vrai titre de la page');
+ok(findTarget(root([sidebarClosed]), T, VIEW) === null, 'élément entièrement hors écran : jamais choisi (le guide n\'entoure rien et ne dessine pas de trait vert au bord)');
+ok(findTarget(root([at('Tableau de bord', { left: -200, top: 100, width: 288, height: 40 })]), T, VIEW) === null, 'élément visible à moins de la moitié : jamais choisi');
+ok(findTarget(root([at('Tableau de bord', { left: 150, top: 100, width: 300, height: 40 })]), T, VIEW) !== null, 'élément visible à plus de la moitié : accepté');
+ok(findTarget(root([at('Tableau de bord', { left: 20, top: 900, width: 300, height: 40 })]), T, VIEW) === null, 'élément sous le bas de l\'écran : pas choisi tant qu\'il n\'est pas visible');
+ok(findTarget(root([at('Tableau de bord', { left: 20, top: 100, width: 300, height: 40 }, { '[aria-hidden="true"], [inert]': true })]), T, VIEW) === null, 'élément dans une zone cachée (aria-hidden ou inert) : jamais choisi');
+const bottomNav = at('Actualités', { left: 10, top: 780, width: 70, height: 50 });
+const feedTitle = at('Actualités', { left: 20, top: 150, width: 200, height: 40 }, { 'main, [role="main"]': true });
+ok(findTarget(root([bottomNav, feedTitle]), X([{ fr: 'Actualités', en: 'News' }]), VIEW) === feedTitle, 'même mot dans le menu du bas et dans la page : la page passe avant le menu');
+ok(findTarget(root([bottomNav]), X([{ fr: 'Actualités', en: 'News' }]), VIEW) === bottomNav, 'seul le menu a ce mot : le menu est choisi');
 const h = holeBox({ left: 0, top: 0, width: 50, height: 30 }, 400, 800);
 ok(h.left >= 2 && h.top >= 2 && h.width > 50 && h.height > 30, 'cadre : un peu plus grand que l\'élément, jamais hors écran à gauche ou en haut');
 const h2 = holeBox({ left: 380, top: 790, width: 100, height: 100 }, 400, 800);
@@ -114,7 +132,7 @@ ok(/markTourSeen\(store\(\), userId\)/.test(comp) && TOUR_VERSION >= 3, 'composa
 const css = fs.readFileSync('src/index.css', 'utf8');
 ok(/\.gp-tour-ring \{[^}]*animation: gp-tour-blink/.test(css) && /@keyframes gp-tour-blink/.test(css), 'CSS : le contour clignote (animation gp-tour-blink)');
 ok(/@media \(prefers-reduced-motion: reduce\) \{ \.gp-tour-ring \{ animation: none/.test(css), 'CSS : le clignotement s\'arrête si l\'appareil demande moins d\'animations');
-ok(/box-shadow: 0 0 0 100vmax rgba\(0, 0, 0, 0\.62\)/.test(css), 'CSS : tout le reste de l\'écran est assombri (le cadre reste lumineux)');
+ok(/box-shadow: 0 0 0 100vmax rgba\(0, 0, 0, 0\.45\)/.test(css) && !/rgba\(0, 0, 0, 0\.62\)/.test(css), 'CSS : le reste de l\'écran est assombri à 45 % seulement (avant 62 %), le cadre reste lumineux');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
