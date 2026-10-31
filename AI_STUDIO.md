@@ -164,3 +164,8 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Commit 9c63857. `shift_mode` (normal/jour/nuit/les deux) lu par `shiftAccess` ; route `force-logout` (responsable) ; champ `force_logout_at` ; code 401 `forced` ; après l'heure, `access_until` est effacé.
 - Horaires de la base remplacés après la sauvegarde n° 75 : 08:00–17:00 et 19:30–04:30 (avant : 08:00–18:00 et 20:00–06:00).
 - Retour arrière : redéployer v58 = SHA fd14694a6b4a2a101bc382d258e517eeaf42f1ce ; si besoin remettre les anciens horaires dans Réglages.
+
+## Données de simulation rechargées (2026-10-31) — pas de changement de df-api
+- Sauvegarde n° 78 avant. Seules les lignes `sim-` (missions, factures, caisse, écritures) ont été supprimées puis recréées ; réglages `monthly_plan` (2 000 000 / 1 100 000) et compteurs mis à jour.
+- Résultat vérifié en base : validées par mois Opérateur 1/2/3/4 = 84/64/44/24 (sept.), 80/61/42/23 (oct.), 1 à 5 missions par jour.
+- Retour arrière : restaurer la sauvegarde n° 78.

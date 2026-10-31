@@ -23,8 +23,12 @@ const tables: [string, { id: string }[]][] = [
   ['df_entries', sim.entries as any], ['df_leaves', sim.leaves], ['df_shifts', sim.shifts], ['df_advances', sim.advances],
   ['df_groups', sim.groups], ['df_messages', sim.messages], ['df_news', sim.news],
 ];
+// --tables=df_posts,df_invoices : ne recharger QUE ces tables (les autres lignes de la simulation, identiques, ne sont pas touchées)
+const only = (process.argv.find(a => a.startsWith('--tables=')) || '').slice(9).split(',').filter(Boolean);
+const keep = (t: string) => only.length === 0 || only.includes(t);
 const out: string[] = ['begin;'];
 for (const [t, rows] of [...tables].reverse()) {
+  if (!keep(t)) continue;
   if (t === 'df_shifts') out.push(`delete from public.df_shifts where data->>'employee_id' in (${operators.map(o => `'${o.id}'`).join(',')});`);
   else out.push(`delete from public.${t} where id like 'sim-%';`);
 }
@@ -64,6 +68,7 @@ left join (values ${reasons.map((x, k) => `(${k},${q(x)})`).join(',')}) as r(i, 
   return out;
 };
 for (const [t, rows] of tables) {
+  if (!keep(t)) continue;
   if (t === 'df_shifts') for (const s of rows as any[]) if (!isSimShift(s, operators)) throw new Error('planning hors simulation');
   if (t === 'df_posts' && COMPACT) { out.push(...compactPostsSql()); for (const r of rows.filter(x => !decidedPost(x))) out.push(`insert into public.df_posts (id, data) values ('${String(r.id).replace(/'/g, "''")}', ${lit(r)});`); continue; }
   for (const r of rows) out.push(`insert into public.${t} (id, data) values ('${String(r.id).replace(/'/g, "''")}', ${lit(r)});`);

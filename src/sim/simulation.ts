@@ -146,7 +146,7 @@ export function buildSimulation(opts: SimOptions): SimData {
     for (const op of operators) {
       const days = monthDays.filter(d => d >= from && d <= upTo && !onApprovedLeave(op.id, d));
       if (!days.length) continue;
-      const share = Math.min(1, days.length / monthDays.length + 0.1);
+      const share = Math.min(1, monthDays.filter(d => d >= from && d <= upTo).length / monthDays.length + 0.1); // jours écoulés du mois (les congés n'abaissent pas l'objectif : plus de missions les autres jours)
       const M = Math.min(days.length * SIM_DAY_MAX, Math.round((op.monthly ?? 40) * share));
       if (M <= 0) continue;
       const avg = Math.min(4.5, Math.max(1, M / (days.length * 0.8)));
