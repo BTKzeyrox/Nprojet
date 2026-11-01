@@ -5,7 +5,7 @@ import { db } from '../db/store';
 import { Avatar } from './Avatar';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { audienceLabel, cleanAudience } from '../utils/newsAccess';
-import { newsLink, newsShareText } from '../utils/newsLink';
+import { newsLink, newsShareText, withShareNote, SHARE_NOTE_MAX } from '../utils/newsLink';
 import { LinkedText } from './LinkedText';
 import type { NewsPost, User } from '../types';
 
@@ -18,7 +18,9 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
   const [done, setDone] = useState('');
   const [err, setErr] = useState('');
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const text = useMemo(() => newsShareText(post, origin), [post, origin]);
+  const [note, setNote] = useState(''); // petit mot facultatif, envoyé avec le lien
+  const baseText = useMemo(() => newsShareText(post, origin), [post, origin]);
+  const text = useMemo(() => withShareNote(baseText, note), [baseText, note]);
   const url = newsLink(origin, post.id);
   const restricted = !!cleanAudience(post.audience);
 
@@ -47,7 +49,7 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
     try { await navigator.clipboard.writeText(url); setDone('Lien copié.'); onShared(); } catch { setErr('Copie impossible ici : sélectionne le lien et copie-le.'); }
   };
   const nativeShare = async () => {
-    try { await navigator.share({ title: post.title || 'Gestion Pro', text: restricted ? '' : text.split('\n')[0], url }); onShared(); onClose(); } catch { /* partage annulé */ }
+    try { await navigator.share({ title: post.title || 'Gestion Pro', text: withShareNote(restricted ? '' : baseText.split('\n')[0], note).trim(), url }); onShared(); onClose(); } catch { /* partage annulé */ }
   };
 
   const card = light ? 'bg-white text-slate-900' : 'bg-[#0f1b2d] text-slate-100';
@@ -62,6 +64,7 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
         </div>
         <div className="p-3 space-y-2 overflow-y-auto">
           {restricted && <div className="rounded-lg px-3 py-2 text-xs bg-sky-500/10 text-sky-600" data-share-restricted>Cette publication est réservée à : {audienceLabel(post.audience, 'fr')}. Le message ne contient que le lien : les autres personnes verront « publication introuvable ».</div>}
+          <textarea value={note} onChange={e => setNote(e.target.value.slice(0, SHARE_NOTE_MAX))} rows={2} disabled={sending || !!done} maxLength={SHARE_NOTE_MAX} aria-label="Ajouter un petit mot (facultatif)" placeholder="Ajouter un petit mot (facultatif)" data-share-note className={`w-full rounded-lg border p-2 text-sm outline-none focus:border-emerald-500 resize-none ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-white/5 border-slate-600 text-slate-100'}`} />
           <div className={`whitespace-pre-line break-words text-xs rounded-lg p-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`} data-share-preview><LinkedText text={text} /></div>
           <div className="flex flex-col">
             <button type="button" onClick={() => void copy()} className={btn} data-share-copy><Copy className="w-4 h-4" />Copier le lien</button>

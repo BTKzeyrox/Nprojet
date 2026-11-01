@@ -1,5 +1,5 @@
 // Contrôle du lien vers une publication et de sa lecture dans un message. Lancer : npm run check:news-link
-import { newsLink, newsNavId, newsIdFromNav, newsShareText, splitLinks, linkLabel } from '../src/utils/newsLink';
+import { newsLink, newsNavId, newsIdFromNav, newsShareText, splitLinks, linkLabel, withShareNote, SHARE_NOTE_MAX } from '../src/utils/newsLink';
 import { parseDeepLinkUrl, deepLinkAllowed } from '../src/utils/deepLink';
 
 let fails = 0, total = 0;
@@ -54,6 +54,21 @@ eq(linkLabel({ go: 'feed', nav: 'news:n1' }), 'Voir la publication', 'nom du lie
 eq(linkLabel({ go: 'feed', nav: 'news:n1' }, 'en'), 'View the post', 'nom du lien : publication (en)');
 eq(linkLabel({ go: 'chat' }), 'Ouvrir la page', 'nom du lien : autre page');
 ok(!linkLabel({ go: 'feed', nav: 'news:n1' }).includes('http') && !linkLabel({ go: 'feed', nav: 'news:n1' }).includes('/?'), 'nom du lien : jamais une adresse');
+
+// ---- Petit mot facultatif avec le lien ----
+const base = newsShareText({ id: 'n1', title: 'Congés', text: 'Bonjour' }, O);
+eq(withShareNote(base, ''), base, 'petit mot vide : le message ne change pas');
+eq(withShareNote(base, '   \n  '), base, 'petit mot d\'espaces : le message ne change pas');
+eq(withShareNote(base, undefined), base, 'petit mot absent : le message ne change pas');
+eq(withShareNote(base, 'Regarde ça'), `Regarde ça\n${base}`, 'petit mot : placé AVANT la publication et le lien');
+ok(withShareNote(base, 'Salut').endsWith(newsLink(O, 'n1')), 'petit mot : le lien reste à la fin (le bouton « Voir la publication » s\'affiche)');
+ok(splitLinks(withShareNote(base, 'Salut'), O).some((x: any) => x.link), 'petit mot : le lien est toujours reconnu');
+eq(withShareNote(base, 'a\n\n\n\nb'), `a\n\nb\n${base}`, 'petit mot : les lignes vides en trop sont réduites');
+eq(withShareNote('lien', 'x'.repeat(SHARE_NOTE_MAX + 50)).split('\n')[0].length, SHARE_NOTE_MAX, `petit mot : coupé à ${SHARE_NOTE_MAX} lettres`);
+const rest = newsShareText({ id: 'n2', title: 'Secret', text: 'Réservé', audience: ['accountant'] }, O);
+ok(!withShareNote(rest, 'Pour toi').includes('Secret') && withShareNote(rest, 'Pour toi').startsWith('Pour toi\n'), 'publication réservée : le petit mot s\'ajoute, mais ni titre ni extrait ne fuient');
+const sheet = (await import('node:fs')).readFileSync(new URL('../src/components/NewsShareSheet.tsx', import.meta.url), 'utf-8');
+ok(/data-share-note/.test(sheet) && /withShareNote\(baseText, note\)/.test(sheet) && /facultatif/.test(sheet), 'écran : champ « petit mot (facultatif) », utilisé dans le message envoyé');
 
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);

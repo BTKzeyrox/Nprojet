@@ -23,6 +23,13 @@ export function newsShareText(post: { id: string; title?: string; text?: string;
   return body ? `${body}\n${url}` : url;
 }
 
+export const SHARE_NOTE_MAX = 500;
+/** Petit mot facultatif écrit par la personne qui partage : placé AVANT le lien. Vide ou espaces seuls = le message reste celui d'avant, sans changement. */
+export function withShareNote(base: string, note: unknown): string {
+  const n = String(note ?? '').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, SHARE_NOTE_MAX).trim();
+  return n ? `${n}\n${base}` : base;
+}
+
 /** Nom affiché à la place de l'adresse longue : « Voir la publication » pour une publication, sinon le nom de la page. */
 export function linkLabel(link: DeepLink, lang: 'fr' | 'en' = 'fr'): string {
   if (newsIdFromNav(link.nav)) return lang === 'en' ? 'View the post' : 'Voir la publication';
