@@ -22,15 +22,19 @@ ok(P.getPinnedThreads('u3').length === 0, 'stockage abîmé : aucune erreur');
 // ---- fiche « À propos » ----
 const op = { id: 'u9', username: 'operator1', name: 'Opérateur 1', role: 'employee', shift: 'night', team: 'Nuit A', is_online: true, phone: '034 00 000 00', avatar_url: '' } as any;
 const th = { id: 'u9', kind: 'user' as const, title: 'Opérateur 1', subtitle: '@operator1', user: op };
-const asAdmin = A.aboutThread(th, { viewer: { id: 'user-admin-1', role: 'admin' }, pinned: false, hidden: false, canOpenFullProfile: true });
+const asAdmin = A.aboutThread(th, { viewer: { id: 'user-admin-1', role: 'admin' }, pinned: false, hidden: false, canOpenFullProfile: true, online: true });
 ok(asAdmin.facts.some(f => f.label === 'Téléphone') && asAdmin.facts.some(f => f.value === 'Opérateur') && asAdmin.facts.some(f => f.value === 'Nuit') && asAdmin.facts.some(f => f.value === 'En ligne'), 'responsable : rôle, poste, état et téléphone');
 ok(asAdmin.actions.join() === 'write,full_profile,pin,hide', 'responsable : écrire, profil complet, épingler, cacher');
 const asEmp = A.aboutThread({ ...th, id: 'u8', user: { ...op, id: 'u8' } }, { viewer: { id: 'u9', role: 'employee' }, pinned: true, hidden: true });
 ok(!asEmp.facts.some(f => f.label === 'Téléphone'), 'opérateur : jamais le téléphone d\'un collègue');
 ok(!asEmp.facts.some(f => /Ar|gain|paie|salaire/i.test(f.label + f.value)), 'opérateur : aucune donnée d\'argent');
 ok(asEmp.actions.join() === 'write,unpin,show', 'déjà épinglée et cachée : propose désépingler et afficher');
-const en = A.aboutThread(th, { viewer: { id: 'x', role: 'admin' }, pinned: false, hidden: false, lang: 'en' });
+const en = A.aboutThread(th, { viewer: { id: 'x', role: 'admin' }, pinned: false, hidden: false, lang: 'en', online: true });
 ok(en.facts.some(f => f.label === 'Role' && f.value === 'Operator') && en.facts.some(f => f.value === 'Online'), 'anglais : rôle et état traduits');
+// L'ancien indicateur is_online (bloqué sur « vrai » quand on ferme l'appli sans se déconnecter) ne dit plus jamais « En ligne » (BTK 2026-11-01)
+const noState = A.aboutThread(th, { viewer: { id: 'user-admin-1', role: 'admin' }, pinned: false, hidden: false });
+ok(!noState.facts.some(f => f.label === 'État'), 'état inconnu (non calculé) : aucune ligne « État », jamais l\'ancien is_online');
+ok(A.aboutThread(th, { viewer: { id: 'user-admin-1', role: 'admin' }, pinned: false, hidden: false, online: false }).facts.some(f => f.value === 'Hors ligne'), 'état calculé hors ligne : « Hors ligne » même si is_online est resté vrai');
 const all = A.aboutThread({ id: 'all', kind: 'all', title: 'Groupe général', subtitle: '' }, { viewer: { id: 'x', role: 'admin' }, pinned: false, hidden: false });
 ok(all.actions.join() === 'write', 'groupe général : on ne le cache pas et il est déjà en tête');
 const grp = A.aboutThread({ id: 'grp_1', kind: 'group', title: 'Équipe', subtitle: '5 membres' }, { viewer: { id: 'x', role: 'employee' }, pinned: false, hidden: false });

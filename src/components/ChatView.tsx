@@ -29,6 +29,7 @@ import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
 import { useNow } from '../utils/useNow';
 import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
+import { onlineBadge } from '../utils/attendanceView';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
@@ -968,7 +969,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {aboutOf && (() => {
         const t: Thread | undefined = threads.find(x => x.id === aboutOf.id) || (() => { const u = users.find(x => x.id === aboutOf.id); return u ? { id: u.id, kind: 'user' as const, title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u } : undefined; })();
         if (!t) return null;
-        const full = aboutThread(t, { viewer: currentUser, pinned: pinnedThreads.includes(t.id), hidden: !!archived[t.id] && archived[t.id] >= lastTs(t), lang: lang === 'en' ? 'en' : 'fr', canOpenFullProfile: !!onOpenProfile });
+        const full = aboutThread(t, { viewer: currentUser, pinned: pinnedThreads.includes(t.id), hidden: !!archived[t.id] && archived[t.id] >= lastTs(t), lang: lang === 'en' ? 'en' : 'fr', canOpenFullProfile: !!onOpenProfile, online: isAdmin && t.kind === 'user' && t.user ? onlineBadge(db.getPresence().find(r => r.user_id === t.user!.id)?.last_seen, Date.now()).online : null });
         const view = aboutOf.menuOnly ? { ...full, facts: [], actions: full.actions.filter(a => a === 'pin' || a === 'unpin' || a === 'hide' || a === 'show') } : full;
         const run = (a: AboutAction) => {
           setAboutOf(null);

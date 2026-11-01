@@ -31,7 +31,7 @@ export const getPresenceStatus = (
   now = Date.now()
 ): { status: PresenceStatus; onlineSec: number; waitingSince: string | null } => {
   const row = presence.find(r => r.user_id === user.id);
-  const fresh = row ? now - new Date(row.last_seen).getTime() < ONLINE_MS : !!user.is_online; // sans données de présence : ancien réglage
+  const fresh = row ? now - new Date(row.last_seen).getTime() < ONLINE_MS : false; // sans signe de vie reçu : hors ligne. L'ancien indicateur `is_online` reste bloqué sur « vrai » quand on ferme l'appli sans se déconnecter (BTK 2026-11-01 : tous les opérateurs « en ligne » sans l'être) : on ne s'y fie plus.
   const waitingSince = fresh && row?.waiting_since ? row.waiting_since : null;
   const onlineSec = row && row.day === dayMada(now) ? row.online_sec : 0;
   if (hasOpenPost(user.id, posts)) return { status: 'working', onlineSec, waitingSince: null };

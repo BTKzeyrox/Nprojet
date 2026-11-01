@@ -11,7 +11,7 @@ const ROLE_FR: Record<string, string> = { admin: 'Responsable', employee: 'Opér
 const ROLE_EN: Record<string, string> = { admin: 'Manager', employee: 'Operator', accountant: 'Accountant', team_lead: 'Team lead' };
 export const roleLabel = (role: unknown, lang: 'fr' | 'en' = 'fr'): string => (lang === 'en' ? ROLE_EN : ROLE_FR)[String(role)] || (lang === 'en' ? 'Member' : 'Membre');
 
-export interface AboutOptions { viewer: Pick<User, 'id' | 'role'>; pinned: boolean; hidden: boolean; lang?: 'fr' | 'en'; canOpenFullProfile?: boolean }
+export interface AboutOptions { viewer: Pick<User, 'id' | 'role'>; pinned: boolean; hidden: boolean; lang?: 'fr' | 'en'; canOpenFullProfile?: boolean; /** Vrai / faux = état calculé depuis les signes de vie (responsable seulement) ; absent ou null = on ne l'affiche pas. Jamais l'ancien indicateur `is_online`. */ online?: boolean | null }
 
 export function aboutThread(t: AboutThread, o: AboutOptions): About {
   const en = o.lang === 'en';
@@ -27,7 +27,7 @@ export function aboutThread(t: AboutThread, o: AboutOptions): About {
       if (u.team) facts.push({ label: tt('Équipe', 'Team'), value: u.team });
       facts.push({ label: tt('Poste', 'Shift'), value: u.shift === 'night' ? tt('Nuit', 'Night') : tt('Jour', 'Day') });
     }
-    facts.push({ label: tt('État', 'Status'), value: u.is_online ? tt('En ligne', 'Online') : tt('Hors ligne', 'Offline') });
+    if (o.online === true || o.online === false) facts.push({ label: tt('État', 'Status'), value: o.online ? tt('En ligne', 'Online') : tt('Hors ligne', 'Offline') });
     if (isAdmin && u.phone) facts.push({ label: tt('Téléphone', 'Phone'), value: u.phone });
     actions.push('write');
     if (o.canOpenFullProfile) actions.push('full_profile');

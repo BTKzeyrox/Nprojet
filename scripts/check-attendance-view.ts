@@ -56,6 +56,12 @@ eq(monthPresence([]), { days: 0, avgArrival: null }, 'mois : aucun jour');
 eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }, { first_seen: '2026-11-02T05:30:00Z' }]), { days: 2, avgArrival: '08:15' }, 'mois : arrivée moyenne 08:00 et 08:30 = 08:15');
 eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }]).days, 1, 'mois : 1 jour');
 
+// ---- Plus jamais « en ligne » à cause de l'ancien indicateur is_online (BTK 2026-11-01 : opérateurs « en ligne » sans s'être connectés) ----
+const presSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/presence.ts', import.meta.url), 'utf-8');
+ok(/const fresh = row \? [^;]*: false;/.test(presSrc) && !/: !!user\.is_online/.test(presSrc), 'présence : aucun signe de vie reçu = HORS LIGNE (plus jamais l\'ancien indicateur is_online)');
+const aboutSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/chatAbout.ts', import.meta.url), 'utf-8');
+ok(!/u\.is_online/.test(aboutSrc), 'fiche « À propos » : n\'utilise plus is_online');
+
 // ---- Écran : le calendrier utilise bien ces règles ----
 import { readFileSync } from 'node:fs';
 const cal = readFileSync(new URL('../src/views/CalendarView.tsx', import.meta.url), 'utf-8');
