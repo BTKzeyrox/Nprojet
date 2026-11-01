@@ -67,8 +67,10 @@ ok(/grid-cols-4/.test(pk) && /FONT_SIZES\.map/.test(pk), 'écran : le sélecteur
 // ---- 4. Messagerie : texte des bulles -1
 const chat = fs.readFileSync('src/components/ChatView.tsx', 'utf8');
 const bubble = chat.split('\n').find(l => l.includes("min-w-[13.5rem]")) || '';
-ok(/text-\[0\.8125rem\]/.test(bubble) && !/\btext-sm\b/.test(bubble), 'messagerie : bulle à 13 px (0,8125 rem, suit la taille choisie), plus 14 px');
-ok(/className="block text-xs leading-snug break-words"/.test(chat) && !/text-\[13px\] leading-snug/.test(chat), 'messagerie : message cité à 12 px (avant 13 px)');
+ok(/text-\[0\.9375rem\]/.test(bubble) && !/\btext-sm\b/.test(bubble) && !/text-\[0\.8125rem\]/.test(bubble), 'messagerie : bulle à 15 px (0,9375 rem, suit la taille choisie ; BTK 2026-11-01 : « trop petit »), avant 13 px');
+ok(/className="block text-\[0\.8125rem\] leading-snug break-words"/.test(chat), 'messagerie : message cité à 13 px (suit la bulle à 15 px)');
+const asst = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8');
+ok(!/text-\[0\.8125rem\]/.test(asst) && /text-\[0\.9375rem\]/.test(asst), 'assistant IA : même taille que la messagerie (15 px)');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
