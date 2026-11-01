@@ -54,5 +54,30 @@ has('src/utils/health/rules/clients.ts', /nav: `client-\$\{c\.id\}`/, 'Santé : 
 has('src/utils/health/rules/team.ts', /nav: `emp-\$\{u\.id\}`/, 'Santé : employé inactif vise cet employé');
 has('src/utils/health/rules/missions.ts', /nav: `val-post-\$\{old\.p\.id\}`/, 'Santé : mission à valider vise la mission la plus ancienne');
 for (const f of ['src/views/admin/AdminDashboard.tsx', 'src/views/admin/StatsPage.tsx', 'src/views/admin/HealthPage.tsx', 'src/components/AssistantChat.tsx']) has(f, /setNavTarget\(/, `${f.split('/').pop()} : transmet la cible exacte`);
+
+// ---- 6) Finances : chaque chiffre et chaque alerte d'argent vise la bonne CARTE (étape C) ----
+const { FIN_NAV, FIGURE_GO, finGo } = await import('../src/utils/financeNav');
+const { FIGURE_IDS } = await import('../src/utils/siteSnapshot');
+const finView = ['src/views/admin/FinanceInsights.tsx', 'src/views/admin/BudgetsCard.tsx', 'src/views/admin/PlanVsActualCard.tsx'].map(read).join('\n');
+ok(Object.values(FIN_NAV).length === 14 && new Set(Object.values(FIN_NAV)).size === 14, 'cartes de Finances : 14 adresses, toutes différentes');
+for (const k of ['profit', 'margin', 'toCollect', 'treasury', 'costPerMission', 'gainPerMission'] as const) ok((FIN_NAV as any)[k] === `fin-${k}`, `carte « ${k} » : adresse fin-${k} (la même que celle de la tuile)`);
+ok(/data-nav=\{why \? `fin-\$\{why\}` : undefined\}/.test(read('src/views/admin/FinanceInsights.tsx')), 'Finances : chaque tuile de chiffre porte l\'adresse fin-<chiffre>');
+for (const k of ['result', 'invoices', 'flow', 'cum', 'billed', 'expenses'] as const) ok(new RegExp(`data-nav=\\{FIN_NAV\\.${k}\\}`).test(read('src/views/admin/FinanceInsights.tsx')), `Finances : la carte « ${k} » a son adresse`);
+ok(/data-nav=\{FIN_NAV\.budgets\}/.test(read('src/views/admin/BudgetsCard.tsx')) && /data-nav=\{FIN_NAV\.plan\}/.test(read('src/views/admin/PlanVsActualCard.tsx')), 'Finances : les cartes Budgets et Prévu contre réel ont leur adresse');
+for (const id of FIGURE_IDS) { const go = FIGURE_GO[id]; ok(!!go && (go.view === 'storage' || (go.view === 'stats' && go.tab === 'finance' && Object.values(FIN_NAV).includes(go.nav as any))), `chiffre « ${id} » : le lien mène à une carte qui existe`); }
+ok(finGo('budgets').nav === 'fin-budgets' && finGo('budgets').tab === 'finance' && finGo('budgets').view === 'stats', 'finGo : page Statistiques, onglet Finances, bonne carte');
+// L'adresse des alertes d'argent (lecture du code) : budget, bénéfice en baisse, trésorerie basse, à encaisser, budgets par catégorie
+const alertsSrc = read('src/utils/alerts.ts');
+for (const [id, k] of [['budget', 'budgets'], ['profit-drop', 'profit'], ['cash-low', 'treasury'], ['unpaid', 'toCollect'], ['budget_cat', 'budgets']] as const) ok(new RegExp(`id: '${id}'[^\\n]*nav: FIN_NAV\\.${k}`).test(alertsSrc), `accueil : l'alerte « ${id} » vise la carte ${k}`);
+has('src/utils/health/rules/finance.ts', /go: \{ \.\.\.GO, nav: FIN_NAV\.treasury \}/, 'Santé : caisse négative vise la carte Trésorerie');
+has('src/utils/health/rules/stats.ts', /nav: FIN_NAV\.flow/, 'Santé : moins d\'argent reçu vise la carte Argent reçu et dépenses');
+has('src/utils/health/rules/stats.ts', /nav: FIN_NAV\.margin/, 'Santé : marge en baisse vise la carte Marge');
+has('src/utils/health/rules/stats.ts', /nav: FIN_NAV\.expenses/, 'Santé : dépense en hausse vise la carte Dépenses par catégorie');
+has('src/utils/health/rules/management.ts', /view: 'stats', tab: 'finance', nav: FIN_NAV\.plan/, 'Santé : paie ou dépenses au-dessus du prévu vise la carte Prévu contre réel (avant : page seulement, sans l\'onglet Finances)');
+// Les alertes d'argent calculées pour de vrai portent bien la cible
+const cashAlerts = computeAlerts({ today: '2026-10-29', settings: {}, cash: [{ id: 'c1', kind: 'out', amount_ar: 900000, date: '2026-10-10', category: 'Achats' }], posts: [], contracts: [], advances: [], products: [], moves: [] } as any);
+const low = cashAlerts.find(a => a.id === 'cash-low');
+ok(!!low && low.go === 'stats' && low.tab === 'finance' && low.nav === 'fin-treasury', 'accueil (calcul réel) : trésorerie négative ouvre Statistiques > Finances et la carte Trésorerie');
+
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

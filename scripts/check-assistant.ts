@@ -156,6 +156,14 @@ for (const pre of ['val-post-', 'val-adv-', 'val-sig-', 'val-rst-', 'val-prf-', 
 const navIntentSrc = fs.readFileSync('src/utils/navIntent.ts', 'utf8');
 for (const f of ['starts', 'ends', 'advances', 'signups', 'resets', 'profiles', 'access']) ok(new RegExp(`'${f}'`).test(navIntentSrc), `filtre « ${f} » : connu de la page Validations`);
 
+// ---------- Chiffres : le lien mène à la carte (étape C) ----------
+const finIn = base({ today: '2026-11-01', nowMs: NOW, users: [], posts: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [] });
+const figAsk: [string, string][] = [['pourquoi la marge ?', 'fin-margin'], ['pourquoi le benefice ?', 'fin-profit'], ['pourquoi la tresorerie ?', 'fin-treasury'], ['why to collect ?', 'fin-toCollect'], ['pourquoi les depenses ?', 'fin-expenses'], ['pourquoi argent recu ?', 'fin-flow']];
+for (const [q, nav] of figAsk) { const fr = respond(q, finIn, []); ok(fr.intent === 'figure' && fr.actions.length === 1 && fr.actions[0].go.view === 'stats' && fr.actions[0].go.tab === 'finance' && fr.actions[0].go.nav === nav && clean(fr), `chiffre « ${q} » : bouton vers la carte ${nav} (page Statistiques, onglet Finances)`); }
+const sv = respond('pourquoi la valeur du stock ?', finIn, []);
+ok(sv.intent === 'figure' && sv.actions[0].go.view === 'storage' && !sv.actions[0].go.tab, 'chiffre « valeur du stock » : mène à Stockage (plus à Finances)');
+ok(isKnownView(respond('pourquoi la marge ?', finIn, []).actions[0].go.view), 'chiffre : la page visée est une page connue du menu');
+
 // ---------- Règles de fond ----------
 const src = fs.readFileSync('src/utils/assistant.ts', 'utf8');
 ok(!/fetch\(|XMLHttpRequest|import .*db\/store|localStorage|Date\.now\(\)/.test(src), 'niveau A : aucun appel réseau, aucun accès direct aux données, aucune horloge cachée (tout vient de l\'entrée)');

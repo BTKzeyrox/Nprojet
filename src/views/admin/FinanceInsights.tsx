@@ -10,6 +10,7 @@ import { forecastMonth, monthFigures } from '../../utils/goals';
 import { actualUntil, forecastLine } from '../../utils/chartData';
 import { WhyFigure } from '../../components/WhyFigure';
 import type { FigureId } from '../../utils/siteSnapshot';
+import { FIN_NAV } from '../../utils/financeNav';
 
 // Chiffres et graphiques financiers de la période (responsable seulement). Tout est calculé ici, sans appel serveur.
 interface Props { range: { start: string; end: string }; lang: 'fr' | 'en' }
@@ -54,7 +55,7 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
       ]
     : [{ key: 'cum', label: t('Bénéfice cumulé', 'Cumulative profit'), values: cum, kind: 'area' as const }];
   const tile = (label: string, value: string, tone = 'text-white', hint?: string, why?: FigureId) => (
-    <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 min-w-0">
+    <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 min-w-0" data-nav={why ? `fin-${why}` : undefined}>
       <div className="text-[11px] text-slate-400 flex items-center justify-between gap-1"><span className="truncate">{label}</span>{why && <WhyFigure id={why} range={r} lang={lang} />}</div>
       <div className={`text-base font-bold truncate ${tone}`}>{value}</div>
       {hint && <div className="text-[11px] text-slate-500 truncate">{hint}</div>}
@@ -65,7 +66,7 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
 
   return (
     <div className="space-y-3" data-notranslate="">
-      <div className={box}>
+      <div className={box} data-nav={FIN_NAV.result}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Résultat de la période', 'Result for the period')}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {tile(t('Bénéfice net', 'Net profit'), ar(f.profit), f.profit < 0 ? 'text-rose-400' : 'text-emerald-400', t('reçu − dépenses − salaires', 'received − expenses − salaries'), 'profit')}
@@ -79,7 +80,7 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
           {t('Meilleur client', 'Best client')} : {f.bestClient ? <b className="text-white">{f.bestClient.name} · {ar(f.bestClient.amount)}</b> : <span className="text-slate-500">{dash}</span>}
         </div>
         {inv && (invoices.length > 0 || inv.unbilled_count > 0) && (
-          <div className="border-t border-slate-700 pt-3 space-y-2" data-testid="invoice-figures">
+          <div className="border-t border-slate-700 pt-3 space-y-2" data-testid="invoice-figures" data-nav={FIN_NAV.invoices}>
             <h3 className="text-xs font-bold text-slate-300">{t('Factures (module Facturation)', 'Invoices (Invoicing module)')}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {tile(t('Émises sur la période', 'Issued in the period'), ar(inv.issued_total), 'text-white', t(`${inv.issued_count} facture(s)`, `${inv.issued_count} invoice(s)`))}
@@ -100,13 +101,13 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
           items={f.clients.map(c => ({ key: c.name, label: c.name, value: c.amount, valueText: ar(c.amount) }))} />
       </div>
 
-      <div className={box}>
+      <div className={box} data-nav={FIN_NAV.flow}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Argent reçu et dépenses', 'Money in and out')} <span className="text-xs font-normal text-slate-400">({BY[g][lang]})</span></h2>
         <MoneyFlowChart labels={f.labels} fullLabels={f.fullLabels} inflow={f.series.inflow} outflow={f.series.outflow} format={ar} axisFormat={short} lang={lang}
           inLabel={t('Argent reçu', 'Money received')} outLabel={t('Dépenses', 'Expenses')} balanceLabel={t('Solde', 'Balance')} ariaLabel={t('Argent reçu et dépenses', 'Money received and expenses')} />
       </div>
 
-      <div className={box}>
+      <div className={box} data-nav={FIN_NAV.cum}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Bénéfice cumulé', 'Cumulative profit')}</h2>
         <XYChart labels={f.labels} fullLabels={f.fullLabels} lang={lang} format={ar} axisFormat={short} summary="last" signColors legend={cumSeries.length > 1}
           ariaLabel={t('Bénéfice cumulé', 'Cumulative profit')} series={cumSeries}
@@ -114,13 +115,13 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
         {fc && <p className="text-[11px] text-slate-500">{t(`Prévision : ${ar(fc.profit)} à la fin du mois, au rythme actuel.`, `Forecast: ${ar(fc.profit)} at the end of the month at the current pace.`)}</p>}
       </div>
 
-      <div className={box}>
+      <div className={box} data-nav={FIN_NAV.billed}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Facturé et reçu', 'Billed and received')}</h2>
         <BilledReceivedBars labels={f.labels} fullLabels={f.fullLabels} billed={f.series.billed} received={f.series.inflow} format={ar} axisFormat={short} lang={lang}
           billedLabel={t('Facturé', 'Billed')} receivedLabel={t('Reçu', 'Received')} leftLabel={t('Reste à encaisser', 'Left to collect')} ariaLabel={t('Facturé et reçu', 'Billed and received')} />
       </div>
 
-      <div className={box}>
+      <div className={box} data-nav={FIN_NAV.expenses}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Dépenses par catégorie', 'Expenses by category')}</h2>
         <DonutChart items={f.expensesByCategory} format={short} centerLabel="Ar" lang={lang} ariaLabel={t('Dépenses par catégorie', 'Expenses by category')} />
       </div>

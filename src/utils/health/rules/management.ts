@@ -7,6 +7,7 @@ import type { HealthAlert } from '../types';
 import { planConflicts, CONFLICT_LABEL } from '../../planning';
 import { budgetVsActual, cleanMonthlyPlan } from '../../budgetPlan';
 import { dayDiff, plural, userName } from './common';
+import { FIN_NAV } from '../../financeNav';
 
 const WINDOW_DAYS = 14;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -50,7 +51,7 @@ export const planOver: HealthRule = {
         title_fr: `${fr_} au-dessus du prévu ce mois-ci`, title_en: `${en_} above plan this month`,
         why_fr: `Réel ${ar(line.actual)} contre ${ar(line.planned)} prévus : ${ar(-line.gap)} de trop.`, why_en: `Actual ${arEn(line.actual)} against ${arEn(line.planned)} planned: ${arEn(-line.gap)} over.`,
         todo_fr: 'Ouvrir Statistiques, onglet Finances, carte « Prévu contre réel » ; garder le prévu ou le corriger s\'il est trop bas.', todo_en: 'Open Statistics, Finance tab, "Planned vs actual" card; keep the plan or fix it if it is too low.',
-        since: ctx.today.slice(0, 7) + '-01', value: Math.round(-line.gap), go: { view: 'stats' },
+        since: ctx.today.slice(0, 7) + '-01', value: Math.round(-line.gap), go: { view: 'stats', tab: 'finance', nav: FIN_NAV.plan },
       } as HealthAlert);
     };
     mk('payroll', cur.payroll, 'Paie', 'Payroll');

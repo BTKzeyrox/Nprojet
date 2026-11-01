@@ -11,6 +11,7 @@ import { periodRange } from './stats';
 import { computeFinance } from './financeStats';
 import { ADVICE, GENERIC_TIPS } from './advice';
 import { isKnownView } from './health/menu';
+import { FIGURE_GO } from './financeNav';
 
 export type Lang = 'fr' | 'en';
 export interface Bi { fr: string; en: string }
@@ -404,7 +405,7 @@ export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[]): 
       const e = explainFigure(it.id, i);
       const val = e.value === null ? '—' : e.unit === 'Ar' ? ar(e.value, 'fr') : e.unit === '%' ? `${e.value} %` : String(e.value);
       const valEn = e.value === null ? '—' : e.unit === 'Ar' ? ar(e.value, 'en') : e.unit === '%' ? `${e.value}%` : String(e.value);
-      return { intent: 'figure', title: b(`${e.name.fr} : ${val}`, `${e.name.en}: ${valEn}`), lines: [e.formula, ...e.parts.map(p => b(`${p.sign} ${p.label.fr} : ${p.value === null ? '—' : p.value}`, `${p.sign} ${p.label.en}: ${p.value === null ? '—' : p.value}`)), ...(e.missing ? [e.missing] : [])], actions: [{ label: b('Ouvrir Finances', 'Open Finance'), go: { view: 'stats', tab: 'finance' } }], sources: e.sources };
+      return { intent: 'figure', title: b(`${e.name.fr} : ${val}`, `${e.name.en}: ${valEn}`), lines: [e.formula, ...e.parts.map(p => b(`${p.sign} ${p.label.fr} : ${p.value === null ? '—' : p.value}`, `${p.sign} ${p.label.en}: ${p.value === null ? '—' : p.value}`)), ...(e.missing ? [e.missing] : [])], actions: [{ label: it.id === 'stockValue' ? b('Ouvrir Stockage', 'Open Storage') : b(`Voir la carte « ${e.name.fr} »`.slice(0, 48), `See the “${e.name.en}” card`.slice(0, 48)), go: FIGURE_GO[it.id] }], sources: e.sources };
     }
     default: return unknownReply();
   }

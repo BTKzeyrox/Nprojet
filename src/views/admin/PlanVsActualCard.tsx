@@ -3,6 +3,7 @@ import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { budgetVsActual, plannedExpenses, PLAN_STATUS_LABEL, type PlanLine, type PlanStatus } from '../../utils/budgetPlan';
+import { FIN_NAV } from '../../utils/financeNav';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -52,7 +53,7 @@ export const PlanVsActualCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
   );
 
   return (
-    <div className="bg-[#0f1722] border border-slate-700 rounded-2xl p-3 sm:p-4 space-y-3">
+    <div className="bg-[#0f1722] border border-slate-700 rounded-2xl p-3 sm:p-4 space-y-3" data-nav={FIN_NAV.plan}>
       <h2 className="text-sm font-bold text-white">{t('Prévu contre réel', 'Planned vs actual')}</h2>
       <p className="text-[11px] text-slate-400">{t('Le réel est calculé : argent reçu, dépenses payées, salaires des missions validées. Le prévu des dépenses est le total des budgets par catégorie ci-dessus. Règle ici les revenus et la paie prévus chaque mois.', 'The actual is computed: money received, expenses paid, salaries of validated missions. Planned expenses are the total of the category budgets above. Set the planned monthly revenue and payroll here.')}</p>
       <div className="grid grid-cols-2 gap-3">

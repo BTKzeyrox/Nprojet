@@ -14,6 +14,7 @@ import { budgetRows } from './purchasing';
 import type { Invoice } from '../types';
 import { canonicalClientName, clientMissionsFromPosts, clientReceived, summarizeClients, type ClientRecord } from './clients';
 import { clientBadgeAlert, clientsToWatch, computeClientBadges } from './clientBadges';
+import { FIN_NAV } from './financeNav';
 
 export type AlertLevel = 'danger' | 'warn';
 export interface AlertItem {
@@ -53,8 +54,8 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   const exp = goalRows(s, month).find(r => r.key === 'expenses');
   if (exp && (exp.state === 'over' || exp.state === 'warn')) {
     out.push(exp.state === 'over'
-      ? { id: 'budget', level: 'danger', go: 'stats', tab: 'finance', fr: `Budget dépassé : ${ar(exp.value)} dépensés ce mois-ci sur ${ar(exp.goal)} prévus.`, en: `Budget exceeded: ${ar(exp.value)} spent this month out of ${ar(exp.goal)}.` }
-      : { id: 'budget', level: 'warn', go: 'stats', tab: 'finance', fr: `Budget presque atteint : ${exp.pct} % du plafond de dépenses du mois.`, en: `Budget almost reached: ${exp.pct}% of this month's spending limit.` });
+      ? { id: 'budget', level: 'danger', go: 'stats', tab: 'finance', nav: FIN_NAV.budgets, fr: `Budget dépassé : ${ar(exp.value)} dépensés ce mois-ci sur ${ar(exp.goal)} prévus.`, en: `Budget exceeded: ${ar(exp.value)} spent this month out of ${ar(exp.goal)}.` }
+      : { id: 'budget', level: 'warn', go: 'stats', tab: 'finance', nav: FIN_NAV.budgets, fr: `Budget presque atteint : ${exp.pct} % du plafond de dépenses du mois.`, en: `Budget almost reached: ${exp.pct}% of this month's spending limit.` });
   }
 
   // 2. Bénéfice en baisse : le mois en cours contre le mois d'avant, sur le même nombre de jours
@@ -63,7 +64,7 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     const cur = computeFinance(fin, 'month', rg.curEff), prev = computeFinance(fin, 'month', rg.prev);
     if (prev.profit > 0 && cur.profit < prev.profit) {
       const drop = Math.round(((prev.profit - cur.profit) / prev.profit) * 100);
-      if (drop >= 20) out.push({ id: 'profit-drop', level: 'warn', go: 'stats', tab: 'finance', fr: `Bénéfice en baisse de ${drop} % par rapport au mois dernier (même nombre de jours).`, en: `Profit down ${drop}% compared with last month (same number of days).` });
+      if (drop >= 20) out.push({ id: 'profit-drop', level: 'warn', go: 'stats', tab: 'finance', nav: FIN_NAV.profit, fr: `Bénéfice en baisse de ${drop} % par rapport au mois dernier (même nombre de jours).`, en: `Profit down ${drop}% compared with last month (same number of days).` });
     }
   }
 
@@ -72,7 +73,7 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   const low = Math.max(0, Number(s.alert_low_cash_ar) || 0);
   if (all.treasury < low || all.treasury < 0) {
     const neg = all.treasury < 0;
-    out.push({ id: 'cash-low', level: neg ? 'danger' : 'warn', go: 'stats', tab: 'finance',
+    out.push({ id: 'cash-low', level: neg ? 'danger' : 'warn', go: 'stats', tab: 'finance', nav: FIN_NAV.treasury,
       fr: neg ? `Trésorerie négative : ${ar(all.treasury)}.` : `Trésorerie basse : ${ar(all.treasury)} (seuil ${ar(low)}).`,
       en: neg ? `Negative cash: ${ar(all.treasury)}.` : `Low cash: ${ar(all.treasury)} (threshold ${ar(low)}).` });
   }
@@ -141,7 +142,7 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
   late.sort((a, b) => b.ago - a.ago || a.name.localeCompare(b.name));
   if (late.length) {
     const left = all.toCollect > 0 ? all.toCollect : late.reduce((t, x) => t + x.due, 0);
-    out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance',
+    out.push({ id: 'unpaid', level: 'warn', go: 'stats', tab: 'finance', nav: FIN_NAV.toCollect,
       fr: `Pas de paiement depuis plus de ${days} jours : ${late.slice(0, 3).map(x => `${x.name} (${x.ago} j)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Reste à encaisser : ${ar(left)}.`,
       en: `No payment for over ${days} days: ${late.slice(0, 3).map(x => `${x.name} (${x.ago} d)`).join(', ')}${late.length > 3 ? ` +${late.length - 3}` : ''}. Left to collect: ${ar(left)}.` });
   }
@@ -152,7 +153,7 @@ export function computeAlerts(i: AlertInput): AlertItem[] {
     if (rows.length) {
       const over = rows.some(r => r.status === 'over');
       const txt = () => rows.slice(0, 3).map(r => `${r.category} (${r.pct} %)`).join(', ') + (rows.length > 3 ? ` +${rows.length - 3}` : '');
-      out.push({ id: 'budget_cat', level: over ? 'danger' : 'warn', go: 'stats', tab: 'finance',
+      out.push({ id: 'budget_cat', level: over ? 'danger' : 'warn', go: 'stats', tab: 'finance', nav: FIN_NAV.budgets,
         fr: over ? `Budget de catégorie dépassé ce mois-ci : ${txt()}.` : `Budget de catégorie presque atteint : ${txt()}.`,
         en: over ? `Category budget exceeded this month: ${txt()}.` : `Category budget almost reached: ${txt()}.` });
     }

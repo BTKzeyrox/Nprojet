@@ -4,6 +4,7 @@ import { alertId, hasEnough, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
 import { normalizeName } from '../../clients';
 import { shiftDay, plural } from './common';
+import { FIN_NAV } from '../../financeNav';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ar = (n: number): string => `${Math.round(n).toLocaleString('fr-FR').replace(/[  ]/g, ' ')} Ar`;
@@ -24,7 +25,7 @@ export const cashNegative: HealthRule = {
       title_fr: 'La caisse est négative', title_en: 'The cash balance is negative',
       why_fr: `Entrées moins sorties saisies : ${ar(bal)}. Les salaires calculés ne sont pas comptés ici.`, why_en: `Recorded income minus expenses: ${arEn(bal)}. Calculated salaries are not counted here.`,
       todo_fr: 'Vérifier les entrées oubliées (paiements clients) ou les dépenses mal saisies.', todo_en: 'Check for forgotten income (client payments) or wrongly entered expenses.',
-      since: null, value: Math.round(-bal), go: GO,
+      since: null, value: Math.round(-bal), go: { ...GO, nav: FIN_NAV.treasury },
     } as HealthAlert];
   },
 };
@@ -100,7 +101,7 @@ export const othersBig: HealthRule = {
       id: alertId('finance', 'others-big'), page: 'finance', rule: 'others-big', severity: 'info',
       title_fr: 'La catégorie « Autres » est trop grosse', title_en: 'The "Others" category is too big',
       why_fr: `« Autres » = ${pct} % des dépenses sur 90 jours (${ar(oth)} sur ${ar(total)}). On ne sait plus à quoi sert l'argent.`, why_en: `"Others" = ${pct}% of expenses over 90 days (${arEn(oth)} of ${arEn(total)}). It is no longer clear what the money is for.`,
-      todo_fr: 'Ranger ces dépenses dans les bonnes catégories.', todo_en: 'Move these expenses to proper categories.', since: null, value: pct, go: GO,
+      todo_fr: 'Ranger ces dépenses dans les bonnes catégories.', todo_en: 'Move these expenses to proper categories.', since: null, value: pct, go: { ...GO, nav: FIN_NAV.expenses },
     } as HealthAlert];
   },
 };

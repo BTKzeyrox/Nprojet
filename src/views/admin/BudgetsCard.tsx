@@ -7,6 +7,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { categoriesFor } from '../../utils/finance';
 import { budgetRows, type BudgetStatus } from '../../utils/purchasing';
+import { FIN_NAV } from '../../utils/financeNav';
 
 // Budgets par catégorie (M4.4, responsable seulement) : un plafond mensuel par catégorie de dépense, une barre d'avancement pour le mois en cours
 // (80 % et plus : attention, plus de 100 % : dépassé). L'alerte de l'accueil est calculée dans src/utils/alerts.ts.
@@ -37,7 +38,7 @@ export const BudgetsCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
   };
 
   return (
-    <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
+    <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3" data-nav={FIN_NAV.budgets}>
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-bold text-white">{t('Budgets du mois', 'Budgets this month')}</h2>
