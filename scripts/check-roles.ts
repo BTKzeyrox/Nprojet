@@ -52,7 +52,9 @@ for (const f of ['invoiceIssue', 'invoiceCancel', 'invoicePay']) eq(/moneyOnly\(
 eq(/const moneyOnly = [^\n]*isMoneyRole\(me\.role\)/.test(src), true, 'moneyOnly se fonde sur isMoneyRole');
 const stateSrc = fn('state');
 eq(stateSrc.includes('!canReadCol(me.role, col)'), true, 'state : lecture filtrée par rôle');
-eq(stateSrc.includes('isOperator(me.role)) await touchPresence'), true, 'state : seuls les opérateurs sont « en ligne »');
+eq(stateSrc.includes('isTrackedRole(me.role)) await touchPresence'), true, 'state : opérateur, chef d\'équipe et comptable sont suivis (arrivée, départ, en ligne)');
+eq(src.includes('const isTrackedRole = (role: unknown): boolean => role === "employee" || role === "team_lead" || role === "accountant"'), true, 'isTrackedRole : jamais l\'administrateur');
+eq(fn('queueRoute').includes("me.role !== 'employee'"), true, 'file d\'attente : réservée aux opérateurs');
 const syncSrc = fn('sync');
 eq(syncSrc.includes('!canWriteMoneyCol(me.role, col)'), true, 'sync : écriture d\'argent filtrée par rôle');
 eq((syncSrc.match(/isMoneyRole\(me\.role\) && MONEY_COLS\.includes\(col\)/g) || []).length, 2, 'sync : le Comptable passe seulement sur les collections d\'argent (écriture et suppression)');

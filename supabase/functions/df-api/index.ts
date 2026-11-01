@@ -2806,6 +2806,8 @@ async function maintenanceMessage(user: any): Promise<string | null> {
 // ---------- présence (en ligne, temps de connexion, file d'attente « sans poste ») ----------
 const dayOf = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10); // jour à Madagascar (UTC+3)
 const ALIVE_MS = 5 * 60 * 1000;
+// Rôles dont on suit l'arrivée, le départ et le « en ligne » : opérateur, chef d'équipe, comptable (pas l'administrateur). Seul l'opérateur compte pour la file d'attente et les vacations (voir `isOperator`).
+const isTrackedRole = (role: unknown): boolean => role === "employee" || role === "team_lead" || role === "accountant";
 async function touchPresence(me: any) {
   const now = new Date();
   const day = dayOf(now);
@@ -3362,7 +3364,7 @@ async function login(req: any, res: any) {
 
   user.is_online = true;
   await sb.from(T.users).upsert({ id: user.id, data: user, updated_at: new Date().toISOString() });
-  if (user.role === 'employee') await touchPresence(user);
+  if (isTrackedRole(user.role)) await touchPresence(user);
   const token = sign({ uid: user.id, exp: Date.now() + 30 * 24 * 3600 * 1000 });
   return res.json({ token, user });
 }
@@ -3522,7 +3524,7 @@ async function state(req: any, res: any, me: any) {
   const serverTime = new Date(Date.now() - 3000).toISOString();
   const out: Record<string, { changed: any[]; ids: string[] }> = {};
   const admin = me.role === 'admin';
-  if (isOperator(me.role)) await touchPresence(me); // seuls les opérateurs comptent comme « en ligne » (vacations, file d'attente)
+  if (isTrackedRole(me.role)) await touchPresence(me); // opérateur, chef d'équipe, comptable : arrivée, départ, en ligne (la file d'attente et les vacations restent aux opérateurs : `waiting_since` n'est posé que par la route `queue`)
 
   // Groupes : chacun ne reçoit que les groupes dont il est membre (l'admin voit tout)
   const { data: groupRows } = await sb.from(T.groups).select('id, data, updated_at');
