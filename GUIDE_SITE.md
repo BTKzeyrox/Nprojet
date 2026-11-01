@@ -289,7 +289,9 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Dans cette fenêtre : heures d'arrivée et de départ, temps en ligne, et chaque mission (heures, durée, score, paie).
   - Filtre Congés : « Acceptés » ou « En attente » ne garde que les employés concernés ce mois-ci. Les demandes refusées ne comptent jamais.
   - Le résumé du mois additionne jours travaillés, absences, retards, congés (sans les dimanches), missions et paie de tous les employés affichés.
-  - Vue du jour : une ligne par employé avec son statut, l'heure de sa 1re mission, sa dernière fin et sa 1re connexion. Le retard se mesure sur la 1re mission.
+  - Vue du jour : une ligne par employé avec son statut, sa 1re mission, sa dernière fin, son arrivée et son départ. Le retard se mesure sur la 1re mission.
+  - Arrivée = 1re connexion du jour. Départ = déconnexion, ou « estimé » (dernier signe de vie) si l'appli est fermée. Chef d'équipe et comptable sont suivis aussi.
+  - Pastille En ligne (signe de vie depuis moins de 90 s) ou Hors ligne depuis HH:MM. Un téléphone en veille ou sans réseau peut paraître hors ligne.
 - **Chiffres et formules** :
   - En retard : Début de la session après l'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.
 - **Réglages liés** (Réglages > Conditions) : `leave.late_limit_time`
