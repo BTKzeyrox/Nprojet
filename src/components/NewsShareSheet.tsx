@@ -64,7 +64,6 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
         </div>
         <div className="p-3 space-y-2 overflow-y-auto">
           {restricted && <div className="rounded-lg px-3 py-2 text-xs bg-sky-500/10 text-sky-600" data-share-restricted>Cette publication est réservée à : {audienceLabel(post.audience, 'fr')}. Le message ne contient que le lien : les autres personnes verront « publication introuvable ».</div>}
-          <textarea value={note} onChange={e => setNote(e.target.value.slice(0, SHARE_NOTE_MAX))} rows={2} disabled={sending || !!done} maxLength={SHARE_NOTE_MAX} aria-label="Ajouter un petit mot (facultatif)" placeholder="Ajouter un petit mot (facultatif)" data-share-note className={`w-full rounded-lg border p-2 text-sm outline-none focus:border-emerald-500 resize-none ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-white/5 border-slate-600 text-slate-100'}`} />
           <div className={`whitespace-pre-line break-words text-xs rounded-lg p-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`} data-share-preview><LinkedText text={text} /></div>
           <div className="flex flex-col">
             <button type="button" onClick={() => void copy()} className={btn} data-share-copy><Copy className="w-4 h-4" />Copier le lien</button>
@@ -90,10 +89,13 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
           {done && <div className="text-xs text-emerald-600 flex items-center gap-1" role="status"><Check className="w-3.5 h-3.5" />{done}</div>}
           {err && <div className="text-xs text-red-500" role="alert">{err}</div>}
         </div>
-        <div className="flex items-center gap-2 p-3 border-t border-slate-500/20" data-share-footer>
+        <div className="flex flex-col gap-2 p-3 border-t border-slate-500/20" data-share-footer>
+          <textarea value={note} onChange={e => setNote(e.target.value.slice(0, SHARE_NOTE_MAX))} rows={2} disabled={sending || !!done} maxLength={SHARE_NOTE_MAX} aria-label="Ajouter un petit mot (facultatif)" placeholder="Ajouter un petit mot (facultatif)" data-share-note className={`w-full rounded-lg border p-2 text-sm outline-none focus:border-emerald-500 resize-none ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-white/5 border-slate-600 text-slate-100'}`} />
+          <div className="flex items-center gap-2">
           <span className={`text-xs flex-1 ${sub}`}>{picked.length === 0 ? 'Choisis une ou plusieurs personnes.' : `${picked.length} sélectionné${picked.length > 1 ? 's' : ''}`}</span>
           <button type="button" onClick={onClose} disabled={sending} data-share-cancel className={`min-h-[44px] px-4 rounded-lg text-sm font-semibold cursor-pointer ${light ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
           <button type="button" onClick={send} disabled={sending || picked.length === 0 || !!done} data-share-send className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2 cursor-pointer">{sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Envoyer{picked.length > 1 ? ` (${picked.length})` : ''}</button>
+          </div>
         </div>
       </div>
     </div>, document.body);

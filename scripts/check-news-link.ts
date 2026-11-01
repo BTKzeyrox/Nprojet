@@ -68,6 +68,7 @@ eq(withShareNote('lien', 'x'.repeat(SHARE_NOTE_MAX + 50)).split('\n')[0].length,
 const rest = newsShareText({ id: 'n2', title: 'Secret', text: 'Réservé', audience: ['accountant'] }, O);
 ok(!withShareNote(rest, 'Pour toi').includes('Secret') && withShareNote(rest, 'Pour toi').startsWith('Pour toi\n'), 'publication réservée : le petit mot s\'ajoute, mais ni titre ni extrait ne fuient');
 const sheet = (await import('node:fs')).readFileSync(new URL('../src/components/NewsShareSheet.tsx', import.meta.url), 'utf-8');
+ok(sheet.indexOf('data-share-note') > sheet.indexOf('data-share-footer'), 'écran : le champ du petit mot est DANS le bloc des boutons Annuler / Envoyer');
 ok(/data-share-note/.test(sheet) && /withShareNote\(baseText, note\)/.test(sheet) && /facultatif/.test(sheet), 'écran : champ « petit mot (facultatif) », utilisé dans le message envoyé');
 
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
