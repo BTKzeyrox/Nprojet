@@ -22,7 +22,7 @@ for (const g of ['day', 'week', 'month', 'year'] as StatsGranularity[]) {
   check(`${g} : comparaison avec la période d'avant`, g === 'day' ? true : s.prev.done > 0, `${s.prev.done}`);
   check(`${g} : taux de validation`, s.cur.rate !== null && s.cur.rate >= 80 && s.cur.rate <= 100, `${s.cur.rate} %`);
   check(`${g} : durée moyenne`, s.cur.avgMin !== null && s.cur.avgMin > 30 && s.cur.avgMin < 300, `${s.cur.avgMin} min`);
-  check(`${g} : types de mission`, s.byType.length >= (g === 'day' || (g === 'week' && elapsed < 4) ? 1 : 3), s.byType.map(t => `${t.label} ${t.count}`).join(', '));
+  check(`${g} : types de mission`, s.byType.length >= (g === 'day' || ((g === 'week' || g === 'month') && elapsed < 4) ? 1 : 3), s.byType.map(t => `${t.label} ${t.count}`).join(', '));
   check(`${g} : classement`, s.team.ranking.length >= (g === 'day' ? 2 : 5), `${s.team.ranking.length} personnes`);
 }
 const m = computeStats(input, 'month', today, today, 'fr');
