@@ -24,14 +24,29 @@ export function planPostDecision(post: any, contract: any, settings: any, employ
     if (!why) return { ok: false, error: 'reason' };
     return { ok: true, kind: 'refused', post: { ...post, status: 'rejected', rejection_reason: why, updated_at: nowIso } };
   }
-  if (post.status === 'pending_start') return { ok: true, kind: 'start_ok', post: { ...post, status: 'active', updated_at: nowIso } };
+  if (post.status === 'pending_start') return { ok: true, kind: 'start_ok', post: { ...post, status: 'active', start_validated_at: nowIso, updated_at: nowIso } };
   const finalScore = num(post.final_score ?? post.current_score);
   const gained = Math.max(0, finalScore - num(post.initial_score));
   const pay = Math.max(0, Math.round(num(settings && settings.price_per_mission)));
   return {
     ok: true, kind: 'end_ok', payAr: pay,
-    post: { ...post, status: 'completed', calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), updated_at: nowIso },
+    post: { ...post, status: 'completed', calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
     contract: contract ? { ...contract, current_score: finalScore } : undefined,
     employee: employee ? { ...employee, total_score_boosted: num(employee.total_score_boosted) + gained, total_earnings_ar: num(employee.total_earnings_ar) + pay } : undefined,
   };
+}
+
+const STAMP_KEYS = ['start_sent_at', 'start_validated_at', 'end_sent_at', 'end_validated_at'];
+/** Heures des étapes d'une mission (demande de BTK, 2026-11-01) : demande de début envoyée, début validé, fin envoyée, fin validée. Posées PAR LE SERVEUR (copie dans le bloc DECIDE de df-api) ; ce qu'envoie un navigateur est ignoré. */
+export function stampPostTimes(existing: any, next: any, nowIso: string): any {
+  if (!next || typeof next !== 'object') return next;
+  const out: any = { ...next };
+  for (const k of STAMP_KEYS) { delete out[k]; if (existing && typeof existing[k] === 'string' && existing[k]) out[k] = existing[k]; }
+  const was = existing ? existing.status : undefined;
+  const now = next.status;
+  if (now === 'pending_start' && was !== 'pending_start') out.start_sent_at = nowIso;
+  if (now === 'active' && was === 'pending_start') out.start_validated_at = nowIso;
+  if (now === 'pending_end' && was !== 'pending_end') out.end_sent_at = nowIso;
+  if (now === 'completed' && was === 'pending_end') out.end_validated_at = nowIso;
+  return out;
 }

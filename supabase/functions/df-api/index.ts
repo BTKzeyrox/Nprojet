@@ -67,16 +67,31 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
     if (!why) return { ok: false, error: "reason" };
     return { ok: true, kind: "refused", post: { ...post, status: "rejected", rejection_reason: why, updated_at: nowIso } };
   }
-  if (post.status === "pending_start") return { ok: true, kind: "start_ok", post: { ...post, status: "active", updated_at: nowIso } };
+  if (post.status === "pending_start") return { ok: true, kind: "start_ok", post: { ...post, status: "active", start_validated_at: nowIso, updated_at: nowIso } };
   const finalScore = decNum(post.final_score ?? post.current_score);
   const gained = Math.max(0, finalScore - decNum(post.initial_score));
   const pay = Math.max(0, Math.round(decNum(settings && settings.price_per_mission)));
   return {
     ok: true, kind: "end_ok", payAr: pay,
-    post: { ...post, status: "completed", calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), updated_at: nowIso },
+    post: { ...post, status: "completed", calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
     contract: contract ? { ...contract, current_score: finalScore } : undefined,
     employee: employee ? { ...employee, total_score_boosted: decNum(employee.total_score_boosted) + gained, total_earnings_ar: decNum(employee.total_earnings_ar) + pay } : undefined,
   };
+}
+// Heures des étapes d'une mission (demande de BTK, 2026-11-01) : demande de début envoyée, début validé, fin envoyée, fin validée. Posées PAR LE SERVEUR au moment du changement d'état ;
+// ce qu'envoie un navigateur est toujours ignoré (on garde seulement ce qui était déjà enregistré). Copie : src/utils/postDecision.ts (`stampPostTimes`).
+const POST_STAMP_KEYS = ["start_sent_at", "start_validated_at", "end_sent_at", "end_validated_at"];
+function stampPostTimes(existing: any, next: any, nowIso: string): any {
+  if (!next || typeof next !== "object") return next;
+  const out: any = { ...next };
+  for (const k of POST_STAMP_KEYS) { delete out[k]; if (existing && typeof existing[k] === "string" && existing[k]) out[k] = existing[k]; }
+  const was = existing ? existing.status : undefined;
+  const now = next.status;
+  if (now === "pending_start" && was !== "pending_start") out.start_sent_at = nowIso;
+  if (now === "active" && was === "pending_start") out.start_validated_at = nowIso;
+  if (now === "pending_end" && was !== "pending_end") out.end_sent_at = nowIso;
+  if (now === "completed" && was === "pending_end") out.end_validated_at = nowIso;
+  return out;
 }
 // ===== END DECIDE =====
 // ===== BEGIN NEWSACCESS (actualités : qui publie, modifie, voit ; copie de src/utils/newsAccess.ts, contrôlée par scripts/check-news-access.ts) =====
@@ -3884,6 +3899,7 @@ async function sync(req: any, res: any, me: any) {
         };
         if (!toSave.text.trim() && !toSave.files.length) { rejected.push({ col, id: rec.id, reason: 'empty' }); continue; }
       }
+      if (col === 'posts' && toSave) toSave = stampPostTimes(existing, toSave, now); // heures des étapes : posées ici, jamais par le navigateur
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
       if ((admin || isMoneyRole(me.role)) && existing) {
         // Journal d'audit : changement de tarif et de réglage (jamais bloquant ; seuls les noms de champs des Conditions sont notés, pas leurs valeurs)

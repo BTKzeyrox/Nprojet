@@ -207,6 +207,11 @@ export interface PostSession {
   tasks_done?: string[]; // identifiants des tâches cochées de la mission (module 6, M6.3)
   start_notes?: string; // description facultative du opérateur au début de session
   admin_notes?: string; // description facultative de l'admin à la validation
+  /** Heures posées par le serveur (2026-11-01) : demande de début envoyée, début validé, fin envoyée, fin validée (ISO). Absentes des anciennes missions. */
+  start_sent_at?: string;
+  start_validated_at?: string;
+  end_sent_at?: string;
+  end_validated_at?: string;
   demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
   created_at: string;
   updated_at: string;

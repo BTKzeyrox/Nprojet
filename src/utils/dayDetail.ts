@@ -14,6 +14,8 @@ export interface ConnectionLine {
 export interface MissionLine {
   id: string; client: string; start: string; end: string | null; minutes: number | null;
   scoreFrom: number; scoreTo: number; target: number; status: 'validated' | 'refused' | 'running' | 'released' | 'waiting'; pay: number;
+  /** Heures des étapes (HH:MM, heure de Madagascar) : demande de début envoyée, début validé, fin envoyée, fin validée. null = pas enregistrée (anciennes missions : la validation n'a pas d'heure). */
+  startSent: string | null; startValidated: string | null; endSent: string | null; endValidated: string | null;
 }
 export interface DayDetail {
   firstSeen: string | null; lastSeen: string | null; onlineSec: number;
@@ -25,6 +27,7 @@ export interface DayDetail {
 
 const toMin = (hms: string) => { const [h, m] = hms.split(':').map(Number); return h * 60 + m; };
 const hm = (hms: string) => hms.slice(0, 5);
+const stampHm = (iso: unknown): string | null => (typeof iso === 'string' && iso && Number.isFinite(Date.parse(iso)) ? hmMada(iso) : null);
 
 export function connectionLines(att: AttendanceRow | undefined, nowMs: number, isToday: boolean): ConnectionLine[] {
   const list = att?.sessions || [];
@@ -53,6 +56,11 @@ export function missionLines(posts: PostSession[], empId: string, date: string, 
       return {
         id: p.id, client: p.client_name, start: hm(p.start_time), end: p.end_time ? hm(p.end_time) : null, minutes,
         scoreFrom: p.initial_score, scoreTo: done ? (p.final_score ?? p.current_score) : p.current_score, target: p.target_score, status, pay: done ? (p.calculated_ar || 0) : 0,
+        // Demande envoyée : l'heure posée par le serveur ; sinon l'heure de début / de fin de la mission (elles sont notées au moment de l'envoi). Validation : seulement l'heure posée par le serveur.
+        startSent: stampHm(p.start_sent_at) ?? hm(p.start_time),
+        startValidated: stampHm(p.start_validated_at),
+        endSent: stampHm(p.end_sent_at) ?? (p.end_time ? hm(p.end_time) : null),
+        endValidated: stampHm(p.end_validated_at),
       };
     });
 }
