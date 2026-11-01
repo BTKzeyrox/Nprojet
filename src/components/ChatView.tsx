@@ -28,13 +28,13 @@ import { TypingDots } from './Reactions';
 import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
 import { useNow } from '../utils/useNow';
 import { LiveDot, LiveLine } from './LiveStatus';
+import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
 
 const readAsDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -383,8 +383,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       if (picked.length < list.length) setError('Plusieurs fichiers : seules les photos sont gardées.');
       if (picked.length > MAX_PHOTOS) { picked = picked.slice(0, MAX_PHOTOS); setError(`${MAX_PHOTOS} photos maximum à la fois.`); }
     }
-    const good = picked.filter(f => f.size <= MAX_BYTES && OK_TYPES.includes(f.type));
-    if (good.length < picked.length) setError(good.length === 0 ? (picked[0].size > MAX_BYTES ? 'Fichier trop gros (10 Mo maximum).' : 'Type non accepté : photo, PDF ou texte seulement.') : 'Certains fichiers trop gros ou non acceptés ont été ignorés.');
+    const good = picked.filter(f => f.size <= MAX_BYTES && OK_TYPES.includes(typeOfFile(f)));
+    if (good.length < picked.length) setError(good.length === 0 ? (picked[0].size > MAX_BYTES ? 'Fichier trop gros (10 Mo maximum).' : 'Type non accepté : photo, PDF, Word, Excel ou texte seulement.') : 'Certains fichiers trop gros ou non acceptés ont été ignorés.');
     if (good.length === 0) return;
     setCompress(true);
     setPendingFiles(good);
@@ -400,7 +400,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const isImage = file.type.startsWith('image/') && file.type !== 'image/gif';
-        const dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+        let dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+        if (!file.type) dataUrl = dataUrl.replace(/^data:[^;,]*/, `data:${typeOfFile(file)}`);
         const url = await db.uploadFile(dataUrl);
         if (!url) { setError('Envoi impossible. Réessaie.'); break; }
         // La citation part avec la première photo, le texte avec la dernière
@@ -900,7 +901,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           )}
           <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-3 pb-3 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
-              <input ref={fileRef} type="file" multiple accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
+              <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <button
                 type="button"
                 disabled={busy || !!editingId}

@@ -4,8 +4,16 @@ import type { NewsAttachment } from '../types';
 
 // Pièces jointes des publications et commentaires : préparation (compression) puis envoi.
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-export const ACCEPT_ATTR = 'image/*,application/pdf,.pdf,text/plain,.txt';
-const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
+export const ACCEPT_ATTR = 'image/*,application/pdf,.pdf,text/plain,.txt,.docx,.xlsx';
+export const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+export const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+export const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', DOCX, XLSX];
+// Certains téléphones ne donnent pas le type d'un Word ou d'un Excel : on le déduit de l'extension.
+export const typeOfFile = (f: { type: string; name: string }): string => {
+  if (f.type) return f.type;
+  const n = (f.name || '').toLowerCase();
+  return n.endsWith('.docx') ? DOCX : n.endsWith('.xlsx') ? XLSX : n.endsWith('.pdf') ? 'application/pdf' : n.endsWith('.txt') ? 'text/plain' : '';
+};
 
 export interface DraftAttachment {
   key: string;
@@ -44,12 +52,15 @@ let seq = 0;
 // Prépare un fichier choisi : refuse les types ou poids non acceptés, compresse les photos (1600 px, ~300 Ko).
 // Les GIF et les PDF/textes restent tels quels. Lance une Error avec un message court en français.
 export async function prepareAttachment(file: File): Promise<DraftAttachment> {
-  if (!OK_TYPES.includes(file.type)) throw new Error(`« ${file.name} » : type non accepté (photo, PDF ou texte).`);
-  const isPhoto = file.type.startsWith('image/') && file.type !== 'image/gif';
+  const ftype = typeOfFile(file);
+  if (!OK_TYPES.includes(ftype)) throw new Error(`« ${file.name} » : type non accepté (photo, PDF, Word, Excel ou texte).`);
+  const isPhoto = ftype.startsWith('image/') && ftype !== 'image/gif';
   if (!isPhoto && file.size > MAX_FILE_BYTES) throw new Error(`« ${file.name} » : fichier trop gros (10 Mo maximum).`);
   let dataUrl: string;
   try {
     dataUrl = isPhoto ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+    // un fichier sans type reçoit le bon type dans l'adresse envoyée au serveur
+    if (!isPhoto && !file.type) dataUrl = dataUrl.replace(/^data:[^;,]*/, `data:${ftype}`);
   } catch {
     throw new Error(`« ${file.name} » : lecture impossible.`);
   }
@@ -58,7 +69,7 @@ export async function prepareAttachment(file: File): Promise<DraftAttachment> {
   return {
     key: `att-${Date.now()}-${++seq}`,
     name: file.name || 'fichier',
-    kind: file.type.startsWith('image/') ? 'image' : 'file',
+    kind: ftype.startsWith('image/') ? 'image' : 'file',
     before: file.size,
     after: isPhoto ? after : file.size,
     dataUrl,

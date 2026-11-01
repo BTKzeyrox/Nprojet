@@ -461,7 +461,7 @@ Tables df_* (Supabase Postgres, aucun accès public : tout passe par df-api)
 - **Chiffres officiels** (numéro de facture, de reçu) : attribués par le serveur par des fonctions SQL, jamais par le navigateur.
 - **Moteur de démo réservé aux essais** : `db.enterDemo('admin' | 'employee')` charge `src/demo/demoData.ts` pour les tests ; en production (`import.meta.env.PROD`) elle refuse. Aucun écran du site ne l'appelle (contrôle `check:no-demo`).
 - **Règle d'or du code** : les règles sont écrites **une fois, pures** (sans écran ni serveur) dans `src/utils/`, puis **copiées à l'identique** dans un bloc `BEGIN … / END …` de `df-api`. Un script `check:…` compare les deux copies et refuse toute différence.
-- **Mots de passe** : `scrypt` (`scrypt$sel$hash`), jamais en clair. **Photos** : Cloudinary. **PDF et textes** : bucket `df-files`.
+- **Mots de passe** : `scrypt` (`scrypt$sel$hash`), jamais en clair. **Photos** : Cloudinary. **PDF, textes, Word (.docx) et Excel (.xlsx)** : bucket `df-files` (10 Mo max par fichier).
 - **Sauvegardes** : `select public.df_take_backup();` (aussi chaque nuit, toutes les tables `df_*`), restauration depuis la page Réglages (admin).
 
 ### Les tables (AUTO)
