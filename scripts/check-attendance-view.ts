@@ -56,5 +56,13 @@ eq(monthPresence([]), { days: 0, avgArrival: null }, 'mois : aucun jour');
 eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }, { first_seen: '2026-11-02T05:30:00Z' }]), { days: 2, avgArrival: '08:15' }, 'mois : arrivée moyenne 08:00 et 08:30 = 08:15');
 eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }]).days, 1, 'mois : 1 jour');
 
+// ---- Écran : le calendrier utilise bien ces règles ----
+import { readFileSync } from 'node:fs';
+const cal = readFileSync(new URL('../src/views/CalendarView.tsx', import.meta.url), 'utf-8');
+ok(cal.includes('OnlinePill') && cal.includes('arrivalLine('), 'écran : pastille et ligne d\'arrivée utilisées dans le calendrier');
+ok(!cal.includes('1re connexion :'), 'écran : un seul mot pour l\'heure d\'arrivée (plus « 1re connexion : »)');
+ok(cal.includes("u.role === 'team_lead' || u.role === 'accountant'"), 'écran : chefs d\'équipe et comptables dans le calendrier global');
+ok(cal.includes("day === today && <OnlinePill"), 'écran : la pastille n\'est montrée que pour aujourd\'hui dans la liste du jour');
+
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);

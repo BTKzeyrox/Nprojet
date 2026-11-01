@@ -36,6 +36,8 @@ import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings, Attend
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { dayDetail, minutesText } from '../utils/dayDetail';
+import { roleLabel, type NewsRole } from '../utils/newsAccess';
+import { onlineBadge, arrivalLine, lastSeenOf } from '../utils/attendanceView';
 import { Avatar } from '../components/Avatar';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { useApp } from '../context/AppContext';
@@ -118,10 +120,18 @@ interface DayPanelProps {
   first: Record<string, string>; today: string; posts: PostSession[]; lang: 'fr' | 'en'; nowMs: number; ar: (n: number) => string;
   onSelectDay: (dateStr: string, shifts: PostSession[]) => void; onPickEmployee: (id: string) => void;
   st: GlobalCalProps['st'];
+  /** Chefs d'équipe et comptables : une ligne simple (arrivée, départ, pastille), sans missions ni paie. */
+  others?: User[];
 }
+// Pastille « En ligne / Hors ligne » (texte toujours écrit, jamais la couleur seule)
+const OnlinePill: React.FC<{ iso: string | null; nowMs: number; lang: 'fr' | 'en'; sub: string }> = ({ iso, nowMs, lang, sub }) => {
+  const b = onlineBadge(iso, nowMs, lang);
+  return <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${b.online ? 'text-emerald-500' : sub}`} data-testid={b.online ? 'online-pill-on' : 'online-pill-off'}><span className={`w-2 h-2 rounded-full ${b.online ? 'bg-emerald-400' : 'bg-slate-400'}`} aria-hidden="true" />{b.text}</span>;
+};
 // Détail d'un jour (même contenu dans l'onglet « Vue du jour » et dans la fenêtre ouverte au clic sur une case du mois)
-const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, today, posts, lang, nowMs, ar, onSelectDay, onPickEmployee, st }) => {
+const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, today, posts, lang, nowMs, ar, onSelectDay, onPickEmployee, st, others }) => {
   const { card, txt, sub, TINT, pill } = st;
+  const presenceOf = (id: string): string | null => lastSeenOf(db.getPresence().find(x => x.user_id === id)?.last_seen, att.find(x => x.user_id === id));
   const rows = useMemo(() => dayView(day, list, ctx, first), [day, list, ctx, first]);
   const [att, setAtt] = useState<AttendanceRow[]>([]);
   useEffect(() => {
@@ -147,6 +157,20 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
       <div className="flex justify-end">
         <button type="button" onClick={() => onSelectDay(day, posts.filter(p => p.date === day))} className={pill(false)}>Détail des missions du jour</button>
       </div>
+      {(others || []).map(o => {
+        const a = att.find(x => x.user_id === o.id);
+        const d = dayDetail([], a, o.id, day, nowMs, today);
+        return (
+          <div key={o.id} className={`${card} p-3`} data-testid={`gcal-other-${o.id}`}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className={`font-bold text-sm ${txt}`}>{o.name}</span>
+              <span className={`text-[11px] ${sub}`}>{roleLabel(o.role as NewsRole, lang)}</span>
+              {day === today && <OnlinePill iso={presenceOf(o.id)} nowMs={nowMs} lang={lang} sub={sub} />}
+            </div>
+            <div className={`mt-1 text-xs ${sub}`} data-testid="arrival-line">{arrivalLine(d, lang)}{a ? ` · ${lang === 'en' ? 'online' : 'connecté'} ${formatDuration(a.online_sec)}` : ''}</div>
+          </div>
+        );
+      })}
       {rows.map(r => {
         const a = att.find(x => x.user_id === r.id);
         const u = list.find(x => x.id === r.id);
@@ -154,13 +178,14 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
           <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
+              {day === today && <OnlinePill iso={presenceOf(r.id)} nowMs={nowMs} lang={lang} sub={sub} />}
               {showShift(db.getSettings()) && <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>}
               <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
             </div>
             <div className={`mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs ${sub}`}>
               {r.firstStart && <span>1re mission : <strong className={txt}>{r.firstStart}</strong>{r.lateMin > 0 && <span className="text-amber-500 font-bold"> (+{r.lateMin} min de retard)</span>}</span>}
               {r.firstStart && <span>Dernière fin : <strong className={txt}>{r.open ? 'en cours' : r.lastEnd || '—'}</strong></span>}
-              {a && <span>1re connexion : <strong className={txt}>{hmMada(a.first_seen)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
+              {a && <span data-testid="arrival-line"><strong className={txt}>{arrivalLine(dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter), lang)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
               {r.missions > 0 && <span>{r.missions} mission{r.missions > 1 ? 's' : ''} · {r.validated} validée{r.validated > 1 ? 's' : ''}{r.refused ? ` · ${r.refused} refusée${r.refused > 1 ? 's' : ''}` : ''}</span>}
               {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
               {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
@@ -180,7 +205,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                         <div className={sub} data-testid="arrival-departure">Arrivée : <strong className={txt}>{d.arrival}</strong> · Départ : {d.departureKind === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <strong className={txt}>{d.departure}</strong>}{d.departureKind === 'lost' && ' (dernier signe de vie)'}</div>
                         <div className={sub}>Temps en ligne : <strong className={txt}>{formatDuration(d.onlineSec)}</strong></div>
                         {d.hasConnectionLog ? d.connections.map((c, i) => (
-                          <div key={i} className={sub}>Arrivée à <strong className={txt}>{c.from}</strong> · {c.state === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <>{c.state === 'out' ? 'départ à' : 'dernier signe de vie à'} <strong className={txt}>{c.to}</strong></>} · {minutesText(c.minutes)}</div>
+                          <div key={i} className={sub}>Connexion à <strong className={txt}>{c.from}</strong> · {c.state === 'live' ? <strong className="text-emerald-600">en ligne maintenant</strong> : <>{c.state === 'out' ? 'départ à' : 'dernier signe de vie à'} <strong className={txt}>{c.to}</strong></>} · {minutesText(c.minutes)}</div>
                         )) : <div className={sub}>Heures de déconnexion : pas enregistrées pour ce jour (avant la mise à jour).</div>}
                       </>
                     ) : <div className={sub}>Aucune connexion enregistrée ce jour-là.</div>}
@@ -230,7 +255,8 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
     <div className={`${card} p-3 min-w-0`}><div className={`text-[11px] leading-tight ${sub}`}>{label}</div><div className={`font-bold text-base leading-tight break-words ${tone || txt}`}>{value}</div></div>
   );
   const dominant = (g: ReturnType<typeof globalMonth>[number]): DayStatus => g.absent > 0 ? 'absent' : g.late > 0 ? 'late' : g.present > 0 ? (g.counts.in_progress > 0 ? 'in_progress' : 'objective_reached') : g.onLeave > 0 ? 'leave' : 'no_post';
-  const panelProps = { list, ctx, first, today, posts, lang, nowMs, st, ar, onSelectDay, onPickEmployee };
+  const others = useMemo(() => db.getUsers().filter(u => u.role === 'team_lead' || u.role === 'accountant'), [list]);
+  const panelProps = { list, ctx, first, today, posts, lang, nowMs, st, ar, onSelectDay, onPickEmployee, others };
 
   return (
     <div className="space-y-3" data-testid="global-calendar">
@@ -612,7 +638,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                   <h2 className={`text-base sm:text-lg font-bold leading-tight break-words ${txt}`}>{isAdmin ? 'Calendrier' : 'Mon calendrier'}</h2>
                   {globalMode && <div className={`text-xs break-words ${sub}`}>Tous les employés · {list.length}{clientFilter !== 'all' && <> · {clientFilter}</>}</div>}
                   {activeUser && (
-                    <div className={`text-xs break-words ${sub}`}>{activeUser.name}{clientFilter !== 'all' && <> · {clientFilter}</>}</div>
+                    <div className={`text-xs break-words flex flex-wrap items-center gap-x-2 ${sub}`}>{activeUser.name}{clientFilter !== 'all' && <> · {clientFilter}</>}{isAdmin && <OnlinePill iso={lastSeenOf(db.getPresence().find(x => x.user_id === activeUser.id)?.last_seen, undefined)} nowMs={Date.now()} lang={appLang === 'en' ? 'en' : 'fr'} sub={sub} />}</div>
                   )}
                 </div>
               </div>
