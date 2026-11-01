@@ -1,5 +1,5 @@
 // Filtre à appliquer sur la page Validations quand on arrive depuis une notification
-export type ValFilter = 'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'profiles';
+export type ValFilter = 'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'profiles' | 'access';
 export const VAL_INTENT_EVENT = 'df-val-intent';
 let pending: ValFilter | null = null;
 

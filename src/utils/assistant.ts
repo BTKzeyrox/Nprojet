@@ -34,37 +34,99 @@ export const waiting = (i: SnapshotInput): Waiting => ({
   advances: i.advances.filter(a => a.status === 'pending').length,
 });
 
-export interface TodoItem { rank: number; text: Bi; go: HealthGo; why: Bi }
-/** « Quoi faire maintenant ? » : les 3 actions les plus utiles. Urgent d'abord, puis ce qui attend une validation, puis « à voir ». Jamais plus de 3. */
+/** Un élément précis qui attend une décision : une ligne = un élément = un bouton qui ouvre exactement cette ligne (page, filtre, élément qui clignote). */
+export type WaitKind = 'reset' | 'end' | 'start' | 'advance' | 'signup' | 'profile' | 'access';
+export interface WaitItem { kind: WaitKind; id: string; label: Bi; since: number | null; coarse?: boolean; go: HealthGo }
+export interface WaitGroup { kind: WaitKind; items: WaitItem[] }
+const KIND_ORDER: WaitKind[] = ['reset', 'end', 'start', 'advance', 'signup', 'profile', 'access'];
+const KIND_FILTER: Record<WaitKind, string> = { reset: 'resets', end: 'ends', start: 'starts', advance: 'advances', signup: 'signups', profile: 'profiles', access: 'access' };
+const ms = (s?: string): number | null => { if (!s) return null; const t = Date.parse(String(s).replace(' ', 'T')); return Number.isFinite(t) ? t : null; };
+const person = (x: string | undefined, fr: string, en: string): Bi => (x && String(x).trim() ? b(String(x).trim(), String(x).trim()) : b(fr, en));
+/** « depuis 26 h ». Une date sans heure (avance) ne donne que des jours entiers ; une attente dans le futur ou inconnue ne donne rien (jamais de chiffre inventé). */
+export function waitedText(since: number | null, now: number | null, coarse = false): Bi | null {
+  if (since === null || now === null || since > now) return null;
+  const min = Math.floor((now - since) / 60000);
+  if (coarse) { const d = Math.floor(min / 1440); return d >= 1 ? b(`depuis ${d} j`, `for ${d} d`) : null; }
+  if (min < 60) return b(`depuis ${Math.max(1, min)} min`, `for ${Math.max(1, min)} min`);
+  const h = Math.floor(min / 60);
+  if (h < 48) return b(`depuis ${h} h`, `for ${h} h`);
+  return b(`depuis ${Math.floor(h / 24)} j`, `for ${Math.floor(h / 24)} d`);
+}
+/** Tout ce qui attend l'admin, élément par élément (étapes de mission, avances, inscriptions, mots de passe oubliés, profils, accès hors horaires). */
+export function waitingItems(i: SnapshotInput): WaitItem[] {
+  const out: WaitItem[] = [];
+  for (const p of i.posts) {
+    if (p.status !== 'pending_start' && p.status !== 'pending_end') continue;
+    const end = p.status === 'pending_end', n = person(p.employee_name, 'un opérateur', 'an operator'), c = person(p.client_name, 'une mission', 'a mission');
+    out.push({ kind: end ? 'end' : 'start', id: p.id, label: b(`Valider ${end ? 'la fin' : 'le début'} de ${n.fr} · ${c.fr}`, `Validate the ${end ? 'end' : 'start'} of ${n.en} · ${c.en}`), since: ms(end ? p.end_sent_at : p.start_sent_at), go: { view: 'validations', filter: end ? 'ends' : 'starts', nav: `val-post-${p.id}` } });
+  }
+  for (const a of i.advances) {
+    if (a.status !== 'pending') continue;
+    const n = person(a.employee_name, 'un opérateur', 'an operator'), amt = Number.isFinite(a.amount_ar) ? ` (${ar(a.amount_ar, 'fr')})` : '', amtEn = Number.isFinite(a.amount_ar) ? ` (${ar(a.amount_ar, 'en')})` : '';
+    out.push({ kind: 'advance', id: a.id, label: b(`Répondre à l'avance de ${n.fr}${amt}`, `Answer the advance request of ${n.en}${amtEn}`), since: ms(a.request_date), coarse: String(a.request_date || '').length <= 10, go: { view: 'validations', filter: 'advances', nav: `val-adv-${a.id}` } });
+  }
+  const pd = i.pending;
+  for (const r of pd?.resets || []) { const n = person(r.name, 'un opérateur', 'an operator'); out.push({ kind: 'reset', id: r.id, label: b(`Mot de passe oublié : ${n.fr}`, `Forgotten password: ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'resets', nav: `val-rst-${r.id}` } }); }
+  for (const r of pd?.signups || []) { const n = person(r.name, 'une personne', 'a person'); out.push({ kind: 'signup', id: r.id, label: b(`Répondre à l'inscription de ${n.fr}`, `Answer the sign-up of ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'signups', nav: `val-sig-${r.id}` } }); }
+  for (const r of pd?.profiles || []) { const n = person(r.old?.name, 'un opérateur', 'an operator'); out.push({ kind: 'profile', id: r.id, label: b(`Valider le changement de profil de ${n.fr}`, `Validate the profile change of ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'profiles', nav: `val-prf-${r.id}` } }); }
+  for (const r of pd?.access || []) { const n = person(r.name, 'un opérateur', 'an operator'); out.push({ kind: 'access', id: r.id, label: b(`Répondre à la demande d'accès hors horaires de ${n.fr}`, `Answer the out-of-hours access request of ${n.en}`), since: null, go: { view: 'validations', filter: 'access', nav: `val-acc-${r.id}` } }); }
+  return out;
+}
+/** Les éléments en attente regroupés par sorte ; mots de passe oubliés d'abord, puis le groupe dont l'élément est le plus ancien. Dans un groupe : le plus ancien en premier. */
+export function waitGroups(i: SnapshotInput): WaitGroup[] {
+  const by = new Map<WaitKind, WaitItem[]>();
+  for (const it of waitingItems(i)) by.set(it.kind, [...(by.get(it.kind) || []), it]);
+  const age = (x: WaitItem) => (x.since === null ? Infinity : x.since);
+  const groups = [...by.entries()].map(([kind, items]) => ({ kind, items: items.sort((x, y) => age(x) - age(y)) }));
+  return groups.sort((x, y) => (x.kind === 'reset' ? 0 : 1) - (y.kind === 'reset' ? 0 : 1) || age(x.items[0]) - age(y.items[0]) || KIND_ORDER.indexOf(x.kind) - KIND_ORDER.indexOf(y.kind));
+}
+const moreGo = (g: WaitGroup): HealthGo => ({ view: 'validations', filter: KIND_FILTER[g.kind] });
+const moreLabel = (n: number): Bi => b(`+ ${n} autre${n > 1 ? 's' : ''}`, `+ ${n} more`);
+
+export interface TodoItem { rank: number; text: Bi; go: HealthGo; why: Bi; more?: { n: number; go: HealthGo } }
+/** « Quoi faire maintenant ? » : les 3 actions les plus utiles. Urgent d'abord, puis ce qui attend une décision (l'élément le plus ancien de chaque sorte, avec un bouton « + N autres »), puis « à voir ». Jamais plus de 3. */
 export function nextActions(i: SnapshotInput, alerts: HealthAlert[], max = 3): TodoItem[] {
-  const out: TodoItem[] = [];
-  const w = waiting(i);
+  const out: TodoItem[] = [], now = i.nowMs ?? null;
   for (const a of [...alerts].sort((x, y) => severityRank(x.severity) - severityRank(y.severity)).filter(x => x.severity === 'urgent')) out.push({ rank: 0, text: b(a.title_fr, a.title_en), go: a.go, why: b(a.why_fr, a.why_en) });
-  const val = w.starts + w.ends;
-  if (val > 0) out.push({ rank: 1, text: b(`Valider ${val} ${plural(val, 'étape de mission', 'étapes de mission')} en attente`, `Validate ${val} pending mission ${plural(val, 'step', 'steps')}`), go: { view: 'validations' }, why: b(`${w.starts} début(s) et ${w.ends} fin(s) attendent ta décision.`, `${w.starts} start(s) and ${w.ends} end(s) wait for your decision.`) });
-  if (w.advances > 0) out.push({ rank: 1, text: b(`Répondre à ${w.advances} ${plural(w.advances, 'demande d\'avance', 'demandes d\'avance')}`, `Answer ${w.advances} advance ${plural(w.advances, 'request', 'requests')}`), go: { view: 'advances' }, why: b('Le salarié attend une réponse pour s\'organiser.', 'The employee is waiting for an answer to plan ahead.') });
+  for (const g of waitGroups(i)) {
+    const first = g.items[0], w = waitedText(first.since, now, first.coarse), n = g.items.length - 1;
+    const parts: Bi[] = [...(w ? [b(`en attente ${w.fr}`, `waiting ${w.en}`)] : []), ...(n > 0 ? [moreLabel(n)] : [])];
+    out.push({ rank: g.kind === 'reset' ? 0 : 1, text: first.label, go: first.go, why: parts.length ? b(parts.map(x => x.fr).join(', '), parts.map(x => x.en).join(', ')) : b('Une décision t\'attend.', 'A decision is waiting for you.'), ...(n > 0 ? { more: { n, go: moreGo(g) } } : {}) });
+  }
   for (const a of alerts.filter(x => x.severity === 'watch')) out.push({ rank: 2, text: b(a.title_fr, a.title_en), go: a.go, why: b(a.why_fr, a.why_en) });
   const seen = new Set<string>(), uniq = out.filter(x => { const k = x.text.fr; if (seen.has(k)) return false; seen.add(k); return true; });
   return uniq.slice(0, Math.max(0, max));
 }
 
-/** Résumé du matin : classé par priorité. Rien à signaler = une seule ligne qui le dit (jamais de liste vide). */
+/** Résumé du matin : classé par priorité, 5 lignes au plus (chiffres du mois compris). Rien à signaler = une seule ligne qui le dit (jamais de liste vide). */
 export function morningSummary(i: SnapshotInput, alerts: HealthAlert[]): Reply {
   const snap = buildSnapshot({ ...i, alerts });
-  const w = waiting(i), urgent = alerts.filter(a => a.severity === 'urgent'), watch = alerts.filter(a => a.severity === 'watch');
+  const now = i.nowMs ?? null, w = waiting(i), groups = waitGroups(i), urgent = alerts.filter(a => a.severity === 'urgent'), watch = alerts.filter(a => a.severity === 'watch');
+  const oldest = (gs: WaitGroup[]): string => { const t = gs.map(g => g.items[0]).filter(x => x.since !== null).sort((x, y) => (x.since as number) - (y.since as number))[0]; const wt = t && waitedText(t.since, now, t.coarse); return wt ? `; le plus ancien ${wt.fr}` : ''; };
+  const oldestEn = (gs: WaitGroup[]): string => { const t = gs.map(g => g.items[0]).filter(x => x.since !== null).sort((x, y) => (x.since as number) - (y.since as number))[0]; const wt = t && waitedText(t.since, now, t.coarse); return wt ? `; oldest ${wt.en}` : ''; };
   const lines: Bi[] = [];
   for (const a of urgent) lines.push(b(`🔴 ${a.title_fr} : ${a.why_fr}`, `🔴 ${a.title_en}: ${a.why_en}`));
-  if (w.starts + w.ends > 0) lines.push(b(`🟠 ${w.starts + w.ends} étape(s) de mission à valider (${w.starts} début, ${w.ends} fin).`, `🟠 ${w.starts + w.ends} mission step(s) to validate (${w.starts} start, ${w.ends} end).`));
-  if (w.advances > 0) lines.push(b(`🟠 ${w.advances} demande(s) d'avance en attente.`, `🟠 ${w.advances} advance request(s) pending.`));
+  const cnt = (k: WaitKind) => groups.find(g => g.kind === k)?.items.length || 0;
+  if (cnt('reset') > 0) lines.push(b(`🔴 ${cnt('reset')} ${plural(cnt('reset'), 'mot de passe oublié', 'mots de passe oubliés')} à traiter.`, `🔴 ${cnt('reset')} forgotten ${plural(cnt('reset'), 'password', 'passwords')} to handle.`));
+  const posts = groups.filter(g => g.kind === 'start' || g.kind === 'end');
+  if (w.starts + w.ends > 0) lines.push(b(`🟠 ${w.starts + w.ends} étape(s) de mission à valider (${w.starts} début, ${w.ends} fin${oldest(posts)}).`, `🟠 ${w.starts + w.ends} mission step(s) to validate (${w.starts} start, ${w.ends} end${oldestEn(posts)}).`));
+  const adv = groups.filter(g => g.kind === 'advance');
+  if (w.advances > 0) lines.push(b(`🟠 ${w.advances} demande(s) d'avance en attente${oldest(adv)}.`, `🟠 ${w.advances} advance request(s) pending${oldestEn(adv)}.`));
+  if (cnt('signup') > 0) lines.push(b(`🟠 ${cnt('signup')} inscription(s) en attente.`, `🟠 ${cnt('signup')} sign-up(s) pending.`));
+  if (cnt('profile') > 0) lines.push(b(`🟠 ${cnt('profile')} changement(s) de profil à valider.`, `🟠 ${cnt('profile')} profile change(s) to validate.`));
+  if (cnt('access') > 0) lines.push(b(`🟠 ${cnt('access')} demande(s) d'accès hors horaires.`, `🟠 ${cnt('access')} out-of-hours access request(s).`));
   for (const a of watch) lines.push(b(`🟡 ${a.title_fr}`, `🟡 ${a.title_en}`));
+  const shown = lines.length > 4 ? [...lines.slice(0, 3), b(`… et ${lines.length - 3} autres points (Santé du site, Validations).`, `… and ${lines.length - 3} more points (Site health, Validations).`)] : lines;
   const f = snap.finance;
   const figures = b(`Ce mois-ci : ${snap.missions.validated} mission(s) validée(s), ${ar(f.received, 'fr')} reçus, bénéfice ${ar(f.profit, 'fr')}.`, `This month: ${snap.missions.validated} validated mission(s), ${ar(f.received, 'en')} received, profit ${ar(f.profit, 'en')}.`);
   const empty = lines.length === 0;
+  const buttons: Reply['actions'] = [];
+  for (const g of groups) { buttons.push({ label: b(g.items[0].label.fr.slice(0, 48), g.items[0].label.en.slice(0, 48)), go: g.items[0].go }); if (g.items.length > 1) buttons.push({ label: moreLabel(g.items.length - 1), go: moreGo(g) }); }
   return {
     intent: 'morning', empty,
     title: b('Résumé du jour', 'Daily summary'),
-    lines: empty ? [b('Rien à signaler : tout est dans les limites réglées.', 'Nothing to report: everything is within the set limits.'), figures] : [...lines, figures],
-    actions: [...(urgent.length || watch.length ? [{ label: b('Voir la Santé du site', 'Open Site health'), go: { view: 'health' } }] : []), ...(w.starts + w.ends > 0 ? [{ label: b('Ouvrir Validations', 'Open Validations'), go: { view: 'validations' } }] : [])],
+    lines: empty ? [b('Rien à signaler : tout est dans les limites réglées.', 'Nothing to report: everything is within the set limits.'), figures] : [...shown, figures],
+    actions: [...(urgent.length || watch.length || lines.length > 4 ? [{ label: b('Voir la Santé du site', 'Open Site health'), go: { view: 'health' } }] : []), ...buttons.slice(0, 5)],
     sources: b(`d'après ${i.posts.length} missions, ${i.cash.length} lignes d'argent et ${alerts.length} alerte(s), au ${dmy(i.today)}`, `based on ${i.posts.length} missions, ${i.cash.length} money lines and ${alerts.length} alert(s), on ${i.today}`),
   };
 }
@@ -74,8 +136,8 @@ export function todoReply(i: SnapshotInput, alerts: HealthAlert[]): Reply {
   return {
     intent: 'todo', empty: items.length === 0, title: b('Quoi faire maintenant ?', 'What to do now?'),
     lines: items.length ? items.map((x, k) => b(`${k + 1}. ${x.text.fr} (${x.why.fr})`, `${k + 1}. ${x.text.en} (${x.why.en})`)) : [b('Rien d\'urgent : tu peux souffler.', 'Nothing urgent: you can relax.')],
-    actions: items.map(x => ({ label: b(x.text.fr, x.text.en), go: x.go })),
-    sources: b(`d'après ${alerts.length} alerte(s) et les validations en attente, au ${dmy(i.today)}`, `based on ${alerts.length} alert(s) and pending validations, on ${i.today}`),
+    actions: items.flatMap(x => [{ label: b(x.text.fr, x.text.en), go: x.go }, ...(x.more ? [{ label: moreLabel(x.more.n), go: x.more.go }] : [])]),
+    sources: b(`d'après ${alerts.length} alerte(s) et les validations en attente, au ${dmy(i.today)}`, `based on ${alerts.length} alert(s) and pending validations, on ${dmy(i.today)}`),
   };
 }
 
@@ -99,10 +161,12 @@ export function teamReply(i: SnapshotInput): Reply {
   const sources = b(`d'après la liste des employés actifs et les missions validées du ${dmy(r.start)} au ${dmy(r.end)}`, `based on the active employees list and missions validated from ${dmy(r.start)} to ${dmy(r.end)}`);
   if (emps.length === 0) return { intent: 'team', empty: true, title: b('Équipe', 'Team'), lines: [b('Aucun employé actif pour le moment.', 'No active employee for now.')], actions: [{ label: b('Ouvrir Opérateurs et sessions', 'Open Operators and sessions'), go: { view: 'employees' } }], sources };
   const count = (id: string) => i.posts.filter(p => p.employee_id === id && p.status === 'completed' && inR(p.date)).length;
+  const TEAM_MAX = 8; // au-delà, la liste reste lisible : le reste est dans la page Employés
+  const shown = emps.slice(0, TEAM_MAX), hidden = emps.length - shown.length;
   return {
     intent: 'team', title: b(`Équipe : ${emps.length} employé${emps.length > 1 ? 's' : ''} actif${emps.length > 1 ? 's' : ''}`, `Team: ${emps.length} active employee${emps.length > 1 ? 's' : ''}`),
-    lines: emps.map(u => { const n = count(u.id); return b(`• ${u.name} : ${n} mission${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''} ce mois`, `• ${u.name}: ${n} mission${n === 1 ? '' : 's'} validated this month`); }),
-    actions: [{ label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources,
+    lines: [...shown.map(u => { const n = count(u.id); return b(`• ${u.name} : ${n} mission${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''} ce mois`, `• ${u.name}: ${n} mission${n === 1 ? '' : 's'} validated this month`); }), ...(hidden > 0 ? [b(`… et ${hidden} autre${hidden > 1 ? 's' : ''} (voir Employés).`, `… and ${hidden} more (see Employees).`)] : [])],
+    actions: [...shown.map(u => ({ label: b(u.name, u.name), go: { view: 'employees', nav: `emp-${u.id}` } })), { label: b('Ouvrir Employés', 'Open Employees'), go: { view: 'employees' } }], sources,
   };
 }
 

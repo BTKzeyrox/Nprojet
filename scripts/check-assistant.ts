@@ -1,6 +1,6 @@
 // Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant
 import fs from 'node:fs';
-import { recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
+import { waitingItems, waitGroups, waitedText, teamReply, recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
 import { buildDemoData } from '../src/demo/demoData';
 import { runHealth } from '../src/utils/health/registry';
 import { ALL_RULES } from '../src/utils/health/all';
@@ -112,6 +112,49 @@ ok(clean(helpReply()) && helpReply().lines.length >= 6, 'aide : la liste des cap
 for (const q of ['résumé du jour', 'quoi faire maintenant', 'explique la page stats', 'pourquoi la marge', 'et si je monte le prix de 5 %', 'aide', 'blabla']) { const rp = respond(q, base(), alertsOf(base())); ok(clean(rp) && rp.title.fr.length > 0 && rp.sources.fr.length > 0, `réponse complète « ${q} » : propre, titrée, avec sources`); }
 const fig = respond('pourquoi le bénéfice', base(), []);
 ok(fig.intent === 'figure' && fig.lines.some(l => /Encaissé/.test(l.fr)) && fig.actions[0].go.view === 'stats', 'réponse chiffre : formule + composantes + bouton vers Finances');
+
+// ---------- Liens exacts : une ligne = un élément = un bouton (étape A, B, E) ----------
+const NOW = Date.parse('2026-11-01T12:00:00Z'), hAgo = (h: number) => new Date(NOW - h * 3600000).toISOString();
+const PD = (id: string, status: string, who: string, cl: string, sent: string | null, extra: any = {}) => ({ id, employee_id: 'u1', employee_name: who, client_name: cl, status, date: day(0), ...(status === 'pending_end' ? { end_sent_at: sent } : { start_sent_at: sent }), ...extra });
+const exact = base({ today: '2026-11-01', nowMs: NOW, users: [], contracts: [], clients: [], cash: [], products: [], moves: [],
+  posts: [PD('p1', 'pending_end', 'Rina', 'Acme', hAgo(26)), PD('p2', 'pending_end', 'Tojo', 'Beta', hAgo(3)), PD('p3', 'pending_start', 'Lova', 'Gamma', hAgo(1)), PD('p4', 'active', 'Zed', 'Zeta', null)] as any,
+  advances: [{ id: 'a1', employee_id: 'u1', employee_name: 'Rina', amount_ar: 50000, status: 'pending', request_date: '2026-11-01', reason: '' }, { id: 'a0', employee_id: 'u1', employee_name: 'Rina', amount_ar: 1, status: 'approved', request_date: day(30), reason: '' }] as any,
+  pending: { signups: [{ id: 's1', name: 'Nari', username: 'nari', phone: '', shift: 'day', status: 'pending', created_at: hAgo(5) }], resets: [{ id: 'r1', user_id: 'u1', username: 'rina', name: 'Rina', phone: '', status: 'pending', created_at: hAgo(2) }], profiles: [{ id: 'f1', user_id: 'u1', status: 'pending', created_at: hAgo(4), old: { name: 'Lova', username: 'lova', phone: '', avatar_url: '' }, name: 'Lova R', username: 'lova', phone: '', avatar_url: '' }], access: [{ id: 'c1', user_id: 'u1', name: 'Tojo', username: 'tojo', role: 'employee', shift: 'day', reason: '', status: 'pending' }] } as any });
+const items = waitingItems(exact), byKind = (k: string) => items.filter(x => x.kind === k);
+ok(items.length === 8 && byKind('end').length === 2 && byKind('start').length === 1 && byKind('advance').length === 1 && byKind('signup').length === 1 && byKind('reset').length === 1 && byKind('profile').length === 1 && byKind('access').length === 1, 'liens exacts : chaque élément en attente a sa propre ligne (une mission active ou une avance déjà décidée n\'y est pas)');
+ok(byKind('end')[0].go.view === 'validations' && byKind('end')[0].go.filter === 'ends' && byKind('end')[0].go.nav === 'val-post-p1' && byKind('start')[0].go.filter === 'starts' && byKind('start')[0].go.nav === 'val-post-p3', 'liens exacts : début et fin ouvrent Validations, bon filtre, bonne ligne');
+ok(byKind('advance')[0].go.filter === 'advances' && byKind('advance')[0].go.nav === 'val-adv-a1' && byKind('signup')[0].go.nav === 'val-sig-s1' && byKind('reset')[0].go.nav === 'val-rst-r1' && byKind('profile')[0].go.nav === 'val-prf-f1' && byKind('access')[0].go.nav === 'val-acc-c1' && byKind('access')[0].go.filter === 'access', 'liens exacts : avances, inscriptions, mots de passe oubliés, profils, accès hors horaires');
+const g = waitGroups(exact);
+ok(g[0].kind === 'reset' && g.find(x => x.kind === 'end')!.items[0].id === 'p1' && g.find(x => x.kind === 'end')!.items.length === 2, 'regroupement : mot de passe oublié d\'abord, et dans un groupe le plus ancien en premier');
+ok(/Valider la fin de Rina · Acme/.test(byKind('end')[0].label.fr) && /Validate the end of Rina · Acme/.test(byKind('end')[0].label.en), 'libellé : « Valider la fin de Rina · Acme » (FR et EN)');
+ok(waitedText(NOW - 26 * 3600000, NOW)!.fr === 'depuis 26 h' && waitedText(NOW - 90 * 1000, NOW)!.fr === 'depuis 1 min' && waitedText(NOW - 72 * 3600000, NOW)!.fr === 'depuis 3 j' && waitedText(null, NOW) === null && waitedText(NOW + 1000, NOW) === null && waitedText(NOW - 1000, null) === null, 'durée : heures, minutes, jours ; inconnue, dans le futur ou sans heure = rien (jamais de chiffre inventé)');
+ok(waitedText(NOW - 5 * 3600000, NOW, true) === null && waitedText(NOW - 3 * 86400000, NOW, true)!.fr === 'depuis 3 j', 'durée : une date sans heure ne donne que des jours entiers');
+const td = todoReply(exact, []);
+ok(td.lines.length === 3 && td.lines[0].fr.startsWith('1. Mot de passe oublié : Rina') && /Valider la fin de Rina · Acme \(en attente depuis 26 h, \+ 1 autre\)/.test(td.lines[1].fr) && clean(td), 'quoi faire : 3 lignes, le plus urgent d\'abord, « en attente depuis 26 h, + 1 autre »');
+ok(td.actions.some(a => a.go.nav === 'val-post-p1') && td.actions.some(a => a.go.view === 'validations' && a.go.filter === 'ends' && !a.go.nav && /\+ 1 autre/.test(a.label.fr)), 'quoi faire : un bouton pour l\'élément exact et « + 1 autre » vers la liste filtrée');
+const mo = morningSummary(exact, []);
+ok(mo.lines.length <= 5 && mo.lines.length >= 2 && clean(mo) && !mo.empty, 'résumé : 5 lignes au plus, chiffres du mois compris');
+ok(mo.lines.some(l => /3 étape\(s\) de mission à valider \(1 début, 2 fin; le plus ancien depuis 26 h\)/.test(l.fr)) && mo.lines.some(l => /^🔴 1 mot de passe oublié/.test(l.fr)), 'résumé : compte les étapes, dit le plus ancien, et signale les mots de passe oubliés');
+ok(mo.actions.some(a => a.go.nav === 'val-post-p1') && mo.actions.some(a => a.go.nav === 'val-adv-a1') && mo.actions.some(a => a.go.nav === 'val-sig-s1') && mo.actions.length <= 6, 'résumé : boutons exacts (étape, avance, inscription), 5 boutons au plus plus la Santé du site');
+const noNow = { ...exact, nowMs: undefined };
+ok(!/depuis \d/.test(todoReply(noNow, []).lines.join(' ') + JSON.stringify(morningSummary(noNow, []).lines)) && waitingItems(noNow).length === 8, 'sans heure donnée : aucune durée affichée, tout le reste marche');
+ok(waitingItems(empty).length === 0 && waitGroups(empty).length === 0 && waitingItems({ ...empty, pending: { signups: [], resets: [], profiles: [], access: [] } }).length === 0, 'cas vides : rien en attente = aucune ligne, aucun plantage (avec ou sans « pending »)');
+const manyPend = base({ nowMs: NOW, users: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [], posts: Array.from({ length: 12 }, (_, k) => PD(`m${k}`, 'pending_end', `Op${k}`, 'Client', hAgo(k + 1))) as any });
+const mm = morningSummary(manyPend, [A('a', 'urgent'), A('b', 'urgent'), A('c', 'watch'), A('d', 'watch'), A('e', 'watch')] as any);
+ok(mm.lines.length === 5 && /autres points/.test(mm.lines[3].fr) && mm.actions.length <= 6 && clean(mm), 'résumé : beaucoup de points = 5 lignes, « … et N autres points », boutons limités');
+ok(nextActions(manyPend, []).length === 1 && nextActions(manyPend, [])[0].more!.n === 11 && nextActions(manyPend, [])[0].go.nav === 'val-post-m11', 'quoi faire : 12 fins en attente = la plus ancienne + « + 11 autres »');
+const unnamed = waitingItems(base({ nowMs: NOW, advances: [], users: [], contracts: [], clients: [], cash: [], products: [], moves: [], posts: [{ id: 'x', status: 'pending_end', date: day(0) }] as any }));
+ok(clean({ intent: 'x', title: { fr: '', en: '' }, lines: unnamed.map(x => x.label), actions: [], sources: { fr: '', en: '' } }) && /un opérateur/.test(unnamed[0].label.fr), 'noms manquants : « un opérateur », jamais « undefined »');
+// Équipe : un bouton par employé (jusqu\'à 8), qui ouvre sa ligne
+const tm = teamReply(rc([U('u1'), U('u2')], [])), tmBig = teamReply(rc(Array.from({ length: 12 }, (_, k) => U(`e${String(k).padStart(2, '0')}`)), []));
+ok(tm.actions[0].go.nav === 'emp-u1' && tm.actions[1].go.nav === 'emp-u2' && tm.actions[2].go.view === 'employees' && !tm.actions[2].go.nav && tm.actions[0].label.fr === 'Emp u1', 'équipe : chaque employé a son bouton qui ouvre sa ligne, plus « Ouvrir Employés »');
+ok(tmBig.lines.length === 9 && /… et 4 autres/.test(tmBig.lines[8].fr) && tmBig.actions.length === 9 && clean(tmBig), 'équipe : 12 employés = 8 lignes et 8 boutons, « … et 4 autres », puis « Ouvrir Employés »');
+ok(teamReply(rc([], [])).empty === true && teamReply(rc([], [])).actions[0].go.view === 'employees', 'équipe : aucun employé = phrase claire');
+// Chaque adresse (data-nav) visée existe vraiment dans une page
+const navSrc = ['src/views/admin/AdminDashboard.tsx', 'src/views/admin/EmployeesManagement.tsx', 'src/components/AccessRequestsCard.tsx'].map(f => fs.readFileSync(f, 'utf8')).join('\n');
+for (const pre of ['val-post-', 'val-adv-', 'val-sig-', 'val-rst-', 'val-prf-', 'val-acc-', 'emp-']) ok(navSrc.includes(`data-nav={\`${pre}\${`), `adresse « ${pre}… » : existe dans une page (le lien de l\'assistant mène quelque part)`);
+const navIntentSrc = fs.readFileSync('src/utils/navIntent.ts', 'utf8');
+for (const f of ['starts', 'ends', 'advances', 'signups', 'resets', 'profiles', 'access']) ok(new RegExp(`'${f}'`).test(navIntentSrc), `filtre « ${f} » : connu de la page Validations`);
 
 // ---------- Règles de fond ----------
 const src = fs.readFileSync('src/utils/assistant.ts', 'utf8');
