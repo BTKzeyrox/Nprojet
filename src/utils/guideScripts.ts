@@ -1,6 +1,7 @@
 // Les 4 guides interactifs (un par rôle, 2026-10-29). Chaque étape ouvre la vraie page et fait clignoter un élément réel ; certaines proposent une petite simulation.
 // Les phrases décrivent ce que fait vraiment le site (elles reprennent la carte du site : siteKnowledge.ts). Contrôlé par `npm run check:guide-tour`.
 import type { Bi } from './siteKnowledge';
+import { findPage } from './siteKnowledge';
 import { guideProblems, type GuideRole, type GuideStep } from './guideEngine';
 
 const b = (fr: string, en: string): Bi => ({ fr, en });
@@ -114,7 +115,34 @@ const EMPLOYEE: GuideStep[] = [
   { id: 'settings', page: 'settings', target: { texts: THEME_TARGET }, title: b('Confort de lecture', 'Reading comfort'), text: THEME, missing: SETTINGS_MISSING },
 ];
 
-export const GUIDE_SCRIPTS: Record<GuideRole, GuideStep[]> = { admin: ADMIN, team_lead: TEAM_LEAD, accountant: ACCOUNTANT, employee: EMPLOYEE };
+// ───────────── Un clip pour CHAQUE page du menu (M20.4) ─────────────
+// Les pages du menu de chaque rôle (Sidebar.tsx et roles.ts : `ACCOUNTANT_VIEWS`, `TEAM_LEAD_VIEWS`). Les pages qui n'ont pas déjà une étape écrite à la main reçoivent un clip de 2 scènes :
+// 1. présentation (le menu clignote, le texte vient de la carte du site) ; 2. astuce (les 2 premières lignes du mode d'emploi de la carte du site). Rien n'est inventé : tout vient de `siteKnowledge.ts`.
+export const GUIDE_MENU_PAGES: Record<GuideRole, string[]> = {
+  admin: ['feed', 'dashboard', 'validations', 'history', 'clients', 'invoices', 'accounting', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'direction', 'employees', 'hr', 'chat', 'calendar', 'sheets', 'advances', 'health', 'errors', 'settings'],
+  team_lead: ['feed', 'validations', 'chat', 'settings'],
+  accountant: ['feed', 'invoices', 'accounting', 'treasury', 'clients', 'purchasing', 'chat', 'settings'],
+  employee: ['feed', 'grid', 'active-post', 'hr', 'chat', 'calendar', 'my-performance', 'sheets', 'advances', 'settings'],
+};
+function withClips(role: GuideRole, base: GuideStep[]): GuideStep[] {
+  const covered = new Set(base.map(s => s.page));
+  const clips: GuideStep[] = [];
+  for (const id of GUIDE_MENU_PAGES[role]) {
+    if (covered.has(id)) continue;
+    const pg = findPage(id);
+    if (!pg) continue; // une page retirée de la carte du site ne casse jamais le guide
+    clips.push(
+      { id: `clip-${id}`, page: id, target: { tour: `nav-${id}` }, title: pg.title, text: pg.purpose,
+        missing: b(`Ouvre « ${pg.title.fr} » dans le menu.`, `Open "${pg.title.en}" in the menu.`) },
+      { id: `clip-${id}-tip`, page: id, target: null, title: b(`${pg.title.fr} : par où commencer`, `${pg.title.en}: where to start`),
+        text: b(`${pg.howto[0].fr} ${pg.howto[1].fr}`, `${pg.howto[0].en} ${pg.howto[1].en}`) },
+    );
+  }
+  const last = base[base.length - 1]; // Réglages reste la dernière étape
+  return last && last.page === 'settings' ? [...base.slice(0, -1), ...clips, last] : [...base, ...clips];
+}
+
+export const GUIDE_SCRIPTS: Record<GuideRole, GuideStep[]> = { admin: withClips('admin', ADMIN), team_lead: withClips('team_lead', TEAM_LEAD), accountant: withClips('accountant', ACCOUNTANT), employee: withClips('employee', EMPLOYEE) };
 export const SIMULATION_NOTE = SIM;
 
 const isRole = (r: unknown): r is GuideRole => r === 'admin' || r === 'employee' || r === 'accountant' || r === 'team_lead';

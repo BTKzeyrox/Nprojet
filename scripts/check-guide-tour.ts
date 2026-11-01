@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { bubbleDock, findTarget, guideProblems, holeBox, norm, sceneDuration, sceneEvents, SCENE_MAX_MS, SCENE_MIN_MS, type ElLike, type GuideStep } from '../src/utils/guideEngine';
-import { GUIDE_SCRIPTS, allGuideProblems, guideSteps } from '../src/utils/guideScripts';
+import { GUIDE_SCRIPTS, GUIDE_MENU_PAGES, allGuideProblems, guideSteps } from '../src/utils/guideScripts';
+import { ACCOUNTANT_VIEWS, TEAM_LEAD_VIEWS } from '../src/utils/roles';
 import { TOUR_PAGES, TOUR_VERSION } from '../src/utils/tour';
 
 let fails = 0, n = 0;
@@ -24,19 +25,30 @@ for (let a = 0; a < roles.length; a++) for (let b = a + 1; b < roles.length; b++
 ok(pairs.every(([a, b]) => sig(a) !== sig(b)), 'les 4 guides ont des suites d\'étapes différentes');
 const welcome = (r: typeof roles[number]) => GUIDE_SCRIPTS[r][0];
 ok(new Set(roles.map(r => welcome(r).title.fr)).size === 4 && new Set(roles.map(r => welcome(r).text.fr)).size === 4, 'chaque guide a son propre écran de bienvenue');
-const titles = (r: typeof roles[number]) => new Set(GUIDE_SCRIPTS[r].slice(1).map(s => s.title.fr));
+const hand = (r: typeof roles[number]) => GUIDE_SCRIPTS[r].slice(1).filter(s => !s.id.startsWith('clip-')); // les clips reprennent la carte du site : ils se ressemblent d'un rôle à l'autre par construction
+const titles = (r: typeof roles[number]) => new Set(hand(r).map(s => s.title.fr));
 ok(pairs.every(([a, b]) => { const A = titles(a), B = titles(b); const same = [...A].filter(x => B.has(x)).length; return same / Math.min(A.size, B.size) < 0.4; }), 'moins de 40 % de titres d\'étapes en commun entre deux guides');
-const texts = (r: typeof roles[number]) => new Set(GUIDE_SCRIPTS[r].slice(1).map(s => s.text.fr));
+const texts = (r: typeof roles[number]) => new Set(hand(r).map(s => s.text.fr));
 ok(pairs.every(([a, b]) => { const A = texts(a), B = texts(b); const same = [...A].filter(x => B.has(x)).length; return same / Math.min(A.size, B.size) < 0.4; }), 'moins de 40 % de textes d\'étapes en commun entre deux guides');
 ok(roles.every(r => GUIDE_SCRIPTS[r].every(s => !/%|undefined|NaN/.test(s.title.fr + s.text.fr + s.title.en + s.text.en))), 'aucun texte cassé');
 
 // ---- 3. Chaque guide ne montre que les pages de son rôle
 const EXTRA: Record<string, string[]> = { employee: ['sheets', 'advances'] }; // « Mes tableaux » et « Ma paie » sont dans le menu de l'opérateur
-ok(roles.every(r => GUIDE_SCRIPTS[r].every(s => s.page === null || TOUR_PAGES[r].includes(s.page) || (EXTRA[r] || []).includes(s.page))), 'chaque étape ouvre une page que ce rôle a vraiment dans son menu');
+ok(roles.every(r => GUIDE_SCRIPTS[r].every(s => s.page === null || TOUR_PAGES[r].includes(s.page) || GUIDE_MENU_PAGES[r].includes(s.page) || (EXTRA[r] || []).includes(s.page))), 'chaque étape ouvre une page que ce rôle a vraiment dans son menu');
 ok(roles.every(r => GUIDE_SCRIPTS[r].every(s => s.page !== 'employees' && s.page !== 'health') || r === 'admin'), 'les pages du responsable ne sont montrées qu\'au responsable');
 ok(!GUIDE_SCRIPTS.team_lead.some(s => ['invoices', 'clients', 'stats', 'employees'].includes(s.page || '')) && !GUIDE_SCRIPTS.accountant.some(s => ['validations', 'employees', 'health', 'stats'].includes(s.page || '')), 'chef d\'équipe et comptable : aucune page qui n\'est pas à eux');
 const sidebar = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
 ok(roles.every(r => GUIDE_SCRIPTS[r].every(s => s.page === null || sidebar.includes(`id: '${s.page}'`))), 'chaque page ouverte existe dans le menu');
+
+// ---- 3 bis. M20.4 : un clip pour CHAQUE page du menu de chaque rôle
+ok(roles.every(r => GUIDE_MENU_PAGES[r].every(pg => GUIDE_SCRIPTS[r].some(st => st.page === pg))), 'chaque page du menu de chaque rôle a au moins une scène (' + roles.map(r => `${r} ${GUIDE_MENU_PAGES[r].length}`).join(', ') + ')');
+ok(roles.every(r => GUIDE_MENU_PAGES[r].filter(pg => !['settings'].includes(pg)).every(pg => GUIDE_SCRIPTS[r].filter(st => st.page === pg).length >= 1)), 'une page sans étape écrite à la main reçoit un clip de 2 scènes (présentation + astuce)');
+ok(roles.every(r => GUIDE_SCRIPTS[r].filter(st => st.id.startsWith('clip-') && !st.id.endsWith('-tip')).every(st => GUIDE_SCRIPTS[r].some(t => t.id === st.id + '-tip' && t.page === st.page))), 'chaque clip a sa scène « astuce » sur la même page');
+ok(JSON.stringify([...ACCOUNTANT_VIEWS].sort()) === JSON.stringify([...GUIDE_MENU_PAGES.accountant].sort()) && JSON.stringify([...TEAM_LEAD_VIEWS].sort()) === JSON.stringify([...GUIDE_MENU_PAGES.team_lead].sort()), 'comptable et chef d\'équipe : les pages du guide = exactement les pages permises (roles.ts)');
+ok(GUIDE_MENU_PAGES.admin.concat(GUIDE_MENU_PAGES.employee).every(pg => sidebar.includes(`id: '${pg}'`)), 'responsable et opérateur : chaque page du guide existe dans le menu');
+ok(roles.every(r => GUIDE_SCRIPTS[r][GUIDE_SCRIPTS[r].length - 1].page === 'settings'), 'Réglages reste la dernière étape de chaque guide');
+ok(roles.every(r => GUIDE_SCRIPTS[r].filter(st => st.id.startsWith('clip-') && !st.id.endsWith('-tip')).every(st => st.target?.tour === `nav-${st.page}`)), 'chaque présentation de clip vise l\'entrée du menu (nav-…) : repère réel');
+ok(roles.every(r => GUIDE_SCRIPTS[r].filter(st => st.id.endsWith('-tip')).every(st => st.target === null)), 'la scène « astuce » n\'assombrit rien (pas d\'élément visé)');
 
 // ---- 4. Chaque élément visé existe dans le code
 const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : /\.(tsx?|json)$/.test(e.name) ? [path.join(d, e.name)] : []);
