@@ -701,6 +701,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
+| `viewportWidth.ts` | Largeur de l'écran en pixels du site, fiable APRÈS une rotation (téléphone ou tablette). |
 | `workDays.ts` | Jours de travail réglables (Réglages) : 0 = dimanche … 6 = samedi. Par défaut lundi à samedi (le dimanche est un jour de repos). Pur : sans écran ni serveur. |
 | `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
@@ -843,6 +844,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:news-access` | Contrôle des actualités : qui publie, modifie, voit (règles du site = copie du serveur) + protections du serveur. Lancer : npm run check:news-access |
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
+| `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:news-link` | Contrôle du lien vers une publication et de sa lecture dans un message. Lancer : npm run check:news-link |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |
 | `npm run check:simulation` | Contrôle du générateur de simulation (module 18, M18.4) : les données inventées doivent être COHÉRENTES entre elles, vues par les vraies règles du site |

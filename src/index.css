@@ -51,7 +51,7 @@
 @layer base {
   html, body {
     overflow-x: hidden;
-    max-width: 100vw;
+    max-width: 100%; /* pas 100vw : après une rotation sur iPhone, 100vw garde un instant la largeur du mode portrait (bande noire à droite) */
     -webkit-text-size-adjust: 100%;
   }
   /* Défilement : avec `overflow-x: hidden` sur html ET body, body devient un 2e conteneur de défilement (overflow-y: auto) imbriqué dans html.

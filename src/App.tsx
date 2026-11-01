@@ -1,3 +1,4 @@
+import { useViewportWidth } from './utils/viewportWidth';
 import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -152,12 +153,7 @@ export default function App() {
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Menu de gauche : téléphone = tiroir ; tablette = bande d'icônes qui s'ouvre au clic ; grand écran = menu complet ou bande d'icônes (choix gardé)
-  const [wide, setWide] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth));
-  useEffect(() => {
-    const on = () => setWide(window.innerWidth);
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
+  const wide = useViewportWidth(); // fiable après une rotation (voir viewportWidth.ts)
   const [sbCollapsed, setSbCollapsed] = useState(() => { try { return localStorage.getItem('df_sb_collapsed') === '1'; } catch { return false; } });
   const toggleSbCollapsed = () => setSbCollapsed(v => { const n = !v; try { localStorage.setItem('df_sb_collapsed', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const sbPhone = wide < 768;

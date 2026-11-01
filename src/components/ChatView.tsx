@@ -28,6 +28,7 @@ import { TypingDots } from './Reactions';
 import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
 import { useNow } from '../utils/useNow';
 import { LiveDot, LiveLine } from './LiveStatus';
+import { useViewportWidth } from '../utils/viewportWidth';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
@@ -244,7 +245,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const onAssistant = isAdmin && threadId === 'assistant';
   const current = threads.find(t => t.id === threadId) || threads[0];
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
-  const convVisible = !showList || (typeof window !== 'undefined' && window.innerWidth >= 768);
+  const vwNow = useViewportWidth(); // se met à jour à la rotation
+  const convVisible = !showList || vwNow >= 768;
   const visible = messages.filter(m => inThread(m, current) && !hidden.has(m.id) && !m.deleted_at); // un message supprimé disparaît sans trace
   const typingNames = typingRows
     .filter(r => (current.kind === 'user' ? r.user_id === current.id && r.to === currentUser.id : current.kind === 'group' || current.kind === 'all' ? r.to === current.id : false))
