@@ -45,3 +45,13 @@ export function treasuryCharts(cash: CashEntry[], range: { start: string; end: s
     received: ins.reduce((s, e) => s + e.amount_ar, 0), spent: outs.reduce((s, e) => s + e.amount_ar, 0),
   };
 }
+
+/** Argent en caisse depuis le début : tout ce qui est reçu moins toutes les dépenses, jusqu'à `today` compris (les lignes datées plus tard ne comptent pas encore). Jamais de salaires. */
+export function cashSinceStart(cash: CashEntry[], today: string): { received: number; spent: number; balance: number } {
+  let received = 0, spent = 0;
+  for (const e of cash) {
+    if (!e || e.date > today || !Number.isFinite(e.amount_ar)) continue;
+    if (e.kind === 'in') received += e.amount_ar; else if (e.kind === 'out') spent += e.amount_ar;
+  }
+  return { received, spent, balance: received - spent };
+}

@@ -1,6 +1,6 @@
 // Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global.
 import { readFileSync } from 'node:fs';
-import { treasuryCharts } from '../src/utils/treasuryCharts';
+import { treasuryCharts, cashSinceStart } from '../src/utils/treasuryCharts';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const e = (id: string, kind: 'in' | 'out', amount_ar: number, date: string, category: string) => ({ id, kind, amount_ar, date, category, created_at: '', updated_at: '' } as any);
@@ -12,6 +12,11 @@ ok(c.balance[1] === 70000 && c.balance[4] === 100000, 'solde cumulé : 70 000 le
 ok(c.inflow[10] === null && c.outflow[19] === null && c.balance[30] === null, 'jours à venir : pas de point');
 ok(c.received === 150000 && c.spent === 60000, 'totaux du mois (la ligne hors mois est ignorée)');
 ok(c.outByCategory[0].label === 'Loyer' && c.outByCategory.length === 3 && c.inByCategory[0].value === 150000, 'catégories triées par montant');
+const since = cashSinceStart([...cash, e('9', 'in', 999999, '2026-12-01', 'Paiement client'), e('8', 'in', 40000, '2026-09-15', 'Paiement client')], '2026-10-10');
+ok(since.received === 190999 && since.spent === 50000 && since.balance === 140999, 'en caisse depuis le début : toutes les lignes jusqu\'à aujourd\'hui (septembre compris), pas celles du futur');
+ok(cashSinceStart([], '2026-10-10').balance === 0 && cashSinceStart([null, { kind: 'in', amount_ar: NaN, date: '2026-10-01' }] as any, '2026-10-10').balance === 0, 'caisse vide ou lignes abîmées : 0, aucun plantage');
+const page = readFileSync('src/views/admin/TreasuryPage.tsx', 'utf8');
+ok(/cashSinceStart\(db\.getCash\(\)/.test(page) && /depuis le début/.test(page) && /since the start/.test(page), 'page Trésorerie : « en caisse depuis le début » affiché (FR et EN)');
 const comp = readFileSync('src/views/admin/TreasuryCharts.tsx', 'utf8') + readFileSync('src/utils/treasuryCharts.ts', 'utf8');
 ok(!/salar|payroll|getPosts|getUsers|advance/i.test(comp), 'graphiques : aucun salaire, aucune paie, aucune mission lue');
 ok(/<TreasuryCharts /.test(readFileSync('src/views/admin/TreasuryPage.tsx', 'utf8')), 'page Trésorerie : graphiques branchés');

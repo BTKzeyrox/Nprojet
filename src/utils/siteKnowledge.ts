@@ -190,7 +190,7 @@ export const SITE_MAP: SitePage[] = [
     id: 'treasury', audience: 'admin', title: b('Trésorerie', 'Treasury'),
     purpose: b('L\'argent reçu et les dépenses du mois, sans salaires ni paie. Pour le Comptable et le responsable.', 'Money received and expenses of the month, with no salaries or payroll. For the Accountant and the admin.'),
     howto: [b('Choisir le mois avec les flèches ; lire les graphiques.', 'Pick the month with the arrows; read the charts.'), b('Ajouter un paiement reçu ou une dépense.', 'Add a payment received or an expense.'), b('Filtrer par type ou catégorie, modifier ou supprimer une ligne.', 'Filter by type or category, edit or delete a line.')],
-    rules: [b('Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.', 'Balance = money received − expenses. Salaries and payroll stay with the admin.'), b('Les lignes saisies ici sont les mêmes que dans l\'onglet Finances du responsable.', 'Lines entered here are the same as in the admin\'s Finances tab.')],
+    rules: [b('Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.', 'Balance = money received − expenses. Salaries and payroll stay with the admin.'), b('Les lignes saisies ici sont les mêmes que dans l\'onglet Finances du responsable.', 'Lines entered here are the same as in the admin\'s Finances tab.'), b('En caisse (depuis le début) = tout l\'argent reçu moins toutes les dépenses, jusqu\'à aujourd\'hui, sans salaires. Il ne dépend pas du mois choisi.', 'Cash on hand (since the start) = all money received minus all expenses, up to today, no salaries. It does not depend on the chosen month.')],
     conditions: [],
     figures: [],
   },

@@ -19,7 +19,8 @@ Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (o
   - Fait : bouton corrigé (ouvre `storage`) ; `check:direction-page` vérifie maintenant que chaque bouton « Voir… » ouvre une page qui existe (27/27). Build OK. Non testé à l'écran (téléphone). Site seulement, pas de serveur. Retour arrière : commit précédent.
 
 ## Priorité 3 : chiffres clairs
-- [ ] **C1. Trésorerie du Comptable : ajouter l'argent en caisse « depuis le début »** (reçu − dépenses depuis le début, sans salaires). Aujourd'hui il ne voit que le solde du mois. Dans `TreasuryPage` / `src/utils/treasuryCharts.ts`, jamais de salaires (`check:treasury`, `check:treasury-charts`).
+- [x] (2026-11-02) **C1. Trésorerie du Comptable : ajouter l'argent en caisse « depuis le début »** (reçu − dépenses depuis le début, sans salaires). Aujourd'hui il ne voit que le solde du mois. Dans `TreasuryPage` / `src/utils/treasuryCharts.ts`, jamais de salaires (`check:treasury`, `check:treasury-charts`).
+  - Fait : carte « En caisse (depuis le début) » en haut de la page Trésorerie (`cashSinceStart` dans `treasuryCharts.ts` : tout le reçu moins toutes les dépenses jusqu'à aujourd'hui, sans salaires, indépendante du mois choisi). 3 contrôles ajoutés (`check:treasury-charts` 18/18), fiche et guide à jour. Site seulement, non testé à l'écran.
 - [x] (2026-11-02) **C2. Direction, carte « Argent du mois » : écrire « depuis le début » sur la ligne Trésorerie** (les autres lignes sont du mois). Même mot que dans Finances.
   - Fait : libellé « Trésorerie (depuis le début) » / « Cash (since the start) » dans `DirectionPage.tsx`.
 - [x] (2026-11-02) **C3. Direction : dire clairement quand le chiffre d'affaires est « estimé »** (pas de facture émise ce mois-ci, donc valeur des missions validées). Le mot « estimé » existe déjà dans le libellé : le rendre plus visible (couleur ou petite note).
