@@ -22,10 +22,10 @@ export interface Reply {
   sources: Bi; // d'où viennent les chiffres
   empty?: boolean; // « rien à signaler »
 }
-const b = (fr: string, en: string): Bi => ({ fr, en });
-const dmy = (d: string) => d.split('-').reverse().join('/');
-const ar = (n: number, l: Lang) => `${Math.round(n).toLocaleString(l === 'en' ? 'en-US' : 'fr-FR').replace(/[  ]/g, ' ')} Ar`;
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+export const b = (fr: string, en: string): Bi => ({ fr, en });
+export const dmy = (d: string) => d.split('-').reverse().join('/');
+export const ar = (n: number, l: Lang) => `${Math.round(n).toLocaleString(l === 'en' ? 'en-US' : 'fr-FR').replace(/[  ]/g, ' ')} Ar`;
+export const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 // ---------- Ce qui attend l'admin (sans les alertes) ----------
 export interface Waiting { starts: number; ends: number; advances: number }

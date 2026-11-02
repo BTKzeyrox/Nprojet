@@ -521,3 +521,10 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 
 ## 2026-11-02 — Notification externe : affichée TOUJOURS
 - Avant : appli ouverte et visible = aucune notification externe. Maintenant (demande BTK) : toujours affichée, appli ouverte ou fermée (carillon de l'appli en plus quand elle est ouverte). Toujours groupée « Vous avez N notifications », un seul son. Fichier : `public/sw.js`. Pas de serveur. Retour arrière : commit précédent.
+
+## Assistant : boutons plus utiles (demande de BTK, « Go » du 2026-11-02)
+
+BTK n'était pas satisfait des boutons du bas (Résumé du jour, Quoi faire, Suggestions, Et si, Aide). Plan : A (barre de boutons avec les vrais chiffres), puis B + C (messages prêts déjà remplis, bouton « Relancer »). Site seulement.
+
+- [x] (2026-11-02) **Étape A.** Barre du bas : « Rédiger un message », À valider (N), Avances (N), Factures en retard (N), Stock bas (N), Qui travaille maintenant, Argent du mois, Clients silencieux (N), Résumé du jour. Un bouton à 0 se cache. Chaque bouton répond avec les vrais éléments (4 lignes au plus, « … et N autres ») et des boutons exacts (`assistantShortcuts.ts`). « Et si le prix +5 % », « Aide », « Quoi faire maintenant ? » et « Suggestions » ne sont plus dans la barre mais marchent encore écrits à la main. « Qui travaille » ne connaît pas les absences et congés (il le dit). `check:assistant` 214/214. Non testé à l'écran (téléphone).
+- [ ] **Étape B + C.** Messages prêts déjà remplis (relancer un client en retard, répondre à une avance, répondre à une inscription, prévenir l'équipe, remercier un client) et bouton « Relancer » sous chaque facture en retard.

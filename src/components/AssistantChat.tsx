@@ -1,11 +1,12 @@
 // Assistant « Admin IA Pro » (niveau A) DANS la messagerie : conversation épinglée, ADMIN SEULEMENT.
 // Les règles répondent (src/utils/assistant.ts) ; aucune donnée ne part vers un serveur ; l'historique reste sur cet appareil.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
+import { shortcutList, shortcutReply, detectShortcut } from '../utils/assistantShortcuts';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
@@ -60,7 +61,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     setBusy(true);
     window.setTimeout(async () => { // petite pause : il « écrit » (le calcul des règles, lui, est instantané)
       const i = getSnapshotInput();
-      let reply = i ? respond(q, i, getHealth().alerts) : helpReply();
+      const sid = detectShortcut(q); // un bouton du bas (ou son texte écrit à la main) : réponse avec les vrais chiffres et des boutons exacts
+      let reply = i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
       if (reply.intent === 'unknown' && i) {
         if (aiOptIn(userId)) { // question libre : seulement si l'admin a activé l'IA externe (Réglages), sinon rien ne sort du site
           const turns = msgs.slice(-6).map(m => ({ role: (m.who === 'me' ? 'user' : 'model') as 'user' | 'model', text: m.text || (m.reply ? [l === 'en' ? m.reply.title.en : m.reply.title.fr, ...m.reply.lines.slice(0, 3).map(x => (l === 'en' ? x.en : x.fr))].join(' ') : '') }));
@@ -92,7 +94,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.nav) setNavTarget(g.nav);
     if (isKnownView(g.view)) onNavigate?.(g.view);
   };
-  const quick = [t('Résumé du jour', 'Daily summary'), t('Quoi faire maintenant ?', 'What to do now?'), t('Suggestions', 'Suggestions'), t('Et si le prix client +5 % ?', 'What if client price +5%?'), t('Aide', 'Help')];
+  // Boutons du bas : les vrais chiffres du jour (un bouton sans rien à montrer se cache) ; recalculés après chaque message, pas à chaque lettre tapée
+  const shortcuts = useMemo(() => { try { const si = getSnapshotInput(); return si ? shortcutList(si) : []; } catch { return []; } }, [msgs.length, busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  const quick = shortcuts.length ? shortcuts.map(x => ({ key: x.id, q: l === 'en' ? x.q.en : x.q.fr, label: l === 'en' ? x.label.en : x.label.fr })) : [{ key: 'help', q: t('Aide', 'Help'), label: t('Aide', 'Help') }];
   const bubbleBot = L ? 'bg-white text-slate-800 border-slate-200' : 'bg-[#16212e] text-slate-200 border-slate-700/80'; // mêmes couleurs que les messages reçus de la messagerie
   const area = L ? 'bg-[#e9eff8]' : 'bg-[#0a0f16]';
 
@@ -135,7 +139,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           </div>
         )}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q}</button>)}</div>
+          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q.key} type="button" disabled={busy} onClick={() => ask(q.q)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q.label}</button>)}</div>
         <form onSubmit={e => { e.preventDefault(); ask(text); inputRef.current?.focus(); }}>
           <div className={`flex items-center gap-1.5 rounded-3xl border pl-3 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
             <input ref={inputRef} type="text" value={text} onChange={e => setText(e.target.value)} enterKeyHint="send" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-1 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none' }} />

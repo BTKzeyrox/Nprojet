@@ -6,7 +6,7 @@ import type { AccessRequest, CashEntry, Client, ClientContract, Invoice, Passwor
 import { computeFinance, type FinanceInput } from './financeStats';
 import { periodRange } from './stats';
 import { clientMissionsFromPosts, clientThresholds, summarizeClients, type ClientStatus } from './clients';
-import { stockRows, stockValue } from './stock';
+import { stockRows, stockValue, type StockSpace } from './stock';
 import { clientPriceForPost } from './clientPrice';
 import { findPage } from './siteKnowledge';
 import type { HealthAlert } from './health/types';
@@ -18,6 +18,7 @@ export interface SnapshotInput {
   alerts?: HealthAlert[]; // alertes visibles de la Santé du site
   /** Demandes en attente (inscriptions, mots de passe oubliés, profils, accès hors horaires) : lues seulement par l'assistant du navigateur, jamais copiées dans l'instantané. */
   pending?: { signups: SignupRequest[]; resets: PasswordResetRequest[]; profiles: ProfileChangeRequest[]; access: AccessRequest[] };
+  spaces?: StockSpace[]; // les stockages (pour « Stock bas »)
   invoices?: Invoice[]; // factures : lues seulement par l'assistant du navigateur (boutons vers une facture nommée), jamais copiées dans l'instantané
   nowMs?: number; // heure de référence donnée par l'appelant (l'assistant n'a pas d'horloge) ; absente = aucune durée d'attente affichée
 }

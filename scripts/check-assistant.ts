@@ -1,5 +1,6 @@
 // Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant
 import fs from 'node:fs';
+import { shortcutList, shortcutReply, detectShortcut, overdueRows, lowStockRows, silentClients } from '../src/utils/assistantShortcuts';
 import { entityLinks, ENTITY_LINKS_MAX, waitingItems, waitGroups, waitedText, teamReply, recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
 import { buildDemoData } from '../src/demo/demoData';
 import { runHealth } from '../src/utils/health/registry';
@@ -194,6 +195,49 @@ const chatSrc = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8');
 ok(/\.\.\.entityLinks\(r\.text, i\), \.\.\.pageLinks\(r\.text, l\)/.test(chatSrc), 'chat : la réponse de l\'IA reçoit les boutons des personnes, clients et factures, puis ceux des pages');
 ok(fs.readFileSync('src/views/admin/ClientsPage.tsx', 'utf8').includes('data-nav={`client-${c.id}`}') && fs.readFileSync('src/views/admin/InvoicesView.tsx', 'utf8').includes('data-nav={`inv-${inv.id}`}'), 'adresses « client-… » et « inv-… » : existent dans Clients et Facturation');
 ok(/invoices: db\.getInvoices\(\)/.test(fs.readFileSync('src/utils/snapshotDb.ts', 'utf8')) && !/invoices/.test(fs.readFileSync('src/utils/siteSnapshot.ts', 'utf8').split('export function buildSnapshot')[1] || ''), 'vie privée : les factures sont lues dans le navigateur et ne passent jamais par l\'instantané envoyé à l\'IA');
+
+// ---------- Boutons du bas : de vrais chiffres, des boutons exacts (A1 à A8) ----------
+const INV = (id: string, num: string, client: string, total: number, due: string, extra: any = {}) => ({ id, number: num, type: 'invoice', status: 'issued', client_id: `c-${client}`, client: { name: client }, total_ar: total, due_date: due, issue_date: '2026-09-01', ...extra });
+const PRD = (id: string, name: string, thr: number, extra: any = {}) => ({ id, name, buy_price_ar: 100, alert_threshold: thr, ...extra });
+const MV = (id: string, pid: string, qty: number) => ({ id, product_id: pid, type: 'in', qty, date: '2026-10-01', note: '' });
+const rich = base({ ...exact, invoices: [INV('i1', 'F-1', 'Acme', 100000, '2026-10-01'), INV('i2', 'F-2', 'Beta', 50000, '2026-10-20'), INV('i3', 'F-3', 'Gamma', 80000, '2026-12-01'), INV('i4', 'F-4', 'Delta', 30000, '2026-09-01', { status: 'draft' }), INV('i5', 'F-5', 'Acme', 70000, '2026-09-15')] as any,
+  cash: [{ id: 'k1', kind: 'in', amount_ar: 70000, date: '2026-10-02', invoice_id: 'i5', category: 'Paiement client' }] as any,
+  products: [PRD('pa', 'Gants', 5), PRD('pb', 'Savon', 5), PRD('pc', 'Eau', 5), PRD('pd', 'Sacs', 0)] as any, moves: [MV('m1', 'pa', 2), MV('m2', 'pc', 50)] as any,
+  users: [EU('u1', 'Rina Rakoto'), EU('u2', 'Tojo'), EU('u3', 'Lova'), EU('u4', 'Zo', { status: 'blocked' })] as any,
+  clients: [{ id: 'c1', name: 'Acme Corp', active: true }, { id: 'c2', name: 'Beta Ltd', active: true }, { id: 'c3', name: 'Vieux Client', active: false }] as any,
+  posts: [...(exact.posts as any[]), { id: 'z1', status: 'completed', date: '2026-07-01', client_id: 'c1', client_name: 'Acme Corp', employee_id: 'u1' }, { id: 'z2', status: 'completed', date: '2026-10-25', client_id: 'c2', client_name: 'Beta Ltd', employee_id: 'u1' }, PD('p5', 'active', 'Rina Rakoto', 'Acme Corp', null)] as any });
+const sl = shortcutList(rich), slBy = (id: string) => sl.find(x => x.id === id);
+ok(sl.map(x => x.id).join() === 'validate,advances,overdue,stock,working,money,silent,morning', 'boutons : l\'ordre À valider, Avances, Factures en retard, Stock bas, Qui travaille, Argent, Clients silencieux, Résumé');
+ok(slBy('validate')!.label.fr === 'À valider (7)' && slBy('advances')!.label.fr === 'Avances (1)' && slBy('overdue')!.label.fr === 'Factures en retard (2)' && slBy('stock')!.label.fr === 'Stock bas (2)' && slBy('silent')!.label.fr === 'Clients silencieux (1)', 'boutons : le vrai chiffre est dans le bouton (7 à valider, 1 avance, 2 factures en retard, 2 produits bas, 1 client silencieux)');
+ok(slBy('validate')!.label.en === 'To validate (7)' && slBy('overdue')!.label.en === 'Overdue invoices (2)' && slBy('working')!.label.fr === 'Qui travaille maintenant' && slBy('morning')!.count === null, 'boutons : FR et EN, et « Qui travaille / Argent / Résumé » sans chiffre');
+const quiet = shortcutList(base({ today: '2026-11-01', nowMs: NOW, users: [], posts: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [] }));
+ok(quiet.map(x => x.id).join() === 'working,money,morning', 'boutons : sans rien à valider, sans retard, sans stock bas, sans client silencieux = ces 5 boutons se cachent');
+ok(overdueRows(rich).map(x => x.inv.id).join() === 'i1,i2' && lowStockRows(rich).map(x => x.row.product.id).join() === 'pb,pa' && silentClients(rich).map(x => x.c.id).join() === 'c1', 'données : retard (brouillon, payée en entier et pas encore due exclues), stock (épuisé et sous seuil, seuil 0 ignoré), clients (archivé et récent exclus)');
+const SR = (id: any) => shortcutReply(id, rich, []);
+let sr = SR('validate');
+ok(sr.title.fr === 'À valider : 7' && sr.lines.length === 5 && /^1\. Mot de passe oublié : Rina \(en attente depuis 2 h\)/.test(sr.lines[0].fr) && /^2\. Valider la fin de Rina · Acme \(en attente depuis 26 h\)/.test(sr.lines[1].fr) && /… et 3 autres/.test(sr.lines[4].fr) && sr.actions.length === 5 && sr.actions[0].go.nav === 'val-rst-r1' && sr.actions[1].go.nav === 'val-post-p1' && sr.actions[4].go.view === 'validations' && /\+ 3 autres/.test(sr.actions[4].label.fr) && clean(sr), 'À valider : mot de passe oublié d\'abord, puis la plus ancienne (« en attente depuis 26 h »), boutons exacts, « + 3 autres »');
+sr = SR('advances');
+ok(sr.title.fr === 'Avances en attente : 1' && sr.actions.length === 1 && sr.actions[0].go.nav === 'val-adv-a1' && sr.actions[0].go.filter === 'advances' && clean(sr), 'Avances : la demande en attente avec son bouton exact');
+sr = SR('overdue');
+ok(sr.lines[0].fr.startsWith('1. F-1 · Acme : 100 000 Ar (31 j de retard)') && sr.lines[1].fr.startsWith('2. F-2 · Beta : 50 000 Ar (12 j de retard)') && /Reste à encaisser : 150 000 Ar sur 2 factures/.test(sr.lines[2].fr) && sr.actions[0].go.nav === 'inv-i1' && sr.actions[1].go.nav === 'inv-i2' && clean(sr), 'Factures en retard : la plus en retard d\'abord, jours de retard, reste dû, boutons vers chaque facture');
+sr = SR('stock');
+ok(sr.lines[0].fr === '1. Savon : épuisé' && sr.lines[1].fr === '2. Gants : 2 restants (seuil 5)' && sr.actions[0].go.view === 'storage' && sr.actions[0].go.storage!.product === 'pb' && sr.actions[0].go.storage!.filter === 'empty' && sr.actions[1].go.storage!.product === 'pa' && sr.actions[1].go.storage!.filter === 'low' && clean(sr), 'Stock bas : l\'épuisé d\'abord, quantité et seuil, bouton qui ouvre le produit dans Stockage avec le bon filtre');
+sr = SR('working');
+ok(sr.title.fr === 'Maintenant : 2 en mission' && sr.lines[0].fr === '• Zed · Zeta' && sr.lines[1].fr === '• Rina Rakoto · Acme Corp' && /3 étapes attendent ta validation/.test(sr.lines.map(x => x.fr).join(' ')) && /sans mission en ce moment \(les absences et congés ne sont pas comptés ici\)/.test(sr.lines[sr.lines.length - 1].fr) && sr.actions.some(a => a.go.nav === 'emp-u1') && sr.actions[sr.actions.length - 1].go.view === 'employees' && clean(sr), 'Qui travaille : en mission, étapes qui attendent, employés sans mission, et il dit que les absences ne sont pas comptées');
+sr = SR('money');
+ok(sr.lines.length === 3 && /^Reçu : .* Ar · Dépenses : .* Ar · Salaires : .* Ar$/.test(sr.lines[0].fr) && /^Bénéfice : /.test(sr.lines[1].fr) && /^Trésorerie : .* · À encaisser : /.test(sr.lines[2].fr) && sr.actions.map(a => a.go.nav).join() === 'fin-profit,fin-treasury,fin-toCollect' && clean(sr), 'Argent du mois : 3 lignes (reçu, dépenses, salaires ; bénéfice ; trésorerie, à encaisser) et boutons vers les cartes');
+sr = SR('silent');
+ok(sr.lines[0].fr.startsWith('1. Acme Corp : aucune mission depuis 123 j') && sr.actions[0].go.nav === 'client-c1' && clean(sr), 'Clients silencieux : nom, jours sans mission, bouton vers la fiche');
+ok(SR('morning').intent === 'morning', 'Résumé du jour : le bouton donne le résumé habituel');
+for (const id of ['validate', 'advances', 'overdue', 'stock', 'silent'] as const) { const e = shortcutReply(id, base({ today: '2026-11-01', nowMs: NOW, users: [], posts: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [] }), []); ok(e.empty === true && e.lines.length === 1 && e.actions.length === 0 && clean(e), `bouton « ${id} » sans rien à montrer : une phrase claire, aucun bouton, aucun plantage`); }
+const many = base({ ...rich, invoices: Array.from({ length: 9 }, (_, k) => INV(`x${k}`, `N-${k}`, `Cl${k}`, 1000 + k, '2026-09-01')) as any, cash: [] });
+sr = shortcutReply('overdue', many, []);
+ok(sr.lines.length === 6 && /… et 5 autres/.test(sr.lines[4].fr) && sr.actions.length === 5 && /\+ 5 autres/.test(sr.actions[4].label.fr) && sr.actions[4].go.view === 'invoices' && clean(sr), 'beaucoup de factures en retard : 4 lignes, « … et 5 autres », total, boutons limités');
+ok(['À valider', 'a valider', 'AVANCES', 'Factures en retard', 'stock bas', 'Qui travaille maintenant', 'qui travaille', 'Argent du mois', 'Clients silencieux', 'Résumé du jour', 'To validate', 'overdue invoices', 'Who is working now', 'Money this month'].every(x => detectShortcut(x) !== null) && detectShortcut('Résumé du jour') === 'morning' && detectShortcut('À valider') === 'validate', 'texte des boutons : reconnu aussi écrit à la main (FR et EN, accents et majuscules ignorés)');
+ok(detectShortcut('') === null && detectShortcut(undefined as any) === null && detectShortcut('Explique la page Avances') === null && detectShortcut('Pourquoi la marge ?') === null && detectShortcut('x'.repeat(5000)) === null, 'texte libre : une vraie phrase ne déclenche pas un bouton');
+ok(/shortcutList\(si\)/.test(chatSrc) && /detectShortcut\(q\)/.test(chatSrc) && /useMemo\(/.test(chatSrc) && !/setInterval|setTimeout\([^)]*shortcut/i.test(chatSrc.split('const shortcuts')[1]?.slice(0, 600) || ''), 'chat : les boutons viennent des vrais chiffres, recalculés après chaque message (pas de nouveau minuteur)');
+const shortSrc = fs.readFileSync('src/utils/assistantShortcuts.ts', 'utf8');
+ok(!/fetch\(|XMLHttpRequest|import .*db\/store|localStorage|Date\.now\(\)/.test(shortSrc), 'boutons : aucun appel réseau, aucun accès direct aux données, aucune horloge cachée');
 
 // ---------- Règles de fond ----------
 const src = fs.readFileSync('src/utils/assistant.ts', 'utf8');
