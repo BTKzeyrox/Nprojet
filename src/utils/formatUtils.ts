@@ -1,6 +1,6 @@
-/**
- * Utility functions for clean number formatting & 1M abbreviations
- */
+// Petits formats d'affichage : points et scores abrégés (1M), montants en Ar, libellés de badge et de vacation, pluriels.
+// Utilisé par : WhyFigure.tsx, MyPayroll.tsx, OperatorSheet.tsx, PostsGrid20.tsx et 30 autres fichiers.
+// Pour modifier : fonctions pures (aucun écran, aucun serveur). Un montant d'argent passe par formatCurrencyAr ; ne pas refaire un format à la main ailleurs.
 
 const trimNum = (n: number, digits: number): string => parseFloat(n.toFixed(digits)).toString();
 

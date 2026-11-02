@@ -168,6 +168,16 @@ if (mode === 'write' || mode === 'check') {
     ok(missing.length === 0, `les fichiers d'écran existent (${missing.join(', ') || 'tous'})`);
     const bad = brokenRefs(cur);
     ok(bad.length === 0, `le texte écrit à la main ne cite que des fichiers et des commandes qui existent (${bad.join(' ; ') || 'rien de cassé'})`);
+    const noHeader: string[] = [];
+    const walk = (d: string) => {
+      for (const e of fs.readdirSync(path.join(root, d), { withFileTypes: true })) {
+        const p = `${d}/${e.name}`;
+        if (e.isDirectory()) walk(p);
+        else if (/\.tsx?$/.test(e.name) && !e.name.endsWith('.d.ts') && !header(p)) noHeader.push(p);
+      }
+    };
+    walk('src');
+    ok(noHeader.length === 0, `chaque fichier de src/ commence par un en-tête // (ce qu'il fait, utilisé par, pour modifier) (${noHeader.slice(0, 5).join(', ') || 'tous'}${noHeader.length > 5 ? ` et ${noHeader.length - 5} autres` : ''})`);
     ok(/^# /m.test(cur) && cur.length > 20000, 'le guide est complet (titre et taille)');
     for (const h of ['## 1.', '## 2.', '## 3.', '## 4.', '## 5.', '## 6.', '## 7.', '## 8.', '## 9.', '## 10.']) ok(cur.includes(h), `section ${h} présente`);
     console.log(`\n${n - fails}/${n} contrôles réussis`);

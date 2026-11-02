@@ -613,7 +613,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances (Statistiques > Finances) : les liens des chiffres de l'assistant et des alertes |
 | `financeStats.ts` | Finances : chiffres « vraie entreprise » (sans écran, sans serveur). Utilisés par l'onglet Finances et par `npm run check:finance-stats`. |
 | `fontSize.ts` | Taille du texte, réglée sur cet appareil (garde dans le navigateur) |
-| `formatUtils.ts` | — |
+| `formatUtils.ts` | Petits formats d'affichage : points et scores abrégés (1M), montants en Ar, libellés de badge et de vacation, pluriels. |
 | `goals.ts` | Objectifs du mois et prévision simple (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
 | `guideEngine.ts` | Guide interactif (visite guidée, module 16 revu le 2026-10-29) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:guide-tour`. |
 | `guideScripts.ts` | Les 4 guides interactifs (un par rôle, 2026-10-29). Chaque étape ouvre la vraie page et fait clignoter un élément réel ; certaines proposent une petite simulation. |
