@@ -89,13 +89,22 @@ function header(p: string): string {
 function codeMap(): string {
   const groups: [string, string][] = [
     ['Règles du site (`src/utils/`)', 'src/utils'], ['Santé du site : moteur (`src/utils/health/`)', 'src/utils/health'], ['Santé du site : contrôles par page (`src/utils/health/rules/`)', 'src/utils/health/rules'],
+    ['Pages du responsable (`src/views/admin/`)', 'src/views/admin'], ['Pages des ressources humaines (`src/views/hr/`)', 'src/views/hr'],
+    ['Autres pages (`src/views/`)', 'src/views'], ['Écran de l\'opérateur (`src/views/employee/`)', 'src/views/employee'],
+    ['Morceaux d\'écran (`src/components/`)', 'src/components'], ['Graphiques (`src/components/charts/`)', 'src/components/charts'],
+    ['Données et types (`src/db/`, `src/types/`, `src/demo/`, `src/context/`, racine de `src/`)', ''],
   ];
+  const EXTRA = ['src/db', 'src/types', 'src/demo', 'src/context', 'src'];
   const out: string[] = [];
   for (const [title, dir] of groups) {
     out.push(`**${title}**`, '', '| Fichier | Rôle |', '|---|---|');
-    for (const f of fs.readdirSync(path.join(root, dir)).filter(x => x.endsWith('.ts')).sort()) {
-      const h = header(`${dir}/${f}`);
-      out.push(`| \`${f}\` | ${(h || '—').replace(/\|/g, '/')} |`);
+    const dirs = dir === '' ? EXTRA : [dir];
+    for (const d of dirs) {
+      for (const f of fs.readdirSync(path.join(root, d)).filter(x => /\.tsx?$/.test(x) && !x.endsWith('.d.ts')).sort()) {
+        const h = header(`${d}/${f}`);
+        const name = dir === '' ? `${d.replace(/^src\/?/, '')}${d === 'src' ? '' : '/'}${f}` : f;
+        out.push(`| \`${name}\` | ${(h || '—').replace(/\|/g, '/')} |`);
+      }
     }
     out.push('');
   }

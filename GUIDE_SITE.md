@@ -573,19 +573,19 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `advice.ts` | Solutions proposées (suggestions) pour chaque règle de la Santé du site. Texte fixe, FR/EN, jamais d'accusation : ce sont des pistes que l'admin juge lui-même. |
 | `aiAssist.ts` | Assistant IA externe (niveau B, M11.13) côté site. ADMIN SEULEMENT, DÉSACTIVÉ PAR DÉFAUT (case dans Réglages, réglée sur cet appareil). |
 | `alerts.ts` | Alertes de l'accueil admin (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
-| `alertsDb.ts` | Le menu affiche la pastille à chaque affichage : on garde le résultat jusqu'à la prochaine modification des données (ou du jour / de la personne connectée). |
+| `alertsDb.ts` | Liste des alertes de l'admin, gardée en mémoire jusqu'au prochain changement de données ; lit le store, aucun appel serveur. |
 | `approvalLimit.ts` | Validation à plusieurs niveaux (module 15, M15.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:approval-limit`. |
 | `assistant.ts` | Assistant « Admin IA Pro », niveau A (module 11, M11.10) : AUCUNE IA externe, que des règles et des calculs faits dans le navigateur de l'admin. |
 | `assistantMessages.ts` | Messages prêts, DÉJÀ REMPLIS avec les vrais éléments du site : relancer un client en retard, répondre à une avance ou à une inscription, remercier un client, prévenir l'équipe. |
 | `assistantShortcuts.ts` | Boutons du bas de l'assistant : chacun montre un vrai chiffre du jour et mène à l'élément exact (À valider, Avances, Factures en retard, Stock bas, Qui travaille, Argent du mois, Clients silencieux, Résumé du jour). |
-| `attachments.ts` | Pièces jointes des publications et commentaires : préparation (compression) puis envoi. |
+| `attachments.ts` | Préparation (compression des photos) et envoi des pièces jointes des publications et commentaires ; touche le navigateur et le réseau. |
 | `attendance.ts` | Retard d'une session (utilisé par le calendrier et par les alertes). Pur, sans écran. |
 | `attendanceView.ts` | Arrivée, départ et pastille « en ligne / hors ligne » pour TOUS les rôles suivis (opérateur, chef d'équipe, comptable). |
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `autoReport.ts` | Rapport automatique (module 15, M15.5). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:auto-report`. |
-| `availability.ts` | Statut de disponibilité : choisi par chaque personne, gardé sur CET appareil (pas partagé avec les autres). |
-| `avatarColor.ts` | Couleur d'une personne = couleur dominante de sa photo de profil (rouge sur photo rouge, etc.). |
-| `backupExcel.ts` | Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté. |
+| `availability.ts` | Statut Disponible, Occupé ou Absent choisi par chaque personne ; gardé dans le navigateur (localStorage), pas de serveur. |
+| `avatarColor.ts` | Couleur d'une personne tirée de sa photo de profil (sinon de son nom) ; lit l'image dans le navigateur, aucun serveur. |
+| `backupExcel.ts` | Sauvegarde Excel des données du store (une feuille par thème), téléchargée par le navigateur ; aucun mot de passe exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
 | `calendarGlobal.ts` | Calendrier GLOBAL (tous les employés) : mois, résumé et vue du jour. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:calendar-global`. |
@@ -596,16 +596,16 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
-| `clientPrice.ts` | Prix client : ce que le client paie pour une mission validée. |
+| `clientPrice.ts` | Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut. |
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
-| `dayDetail.ts` | Détail complet d'un employé pour un jour : connexions (heures de connexion et de déconnexion) et missions. Pur : sans écran ni serveur. |
+| `dayDetail.ts` | Règles pures (sans écran, sans serveur) du détail d'un employé pour un jour : connexions, missions et totaux. |
 | `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
 | `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
-| `enTranslate.ts` | Traduction automatique de l'interface en anglais (français → English). |
+| `enTranslate.ts` | Traduit l'interface française en anglais en remplaçant les textes de la page (dictionnaire enDict.json) ; agit sur la page du navigateur. |
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
@@ -620,7 +620,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `healthDb.ts` | « Santé du site » : relie le moteur d'alertes (src/utils/health/) aux données du site. ADMIN SEULEMENT (liste vide pour un employé : il n'a ni argent ni stock). |
 | `healthNotif.ts` | Notifications de la cloche pour l'admin (M11.7 / M9.4) : règles PURES (aucun écran, aucun serveur). |
 | `hrFile.ts` | Dossier du salarié (module 5, M5.1) : règles pures, sans écran ni serveur. |
-| `i18n.ts` | — |
+| `i18n.ts` | Table des textes de l'interface par clé (menus, grille, connexion) et getTranslation ; pur, sans écran ni serveur. |
 | `imageUtils.ts` | Justificatif de remplacement (image SVG générée localement, sans service externe). |
 | `importFile.ts` | Import Excel et CSV (module 16, M16.1) : lire un fichier choisi par le responsable et le rendre en tableau de textes. |
 | `importRules.ts` | Import Excel et CSV (module 16, M16.1) : règles pures, sans écran, sans serveur, sans réseau, sans lecture de fichier. |
@@ -642,9 +642,9 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
 | `newsAccess.ts` | Actualités : qui peut publier, qui peut modifier, qui peut voir (règles pures, copie identique dans supabase/functions/df-api/index.ts, bloc NEWSACCESS ; contrôlé par scripts/check-news-access.ts) |
 | `newsLink.ts` | Lien direct vers une publication des Actualités, et lecture de ces liens dans un message (règles pures, sans écran, sans réseau ; contrôlé par scripts/check-news-link.ts) |
-| `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
+| `notifSound.ts` | Bip de notification et préférence du son (activé, volume) gardée sur cet appareil ; utilise l'audio et le stockage du navigateur. |
 | `notifView.ts` | Affichage de la cloche : heure de Madagascar + filtres (règles pures, testées dans scripts/check-notif-view.ts) |
-| `notifications.ts` | — |
+| `notifications.ts` | Construit la liste de la cloche (à valider, refus, messages, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur. |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
 | `offlineServer.ts` | Règles du SERVEUR pour les actions envoyées après une coupure (module 13, M13.7) : « une même action n'est exécutée qu'une fois ». |
 | `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
@@ -652,9 +652,9 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
-| `payslip.ts` | — |
-| `pendingCount.ts` | Nombre de choses à valider par l'admin (une seule source pour la cloche, le menu et l'Accueil) |
-| `performance.ts` | Statistiques de performance par opérateur (lecture du store, aucun appel serveur). |
+| `payslip.ts` | Met en page le bulletin de paie imprimable (A4, FR ou EN) et le CSV ; le serveur calcule les montants, ici on les affiche et on les vérifie. |
+| `pendingCount.ts` | Compte ce que l'admin doit valider (débuts, fins, avances, inscriptions, mots de passe, accès, profils) ; lit le store. |
+| `performance.ts` | Statistiques de performance par opérateur (missions validées, refusées, taux, délai moyen) avec export Excel et CSV ; lit le store. |
 | `performanceExport.ts` | Export des scores et des badges (module 3, M3.8) : tableau Excel/CSV de la page Performance et section du rapport mensuel. |
 | `performanceScore.ts` | Performance des salariés (module 3, partie A) : score 0-100, badges à niveaux, tendance, points d'attention, employé du mois. |
 | `phoneUtils.ts` | Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 » |
@@ -664,10 +664,10 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
 | `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
-| `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
+| `presence.ts` | Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store. |
 | `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
-| `proofs.ts` | Toutes les preuves d'une session (début puis fin), sans doublon |
+| `proofs.ts` | Règle pure (sans écran, sans serveur) : toutes les preuves d'une session, début puis fin, sans doublon. |
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
 | `pushAlerts.ts` | Notifications externes (push), partie 2b : les alertes CALCULÉES (stock par stockage, avance en attente, validation en attente, facture en retard), |
@@ -695,21 +695,21 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `siteSnapshot.ts` | Instantané du site et « Pourquoi ce chiffre ? » (module 11, M11.9). Pur : pas d'écran, pas de serveur. ADMIN SEULEMENT (chiffres d'argent). |
 | `snapshotDb.ts` | Relie l'instantané et « Pourquoi ce chiffre ? » aux données du site. ADMIN SEULEMENT : sans admin, aucune donnée n'est lue. |
 | `splash.ts` | Écran de démarrage « BTK » (défini dans index.html) : retrait en fondu quand le site est prêt. |
-| `stats.ts` | Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques. |
+| `stats.ts` | Règles pures (sans écran, sans serveur) des périodes jour, semaine, mois, année et des chiffres de la page Statistiques. |
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
 | `storageNav.ts` | « Va exactement au bon endroit du Stockage » : une alerte ou une notification dit QUEL stockage, QUEL filtre et QUEL produit. |
 | `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamGoals.ts` | Objectifs par salarié et par équipe (module 15, M15.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:team-goals`. |
-| `teamLead.ts` | Sessions en attente (début ou fin) des opérateurs de l'équipe du Chef d'équipe, les plus anciennes d'abord. Rien d'autre : jamais un autre groupe. |
+| `teamLead.ts` | Règle pure (sans écran, sans serveur) : sessions en attente des opérateurs de l'équipe d'un Chef d'équipe, les plus anciennes d'abord. |
 | `totp.ts` | Sécurité en deux étapes (module 16, M16.4) : règles pures, sans écran, sans serveur. |
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
 | `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
-| `treasuryCharts.ts` | Données des graphiques de la Trésorerie : argent reçu et dépenses SEULEMENT (jamais de salaires). Pur : sans écran ni serveur. |
-| `updateWatcher.ts` | Rechargement automatique après une mise à jour du site. |
-| `useChatUnread.ts` | Nombre de nouveaux messages non lus (pastille rouge sur l'icône Messages) |
-| `useLockBodyScroll.ts` | — |
+| `treasuryCharts.ts` | Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires. |
+| `updateWatcher.ts` | Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau. |
+| `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
+| `useLockBodyScroll.ts` | Bloque le défilement de la page derrière une fenêtre ouverte ; agit sur le style de la page dans le navigateur, aucun serveur. |
 | `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
@@ -754,9 +754,192 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `suppliers.ts` | Contrôles de la page Achats / Fournisseurs (module 11, M11.12). Règles pures : elles lisent, ne changent rien. |
 | `system.ts` | Contrôles « Système » (module 11, M9.2 partie A) : sauvegarde de nuit et erreurs du site. Règles pures. |
 | `team.ts` | Contrôles de la page Équipe (module 11, lot 1) : absences, retards, refus, inactivité. Règles pures. |
+
+**Pages du responsable (`src/views/admin/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `AccountingPage.tsx` | Page Comptabilité : journal, grand livre, balance, résultat, bilan, TVA, rapprochement bancaire, clôture et saisie d'une écriture. |
+| `AdminDashboard.tsx` | Écran principal du responsable : tableau de bord, validations de missions, alertes de sécurité et liste des sessions, selon l'onglet demandé. |
+| `AutoReportCard.tsx` | Carte du rapport automatique : réglage de la fréquence (semaine ou mois) et liste des rapports prêts à ouvrir, imprimer ou télécharger en PDF. |
+| `BudgetsCard.tsx` | Carte Budgets du mois : un plafond mensuel par catégorie de dépense, avec barre d'avancement (attention dès 80 %, dépassé au-delà de 100 %). |
+| `ClientsPage.tsx` | Page Clients : liste, fiche, création, modification, archivage et import des clients, avec statut et chiffres calculés. |
+| `DirectionPage.tsx` | Page Direction : synthèse du mois en cours (argent, retards de paiement, comptabilité, prévu contre réel, meilleurs clients, stock, alertes). |
+| `EmployeesManagement.tsx` | Page Opérateurs et avances : liste des opérateurs avec statut en direct, ajout, modification, blocage, suppression, et validation des avances sur salaire. |
+| `ErrorsLog.tsx` | Journal des erreurs : plantages, erreurs serveur et signalements des opérateurs, regroupés, à marquer résolus ou à copier pour Claude. |
+| `FinanceInsights.tsx` | Chiffres et graphiques financiers de la période : bénéfice, marge, à encaisser, trésorerie, clients, dépenses par catégorie et marge par type. |
+| `FinanceTab.tsx` | Onglet Finances : paiements reçus des clients et dépenses de la période, avec ajout, modification et suppression, et les cartes finance en dessous. |
+| `HealthPage.tsx` | Page Santé du site : liste des alertes que le site calcule tout seul, par page, à ouvrir, marquer vérifiées ou ignorer. |
+| `HistoryPage.tsx` | Page Historique : liste filtrable des demandes d'avance, sessions, profils, inscriptions et mots de passe oubliés, avec leur statut. |
+| `InventorySection.tsx` | Section Inventaire de la page Achats : on saisit les quantités comptées, l'écart s'affiche et un clic crée les ajustements de stock. |
+| `InvoicesView.tsx` | Page Facturation : liste des factures, brouillon, émission, paiement, avoir, créances à relancer, et onglet Devis si les devis sont activés. |
+| `LevelsHistory.tsx` | Tableau de l'historique mensuel des niveaux : pour chaque opérateur et chacun des 6 derniers mois, missions validées et niveau. |
+| `MissionsToLink.tsx` | Outil « Rattacher les anciennes missions » de la page Clients : propose le client de même nom et rattache une ligne à la fois. |
+| `OperatorPage.tsx` | Page d'un opérateur : profil, état en direct, niveau, mission en cours, dernières sessions et liens vers son calendrier, ses messages et son historique. |
+| `PerformancePage.tsx` | Page Performance : tableau par opérateur (terminées, refusées, taux, délai) avec export Excel et CSV, et onglets Niveaux, Scores et Objectifs. |
+| `PerformanceScores.tsx` | Onglet Scores et badges : employé du mois, classement des derniers jours et fiche détaillée de chaque salarié. |
+| `PlanVsActualCard.tsx` | Carte Prévu contre réel de l'onglet Finances : compare revenus, dépenses, paie et bénéfice prévus aux chiffres réels des 6 derniers mois. |
+| `PurchaseOrdersSection.tsx` | Section Bons de commande de la page Achats : brouillon, commandé, reçu (total ou partiel), avec entrées de stock à la réception. |
+| `PurchasingPage.tsx` | Page Achats : trois onglets, bons de commande, fournisseurs et inventaire du stock. |
+| `QuotesSection.tsx` | Onglet Devis de la page Facturation : brouillon, envoyé, accepté ou refusé, et transformation d'un devis accepté en facture brouillon. |
+| `ReportTab.tsx` | Onglet Rapport du mois dans Statistiques : aperçu du rapport du mois choisi, avec impression, PDF et Excel. |
+| `SettingsView.tsx` | Page Réglages : onglets Général, Équipe, Missions, Conditions, Performance et Données ; avec personalOnly, seulement les réglages de l'appareil. |
+| `StatsPage.tsx` | Page Statistiques du responsable : choix de la période, chiffres d'activité, graphiques, et onglets Finances et Rapport. |
+| `StockAnalytics.tsx` | Onglet Analyses du Stockage : valeur du stock, produits les plus utilisés, fournisseurs et achats les plus chers, avec leur propre période. |
+| `StockCategoriesDialog.tsx` | Fenêtre Catégories du Stockage : ajouter, renommer, supprimer ou remettre la liste par défaut des catégories de produits. |
+| `StockDashboard.tsx` | Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements et graphiques. |
+| `StockMovements.tsx` | Onglet Mouvements du Stockage : historique des entrées, sorties et ajustements, filtrable par période, type et produit. |
+| `StockSpacesDialog.tsx` | Fenêtre Stockages : créer, renommer ou supprimer un stockage ; chaque stockage a ses propres produits et ne se mélange jamais aux autres. |
+| `StockTab.tsx` | Onglet Produits du Stockage : produits, quantités calculées, entrées, sorties, ajustements, photos, import et voyant sous le seuil. |
+| `StoragePage.tsx` | Page Stockage : un stockage à la fois, avec onglets Tableau de bord, Produits, Mouvements et Analyses, et gestion des stockages. |
+| `SuppliersSection.tsx` | Section Fournisseurs de la page Achats : fiches (nom, contact, délai habituel, note) avec archivage et chiffres par fournisseur. |
+| `TeamGoalsSection.tsx` | Onglet Objectifs de la page Performance : objectifs d'équipe ou de salarié par mois, avec barre d'avancement et statut. |
+| `TreasuryCharts.tsx` | Graphiques de la Trésorerie : argent reçu et dépenses jour par jour, solde du mois et répartition par catégorie, sans aucun salaire. |
+| `TreasuryPage.tsx` | Page Trésorerie du Comptable : paiements reçus et dépenses du mois, avec graphiques, sans salaires ni paie. |
+
+**Pages des ressources humaines (`src/views/hr/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `DossiersSection.tsx` | Dossier RH du salarié : poste, contrat, contact d'urgence, documents et historique de taux ; le responsable modifie, le salarié lit le sien. |
+| `HrPage.tsx` | Page Ressources humaines : onglets Congés, Dossiers, Planning et Évaluations, avec une vue réduite pour le salarié. |
+| `LeavesSection.tsx` | Onglet Congés des RH : solde, demande et annulation pour le salarié ; décision, saisie directe et suppression pour le responsable. |
+| `PlanningSection.tsx` | Onglet Planning des RH : grille de la semaine par employé (Jour, Nuit, Repos), conflits signalés et copie de la semaine précédente. |
+| `ReviewsSection.tsx` | Onglet Évaluations des RH : fiche d'évaluation périodique avec photo des scores, objectifs, remarques, partage et accusé de lecture du salarié. |
+
+**Autres pages (`src/views/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `CalendarView.tsx` | Page Calendrier : le responsable voit tous les employés (mois, résumé, détail d'un jour) ; un employé voit son propre calendrier. |
+| `FeedView.tsx` | Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications. |
+| `LoginView.tsx` | Écran de connexion : identifiant et mot de passe, code de sécurité en double étape, demande de compte et mot de passe oublié. |
+| `TeamValidations.tsx` | Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché. |
+
+**Écran de l'opérateur (`src/views/employee/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `EmployeeDashboard.tsx` | Écran principal de l'employé : grille des missions, mission en cours (début, preuves, fin), avances sur salaire et messages. |
+
+**Morceaux d'écran (`src/components/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `AccessBanner.tsx` | Bandeau fixe en haut qui compte à rebours avant la déconnexion : rouge si le responsable l'ordonne, orange dans les 15 dernières minutes d'accès. |
+| `AccessRequestsCard.tsx` | Carte du responsable : demandes de connexion hors horaires à autoriser ou refuser, et autorisations en cours dont on peut changer l'heure de fin. |
+| `AdvPayTabs.tsx` | Petit sélecteur à deux onglets, « Avances » et « Paie », pour filtrer la page Avances sans ouvrir une autre page. |
+| `AdvanceHistory.tsx` | Historique des demandes d'avance de salaire avec recherche, filtres (statut, mois, opérateur, montant), totaux par statut et liste des demandes. |
+| `AiSettingsSection.tsx` | Section des Réglages pour activer ou non l'IA externe de l'assistant (Gemini), avec l'avertissement de confidentialité et le nombre de questions restantes. |
+| `AssistantChat.tsx` | Assistant « Admin IA Pro » (niveau A) DANS la messagerie : conversation épinglée, ADMIN SEULEMENT. |
+| `AuditSection.tsx` | Journal d'audit des Réglages : qui a fait quoi et quand, avec filtres par action, texte et dates, regroupé par jour. |
+| `Avatar.tsx` | Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo. |
+| `BackupsSection.tsx` | Section des Réglages pour les sauvegardes : liste des sauvegardes de nuit, sauvegarde immédiate, export, import d'un fichier et restauration protégée par code. |
+| `BadgeCongrats.tsx` | Composant invisible qui affiche un petit message « Bravo ! » quand l'opérateur gagne un nouveau badge de performance. |
+| `BottomNav.tsx` | Barre de navigation du bas, sur téléphone seulement : quatre ou cinq pages directes selon le rôle, plus le bouton Menu. |
+| `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
+| `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
+| `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
+| `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
+| `ClientBadges.tsx` | Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement. |
+| `ClientPicker.tsx` | Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client. |
+| `CompanyConditions.tsx` | Page des Conditions de l'entreprise : identité, taxes, facturation, paie, congés, missions, pages du menu à cacher, règlement et seuils de surveillance. |
+| `ConfirmModal.tsx` | Fenêtre de confirmation (Annuler / Confirmer, en rouge si danger), avec le hook useConfirm et la fonction globale askConfirm. |
+| `ConnectionBanner.tsx` | État de la connexion : pastille du header (hors ligne, envoi, à revoir, copie verrouillée, tout est envoyé) et relance automatique des envois. |
+| `DayDetailsModal.tsx` | Fenêtre du détail d'une journée du calendrier : missions du jour, points gagnés, présence, preuves et contrats à échéance. |
+| `DeadlineFields.tsx` | Champs « date limite, heure, priorité » d'une mission (DeadlineFields) et pastilles d'échéance et de priorité sur une carte (DeadlineBadges). |
+| `DiagPanel.tsx` | Panneau de diagnostic du défilement de la page, affiché seulement quand l'adresse contient ?diag=1. |
+| `ErrorBoundary.tsx` | Écran de secours quand une page plante : numéro d'incident, boutons Réessayer, vider le cache, copier le rapport et se déconnecter. |
+| `FileViewerModal.tsx` | Visionneuse plein écran de fiches (PDF, texte) avec Retour, Télécharger, Ouvrir à part et Supprimer. |
+| `FontSizePicker.tsx` | Choix de la taille du texte de l'application, en quatre boutons. |
+| `GoalsPanel.tsx` | Cartes du responsable : objectifs du mois en jauges (GoalsBars), prévision de fin de mois (ForecastCard) et liste des alertes (AlertsList). |
+| `ImportDialog.tsx` | Fenêtre d'import Excel ou CSV : choix du fichier, aperçu ligne par ligne, puis validation pour clients, produits, salariés ou tableau. |
+| `LightboxModal.tsx` | Visionneuse plein écran d'images (preuves) avec zoom, déplacement, précédent / suivant, téléchargement et suppression. |
+| `LinkedText.tsx` | Texte de message où les liens vers une page de ce site deviennent un bouton au nom clair (« Voir la publication ») au lieu de l'adresse longue. |
+| `LiveStatus.tsx` | Pastille ronde de statut en direct posée sur une photo (LiveDot) et ligne de statut avec texte (LiveLine). |
+| `LoadingBar.tsx` | Fine barre verte sous l'en-tête, visible tant qu'une action est en cours d'envoi au serveur. |
+| `LogoutTransition.tsx` | Écran sombre de transition « déconnexion en cours » avec animation, affiché pendant la déconnexion. |
+| `MissionGuide.tsx` | Guide d'une mission en quatre étapes avec le justificatif attendu : contenu (MissionGuideContent), bouton d'aide (MissionGuideButton) et liste de contrôle du responsable (AdminChecklist). |
+| `MissionTemplatesSection.tsx` | Section des Réglages pour gérer les modèles de mission : créer, modifier et supprimer, avec le type et le justificatif demandé. |
+| `MyPayroll.tsx` | Page de l'opérateur pour sa paie : période en cours, fiches de paie détaillées, impression, PDF et Excel, plus le plafond d'avance (useAdvanceRoom, AdvanceRoomInfo). |
+| `MyPerformance.tsx` | Page « Ma performance » de l'opérateur : son score et ses badges avec le pourquoi, jamais ceux des autres. |
+| `MySheets.tsx` | Page « Mes tableaux » : saisie de tableaux type Excel (formules, filtres, import, export Excel, Word et impression) pour l'opérateur. |
+| `NewsPublishSettings.tsx` | Section des Réglages : qui peut publier dans les Actualités (pas du tout, avec validation ou direct) et si l'auteur peut modifier ses publications. |
+| `NewsShareSheet.tsx` | Fenêtre pour partager une publication : envoyer le lien dans un message à des personnes ou groupes, copier le lien, ou utiliser le partage du téléphone. |
+| `NotificationsCard.tsx` | Carte des Réglages pour recevoir les notifications sur cet appareil : activer, choisir les catégories, envoyer un test et désactiver. |
+| `OfflineCard.tsx` | Carte des Réglages « Travail hors ligne » : état de la copie sur l'appareil, code de verrouillage, actions en attente et effacement de la copie. |
+| `OfflineCenter.tsx` | Fenêtre « Travail hors ligne » : actions en attente d'envoi et éléments à revoir, avec renvoi, copie du texte, annulation et suppression. |
+| `OfflinePin.tsx` | Formulaire du code de verrouillage hors ligne (4 à 8 chiffres) pour ouvrir la copie, créer ou changer le code (PinForm). |
+| `OfflineUnlockView.tsx` | Écran affiché quand l'appli s'ouvre sans réseau : on tape le code pour ouvrir la dernière copie des données, ou on efface la copie. |
+| `OperatorSheet.tsx` | Fiche d'un opérateur : son état, ses missions ouvertes et toutes les actions possibles (profil, modifier, bloquer, supprimer, déconnexion forcée). |
+| `OperatorsTabs.tsx` | Barre à deux onglets de la page Opérateurs et sessions : la liste des opérateurs et le suivi des sessions. |
+| `PageSkeleton.tsx` | Page « squelette » grise et animée, affichée tout de suite pendant qu'une page se charge. |
+| `PayrollAdmin.tsx` | Paie : choix de la période, fiches de paie des opérateurs, primes, retenues, paiement, clôture, réouverture et exports (CSV, Excel, PDF). |
+| `PendingMark.tsx` | Petite marque « En attente » sur un élément modifié ici et pas encore reçu par le serveur, avec deux aides pour les actions qui exigent le réseau. |
+| `PendingPostActions.tsx` | Boutons Modifier et Annuler sur la carte d'une mission en attente de validation, côté opérateur. |
+| `PerformanceBadges.tsx` | Affiche les scores et badges de performance d'un opérateur : pastilles, détail, anneau du score, tendance, barres et carte complète. |
+| `PerformanceSettings.tsx` | Réglages de la performance : période du score, minimums de missions, poids du score et seuils des badges Bronze, Argent, Or. |
+| `PostsGrid20.tsx` | Grille des missions : liste filtrable et triable, et pour le responsable l'ajout d'une mission (client, modèle, échéance, tâches). |
+| `ProfilePhotoGate.tsx` | Écran obligatoire : l'employé doit ajouter sa photo de profil (appareil photo ou galerie) avant d'utiliser le site. |
+| `PullToRefresh.tsx` | Tirer la page vers le bas en haut de page : une roue tourne puis les données sont actualisées. |
+| `QueueButton.tsx` | Bouton de l'opérateur « Je n'ai pas de mission » : entre dans la file d'attente vue par le responsable, ou la quitte. |
+| `Reactions.tsx` | Briques des réactions emoji : choix d'un emoji, pastilles de réactions sous un message et trois points « en train d'écrire ». |
+| `ReasonModal.tsx` | Fenêtre qui demande un motif (obligatoire) ou une description facultative avant une action comme un refus, une réouverture ou une annulation. |
+| `RecurringMissionsSection.tsx` | Réglages, section Missions : crée, modifie, met en pause ou supprime les missions qui reviennent toutes seules (chaque jour, semaine ou mois). |
+| `ReportProblemModal.tsx` | Fenêtre « Signaler un problème » : texte libre et capture d'écran facultative, envoyés à l'administrateur avec les infos techniques. |
+| `RestoreSection.tsx` | Remise à zéro du site : Gmail vérifié, sauvegarde Excel, deux confirmations et code reçu par mail. |
+| `ScoreInput.tsx` | Champ de saisie d'un score ou d'une quantité : espaces de milliers automatiques et abréviations comme 12k ou 20.467M. |
+| `ScrollButtons.tsx` | Boutons ronds « Haut » et « Bas » toujours disponibles quand la page est plus longue que l'écran, même si le défilement est bloqué. |
+| `SheetForm.tsx` | Vue Formulaire d'un tableau : une fiche par ligne avec champs étiquetés, recherche et navigation, lisible sur téléphone. |
+| `Sidebar.tsx` | Menu de gauche : profil, entrées de navigation selon le rôle, pastilles de comptage et boutons de thème, déconnexion et signalement. |
+| `SignupSettings.tsx` | Réglages, section Inscriptions : le responsable ouvre ou ferme la création de compte. |
+| `SmartField.tsx` | Champ de saisie intelligent d'une colonne de tableau : dates, nombres, montants, téléphone, heure et suggestions de texte. |
+| `StatCard.tsx` | Carte de chiffre clé : libellé, valeur, unité, variation en pourcentage et mini-courbe. |
+| `TaskChecklist.tsx` | Tâches d'une mission : barre de progression sur la carte, liste à cocher pour l'opérateur et éditeur de la liste. |
+| `ThemeLangControls.tsx` | Petit interrupteur soleil et lune pour le thème, et petite liste pour la langue, dans les Réglages. |
+| `ToastHost.tsx` | Petite notification arrondie en bas de l'écran, qui remplace aussi les fenêtres alert() du navigateur. |
+| `TopBar.tsx` | Barre du haut : bouton du menu, recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil. |
+| `TourGuide.tsx` | Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène. |
+| `TwoStepCard.tsx` | Réglages, carte de sécurité en deux étapes : activer, désactiver et refaire les codes de secours. |
+| `TwoStepDialog.tsx` | Fenêtre de confirmation en deux étapes : lire ce qui va se passer, puis taper un mot pour valider. |
+| `TypeHintBanner.tsx` | Bandeau qui propose de transformer une colonne de tableau (code, date, heure, téléphone, nombre ou liste de choix), avec Oui ou Non merci. |
+| `WatchSettingsSection.tsx` | Réglages, section Surveillance : seuils de la Santé du site et notifications, réglés sur cet appareil. |
+| `WelcomeAnimation.tsx` | Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde. |
+| `WhyFigure.tsx` | Bouton « Pourquoi ce chiffre ? » qui ouvre une fenêtre avec la formule, la période, les composantes, les plus grosses lignes et les sources. |
+| `WorkModeCard.tsx` | Carte « Ma façon de travailler » : tableau préparé sur le site ou fichier Excel externe, mission par mission. |
+
+**Graphiques (`src/components/charts/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `Charts.tsx` | Graphiques en SVG sans bibliothèque : barres, courbe, anneau et mini-courbe, qui réexporte aussi XYChart, RankBars et Gauge. |
+| `Gauge.tsx` | Jauge d'objectif en demi-cercle : le remplissage s'arrête à 100 %, un trait blanc montre où on devrait en être. |
+| `RankBars.tsx` | Classement en barres horizontales (employés, clients, types, produits) ; la plus grande valeur donne la barre pleine. |
+| `StyledCharts.tsx` | Trois graphiques lisibles : argent reçu et dépenses, facturé et reçu, et missions faites par jour en calendrier de carrés. |
+| `XYChart.tsx` | Moteur de graphique en SVG : barres groupées ou empilées, courbes et zones, avec axes, infobulle, légende cliquable et lignes de repère. |
+| `chartCommon.ts` | Éléments partagés par les graphiques (couleurs, textes FR/EN, nombres courts). |
+
+**Données et types (`src/db/`, `src/types/`, `src/demo/`, `src/context/`, racine de `src/`)**
+
+| Fichier | Rôle |
+|---|---|
+| `db/initialData.ts` | Missions d'exemple (2 par type) et liste des types de mission, que le responsable peut modifier ou supprimer. |
+| `db/offlineController.ts` | Contrôleur du mode hors ligne (module 13, M13.5) : branche la copie locale (offlineVault.ts) et la file d'actions (offlineSync.ts) sur le magasin de données. |
+| `db/store.ts` | Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions. |
+| `types/index.ts` | Types TypeScript des données de l'appli : utilisateurs, missions, avances, messages, actualités, clients, finances, stock, factures et achats. |
+| `demo/demoData.ts` | Données de démonstration 100 % inventées (missions, finances, stock, factures, clients, congés...), identiques à chaque ouverture de la démo. |
+| `context/AppContext.tsx` | Contexte global de l'appli : thème clair ou sombre, langue FR ou EN, traduction t(clé) et animation de déconnexion. |
+| `App.tsx` | Coque de l'application : choisit l'écran à afficher selon le rôle (responsable, comptable, chef d'équipe, employé) et la page active. |
+| `main.tsx` | Point d'entrée du site : installe suivi d'erreurs, mises à jour, défilement de secours et mode hors ligne, puis affiche l'appli. |
 <!-- /AUTO:codemap -->
 
 Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran réutilisables, graphiques dans `src/components/charts/`), `src/db/store.ts` (accès aux données), `src/demo/demoData.ts` (données de démo), `src/types/index.ts` (types), `supabase/functions/df-api/index.ts` (serveur), `supabase/migrations/` (tables), `scripts/` (contrôles).
+
+**Règle d'en-tête (pour copier ou modifier un fichier sans lire tout le projet).** Chaque fichier de `src/` commence par 2 à 4 lignes de commentaire `//` :
+1. **Ce qu'il fait** : une seule phrase qui se comprend seule (elle est copiée dans la carte ci-dessus par `npm run guide`).
+2. **Utilisé par** : qui l'importe, et quelle commande `check:` le contrôle s'il y en a une.
+3. **Pour modifier** (si utile) : d'où viennent les données, qui voit l'écran, les textes FR/EN avec `t(fr, en)`, le piège à connaître.
+Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même commit, puis `npm run guide` et `npm run check:guide`. Ces lignes ne changent rien au comportement du site.
 
 ### Recettes (ce qu'il faut faire, dans l'ordre)
 
