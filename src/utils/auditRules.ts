@@ -1,6 +1,6 @@
 // Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux.
 export const AUDIT_ACTIONS = [
-  'invoice_issue', 'invoice_cancel', 'invoice_pay', 'delete', 'tariff_change', 'settings_change', 'company_change',
+  'invoice_issue', 'invoice_cancel', 'invoice_pay', 'delete', 'tariff_change', 'settings_change', 'company_change', 'cash_change',
   'user_create', 'user_password', 'signup_decision', 'profile_decision', 'reset_decision',
   'payroll_close', 'payroll_reopen', 'payroll_pay', 'backup_now', 'backup_restore', 'mission_decision', 'login_locked', 'totp_on', 'totp_off', 'totp_reset', 'backup_import',
   'accounting_sync', 'accounting_post', 'accounting_reverse', 'accounting_close', 'accounting_reopen',
@@ -59,7 +59,7 @@ export const auditCutoffMs = (nowMs: number) => nowMs - AUDIT_KEEP_DAYS * 86400_
 // ---------- Site seulement : libellés, filtre, regroupement ----------
 const LABELS: Record<AuditAction, [string, string]> = {
   invoice_issue: ['Facture émise', 'Invoice issued'], invoice_cancel: ['Facture annulée (avoir)', 'Invoice cancelled (credit note)'], invoice_pay: ['Paiement de facture', 'Invoice payment'],
-  delete: ['Suppression', 'Deletion'], tariff_change: ['Changement de tarif', 'Price change'], settings_change: ['Changement de réglage', 'Setting change'], company_change: ['Conditions de l\'entreprise modifiées', 'Company conditions changed'],
+  delete: ['Suppression', 'Deletion'], tariff_change: ['Changement de tarif', 'Price change'], settings_change: ['Changement de réglage', 'Setting change'], company_change: ['Conditions de l\'entreprise modifiées', 'Company conditions changed'], cash_change: ['Ligne de caisse modifiée', 'Cash line changed'],
   user_create: ['Compte créé', 'Account created'], user_password: ['Mot de passe changé', 'Password changed'], signup_decision: ['Inscription traitée', 'Sign-up handled'], profile_decision: ['Modification de profil traitée', 'Profile change handled'], reset_decision: ['Mot de passe oublié traité', 'Password reset handled'],
   accounting_sync: ['Écritures générées', 'Entries generated'], accounting_post: ['Écriture saisie', 'Entry posted'], accounting_reverse: ['Écriture annulée (contre-passation)', 'Entry reversed'], accounting_close: ['Comptabilité clôturée', 'Accounting closed'], accounting_reopen: ['Comptabilité rouverte', 'Accounting reopened'],
   access_request: ['Demande de connexion hors horaires', 'Out-of-hours login request'], access_approved: ['Connexion hors horaires autorisée', 'Out-of-hours login approved'], access_refused: ['Connexion hors horaires refusée', 'Out-of-hours login refused'], access_changed: ['Fin d\'autorisation modifiée', 'Authorization end changed'], force_logout: ['Déconnexion forcée', 'Forced disconnect'],

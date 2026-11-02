@@ -2598,7 +2598,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "cash_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
@@ -3913,6 +3913,10 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'contracts' || col === 'products') {
           const tch = auditChanges(existing, toSave, col === 'products' ? ['buy_price_ar', 'sell_price_ar'] : ['client_price_ar']);
           if (tch.length) await auditLog(me, 'tariff_change', { type: col, id: rec.id, label: auditLabelOf(toSave) }, tch.join(' ; '));
+        } else if (col === 'cash') {
+          // Ligne de caisse modifiée (montant, date, catégorie, sens) : ancien → nouveau, jamais bloquant ; la note et les liens ne sont pas notés
+          const cch = auditChanges(existing, toSave, ['amount_ar', 'date', 'category', 'kind']);
+          if (cch.length) await auditLog(me, 'cash_change', { type: 'cash', id: rec.id, label: auditCut(`${(toSave as any).category || 'Caisse'} ${(toSave as any).date || ''}`, 80) }, cch.join(' ; '));
         }
       }
       if (admin && col === 'posts' && existing && toSave && existing.status !== toSave.status) {

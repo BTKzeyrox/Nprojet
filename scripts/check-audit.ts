@@ -87,7 +87,7 @@ eq(/AUDIT\)\.delete\(\)\.lt\('updated_at'[^\n]*auditCutoffMs/.test(src), true, '
 for (const [fnName, action] of [['invoiceIssue', 'invoice_issue'], ['invoiceCancel', 'invoice_cancel'], ['invoicePay', 'invoice_pay'], ['createUser', 'user_create'], ['setPassword', 'user_password'], ['profileDecision', 'profile_decision'], ['resetDecision', 'reset_decision'], ['signupDecision', 'signup_decision'], ['payrollClose', 'payroll_close'], ['payrollReopen', 'payroll_reopen'], ['payrollPay', 'payroll_pay'], ['backupNow', 'backup_now']] as const)
   eq(fn(fnName).includes(`auditLog(me, '${action}'`), true, `${fnName} écrit dans le journal`);
 const syncSrc = fn('sync');
-for (const a of ['delete', 'tariff_change', 'settings_change', 'company_change']) eq(syncSrc.includes(`auditLog(me, '${a}'`), true, `sync écrit « ${a} »`);
+for (const a of ['delete', 'tariff_change', 'settings_change', 'company_change', 'cash_change']) eq(syncSrc.includes(`auditLog(me, '${a}'`), true, `sync écrit « ${a} »`);
 eq(/auditDel = \(admin \|\| isMoneyRole\(me\.role\)\) && col !== 'messages'/.test(syncSrc), true, 'suppression : étiquette lue avant, messages exclus');
 eq(/password/i.test(/auditLog\(me, 'user_password'[^\n]*\n/.exec(fn('setPassword'))![0].replace("'user_password'", '')), false, 'mot de passe jamais écrit dans le journal');
 const companyLine = /auditLog\(me, 'company_change'[^\n]*\n/.exec(syncSrc)![0];
