@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { todayMada } from '../../utils/stats';
 import { askConfirm } from '../../components/ConfirmModal';
-import { JOURNALS, PLAN, accountOf, addDays, isMonthEnd, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
+import { JOURNALS, PLAN, accountOf, addDays, isMonthEnd, monthEnd, balanceSheet, entryReasonText, fiscalYearOf, incomeStatement, ledger, totals, trialBalance, vatByMonth, type Entry, type Journal } from '../../utils/accounting';
 import { downloadAccountingExcel, downloadVatExcel } from '../../utils/exportDoc';
 import { RECON_ACCOUNTS, STATEMENT_ERROR, STATEMENT_PROBLEM, STATEMENT_TEMPLATE, bookLines, parseStatement, reconcile, type StatementParse } from '../../utils/bankRecon';
 import { matrixFromFile, FILE_PROBLEM_TEXT, downloadCsv } from '../../utils/importFile';
@@ -44,7 +44,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
   const [custom, setCustom] = useState({ from: fy.start, to: today });
   const range = useMemo(() => {
     if (preset === 'all') return { from: undefined as string | undefined, to: undefined as string | undefined };
-    if (preset === 'month') return { from: `${today.slice(0, 7)}-01`, to: `${today.slice(0, 7)}-31` };
+    if (preset === 'month') return { from: `${today.slice(0, 7)}-01`, to: monthEnd(today.slice(0, 7)) };
     if (preset === 'year') return { from: fy.start, to: fy.end };
     return { from: custom.from || undefined, to: custom.to || undefined };
   }, [preset, custom, today, fy.start, fy.end]);

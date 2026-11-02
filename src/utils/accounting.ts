@@ -287,3 +287,10 @@ export const ENTRY_REASON: Record<string, [string, string]> = {
   unbalanced: ['Écriture déséquilibrée : débits et crédits doivent être égaux.', 'Unbalanced entry: debits and credits must be equal.'],
 };
 export const entryReasonText = (reason: string, lang: 'fr' | 'en' = 'fr'): string => (ENTRY_REASON[reason] || ['Écriture refusée.', 'Entry refused.'])[lang === 'en' ? 1 : 0];
+
+/** Dernier jour d'un mois « AAAA-MM » sous la forme « AAAA-MM-JJ » (28, 29, 30 ou 31 jours). Mois illisible : « AAAA-MM-31 » comme avant, jamais d'erreur. */
+export function monthEnd(ym: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return `${ym}-31`;
+  return `${ym}-${String(new Date(Date.UTC(Number(m[1]), Number(m[2]), 0)).getUTCDate()).padStart(2, '0')}`;
+}

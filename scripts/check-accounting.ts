@@ -1,6 +1,6 @@
 // Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting
 import { vatRows } from '../src/utils/exportDoc';
-import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, assignNumbers, vatByMonth, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
+import { PLAN, JOURNALS, cleanEntry, reverseEntry, entryIdFor, ledger, trialBalance, incomeStatement, balanceSheet, vatSummary, fiscalYearOf, assignNumbers, vatByMonth, monthEnd, isDate, accountOf, classOf, totals, entryReasonText, type Entry } from '../src/utils/accounting';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
@@ -93,6 +93,8 @@ const odd = [mk('o1', '2026-05-01', 'BQ', [L('411', 0, 1000), L('512', 1000, 0)]
 const bo = balanceSheet(odd, '2026-12-31');
 ok(bo.balanced && bo.liabilities.some(l => l.account === '411' && l.amount === 1000), 'client créditeur : passe au passif, le bilan reste équilibré');
 
+ok(monthEnd('2026-10') === '2026-10-31' && monthEnd('2026-11') === '2026-11-30' && monthEnd('2026-02') === '2026-02-28' && monthEnd('2028-02') === '2028-02-29' && monthEnd('2100-02') === '2100-02-28' && monthEnd('2026-12') === '2026-12-31', 'fin de mois : 31, 30, 28 et 29 (année bissextile) ; 2100 n\'est pas bissextile');
+ok(monthEnd('abc') === 'abc-31' && monthEnd('2026-13') === '2026-13-31' && monthEnd('') === '-31' && isDate(monthEnd('2026-02')), 'mois illisible : pas d\'erreur ; la fin de février est une vraie date');
 // au hasard : peu importe ce qu'on saisit, tout reste équilibré
 let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 const codes = PLAN.map(a => a.code);

@@ -34,9 +34,11 @@ Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (o
   - Fait (« Go all » de BTK) : le graphique s'appelle « Solde de la caisse » et part de ce qui restait à la fin du mois précédent (`opening` et `balanceTotal` dans `treasuryCharts.ts` ; les lignes datées après aujourd'hui ne comptent pas). `balance` (solde du mois seul) reste calculé. 3 contrôles ajoutés (`check:treasury-charts` 21/21), guide à jour. Site seulement, non testé à l'écran.
 
 ## Priorité 4 : qualité du code et réglages
-- [ ] **D1. Séparer `FinanceTab.tsx` (205 lignes) :** la saisie et le filtre d'une part, l'éditeur (fenêtre) d'autre part. Pas de changement visible. Faire seulement si on touche encore ce fichier.
-- [ ] **D2. Plan comptable : faire valider par un expert-comptable** (le plan est « minimal, de départ »). Ce n'est pas du code : c'est à BTK de voir avec un comptable avant tout usage officiel. Garder l'avertissement dans la page.
-- [ ] **D3. Comptabilité : plage « Ce mois » écrite `AAAA-MM-31`.** Ça marche (comparaison de textes), mais c'est une date qui n'existe pas certains mois. Utiliser la vraie fin de mois (`periodRange`). Petit nettoyage, sans effet visible.
+- [ ] (reporté) **D1. Séparer `FinanceTab.tsx` (205 lignes) :** la saisie et le filtre d'une part, l'éditeur (fenêtre) d'autre part. Pas de changement visible. Faire seulement si on touche encore ce fichier.
+  - 2026-11-02 : non fait volontairement (« Go all » reçu, mais ce fichier n'a pas été touché et un découpage sans changement visible n'apporte rien tant qu'on n'y ajoute pas de fonction). À reprendre au prochain changement de `FinanceTab.tsx`.
+- [ ] (à faire par BTK, pas du code) **D2. Plan comptable : faire valider par un expert-comptable** (le plan est « minimal, de départ »). Ce n'est pas du code : c'est à BTK de voir avec un comptable avant tout usage officiel. Garder l'avertissement dans la page.
+- [x] (2026-11-02) **D3. Comptabilité : plage « Ce mois » écrite `AAAA-MM-31`.** Ça marche (comparaison de textes), mais c'est une date qui n'existe pas certains mois. Utiliser la vraie fin de mois (`periodRange`). Petit nettoyage, sans effet visible.
+  - Fait : `monthEnd('AAAA-MM')` dans `accounting.ts` (28, 29, 30 ou 31 ; mois illisible : ancien comportement, jamais d'erreur), utilisée par « Ce mois » dans `AccountingPage.tsx`. 2 contrôles ajoutés (`check:accounting` 76/76). Le calcul interne de la TVA (`vatByMonth`) garde `-31` : il ne sert qu'à comparer des textes, aucun effet. Site seulement.
 
 ## À essayer à l'écran par BTK (rien de tout cela n'a été testé)
 - [ ] Trésorerie avec un compte Comptable : pas de salaires, saisie, filtres, changement de mois.
