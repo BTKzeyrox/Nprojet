@@ -494,3 +494,8 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 
 ## 2026-11-02 — Correction : bouton « Voir la publication » dans les messages
 - Cause : la messagerie du chef d'équipe, du comptable et de l'opérateur n'avait pas la fonction de changement de page ; seul l'admin l'avait. Corrigé dans `App.tsx` + contrôle dans `check:news-link`. Pas de serveur.
+
+## 2026-11-02 — Correction : notifications sur le mauvais compte (même téléphone)
+- Cause : l'abonnement du téléphone restait lié au dernier compte qui avait activé les notifications, même après déconnexion. Un message pour cet ancien compte sonnait sur le téléphone d'un autre compte ; les autres comptes ne recevaient rien.
+- Maintenant : déconnexion = l'appareil est détaché du compte ; ouverture d'un compte = l'appareil est rattaché à ce compte (si les notifications sont déjà autorisées sur l'appareil). Client seulement, pas de serveur. Contrôle : `check:push-device`.
+- Limite : à l'ouverture du compte suivant, les interrupteurs par catégorie repartent à zéro. Si on ferme l'onglet sans se déconnecter, l'appareil reste au dernier compte.

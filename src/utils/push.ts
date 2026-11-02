@@ -71,3 +71,23 @@ export async function disablePush(): Promise<void> {
     if (sub) { await db.pushUnsubscribe(sub.endpoint); await sub.unsubscribe(); }
   } catch { /* ignore */ }
 }
+
+/** À la déconnexion : cet appareil n'appartient plus à la personne (sinon ses notifications arrivent sur le téléphone d'un autre compte). L'abonnement du navigateur est gardé : le prochain compte qui s'ouvre le reprend. */
+export async function unbindPushDevice(): Promise<void> {
+  try {
+    if (pushSupport() !== 'ok') return;
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    const sub = await reg?.pushManager.getSubscription();
+    if (sub) await db.pushUnsubscribe(sub.endpoint);
+  } catch { /* ignore */ }
+}
+
+/** À l'ouverture d'un compte : si cet appareil est déjà autorisé, il est rattaché à CE compte (et plus à l'ancien). */
+export async function bindPushDevice(): Promise<void> {
+  try {
+    if (pushSupport() !== 'ok' || Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    const sub = await reg?.pushManager.getSubscription();
+    if (sub) await db.pushSubscribe(sub.toJSON());
+  } catch { /* ignore */ }
+}

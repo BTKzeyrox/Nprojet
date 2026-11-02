@@ -1,5 +1,6 @@
 import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
+import { bindPushDevice, unbindPushDevice } from './utils/push';
 import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -117,6 +118,8 @@ export default function App() {
     document.addEventListener('visibilitychange', on);
     return () => document.removeEventListener('visibilitychange', on);
   }, []);
+  // Cet appareil appartient au compte ouvert : les notifications de l'ancien compte n'y arrivent plus
+  useEffect(() => { if (currentUser?.id) void bindPushDevice(); }, [currentUser?.id]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
@@ -251,8 +254,9 @@ export default function App() {
     setIsMobileSidebarOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setViewAs('admin');
+    try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
