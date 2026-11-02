@@ -541,3 +541,4 @@ Liste complète : `TODO_AMELIORATIONS.md`.
 
 ## 2026-11-02 — Liens : « Voir la publication » partout (aperçu de la liste, cloche, citation, message épinglé)
 - Avant : l'adresse longue s'affichait dans l'aperçu de la liste des discussions. Maintenant : le nom du lien. `previewText` dans `newsLink.ts`. Contrôle : `check:news-link` (66). Pas de serveur.
+- [x] (2026-11-02) **C4.** Finances : la tuile « À encaisser » devient « Estimé à encaisser » (missions validées × prix client − reçu), pour ne plus la confondre avec « Reste à payer » des factures. Aussi dans le rapport, « Pourquoi ce chiffre ? » et la fiche du guide. Site seulement. Non testé à l'écran.

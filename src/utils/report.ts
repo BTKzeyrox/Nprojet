@@ -133,7 +133,7 @@ export function exportSheets(r: Report): SheetData[] {
     [t('Bénéfice net (Ar)', 'Net profit (Ar)'), fin.profit, finPrev.profit],
     [t('Marge (%)', 'Margin (%)'), fin.marginPct ?? '', finPrev.marginPct ?? ''],
     [t('Facturé (Ar)', 'Billed (Ar)'), fin.billed, finPrev.billed],
-    [t('À encaisser (Ar)', 'To collect (Ar)'), fin.toCollect, finPrev.toCollect],
+    [t('Estimé à encaisser (Ar)', 'Estimated to collect (Ar)'), fin.toCollect, finPrev.toCollect],
     [t('Trésorerie (Ar)', 'Cash on hand (Ar)'), fin.treasury, ''],
     ...(r.inv ? [[t(wk ? 'Factures émises sur la semaine (Ar)' : 'Factures émises sur le mois (Ar)', wk ? 'Invoices issued in the week (Ar)' : 'Invoices issued in the month (Ar)'), r.inv.issued_total, ''], [t('Reste à payer sur les factures (Ar)', 'Left to pay on invoices (Ar)'), r.inv.to_collect, ''], [t('Dont en retard (Ar)', 'Of which overdue (Ar)'), r.inv.overdue, ''], [t('Missions validées pas encore facturées (Ar)', 'Approved missions not yet invoiced (Ar)'), r.inv.unbilled_total, '']] : []),
     [],
@@ -240,7 +240,7 @@ ${row(t('Argent reçu', 'Money received'), ar(fin.received), ar(finPrev.received
 ${row(t('Dépenses et salaires', 'Expenses and salaries'), ar(fin.totalOut), ar(finPrev.totalOut), delta(fin.totalOut, finPrev.totalOut))}
 ${row(t('Bénéfice net', 'Net profit'), ar(fin.profit), ar(finPrev.profit), delta(fin.profit, finPrev.profit))}
 ${row(t('Marge', 'Margin'), fin.marginPct === null ? '–' : `${fin.marginPct} %`, finPrev.marginPct === null ? '–' : `${finPrev.marginPct} %`, '')}
-${row(t('À encaisser', 'To collect'), ar(fin.toCollect), ar(finPrev.toCollect), '')}
+${row(t('Estimé à encaisser', 'Estimated to collect'), ar(fin.toCollect), ar(finPrev.toCollect), '')}
 ${row(t('Trésorerie', 'Cash on hand'), ar(fin.treasury), '', '')}
 ${r.inv ? row(t(wk ? 'Factures émises cette semaine' : 'Factures émises ce mois', wk ? 'Invoices issued this week' : 'Invoices issued this month'), ar(r.inv.issued_total), '', '') + row(t('Reste à payer sur les factures', 'Left to pay on invoices'), ar(r.inv.to_collect), '', '') + row(t('Dont en retard', 'Of which overdue'), ar(r.inv.overdue), '', '') : ''}</table>
 <div class="two"><div class="ok"><h2>${esc(t('3 points forts', '3 strengths'))}</h2><ul>${r.strengths.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>

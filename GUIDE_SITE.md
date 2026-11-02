@@ -216,7 +216,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Chiffres et formules** :
   - Facturé : Missions validées × prix client.
   - Encaissé : Somme des paiements reçus.
-  - À encaisser : Facturé − encaissé (jamais négatif).
+  - Estimé à encaisser : Facturé − encaissé (jamais négatif). Ce n'est pas le « Reste à payer » des factures émises.
   - Dépenses : Dépenses saisies + salaires (les avances sont déjà dans les salaires).
   - Bénéfice : Encaissé − dépenses.
   - Marge : Bénéfice ÷ encaissé, en %. Vide si rien n'est encaissé.

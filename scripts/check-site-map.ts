@@ -40,7 +40,7 @@ for (const id of ['grid', 'profile', 'feed', 'chat', 'calendar']) { const p = fi
 
 // Les formules importantes sont bien écrites comme le code les calcule
 const f = (page: string, name: string) => findPage(page)!.figures.find(x => x.name.fr === name)?.formula.fr || '';
-ok(/Bénéfice ÷ encaissé/.test(f('stats', 'Marge')) && /Encaissé − dépenses/.test(f('stats', 'Bénéfice')) && /Facturé − encaissé/.test(f('stats', 'À encaisser')), 'formules : marge, bénéfice, à encaisser comme dans financeStats.ts');
+ok(/Bénéfice ÷ encaissé/.test(f('stats', 'Marge')) && /Encaissé − dépenses/.test(f('stats', 'Bénéfice')) && /Facturé − encaissé/.test(f('stats', 'Estimé à encaisser')), 'formules : marge, bénéfice, à encaisser comme dans financeStats.ts');
 ok(/Brut \+ primes − retenues appliquées − avances remboursées/.test(f('advances', 'Net')), 'formules : le net comme dans le serveur (df-api)');
 const fin = fs.readFileSync('src/utils/financeStats.ts', 'utf8');
 ok(fin.includes('Marge = bénéfice ÷ encaissé') && fin.includes('Bénéfice = encaissé − dépenses') && fin.includes('À encaisser = facturé − encaissé'), 'formules : le code source dit toujours la même chose (si ce contrôle échoue, la fiche est à relire)');

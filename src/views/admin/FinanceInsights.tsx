@@ -71,7 +71,7 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {tile(t('Bénéfice net', 'Net profit'), ar(f.profit), f.profit < 0 ? 'text-rose-400' : 'text-emerald-400', t('reçu − dépenses − salaires', 'received − expenses − salaries'), 'profit')}
           {tile(t('Marge', 'Margin'), f.marginPct === null ? dash : `${f.marginPct} %`, f.marginPct !== null && f.marginPct < 0 ? 'text-rose-400' : 'text-white', f.marginPct === null ? t('aucun paiement reçu', 'no payment received') : t('bénéfice ÷ reçu', 'profit ÷ received'), 'margin')}
-          {tile(t('À encaisser', 'To collect'), ar(f.toCollect), 'text-amber-400', t(`facturé ${ar(f.billed)}`, `billed ${ar(f.billed)}`), 'toCollect')}
+          {tile(t('Estimé à encaisser', 'Estimated to collect'), ar(f.toCollect), 'text-amber-400', t(`facturé ${ar(f.billed)}`, `billed ${ar(f.billed)}`), 'toCollect')}
           {tile(t('Trésorerie', 'Cash on hand'), ar(f.treasury), f.treasury < 0 ? 'text-rose-400' : 'text-sky-300', t('depuis le début', 'since the start'), 'treasury')}
           {tile(t('Coût par mission', 'Cost per mission'), f.costPerMission === null ? dash : ar(f.costPerMission), 'text-white', t(`${f.done} mission(s) validée(s)`, `${f.done} validated mission(s)`), 'costPerMission')}
           {tile(t('Gain par mission', 'Gain per mission'), f.gainPerMission === null ? dash : ar(f.gainPerMission), f.gainPerMission !== null && f.gainPerMission < 0 ? 'text-rose-400' : 'text-white', undefined, 'gainPerMission')}
@@ -88,10 +88,10 @@ export const FinanceInsights: React.FC<Props> = ({ range: r, lang }) => {
               {tile(t('Dont en retard', 'Of which overdue'), ar(inv.overdue), inv.overdue > 0 ? 'text-rose-400' : 'text-white')}
               {tile(t('Pas encore facturé', 'Not yet invoiced'), ar(inv.unbilled_total), inv.unbilled_total > 0 ? 'text-sky-300' : 'text-white', t(`${inv.unbilled_count} mission(s) validée(s)`, `${inv.unbilled_count} approved mission(s)`))}
             </div>
-            <p className="text-[11px] text-slate-500">{t('« À encaisser » plus haut = missions validées × prix client − argent reçu (sert aux marges). Les chiffres ci-dessus viennent des factures émises.', '“To collect” above = approved missions × client price − money received (used for margins). The figures here come from issued invoices.')}</p>
+            <p className="text-[11px] text-slate-500">{t('« Estimé à encaisser » plus haut = missions validées × prix client − argent reçu (sert aux marges). Les chiffres ci-dessus viennent des factures émises.', '“Estimated to collect” above = approved missions × client price − money received (used for margins). The figures here come from issued invoices.')}</p>
           </div>
         )}
-        {noPrice && <p className="text-[11px] text-amber-300">{t('Le prix client vaut 0 : « À encaisser » et les marges restent à 0. Règle-le dans Réglages > Missions.', 'Client price is 0: “To collect” and margins stay at 0. Set it in Settings > Missions.')}</p>}
+        {noPrice && <p className="text-[11px] text-amber-300">{t('Le prix client vaut 0 : « Estimé à encaisser » et les marges restent à 0. Règle-le dans Réglages > Missions.', 'Client price is 0: “Estimated to collect” and margins stay at 0. Set it in Settings > Missions.')}</p>}
       </div>
 
       <div className={box}>
