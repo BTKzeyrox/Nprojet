@@ -128,4 +128,34 @@ export const accountingStale: HealthRule = {
   },
 };
 
-export const ACCOUNTING_RULES: HealthRule[] = [accountingUnbalanced, accountingPeriodOpen, accountingVatDue, accountingStale];
+
+/**
+ * Ligne de caisse datée dans un mois déjà clos et qui n'a jamais reçu d'écriture : le mois étant clos, « Générer les écritures » la refusera.
+ * Limites : seules les lignes de caisse sont regardées ; sans clôture, aucune alerte ; le site ne rouvre rien tout seul.
+ */
+export const accountingCashClosed: HealthRule = {
+  id: 'accounting.cash-closed', page: 'accounting',
+  run: (ctx) => {
+    const list = entriesOf(ctx), through = closedThrough(ctx);
+    if (!list || !through || !Array.isArray(ctx.cash)) return [];
+    const have = new Set(list.map(e => e.id));
+    const late: string[] = [];
+    for (const c of ctx.cash) {
+      if (!c || typeof c.id !== 'string' || !DATE_RE.test(c.date || '') || c.date > through) continue;
+      const r = entryForCash(c as any);
+      if (r.ok && !have.has(r.entry.id)) late.push(c.date);
+    }
+    if (!late.length) return [];
+    const n = late.length, since = late.sort()[0];
+    return [{
+      id: alertId('accounting', 'cash-closed'), page: 'accounting', rule: 'cash-closed', severity: 'watch',
+      title_fr: `${n} ${plural(n, 'ligne de caisse dans un mois clos sans écriture', 'lignes de caisse dans un mois clos sans écriture')}`, title_en: `${n} ${plural(n, 'cash line in a closed month without an entry', 'cash lines in a closed month without an entry')}`,
+      why_fr: `Comptabilité close jusqu'au ${fr(through)} : une ligne datée du ${fr(since)} (ou après) n'a pas d'écriture et n'en recevra pas tant que le mois n'est pas rouvert.`,
+      why_en: `Accounting is closed up to ${through}: a line dated ${since} (or later) has no entry and will get none until the month is reopened.`,
+      todo_fr: 'Rouvrir le mois (avec un motif), générer les écritures, puis le reclore ; ou refaire la ligne de caisse avec une date du mois ouvert.', todo_en: 'Reopen the month (with a reason), generate the entries, then close it again; or redo the cash line with a date in the open month.',
+      since, value: n, go: GO,
+    } as HealthAlert];
+  },
+};
+
+export const ACCOUNTING_RULES: HealthRule[] = [accountingUnbalanced, accountingPeriodOpen, accountingVatDue, accountingStale, accountingCashClosed];

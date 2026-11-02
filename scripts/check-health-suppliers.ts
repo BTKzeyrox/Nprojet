@@ -33,9 +33,24 @@ ok(!find(run(ctx({ settings: { budgets: { Loyer: 1000 } } as any, cash: [OUT('a'
 ok(!find(run(ctx({ settings: { budgets: { Loyer: 1000 } } as any, cash: [OUT('a', 'Loyer', 9000, '2026-09-05')] as any })), 'suppliers:budget-over'), 'budget : dépense du mois dernier ignorée');
 ok(!find(run(ctx({ settings: {} as any, cash: [OUT('a', 'Loyer', 9000, `${month}-05`)] as any })), 'suppliers:budget-over'), 'budget : sans plafond défini, aucune alerte');
 
+// --- dépense d'achat qui ne correspond plus à la réception (P4)
+const RPO = (id: string, status: string, qty: number, received: number, cost = 100) => ({ id, ref: id, supplier_id: 's1', date: day(10), status, lines: [{ product_id: 'p', qty, unit_cost_ar: cost, received_qty: received }], note: '' });
+const POOUT = (id: string, po: string, amount: number) => ({ id, kind: 'out', category: 'Achats', amount_ar: amount, date: day(5), note: '', po_id: po });
+ok(!find(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: [POOUT('c1', 'BC-5', 1000)] as any })), 'suppliers:po-cash-mismatch'), 'dépense = quantité reçue × prix : aucune alerte');
+a = find(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: [POOUT('c1', 'BC-5', 600)] as any })), 'suppliers:po-cash-mismatch');
+ok(!!a && a.severity === 'watch' && a.value === 1 && a.go.view === 'purchasing' && a.title_fr === '1 achat dont la dépense ne correspond plus à la réception' && /BC-5/.test(a.why_fr), 'dépense modifiée après la réception : alerte, le bon est cité');
+ok(!!find(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: [] })), 'suppliers:po-cash-mismatch'), 'dépense supprimée : alerte');
+ok(!find(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: [POOUT('c1', 'BC-5', 1001)] as any })), 'suppliers:po-cash-mismatch'), '1 Ar d\'arrondi : toléré');
+ok(!find(run(ctx({ purchases: [RPO('BC-6', 'ordered', 10, 0), RPO('BC-7', 'draft', 10, 0), RPO('BC-8', 'cancelled', 10, 0)] as any, cash: [] })), 'suppliers:po-cash-mismatch'), 'bon sans réception (commandé, brouillon, annulé) : ignoré');
+ok(!find(run(ctx({ purchases: [RPO('BC-9', 'ordered', 10, 4)] as any, cash: [POOUT('c1', 'BC-9', 250), POOUT('c2', 'BC-9', 150)] as any })), 'suppliers:po-cash-mismatch'), 'réception en deux fois (250 + 150 = 4 × 100) : aucune alerte');
+a = find(run(ctx({ purchases: [RPO('BC-1', 'received', 1, 1), RPO('BC-2', 'received', 1, 1)] as any, cash: [] })), 'suppliers:po-cash-mismatch');
+ok(a?.value === 2 && a.title_fr === '2 achats dont la dépense ne correspond plus à la réception', 'deux achats : pluriel et compte 2');
+ok(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: null as any })).errors.length === 0 && !find(run(ctx({ purchases: [RPO('BC-5', 'received', 10, 10)] as any, cash: null as any })), 'suppliers:po-cash-mismatch'), 'caisse non chargée : la règle se tait');
+ok(run(ctx({ purchases: [null, { id: 'x', status: 'received', lines: 'oups' }] as any, cash: [null, { id: 1, kind: 'out', po_id: 5 }] as any })).errors.every(e => e.rule !== 'suppliers.po-cash-mismatch'), 'données abîmées : la nouvelle règle ne plante pas');
+
 const all = run(ctx({ purchases: [PO('BC-1', 'ordered', day(8))] as any, settings: { budgets: { Loyer: 1 } } as any, cash: [OUT('a', 'Loyer', 5, `${month}-05`)] as any }));
 ok(all.alerts.length === 2 && all.alerts.every(x => alertProblem(x) === null), 'format commun respecté par toutes les alertes');
-ok(!!ADVICE['po-late'] && !!ADVICE['budget-over'], 'chaque règle a sa solution dans l\'assistant');
+ok(!!ADVICE['po-late'] && !!ADVICE['budget-over'] && !!ADVICE['po-cash-mismatch'], 'chaque règle a sa solution dans l\'assistant');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);

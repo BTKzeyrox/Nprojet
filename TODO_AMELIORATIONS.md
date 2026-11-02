@@ -56,14 +56,17 @@ Lecture des règles (`invoices.ts`, `purchasing.ts`) et du serveur. Les écrans 
 
 ## Factures
 - [ ] **F1. Annuler un paiement saisi par erreur.** Les lignes de paiement d'une facture sont verrouillées (`invoice_locked`) et il n'y a pas de route pour les annuler : une facture avec un mauvais paiement ne peut ni être annulée ni être corrigée. À faire : une route serveur « annuler un paiement » (écriture inverse tracée, motif obligatoire, Journal d'audit, jamais de suppression). Serveur à redéployer, sauvegarde avant.
-- [ ] **F2. Vérifier l'avoir partiel.** Lire `invoice-cancel` : annule-t-il toujours toute la facture ? Si oui, décider avec BTK s'il faut un avoir partiel.
-- [ ] **F3. Paiement daté dans un mois clos.** Vérifier ce qui se passe (écriture refusée « closed ») et ajouter une alerte dans la Santé du site si rien ne le signale.
+- [x] (2026-11-02, lecture) **F2. Vérifier l'avoir partiel.** Lire `invoice-cancel` : annule-t-il toujours toute la facture ? Si oui, décider avec BTK s'il faut un avoir partiel.
+  - Constaté dans `df_cancel_invoice` (SQL) : l'avoir reprend TOUTES les lignes et le total de la facture, et l'annulation est refusée (`has_payments`) dès qu'un paiement existe. Donc pas d'avoir partiel. Décision de BTK : en veut-il un ? (change la base et la comptabilité : à ne faire qu'avec son accord).
+- [x] (2026-11-02) **F3. Paiement daté dans un mois clos.** Vérifier ce qui se passe (écriture refusée « closed ») et ajouter une alerte dans la Santé du site si rien ne le signale.
+  - Constaté : `df_pay_invoice` accepte n'importe quelle date de paiement. Fait : règle `accounting.cash-closed` (« à voir ») : une ligne de caisse datée dans un mois clos, sans écriture, est signalée (rouvrir le mois avec un motif, générer, reclore). `check:health-accounting` 46/46. Site seulement, non testé à l'écran.
 
 ## Achats
 - [ ] **P1. Prix réel à la réception.** Aujourd'hui la dépense = quantité reçue × prix commandé (lignes figées). Permettre de saisir le prix réel de la livraison, avec trace de l'écart. Serveur à redéployer.
 - [ ] **P2. « Solder le reste ».** Un bon reçu en partie ne s'annule plus et reste « Commandé » et « en retard » pour toujours. Ajouter une action qui clôt le bon sans livrer le reste (état final, tracé). Serveur à redéployer.
 - [ ] **P3. Réception définitive, pas de retour fournisseur.** Une erreur de quantité se corrige par l'inventaire mais la dépense « Achats » reste. À décider avec BTK : retour fournisseur ou correction de réception.
-- [ ] **P4. Dépense d'achat modifiable.** Seuls les paiements de factures sont verrouillés ; la ligne « Achats » liée à un bon de commande (`po_id`) peut être modifiée ou supprimée dans Finances. Étape 1 (site seulement) : alerte dans la Santé du site quand le montant d'une dépense ne correspond plus à la réception. Étape 2 (serveur) : verrouiller ces lignes.
+- [ ] **P4. Dépense d'achat modifiable.** (étape 1 faite le 2026-11-02, étape 2 à faire) Seuls les paiements de factures sont verrouillés ; la ligne « Achats » liée à un bon de commande (`po_id`) peut être modifiée ou supprimée dans Finances. Étape 1 (site seulement) : alerte dans la Santé du site quand le montant d'une dépense ne correspond plus à la réception. Étape 2 (serveur) : verrouiller ces lignes.
+  - Étape 1 faite : règle `suppliers.po-cash-mismatch` (« à voir ») : attendu = quantité reçue × prix du bon, réel = dépenses de la caisse qui citent le bon (`po_id`), tolérance 1 Ar par ligne et par réception ; bon sans réception ignoré. `check:health-suppliers` 22/22. Limite : un vieux bon reçu avant que les dépenses citent `po_id` peut être signalé à tort (à voir sur les vraies données). Site seulement, non testé à l'écran.
 - [ ] **P5. Facture et paiement fournisseur.** E1 à E3 de la section précédente : numéro de facture fournisseur, échéance, « payé / à payer », « À payer aux fournisseurs » sur la Direction, compte 401. En attente de la réponse de BTK : paie-t-il ses fournisseurs à la réception ou plus tard sur facture ?
 
 ## Ordre

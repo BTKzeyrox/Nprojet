@@ -72,13 +72,26 @@ ok(!find(run(ctx({ cash: [c1], entries: [E('manuelle', '2026-10-20', [['512', 5,
 ok(run(ctx({ cash: null as any, entries: [booked(c1)] })).errors.length === 0 && !find(run(ctx({ cash: null as any, entries: [booked(c1)] })), 'accounting:stale'), 'caisse non chargée : la règle se tait');
 ok(run(ctx({ cash: [null, { id: 5 }] as any, entries: [booked(c1)] })).errors.length === 0, 'lignes de caisse abîmées : aucun plantage');
 
+// --- ligne de caisse dans un mois clos sans écriture (F3)
+const CLOSED = { acct_close: { through: '2026-09-30' } } as any;
+const k1 = CASH('k1', 8000, '2026-09-15');
+a = find(run(ctx({ settings: CLOSED, cash: [k1], entries: [] })), 'accounting:cash-closed');
+ok(!!a && a.severity === 'watch' && a.value === 1 && a.since === '2026-09-15' && a.go.view === 'accounting' && a.title_fr === '1 ligne de caisse dans un mois clos sans écriture', 'ligne datée dans un mois clos, sans écriture : alerte');
+ok(!find(run(ctx({ settings: CLOSED, cash: [k1], entries: [booked(k1)] })), 'accounting:cash-closed'), 'ligne de caisse déjà comptabilisée : aucune alerte');
+ok(!find(run(ctx({ settings: CLOSED, cash: [CASH('k2', 8000, '2026-10-02')], entries: [] })), 'accounting:cash-closed'), 'ligne datée dans le mois ouvert : aucune alerte (le bouton « Générer » s\'en occupe)');
+ok(!find(run(ctx({ settings: {} as any, cash: [k1], entries: [] })), 'accounting:cash-closed'), 'aucune clôture : aucune alerte');
+ok(!find(run(ctx({ settings: CLOSED, cash: [k1], entries: null as any })), 'accounting:cash-closed'), 'écritures non chargées : la règle se tait');
+a = find(run(ctx({ settings: CLOSED, cash: [k1, CASH('k3', 100, '2026-08-31', 'in', 'Paiement client')], entries: [] })), 'accounting:cash-closed');
+ok(a?.value === 2 && a.since === '2026-08-31' && a.title_fr === '2 lignes de caisse dans un mois clos sans écriture', 'deux lignes : pluriel, « depuis » = la plus ancienne');
+ok(run(ctx({ settings: CLOSED, cash: [null, { id: 3 }, { id: 'z', date: 'bad' }] as any, entries: [] })).errors.length === 0, 'lignes abîmées : aucun plantage');
+
 // --- ensemble
 const all = run(ctx({ entries: [...sep, ...v, E('bad', '2026-10-20', [['512', 10, 0], ['706', 0, 5]])] as any }));
 ok(all.alerts.length === 3 && all.errors.length === 0 && all.alerts.every(x => alertProblem(x) === null), 'format commun respecté par les 3 alertes (la caisse est vide : « stale » se tait)');
 ok(all.alerts.every(x => !/[àâçéèêëîïôùûœ]/i.test(x.title_en + x.why_en + (x.todo_en || ''))), 'anglais sans accents ni mots français');
 ok(all.alerts[0].severity === 'urgent', 'l\'alerte urgente passe en premier');
-ok(['unbalanced', 'period-open', 'vat-due', 'stale'].every(k => !!ADVICE[k] && ADVICE[k].fr.length > 20 && ADVICE[k].en.length > 20), 'chaque règle a sa solution dans l\'assistant');
-ok(!/\b(sanction|faute|coupable)/i.test(['unbalanced', 'period-open', 'vat-due', 'stale'].map(k => ADVICE[k].fr).join(' ')), 'solutions sans accusation');
+ok(['unbalanced', 'period-open', 'vat-due', 'stale', 'cash-closed'].every(k => !!ADVICE[k] && ADVICE[k].fr.length > 20 && ADVICE[k].en.length > 20), 'chaque règle a sa solution dans l\'assistant');
+ok(!/\b(sanction|faute|coupable)/i.test(['unbalanced', 'period-open', 'vat-due', 'stale', 'cash-closed'].map(k => ADVICE[k].fr).join(' ')), 'solutions sans accusation');
 ok((HEALTH_PAGES as readonly string[]).includes('accounting') && MENU_ITEM_OF_PAGE.accounting === 'accounting' && isKnownView('accounting'), 'page surveillée « accounting » : pastille sur l\'entrée Comptabilité, destination connue');
 ok(ACCOUNTING_RULES.every(x => ALL_RULES.includes(x)), 'les 4 règles sont dans la liste complète des règles');
 

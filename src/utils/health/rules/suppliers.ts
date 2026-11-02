@@ -44,4 +44,42 @@ export const budgetOver: HealthRule = {
   },
 };
 
-export const SUPPLIER_RULES: HealthRule[] = [poLate, budgetOver];
+
+/**
+ * Achat dont la dépense « Achats » ne correspond plus à ce qui a été reçu.
+ * Attendu = somme (quantité reçue × prix commandé) des lignes du bon ; réel = somme des dépenses de la caisse qui citent ce bon (`po_id`).
+ * Limites : on tolère 1 Ar d'arrondi par ligne et par réception ; un bon sans aucune réception est ignoré ; le site ne corrige rien.
+ */
+export const poCashMismatch: HealthRule = {
+  id: 'suppliers.po-cash-mismatch', page: 'suppliers',
+  run: (ctx) => {
+    if (!Array.isArray(ctx.purchases) || !Array.isArray(ctx.cash)) return [];
+    const spent = new Map<string, { sum: number; n: number }>();
+    for (const c of ctx.cash) {
+      if (!c || c.kind !== 'out' || typeof (c as any).po_id !== 'string' || !(c as any).po_id || !Number.isFinite(c.amount_ar)) continue;
+      const k = (c as any).po_id as string, x = spent.get(k) || { sum: 0, n: 0 };
+      x.sum += c.amount_ar; x.n++; spent.set(k, x);
+    }
+    const bad: { ref: string; since: string }[] = [];
+    for (const o of ctx.purchases) {
+      if (!o || (o.status !== 'ordered' && o.status !== 'received') || !Array.isArray(o.lines)) continue;
+      let expected = 0, any = false;
+      for (const l of o.lines) { const q = Number(l?.received_qty), u = Number(l?.unit_cost_ar); if (Number.isFinite(q) && Number.isFinite(u) && q > 0) { any = true; expected += Math.round(q * u); } }
+      if (!any) continue;
+      const got = spent.get(o.id) || { sum: 0, n: 0 };
+      const tolerance = o.lines.length + got.n;
+      if (Math.abs(expected - got.sum) > tolerance) bad.push({ ref: o.ref, since: String(o.date || ctx.today) });
+    }
+    if (!bad.length) return [];
+    const n = bad.length, refs = list(bad.map(b => b.ref));
+    return [{
+      id: alertId('suppliers', 'po-cash-mismatch'), page: 'suppliers', rule: 'po-cash-mismatch', severity: 'watch',
+      title_fr: `${n} ${plural(n, 'achat dont la dépense ne correspond plus à la réception', 'achats dont la dépense ne correspond plus à la réception')}`, title_en: `${n} ${plural(n, 'purchase whose expense no longer matches the receipt', 'purchases whose expense no longer matches the receipt')}`,
+      why_fr: `La dépense « Achats » a été modifiée ou supprimée après la réception (${refs}) : le stock et la caisse ne disent plus la même chose.`, why_en: `The “Purchases” expense was changed or deleted after the receipt (${refs}): stock and cash no longer agree.`,
+      todo_fr: 'Ouvrir Achats, regarder le bon, puis remettre la dépense dans Finances au montant reçu (quantité reçue × prix du bon).', todo_en: 'Open Purchases, look at the order, then put the expense back in Finances at the received amount (received quantity × order price).',
+      since: bad.map(b => b.since).sort()[0], value: n, go: GO,
+    } as HealthAlert];
+  },
+};
+
+export const SUPPLIER_RULES: HealthRule[] = [poLate, budgetOver, poCashMismatch];

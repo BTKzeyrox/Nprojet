@@ -133,6 +133,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Un fournisseur qui a servi ne se supprime pas : on l'archive.
   - Le stock n'est jamais saisi à la main : l'inventaire crée des ajustements.
   - Budgets (dans Finances) : attention à 80 % du plafond du mois, dépassé au-dessus de 100 %.
+  - Si la dépense « Achats » d'une réception est modifiée ou supprimée dans Finances, la Santé du site le signale.
 - **Dans le code** : `src/views/admin/PurchasingPage.tsx`, `src/views/admin/SuppliersSection.tsx`, `src/views/admin/PurchaseOrdersSection.tsx`, `src/views/admin/InventorySection.tsx`, `src/views/admin/BudgetsCard.tsx`
 
 ### Performance  `performance`
@@ -324,6 +325,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Export pour le comptable : Excel (journal, grand livre, balance) ou CSV, sur la période choisie ; montants en nombres entiers.
   - La Santé du site signale une écriture déséquilibrée, des mois finis pas encore clos et la TVA à déclarer : ce sont des rappels, jamais des blocages.
   - Une ligne de caisse modifiée ou supprimée après sa comptabilisation est signalée : le site ne corrige rien, on annule l'écriture puis on saisit la bonne.
+  - Une ligne de caisse datée dans un mois clos, sans écriture, est signalée : rouvre le mois (avec un motif), génère, puis reclos.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
