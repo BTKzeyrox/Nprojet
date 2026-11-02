@@ -517,3 +517,4 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Ajoutés : discussions épinglées, conversations cachées, messages « supprimés pour moi », lu/non lu, statut de disponibilité, option assistant IA. Les listes longues ont une limite plus grande (60 000 caractères pour les messages cachés). Même table `df_prefs`, aucune migration.
 - Retour au premier plan (après 30 s) : l'appli reprend ce qui a changé ailleurs ; recharge seulement si on n'est pas en train d'écrire.
 - Limite : si deux appareils changent la même liste en même temps, le dernier gagne.
+- Serveur : df-api v67 = commit f612f20 (retour arrière : v66 = 88e6cd7).
