@@ -145,18 +145,43 @@ self.addEventListener('fetch', function (e) {
   e.respondWith((kind === 'asset' ? cacheFirst(req, url) : staleWhileRevalidate(req, url)).catch(function () { return Response.error(); }));
 });
 
+// ===== BEGIN DIGEST (copie de src/utils/pushDigest.ts : `digestPlan`) =====
+var DIGEST_TAG = 'gp-digest';
+function digestPlan(count, m, en, url) {
+  var n = Math.max(1, Math.floor(Number(count)) || 1);
+  var safeUrl = typeof url === 'string' && url.charAt(0) === '/' && url.charAt(1) !== '/' ? url : '/';
+  if (n === 1) return { title: String(m.title || 'Gestion Pro'), body: String(m.body || ''), silent: false, url: safeUrl, tag: DIGEST_TAG, count: 1 };
+  return { title: 'Gestion Pro', body: en ? 'You have ' + n + ' notifications' : 'Vous avez ' + n + ' notifications', silent: true, url: '/', tag: DIGEST_TAG, count: n };
+}
+// ===== END DIGEST =====
+
+// Notifications externes groupées : appli ouverte et visible = pas de bandeau (la cloche de l'appli joue le son à chaque notification) ; sinon UNE notification
+// « Vous avez N notifications » avec un seul son (la première sonne, les suivantes la mettent à jour sans bruit). Sur iPhone / iPad une notification doit toujours être montrée : on la montre sans bruit puis on la retire.
+async function handlePush(d) {
+  const en = /^en/i.test((self.navigator && self.navigator.language) || '');
+  const m = (en ? d.en : d.fr) || d.fr || d.en || { title: 'Gestion Pro', body: '' };
+  const url = typeof d.url === 'string' ? d.url : '/';
+  const base = { icon: '/icon-192.png', badge: '/favicon-32.png' };
+  const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const visible = wins.some((c) => c.visibilityState === 'visible');
+  if (visible) {
+    if (!/iPhone|iPad|iPod/i.test((self.navigator && self.navigator.userAgent) || '')) return; // Chrome, Android, ordinateur : rien à montrer
+    await self.registration.showNotification('Gestion Pro', Object.assign({ body: '', silent: true, tag: 'gp-fg' }, base));
+    await new Promise((r) => setTimeout(r, 1200));
+    const fg = await self.registration.getNotifications({ tag: 'gp-fg' });
+    fg.forEach((n) => n.close());
+    return;
+  }
+  const old = await self.registration.getNotifications({ tag: DIGEST_TAG });
+  let prev = 0;
+  old.forEach((n) => { prev = Math.max(prev, Number(n.data && n.data.count) || 0); });
+  const p = digestPlan(prev + 1, m, en, url);
+  await self.registration.showNotification(p.title, Object.assign({ body: p.body, silent: p.silent, tag: p.tag, renotify: false, data: { url: p.url, count: p.count } }, base)); // lien exact seulement pour une notification seule
+}
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = {}; }
-  const en = /^en/i.test((self.navigator && self.navigator.language) || '');
-  const m = (en ? d.en : d.fr) || d.fr || d.en || { title: 'Gestion Pro', body: '' };
-  e.waitUntil(self.registration.showNotification(String(m.title || 'Gestion Pro'), {
-    body: String(m.body || ''),
-    icon: '/icon-192.png',
-    badge: '/favicon-32.png',
-    tag: typeof d.tag === 'string' ? d.tag : undefined,
-    data: { url: typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//') ? d.url : '/' }, // lien exact : /?go=…
-  }));
+  e.waitUntil(handlePush(d));
 });
 
 self.addEventListener('notificationclick', (e) => {

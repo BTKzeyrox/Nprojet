@@ -1,4 +1,5 @@
 import { useViewportWidth } from './utils/viewportWidth';
+import { closeDigestNotifications } from './utils/pushDigest';
 import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -109,6 +110,13 @@ export default function App() {
   }, [currentUser?.id, currentUser?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
   useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);
+  // Appli ouverte et visible : les notifications externes en attente sont retirées (la cloche les montre)
+  useEffect(() => {
+    closeDigestNotifications();
+    const on = () => { if (document.visibilityState === 'visible') closeDigestNotifications(); };
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, []);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place

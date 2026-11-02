@@ -54,7 +54,7 @@ ok(calls.join() === 'advances', 'ouverture : la page est ouverte');
 // ---- Branchements (lecture du code) ----
 const sw = read('public/sw.js'), app = read('src/App.tsx');
 ok(/postMessage\(\{ type: 'open-link', url: url \}\)/.test(sw) && /openWindow\(url\)/.test(sw), 'service worker : appli ouverte = message « open-link » ; sinon ouverture au bon endroit');
-ok(/startsWith\('\/'\) && !d\.url\.startsWith\('\/\/'\)/.test(sw), 'service worker : une adresse externe (//…) est refusée');
+ok(/url\.charAt\(0\) === '\/' && url\.charAt\(1\) !== '\/'/.test(sw), 'service worker : une adresse externe (//…) est refusée');
 ok(/captureDeepLink\(\);/.test(app) && /takeDeepLink\(\)/.test(app) && /type === 'open-link'/.test(app) && /deepLinkAllowed\(role, l\.go\)/.test(app), 'appli : lien lu à l\'ouverture, appliqué après connexion, et reçu du service worker');
 ok(/url: link \? deepLinkUrl\(link\) : '\/'/.test(src), 'serveur : le push porte le lien exact');
 ok((src.match(/\{ go: 'active-post' \}/g) || []).length === 2, 'serveur : mission validée / refusée → page de la mission');

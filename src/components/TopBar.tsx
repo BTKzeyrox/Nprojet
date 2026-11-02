@@ -124,7 +124,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const knownIds = useRef<Set<string> | null>(null);
   useEffect(() => {
     const ids = new Set(notifs.map(n => n.id));
-    if (knownIds.current && notifs.some(n => !knownIds.current!.has(n.id))) beepIfEnabled();
+    if (knownIds.current) { const fresh = notifs.filter(n => !knownIds.current!.has(n.id)).length; if (fresh > 0) beepIfEnabled(fresh); } // un son par nouvelle notification
     knownIds.current = ids;
   }, [notifs.map(n => n.id).join('|')]);
 

@@ -77,6 +77,7 @@
     "check:attendance-view": "npx --yes tsx scripts/check-attendance-view.ts",
     "check:viewport-width": "npx --yes tsx scripts/check-viewport-width.ts",
     "check:post-stamps": "npx --yes tsx scripts/check-post-stamps.ts",
+    "check:push-digest": "npx --yes tsx scripts/check-push-digest.ts",
     "check:news-link": "npx --yes tsx scripts/check-news-link.ts",
     "check:header-status": "esbuild scripts/check-header-status.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-header-status.mjs && node node_modules/.cache/check-header-status.mjs",
     "check:simulation": "npx --yes tsx scripts/check-simulation.ts",

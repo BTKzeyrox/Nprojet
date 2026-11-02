@@ -50,27 +50,40 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', once);
 }
 
-// Bip court (2 notes)
+// Nouveau son (BTK, 2026-11-01) : petite cloche claire à 3 notes montantes (do - mi - sol), douce, avec une résonance ; remplace l'ancien bip à 2 notes.
+export const CHIME_NOTES = [1046.5, 1318.5, 1568]; // do6, mi6, sol6
+export const CHIME_GAP = 0.11; // secondes entre deux notes
 export const playBeep = (volumeOverride?: number): boolean => {
   const c = getCtx();
   if (!c || c.state !== 'running') return false; // bloqué par le navigateur : pas de son, sans erreur
   const vol = volumeOverride ?? getSoundPrefs().volume;
   const t0 = c.currentTime;
-  [880, 1175].forEach((f, i) => {
-    const o = c.createOscillator();
-    const g = c.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    const s = t0 + i * 0.13;
-    g.gain.setValueAtTime(0.0001, s);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.001, 0.25 * vol), s + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.12);
-    o.connect(g).connect(c.destination);
-    o.start(s);
-    o.stop(s + 0.13);
+  CHIME_NOTES.forEach((f, i) => {
+    const s = t0 + i * CHIME_GAP;
+    const last = i === CHIME_NOTES.length - 1;
+    const dur = last ? 0.55 : 0.28; // la dernière note résonne plus longtemps
+    // note principale (sinus) + harmonique douce (octave, plus faible) = timbre de cloche
+    [[f, 0.22], [f * 2, 0.07]].forEach(([freq, amp]) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, amp * vol), s + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+      o.connect(g).connect(c.destination);
+      o.start(s);
+      o.stop(s + dur + 0.02);
+    });
   });
   return true;
 };
 
-// Appelé quand une nouvelle notification arrive
-export const beepIfEnabled = () => { if (getSoundPrefs().on) playBeep(); };
+// Appelé quand de nouvelles notifications arrivent dans l'appli ouverte : le MÊME son à CHAQUE notification (jusqu'à 3 d'affilée, espacés, pour ne pas faire un vacarme)
+export const MAX_CHIMES = 3;
+export const CHIME_SPACING_MS = 900;
+export const chimeCount = (n: number): number => Math.min(MAX_CHIMES, Math.max(0, Math.floor(Number(n)) || 0));
+export const beepIfEnabled = (n = 1) => {
+  if (!getSoundPrefs().on) return;
+  for (let i = 0; i < chimeCount(n); i++) { if (i === 0) playBeep(); else setTimeout(() => { playBeep(); }, i * CHIME_SPACING_MS); }
+};

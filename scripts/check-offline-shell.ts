@@ -86,7 +86,7 @@ function makeEnv(opts: { timeoutFires?: boolean } = {}) {
     addEventListener(t: string, h: Handler) { (handlers[t] ||= []).push(h); },
     skipWaiting() { skipped++; return Promise.resolve(); },
     clients: { claim() { claimed++; return Promise.resolve(); }, matchAll: async () => [], openWindow: async (u: string) => { opened.push(u); } },
-    registration: { showNotification: async (t: string, o: any) => { shown.push({ t, o }); } },
+    registration: { showNotification: async (t: string, o: any) => { shown.push({ t, o }); }, getNotifications: async () => [] },
   };
   const fakeSetTimeout = (fn: () => void, ms: number) => (opts.timeoutFires && ms === 4000 ? setTimeout(fn, 0) : setTimeout(fn, ms));
   const ctx: any = { self, caches, fetch: fetchFake, Response, Headers, URL, Promise, JSON, Array, Object, Error, TypeError, setTimeout: fakeSetTimeout, clearTimeout, console };
@@ -304,7 +304,7 @@ const text = async (r: Response | null) => (r ? r.clone().text() : '');
   // --- les notifications marchent toujours ---
   const e = makeEnv();
   await e.fire('push', { data: { json: () => ({ fr: { title: 'Titre', body: 'Corps' }, en: { title: 'Title', body: 'Body' }, tag: 't1', url: '/clients' }) } });
-  ok(e.shown.length === 1 && e.shown[0].t === 'Titre' && e.shown[0].o.body === 'Corps' && e.shown[0].o.tag === 't1' && e.shown[0].o.data.url === '/clients' && e.shown[0].o.icon === '/icon-192.png', 'notification reçue et affichée comme avant');
+  ok(e.shown.length === 1 && e.shown[0].t === 'Titre' && e.shown[0].o.body === 'Corps' && e.shown[0].o.tag === 'gp-digest' && e.shown[0].o.data.url === '/clients' && e.shown[0].o.icon === '/icon-192.png', 'notification reçue et affichée comme avant');
   await e.fire('push', { data: { json: () => ({ fr: { title: 'X', body: 'Y' }, url: 'http://pirate.example' }) } });
   ok(e.shown[1].o.data.url === '/', 'adresse de notification venant d\'ailleurs : refusée (« / »)');
   await e.fire('push', { data: null });

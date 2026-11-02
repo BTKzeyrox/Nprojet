@@ -479,3 +479,10 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
   - Constat, pas corrigé (à décider avec BTK) : dans l'assistant, « à encaisser » est compris comme « encaissé » (le mot « encaisse » est cherché avant « a encaisser »).
 - [ ] **Étape 3 = D.** Réponses de l'IA externe : boutons pour les employés, clients et factures nommés dans la réponse (3 au plus), qui ouvrent leur ligne exacte.
 - [ ] F (contrôles) : fait à chaque étape ; étape 1 : chaque adresse visée existe dans une page, ordre, regroupement et cas vides vérifiés.
+## 2026-11-02 — Notifications : nouveau son + notification externe groupée
+- Nouveau son « carillon » (3 notes montantes) à la place de l'ancien bip.
+- Appli ouverte : chaque nouvelle notification joue le carillon (jusqu'à 3 d'affilée).
+- Appli fermée (admin, opérateur, chef, comptable) : UNE notification externe « Vous avez N notifications », un seul son (la 1re sonne, les suivantes mettent à jour sans bruit). Une seule notification = son message + lien exact. Ouvrir l'appli retire la notification groupée.
+- Fichiers : `public/sw.js` (statique, pas de serveur), `src/utils/pushDigest.ts`, `src/utils/notifSound.ts`, `TopBar`, `App`. Contrôle : `npm run check:push-digest` (39).
+- Limite : le site ne peut pas choisir le son du téléphone pour la notification externe. À tester sur un vrai téléphone.
+- Retour arrière : revenir au commit précédent.

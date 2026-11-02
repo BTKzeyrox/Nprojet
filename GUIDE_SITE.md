@@ -661,6 +661,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `purchasing.ts` | Fournisseurs, bons de commande, inventaire et budgets (module 4) : règles pures, sans écran ni serveur. |
 | `push.ts` | Notifications push côté téléphone/navigateur (M6.4). Aucune dépendance : service worker + API Push du navigateur. |
 | `pushAlerts.ts` | Notifications externes (push), partie 2b : les alertes CALCULÉES (stock par stockage, avance en attente, validation en attente, facture en retard), |
+| `pushDigest.ts` | Notifications EXTERNES groupées (demande de BTK, 2026-11-01) : quand personne n'a l'appli ouverte, plusieurs notifications ne font PAS plusieurs sons ni plusieurs bandeaux : |
 | `pushEvents.ts` | Notifications externes (push), partie 2a : les événements de la cloche, envoyés aussi hors de l'appli. Règles pures, sans réseau. |
 | `pushRules.ts` | Notifications push (module 6, M6.4) : règles pures, sans réseau. Contrôlé par `npm run check:push`. |
 | `quotes.ts` | Règles des DEVIS (module 2, M2.9). Fonctions pures, sans écran ni serveur. Copiées dans le bloc QUOTES de supabase/functions/df-api/index.ts |
@@ -847,6 +848,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:push-digest` | Contrôle des notifications externes groupées et du nouveau son (demande de BTK, 2026-11-01). Lancer : npm run check:push-digest |
 | `npm run check:news-link` | Contrôle du lien vers une publication et de sa lecture dans un message. Lancer : npm run check:news-link |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |
 | `npm run check:simulation` | Contrôle du générateur de simulation (module 18, M18.4) : les données inventées doivent être COHÉRENTES entre elles, vues par les vraies règles du site |
