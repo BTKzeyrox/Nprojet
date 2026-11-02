@@ -48,3 +48,23 @@ Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (o
 ## Ordre conseillé
 1. B1 (petit, sans risque), 2. A1 puis A2, 3. C1, C2, C3, C4, 4. C5, C6, D1 à D3.
 Chaque lettre est une étape. « GO A1 » = seulement A1 ; « GO » seul = tout le plan dans l'ordre (règle 3 de `LIRE_EN_PREMIER.md`).
+
+---
+
+# Suite : pages Factures et Achats (analyse du 2026-11-02, « Go all » de BTK)
+Lecture des règles (`invoices.ts`, `purchasing.ts`) et du serveur. Les écrans `InvoicesView.tsx` et `PurchaseOrdersSection.tsx` n'ont pas été lus en détail. Rien n'est testé à l'écran.
+
+## Factures
+- [ ] **F1. Annuler un paiement saisi par erreur.** Les lignes de paiement d'une facture sont verrouillées (`invoice_locked`) et il n'y a pas de route pour les annuler : une facture avec un mauvais paiement ne peut ni être annulée ni être corrigée. À faire : une route serveur « annuler un paiement » (écriture inverse tracée, motif obligatoire, Journal d'audit, jamais de suppression). Serveur à redéployer, sauvegarde avant.
+- [ ] **F2. Vérifier l'avoir partiel.** Lire `invoice-cancel` : annule-t-il toujours toute la facture ? Si oui, décider avec BTK s'il faut un avoir partiel.
+- [ ] **F3. Paiement daté dans un mois clos.** Vérifier ce qui se passe (écriture refusée « closed ») et ajouter une alerte dans la Santé du site si rien ne le signale.
+
+## Achats
+- [ ] **P1. Prix réel à la réception.** Aujourd'hui la dépense = quantité reçue × prix commandé (lignes figées). Permettre de saisir le prix réel de la livraison, avec trace de l'écart. Serveur à redéployer.
+- [ ] **P2. « Solder le reste ».** Un bon reçu en partie ne s'annule plus et reste « Commandé » et « en retard » pour toujours. Ajouter une action qui clôt le bon sans livrer le reste (état final, tracé). Serveur à redéployer.
+- [ ] **P3. Réception définitive, pas de retour fournisseur.** Une erreur de quantité se corrige par l'inventaire mais la dépense « Achats » reste. À décider avec BTK : retour fournisseur ou correction de réception.
+- [ ] **P4. Dépense d'achat modifiable.** Seuls les paiements de factures sont verrouillés ; la ligne « Achats » liée à un bon de commande (`po_id`) peut être modifiée ou supprimée dans Finances. Étape 1 (site seulement) : alerte dans la Santé du site quand le montant d'une dépense ne correspond plus à la réception. Étape 2 (serveur) : verrouiller ces lignes.
+- [ ] **P5. Facture et paiement fournisseur.** E1 à E3 de la section précédente : numéro de facture fournisseur, échéance, « payé / à payer », « À payer aux fournisseurs » sur la Direction, compte 401. En attente de la réponse de BTK : paie-t-il ses fournisseurs à la réception ou plus tard sur facture ?
+
+## Ordre
+1. F2 et F3 (lecture), 2. P4 étape 1, 3. F1, 4. P2, 5. P1, 6. P4 étape 2, puis P3 et P5 après décision de BTK. Une étape à la fois, un commit chacune ; les étapes serveur avec sauvegarde avant et retour en arrière noté dans `TODO.md`.
