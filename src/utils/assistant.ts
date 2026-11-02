@@ -37,7 +37,7 @@ export const waiting = (i: SnapshotInput): Waiting => ({
 
 /** Un élément précis qui attend une décision : une ligne = un élément = un bouton qui ouvre exactement cette ligne (page, filtre, élément qui clignote). */
 export type WaitKind = 'reset' | 'end' | 'start' | 'advance' | 'signup' | 'profile' | 'access';
-export interface WaitItem { kind: WaitKind; id: string; label: Bi; since: number | null; coarse?: boolean; go: HealthGo }
+export interface WaitItem { kind: WaitKind; id: string; who?: string; label: Bi; since: number | null; coarse?: boolean; go: HealthGo }
 export interface WaitGroup { kind: WaitKind; items: WaitItem[] }
 const KIND_ORDER: WaitKind[] = ['reset', 'end', 'start', 'advance', 'signup', 'profile', 'access'];
 const KIND_FILTER: Record<WaitKind, string> = { reset: 'resets', end: 'ends', start: 'starts', advance: 'advances', signup: 'signups', profile: 'profiles', access: 'access' };
@@ -64,11 +64,11 @@ export function waitingItems(i: SnapshotInput): WaitItem[] {
   for (const a of i.advances) {
     if (a.status !== 'pending') continue;
     const n = person(a.employee_name, 'un opérateur', 'an operator'), amt = Number.isFinite(a.amount_ar) ? ` (${ar(a.amount_ar, 'fr')})` : '', amtEn = Number.isFinite(a.amount_ar) ? ` (${ar(a.amount_ar, 'en')})` : '';
-    out.push({ kind: 'advance', id: a.id, label: b(`Répondre à l'avance de ${n.fr}${amt}`, `Answer the advance request of ${n.en}${amtEn}`), since: ms(a.request_date), coarse: String(a.request_date || '').length <= 10, go: { view: 'validations', filter: 'advances', nav: `val-adv-${a.id}` } });
+    out.push({ kind: 'advance', id: a.id, who: n.fr, label: b(`Répondre à l'avance de ${n.fr}${amt}`, `Answer the advance request of ${n.en}${amtEn}`), since: ms(a.request_date), coarse: String(a.request_date || '').length <= 10, go: { view: 'validations', filter: 'advances', nav: `val-adv-${a.id}` } });
   }
   const pd = i.pending;
   for (const r of pd?.resets || []) { const n = person(r.name, 'un opérateur', 'an operator'); out.push({ kind: 'reset', id: r.id, label: b(`Mot de passe oublié : ${n.fr}`, `Forgotten password: ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'resets', nav: `val-rst-${r.id}` } }); }
-  for (const r of pd?.signups || []) { const n = person(r.name, 'une personne', 'a person'); out.push({ kind: 'signup', id: r.id, label: b(`Répondre à l'inscription de ${n.fr}`, `Answer the sign-up of ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'signups', nav: `val-sig-${r.id}` } }); }
+  for (const r of pd?.signups || []) { const n = person(r.name, 'une personne', 'a person'); out.push({ kind: 'signup', id: r.id, who: n.fr, label: b(`Répondre à l'inscription de ${n.fr}`, `Answer the sign-up of ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'signups', nav: `val-sig-${r.id}` } }); }
   for (const r of pd?.profiles || []) { const n = person(r.old?.name, 'un opérateur', 'an operator'); out.push({ kind: 'profile', id: r.id, label: b(`Valider le changement de profil de ${n.fr}`, `Validate the profile change of ${n.en}`), since: ms(r.created_at), go: { view: 'validations', filter: 'profiles', nav: `val-prf-${r.id}` } }); }
   for (const r of pd?.access || []) { const n = person(r.name, 'un opérateur', 'an operator'); out.push({ kind: 'access', id: r.id, label: b(`Répondre à la demande d'accès hors horaires de ${n.fr}`, `Answer the out-of-hours access request of ${n.en}`), since: null, go: { view: 'validations', filter: 'access', nav: `val-acc-${r.id}` } }); }
   return out;
@@ -410,7 +410,7 @@ export function helpReply(): Reply {
       b('• « Récap de Camille » : ses chiffres, sans jugement.', '• "Recap of Camille": their figures, without judgement.'),
       b('• « Pourquoi la marge ? » : la formule et les lignes du chiffre.', '• "Why the margin?": the formula and the lines behind the figure.'),
       b('• « Et si je monte le prix client de 5 % ? » : un calcul simple.', '• "What if I raise the client price by 5%?": a simple calculation.'),
-      b('• Bouton « Rédiger un message » : un modèle à remplir (relance, remerciement…), que tu modifies avant de le copier.', '• "Write a message" button: a template to fill in (reminder, thanks…) that you edit before copying it.'),
+      b('• Bouton « Rédiger un message » : des messages déjà remplis avec tes données (relance, avance, inscription, remerciement, équipe), que tu modifies avant de les copier. « Relancer » est aussi sous chaque facture en retard.', '• "Write a message" button: messages already filled in with your data (reminder, advance, sign-up, thanks, team), that you edit before copying them. "Remind" is also under each overdue invoice.'),
       b('Je ne décide rien et je ne fais rien tout seul : tu valides, tu paies, tu supprimes toi-même. Je ne devine pas : s\'il manque une donnée, je le dis.', 'I decide nothing and do nothing by myself: you validate, pay and delete yourself. I do not guess: if data is missing, I say so.'),
     ],
     actions: [], sources: b('carte du site', 'site map'),

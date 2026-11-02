@@ -75,17 +75,17 @@ function pendingReply(i: SnapshotInput, advances: boolean): Reply {
   const shown = items.slice(0, SHOWN), rest = items.length - shown.length;
   const lines = shown.map((x, k) => { const w = waitedText(x.since, now, x.coarse); return b(`${k + 1}. ${x.label.fr}${w ? ` (en attente ${w.fr})` : ''}`, `${k + 1}. ${x.label.en}${w ? ` (waiting ${w.en})` : ''}`); });
   if (rest > 0) lines.push(b(`… et ${rest} autre${rest > 1 ? 's' : ''}.`, `… and ${rest} more.`));
-  return reply('shortcut', b(`${title.fr} : ${items.length}`, `${title.en}: ${items.length}`), lines, [...shown.map(x => ({ label: cut(x.label), go: x.go })), ...(rest > 0 ? [{ label: more(rest), go: advances ? { view: 'validations', filter: 'advances' } : { view: 'validations' } }] : [])], from);
+  return reply('shortcut', b(`${title.fr} : ${items.length}`, `${title.en}: ${items.length}`), lines, [...shown.flatMap(x => [{ label: cut(x.label), go: x.go }, ...(x.who && (x.kind === 'advance' || x.kind === 'signup') ? [{ label: b(`Répondre à ${x.who}`.slice(0, 48), `Answer ${x.who}`.slice(0, 48)), go: { view: `msg:${x.kind === 'advance' ? 'advance' : 'signup'}-${x.id}` } }] : [])]), ...(rest > 0 ? [{ label: more(rest), go: advances ? { view: 'validations', filter: 'advances' } : { view: 'validations' } }] : [])], from);
 }
 
 function overdueReply(i: SnapshotInput): Reply {
   const title = b('Factures en retard', 'Overdue invoices'), from = src(i, 'les factures émises et l\'argent reçu', 'issued invoices and money received'), rows = overdueRows(i);
   if (!rows.length) return nothing(i, title, 'Aucune facture en retard.', 'No overdue invoice.', from);
-  const shown = rows.slice(0, SHOWN), rest = rows.length - shown.length, total = rows.reduce((t, x) => t + x.info.balance, 0);
+  const shown = rows.slice(0, 3), rest = rows.length - shown.length, total = rows.reduce((t, x) => t + x.info.balance, 0); // 3 lignes : chacune a 2 boutons (ouvrir, relancer)
   const lines = shown.map((x, k) => { const who = x.inv.client?.name || '?', num = x.inv.number || '—'; return b(`${k + 1}. ${num} · ${who} : ${ar(x.info.balance, 'fr')} (${x.info.days_late} j de retard)`, `${k + 1}. ${num} · ${who}: ${ar(x.info.balance, 'en')} (${x.info.days_late} d late)`); });
   if (rest > 0) lines.push(b(`… et ${rest} autre${rest > 1 ? 's' : ''}.`, `… and ${rest} more.`));
   lines.push(b(`Reste à encaisser : ${ar(total, 'fr')} sur ${rows.length} ${plural(rows.length, 'facture', 'factures')}.`, `Left to collect: ${ar(total, 'en')} on ${rows.length} ${plural(rows.length, 'invoice', 'invoices')}.`));
-  return reply('shortcut', b(`${title.fr} : ${rows.length}`, `${title.en}: ${rows.length}`), lines, [...shown.map(x => ({ label: b(`Ouvrir ${x.inv.number || 'la facture'}`.slice(0, 48), `Open ${x.inv.number || 'the invoice'}`.slice(0, 48)), go: { view: 'invoices', nav: `inv-${x.inv.id}` } })), ...(rest > 0 ? [{ label: more(rest), go: { view: 'invoices' } }] : [])], from);
+  return reply('shortcut', b(`${title.fr} : ${rows.length}`, `${title.en}: ${rows.length}`), lines, [...shown.flatMap(x => [{ label: b(`Ouvrir ${x.inv.number || 'la facture'}`.slice(0, 48), `Open ${x.inv.number || 'the invoice'}`.slice(0, 48)), go: { view: 'invoices', nav: `inv-${x.inv.id}` } }, ...(x.inv.client?.name ? [{ label: b(`Relancer ${x.inv.client.name}`.slice(0, 48), `Remind ${x.inv.client.name}`.slice(0, 48)), go: { view: `msg:overdue-${x.inv.id}` } }] : [])]), ...(rest > 0 ? [{ label: more(rest), go: { view: 'invoices' } }] : [])], from);
 }
 
 function stockReply(i: SnapshotInput): Reply {

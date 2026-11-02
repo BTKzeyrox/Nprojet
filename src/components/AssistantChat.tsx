@@ -7,6 +7,7 @@ import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
 import { shortcutList, shortcutReply, detectShortcut } from '../utils/assistantShortcuts';
+import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } from '../utils/assistantMessages';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
@@ -85,8 +86,18 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     setProblem([r.missing.length ? t(`À remplir : ${names(r.missing)}.`, `To fill in: ${names(r.missing)}.`) : '', r.invalid.length ? t(`Valeur à corriger : ${names(r.invalid)}.`, `Value to fix: ${names(r.invalid)}.`) : ''].filter(Boolean).join(' '));
   };
   const copy = async () => { if (draft == null) return; try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setCopied(false); setProblem(t('Copie impossible ici : sélectionne le texte et copie-le à la main.', 'Copy not possible here: select the text and copy it by hand.')); } };
+  // Message prêt, déjà rempli avec les vrais éléments : l'éditeur s'ouvre avec le texte ; un champ à décider (le motif) reste à remplir. Rien n'est envoyé.
+  const applySuggested = (sm: SuggestedMessage) => {
+    setComposing(true); setTplId(sm.template); setVals(sm.values); setCopied(false);
+    const r = compose(sm.template, sm.values, l);
+    if (r.ok) { setDraft(r.text); setProblem(''); return; }
+    setDraft(null);
+    setProblem(t(`À remplir : ${r.missing.map(f => FIELDS[f].label.fr).join(', ')}.`, `To fill in: ${r.missing.map(f => FIELDS[f].label.en).join(', ')}.`));
+  };
+  const suggested = useMemo(() => { if (!composing) return []; try { const si = getSnapshotInput(); return si ? suggestedMessages(si, l) : []; } catch { return []; } }, [composing, l]);
   const go = (g: { view: string; tab?: string; storage?: StorageIntent; nav?: string; filter?: string }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
+    if (g.view.startsWith(MSG_PREFIX)) { const si = getSnapshotInput(), sm = si && findSuggested(si, g.view.slice(MSG_PREFIX.length), l); if (sm) applySuggested(sm); return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
     if (g.storage) setStorageIntent(g.storage);
@@ -125,6 +136,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       <div className={`px-3 pt-2 pb-3 border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`}>
         {composing && (
           <div className={`mb-2 rounded-xl border p-2.5 space-y-2 text-sm ${L ? 'border-slate-300 bg-slate-50 text-slate-800' : 'border-white/15 bg-white/5 text-slate-100'}`} data-compose>
+            {suggested.length > 0 && <div className="flex flex-wrap gap-1.5" data-suggested-messages>{suggested.map(x => <button key={x.id} type="button" onClick={() => applySuggested(x)} className={`min-h-[36px] px-2.5 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{l === 'en' ? x.label.en : x.label.fr}</button>)}</div>}
             <select aria-label={t('Modèle', 'Template')} value={tplId} onChange={e => { setTplId(e.target.value); setDraft(null); setProblem(''); }} className={`w-full min-h-[40px] rounded-lg border px-2 ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`}>
               {TEMPLATES.map(x => <option key={x.id} value={x.id}>{l === 'en' ? x.name.en : x.name.fr}</option>)}
             </select>
