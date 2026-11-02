@@ -158,7 +158,7 @@ for (const f of ['starts', 'ends', 'advances', 'signups', 'resets', 'profiles', 
 
 // ---------- Chiffres : le lien mène à la carte (étape C) ----------
 const finIn = base({ today: '2026-11-01', nowMs: NOW, users: [], posts: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [] });
-const figAsk: [string, string][] = [['pourquoi la marge ?', 'fin-margin'], ['pourquoi le benefice ?', 'fin-profit'], ['pourquoi la tresorerie ?', 'fin-treasury'], ['why to collect ?', 'fin-toCollect'], ['pourquoi les depenses ?', 'fin-expenses'], ['pourquoi argent recu ?', 'fin-flow']];
+const figAsk: [string, string][] = [['pourquoi la marge ?', 'fin-margin'], ['pourquoi le benefice ?', 'fin-profit'], ['pourquoi la tresorerie ?', 'fin-treasury'], ['why to collect ?', 'fin-toCollect'], ['pourquoi le reste à encaisser ?', 'fin-toCollect'], ['pourquoi à encaisser est si haut ?', 'fin-toCollect'], ['pourquoi on a encaissé si peu ?', 'fin-flow'], ['pourquoi les depenses ?', 'fin-expenses'], ['pourquoi argent recu ?', 'fin-flow']];
 for (const [q, nav] of figAsk) { const fr = respond(q, finIn, []); ok(fr.intent === 'figure' && fr.actions.length === 1 && fr.actions[0].go.view === 'stats' && fr.actions[0].go.tab === 'finance' && fr.actions[0].go.nav === nav && clean(fr), `chiffre « ${q} » : bouton vers la carte ${nav} (page Statistiques, onglet Finances)`); }
 const sv = respond('pourquoi la valeur du stock ?', finIn, []);
 ok(sv.intent === 'figure' && sv.actions[0].go.view === 'storage' && !sv.actions[0].go.tab, 'chiffre « valeur du stock » : mène à Stockage (plus à Finances)');

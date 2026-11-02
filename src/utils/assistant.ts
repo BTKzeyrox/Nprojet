@@ -386,7 +386,11 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
     const hits = emps.filter(u => { const n = normalizeName(u.name); return n.length >= 3 && (t.includes(n) || n.split(' ').some(part => part.length >= 3 && new RegExp(`\\b${part}\\b`).test(t))); });
     if (hits.length === 1) return { kind: 'employee', id: hits[0].id };
   }
-  for (const id of FIGURE_IDS) { const words = FIGURE_WORDS[id]; if (/pourquoi|why|comment|how|calcul/.test(t) && words.some(w => t.includes(w))) return { kind: 'figure', id }; }
+  if (/pourquoi|why|comment|how|calcul/.test(t)) { // le mot le plus long qui correspond gagne : « à encaisser » (reste dû) ne doit pas être pris pour « encaissé » (argent reçu)
+    let best: { id: FigureId; len: number } | null = null;
+    for (const id of FIGURE_IDS) for (const w of FIGURE_WORDS[id]) if (t.includes(w) && (!best || w.length > best.len)) best = { id, len: w.length };
+    if (best) return { kind: 'figure', id: best.id };
+  }
   if (/explique|expliquer|explain|page|a quoi sert|what is|how does/.test(t)) {
     const best = PAGE_WORDS.map(([id, ws]) => ({ id, score: Math.max(...ws.map(w => (w && t.includes(w) ? w.length : 0))) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score)[0];
     if (best) return { kind: 'page', id: best.id };
