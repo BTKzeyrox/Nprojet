@@ -1,3 +1,6 @@
+// Page Performance : tableau par opérateur (terminées, refusées, taux, délai) avec export Excel et CSV, et onglets Niveaux, Scores et Objectifs.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:performance-page.
+// Pour modifier : l'onglet Scores et badges ne s'affiche que si les badges sont activés (Réglages > Conditions > Choix de fonctionnement). Dans l'export, le score porte sur la fenêtre des Réglages, pas sur la période choisie. Textes FR/EN avec t(fr, en) en partie.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { useApp } from '../../context/AppContext';

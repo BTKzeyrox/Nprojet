@@ -1,3 +1,6 @@
+// Onglet Scores et badges : employé du mois, classement des derniers jours et fiche détaillée de chaque salarié.
+// Utilisé par : PerformancePage.tsx. Contrôlé par : npm run check:performance-page.
+// Pour modifier : tout est calculé dans src/utils/performanceScore.ts, rien n'est saisi. Responsable seulement. La publication de l'employé du mois dans Actualités se fait après confirmation (db.publishNews). Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Megaphone, Trophy, TriangleAlert } from 'lucide-react';
 import { db } from '../../db/store';

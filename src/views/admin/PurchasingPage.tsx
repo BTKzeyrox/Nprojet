@@ -1,3 +1,6 @@
+// Page Achats : trois onglets, bons de commande, fournisseurs et inventaire du stock.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:purchasing-page.
+// Pour modifier : chaque onglet est un fichier (PurchaseOrdersSection, SuppliersSection, InventorySection) ; la page les affiche et les rafraîchit quand db change. Responsable seulement. initialTab ne sert qu'au contrôle automatique. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';

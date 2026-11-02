@@ -1,3 +1,6 @@
+// Page Direction : synthèse du mois en cours (argent, retards de paiement, comptabilité, prévu contre réel, meilleurs clients, stock, alertes).
+// Utilisé par : App.tsx. Contrôlé par : npm run check:direction-page.
+// Pour modifier : aucun calcul propre : tout vient de directionSummary (src/utils/direction.ts). Réservé au responsable ; chaque carte renvoie vers la page qui détaille grâce à onNavigate. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BookOpen, Boxes, HeartPulse, Landmark, Target, Trophy, Users, Wallet } from 'lucide-react';
 import { PLAN_STATUS_LABEL } from '../../utils/budgetPlan';

@@ -1,3 +1,6 @@
+// Page Réglages : onglets Général, Équipe, Missions, Conditions, Performance et Données ; avec personalOnly, seulement les réglages de l'appareil.
+// Utilisé par : App.tsx et prefetch.ts. Contrôlé par : npm run check:tour.
+// Pour modifier : la fonction save vérifie les valeurs puis appelle db.updateSettings. Les blocs qui s'enregistrent tout de suite (Conditions, plan mensuel, objectifs, rapport automatique, modèles de mission...) sont retirés de l'envoi pour qu'une vieille copie ne les écrase pas.
 import React, { useEffect, useState } from 'react';
 import { ThemeLangControls } from '../../components/ThemeLangControls';
 import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';

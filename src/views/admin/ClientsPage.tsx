@@ -1,3 +1,6 @@
+// Page Clients : liste, fiche, création, modification, archivage et import des clients, avec statut et chiffres calculés.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:clients-demo, npm run check:clients-page, npm run check:import-page, npm run check:missions-link et npm run check:performance-page.
+// Pour modifier : le statut d'un client n'est jamais saisi : il se calcule avec les missions validées (src/utils/clients.ts) et les seuils de Réglages > Conditions. Réservé au responsable ; le serveur ne renvoie aucun client à un opérateur. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, ArchiveRestore, ChevronDown, ChevronRight, FileSpreadsheet, Mail, MapPin, Pencil, Phone, Plus, Search, Trash2, X } from 'lucide-react';

@@ -1,3 +1,6 @@
+// Page Ressources humaines : onglets Congés, Dossiers, Planning et Évaluations, avec une vue réduite pour le salarié.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:hr-page et npm run check:planning-page.
+// Pour modifier : responsable = tous les onglets en gestion ; salarié = son dossier en lecture seule et ses propres congés. Ajouter un onglet = type HrTab, bouton tabBtn et ligne d'affichage. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';

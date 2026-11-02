@@ -1,3 +1,6 @@
+// Page Opérateurs et avances : liste des opérateurs avec statut en direct, ajout, modification, blocage, suppression, et validation des avances sur salaire.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : la prop section choisit l'affichage : 'employees' (équipe) ou 'advances' (paie et avances). Données lues dans db (users, posts, presence, profileRequests). Téléphone au format fixe « 261 34 12 345 67 », mot de passe de 6 caractères au moins. Beaucoup de textes sont écrits en français seulement.
 import { CREATABLE_ROLES, ROLE_NAMES, roleOf, cleanTeam } from '../../utils/roles';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';

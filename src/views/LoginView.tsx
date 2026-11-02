@@ -1,3 +1,6 @@
+// Écran de connexion : identifiant et mot de passe, code de sécurité en double étape, demande de compte et mot de passe oublié.
+// Utilisé par : App.tsx.
+// Pour modifier : la connexion passe par db.login, l'inscription par db.requestSignup et l'oubli par db.requestPasswordReset ; les textes de titre utilisent t(clé), le reste est écrit en français.
 import React, { useEffect, useState } from 'react';
 import {
   Shield,

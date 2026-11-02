@@ -1,3 +1,6 @@
+// Onglet Objectifs de la page Performance : objectifs d'équipe ou de salarié par mois, avec barre d'avancement et statut.
+// Utilisé par : PerformancePage.tsx. Contrôlé par : npm run check:team-goals-page.
+// Pour modifier : la valeur réelle est calculée avec les missions du mois, jamais saisie ; chaque action s'enregistre tout de suite (db.saveTeamGoal, db.removeTeamGoal). Les règles sont dans src/utils/teamGoals.ts. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { db } from '../../db/store';

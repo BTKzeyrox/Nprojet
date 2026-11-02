@@ -1,3 +1,6 @@
+// Onglet Congés des RH : solde, demande et annulation pour le salarié ; décision, saisie directe et suppression pour le responsable.
+// Utilisé par : HrPage.tsx.
+// Pour modifier : données via db.getLeaves, db.requestLeave et db.decideLeave ; jours par an et jours travaillés viennent des règles de l'entreprise (companyRules). Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';

@@ -1,3 +1,6 @@
+// Journal des erreurs : plantages, erreurs serveur et signalements des opérateurs, regroupés, à marquer résolus ou à copier pour Claude.
+// Utilisé par : App.tsx.
+// Pour modifier : les lignes sont chargées par db.fetchErrors et modifiées par db.updateError (pas de collection locale). Le texte du bouton « Copier pour Claude » est construit dans la fonction forClaude. Textes en français seulement.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bug, RefreshCw, Copy, CheckCircle2, RotateCcw, Trash2, Image as ImageIcon, AlertTriangle, LifeBuoy } from 'lucide-react';
 import { ReportProblemModal } from '../../components/ReportProblemModal';

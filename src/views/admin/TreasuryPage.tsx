@@ -1,3 +1,6 @@
+// Page Trésorerie du Comptable : paiements reçus et dépenses du mois, avec graphiques, sans salaires ni paie.
+// Utilisé par : App.tsx.
+// Pour modifier : elle réutilise FinanceTab en mode moneyOnly avec salariesAr et advancesAr à 0 : les chiffres de paie restent au responsable. Navigation mois par mois ; textes FR/EN selon la langue.
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Landmark } from 'lucide-react';
 import { useApp } from '../../context/AppContext';

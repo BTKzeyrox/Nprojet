@@ -1,3 +1,6 @@
+// Onglet Planning des RH : grille de la semaine par employé (Jour, Nuit, Repos), conflits signalés et copie de la semaine précédente.
+// Utilisé par : HrPage.tsx.
+// Pour modifier : un clic fait défiler vide, Jour, Nuit, Repos ; l'enregistrement passe par db.applyShifts et les conflits par planConflicts (utils/planning.ts). Le salarié ne voit que son planning, en lecture seule. Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Copy, Eraser } from 'lucide-react';
 import { db } from '../../db/store';

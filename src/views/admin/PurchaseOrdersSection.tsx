@@ -1,3 +1,6 @@
+// Section Bons de commande de la page Achats : brouillon, commandé, reçu (total ou partiel), avec entrées de stock à la réception.
+// Utilisé par : PurchasingPage.tsx.
+// Pour modifier : à la réception, les entrées de stock et la dépense « Achats » se créent après confirmation ; un bon commandé est figé. Données : db.getPurchases(), getSuppliers(), getProducts(). Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';

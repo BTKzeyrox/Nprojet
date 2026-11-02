@@ -1,3 +1,6 @@
+// Page Statistiques du responsable : choix de la période, chiffres d'activité, graphiques, et onglets Finances et Rapport.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:page.
+// Pour modifier : réservée au responsable (la page ne s'affiche pas sinon). Le type de période est gardé dans le navigateur (stats_gran) et l'onglet par getStatsTab. Les fiches de paie sont lues une fois par mois affiché (cache de 2 minutes).
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../../db/store';

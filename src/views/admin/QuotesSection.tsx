@@ -1,3 +1,6 @@
+// Onglet Devis de la page Facturation : brouillon, envoyé, accepté ou refusé, et transformation d'un devis accepté en facture brouillon.
+// Utilisé par : InvoicesView.tsx. Contrôlé par : npm run check:quotes-page.
+// Pour modifier : facultatif : l'onglet n'existe que si le réglage « Devis activés » est actif. Mêmes lignes qu'une facture ; contrôle des champs par checkQuoteDraft (src/utils/quotes.ts) ; écriture par db.saveQuote. Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, FilePlus2, Pencil, Plus, Search, Send, Trash2, X } from 'lucide-react';

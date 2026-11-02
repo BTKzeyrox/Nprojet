@@ -1,3 +1,6 @@
+// Écran principal du responsable : tableau de bord, validations de missions, alertes de sécurité et liste des sessions, selon l'onglet demandé.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : l'écran affiché dépend de activeSubTab (dashboard, grid, sessions, security, validations). Données lues dans db (users, posts, securityLogs, advances). Fichier très long : chercher la zone par ses commentaires SECTION ou par isValidations, isSecurity, isSessions.
 import { showToast } from '../../components/ToastHost';
 import React, { useState, useEffect } from 'react';
 import {

@@ -1,3 +1,6 @@
+// Onglet Évaluations des RH : fiche d'évaluation périodique avec photo des scores, objectifs, remarques, partage et accusé de lecture du salarié.
+// Utilisé par : HrPage.tsx.
+// Pour modifier : les fiches viennent de db.getReviews ; les points à améliorer ne sont jamais envoyés au salarié (le serveur les retire). Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { Check, Pencil, Plus, Send, Trash2 } from 'lucide-react';
 import { db } from '../../db/store';

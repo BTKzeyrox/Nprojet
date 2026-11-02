@@ -1,3 +1,6 @@
+// Carte du rapport automatique : réglage de la fréquence (semaine ou mois) et liste des rapports prêts à ouvrir, imprimer ou télécharger en PDF.
+// Utilisé par : StatsPage.tsx. Contrôlé par : npm run check:auto-report-ui.
+// Pour modifier : réservé au responsable (la carte ne s'affiche pas sinon). Réglage lu et écrit par db.getAutoReport et db.saveAutoReport ; la copie d'un rapport est figée à sa première ouverture (db.freezeReportCopy). Textes FR/EN avec t(fr, en).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText, Printer, RefreshCw } from 'lucide-react';
 import { db } from '../../db/store';

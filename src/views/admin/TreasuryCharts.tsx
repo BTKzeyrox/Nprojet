@@ -1,3 +1,6 @@
+// Graphiques de la Trésorerie : argent reçu et dépenses jour par jour, solde du mois et répartition par catégorie, sans aucun salaire.
+// Utilisé par : TreasuryPage.tsx.
+// Pour modifier : calculés par treasuryCharts (src/utils/treasuryCharts.ts) à partir de db.getCash() ; la période vient de TreasuryPage (prop range). Textes FR/EN avec t(fr, en).
 import React, { useMemo } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';

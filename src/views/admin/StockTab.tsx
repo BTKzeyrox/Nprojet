@@ -1,3 +1,6 @@
+// Onglet Produits du Stockage : produits, quantités calculées, entrées, sorties, ajustements, photos, import et voyant sous le seuil.
+// Utilisé par : StockDashboard.tsx et StoragePage.tsx. Contrôlé par : npm run check:import-page et npm run check:stock.
+// Pour modifier : la quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement et le total se recalcule (src/utils/stock.ts). Un seul stockage à la fois (prop spaceId). Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, FileSpreadsheet, History, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';

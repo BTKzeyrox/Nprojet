@@ -1,3 +1,6 @@
+// Page Stockage : un stockage à la fois, avec onglets Tableau de bord, Produits, Mouvements et Analyses, et gestion des stockages.
+// Utilisé par : App.tsx.
+// Pour modifier : le dernier stockage ouvert est gardé sur l'appareil (clé df_stock_space). Une alerte ou une notification peut ouvrir un produit précis (takeStorageIntent, puis setNavTarget). Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import { db } from '../../db/store';

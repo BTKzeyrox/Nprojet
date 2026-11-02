@@ -1,3 +1,6 @@
+// Onglet Rapport du mois dans Statistiques : aperçu du rapport du mois choisi, avec impression, PDF et Excel.
+// Utilisé par : StatsPage.tsx. Contrôlé par : npm run check:phase4.
+// Pour modifier : le rapport n'est construit que pour le responsable (buildReport). Les badges et le score ne s'ajoutent que si les badges sont activés. Il contient des chiffres d'argent. Textes FR/EN avec t(fr, en).
 import { badgeAccess, performanceInput } from '../../utils/usePerformance';
 import { computePerformance } from '../../utils/performanceScore';
 import { clientBadgesFromDb } from '../../utils/clientBadgesDb';

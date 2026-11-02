@@ -1,3 +1,6 @@
+// Écran principal de l'employé : grille des missions, mission en cours (début, preuves, fin), avances sur salaire et messages.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : l'onglet affiché dépend de activeSubTab (grid, active-post, advances, chat) ; les données viennent de db (posts, contrats). Fichier très long : chercher la zone par son nom d'état.
 import React, { useState, useEffect } from 'react';
 import {
   ClipboardList,

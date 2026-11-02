@@ -1,3 +1,6 @@
+// Section Fournisseurs de la page Achats : fiches (nom, contact, délai habituel, note) avec archivage et chiffres par fournisseur.
+// Utilisé par : PurchasingPage.tsx.
+// Pour modifier : un fournisseur qui a servi (bon, entrée de stock, dépense) ne se supprime pas : on l'archive. Délai maximum MAX_LEAD_DAYS dans src/utils/purchasing.ts. Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, ArchiveRestore, ChevronDown, ChevronRight, Pencil, Plus, Search, Trash2, X } from 'lucide-react';

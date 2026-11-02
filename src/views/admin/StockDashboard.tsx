@@ -1,3 +1,6 @@
+// Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements et graphiques.
+// Utilisé par : StoragePage.tsx.
+// Pour modifier : lecture seule, un seul stockage à la fois (prop spaceId). Un clic sur Épuisés ou Stock bas ouvre l'onglet Produits avec le bon filtre (onOpenProducts). Textes FR/EN avec t(fr, en).
 import React, { useMemo } from 'react';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { db } from '../../db/store';

@@ -1,3 +1,6 @@
+// Onglet Analyses du Stockage : valeur du stock, produits les plus utilisés, fournisseurs et achats les plus chers, avec leur propre période.
+// Utilisé par : StoragePage.tsx. Contrôlé par : npm run check:purchasing-page et npm run check:stock.
+// Pour modifier : lecture seule, un seul stockage à la fois (prop spaceId, via inSpace). Les calculs sont dans src/utils/stock.ts et src/utils/purchasing.ts. Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';

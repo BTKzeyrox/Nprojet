@@ -1,3 +1,6 @@
+// Page d'un opérateur : profil, état en direct, niveau, mission en cours, dernières sessions et liens vers son calendrier, ses messages et son historique.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : la prop userId choisit l'opérateur ; données lues dans db (users, posts, avances, journal de sécurité). Les liens passent par onGo(vue). Textes en français seulement.
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, IdCard, Calendar, MessageSquare, DollarSign, ShieldAlert, ClipboardList } from 'lucide-react';
 import { db } from '../../db/store';

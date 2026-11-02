@@ -1,3 +1,6 @@
+// Fenêtre Catégories du Stockage : ajouter, renommer, supprimer ou remettre la liste par défaut des catégories de produits.
+// Utilisé par : StockTab.tsx.
+// Pour modifier : renommer une catégorie change aussi ses produits ; la supprimer les laisse sans catégorie. Limite STOCK_CATEGORY_MAX et liste par défaut dans src/utils/stock.ts. Écriture par db.setStockCategories. Textes FR/EN avec t(fr, en).
 import React, { useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';

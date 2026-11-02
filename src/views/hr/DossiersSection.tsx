@@ -1,3 +1,6 @@
+// Dossier RH du salarié : poste, contrat, contact d'urgence, documents et historique de taux ; le responsable modifie, le salarié lit le sien.
+// Utilisé par : HrPage.tsx, LeavesSection.tsx, PlanningSection.tsx et ReviewsSection.tsx.
+// Pour modifier : les styles field, card et btn sont réutilisés par les autres onglets RH ; les liens de documents sont des liens https et le serveur revérifie tout. Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Pencil, Plus, Search, Trash2, X } from 'lucide-react';

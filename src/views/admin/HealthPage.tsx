@@ -1,3 +1,6 @@
+// Page Santé du site : liste des alertes que le site calcule tout seul, par page, à ouvrir, marquer vérifiées ou ignorer.
+// Utilisé par : App.tsx.
+// Pour modifier : alertes lues par getHealth() (src/utils/healthDb.ts). Pour ajouter une page contrôlée, mettre à jour PAGE_LABEL et LIVE_PAGES. Une alerte ignorée ou vérifiée est gardée sur l'appareil ; elle revient si le problème s'aggrave (pour « ignorer » : ou après 14 jours). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { HeartPulse, RefreshCw, Eye, EyeOff, CheckCircle2, ChevronRight, Undo2 } from 'lucide-react';
 import { db } from '../../db/store';

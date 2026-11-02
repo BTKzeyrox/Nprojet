@@ -1,3 +1,6 @@
+// Outil « Rattacher les anciennes missions » de la page Clients : propose le client de même nom et rattache une ligne à la fois.
+// Utilisé par : ClientsPage.tsx. Contrôlé par : npm run check:missions-link.
+// Pour modifier : l'outil ne s'affiche que pour le responsable et seulement s'il reste des missions à rattacher. Il n'y a volontairement aucun bouton « tout rattacher ». Écriture par db.attachMissionsByName ; textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Link2, Plus } from 'lucide-react';
 import { db } from '../../db/store';

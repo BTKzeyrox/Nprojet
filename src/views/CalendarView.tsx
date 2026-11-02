@@ -1,3 +1,6 @@
+// Page Calendrier : le responsable voit tous les employés (mois, résumé, détail d'un jour) ; un employé voit son propre calendrier.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : les données viennent de db (posts, users, avances, congés) ; la vue globale s'ouvre avec selectedId 'all' et le détail d'un jour est partagé par l'onglet et la fenêtre du mois.
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';

@@ -1,3 +1,6 @@
+// Tableau de l'historique mensuel des niveaux : pour chaque opérateur et chacun des 6 derniers mois, missions validées et niveau.
+// Utilisé par : PerformancePage.tsx.
+// Pour modifier : tout est calculé, jamais saisi : db.getPosts() et les niveaux de Réglages (perf_levels), avec src/utils/monthLevel.ts. Textes en français seulement.
 import React, { useEffect, useState } from 'react';
 import { db } from '../../db/store';
 import { cleanLevels, levelInfo, monthCount, lastMonths, monthLabel } from '../../utils/monthLevel';

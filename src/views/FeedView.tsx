@@ -1,3 +1,6 @@
+// Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications.
+// Utilisé par : App.tsx.
+// Pour modifier : les publications viennent de db.getNews() ; qui peut voir, modifier ou publier est décidé par utils/newsAccess.ts ; le responsable publie en direct, les autres peuvent passer par une validation.
 import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye, MoreVertical } from 'lucide-react';

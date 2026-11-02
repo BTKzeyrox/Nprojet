@@ -1,3 +1,6 @@
+// Onglet Mouvements du Stockage : historique des entrées, sorties et ajustements, filtrable par période, type et produit.
+// Utilisé par : StoragePage.tsx.
+// Pour modifier : lecture seule : pour corriger un mouvement, on l'ouvre dans l'historique du produit (onglet Produits). La liste s'affiche par pages de 40 (constante PAGE). Textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';

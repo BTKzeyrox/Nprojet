@@ -1,3 +1,6 @@
+// Page Facturation : liste des factures, brouillon, émission, paiement, avoir, créances à relancer, et onglet Devis si les devis sont activés.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:invoices-page et npm run check:quotes-page.
+// Pour modifier : le numéro, le reçu et les totaux définitifs sont toujours posés par le serveur ; l'état (payée, en retard...) se calcule dans src/utils/invoices.ts. Émission et paiement en ligne seulement (useOnlineOnly). Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Ban, CheckCircle2, FilePlus2, Pencil, Download, FileText, Plus, Printer, Search, Send, Trash2, Wallet, X } from 'lucide-react';

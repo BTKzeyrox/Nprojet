@@ -1,3 +1,6 @@
+// Section Inventaire de la page Achats : on saisit les quantités comptées, l'écart s'affiche et un clic crée les ajustements de stock.
+// Utilisé par : PurchasingPage.tsx.
+// Pour modifier : le stock n'est jamais saisi à la main : db.applyInventory crée des mouvements « ajustement » avec la raison inventaire. Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { db } from '../../db/store';
 import { productStorage } from '../../utils/stock';

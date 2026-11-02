@@ -1,3 +1,6 @@
+// Carte Prévu contre réel de l'onglet Finances : compare revenus, dépenses, paie et bénéfice prévus aux chiffres réels des 6 derniers mois.
+// Utilisé par : FinanceTab.tsx. Contrôlé par : npm run check:budget-plan-page.
+// Pour modifier : seuls les revenus et la paie prévus se saisissent (db.saveMonthlyPlan) ; les dépenses prévues sont le total des budgets par catégorie ; le réel est toujours calculé. Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';

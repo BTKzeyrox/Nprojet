@@ -1,3 +1,6 @@
+// Fenêtre Stockages : créer, renommer ou supprimer un stockage ; chaque stockage a ses propres produits et ne se mélange jamais aux autres.
+// Utilisé par : StoragePage.tsx.
+// Pour modifier : un stockage ne se supprime que s'il est vide et il faut en garder au moins un ; limite STOCK_SPACE_MAX dans src/utils/stock.ts. Écriture par db.addStockSpace, renameStockSpace et deleteStockSpace. Textes FR/EN avec t(fr, en).
 import React, { useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';

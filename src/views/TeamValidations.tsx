@@ -1,3 +1,6 @@
+// Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché.
+// Utilisé par : App.tsx.
+// Pour modifier : la liste vient de teamPendingPosts (utils/teamLead.ts) selon l'équipe du chef ; décider passe par db.decidePostNow et une session refusée revient en attente si le serveur échoue.
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { db } from '../db/store';

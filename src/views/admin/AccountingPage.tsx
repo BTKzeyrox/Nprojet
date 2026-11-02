@@ -1,3 +1,6 @@
+// Page Comptabilité : journal, grand livre, balance, résultat, bilan, TVA, rapprochement bancaire, clôture et saisie d'une écriture.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:accounting-close et npm run check:accounting-page.
+// Pour modifier : les écritures viennent de db.getEntries() et s'écrivent par le serveur (routes accounting-*). Responsable et Comptable voient la page ; annuler une écriture, clôturer et rouvrir : responsable seulement. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Ban, ChevronDown, ChevronRight, Plus, RefreshCw, Trash2, X } from 'lucide-react';

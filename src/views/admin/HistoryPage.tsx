@@ -1,3 +1,6 @@
+// Page Historique : liste filtrable des demandes d'avance, sessions, profils, inscriptions et mots de passe oubliés, avec leur statut.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : la fonction buildHistory rassemble les lignes depuis db (avances, missions, demandes de profil, inscriptions, réinitialisations). Piège : les inscriptions et mots de passe déjà traités ne laissent pas de trace, seuls ceux en attente apparaissent. Textes en français seulement.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, DollarSign, ClipboardList, IdCard, UserPlus, KeyRound } from 'lucide-react';
 import { db } from '../../db/store';

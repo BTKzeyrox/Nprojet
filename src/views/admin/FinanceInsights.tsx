@@ -1,3 +1,6 @@
+// Chiffres et graphiques financiers de la période : bénéfice, marge, à encaisser, trésorerie, clients, dépenses par catégorie et marge par type.
+// Utilisé par : FinanceTab.tsx. Contrôlé par : npm run check:finance-page et npm run check:invoice-stats.
+// Pour modifier : responsable seulement ; tout est calculé dans la page, sans appel serveur (computeFinance, invoiceFigures). La période vient de la page qui l'affiche (prop range). Textes FR/EN avec t(fr, en).
 import React, { useMemo } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
