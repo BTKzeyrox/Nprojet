@@ -1,6 +1,6 @@
 // Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant
 import fs from 'node:fs';
-import { waitingItems, waitGroups, waitedText, teamReply, recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
+import { entityLinks, ENTITY_LINKS_MAX, waitingItems, waitGroups, waitedText, teamReply, recapPrintHtml, PRINT_PREFIX, suggestionsReply, pageLinks, morningSummary, nextActions, todoReply, explainPage, employeeRecap, employeeReply, whatIf, whatIfReply, detectIntent, parsePct, respond, helpReply, unknownReply, type Reply } from '../src/utils/assistant';
 import { buildDemoData } from '../src/demo/demoData';
 import { runHealth } from '../src/utils/health/registry';
 import { ALL_RULES } from '../src/utils/health/all';
@@ -163,6 +163,37 @@ for (const [q, nav] of figAsk) { const fr = respond(q, finIn, []); ok(fr.intent 
 const sv = respond('pourquoi la valeur du stock ?', finIn, []);
 ok(sv.intent === 'figure' && sv.actions[0].go.view === 'storage' && !sv.actions[0].go.tab, 'chiffre « valeur du stock » : mène à Stockage (plus à Finances)');
 ok(isKnownView(respond('pourquoi la marge ?', finIn, []).actions[0].go.view), 'chiffre : la page visée est une page connue du menu');
+
+// ---------- Réponses de l'IA : boutons pour les personnes, clients et factures nommés (étape D) ----------
+const EU = (id: string, name: string, extra: any = {}) => ({ id, name, username: id, role: 'employee', status: 'active', ...extra });
+const ent = base({ today: '2026-11-01', nowMs: NOW, posts: [], contracts: [], cash: [], products: [], moves: [], advances: [],
+  users: [EU('u1', 'Rina Rakoto'), EU('u2', 'Tojo'), EU('u3', 'Camille Dupont'), EU('u4', 'Camille Dupont'), EU('u5', 'Jo'), EU('u6', 'Lova', { role: 'accountant' }), { id: 'user-admin-1', name: 'Boss Admin', username: 'admin', role: 'admin', status: 'active' }] as any,
+  clients: [{ id: 'c1', name: 'Acme Corp' }, { id: 'c2', name: 'Beta Ltd' }, { id: 'c3', name: 'Tojo' }] as any,
+  invoices: [{ id: 'i1', number: 'F-2026-0012', status: 'issued', type: 'invoice' }, { id: 'i2', number: 'AV-2026-0003', status: 'issued', type: 'credit_note' }, { id: 'i3', status: 'draft' }] as any });
+let el = entityLinks('Rina Rakoto doit encore 3 missions. Voir aussi Acme Corp et la facture F-2026-0012.', ent);
+ok(el.length === 3 && el[0].go.view === 'employees' && el[0].go.nav === 'emp-u1' && el[1].go.view === 'clients' && el[1].go.nav === 'client-c1' && el[2].go.view === 'invoices' && el[2].go.nav === 'inv-i1', 'IA : une personne, un client et une facture nommés = 3 boutons qui ouvrent la ligne exacte, dans l\'ordre du texte');
+ok(el[0].label.fr === 'Ouvrir Rina Rakoto' && el[1].label.fr === 'Client : Acme Corp' && el[2].label.fr === 'Facture F-2026-0012' && el[2].label.en === 'Invoice F-2026-0012' && clean({ intent: 'x', title: { fr: '', en: '' }, lines: [], actions: el, sources: { fr: '', en: '' } } as any), 'IA : libellés FR et EN clairs (« Ouvrir Rina Rakoto », « Client : Acme Corp », « Facture F-2026-0012 »)');
+el = entityLinks('Acme Corp, Beta Ltd, Rina Rakoto, Lova et F-2026-0012 sont cités.', ent);
+ok(el.length === ENTITY_LINKS_MAX && ENTITY_LINKS_MAX === 3 && el.map(x => x.go.nav).join() === 'client-c1,client-c2,emp-u1', 'IA : 3 boutons au plus, dans l\'ordre où les noms apparaissent');
+ok(entityLinks('Acme Corp puis encore ACME corp, et acme-corp.', ent).length === 1, 'IA : le même client cité trois fois = un seul bouton (majuscules, tirets, accents ignorés)');
+ok(entityLinks('Camille Dupont a oublié sa mission.', ent).length === 0, 'IA : un nom porté par deux fiches n\'est jamais deviné (aucun bouton)');
+ok(entityLinks('Tojo est en retard.', ent).length === 0, 'IA : un nom porté par une personne ET un client n\'est pas deviné non plus');
+ok(entityLinks('Jo a fini et Boss Admin aussi.', ent).length === 0, 'IA : nom de moins de 3 caractères ignoré, et le compte du responsable n\'a pas de bouton');
+ok(entityLinks('Lova a demandé un accès.', ent).length === 1 && entityLinks('Lova a demandé un accès.', ent)[0].go.nav === 'emp-u6', 'IA : un comptable ou chef d\'équipe a aussi sa ligne dans Employés');
+ok(entityLinks('Rinaldo et Rina Rakotoson ne sont pas Rina Rakoto.', ent).length === 1 && entityLinks('Rinaldo, Rina Rakotoson.', ent).length === 0, 'IA : un mot qui n\'est qu\'un morceau d\'un autre mot ne compte pas');
+ok(entityLinks('Voir AV-2026-0003.', ent)[0].label.fr === 'Avoir AV-2026-0003' && entityLinks('Voir AV-2026-0003.', ent)[0].label.en === 'Credit note AV-2026-0003', 'IA : un avoir est appelé « Avoir », pas « Facture »');
+ok(entityLinks('Le brouillon i3 et la facture draft.', ent).length === 0, 'IA : un brouillon sans numéro n\'a pas de bouton');
+ok(entityLinks('', ent).length === 0 && entityLinks('Acme Corp', ent, 0).length === 0 && entityLinks(undefined as any, ent).length === 0 && entityLinks('Acme Corp', { ...ent, clients: [], users: [], invoices: undefined }).length === 0, 'IA : texte vide, max 0, texte absent, aucune donnée = aucun bouton, aucun plantage');
+ok(entityLinks('x'.repeat(10000) + ' Acme Corp', ent).length === 0 && entityLinks('<b>Acme Corp</b> {{x}} $(rm)', ent).length === 1, 'IA : texte énorme borné (4000 caractères), balises et symboles ne cassent rien');
+const odd = base({ ...ent, clients: [{ id: 'c9', name: '' }, { id: 'c8', name: '  ' }, { id: 'c7', name: '$$$' }, { id: 'c6', name: 'Zéta Café' }] as any, users: [] });
+ok(entityLinks('Zeta Cafe est notre client.', odd).length === 1 && entityLinks('Zéta Café', odd)[0].go.nav === 'client-c6', 'IA : accents ignorés dans les deux sens ; noms vides ou faits de symboles ignorés');
+const frEnLinks = entityLinks('Rina Rakoto et Acme Corp', ent);
+ok(frEnLinks.every(x => isKnownView(x.go.view)), 'IA : chaque bouton mène à une page connue du menu');
+// Les adresses visées existent dans les pages, et l'assistant les branche sur la réponse de l'IA
+const chatSrc = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8');
+ok(/\.\.\.entityLinks\(r\.text, i\), \.\.\.pageLinks\(r\.text, l\)/.test(chatSrc), 'chat : la réponse de l\'IA reçoit les boutons des personnes, clients et factures, puis ceux des pages');
+ok(fs.readFileSync('src/views/admin/ClientsPage.tsx', 'utf8').includes('data-nav={`client-${c.id}`}') && fs.readFileSync('src/views/admin/InvoicesView.tsx', 'utf8').includes('data-nav={`inv-${inv.id}`}'), 'adresses « client-… » et « inv-… » : existent dans Clients et Facturation');
+ok(/invoices: db\.getInvoices\(\)/.test(fs.readFileSync('src/utils/snapshotDb.ts', 'utf8')) && !/invoices/.test(fs.readFileSync('src/utils/siteSnapshot.ts', 'utf8').split('export function buildSnapshot')[1] || ''), 'vie privée : les factures sont lues dans le navigateur et ne passent jamais par l\'instantané envoyé à l\'IA');
 
 // ---------- Règles de fond ----------
 const src = fs.readFileSync('src/utils/assistant.ts', 'utf8');

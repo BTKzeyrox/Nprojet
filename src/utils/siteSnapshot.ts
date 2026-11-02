@@ -2,7 +2,7 @@
 //  - buildSnapshot : un résumé CALCULÉ de tous les modules (chiffres clés, comptages), sans noms de personnes ni lignes brutes.
 //    C'est la seule chose qui pourra être donnée à une IA externe (niveau B, facultatif, désactivé par défaut) : jamais les données brutes.
 //  - explainFigure : pour un chiffre, sa formule (carte du site), sa période, ses composantes, les lignes qui le forment, et ses sources.
-import type { AccessRequest, CashEntry, Client, ClientContract, PasswordResetRequest, PostSession, Product, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, StockMove, User } from '../types';
+import type { AccessRequest, CashEntry, Client, ClientContract, Invoice, PasswordResetRequest, PostSession, Product, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, StockMove, User } from '../types';
 import { computeFinance, type FinanceInput } from './financeStats';
 import { periodRange } from './stats';
 import { clientMissionsFromPosts, clientThresholds, summarizeClients, type ClientStatus } from './clients';
@@ -18,6 +18,7 @@ export interface SnapshotInput {
   alerts?: HealthAlert[]; // alertes visibles de la Santé du site
   /** Demandes en attente (inscriptions, mots de passe oubliés, profils, accès hors horaires) : lues seulement par l'assistant du navigateur, jamais copiées dans l'instantané. */
   pending?: { signups: SignupRequest[]; resets: PasswordResetRequest[]; profiles: ProfileChangeRequest[]; access: AccessRequest[] };
+  invoices?: Invoice[]; // factures : lues seulement par l'assistant du navigateur (boutons vers une facture nommée), jamais copiées dans l'instantané
   nowMs?: number; // heure de référence donnée par l'appelant (l'assistant n'a pas d'horloge) ; absente = aucune durée d'attente affichée
 }
 export interface Snapshot {

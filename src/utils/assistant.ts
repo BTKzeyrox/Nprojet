@@ -207,6 +207,33 @@ export function pageLinks(text: string, lang: Lang): { label: Bi; go: HealthGo }
   return out;
 }
 
+// ---------- Boutons pour les personnes, clients et factures nommés dans un texte (réponse de l'IA) ----------
+export const ENTITY_LINKS_MAX = 3;
+/** Les personnes, clients et factures cités par leur NOM COMPLET (ou leur numéro de facture) dans un texte, dans l'ordre où ils apparaissent : au plus 3, chacun une seule fois, chaque bouton ouvre la ligne exacte (Employés, Clients, Facturation).
+ * Je ne devine pas : un nom porté par deux fiches (même deux sortes différentes), un nom de moins de 3 caractères, un mot qui n'est qu'un morceau d'un autre mot, ou un brouillon sans numéro = pas de bouton.
+ * Tout se calcule dans le navigateur de l'admin : aucun nom ne sort. */
+export function entityLinks(text: string, i: SnapshotInput, max = ENTITY_LINKS_MAX): { label: Bi; go: HealthGo }[] {
+  const t = ` ${normalizeName(String(text || '').slice(0, 4000))} `;
+  if (t.trim() === '' || max <= 0) return [];
+  interface Cand { key: string; label: Bi; go: HealthGo }
+  const cands: Cand[] = [];
+  for (const u of i.users) if (u.role !== 'admin' && u.name) cands.push({ key: normalizeName(u.name), label: b(`Ouvrir ${u.name}`, `Open ${u.name}`), go: { view: 'employees', nav: `emp-${u.id}` } });
+  for (const c of i.clients) if (c.name) cands.push({ key: normalizeName(c.name), label: b(`Client : ${c.name}`, `Client: ${c.name}`), go: { view: 'clients', nav: `client-${c.id}` } });
+  for (const v of i.invoices || []) if (v.number) { const credit = v.type === 'credit_note'; cands.push({ key: normalizeName(v.number), label: b(`${credit ? 'Avoir' : 'Facture'} ${v.number}`, `${credit ? 'Credit note' : 'Invoice'} ${v.number}`), go: { view: 'invoices', nav: `inv-${v.id}` } }); }
+  const count = new Map<string, number>();
+  for (const c of cands) count.set(c.key, (count.get(c.key) || 0) + 1);
+  const hits: { at: number; c: Cand }[] = [], seen = new Set<string>();
+  for (const c of cands) {
+    if (c.key.length < 3 || count.get(c.key) !== 1) continue; // trop court ou ambigu : on ne devine pas
+    const at = t.indexOf(` ${c.key} `);
+    if (at < 0) continue;
+    const id = `${c.go.view}|${c.go.nav}`;
+    if (seen.has(id)) continue;
+    seen.add(id); hits.push({ at, c });
+  }
+  return hits.sort((x, y) => x.at - y.at).slice(0, max).map(h => ({ label: b(h.c.label.fr.slice(0, 48), h.c.label.en.slice(0, 48)), go: h.c.go }));
+}
+
 // ---------- Récap d'un employé ----------
 export interface EmployeeRecap {
   found: boolean; name: string; status: string; badge: string | null;

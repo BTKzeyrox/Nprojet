@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
-import { respond, helpReply, pageLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
+import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
@@ -66,7 +66,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           const turns = msgs.slice(-6).map(m => ({ role: (m.who === 'me' ? 'user' : 'model') as 'user' | 'model', text: m.text || (m.reply ? [l === 'en' ? m.reply.title.en : m.reply.title.fr, ...m.reply.lines.slice(0, 3).map(x => (l === 'en' ? x.en : x.fr))].join(' ') : '') }));
           const r = await askAi(q, l, turns);
           reply = r.ok
-            ? { intent: 'ai', title: { fr: '', en: '' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: pageLinks(r.text, l), sources: { fr: '', en: '' } }
+            ? { intent: 'ai', title: { fr: '', en: '' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: [...entityLinks(r.text, i), ...pageLinks(r.text, l)], sources: { fr: '', en: '' } }
             : { intent: 'ai_error', title: { fr: '', en: '' }, lines: [r.error], actions: [], sources: { fr: '', en: '' } };
         } else reply = { intent: 'ai_off', title: { fr: 'Je ne sais pas répondre à ça tout seul', en: 'I cannot answer that on my own' }, lines: [{ fr: 'Mes règles couvrent le résumé, les priorités, l\'équipe, les chiffres et les « et si ». Pour les questions libres, je peux demander à une IA externe : elle ne reçoit que ta question et un résumé sans noms.', en: 'My rules cover the summary, priorities, team, figures and "what if". For free-form questions I can ask an external AI: it only receives your question and a summary without names.' }, { fr: 'Elle est coupée sur cet appareil. Touche le bouton pour l\'activer (tu peux la couper dans Réglages > Général).', en: 'It is off on this device. Tap the button to turn it on (you can turn it off in Settings > General).' }], actions: [{ label: { fr: 'Activer l\'IA externe', en: 'Turn on the external AI' }, go: { view: ENABLE_AI } }], sources: { fr: 'règles du site', en: 'site rules' } };
       }
