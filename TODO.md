@@ -511,3 +511,4 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Site : `src/utils/prefsRules.ts` (règles), `prefsSync.ts` (branchement : chaque changement part après 0,8 s ; à l'ouverture du compte le compte gagne ; un appareil neuf envoie ses réglages). Un seul rechargement par session quand l'appareil reprend les réglages du compte.
 - Pas synchronisés : connexion (jeton), interrupteurs de notifications par appareil, historique de l'assistant, brouillons. Il faut toujours se connecter dans chaque navigateur/appli.
 - Retour arrière : commit précédent + `drop table public.df_prefs;`.
+- Serveur déployé : df-api v66 = commit 88e6cd7 (import brut GitHub). Retour arrière : redéployer l'import du commit e080e03 (v65). Table `df_prefs` créée après la sauvegarde n° 89.
