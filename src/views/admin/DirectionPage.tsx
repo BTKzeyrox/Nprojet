@@ -51,11 +51,12 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
       <div className="grid gap-3 md:grid-cols-2">
         <div className={card}>
           {head(<Landmark className="w-4 h-4 text-emerald-400" aria-hidden="true" />, 'Argent du mois', 'Money this month')}
-          {row(sum.revenue.estimated ? t('Chiffre d\'affaires (estimé : missions validées)', 'Revenue (estimated: validated missions)') : t(`Chiffre d'affaires (${sum.revenue.invoices} facture(s) émise(s))`, `Revenue (${sum.revenue.invoices} invoice(s) issued)`), ar(sum.revenue.amount))}
+          {row(sum.revenue.estimated ? t('Chiffre d\'affaires (estimé : missions validées)', 'Revenue (estimated: validated missions)') : t(`Chiffre d'affaires (${sum.revenue.invoices} facture(s) émise(s))`, `Revenue (${sum.revenue.invoices} invoice(s) issued)`), ar(sum.revenue.amount), sum.revenue.estimated ? 'text-amber-300' : 'text-white')}
+          {sum.revenue.estimated && <p className="text-[11px] text-amber-300/80">{t('Estimé : aucune facture émise ce mois-ci, on prend la valeur des missions validées.', 'Estimated: no invoice issued this month, so the value of validated missions is used.')}</p>}
           {row(t('Encaissé', 'Received'), ar(sum.money.received))}
           {row(t('Dépenses + salaires', 'Expenses + salaries'), ar(sum.money.out))}
           {row(t('Bénéfice', 'Profit'), `${ar(sum.money.profit)}${sum.money.marginPct !== null ? ` (${sum.money.marginPct} %)` : ''}`, sum.money.profit < 0 ? 'text-red-400' : 'text-emerald-400')}
-          {row(t('Trésorerie', 'Cash'), ar(sum.money.treasury), sum.money.treasury < 0 ? 'text-red-400' : 'text-white')}
+          {row(t('Trésorerie (depuis le début)', 'Cash (since the start)'), ar(sum.money.treasury), sum.money.treasury < 0 ? 'text-red-400' : 'text-white')}
           {go('stats', 'Voir les finances', 'See the finances')}
         </div>
 

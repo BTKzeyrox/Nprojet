@@ -40,6 +40,8 @@ ok(!/Comptabilité du mois|Résultat comptable|Prévu contre réel|Revenus encai
 const dirSrc = fs.readFileSync('src/views/admin/DirectionPage.tsx', 'utf8');
 const targets = [...dirSrc.matchAll(/go\('([a-z-]+)',/g)].map(m => m[1]);
 ok(targets.length >= 7 && targets.every(v => app.includes(`activeView === '${v}'`)), `chaque bouton « Voir… » ouvre une page qui existe dans l'application (${[...new Set(targets)].join(', ')})`);
+ok(/Trésorerie \(depuis le début\)/.test(dirSrc) && /Cash \(since the start\)/.test(dirSrc), 'la ligne Trésorerie dit « depuis le début » (FR et EN) : les autres lignes sont du mois');
+ok(/sum\.revenue\.estimated && <p/.test(dirSrc) && /Estimated: no invoice issued this month/.test(dirSrc), 'chiffre d\'affaires estimé : une note visible explique d\'où vient le chiffre (FR et EN)');
 ok(/go\('storage', 'Voir le stock'/.test(dirSrc), 'le bouton « Voir le stock » ouvre la page Stockage (et plus Statistiques)');
 ok(['accounting'].every(v => /Voir la comptabilité/.test(fr) && /See accounting/.test(en)), 'lien « Voir la comptabilité » vers la page Comptabilité');
 ok(calls === 0, 'aucun appel réseau');

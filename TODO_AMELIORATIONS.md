@@ -20,8 +20,10 @@ Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (o
 
 ## Priorité 3 : chiffres clairs
 - [ ] **C1. Trésorerie du Comptable : ajouter l'argent en caisse « depuis le début »** (reçu − dépenses depuis le début, sans salaires). Aujourd'hui il ne voit que le solde du mois. Dans `TreasuryPage` / `src/utils/treasuryCharts.ts`, jamais de salaires (`check:treasury`, `check:treasury-charts`).
-- [ ] **C2. Direction, carte « Argent du mois » : écrire « depuis le début » sur la ligne Trésorerie** (les autres lignes sont du mois). Même mot que dans Finances.
-- [ ] **C3. Direction : dire clairement quand le chiffre d'affaires est « estimé »** (pas de facture émise ce mois-ci, donc valeur des missions validées). Le mot « estimé » existe déjà dans le libellé : le rendre plus visible (couleur ou petite note).
+- [x] (2026-11-02) **C2. Direction, carte « Argent du mois » : écrire « depuis le début » sur la ligne Trésorerie** (les autres lignes sont du mois). Même mot que dans Finances.
+  - Fait : libellé « Trésorerie (depuis le début) » / « Cash (since the start) » dans `DirectionPage.tsx`.
+- [x] (2026-11-02) **C3. Direction : dire clairement quand le chiffre d'affaires est « estimé »** (pas de facture émise ce mois-ci, donc valeur des missions validées). Le mot « estimé » existe déjà dans le libellé : le rendre plus visible (couleur ou petite note).
+  - Fait : montant en ambre et petite note « Estimé : aucune facture émise ce mois-ci… » (FR et EN). 2 contrôles ajoutés dans `check:direction-page` (29/29). Site seulement, non testé à l'écran.
 - [ ] **C4. Finances : éviter la confusion entre deux « À encaisser ».** La tuile du haut = missions validées × prix client − reçu. Le bloc Factures = reste à payer des factures émises. Proposer un seul mot par chiffre (par exemple « Estimé à encaisser » et « Reste à payer sur factures ») dans `FinanceInsights.tsx`, avec le même mot dans `GUIDE_SITE.md` et « Pourquoi ce chiffre ? ».
 - [ ] **C5. Finances : préciser sur la tuile Trésorerie qu'elle ne suit pas la période choisie** (elle est déjà marquée « depuis le début » : vérifier que ça reste lisible sur téléphone).
 - [ ] **C6. Trésorerie : le graphique « Solde du mois » repart de 0 chaque mois.** Option : le faire partir du solde de fin du mois précédent (à décider avec BTK, après C1).
