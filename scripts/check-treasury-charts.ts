@@ -12,6 +12,9 @@ ok(c.balance[1] === 70000 && c.balance[4] === 100000, 'solde cumulé : 70 000 le
 ok(c.inflow[10] === null && c.outflow[19] === null && c.balance[30] === null, 'jours à venir : pas de point');
 ok(c.received === 150000 && c.spent === 60000, 'totaux du mois (la ligne hors mois est ignorée)');
 ok(c.outByCategory[0].label === 'Loyer' && c.outByCategory.length === 3 && c.inByCategory[0].value === 150000, 'catégories triées par montant');
+ok(c.opening === 999 && c.balanceTotal[0] === 999 && c.balanceTotal[1] === 70999 && c.balanceTotal[4] === 100999 && c.balanceTotal[10] === null, 'solde de la caisse : part des 999 Ar restés à la fin du mois précédent (30 septembre), puis suit le solde du mois ; rien après aujourd\'hui');
+ok(treasuryCharts([e('1', 'in', 5000, '2026-11-20', 'Paiement client')], { start: '2026-12-01', end: '2026-12-31' }, '2026-10-10').opening === 0, 'les lignes datées après aujourd\'hui ne comptent pas dans le solde de départ');
+ok(treasuryCharts([], { start: '2026-10-01', end: '2026-10-31' }, '2026-10-10').balanceTotal[0] === 0, 'caisse vide : le solde part de 0');
 const since = cashSinceStart([...cash, e('9', 'in', 999999, '2026-12-01', 'Paiement client'), e('8', 'in', 40000, '2026-09-15', 'Paiement client')], '2026-10-10');
 ok(since.received === 190999 && since.spent === 50000 && since.balance === 140999, 'en caisse depuis le début : toutes les lignes jusqu\'à aujourd\'hui (septembre compris), pas celles du futur');
 ok(cashSinceStart([], '2026-10-10').balance === 0 && cashSinceStart([null, { kind: 'in', amount_ar: NaN, date: '2026-10-01' }] as any, '2026-10-10').balance === 0, 'caisse vide ou lignes abîmées : 0, aucun plantage');

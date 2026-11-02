@@ -24,10 +24,10 @@ export const TreasuryCharts: React.FC<{ range: { start: string; end: string }; l
           inLabel={t('Argent reçu', 'Money received')} outLabel={t('Dépenses', 'Expenses')} balanceLabel={t('Solde', 'Balance')} ariaLabel={t('Argent reçu et dépenses', 'Money received and expenses')} />
       </div>
       <div className={box}>
-        <h2 className="text-sm sm:text-base font-bold text-white">{t('Solde du mois', 'Balance of the month')}</h2>
+        <h2 className="text-sm sm:text-base font-bold text-white">{t('Solde de la caisse', 'Cash balance')}</h2>
         <XYChart labels={c.labels} fullLabels={c.fullLabels} lang={lang} format={ar} axisFormat={compactNumber} summary="last" signColors
-          ariaLabel={t('Solde cumulé du mois (reçu − dépenses)', 'Cumulative balance of the month (received − expenses)')}
-          series={[{ key: 'bal', label: t('Solde cumulé', 'Cumulative balance'), values: c.balance, kind: 'area' as const }]} />
+          ariaLabel={t('Solde de la caisse jour après jour : il part de ce qui restait à la fin du mois précédent', 'Cash balance day by day: it starts from what was left at the end of the previous month')}
+          series={[{ key: 'bal', label: t('Solde de la caisse', 'Cash balance'), values: c.balanceTotal, kind: 'area' as const }]} />
       </div>
       <div className={box}>
         <h2 className="text-sm sm:text-base font-bold text-white">{t('Où part l\'argent', 'Where the money goes')}</h2>

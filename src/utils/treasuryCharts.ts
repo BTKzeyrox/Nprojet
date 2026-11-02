@@ -9,6 +9,10 @@ export interface TreasuryCharts {
   outflow: (number | null)[];
   /** Solde cumulé du mois (reçu − dépenses) jour après jour. */
   balance: (number | null)[];
+  /** Argent en caisse à la veille du premier jour (tout ce qui est reçu moins toutes les dépenses avant la période, jamais après aujourd'hui). */
+  opening: number;
+  /** Solde de la caisse jour après jour : `opening` + le solde cumulé du mois. */
+  balanceTotal: (number | null)[];
   inByCategory: { label: string; value: number }[];
   outByCategory: { label: string; value: number }[];
   received: number;
@@ -26,21 +30,23 @@ export function treasuryCharts(cash: CashEntry[], range: { start: string; end: s
   const days = daysBetween(range.start, range.end) + 1;
   const inRange = cash.filter(e => e.date >= range.start && e.date <= range.end);
   const labels: string[] = [], fullLabels: string[] = [];
-  const inflow: (number | null)[] = [], outflow: (number | null)[] = [], balance: (number | null)[] = [];
+  const inflow: (number | null)[] = [], outflow: (number | null)[] = [], balance: (number | null)[] = [], balanceTotal: (number | null)[] = [];
+  let opening = 0;
+  for (const e of cash) if (e && e.date < range.start && e.date <= today && Number.isFinite(e.amount_ar)) opening += e.kind === 'in' ? e.amount_ar : e.kind === 'out' ? -e.amount_ar : 0;
   let run = 0;
   for (let i = 0; i < days; i++) {
     const d = addDays(range.start, i);
     labels.push(String(Number(d.slice(8, 10))));
     fullLabels.push(d.split('-').reverse().join('/'));
-    if (d > today) { inflow.push(null); outflow.push(null); balance.push(null); continue; }
+    if (d > today) { inflow.push(null); outflow.push(null); balance.push(null); balanceTotal.push(null); continue; }
     let a = 0, b = 0;
     for (const e of inRange) if (e.date === d) { if (e.kind === 'in') a += e.amount_ar; else b += e.amount_ar; }
     run += a - b;
-    inflow.push(a); outflow.push(b); balance.push(run);
+    inflow.push(a); outflow.push(b); balance.push(run); balanceTotal.push(opening + run);
   }
   const ins = inRange.filter(e => e.kind === 'in'), outs = inRange.filter(e => e.kind === 'out');
   return {
-    labels, fullLabels, inflow, outflow, balance,
+    labels, fullLabels, inflow, outflow, balance, opening, balanceTotal,
     inByCategory: byCat(ins), outByCategory: byCat(outs),
     received: ins.reduce((s, e) => s + e.amount_ar, 0), spent: outs.reduce((s, e) => s + e.amount_ar, 0),
   };

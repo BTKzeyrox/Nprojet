@@ -305,6 +305,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Solde = argent reçu − dépenses. Les salaires et la paie restent au responsable.
   - Les lignes saisies ici sont les mêmes que dans l'onglet Finances du responsable.
   - En caisse (depuis le début) = tout l'argent reçu moins toutes les dépenses, jusqu'à aujourd'hui, sans salaires. Il ne dépend pas du mois choisi.
+  - Le graphique « Solde de la caisse » part de ce qui restait à la fin du mois précédent, puis suit les jours du mois.
 - **Dans le code** : `src/views/admin/TreasuryPage.tsx`, `src/views/admin/FinanceTab.tsx`
 
 ### Comptabilité  `accounting`
