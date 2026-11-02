@@ -131,6 +131,15 @@ export default function App() {
       let done = false; try { done = sessionStorage.getItem('df_prefs_reload') === uid; sessionStorage.setItem('df_prefs_reload', uid); } catch { /* ignore */ }
       if (!done) window.location.reload();
     });
+    // Retour au premier plan : reprend ce qui a changé ailleurs (sauf pendant qu'on écrit)
+    let last = Date.now();
+    const onVis = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - last < 30000) return;
+      last = Date.now();
+      void syncPrefsFromAccount().then(changed => { const a = document.activeElement as HTMLElement | null; if (changed && !(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'))) window.location.reload(); });
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, [currentUser?.id]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent

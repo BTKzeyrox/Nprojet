@@ -512,3 +512,8 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Pas synchronisés : connexion (jeton), interrupteurs de notifications par appareil, historique de l'assistant, brouillons. Il faut toujours se connecter dans chaque navigateur/appli.
 - Retour arrière : commit précédent + `drop table public.df_prefs;`.
 - Serveur déployé : df-api v66 = commit 88e6cd7 (import brut GitHub). Retour arrière : redéployer l'import du commit e080e03 (v65). Table `df_prefs` créée après la sauvegarde n° 89.
+
+## 2026-11-02 — Réglages par compte : messagerie en plus (demande BTK)
+- Ajoutés : discussions épinglées, conversations cachées, messages « supprimés pour moi », lu/non lu, statut de disponibilité, option assistant IA. Les listes longues ont une limite plus grande (60 000 caractères pour les messages cachés). Même table `df_prefs`, aucune migration.
+- Retour au premier plan (après 30 s) : l'appli reprend ce qui a changé ailleurs ; recharge seulement si on n'est pas en train d'écrire.
+- Limite : si deux appareils changent la même liste en même temps, le dernier gagne.

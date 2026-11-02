@@ -18,6 +18,16 @@ eq(P.cleanPrefs({ theme: 3 }), {}, 'valeur non texte refusée');
 eq(P.localKeyOf('theme', 'u1'), 'delta_theme', 'clé thème');
 eq(P.localKeyOf('health_notif', 'u1'), 'df_notif_health_u1', 'clé Santé propre au compte');
 eq(P.nameOfLocalKey('df_watch_u2', 'u2'), 'watch', 'clé inverse');
+eq(P.localKeyOf('chat_pinthreads', 'u1'), 'df_chat_pinthreads_u1', 'discussions épinglées');
+eq(P.localKeyOf('chat_archived', 'u1'), 'df_chat_archived_u1', 'conversations cachées');
+eq(P.localKeyOf('chat_hidden', 'u1'), 'df_chat_hidden_u1', 'messages supprimés pour moi');
+eq(P.localKeyOf('chat_seen', 'u1'), 'df_chat_seen_u1', 'lu / non lu');
+eq(P.cleanPrefs({ chat_hidden: 'x'.repeat(59000) }).chat_hidden?.length, 59000, 'longue liste de messages cachés acceptée');
+eq(P.cleanPrefs({ chat_pinthreads: 'x'.repeat(7000) }), {}, 'liste courte : limite normale');
+// les clés de messagerie synchronisées sont bien celles de chatPrefs.ts
+const cp = readFileSync('src/utils/chatPrefs.ts', 'utf8');
+eq(['hidden', 'archived', 'pinthreads', 'seen'].every(k => cp.includes(`key('${k}', uid)`)), true, 'chatPrefs.ts utilise les mêmes clés');
+eq(/visibilitychange/.test(readFileSync('src/App.tsx', 'utf8')) && /syncPrefsFromAccount\(\)\.then\(changed => \{ const a/.test(readFileSync('src/App.tsx', 'utf8')), true, 'retour au premier plan : resynchro, sans recharger pendant la saisie');
 eq(P.nameOfLocalKey('df_watch_u2', 'u1'), null, 'le réglage d\'un autre compte n\'est pas pris');
 eq(P.nameOfLocalKey('df_session_token_v2', 'u1'), null, 'JAMAIS la clé de connexion');
 eq(P.PREF_NAMES.map(n => P.localKeyOf(n, 'u')).includes('df_session_token_v2'), false, 'le jeton de connexion n\'est pas synchronisé');

@@ -5442,8 +5442,9 @@ function pushKindFor(before: unknown, after: unknown): PushKind | null {
 }
 
 // ===== BEGIN PREFS (copie de src/utils/prefsRules.ts) =====
-const PREF_NAMES = ['theme', 'lang', 'font', 'sound', 'sidebar', 'stats_gran', 'stock_space', 'health_notif', 'watch'];
+const PREF_NAMES = ['theme', 'lang', 'font', 'sound', 'sidebar', 'stats_gran', 'stock_space', 'health_notif', 'watch', 'chat_hidden', 'chat_archived', 'chat_pinthreads', 'chat_seen', 'availability', 'ai_optin'];
 const PREF_MAX_LEN = 6000;
+const PREF_BIG: Record<string, number> = { chat_hidden: 60000, chat_seen: 20000, chat_archived: 12000 }; // listes plus longues : messages supprimés pour moi, dernières lectures, conversations cachées
 /** Ne garde que les réglages connus avec une valeur texte courte ; null = effacer. Tout le reste est ignoré. */
 function cleanPrefs(input: unknown): Record<string, string | null> {
   const out: Record<string, string | null> = {};
@@ -5452,7 +5453,7 @@ function cleanPrefs(input: unknown): Record<string, string | null> {
     if (!Object.prototype.hasOwnProperty.call(input, name)) continue;
     const v = (input as Record<string, unknown>)[name];
     if (v === null) out[name] = null;
-    else if (typeof v === 'string' && v.length <= PREF_MAX_LEN) out[name] = v;
+    else if (typeof v === 'string' && v.length <= (PREF_BIG[name] || PREF_MAX_LEN)) out[name] = v;
   }
   return out;
 }
