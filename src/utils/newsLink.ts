@@ -60,3 +60,8 @@ export function splitLinks(message: string, origin: string): LinkPart[] {
   if (last < src.length) out.push({ kind: 'text', text: src.slice(last) });
   return out.length ? out : [{ kind: 'text', text: src }];
 }
+
+/** Texte court (aperçu de la liste, cloche, citation) : chaque lien vers une page de CE site devient son nom (« Voir la publication »), jamais l'adresse longue. */
+export function previewText(message: string, origin: string, lang: 'fr' | 'en' = 'fr'): string {
+  return splitLinks(message, origin).map(p => (p.kind === 'link' ? linkLabel(p.link, lang) : p.text)).join('').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+}

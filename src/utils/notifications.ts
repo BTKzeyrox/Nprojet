@@ -1,6 +1,7 @@
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
+import { previewText } from './newsLink';
 import { getQueue, getFreePosts } from './presence';
 import type { ValFilter } from './navIntent';
 import { getHealthSoft } from './healthDb';
@@ -79,7 +80,7 @@ export const buildNotifications = (user: User): Notif[] => {
     .slice(-20)
     .forEach(m => {
       const group = (m.recipient_id || 'all') === 'all';
-      out.push({ id: `msg-${m.id}`, title: group ? `${m.sender_name} · groupe` : m.sender_name, sub: m.message ? m.message.slice(0, 80) : 'Pièce jointe', view: 'chat', thread: group ? 'all' : m.sender_id, at: m.timestamp, tone: 'info' });
+      out.push({ id: `msg-${m.id}`, title: group ? `${m.sender_name} · groupe` : m.sender_name, sub: m.message ? previewText(m.message, (typeof window !== 'undefined' && window.location ? window.location.origin : '')).slice(0, 80) : 'Pièce jointe', view: 'chat', thread: group ? 'all' : m.sender_id, at: m.timestamp, tone: 'info' });
     });
   return out.sort((a, b) => ts(b.at) - ts(a.at));
 };

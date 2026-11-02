@@ -75,5 +75,18 @@ const appSrc = (await import('node:fs')).readFileSync('src/App.tsx', 'utf8');
 const chats = appSrc.match(/<ChatView [^>]*>/g) || [];
 ok(chats.length >= 4 && chats.every(c => /onNavigate=/.test(c)), 'messagerie de CHAQUE rôle : le bouton « Voir la publication » peut changer de page (onNavigate)');
 
+{
+  const O = 'https://nprojet-beta.vercel.app';
+  const { previewText } = await import('../src/utils/newsLink');
+  ok(previewText(`${O}/?go=feed&nav=news:abc`, O) === 'Voir la publication', 'aperçu : le lien seul devient « Voir la publication »');
+  ok(previewText(`Regarde ça\n${O}/?go=feed&nav=news:abc`, O) === 'Regarde ça Voir la publication', 'aperçu : petit mot + nom du lien, sur une ligne');
+  ok(previewText(`${O}/?go=feed&nav=news:abc`, O, 'en') === 'View the post', 'aperçu : anglais');
+  ok(previewText('Bonjour https://autre.site/x', O) === 'Bonjour https://autre.site/x', 'aperçu : une adresse d\'un autre site reste telle quelle');
+  ok(previewText('Salut', O) === 'Salut', 'aperçu : texte simple inchangé');
+  const cv = (await import('node:fs')).readFileSync('src/components/ChatView.tsx', 'utf8');
+  ok(/previewText\(last\.message/.test(cv) && /previewText\(msg\.reply_to/.test(cv) && /previewText\(pinShown/.test(cv), 'liste, citation et message épinglé : jamais l\'adresse longue');
+  ok(/previewText\(m\.message/.test((await import('node:fs')).readFileSync('src/utils/notifications.ts', 'utf8')), 'cloche : même chose');
+}
+
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);

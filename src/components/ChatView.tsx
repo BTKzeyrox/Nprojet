@@ -23,6 +23,7 @@ import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { LinkedText } from './LinkedText';
+import { previewText } from '../utils/newsLink';
 import { playUiSound } from '../utils/notifSound';
 import { applyDeepLink, deepLinkAllowed } from '../utils/deepLink';
 import { TypingDots } from './Reactions';
@@ -526,7 +527,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const renderThread = (t: Thread, archivedRow = false) => {
     const last = lastOf(t);
     const who = last && !last.deleted_at && t.kind !== 'user' && t.kind !== 'pair' ? `${last.sender_id === currentUser.id ? 'Moi' : last.sender_name.split(' ')[0]} : ` : last && last.sender_id === currentUser.id && !last.deleted_at && t.kind === 'user' ? 'Moi : ' : '';
-    const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (last.message || (last.attachment_kind === 'image' ? (last.album_id ? 'Photos' : 'Photo') : last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
+    const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (previewText(last.message || '', window.location.origin) || (last.attachment_kind === 'image' ? (last.album_id ? 'Photos' : 'Photo') : last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
     const unread = t.id === current.id && convVisible ? 0 : unreadOf(t);
     const palette = ['border-l-rose-500', 'border-l-amber-500', 'border-l-emerald-500', 'border-l-sky-500', 'border-l-violet-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-orange-500'];
     const hash = Array.from(t.id).reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -690,7 +691,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           >
             <Pin className="w-3 h-3 text-blue-600 shrink-0" />
             <span className={`flex-1 min-w-0 text-[11px] ${P.sub}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}<b className="text-blue-600">{pinShown.sender_name.split(' ')[0]}</b> : {pinShown.message || pinShown.attachment_name || 'Pièce jointe'}
+              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}<b className="text-blue-600">{pinShown.sender_name.split(' ')[0]}</b> : {previewText(pinShown.message || '', window.location.origin) || pinShown.attachment_name || 'Pièce jointe'}
             </span>
           </button>
         )}
@@ -769,7 +770,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <button type="button" onClick={() => jumpTo(msg.reply_to!.id)} className="relative block w-full text-left mb-1 rounded-lg overflow-hidden cursor-pointer pl-3 pr-2.5 py-1" style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.92)' : ac.quoteBg, color: L ? '#1e293b' : isMe ? '#1e293b' : '#e2e8f0' }}>
                                 <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: ac.bar }} />
                                 <span className="block text-[12px] font-bold leading-tight" style={{ color: isMe ? ac.name : ac.name }}>{msg.reply_to!.sender_name}</span>
-                                <span className="block text-[0.8125rem] leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{msg.reply_to!.text || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
+                                <span className="block text-[0.8125rem] leading-snug break-words" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: 0.88 }}>{previewText(msg.reply_to!.text || '', window.location.origin) || (msg.reply_to!.has_attachment ? 'Pièce jointe' : '')}</span>
                               </button>
                             );
                           })()}
