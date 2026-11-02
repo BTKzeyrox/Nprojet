@@ -181,7 +181,8 @@ async function handlePush(d) {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = {}; }
-  e.waitUntil(handlePush(d));
+  // Si quoi que ce soit plante : on montre quand même une notification simple (iPhone : une notification doit TOUJOURS être montrée)
+  e.waitUntil(handlePush(d).catch(() => self.registration.showNotification('Gestion Pro', { body: 'Vous avez une nouvelle notification', icon: '/icon-192.png', badge: '/favicon-32.png', tag: 'gp-digest', data: { url: '/', count: 1 } })));
 });
 
 self.addEventListener('notificationclick', (e) => {

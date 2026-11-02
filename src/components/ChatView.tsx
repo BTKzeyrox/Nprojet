@@ -23,6 +23,7 @@ import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
 import { useApp } from '../context/AppContext';
 import { LinkedText } from './LinkedText';
+import { playUiSound } from '../utils/notifSound';
 import { applyDeepLink, deepLinkAllowed } from '../utils/deepLink';
 import { TypingDots } from './Reactions';
 import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
@@ -351,6 +352,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const key = `${current.id}|${text.trim()}|${extra?.url || ''}`;
     if (lastSent.current.key === key && Date.now() - lastSent.current.at < 3000) { setText(''); return; }
     lastSent.current = { key, at: Date.now() };
+    playUiSound('send');
     db.sendMessage({
       senderId: currentUser.id,
       message: extra?.noText ? '' : text,

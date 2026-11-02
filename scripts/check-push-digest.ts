@@ -36,7 +36,7 @@ for (const n of [1, 2, 3, 10]) for (const en of [false, true]) eq(swPlan(n, M, e
 ok(/visibilityState === 'visible'/.test(sw) && /getNotifications\(\{ tag: DIGEST_TAG \}\)/.test(sw), 'sw : regarde si l\'appli est visible et compte les notifications déjà là');
 ok(/if \(!\/iPhone\|iPad\|iPod\/i\.test/.test(sw) && /tag: 'gp-fg'/.test(sw), 'sw : appli ouverte → rien sur Android / ordinateur ; iPhone : notification silencieuse retirée aussitôt');
 ok(/silent: p\.silent, tag: p\.tag, renotify: false/.test(sw), 'sw : mise à jour sans bruit (silent + renotify faux)');
-ok(/e\.waitUntil\(handlePush\(d\)\)/.test(sw), 'sw : le travail se fait dans waitUntil');
+ok(/e\.waitUntil\(handlePush\(d\)/.test(sw), 'sw : le travail se fait dans waitUntil');
 ok(/notificationclick/.test(sw) && /e\.notification\.close\(\)/.test(sw), 'sw : toucher la notification la ferme (le compte repart de zéro)');
 const app = readFileSync('src/App.tsx', 'utf8');
 ok(/closeDigestNotifications\(\)/.test(app) && /visibilitychange/.test(app), 'appli : ouverte → les notifications externes en attente sont retirées');

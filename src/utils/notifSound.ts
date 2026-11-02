@@ -87,3 +87,29 @@ export const beepIfEnabled = (n = 1) => {
   if (!getSoundPrefs().on) return;
   for (let i = 0; i < chimeCount(n); i++) { if (i === 0) playBeep(); else setTimeout(() => { playBeep(); }, i * CHIME_SPACING_MS); }
 };
+
+// Petits sons de l'appli (BTK, 2026-11-02) : envoyer, « J'adore », publication envoyée. Même réglage (son oui/non + volume) que la cloche.
+export type UiSound = 'send' | 'like' | 'published';
+export const UI_SOUNDS: Record<UiSound, { notes: [number, number][]; gap: number; dur: number; amp: number }> = {
+  send: { notes: [[660, 0], [988, 0]], gap: 0.07, dur: 0.16, amp: 0.16 }, // petit « pop » montant, court
+  like: { notes: [[1175, 0], [1568, 0]], gap: 0.06, dur: 0.14, amp: 0.14 }, // « tic-tic » aigu, léger
+  published: { notes: [[784, 0], [988, 0], [1318.5, 0]], gap: 0.09, dur: 0.22, amp: 0.18 }, // 3 notes montantes, un peu plus longues
+};
+export const playUiSound = (kind: UiSound): boolean => {
+  if (!getSoundPrefs().on) return false;
+  const c = getCtx();
+  if (!c || c.state !== 'running') return false;
+  const { notes, gap, dur, amp } = UI_SOUNDS[kind];
+  const vol = getSoundPrefs().volume, t0 = c.currentTime;
+  notes.forEach(([f], i) => {
+    const s = t0 + i * gap, d = i === notes.length - 1 ? dur * 1.6 : dur;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, s);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, amp * vol), s + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, s + d);
+    o.connect(g).connect(c.destination);
+    o.start(s); o.stop(s + d + 0.02);
+  });
+  return true;
+};

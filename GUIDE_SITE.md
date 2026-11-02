@@ -849,6 +849,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:ui-sounds` | Contrôle : sons de l'appli (envoyer, J'adore, publication envoyée) + notification externe de secours. Lancer : npm run check:ui-sounds |
 | `npm run check:push-device` | Contrôle : l'appareil suit le compte ouvert (déconnexion = détaché ; ouverture d'un compte = rattaché). Lancer : npm run check:push-device |
 | `npm run check:notif-view` | Contrôle : heure (Madagascar) et filtres de la cloche. Lancer : npm run check:notif-view |
 | `npm run check:push-digest` | Contrôle des notifications externes groupées et du nouveau son (demande de BTK, 2026-11-01). Lancer : npm run check:push-digest |

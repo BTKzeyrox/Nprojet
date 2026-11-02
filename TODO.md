@@ -499,3 +499,8 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Cause : l'abonnement du téléphone restait lié au dernier compte qui avait activé les notifications, même après déconnexion. Un message pour cet ancien compte sonnait sur le téléphone d'un autre compte ; les autres comptes ne recevaient rien.
 - Maintenant : déconnexion = l'appareil est détaché du compte ; ouverture d'un compte = l'appareil est rattaché à ce compte (si les notifications sont déjà autorisées sur l'appareil). Client seulement, pas de serveur. Contrôle : `check:push-device`.
 - Limite : à l'ouverture du compte suivant, les interrupteurs par catégorie repartent à zéro. Si on ferme l'onglet sans se déconnecter, l'appareil reste au dernier compte.
+
+## 2026-11-02 — Sons : envoyer, J'adore, publication envoyée + repli de la notification externe
+- Trois petits sons doux (même réglage son/volume que la cloche) : envoi d'un message, « J'adore » (pas au retrait), publication envoyée/proposée (après succès).
+- `public/sw.js` : si le traitement d'une notification plante, une notification simple « Vous avez une nouvelle notification » est quand même montrée. Contrôle : `check:ui-sounds`. Pas de serveur.
+- Notification externe « n'affiche pas » : cause non confirmée (voir message à BTK : bouton Tester dans Réglages).

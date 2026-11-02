@@ -13,6 +13,7 @@ import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
 import { NewsShareSheet } from '../components/NewsShareSheet';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { newsIdFromNav, newsNavId } from '../utils/newsLink';
+import { playUiSound } from '../utils/notifSound';
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
@@ -392,7 +393,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       </div>
 
       <div className={`flex flex-nowrap items-center gap-0.5 border-t pt-2 ${light ? 'border-slate-200' : 'border-slate-700'}`}>
-        <button type="button" disabled={busy} onClick={() => void run(() => db.toggleLoveNews(post.id))} className={`${btn} ${loved ? 'text-red-500' : ''}`} aria-pressed={loved}>
+        <button type="button" disabled={busy} onClick={() => { if (!loved) playUiSound('like'); void run(() => db.toggleLoveNews(post.id)); }} className={`${btn} ${loved ? 'text-red-500' : ''}`} aria-pressed={loved}>
           <Heart className="w-3.5 h-3.5 shrink-0" fill={loved ? 'currentColor' : 'none'} />J’adore
         </button>
         <button type="button" onClick={() => setOpen(v => !v)} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
@@ -514,6 +515,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
       ? db.publishNews({ title, text, pinned, files: up.files, audience: aud })
       : await db.submitNews({ title, text, files: up.files, audience: aud });
     if (!r.success) { setErr(r.error || 'Impossible de publier.'); setBusy(false); return; }
+    playUiSound('published');
     setTitle(''); setText(''); setPinned(false); setItems([]); setAud([]);
     if (!direct) setInfo('Envoyée au responsable. Elle sera visible par l’équipe après validation.');
     else if (!isAdmin) setInfo('Publiée.');
