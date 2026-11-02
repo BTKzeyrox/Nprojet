@@ -518,3 +518,6 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Retour au premier plan (après 30 s) : l'appli reprend ce qui a changé ailleurs ; recharge seulement si on n'est pas en train d'écrire.
 - Limite : si deux appareils changent la même liste en même temps, le dernier gagne.
 - Serveur : df-api v67 = commit f612f20 (retour arrière : v66 = 88e6cd7).
+
+## 2026-11-02 — Notification externe : affichée TOUJOURS
+- Avant : appli ouverte et visible = aucune notification externe. Maintenant (demande BTK) : toujours affichée, appli ouverte ou fermée (carillon de l'appli en plus quand elle est ouverte). Toujours groupée « Vous avez N notifications », un seul son. Fichier : `public/sw.js`. Pas de serveur. Retour arrière : commit précédent.

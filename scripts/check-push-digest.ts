@@ -33,8 +33,8 @@ for (const [name, plan] of [['site', digestPlan], ['service worker', swPlan]] as
 for (const n of [1, 2, 3, 10]) for (const en of [false, true]) eq(swPlan(n, M, en, '/?go=chat'), digestPlan(n, M, en, '/?go=chat'), `copie identique pour ${n} notification(s), ${en ? 'EN' : 'FR'}`);
 
 // Service worker : appli ouverte = pas de bandeau ; sinon notification groupée
-ok(/visibilityState === 'visible'/.test(sw) && /getNotifications\(\{ tag: DIGEST_TAG \}\)/.test(sw), 'sw : regarde si l\'appli est visible et compte les notifications déjà là');
-ok(/if \(!\/iPhone\|iPad\|iPod\/i\.test/.test(sw) && /tag: 'gp-fg'/.test(sw), 'sw : appli ouverte → rien sur Android / ordinateur ; iPhone : notification silencieuse retirée aussitôt');
+ok(/getNotifications\(\{ tag: DIGEST_TAG \}\)/.test(sw), 'sw : compte les notifications déjà là');
+ok(!/visibilityState/.test(sw) && !/gp-fg/.test(sw), 'sw : la notification externe s\'affiche TOUJOURS (appli ouverte ou fermée)');
 ok(/silent: p\.silent, tag: p\.tag, renotify: false/.test(sw), 'sw : mise à jour sans bruit (silent + renotify faux)');
 ok(/e\.waitUntil\(handlePush\(d\)/.test(sw), 'sw : le travail se fait dans waitUntil');
 ok(/notificationclick/.test(sw) && /e\.notification\.close\(\)/.test(sw), 'sw : toucher la notification la ferme (le compte repart de zéro)');
