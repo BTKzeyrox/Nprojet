@@ -636,6 +636,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `newsAccess.ts` | Actualités : qui peut publier, qui peut modifier, qui peut voir (règles pures, copie identique dans supabase/functions/df-api/index.ts, bloc NEWSACCESS ; contrôlé par scripts/check-news-access.ts) |
 | `newsLink.ts` | Lien direct vers une publication des Actualités, et lecture de ces liens dans un message (règles pures, sans écran, sans réseau ; contrôlé par scripts/check-news-link.ts) |
 | `notifSound.ts` | Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien |
+| `notifView.ts` | Affichage de la cloche : heure de Madagascar + filtres (règles pures, testées dans scripts/check-notif-view.ts) |
 | `notifications.ts` | — |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
 | `offlineServer.ts` | Règles du SERVEUR pour les actions envoyées après une coupure (module 13, M13.7) : « une même action n'est exécutée qu'une fois ». |
@@ -848,6 +849,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:notif-view` | Contrôle : heure (Madagascar) et filtres de la cloche. Lancer : npm run check:notif-view |
 | `npm run check:push-digest` | Contrôle des notifications externes groupées et du nouveau son (demande de BTK, 2026-11-01). Lancer : npm run check:push-digest |
 | `npm run check:news-link` | Contrôle du lien vers une publication et de sa lecture dans un message. Lancer : npm run check:news-link |
 | `npm run check:header-status` | Contrôle de l'état de l'envoi dans le header (pastille) et du fond des fenêtres qui couvre le header (flou). Sans réseau, sans navigateur : rendu côté serveur |

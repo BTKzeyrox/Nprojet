@@ -486,3 +486,8 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Fichiers : `public/sw.js` (statique, pas de serveur), `src/utils/pushDigest.ts`, `src/utils/notifSound.ts`, `TopBar`, `App`. Contrôle : `npm run check:push-digest` (39).
 - Limite : le site ne peut pas choisir le son du téléphone pour la notification externe. À tester sur un vrai téléphone.
 - Retour arrière : revenir au commit précédent.
+
+## 2026-11-02 — Cloche : heure + filtres
+- Chaque notification montre son heure (Madagascar) : « 14:32 », « Hier 14:32 », « 28/10 14:32 ». Sans heure connue, seulement la date.
+- Filtres en haut de la cloche : Toutes, Non lues, Messages, Missions, Alertes.
+- Fichiers : `src/utils/notifView.ts`, `TopBar.tsx`. Contrôle : `npm run check:notif-view` (16). Pas de serveur. Retour arrière : commit précédent.

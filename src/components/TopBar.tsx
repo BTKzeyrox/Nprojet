@@ -9,6 +9,7 @@ import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { setStorageIntent } from '../utils/storageNav';
 import { beepIfEnabled } from '../utils/notifSound';
+import { NOTIF_FILTERS, filterNotifs, notifWhen, type NotifFilter } from '../utils/notifView';
 import { ConnectionChip } from './ConnectionBanner';
 import { Avatar } from './Avatar';
 import { usePresence, PRESENCE_DOT, PRESENCE_LABEL } from '../utils/availability';
@@ -45,6 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [nFilter, setNFilter] = useState<NotifFilter>('all');
   const box = useRef<HTMLDivElement>(null);
   const bellBox = useRef<HTMLDivElement>(null);
 
@@ -120,6 +122,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const notifs = buildNotifications(currentUser);
   const count = unreadCount(currentUser, notifs);
   const seen = getSeen(currentUser);
+  const shown = filterNotifs(notifs, nFilter, seen);
   // Bip court quand une NOUVELLE notification arrive (jamais au chargement de la page)
   const knownIds = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -215,11 +218,20 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                   {count > 0 && <button type="button" onClick={() => { markAllRead(currentUser, notifs); force(n => n + 1); }} className="min-h-[32px] px-3 rounded-lg border border-current font-semibold cursor-pointer" data-notif-readall>Tout marquer comme lu</button>}
                 </div>
               )}
+              {notifs.length > 0 && (
+                <div className={`px-2 py-2 flex gap-1.5 overflow-x-auto ${L ? 'bg-white' : 'bg-transparent'}`} data-notif-filters>
+                  {NOTIF_FILTERS.map(f => (
+                    <button key={f.id} type="button" onClick={() => setNFilter(f.id)} aria-pressed={nFilter === f.id} data-notif-filter={f.id}
+                      className={`shrink-0 min-h-[32px] px-3 rounded-lg text-xs font-semibold border cursor-pointer ${nFilter === f.id ? 'bg-[#1d4ed8] text-white border-[#1d4ed8]' : L ? 'bg-white text-slate-700 border-slate-300' : 'bg-white/5 text-slate-200 border-white/20'}`}>{f.label}</button>
+                  ))}
+                </div>
+              )}
               <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
+                {notifs.length > 0 && shown.length === 0 && <div className={`px-3 py-6 text-sm text-center ${L ? 'text-slate-500' : 'text-slate-300'}`}>Aucune notification dans ce filtre.</div>}
                 {notifs.length === 0 ? (
                   <div className={`px-3 py-6 text-sm text-center ${L ? 'text-slate-500' : 'text-slate-300'}`}>Rien de nouveau.</div>
                 ) : (
-                  notifs.slice(0, 30).map(n => {
+                  shown.slice(0, 30).map(n => {
                     const tone = n.tone === 'urgent' ? 'bg-red-100 text-red-700' : n.tone === 'bad' ? 'bg-orange-100 text-orange-700' : n.tone === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
                     const fresh = !seen.includes(n.id);
                     return (
@@ -232,7 +244,10 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                           <Bell className="w-4 h-4" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={`block text-sm font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{n.title}</span>
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className={`block text-sm font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{n.title}</span>
+                            <span className={`shrink-0 text-[11px] tabular-nums ${L ? 'text-slate-500' : 'text-slate-400'}`} data-notif-time>{notifWhen(n.at)}</span>
+                          </span>
                           {n.sub && <span className={`block text-xs mt-0.5 ${L ? 'text-slate-600' : 'text-slate-300'} break-words`}>{n.sub}</span>}
                         </span>
                         {fresh ? <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" data-notif-unread /> : <span className={`mt-0.5 text-[10px] shrink-0 ${L ? 'text-slate-400' : 'text-slate-400'}`} data-notif-read>Lue</span>}
