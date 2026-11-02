@@ -1,3 +1,6 @@
+// Table des textes de l'interface par clé (menus, grille, connexion) et getTranslation ; pur, sans écran ni serveur.
+// Utilisé par : AppContext.tsx.
+// Pour modifier : getTranslation renvoie toujours le français ; l'anglais est appliqué sur l'écran par enTranslate.ts et enDict.json.
 export type Language = 'fr' | 'en';
 
 export const TRANSLATIONS = {

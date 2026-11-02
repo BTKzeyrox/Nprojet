@@ -1,3 +1,6 @@
+// Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau.
+// Utilisé par : main.tsx.
+// Pour modifier : il attend que la personne ait fini d'écrire (isBusy) ; une seule tentative par version (sessionStorage) évite la boucle ; inactif en développement.
 import { APP_VERSION } from './errorReport';
 import { db } from '../db/store';
 

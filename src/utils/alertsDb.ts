@@ -1,3 +1,6 @@
+// Liste des alertes de l'admin, gardée en mémoire jusqu'au prochain changement de données ; lit le store, aucun appel serveur.
+// Utilisé par : GoalsPanel.tsx et Sidebar.tsx. Contrôlé par : npm run check:performance-page et npm run check:phase4.
+// Pour modifier : si une alerte dépend d'une nouvelle donnée ou d'un réglage, ajoute-la à la signature et à la clé du cache, sinon la pastille peut rester périmée.
 import { db } from '../db/store';
 import { todayMada } from './stats';
 import { computeAlerts, type AlertItem } from './alerts';

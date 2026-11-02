@@ -1,3 +1,6 @@
+// Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store.
+// Utilisé par : DayDetailsModal.tsx, OperatorSheet.tsx, PayrollAdmin.tsx, QueueButton.tsx, notifications.ts, CalendarView.tsx, AdminDashboard.tsx, EmployeesManagement.tsx et 1 autre.
+// Pour modifier : en ligne = signe de vie de moins de 90 s (ONLINE_MS) ; ne pas se fier à is_online (resté bloqué sur vrai) ; dayMada = jour de Madagascar (UTC+3).
 import { db } from '../db/store';
 import { ClientContract, PostSession, PresenceRow, User } from '../types';
 

@@ -1,3 +1,6 @@
+// Missions d'exemple (2 par type) et liste des types de mission, que le responsable peut modifier ou supprimer.
+// Utilisé par : (aucun import direct trouvé : chargé à la demande ou point d'entrée).
+// Pour modifier : MISSION_TYPES est la liste des types ; chaque mission d'AVAILABLE_CLIENT_CONTRACTS suit le type ClientContract de types/index.ts.
 import { ClientContract } from '../types';
 
 // Missions d'exemple (démonstration) : 2 par type. Le responsable peut les modifier ou les supprimer.

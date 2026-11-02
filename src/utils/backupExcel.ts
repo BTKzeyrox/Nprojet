@@ -1,3 +1,6 @@
+// Sauvegarde Excel des données du store (une feuille par thème), téléchargée par le navigateur ; aucun mot de passe exporté.
+// Utilisé par : RestoreSection.tsx.
+// Pour modifier : un nouveau thème = un appel add(...) ; finances et stock sont vides pour un opérateur (le serveur ne les envoie pas) ; le jour du nom de fichier est en UTC.
 import { db } from '../db/store';
 import { downloadWorkbook, fromObjects, type XSheet } from './xlsxA4';
 

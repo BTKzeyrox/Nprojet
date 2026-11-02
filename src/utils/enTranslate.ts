@@ -1,3 +1,6 @@
+// Traduit l'interface française en anglais en remplaçant les textes de la page (dictionnaire enDict.json) ; agit sur la page du navigateur.
+// Utilisé par : App.tsx.
+// Pour modifier : une traduction de plus = une entrée dans enDict.json ; la phrase la plus longue passe d'abord ; data-notranslate sur un élément l'exclut.
 import dict from './enDict.json';
 
 // Traduction automatique de l'interface en anglais (français → English).

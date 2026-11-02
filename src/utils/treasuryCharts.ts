@@ -1,3 +1,6 @@
+// Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires.
+// Utilisé par : TreasuryCharts.tsx. Contrôlé par : npm run check:treasury-charts.
+// Pour modifier : les jours après la date du jour n'ont pas de point (null) ; les salaires sont exclus volontairement.
 import type { CashEntry } from '../types';
 import { addDays, daysBetween } from './stats';
 

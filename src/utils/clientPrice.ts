@@ -1,3 +1,6 @@
+// Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut.
+// Utilisé par : PostsGrid20.tsx, store.ts, demoData.ts, clients.ts, financeStats.ts, invoices.ts, siteSnapshot.ts et AdminDashboard.tsx. Contrôlé par : npm run check:client-price, check:clients et check:simulation.
+// Pour modifier : prix arrondis à l'Ar ; 0 est un vrai prix (mission offerte), un prix vide ou invalide est ignoré ; l'ordre à 5 niveaux est dans clientPriceWithClient.
 import type { AppSettings, ClientContract, PostSession } from '../types';
 import type { ClientRecord } from './clients';
 

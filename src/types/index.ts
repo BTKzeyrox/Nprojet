@@ -1,3 +1,6 @@
+// Types TypeScript des données de l'appli : utilisateurs, missions, avances, messages, actualités, clients, finances, stock, factures et achats.
+// Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AdvanceHistory.tsx, BottomNav.tsx, CVViewerModal.tsx, ChatDialogs.tsx, ChatView.tsx et 76 autres. Contrôlé par : npm run check:finance et 6 autres commandes check.
+// Pour modifier : changer un champ ici touche tout ce qui lit cette donnée ; les rôles sont dans UserRole (admin, employee, accountant, team_lead).
 import type { MissionTemplate } from '../utils/missionTemplates';
 import type { RecurringRule } from '../utils/recurring';
 import type { AutoReportSetting } from '../utils/autoReport';

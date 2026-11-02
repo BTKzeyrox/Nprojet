@@ -1,3 +1,6 @@
+// Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions.
+// Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AiSettingsSection.tsx, AuditSection.tsx, BackupsSection.tsx, BadgeCongrats.tsx, BottomNav.tsx et 102 autres. Contrôlé par : npm run check:page et 40 autres commandes check.
+// Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
 import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';

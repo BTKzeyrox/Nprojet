@@ -1,3 +1,6 @@
+// Bip de notification et préférence du son (activé, volume) gardée sur cet appareil ; utilise l'audio et le stockage du navigateur.
+// Utilisé par : TopBar.tsx et SettingsView.tsx.
+// Pour modifier : le réglage est dans localStorage (df_notif_sound), propre à chaque téléphone ; avant le premier toucher le navigateur bloque le son et playBeep renvoie false.
 import { useEffect, useState } from 'react';
 
 // Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien

@@ -1,3 +1,6 @@
+// Statut Disponible, Occupé ou Absent choisi par chaque personne ; gardé dans le navigateur (localStorage), pas de serveur.
+// Utilisé par : CVViewerModal.tsx et TopBar.tsx. Contrôlé par : npm run check:header-profile.
+// Pour modifier : le statut reste sur CET appareil et n'est pas partagé ; un nouveau statut s'ajoute dans PRESENCE_LIST, PRESENCE_LABEL et PRESENCE_DOT.
 import { useSyncExternalStore } from 'react';
 
 // Statut de disponibilité : choisi par chaque personne, gardé sur CET appareil (pas partagé avec les autres).

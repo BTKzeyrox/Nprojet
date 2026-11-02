@@ -1,3 +1,6 @@
+// Met en page le bulletin de paie imprimable (A4, FR ou EN) et le CSV ; le serveur calcule les montants, ici on les affiche et on les vérifie.
+// Utilisé par : MyPayroll.tsx, PayrollAdmin.tsx, exportDoc.ts et StatsPage.tsx. Contrôlé par : npm run check:payslip, check:print-format et check:xlsx-a4.
+// Pour modifier : slipTotals recompose le net ; un écart avec le net du serveur est signalé sur le papier ; montants arrondis à l'Ar ; textes dans L.fr et L.en.
 import { PRINT_FONT, PRINT_FONT_FACE, PRINT_MARGIN_MM, PRINT_PT } from './printFormat';
 export interface SlipLine { post_id: string; date: string; client: string; post_number: number | null; score: number; rate: number; amount: number }
 export interface SlipEntry { id: string; amount: number; reason: string; at: string }

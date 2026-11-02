@@ -1,3 +1,6 @@
+// Coque de l'application : choisit l'écran à afficher selon le rôle (responsable, comptable, chef d'équipe, employé) et la page active.
+// Utilisé par : main.tsx.
+// Pour modifier : les pages sont chargées à la demande (lazy) en haut du fichier ; ajouter une page = un lazy() puis une branche dans le bloc de pages de son rôle.
 import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
 import { bindPushDevice, unbindPushDevice } from './utils/push';

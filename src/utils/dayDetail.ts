@@ -1,3 +1,6 @@
+// Règles pures (sans écran, sans serveur) du détail d'un employé pour un jour : connexions, missions et totaux.
+// Utilisé par : attendanceView.ts et CalendarView.tsx. Contrôlé par : npm run check:attendance-view, check:day-detail et check:post-stamps.
+// Pour modifier : les heures sont en heure de Madagascar (UTC+3, hmMada) ; SESSION_GAP_MS (150 s) est la même valeur que le serveur, à garder identique.
 import type { AttendanceRow, PostSession } from '../types';
 
 // Détail complet d'un employé pour un jour : connexions (heures de connexion et de déconnexion) et missions. Pur : sans écran ni serveur.

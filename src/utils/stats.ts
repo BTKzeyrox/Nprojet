@@ -1,3 +1,6 @@
+// Règles pures (sans écran, sans serveur) des périodes jour, semaine, mois, année et des chiffres de la page Statistiques.
+// Utilisé par : DeadlineFields.tsx, GoalsPanel.tsx, MySheets.tsx, OperatorSheet.tsx, StatCard.tsx, store.ts, alerts.ts, alertsDb.ts et 48 autres. Contrôlé par : npm run check:accounting-entries, check:badges, check:budget-plan-page et 26 autres.
+// Pour modifier : dates en texte AAAA-MM-JJ (jour de Madagascar), calculs en UTC ; la semaine commence le lundi ; beaucoup d'écrans en dépendent, relance les contrôles check:*.
 import type { ClientContract, PostSession, SalaryAdvanceRequest, User } from '../types';
 
 // Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques.

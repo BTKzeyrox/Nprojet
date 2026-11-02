@@ -1,3 +1,6 @@
+// Couleur d'une personne tirée de sa photo de profil (sinon de son nom) ; lit l'image dans le navigateur, aucun serveur.
+// Utilisé par : ChatView.tsx.
+// Pour modifier : une photo grise, noire, blanche ou bloquée (CORS) retombe sur la teinte du nom ; un composant appelle useAccentVersion pour se redessiner.
 import { useSyncExternalStore } from 'react';
 
 // Couleur d'une personne = couleur dominante de sa photo de profil (rouge sur photo rouge, etc.).

@@ -1,3 +1,6 @@
+// Statistiques de performance par opérateur (missions validées, refusées, taux, délai moyen) avec export Excel et CSV ; lit le store.
+// Utilisé par : PerformancePage.tsx et StatsPage.tsx.
+// Pour modifier : les dates sont lues sans fuseau (heure de l'appareil) et les durées passent minuit (+24 h) ; colonnes d'export dans performanceExport.ts.
 import { db } from '../db/store';
 import type { PostSession } from '../types';
 import { performanceAoa, type ScoreCells } from './performanceExport';

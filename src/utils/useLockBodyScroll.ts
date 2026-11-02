@@ -1,3 +1,6 @@
+// Bloque le défilement de la page derrière une fenêtre ouverte ; agit sur le style de la page dans le navigateur, aucun serveur.
+// Utilisé par : App.tsx, CVViewerModal.tsx, ChatAbout.tsx, ChatDialogs.tsx, ConfirmModal.tsx, DayDetailsModal.tsx, DiagPanel.tsx, FileViewerModal.tsx et 28 autres.
+// Pour modifier : un compteur gère les fenêtres imbriquées ; dès 1024 px de large la page n'est pas touchée, sur téléphone elle est figée ; releaseOrphanBodyLock débloque une page restée bloquée.
 import { useEffect } from 'react';
 
 let activeLocksCount = 0;

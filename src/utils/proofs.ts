@@ -1,3 +1,6 @@
+// Règle pure (sans écran, sans serveur) : toutes les preuves d'une session, début puis fin, sans doublon.
+// Utilisé par : DayDetailsModal.tsx, AdminDashboard.tsx et EmployeeDashboard.tsx.
+// Pour modifier : la liste (start_proof_urls, end_proof_urls) passe avant l'adresse unique (start_proof_url, end_proof_url).
 import { PostSession } from '../types';
 
 // Toutes les preuves d'une session (début puis fin), sans doublon

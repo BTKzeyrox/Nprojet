@@ -1,3 +1,6 @@
+// Données de démonstration 100 % inventées (missions, finances, stock, factures, clients, congés...), identiques à chaque ouverture de la démo.
+// Utilisé par : store.ts. Contrôlé par : npm run check:demo-stats et 11 autres commandes check.
+// Pour modifier : buildDemoData() assemble le tout et chaque partie a sa fonction buildDemo... ; les montants doivent rester cohérents entre eux (paiements liés aux factures et aux missions).
 import type { CashEntry, Client, PurchaseOrder, Quote, Supplier, Invoice, InvoiceLine, Product, StockMove, ChatGroup, ChatMessage, ClientContract, NewsPost, PasswordResetRequest, PostSession, PresenceRow, ProfileChangeRequest, SalaryAdvanceRequest, SignupRequest, User } from '../types';
 import type { RecurringRule } from '../utils/recurring';
 

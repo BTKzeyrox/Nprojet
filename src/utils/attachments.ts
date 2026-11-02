@@ -1,3 +1,6 @@
+// Préparation (compression des photos) et envoi des pièces jointes des publications et commentaires ; touche le navigateur et le réseau.
+// Utilisé par : ChatView.tsx, FileViewerModal.tsx, LightboxModal.tsx et FeedView.tsx.
+// Pour modifier : la limite de 10 Mo (MAX_FILE_BYTES) et les types acceptés (OK_TYPES, ACCEPT_ATTR) vont ensemble ; l'envoi passe par db.uploadFile, jusqu'à 3 essais.
 import { db } from '../db/store';
 import { compressProofImage } from './imageUtils';
 import type { NewsAttachment } from '../types';

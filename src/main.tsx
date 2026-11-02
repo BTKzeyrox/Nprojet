@@ -1,3 +1,5 @@
+// Point d'entrée du site : installe suivi d'erreurs, mises à jour, défilement de secours et mode hors ligne, puis affiche l'appli.
+// Utilisé par : (aucun import direct trouvé : chargé à la demande ou point d'entrée).
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';

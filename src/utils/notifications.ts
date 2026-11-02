@@ -1,3 +1,6 @@
+// Construit la liste de la cloche (à valider, refus, messages, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur.
+// Utilisé par : ChatView.tsx, TopBar.tsx, WatchSettingsSection.tsx et useChatUnread.ts. Contrôlé par : npm run check:notif-read.
+// Pour modifier : l'état « lu » est gardé par personne sur cet appareil (400 derniers id) ; une nouvelle notification a besoin d'un id stable pour pouvoir être marquée lue.
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
