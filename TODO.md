@@ -491,3 +491,6 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Chaque notification montre son heure (Madagascar) : « 14:32 », « Hier 14:32 », « 28/10 14:32 ». Sans heure connue, seulement la date.
 - Filtres en haut de la cloche : Toutes, Non lues, Messages, Missions, Alertes.
 - Fichiers : `src/utils/notifView.ts`, `TopBar.tsx`. Contrôle : `npm run check:notif-view` (16). Pas de serveur. Retour arrière : commit précédent.
+
+## 2026-11-02 — Correction : bouton « Voir la publication » dans les messages
+- Cause : la messagerie du chef d'équipe, du comptable et de l'opérateur n'avait pas la fonction de changement de page ; seul l'admin l'avait. Corrigé dans `App.tsx` + contrôle dans `check:news-link`. Pas de serveur.

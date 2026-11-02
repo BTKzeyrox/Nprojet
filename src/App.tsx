@@ -430,7 +430,7 @@ export default function App() {
             <FeedView key={viewUser.role} currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'team_lead' ? (
             /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */
-            activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+            activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               : activeView === 'settings' ? <SettingsView personalOnly />
               : <TeamValidations currentUser={viewUser} onOpenProofLightbox={handleOpenProofLightbox} />
           ) : viewUser.role === 'accountant' ? (
@@ -439,7 +439,7 @@ export default function App() {
               : activeView === 'accounting' ? <AccountingPage />
               : activeView === 'treasury' ? <TreasuryPage />
               : activeView === 'purchasing' ? <PurchasingPage />
-              : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+              : activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               : activeView === 'settings' ? <SettingsView personalOnly />
               : <InvoicesView />
           ) : viewUser.role === 'admin' ? (
@@ -534,7 +534,7 @@ export default function App() {
               ) : activeView === 'hr' ? (
                 <HrPage currentUser={viewUser} />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
+                <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : activeView === 'settings' ? (
                 <SettingsView personalOnly />
               ) : activeView === 'sheets' ? (

@@ -71,5 +71,9 @@ const sheet = (await import('node:fs')).readFileSync(new URL('../src/components/
 ok(sheet.indexOf('data-share-note') > sheet.indexOf('data-share-footer'), 'écran : le champ du petit mot est DANS le bloc des boutons Annuler / Envoyer');
 ok(/data-share-note/.test(sheet) && /withShareNote\(baseText, note\)/.test(sheet) && /facultatif/.test(sheet), 'écran : champ « petit mot (facultatif) », utilisé dans le message envoyé');
 
+const appSrc = (await import('node:fs')).readFileSync('src/App.tsx', 'utf8');
+const chats = appSrc.match(/<ChatView [^>]*>/g) || [];
+ok(chats.length >= 4 && chats.every(c => /onNavigate=/.test(c)), 'messagerie de CHAQUE rôle : le bouton « Voir la publication » peut changer de page (onNavigate)');
+
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);
