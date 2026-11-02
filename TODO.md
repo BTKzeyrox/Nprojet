@@ -528,3 +528,9 @@ BTK n'était pas satisfait des boutons du bas (Résumé du jour, Quoi faire, Sug
 
 - [x] (2026-11-02) **Étape A.** Barre du bas : « Rédiger un message », À valider (N), Avances (N), Factures en retard (N), Stock bas (N), Qui travaille maintenant, Argent du mois, Clients silencieux (N), Résumé du jour. Un bouton à 0 se cache. Chaque bouton répond avec les vrais éléments (4 lignes au plus, « … et N autres ») et des boutons exacts (`assistantShortcuts.ts`). « Et si le prix +5 % », « Aide », « Quoi faire maintenant ? » et « Suggestions » ne sont plus dans la barre mais marchent encore écrits à la main. « Qui travaille » ne connaît pas les absences et congés (il le dit). `check:assistant` 214/214. Non testé à l'écran (téléphone).
 - [x] (2026-11-02) **Étape B + C.** Messages prêts déjà remplis (`assistantMessages.ts`) : Relancer un client en retard (nom, reste dû, date = aujourd'hui + 7 jours, modifiable), Répondre à l'avance de X (nom et montant), Répondre à l'inscription de X (nouveau modèle `signup_answer`), Remercier un client (dernier paiement reçu : montant et date), Prévenir l'équipe (date du jour). Le motif (la décision) reste vide : le message est refusé tant qu'il n'est pas écrit, jamais deviné. Ils sont dans l'éditeur « Rédiger un message » et en boutons « Relancer » (sous chaque facture en retard), « Répondre à X » (sous chaque avance ou inscription en attente). Rien n'est envoyé : l'admin relit et copie. `check:assistant` 229/229. Non testé à l'écran (téléphone). Pas fait : modèle pour un mot de passe oublié ou une absence.
+
+## Améliorations Trésorerie / Finances / Comptabilité / Direction (GO de BTK, 2026-11-02)
+
+Liste complète : `TODO_AMELIORATIONS.md`.
+
+- [x] (2026-11-02) **B1.** Direction : « Voir le stock » ouvre maintenant la page Stockage (avant : Statistiques, où il n'y a plus d'onglet Stock). Nouveau contrôle dans `check:direction-page`. Site seulement. Non testé à l'écran.

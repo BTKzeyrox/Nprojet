@@ -119,7 +119,7 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
               <ul className="text-sm text-slate-200 space-y-0.5">{sum.stock.rows.map(r => (<li key={r.product.id} className="flex justify-between gap-3"><span>{r.product.name}</span><span className={`font-semibold ${r.negative ? 'text-red-400' : r.empty ? 'text-amber-300' : 'text-white'}`}>{r.qty} {r.product.unit}</span></li>))}</ul>
             </>
           )}
-          {go('stats', 'Voir le stock', 'See stock')}
+          {go('storage', 'Voir le stock', 'See stock')}
         </div>
 
         <div className={card}>

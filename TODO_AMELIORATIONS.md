@@ -14,7 +14,8 @@ Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (o
 - [ ] **A2. Noter dans le journal d'audit les modifications de la caisse.** Aujourd'hui seules les suppressions (et les tarifs, réglages) sont notées ; une modification de montant par le Comptable ou le responsable ne l'est pas. Ajouter une action `cash_change` dans le serveur (bloc AUDIT de `df-api`, avec l'ancien et le nouveau montant). Serveur à redéployer : sauvegarde avant, retour en arrière écrit dans `TODO.md`.
 
 ## Priorité 2 : lien cassé
-- [ ] **B1. Direction, carte « Stock critique » : le bouton « Voir le stock » ouvre `stats`, mais le stock est dans la page `storage` (Stockage).** Corriger `src/views/admin/DirectionPage.tsx` (ligne 122) pour ouvrir `storage`. Vérifier les autres boutons « Voir… » de la page. Ajouter un contrôle qui vérifie que chaque bouton ouvre une page qui existe (comme `check:alert-links`).
+- [x] (2026-11-02) **B1. Direction, carte « Stock critique » : le bouton « Voir le stock » ouvre `stats`, mais le stock est dans la page `storage` (Stockage).** Corriger `src/views/admin/DirectionPage.tsx` (ligne 122) pour ouvrir `storage`. Vérifier les autres boutons « Voir… » de la page. Ajouter un contrôle qui vérifie que chaque bouton ouvre une page qui existe (comme `check:alert-links`).
+  - Fait : bouton corrigé (ouvre `storage`) ; `check:direction-page` vérifie maintenant que chaque bouton « Voir… » ouvre une page qui existe (27/27). Build OK. Non testé à l'écran (téléphone). Site seulement, pas de serveur. Retour arrière : commit précédent.
 
 ## Priorité 3 : chiffres clairs
 - [ ] **C1. Trésorerie du Comptable : ajouter l'argent en caisse « depuis le début »** (reçu − dépenses depuis le début, sans salaires). Aujourd'hui il ne voit que le solde du mois. Dans `TreasuryPage` / `src/utils/treasuryCharts.ts`, jamais de salaires (`check:treasury`, `check:treasury-charts`).

@@ -37,6 +37,10 @@ ok((app.match(/activeView === 'direction'/g) || []).length === 1 && /DirectionPa
 ok(fr.includes('Comptabilité du mois') && en.includes('Accounting this month') && fr.includes('Résultat comptable') && en.includes('Accounting result'), 'carte « Comptabilité du mois » affichée en FR et EN (la démo a des écritures)');
 ok(fr.includes('Prévu contre réel') && en.includes('Planned vs actual') && /Revenus encaissés/.test(fr) && /Revenue received/.test(en), 'carte « Prévu contre réel » affichée en FR et EN (la démo a un plan)');
 ok(!/Comptabilité du mois|Résultat comptable|Prévu contre réel|Revenus encaissés/.test(en), 'anglais : aucun libellé français dans les deux nouvelles cartes');
+const dirSrc = fs.readFileSync('src/views/admin/DirectionPage.tsx', 'utf8');
+const targets = [...dirSrc.matchAll(/go\('([a-z-]+)',/g)].map(m => m[1]);
+ok(targets.length >= 7 && targets.every(v => app.includes(`activeView === '${v}'`)), `chaque bouton « Voir… » ouvre une page qui existe dans l'application (${[...new Set(targets)].join(', ')})`);
+ok(/go\('storage', 'Voir le stock'/.test(dirSrc), 'le bouton « Voir le stock » ouvre la page Stockage (et plus Statistiques)');
 ok(['accounting'].every(v => /Voir la comptabilité/.test(fr) && /See accounting/.test(en)), 'lien « Voir la comptabilité » vers la page Comptabilité');
 ok(calls === 0, 'aucun appel réseau');
 
