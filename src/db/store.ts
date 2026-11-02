@@ -3215,6 +3215,17 @@ export class AppStore {
     if (this.demo) return;
     await this.api('push-unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) });
   }
+  // --- Réglages par compte (thème, langue, taille du texte, son…) : partagés entre tous les appareils du compte ---
+  public async prefsGet(): Promise<Record<string, string> | null> {
+    if (this.demo || !this.token) return null;
+    const r = await this.api('prefs');
+    return r.ok && r.data && typeof r.data.prefs === 'object' && r.data.prefs ? r.data.prefs : null;
+  }
+  public async prefsSet(changes: Record<string, string | null>): Promise<boolean> {
+    if (this.demo || !this.token) return false;
+    const r = await this.api('prefs-set', { method: 'POST', body: JSON.stringify({ changes }) });
+    return r.ok;
+  }
   /** Interrupteurs par catégorie de cet appareil : sans `off` on lit ; avec `off` on enregistre (catégories coupées). */
   public async pushPrefs(endpoint: string, off?: string[]): Promise<{ ok: boolean; off: string[]; error?: string }> {
     if (this.demo) return { ok: false, off: [], error: 'Indisponible en mode démo.' };

@@ -500,7 +500,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `prefs`, `prefs-set`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -655,6 +655,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `postBand.ts` | Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
+| `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
+| `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
 | `presence.ts` | Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s |
 | `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
@@ -849,6 +851,7 @@ Autres dossiers : `src/views/` (pages), `src/components/` (morceaux d'écran ré
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:prefs-sync` | Contrôle : réglages synchronisés par compte (règles identiques site/serveur, plan de synchro, branchements). Lancer : npm run check:prefs-sync |
 | `npm run check:ui-sounds` | Contrôle : sons de l'appli (envoyer, J'adore, publication envoyée) + notification externe de secours. Lancer : npm run check:ui-sounds |
 | `npm run check:push-device` | Contrôle : l'appareil suit le compte ouvert (déconnexion = détaché ; ouverture d'un compte = rattaché). Lancer : npm run check:push-device |
 | `npm run check:notif-view` | Contrôle : heure (Madagascar) et filtres de la cloche. Lancer : npm run check:notif-view |

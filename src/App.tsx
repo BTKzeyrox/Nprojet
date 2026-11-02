@@ -1,6 +1,7 @@
 import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
 import { bindPushDevice, unbindPushDevice } from './utils/push';
+import { installPrefsSync, syncPrefsFromAccount } from './utils/prefsSync';
 import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -120,6 +121,17 @@ export default function App() {
   }, []);
   // Cet appareil appartient au compte ouvert : les notifications de l'ancien compte n'y arrivent plus
   useEffect(() => { if (currentUser?.id) void bindPushDevice(); }, [currentUser?.id]);
+  // Réglages du compte (thème, langue, texte, son…) : les mêmes sur tous les appareils et navigateurs. Premier chargement d'un nouvel appareil : on recharge une fois pour les appliquer.
+  useEffect(() => {
+    installPrefsSync();
+    const uid = currentUser?.id;
+    if (!uid) return;
+    void syncPrefsFromAccount().then(changed => {
+      if (!changed) return;
+      let done = false; try { done = sessionStorage.getItem('df_prefs_reload') === uid; sessionStorage.setItem('df_prefs_reload', uid); } catch { /* ignore */ }
+      if (!done) window.location.reload();
+    });
+  }, [currentUser?.id]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place

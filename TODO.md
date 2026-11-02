@@ -504,3 +504,10 @@ Plan court : une ligne = un élément = un bouton qui ouvre exactement cet élé
 - Trois petits sons doux (même réglage son/volume que la cloche) : envoi d'un message, « J'adore » (pas au retrait), publication envoyée/proposée (après succès).
 - `public/sw.js` : si le traitement d'une notification plante, une notification simple « Vous avez une nouvelle notification » est quand même montrée. Contrôle : `check:ui-sounds`. Pas de serveur.
 - Notification externe « n'affiche pas » : cause non confirmée (voir message à BTK : bouton Tester dans Réglages).
+
+## 2026-11-02 — Réglages synchronisés par compte (accord BTK « Go accord »)
+- Thème, langue, taille du texte, son, menu replié, granularité des stats, dernier stockage, réglages Santé (notif + surveillance) suivent le COMPTE : mêmes réglages sur appli installée, Safari, autre navigateur, tablette, PC.
+- Serveur : table `df_prefs` (migration `20261102_create_df_prefs.sql`, sauvegarde n° 89 avant), routes `prefs` (GET) et `prefs-set` (POST), bloc PREFS copié site/serveur. Chacun ne lit/écrit que les siens. Le jeton de connexion n'est JAMAIS synchronisé.
+- Site : `src/utils/prefsRules.ts` (règles), `prefsSync.ts` (branchement : chaque changement part après 0,8 s ; à l'ouverture du compte le compte gagne ; un appareil neuf envoie ses réglages). Un seul rechargement par session quand l'appareil reprend les réglages du compte.
+- Pas synchronisés : connexion (jeton), interrupteurs de notifications par appareil, historique de l'assistant, brouillons. Il faut toujours se connecter dans chaque navigateur/appli.
+- Retour arrière : commit précédent + `drop table public.df_prefs;`.

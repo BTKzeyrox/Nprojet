@@ -5441,6 +5441,40 @@ function pushKindFor(before: unknown, after: unknown): PushKind | null {
   return null;
 }
 
+// ===== BEGIN PREFS (copie de src/utils/prefsRules.ts) =====
+const PREF_NAMES = ['theme', 'lang', 'font', 'sound', 'sidebar', 'stats_gran', 'stock_space', 'health_notif', 'watch'];
+const PREF_MAX_LEN = 6000;
+/** Ne garde que les réglages connus avec une valeur texte courte ; null = effacer. Tout le reste est ignoré. */
+function cleanPrefs(input: unknown): Record<string, string | null> {
+  const out: Record<string, string | null> = {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+  for (const name of PREF_NAMES) {
+    if (!Object.prototype.hasOwnProperty.call(input, name)) continue;
+    const v = (input as Record<string, unknown>)[name];
+    if (v === null) out[name] = null;
+    else if (typeof v === 'string' && v.length <= PREF_MAX_LEN) out[name] = v;
+  }
+  return out;
+}
+// ===== END PREFS =====
+const PREFS = "df_prefs";
+// Réglages du compte : lecture (chaque personne ne voit que les siens)
+async function prefsGetRoute(_req: any, res: any, me: any) {
+  const { data: row } = await sb.from(PREFS).select('data').eq('id', String(me.id)).maybeSingle();
+  return res.json({ prefs: cleanPrefs((row as any)?.data) });
+}
+// Réglages du compte : écriture { changes: { nom: valeur | null } } ; fusionne avec l'existant
+async function prefsSetRoute(req: any, res: any, me: any) {
+  const changes = cleanPrefs(req.body?.changes);
+  if (!Object.keys(changes).length) return res.json({ ok: true, prefs: {} });
+  const id = String(me.id);
+  const { data: row } = await sb.from(PREFS).select('data').eq('id', id).maybeSingle();
+  const next: Record<string, string> = { ...(cleanPrefs((row as any)?.data) as Record<string, string>) };
+  for (const [k, v] of Object.entries(changes)) { if (v === null) delete next[k]; else next[k] = v; }
+  await sb.from(PREFS).upsert({ id, data: next, updated_at: new Date().toISOString() });
+  return res.json({ ok: true, prefs: next });
+}
+
 async function pushKeyRoute(_req: any, res: any, _me: any) {
   const k = await pushKeys();
   if (!k) return res.status(503).json({ error: 'Notifications indisponibles pour le moment.' });
@@ -5826,6 +5860,8 @@ Deno.serve(async (request: Request) => {
     if (action === "report-freeze" && req.method === "POST") return await reportFreeze(req, res, me);
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
+    if (action === "prefs" && req.method === "GET") return await prefsGetRoute(req, res, me);
+    if (action === "prefs-set" && req.method === "POST") return await prefsSetRoute(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
     if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);
     if (action === "push-prefs" && req.method === "POST") return await pushPrefsRoute(req, res, me);
