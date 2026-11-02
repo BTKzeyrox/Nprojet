@@ -52,15 +52,35 @@ a = find(run(ctx({ entries: [...v, E('d', '2026-09-12', [['4456', 500, 0], ['512
 ok(a?.value === 1500, 'TVA déductible retirée : 2 000 − 500 = 1 500');
 ok(!find(run(ctx({ entries: [E('z', '2026-09-10', [['512', 100, 0], ['706', 0, 100]])] as any })), 'accounting:vat-due'), 'aucune TVA dans les écritures : aucune alerte');
 
+// --- écriture qui ne correspond plus à sa ligne de caisse (A1)
+import { entryForCash } from '../src/utils/accountingEntries';
+const CASH = (id: string, amount: number, date = '2026-10-20', kind = 'out', category = 'Loyer') => ({ id, kind, category, amount_ar: amount, date, note: '' }) as any;
+const booked = (c: any) => { const r = entryForCash(c); if (!r.ok) throw new Error('ligne non comptabilisable'); return r.entry as any; };
+const c1 = CASH('c1', 5000);
+ok(!find(run(ctx({ cash: [c1], entries: [booked(c1)] })), 'accounting:stale'), 'ligne de caisse inchangée : aucune alerte');
+a = find(run(ctx({ cash: [{ ...c1, amount_ar: 6000 }], entries: [booked(c1)] })), 'accounting:stale');
+ok(!!a && a.severity === 'watch' && a.value === 1 && a.since === '2026-10-20' && a.go.view === 'accounting' && a.title_fr === '1 écriture ne correspond plus à sa ligne de caisse', 'montant changé après la comptabilisation : alerte (singulier)');
+ok(!!find(run(ctx({ cash: [{ ...c1, date: '2026-10-22' }], entries: [booked(c1)] })), 'accounting:stale'), 'date changée : alerte');
+ok(!!find(run(ctx({ cash: [{ ...c1, category: 'Internet' }], entries: [booked(c1)] })), 'accounting:stale'), 'catégorie (compte de charge) changée : alerte');
+ok(!!find(run(ctx({ cash: [], entries: [booked(c1)] })), 'accounting:stale'), 'ligne de caisse supprimée : alerte');
+ok(!find(run(ctx({ cash: [{ ...c1, note: 'autre note' }], entries: [booked(c1)] })), 'accounting:stale'), 'seule la note change : le montant, la date et les comptes sont les mêmes, aucune alerte');
+ok(!find(run(ctx({ cash: [{ ...c1, amount_ar: 6000 }], entries: [{ ...booked(c1), reversed_by: 'je-rev-1' }] })), 'accounting:stale'), 'écriture déjà annulée : aucune alerte');
+const c2 = CASH('c2', 1000, '2026-10-21', 'in', 'Paiement client');
+a = find(run(ctx({ cash: [{ ...c1, amount_ar: 1 }, { ...c2, amount_ar: 2 }], entries: [booked(c1), booked(c2)] })), 'accounting:stale');
+ok(a?.value === 2 && a.title_fr === '2 écritures ne correspondent plus à leur ligne de caisse' && a.since === '2026-10-20', 'deux écritures : compte 2, « depuis » = la plus ancienne');
+ok(!find(run(ctx({ cash: [c1], entries: [E('manuelle', '2026-10-20', [['512', 5, 0], ['706', 0, 5]])] as any })), 'accounting:stale'), 'écriture saisie à la main : jamais comparée à la caisse');
+ok(run(ctx({ cash: null as any, entries: [booked(c1)] })).errors.length === 0 && !find(run(ctx({ cash: null as any, entries: [booked(c1)] })), 'accounting:stale'), 'caisse non chargée : la règle se tait');
+ok(run(ctx({ cash: [null, { id: 5 }] as any, entries: [booked(c1)] })).errors.length === 0, 'lignes de caisse abîmées : aucun plantage');
+
 // --- ensemble
 const all = run(ctx({ entries: [...sep, ...v, E('bad', '2026-10-20', [['512', 10, 0], ['706', 0, 5]])] as any }));
-ok(all.alerts.length === 3 && all.errors.length === 0 && all.alerts.every(x => alertProblem(x) === null), 'format commun respecté par les 3 alertes');
+ok(all.alerts.length === 3 && all.errors.length === 0 && all.alerts.every(x => alertProblem(x) === null), 'format commun respecté par les 3 alertes (la caisse est vide : « stale » se tait)');
 ok(all.alerts.every(x => !/[àâçéèêëîïôùûœ]/i.test(x.title_en + x.why_en + (x.todo_en || ''))), 'anglais sans accents ni mots français');
 ok(all.alerts[0].severity === 'urgent', 'l\'alerte urgente passe en premier');
-ok(['unbalanced', 'period-open', 'vat-due'].every(k => !!ADVICE[k] && ADVICE[k].fr.length > 20 && ADVICE[k].en.length > 20), 'chaque règle a sa solution dans l\'assistant');
-ok(!/\b(sanction|faute|coupable)/i.test(['unbalanced', 'period-open', 'vat-due'].map(k => ADVICE[k].fr).join(' ')), 'solutions sans accusation');
+ok(['unbalanced', 'period-open', 'vat-due', 'stale'].every(k => !!ADVICE[k] && ADVICE[k].fr.length > 20 && ADVICE[k].en.length > 20), 'chaque règle a sa solution dans l\'assistant');
+ok(!/\b(sanction|faute|coupable)/i.test(['unbalanced', 'period-open', 'vat-due', 'stale'].map(k => ADVICE[k].fr).join(' ')), 'solutions sans accusation');
 ok((HEALTH_PAGES as readonly string[]).includes('accounting') && MENU_ITEM_OF_PAGE.accounting === 'accounting' && isKnownView('accounting'), 'page surveillée « accounting » : pastille sur l\'entrée Comptabilité, destination connue');
-ok(ACCOUNTING_RULES.every(x => ALL_RULES.includes(x)), 'les 3 règles sont dans la liste complète des règles');
+ok(ACCOUNTING_RULES.every(x => ALL_RULES.includes(x)), 'les 4 règles sont dans la liste complète des règles');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);

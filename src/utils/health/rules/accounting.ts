@@ -3,7 +3,8 @@
 // (2) la clôture est facultative : l'alerte est « à voir », jamais urgente ; (3) la date limite légale de la TVA n'est pas codée (à confirmer avec l'expert-comptable).
 import { alertId, type HealthContext, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
-import { totals, vatByMonth, type Entry } from '../../accounting';
+import { totals, vatByMonth, type Entry, type EntryLine } from '../../accounting';
+import { entryForCash } from '../../accountingEntries';
 import { dayDiff, plural } from './common';
 
 const GO = { view: 'accounting' };
@@ -89,4 +90,42 @@ export const accountingVatDue: HealthRule = {
   },
 };
 
-export const ACCOUNTING_RULES: HealthRule[] = [accountingUnbalanced, accountingPeriodOpen, accountingVatDue];
+
+/** Lignes d'une écriture sous une forme comparable (compte, débit, crédit), triées. */
+const shape = (lines: EntryLine[]): string => lines.map(l => `${l.account}|${Math.round(Number(l.debit) || 0)}|${Math.round(Number(l.credit) || 0)}`).sort().join(';');
+const ENTRY_OF_CASH = /^je-(receipt|expense)-(.+)$/;
+
+/**
+ * Une écriture automatique d'une ligne de caisse qui ne correspond plus à cette ligne (montant, date, compte changés) ou dont la ligne a été supprimée.
+ * Limites : on ne regarde que les lignes de caisse (pas les factures ni la paie) ; une écriture déjà annulée (`reversed_by`) est ignorée ; le site ne corrige rien tout seul.
+ */
+export const accountingStale: HealthRule = {
+  id: 'accounting.stale', page: 'accounting',
+  run: (ctx) => {
+    const list = entriesOf(ctx);
+    if (!list || !list.length || !Array.isArray(ctx.cash)) return [];
+    const byId = new Map(ctx.cash.filter(c => c && typeof c.id === 'string').map(c => [c.id, c] as const));
+    const bad: Entry[] = [];
+    for (const e of list) {
+      const m = ENTRY_OF_CASH.exec(e.id || '');
+      if (!m || e.reversed_by || e.reversal_of) continue;
+      const c = byId.get(m[2]);
+      if (!c) { bad.push(e); continue; } // la ligne de caisse n'existe plus
+      const r = entryForCash(c as any);
+      if (!r.ok) continue; // la ligne n'est plus comptabilisable : la page Comptabilité le montre déjà
+      if (r.entry.date !== e.date || shape(r.entry.lines) !== shape(e.lines)) bad.push(e);
+    }
+    if (!bad.length) return [];
+    const n = bad.length, since = bad.map(e => e.date).sort()[0];
+    return [{
+      id: alertId('accounting', 'stale'), page: 'accounting', rule: 'stale', severity: 'watch',
+      title_fr: `${n} ${plural(n, 'écriture ne correspond plus à sa ligne de caisse', 'écritures ne correspondent plus à leur ligne de caisse')}`, title_en: `${n} ${plural(n, 'entry no longer matches its cash line', 'entries no longer match their cash line')}`,
+      why_fr: `Une ligne de caisse a été modifiée ou supprimée après sa comptabilisation (la plus ancienne : ${fr(since)}) : le journal, la balance et le résultat gardent l'ancien chiffre.`,
+      why_en: `A cash line was changed or deleted after it was booked (oldest: ${since}): the journal, trial balance and result keep the old figure.`,
+      todo_fr: 'Ouvrir la Comptabilité, annuler l\'écriture (écriture inverse) puis saisir la bonne, ou remettre la ligne de caisse comme avant.', todo_en: 'Open Accounting, reverse the entry (counter-entry) then post the correct one, or put the cash line back as it was.',
+      since, value: n, go: GO,
+    } as HealthAlert];
+  },
+};
+
+export const ACCOUNTING_RULES: HealthRule[] = [accountingUnbalanced, accountingPeriodOpen, accountingVatDue, accountingStale];

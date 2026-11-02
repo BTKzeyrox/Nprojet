@@ -5,11 +5,12 @@
 Cases : `[ ]` à faire · `[x]` fait. Pages concernées : `treasury`, `stats` (onglet Finances), `accounting`, `direction`.
 
 ## Priorité 1 : écritures comptables qui peuvent devenir fausses
-- [ ] **A1. Détecter une écriture qui ne correspond plus à sa pièce.**
+- [x] (2026-11-02) **A1. Détecter une écriture qui ne correspond plus à sa pièce.**
   - Problème : l'identifiant d'une écriture vient de l'identifiant de la ligne de caisse (`entryIdFor` dans `src/utils/accountingEntries.ts`). « Générer les écritures » saute une pièce qui a déjà son écriture. Si la ligne de caisse est modifiée (montant, date, catégorie) ou supprimée après, l'écriture garde l'ancien chiffre.
   - À faire : une règle de la Santé du site (`src/utils/health/rules/accounting.ts`) qui compare chaque écriture à sa pièce et signale « N écriture(s) ne correspondent plus à leur pièce », avec sa solution dans `src/utils/advice.ts` et son lien exact.
   - À décider avec BTK : on signale seulement, ou on propose aussi « annuler et refaire l'écriture » (écriture inverse, jamais de modification).
   - Contrôle à ajouter : `check:accounting-stale`. Fiche dans la carte du site (`check:site-map`).
+  - Fait : règle `accounting.stale` (« à voir », jamais urgente) dans `src/utils/health/rules/accounting.ts`, solution dans `advice.ts` (clé `stale`), phrase dans la fiche Comptabilité de `siteKnowledge.ts` et `GUIDE_SITE.md`. Elle compare chaque écriture `je-receipt-…` / `je-expense-…` à sa ligne de caisse (date, comptes, montants ; pas la note) ; une écriture déjà annulée est ignorée ; elle SIGNALE seulement, rien n'est corrigé tout seul (choix par défaut, accord par « Go »). Tests : 12 cas ajoutés dans `check:health-accounting` (39/39), au lieu d'un contrôle séparé. Site seulement, pas de serveur. Non testé à l'écran. Limite : seules les lignes de caisse sont comparées (pas les factures ni la paie). L'essai de confirmation à l'écran reste à faire par BTK.
   - Essai à faire d'abord (pour confirmer le problème) : comptabiliser une ligne de caisse, la modifier, regarder le journal.
 - [ ] **A2. Noter dans le journal d'audit les modifications de la caisse.** Aujourd'hui seules les suppressions (et les tarifs, réglages) sont notées ; une modification de montant par le Comptable ou le responsable ne l'est pas. Ajouter une action `cash_change` dans le serveur (bloc AUDIT de `df-api`, avec l'ancien et le nouveau montant). Serveur à redéployer : sauvegarde avant, retour en arrière écrit dans `TODO.md`.
 

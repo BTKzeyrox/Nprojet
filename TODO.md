@@ -534,3 +534,4 @@ BTK n'était pas satisfait des boutons du bas (Résumé du jour, Quoi faire, Sug
 Liste complète : `TODO_AMELIORATIONS.md`.
 
 - [x] (2026-11-02) **B1.** Direction : « Voir le stock » ouvre maintenant la page Stockage (avant : Statistiques, où il n'y a plus d'onglet Stock). Nouveau contrôle dans `check:direction-page`. Site seulement. Non testé à l'écran.
+- [x] (2026-11-02) **A1.** Santé du site : nouvelle alerte « écriture ne correspond plus à sa ligne de caisse » (règle `accounting.stale`, « à voir »), pour une ligne de caisse modifiée ou supprimée après sa comptabilisation. Signale seulement. `check:health-accounting` 39/39, `check:site-map` 282/282, build OK. Site seulement. Non testé à l'écran. Retour arrière : commit précédent.

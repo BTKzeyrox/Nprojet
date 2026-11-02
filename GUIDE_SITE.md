@@ -321,6 +321,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Rapprochement : on charge le relevé (CSV ou Excel) ; le site montre ce qui correspond, ce qui manque aux livres et ce qui manque au relevé. Rien n'est écrit sans ton accord.
   - Export pour le comptable : Excel (journal, grand livre, balance) ou CSV, sur la période choisie ; montants en nombres entiers.
   - La Santé du site signale une écriture déséquilibrée, des mois finis pas encore clos et la TVA à déclarer : ce sont des rappels, jamais des blocages.
+  - Une ligne de caisse modifiée ou supprimée après sa comptabilisation est signalée : le site ne corrige rien, on annule l'écriture puis on saisit la bonne.
 - **Chiffres et formules** :
   - Résultat : Produits (comptes 7) moins charges (comptes 6) de la période.
   - Balance : Pour chaque compte, total des débits, total des crédits et solde ; le total des débits égale celui des crédits.
