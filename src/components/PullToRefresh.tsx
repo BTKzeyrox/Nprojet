@@ -1,3 +1,6 @@
+// Tirer la page vers le bas en haut de page : une roue tourne puis les données sont actualisées.
+// Utilisé par : App.tsx.
+// Pour modifier : prop disabled ; seuil de tirage THRESHOLD et limite MAX en tête de fichier ; l'actualisation appelle db.refreshNow(). Rien ne se déclenche si la page est défilée ou bloquée.
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { db } from '../db/store';

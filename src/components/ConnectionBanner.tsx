@@ -1,3 +1,6 @@
+// État de la connexion : pastille du header (hors ligne, envoi, à revoir, copie verrouillée, tout est envoyé) et relance automatique des envois.
+// Utilisé par : App.tsx et TopBar.tsx. Contrôlé par : npm run check:header-status.
+// Pour modifier : le bandeau jaune du bas est retiré, ConnectionBanner ne rend rien mais relance les envois (useConnectionModel(true)). Les textes viennent de bannerModel (utils/offlineText.ts).
 import React, { useEffect, useRef, useState } from 'react';
 import { WifiOff, CheckCircle2, Send, AlertTriangle, Lock } from 'lucide-react';
 import { db } from '../db/store';

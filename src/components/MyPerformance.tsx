@@ -1,3 +1,6 @@
+// Page « Ma performance » de l'opérateur : son score et ses badges avec le pourquoi, jamais ceux des autres.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:performance-page.
+// Pour modifier : réservée au rôle opérateur ; affichée seulement si le responsable a activé les badges dans les Conditions. Le détail du score dépend de access.seesAttention. Textes FR/EN avec t(fr, en).
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';

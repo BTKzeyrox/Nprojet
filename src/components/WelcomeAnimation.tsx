@@ -1,3 +1,6 @@
+// Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde.
+// Utilisé par : App.tsx.
+// Pour modifier : props user et onComplete (appelé à la fin) ; les étapes et durées sont dans le useEffect. Textes en français seulement.
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { User } from '../types';

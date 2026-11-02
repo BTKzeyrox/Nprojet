@@ -1,3 +1,6 @@
+// Bandeau fixe en haut qui compte à rebours avant la déconnexion : rouge si le responsable l'ordonne, orange dans les 15 dernières minutes d'accès.
+// Utilisé par : App.tsx.
+// Pour modifier : reçoit user ; le seuil est WARN_MIN (15 min). La mission en cours est dite « gardée » ; les textes sont en français seulement.
 import React, { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { db } from '../db/store';

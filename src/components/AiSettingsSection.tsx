@@ -1,3 +1,6 @@
+// Section des Réglages pour activer ou non l'IA externe de l'assistant (Gemini), avec l'avertissement de confidentialité et le nombre de questions restantes.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : le choix se règle par appareil (aiOptIn / setAiOptIn) ; l'état du serveur vient de db.aiCall('status'). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { db } from '../db/store';

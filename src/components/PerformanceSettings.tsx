@@ -1,3 +1,6 @@
+// Réglages de la performance : période du score, minimums de missions, poids du score et seuils des badges Bronze, Argent, Or.
+// Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:performance-page.
+// Pour modifier : les champs sont listés en tête de fichier (GENERAL, WEIGHTS, LEVELS, OTHER) avec leurs limites ; une valeur hors limites est refusée avec un message, jamais corrigée. Prop lang ; textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Award } from 'lucide-react';
 import { db } from '../db/store';

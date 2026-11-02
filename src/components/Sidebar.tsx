@@ -1,3 +1,6 @@
+// Menu de gauche : profil, entrées de navigation selon le rôle, pastilles de comptage et boutons de thème, déconnexion et signalement.
+// Utilisé par : App.tsx.
+// Pour modifier : les entrées sont dans navItems selon le rôle (admin, comptable, chef d'équipe, employé) et viewAllowedFor ; props currentUser, activeView, onNavigate, onLogout, compact. Libellés surtout en français.
 import { Avatar } from './Avatar';
 import { db } from '../db/store';
 import { viewAllowedFor } from '../utils/roles';

@@ -1,3 +1,6 @@
+// Réglages, carte de sécurité en deux étapes : activer, désactiver et refaire les codes de secours.
+// Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:totp-page.
+// Pour modifier : sans props ; appelle db.totpStatus, totpStart, totpEnable, totpDisable. Le serveur décide qui y a droit (eligible) et la carte reste cachée sinon. Le secret et les codes ne s'affichent qu'une fois. Textes FR/EN.
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Copy, Download } from 'lucide-react';
 import { db } from '../db/store';

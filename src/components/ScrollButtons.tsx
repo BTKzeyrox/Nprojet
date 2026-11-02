@@ -1,3 +1,6 @@
+// Boutons ronds « Haut » et « Bas » toujours disponibles quand la page est plus longue que l'écran, même si le défilement est bloqué.
+// Utilisé par : App.tsx.
+// Pour modifier : prop hidden pour les masquer ; ils libèrent un verrou de défilement resté par erreur (releaseOrphanBodyLock) avant de défiler. Couleurs selon le thème de useApp.
 import React, { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';

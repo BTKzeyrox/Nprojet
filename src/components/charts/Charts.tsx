@@ -1,3 +1,6 @@
+// Graphiques en SVG sans bibliothèque : barres, courbe, anneau et mini-courbe, qui réexporte aussi XYChart, RankBars et Gauge.
+// Utilisé par : StatCard.tsx, FinanceInsights.tsx, StatsPage.tsx et 3 autres. Contrôlé par : npm run check:charts.
+// Pour modifier : BarChart, LineChart, DonutChart et Sparkline sont définis ici ; les autres graphiques sont dans leurs propres fichiers. Prévoir 0, 1 ou beaucoup de données.
 import React, { useId, useState } from 'react';
 import { CHART_COLORS, TXT, compactNumber, type ChartLang } from './chartCommon';
 import { centerFontSize, clip, donutParts, sparkShape, toggleSelection, validSelection } from '../../utils/chartParts';

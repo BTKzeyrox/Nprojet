@@ -1,3 +1,6 @@
+// Fiche d'un opérateur : son état, ses missions ouvertes et toutes les actions possibles (profil, modifier, bloquer, supprimer, déconnexion forcée).
+// Utilisé par : EmployeesManagement.tsx. Contrôlé par : npm run check:operator-list.
+// Pour modifier : tout arrive par props (user, cfg, posts, live, et les callbacks onEdit, onToggleBlock, onDelete, onSetAccess, onForceLogout). La fiche ne lit pas db elle-même. Textes FR/EN avec t(fr, en).
 import React, { useRef, useState } from 'react';
 import { X, UserCog, Ban, UserCheck, Trash2, FileText, CalendarDays, MessageSquare, ExternalLink, Sun, Moon, Clock3, ListChecks } from 'lucide-react';
 import type { AppSettings, PostSession, User } from '../types';

@@ -1,3 +1,6 @@
+// Choix de la taille du texte de l'application, en quatre boutons.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : les tailles viennent de FONT_SIZES, la lecture et l'enregistrement de getFontSize et setFontSize (utils/fontSize.ts).
 import React, { useState } from 'react';
 import { FONT_SIZES, getFontSize, setFontSize } from '../utils/fontSize';
 

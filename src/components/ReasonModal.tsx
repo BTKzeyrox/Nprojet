@@ -1,3 +1,6 @@
+// Fenêtre qui demande un motif (obligatoire) ou une description facultative avant une action comme un refus, une réouverture ou une annulation.
+// Utilisé par : App.tsx, AccessRequestsCard.tsx, PayrollAdmin.tsx et 2 autres.
+// Pour modifier : appeler askReason({ title, message, confirmLabel, optional, onSubmit }) ; un seul ReasonHost doit être monté dans l'appli. Motif de 3 à 300 caractères. Textes en français seulement.
 import React, { useEffect, useRef, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { XCircle, CheckCircle } from 'lucide-react';

@@ -1,3 +1,6 @@
+// Remise à zéro du site : Gmail vérifié, sauvegarde Excel, deux confirmations et code reçu par mail.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : sans props ; appelle db.restoreStatus, restoreSetEmail, restoreVerifyEmail, restoreSendCode. Action destructive : garder l'ordre des étapes (idle, warn, code). Textes en français seulement.
 import React, { useEffect, useState } from 'react';
 import { Download, Mail, RotateCcw, ShieldAlert } from 'lucide-react';
 import { db } from '../db/store';

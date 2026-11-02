@@ -1,3 +1,6 @@
+// Section des Réglages pour gérer les modèles de mission : créer, modifier et supprimer, avec le type et le justificatif demandé.
+// Utilisé par : RecurringMissionsSection.tsx et SettingsView.tsx. Contrôlé par : npm run check:templates-store.
+// Pour modifier : enregistrement par db.saveMissionTemplate et db.removeMissionTemplate, effet immédiat ; limites de longueur dans TEMPLATE_LIMITS. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Pencil, FileText } from 'lucide-react';
 import { db } from '../db/store';

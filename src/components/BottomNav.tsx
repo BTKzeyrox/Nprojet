@@ -1,3 +1,6 @@
+// Barre de navigation du bas, sur téléphone seulement : quatre ou cinq pages directes selon le rôle, plus le bouton Menu.
+// Utilisé par : App.tsx.
+// Pour modifier : les listes items, accountantItems et teamLeadItems donnent les pages par rôle ; les pages cachées dans les Conditions sont retirées. Elle se masque quand le clavier est ouvert.
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark } from 'lucide-react';
 import { db } from '../db/store';

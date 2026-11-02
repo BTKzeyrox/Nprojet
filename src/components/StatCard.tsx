@@ -1,3 +1,6 @@
+// Carte de chiffre clé : libellé, valeur, unité, variation en pourcentage et mini-courbe.
+// Utilisé par : StatsPage.tsx. Contrôlé par : npm run check:charts.
+// Pour modifier : props label, value, unit, hint, variation, deltaText, deltaDir, spark et tone (good, cost, neutral) ; tone dit si monter est bien ou une charge.
 import React from 'react';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { Sparkline } from './charts/Charts';

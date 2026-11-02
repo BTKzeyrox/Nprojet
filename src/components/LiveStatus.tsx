@@ -1,3 +1,6 @@
+// Pastille ronde de statut en direct posée sur une photo (LiveDot) et ligne de statut avec texte (LiveLine).
+// Utilisé par : ChatView.tsx, OperatorSheet.tsx, CalendarView.tsx et EmployeesManagement.tsx. Contrôlé par : npm run check:live-status.
+// Pour modifier : les deux reçoivent info (LiveInfo) et lang ; les couleurs et textes viennent de LIVE_META et liveText (utils/presenceStatus.ts).
 import React from 'react';
 import { LIVE_META, liveText, type LiveInfo } from '../utils/presenceStatus';
 

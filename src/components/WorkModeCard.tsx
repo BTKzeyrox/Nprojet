@@ -1,3 +1,6 @@
+// Carte « Ma façon de travailler » : tableau préparé sur le site ou fichier Excel externe, mission par mission.
+// Utilisé par : MySheets.tsx. Contrôlé par : npm run check:work-mode-ui.
+// Pour modifier : props uid, lang, today, onMerge, onOpen ; le choix est gardé par setWorkMode et les missions sans tableau viennent de db.getMissionsWithoutSheet(). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Download, FileSpreadsheet, Globe, Upload } from 'lucide-react';
 import { db } from '../db/store';

@@ -1,3 +1,6 @@
+// Fenêtre d'import Excel ou CSV : choix du fichier, aperçu ligne par ligne, puis validation pour clients, produits, salariés ou tableau.
+// Utilisé par : MySheets.tsx, ClientsPage.tsx, EmployeesManagement.tsx et StockTab.tsx.
+// Pour modifier : props kind, onClose, onSheet, storageId, into et onMerge. Rien n'est écrit avant « Importer » ; les règles sont dans utils/importRules.ts. Pour les salariés, le mot de passe provisoire est montré une seule fois.
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Check, Download, FileSpreadsheet, X } from 'lucide-react';

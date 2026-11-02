@@ -1,3 +1,6 @@
+// Paie : choix de la période, fiches de paie des opérateurs, primes, retenues, paiement, clôture, réouverture et exports (CSV, Excel, PDF).
+// Utilisé par : EmployeesManagement.tsx.
+// Pour modifier : sans props ; les données viennent du serveur par db.payrollCall (routes payroll-period, payroll-close, payroll-reopen...). Les textes sont écrits en français seulement. Une période clôturée est figée.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Lock, Unlock, Download, FileText, Printer, Plus, Wallet, X, BadgeCheck, MinusCircle } from 'lucide-react';

@@ -1,3 +1,6 @@
+// Fenêtre de confirmation (Annuler / Confirmer, en rouge si danger), avec le hook useConfirm et la fonction globale askConfirm.
+// Utilisé par : App.tsx, BackupsSection.tsx, ChatDialogs.tsx, ChatView.tsx, CompanyConditions.tsx, MissionTemplatesSection.tsx, OfflineCard.tsx, OfflineCenter.tsx et 18 autres.
+// Pour modifier : askConfirm({ title, message, confirmLabel, danger, onConfirm }) marche partout, mais un seul ConfirmHost doit être monté dans l'application ; sinon repli sur window.confirm.
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { AlertTriangle } from 'lucide-react';

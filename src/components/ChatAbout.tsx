@@ -1,3 +1,6 @@
+// Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil).
+// Utilisé par : ChatView.tsx.
+// Pour modifier : reçoit thread, about, onAction et onClose ; les actions et libellés sont dans LABEL et ICON, les règles dans utils/chatAbout.ts. Textes FR/EN.
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, ArchiveRestore, Info, MessageSquare, Pin, PinOff, UserRound, Users, X } from 'lucide-react';

@@ -1,3 +1,6 @@
+// Fenêtre du détail d'une journée du calendrier : missions du jour, points gagnés, présence, preuves et contrats à échéance.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : props isOpen, dateStr, shifts, attendance, onBack et onOpenProofLightbox. Le nom de l'opérateur n'est montré qu'au responsable. Heures décalées à l'heure de Madagascar (+3 h).
 import React from 'react';
 import { X, ArrowLeft, Calendar, Clock, Trophy, Eye, CheckCircle2, AlertTriangle, Lock } from 'lucide-react';
 import { PostSession, AttendanceRow } from '../types';

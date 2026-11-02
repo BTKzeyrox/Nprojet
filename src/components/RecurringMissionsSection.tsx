@@ -1,3 +1,6 @@
+// Réglages, section Missions : crée, modifie, met en pause ou supprime les missions qui reviennent toutes seules (chaque jour, semaine ou mois).
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : sans props ; règles lues et écrites par db.getRecurringRules et db.saveRecurringRule ; le serveur crée la mission à l'heure prévue, heure de Madagascar. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Pencil, Pause, Play, Repeat } from 'lucide-react';
 import { db } from '../db/store';

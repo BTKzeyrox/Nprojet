@@ -1,3 +1,6 @@
+// Carte du responsable : demandes de connexion hors horaires à autoriser ou refuser, et autorisations en cours dont on peut changer l'heure de fin.
+// Utilisé par : AdminDashboard.tsx.
+// Pour modifier : reçoit requests et cfg ; décision par db.decideAccess (approuver, modifier, refuser avec motif via askReason). Ne s'affiche pas s'il n'y a rien. Textes en français seulement.
 import React, { useState } from 'react';
 import { Clock } from 'lucide-react';
 import { db } from '../db/store';

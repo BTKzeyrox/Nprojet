@@ -1,3 +1,6 @@
+// Réglages, section Surveillance : seuils de la Santé du site et notifications, réglés sur cet appareil.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : sans props ; champs listés dans WATCH_FIELDS, valeurs lues et écrites par getWatchPrefs et setWatchPrefs. Case vide = valeur de départ. Textes FR/EN avec t(fr, en).
 import React, { useState } from 'react';
 import { Activity } from 'lucide-react';
 import { useApp } from '../context/AppContext';

@@ -1,3 +1,6 @@
+// Moteur de graphique en SVG : barres groupées ou empilées, courbes et zones, avec axes, infobulle, légende cliquable et lignes de repère.
+// Utilisé par : Charts.tsx.
+// Pour modifier : props dans XYChartProps (séries XYSeries, RefLine) ; une valeur null veut dire pas de point. Vert au-dessus de zéro, rouge en dessous.
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { BAD, CHART_COLORS, GOOD, TXT, compactNumber, safe, type ChartLang } from './chartCommon';
 import { labelStep, monotonePath, nearestIndex, niceScale, seriesStats, variationPct } from '../../utils/chartScale';

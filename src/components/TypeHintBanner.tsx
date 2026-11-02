@@ -1,3 +1,6 @@
+// Bandeau qui propose de transformer une colonne de tableau (code, date, heure, téléphone, nombre ou liste de choix), avec Oui ou Non merci.
+// Utilisé par : MySheets.tsx. Contrôlé par : npm run check:sheet-form.
+// Pour modifier : les phrases sont dans hintText(name, kind, sample, options, t) ; aucun changement n'est fait sans clic. Textes FR/EN avec t(fr, en).
 import React from 'react';
 import type { HintKind } from '../utils/sheetRetype';
 

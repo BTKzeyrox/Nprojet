@@ -1,3 +1,6 @@
+// Fenêtre pour partager une publication : envoyer le lien dans un message à des personnes ou groupes, copier le lien, ou utiliser le partage du téléphone.
+// Utilisé par : FeedView.tsx.
+// Pour modifier : props post, me, light, onClose et onShared. Si la publication est réservée à certains rôles, le message ne contient que le lien. Textes en français seulement.
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Copy, Link2, Loader2, Search, Send, Share2, Users, X } from 'lucide-react';

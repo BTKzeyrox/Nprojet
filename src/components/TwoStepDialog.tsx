@@ -1,3 +1,6 @@
+// Fenêtre de confirmation en deux étapes : lire ce qui va se passer, puis taper un mot pour valider.
+// Utilisé par : (aucun import direct trouvé : chargé à la demande ou point d'entrée).
+// Pour modifier : props title, intro (lignes d'explication), word (mot à taper), confirmLabel, onConfirm, onClose. Textes en français seulement.
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, X } from 'lucide-react';

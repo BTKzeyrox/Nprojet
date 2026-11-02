@@ -1,3 +1,6 @@
+// Champs « date limite, heure, priorité » d'une mission (DeadlineFields) et pastilles d'échéance et de priorité sur une carte (DeadlineBadges).
+// Utilisé par : PostsGrid20.tsx et AdminDashboard.tsx. Contrôlé par : npm run check:deadlines-store.
+// Pour modifier : DeadlineFields reçoit date, time, priority, onChange et inputClass ; les règles d'échéance sont dans utils/deadlines.ts. Textes FR/EN avec t(fr, en).
 import React from 'react';
 import { Flame } from 'lucide-react';
 import { dueLabel, dueState, PRIORITIES, type MissionPriority } from '../utils/deadlines';

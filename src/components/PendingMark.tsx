@@ -1,3 +1,6 @@
+// Petite marque « En attente » sur un élément modifié ici et pas encore reçu par le serveur, avec deux aides pour les actions qui exigent le réseau.
+// Utilisé par : ChatView.tsx, AdminDashboard.tsx, EmployeesManagement.tsx et 3 autres. Contrôlé par : npm run check:offline-ui.
+// Pour modifier : PendingMark reçoit col et id (db.isUnsent) ; useOnlineOnly(kind) et OnlineOnlyNote lisent les raisons dans ONLINE_ONLY_WHY (utils/offlineText.ts). Textes FR/EN selon useLang.
 import React from 'react';
 import { Clock, WifiOff } from 'lucide-react';
 import { db } from '../db/store';

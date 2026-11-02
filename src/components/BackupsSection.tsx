@@ -1,3 +1,6 @@
+// Section des Réglages pour les sauvegardes : liste des sauvegardes de nuit, sauvegarde immédiate, export, import d'un fichier et restauration protégée par code.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : restaurer exige un Gmail vérifié, le mot RESTAURER, deux confirmations et un code reçu par mail ; les sauvegardes sont gardées 14 jours. Textes en français seulement.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Database, Download, RefreshCw, RotateCcw } from 'lucide-react';
 import { db } from '../db/store';

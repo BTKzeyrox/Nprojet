@@ -1,3 +1,6 @@
+// Grille des missions : liste filtrable et triable, et pour le responsable l'ajout d'une mission (client, modèle, échéance, tâches).
+// Utilisé par : AdminDashboard.tsx et EmployeeDashboard.tsx.
+// Pour modifier : props currentUser, activePost, allPosts, onSelectContract, onOpenProofLightbox, onNavigateToActivePost. Contrats lus par db.getContracts(). Fichier long : repérer la zone par showAdd ou filterShift.
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MissionGuideButton } from './MissionGuide';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';

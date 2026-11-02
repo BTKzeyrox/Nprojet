@@ -1,3 +1,6 @@
+// Écran sombre de transition « déconnexion en cours » avec animation, affiché pendant la déconnexion.
+// Utilisé par : App.tsx.
+// Pour modifier : s'affiche selon isLoggingOut de useApp ; le titre vient de t('logging_out').
 import React from 'react';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';

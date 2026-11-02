@@ -1,3 +1,6 @@
+// Page « squelette » grise et animée, affichée tout de suite pendant qu'une page se charge.
+// Utilisé par : App.tsx.
+// Pour modifier : composant sans props ni données ; seuls la forme des blocs et le texte d'accessibilité (en français) sont dans le fichier.
 import React from 'react';
 
 // Page « squelette » : s'affiche tout de suite pendant qu'une page se charge (on voit que ça réagit)

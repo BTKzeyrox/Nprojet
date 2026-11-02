@@ -1,3 +1,6 @@
+// Petite notification arrondie en bas de l'écran, qui remplace aussi les fenêtres alert() du navigateur.
+// Utilisé par : App.tsx, BadgeCongrats.tsx, MySheets.tsx et 6 autres.
+// Pour modifier : monter un seul ToastHost, puis appeler showToast(message, type) avec type success, error ou info de partout. Attention : alert() est remplacé et un mot comme « impossible » ou « erreur » le rend rouge.
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 

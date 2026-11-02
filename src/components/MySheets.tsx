@@ -1,3 +1,6 @@
+// Page « Mes tableaux » : saisie de tableaux type Excel (formules, filtres, import, export Excel, Word et impression) pour l'opérateur.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:import-page et npm run check:mission-sheet.
+// Pour modifier : l'opérateur modifie ses tableaux ; le responsable les lit sans rien changer (ro). Données par db.getSheets ; formules dans utils/sheetFormula.ts. Fichier long. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Copy, Download, FileSpreadsheet, FileText, Paintbrush, Plus, Redo2, Search, Table2, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';

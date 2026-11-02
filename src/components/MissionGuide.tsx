@@ -1,3 +1,6 @@
+// Guide d'une mission en quatre étapes avec le justificatif attendu : contenu (MissionGuideContent), bouton d'aide (MissionGuideButton) et liste de contrôle du responsable (AdminChecklist).
+// Utilisé par : PostsGrid20.tsx, AdminDashboard.tsx et EmployeeDashboard.tsx.
+// Pour modifier : props type et currentStep (l'étape en cours est mise en avant) ; les guides par type viennent de utils/missionGuides.ts. Textes en français seulement.
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle, X, CheckCircle2, Camera, FileText } from 'lucide-react';

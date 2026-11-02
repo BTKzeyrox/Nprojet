@@ -1,3 +1,6 @@
+// Boutons Modifier et Annuler sur la carte d'une mission en attente de validation, côté opérateur.
+// Utilisé par : PostsGrid20.tsx.
+// Pour modifier : reçoit post et onGoToPost. Début en attente : on change la quantité et la photo (db.updatePendingStartPost) ; fin en attente : db.cancelPendingEndPost reprend la session. Textes en français seulement.
 import { createPortal } from 'react-dom';
 import React, { useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';

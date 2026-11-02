@@ -1,3 +1,6 @@
+// Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client.
+// Utilisé par : PostsGrid20.tsx et AdminDashboard.tsx. Contrôlé par : npm run check:missions-link.
+// Pour modifier : props value, onChange(id, nom), required, error et classes. N'affiche rien aux rôles sans accès à l'argent (isMoneyRole). Textes FR/EN avec t(fr, en).
 import { isMoneyRole } from '../utils/roles';
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';

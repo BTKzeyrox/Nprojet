@@ -1,3 +1,6 @@
+// Fine barre verte sous l'en-tête, visible tant qu'une action est en cours d'envoi au serveur.
+// Utilisé par : App.tsx.
+// Pour modifier : elle écoute db.onNetwork et reste 250 ms après la fin pour être vue.
 import React, { useEffect, useState } from 'react';
 import { db } from '../db/store';
 

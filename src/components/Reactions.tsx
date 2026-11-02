@@ -1,3 +1,6 @@
+// Briques des réactions emoji : choix d'un emoji, pastilles de réactions sous un message et trois points « en train d'écrire ».
+// Utilisé par : AssistantChat.tsx et ChatView.tsx.
+// Pour modifier : la liste REACTION_EMOJIS est en tête de fichier (le serveur refuse les autres emoji, à changer des deux côtés). Les composants sont EmojiPicker, ReactionChips et TypingDots.
 import React from 'react';
 
 // Les 6 réactions autorisées (le serveur refuse les autres)

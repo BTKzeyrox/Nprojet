@@ -1,3 +1,6 @@
+// Historique des demandes d'avance de salaire avec recherche, filtres (statut, mois, opérateur, montant), totaux par statut et liste des demandes.
+// Utilisé par : EmployeesManagement.tsx et EmployeeDashboard.tsx.
+// Pour modifier : reçoit advances ; showOperator active le filtre par opérateur (vue du responsable). Montants en Ar via formatCurrencyAr. Textes en français seulement.
 import React, { useMemo, useState } from 'react';
 import { Search, X, CheckCircle2, XCircle, Hourglass, HandCoins } from 'lucide-react';
 import { SalaryAdvanceRequest, AdvanceStatus } from '../types';

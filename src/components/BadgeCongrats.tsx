@@ -1,3 +1,6 @@
+// Composant invisible qui affiche un petit message « Bravo ! » quand l'opérateur gagne un nouveau badge de performance.
+// Utilisé par : App.tsx.
+// Pour modifier : la mémoire des badges déjà vus reste sur l'appareil (clé df_badges_seen) ; les règles sont dans utils/recognition.ts. Rien n'est envoyé au serveur.
 import { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';

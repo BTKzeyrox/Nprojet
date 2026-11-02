@@ -1,3 +1,6 @@
+// Visionneuse plein écran de fiches (PDF, texte) avec Retour, Télécharger, Ouvrir à part et Supprimer.
+// Utilisé par : ChatView.tsx et FeedView.tsx.
+// Pour modifier : props url, name, subtitle, onClose et onDelete ; sans onDelete, le bouton Supprimer n'apparaît pas.
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Download, ExternalLink, FileText, Trash2 } from 'lucide-react';

@@ -1,3 +1,6 @@
+// Vue Formulaire d'un tableau : une fiche par ligne avec champs étiquetés, recherche et navigation, lisible sur téléphone.
+// Utilisé par : MySheets.tsx. Contrôlé par : npm run check:sheet-form.
+// Pour modifier : reçoit sheet, comp, ro (lecture seule), lang, today, apply et t en props ; mêmes données que la grille. La liste est limitée à FORM_LIST_MAX fiches.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Copy, Plus, Search, Trash2 } from 'lucide-react';
 import * as S from '../utils/sheets';

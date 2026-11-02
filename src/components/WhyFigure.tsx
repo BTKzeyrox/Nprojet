@@ -1,3 +1,6 @@
+// Bouton « Pourquoi ce chiffre ? » qui ouvre une fenêtre avec la formule, la période, les composantes, les plus grosses lignes et les sources.
+// Utilisé par : FinanceInsights.tsx.
+// Pour modifier : props id (FigureId), range et lang ; le contenu vient de explain(id, range). Réservé au responsable : rien ne s'affiche sinon. Textes FR/EN avec t(fr, en).
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';

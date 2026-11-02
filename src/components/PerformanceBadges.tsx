@@ -1,3 +1,6 @@
+// Affiche les scores et badges de performance d'un opérateur : pastilles, détail, anneau du score, tendance, barres et carte complète.
+// Utilisé par : CVViewerModal.tsx, ClientBadges.tsx, MyPerformance.tsx et 2 autres.
+// Pour modifier : rien n'est saisi, tout vient des règles de utils/performanceScore.ts ; chaque badge montre son « pourquoi ». La langue est passée en prop lang.
 import React from 'react';
 import { Clock, Flame, Layers, Minus, ShieldCheck, Sprout, TrendingDown, TrendingUp, Zap, TriangleAlert } from 'lucide-react';
 import { BADGE_NAMES } from '../utils/recognition';

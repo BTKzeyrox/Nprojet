@@ -1,3 +1,6 @@
+// Réglages, section Inscriptions : le responsable ouvre ou ferme la création de compte.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : sans props ; réglage signup_open via db.updateSettings, demandes en attente par db.getSignupRequests(). Fermé, le serveur refuse chaque demande. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { db } from '../db/store';

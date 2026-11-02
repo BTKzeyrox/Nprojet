@@ -1,3 +1,6 @@
+// Journal d'audit des Réglages : qui a fait quoi et quand, avec filtres par action, texte et dates, regroupé par jour.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : reçoit lang ; données par db.listAudit, règles dans utils/auditRules.ts. Réservé au responsable (le serveur refuse les autres). Textes FR/EN avec t(fr, en).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollText, RefreshCw } from 'lucide-react';
 import { db } from '../db/store';

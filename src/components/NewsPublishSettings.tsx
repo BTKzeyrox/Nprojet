@@ -1,3 +1,6 @@
+// Section des Réglages : qui peut publier dans les Actualités (pas du tout, avec validation ou direct) et si l'auteur peut modifier ses publications.
+// Utilisé par : SettingsView.tsx.
+// Pour modifier : une liste de choix par rôle (AUDIENCE_ROLES), enregistrée par db.updateSettings({ news_publish }). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Newspaper } from 'lucide-react';
 import { db } from '../db/store';

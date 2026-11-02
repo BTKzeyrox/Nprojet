@@ -1,3 +1,6 @@
+// Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène.
+// Utilisé par : App.tsx et SettingsView.tsx.
+// Pour modifier : props userId, role, onNavigate ; les scènes viennent de utils/guideScripts.ts. S'ouvre seul à la première connexion de chaque compte sur l'appareil ; simulation sans appel au serveur.
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Compass, List, Pause, Play, Pointer, RotateCcw, SkipBack, SkipForward, X, HelpCircle } from 'lucide-react';

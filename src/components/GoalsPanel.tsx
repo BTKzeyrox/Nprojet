@@ -1,3 +1,6 @@
+// Cartes du responsable : objectifs du mois en jauges (GoalsBars), prévision de fin de mois (ForecastCard) et liste des alertes (AlertsList).
+// Utilisé par : AdminDashboard.tsx et StatsPage.tsx. Contrôlé par : npm run check:phase4.
+// Pour modifier : les trois composants ne s'affichent que pour le responsable (chiffres d'argent). Chacun reçoit lang ; AlertsList reçoit aussi onGo. Textes FR/EN avec t(fr, en).
 import React from 'react';
 import { AlertTriangle, Target, TrendingUp } from 'lucide-react';
 import { db } from '../db/store';

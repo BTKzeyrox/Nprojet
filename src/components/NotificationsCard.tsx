@@ -1,3 +1,6 @@
+// Carte des Réglages pour recevoir les notifications sur cet appareil : activer, choisir les catégories, envoyer un test et désactiver.
+// Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:push-store.
+// Pour modifier : les catégories dépendent du rôle (la liste cats : responsable ou opérateur). Réglage par appareil via db.pushPrefs. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { db } from '../db/store';

@@ -1,3 +1,6 @@
+// Panneau de diagnostic du défilement de la page, affiché seulement quand l'adresse contient ?diag=1.
+// Utilisé par : App.tsx.
+// Pour modifier : il ne lit que l'état de la page (tailles, styles, événements) et aucune donnée de l'entreprise ; le bouton Copier met le texte dans le presse-papiers.
 import React, { useEffect, useRef, useState } from 'react';
 import { getLockInfo } from '../utils/useLockBodyScroll';
 import { getRescueInfo } from '../utils/scrollRescue';

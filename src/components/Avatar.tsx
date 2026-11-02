@@ -1,3 +1,6 @@
+// Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo.
+// Utilisé par : CVViewerModal.tsx, ChatAbout.tsx, ChatDialogs.tsx, ChatView.tsx, NewsShareSheet.tsx, OperatorSheet.tsx, ProfilePhotoGate.tsx, Sidebar.tsx et 7 autres.
+// Pour modifier : props src, name et className (taille par défaut w-8 h-8).
 import React from 'react';
 
 interface AvatarProps {

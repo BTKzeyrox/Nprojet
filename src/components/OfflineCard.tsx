@@ -1,3 +1,6 @@
+// Carte des Réglages « Travail hors ligne » : état de la copie sur l'appareil, code de verrouillage, actions en attente et effacement de la copie.
+// Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:offline-ui.
+// Pour modifier : l'état vient de db.getOfflineStatus et db.getUnsent ; effacer ou retirer le code passe par askConfirm (danger). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { CloudOff } from 'lucide-react';
 import { db } from '../db/store';

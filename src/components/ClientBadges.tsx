@@ -1,3 +1,6 @@
+// Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement.
+// Utilisé par : ClientsPage.tsx.
+// Pour modifier : réservé au responsable ; reçoit lang (et p, cfg pour la fiche). Chaque badge affiche son « pourquoi » ; les règles sont dans utils/clientBadges.ts. Textes FR/EN.
 import React from 'react';
 import { BadgeCheck, Hourglass, Eye, Boxes } from 'lucide-react';
 import { CLIENT_BADGE_NAMES, type Bilingual, type ClientBadge, type ClientBadgeId, type ClientBadgeConfig, type ClientPerformance } from '../utils/clientBadges';

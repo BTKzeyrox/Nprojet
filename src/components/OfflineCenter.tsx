@@ -1,3 +1,6 @@
+// Fenêtre « Travail hors ligne » : actions en attente d'envoi et éléments à revoir, avec renvoi, copie du texte, annulation et suppression.
+// Utilisé par : App.tsx, ConnectionBanner.tsx et OfflineCard.tsx. Contrôlé par : npm run check:offline-ui.
+// Pour modifier : s'ouvre de partout par openOfflineCenter('pending' ou 'review') ; textes de revue dans REVIEW_TEXT (utils/offline.ts). Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { X, WifiOff, Wifi, Clock, AlertTriangle, Copy, RotateCcw, Trash2, Undo2, Lock } from 'lucide-react';
 import { db } from '../db/store';

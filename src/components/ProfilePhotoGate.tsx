@@ -1,3 +1,6 @@
+// Écran obligatoire : l'employé doit ajouter sa photo de profil (appareil photo ou galerie) avant d'utiliser le site.
+// Utilisé par : App.tsx.
+// Pour modifier : props user, onDone, onLogout ; la photo est compressée, envoyée par db.uploadFile puis enregistrée par db.updateUser. Textes en français seulement.
 import React, { useRef, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Camera, Image as ImageIcon, Check, LogOut } from 'lucide-react';

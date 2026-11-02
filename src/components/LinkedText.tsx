@@ -1,3 +1,6 @@
+// Texte de message où les liens vers une page de ce site deviennent un bouton au nom clair (« Voir la publication ») au lieu de l'adresse longue.
+// Utilisé par : ChatView.tsx et NewsShareSheet.tsx.
+// Pour modifier : props text, lang et onOpen(link) ; l'adresse reste dans le message. Un clic avec Ctrl, Cmd ou Maj garde le comportement normal du lien.
 import React from 'react';
 import { ExternalLink, Newspaper } from 'lucide-react';
 import { splitLinks, linkLabel, newsIdFromNav } from '../utils/newsLink';

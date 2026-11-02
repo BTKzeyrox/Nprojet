@@ -1,3 +1,6 @@
+// Écran affiché quand l'appli s'ouvre sans réseau : on tape le code pour ouvrir la dernière copie des données, ou on efface la copie.
+// Utilisé par : App.tsx. Contrôlé par : npm run check:offline-ui.
+// Pour modifier : le code se saisit dans PinForm (OfflinePin.tsx) ; réessayer le réseau = db.retryOnline(), effacer = db.offlineEraseLocal() après confirmation. Textes FR/EN avec t(fr, en).
 import React, { useEffect, useState } from 'react';
 import { Lock, WifiOff, RefreshCw } from 'lucide-react';
 import { db } from '../db/store';

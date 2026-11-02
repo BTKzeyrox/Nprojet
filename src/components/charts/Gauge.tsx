@@ -1,3 +1,6 @@
+// Jauge d'objectif en demi-cercle : le remplissage s'arrête à 100 %, un trait blanc montre où on devrait en être.
+// Utilisé par : GoalsPanel.tsx et Charts.tsx.
+// Pour modifier : props pct, state ('good', 'ok', 'warn', 'over'), label, detail, stateText, markPct et markText.
 import React from 'react';
 import { GAUGE, gaugeShape } from '../../utils/chartParts';
 

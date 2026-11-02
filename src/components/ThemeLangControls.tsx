@@ -1,3 +1,6 @@
+// Petit interrupteur soleil et lune pour le thème, et petite liste pour la langue, dans les Réglages.
+// Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:styled-charts.
+// Pour modifier : sans props ; lit et change theme et lang par useApp (toggleTheme, setLang). Réglage propre à l'appareil.
 import React from 'react';
 import { Languages, Moon, Sun } from 'lucide-react';
 import { useApp } from '../context/AppContext';

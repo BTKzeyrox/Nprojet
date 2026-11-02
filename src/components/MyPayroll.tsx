@@ -1,3 +1,6 @@
+// Page de l'opérateur pour sa paie : période en cours, fiches de paie détaillées, impression, PDF et Excel, plus le plafond d'avance (useAdvanceRoom, AdvanceRoomInfo).
+// Utilisé par : EmployeeDashboard.tsx.
+// Pour modifier : données lues sur le serveur par db.payrollCall('payroll-mine') ; bulletins construits par utils/payslip.ts. Le texte est surtout en français ; seul le bulletin suit la langue.
 import React, { useEffect, useState } from 'react';
 import { Printer, Download, FileText, ChevronDown, ChevronUp, BadgeCheck } from 'lucide-react';
 import { db } from '../db/store';

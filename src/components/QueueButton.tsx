@@ -1,3 +1,6 @@
+// Bouton de l'opérateur « Je n'ai pas de mission » : entre dans la file d'attente vue par le responsable, ou la quitte.
+// Utilisé par : EmployeeDashboard.tsx.
+// Pour modifier : prop userId ; file lue par db.getMyQueue() et changée par db.setWaiting. Le bouton disparaît si l'opérateur a déjà une mission ouverte. Textes en français seulement.
 import React, { useEffect, useState } from 'react';
 import { Hourglass } from 'lucide-react';
 import { db } from '../db/store';

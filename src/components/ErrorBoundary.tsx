@@ -1,3 +1,6 @@
+// Écran de secours quand une page plante : numéro d'incident, boutons Réessayer, vider le cache, copier le rapport et se déconnecter.
+// Utilisé par : App.tsx et main.tsx.
+// Pour modifier : prop scope, « app » pour tout l'écran ou « page » pour garder le menu. Le message d'erreur n'est montré qu'au responsable, ou si err_hide_details vaut false.
 import React from 'react';
 import { AlertTriangle, RefreshCw, RotateCcw, LogOut, Copy, LifeBuoy } from 'lucide-react';
 import { db } from '../db/store';

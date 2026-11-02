@@ -1,3 +1,6 @@
+// Tâches d'une mission : barre de progression sur la carte, liste à cocher pour l'opérateur et éditeur de la liste.
+// Utilisé par : PostsGrid20.tsx, AdminDashboard.tsx et EmployeeDashboard.tsx. Contrôlé par : npm run check:tasks-store.
+// Pour modifier : TaskBar (lecture), TaskChecklist (onToggle absent = lecture seule) et TaskListEditor ; limites dans TASK_LIMITS (utils/taskList.ts). Textes FR/EN.
 import React from 'react';
 import { CheckSquare, Square } from 'lucide-react';
 import { taskProgress, TASK_LIMITS, type MissionTask } from '../utils/taskList';

@@ -1,3 +1,6 @@
+// Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal).
+// Utilisé par : ChatView.tsx.
+// Pour modifier : les groupes se changent par db.createGroup, db.updateGroup, db.leaveGroup et db.deleteGroup ; GroupInfoModal appelle onGone si le groupe est quitté ou supprimé.
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Camera, LogOut, Pencil, Search, ShieldCheck, ShieldOff, Trash2, UserMinus, UserPlus, Users, X, Check } from 'lucide-react';

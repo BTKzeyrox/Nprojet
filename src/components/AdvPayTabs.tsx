@@ -1,3 +1,6 @@
+// Petit sélecteur à deux onglets, « Avances » et « Paie », pour filtrer la page Avances sans ouvrir une autre page.
+// Utilisé par : EmployeesManagement.tsx et EmployeeDashboard.tsx.
+// Pour modifier : props value ('advances' ou 'payroll'), onChange et payLabel (le texte du 2e onglet est fourni par la page).
 import React from 'react';
 
 // Filtre de la page Avances : « Avances » ou « Paie » (pas de nouvelle page)

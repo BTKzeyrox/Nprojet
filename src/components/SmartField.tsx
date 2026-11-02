@@ -1,3 +1,6 @@
+// Champ de saisie intelligent d'une colonne de tableau : dates, nombres, montants, téléphone, heure et suggestions de texte.
+// Utilisé par : MySheets.tsx et SheetForm.tsx. Contrôlé par : npm run check:sheet-form.
+// Pour modifier : reçoit col, value, shown, lang, today et onCommit ; une saisie refusée ne remplace jamais l'ancienne valeur et la raison est dite par showToast. Les règles viennent de utils/sheetAuto.ts.
 import React, { useState } from 'react';
 import * as S from '../utils/sheets';
 import * as A from '../utils/sheetAuto';

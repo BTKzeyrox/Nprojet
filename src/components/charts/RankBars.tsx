@@ -1,3 +1,6 @@
+// Classement en barres horizontales (employés, clients, types, produits) ; la plus grande valeur donne la barre pleine.
+// Utilisé par : Charts.tsx.
+// Pour modifier : props items, ariaLabel, format, limit et showShare ; une valeur négative est en rouge avec son signe, la barre suit la valeur absolue.
 import React from 'react';
 import { TXT, type ChartLang } from './chartCommon';
 import { rankBars } from '../../utils/chartParts';

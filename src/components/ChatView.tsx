@@ -1,3 +1,6 @@
+// Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';

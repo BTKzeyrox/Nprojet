@@ -1,3 +1,6 @@
+// Barre à deux onglets de la page Opérateurs et sessions : la liste des opérateurs et le suivi des sessions.
+// Utilisé par : App.tsx.
+// Pour modifier : reçoit active ('operators' ou 'sessions') et onChange(view) avec 'employees' ou 'active-post' ; la langue vient de useApp.
 import React from 'react';
 import { Users, ClipboardList } from 'lucide-react';
 import { useApp } from '../context/AppContext';

@@ -1,3 +1,6 @@
+// Trois graphiques lisibles : argent reçu et dépenses, facturé et reçu, et missions faites par jour en calendrier de carrés.
+// Utilisé par : FinanceInsights.tsx, StatsPage.tsx et TreasuryCharts.tsx. Contrôlé par : npm run check:styled-charts.
+// Pour modifier : MoneyFlowChart, BilledReceivedBars et ActivityGrid ; toucher un point, une barre ou un carré affiche le détail sous le graphique.
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { BAD, GOOD, compactNumber, safe, type ChartLang } from './chartCommon';
 import { labelStep, monotonePath, niceScale } from '../../utils/chartScale';

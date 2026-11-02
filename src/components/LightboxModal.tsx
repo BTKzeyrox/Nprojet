@@ -1,3 +1,6 @@
+// Visionneuse plein écran d'images (preuves) avec zoom, déplacement, précédent / suivant, téléchargement et suppression.
+// Utilisé par : App.tsx, ChatView.tsx et FeedView.tsx.
+// Pour modifier : props isOpen, imageUrl, gallery, names, title, canDelete et onDelete ; sans canDelete, pas de bouton Supprimer. Le zoom va de 1 à 6 (MIN, MAX).
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';

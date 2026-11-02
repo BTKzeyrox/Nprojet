@@ -1,3 +1,6 @@
+// Formulaire du code de verrouillage hors ligne (4 à 8 chiffres) pour ouvrir la copie, créer ou changer le code (PinForm).
+// Utilisé par : OfflineCard.tsx, OfflineCenter.tsx et OfflineUnlockView.tsx. Contrôlé par : npm run check:offline-ui.
+// Pour modifier : props mode ('unlock', 'create' ou 'change'), onDone, label et autoFocus. Après des erreurs, une attente s'affiche, et rien n'est effacé pour un mauvais code.
 import React, { useEffect, useState } from 'react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';

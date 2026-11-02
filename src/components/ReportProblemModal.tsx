@@ -1,3 +1,6 @@
+// Fenêtre « Signaler un problème » : texte libre et capture d'écran facultative, envoyés à l'administrateur avec les infos techniques.
+// Utilisé par : App.tsx et ErrorsLog.tsx.
+// Pour modifier : prop onClose ; envoi par db.submitProblemReport avec page, appareil et version ajoutés automatiquement. Description d'au moins 3 caractères. Textes en français seulement.
 import React, { useState } from 'react';
 import { X, Camera, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../db/store';

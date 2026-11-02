@@ -1,3 +1,6 @@
+// Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil.
+// Utilisé par : App.tsx et prefetch.ts.
+// Pour modifier : props isOpen, onClose, user, onMessage (bouton Message), canSwitchMode, viewAs et onViewAs (vue opérateur du responsable). Les badges ne sont jamais montrés à un collègue.
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Camera, Image as ImageIcon, Sun, Moon, Phone, MessageCircle, Eye, KeyRound } from 'lucide-react';
 import { User } from '../types';

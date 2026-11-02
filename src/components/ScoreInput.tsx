@@ -1,3 +1,6 @@
+// Champ de saisie d'un score ou d'une quantité : espaces de milliers automatiques et abréviations comme 12k ou 20.467M.
+// Utilisé par : PendingPostActions.tsx, PostsGrid20.tsx, AdminDashboard.tsx et 2 autres.
+// Pour modifier : props value (nombre), onChange(nombre), className, placeholder, required ; seuls chiffres, séparateur décimal et suffixe k ou M sont acceptés.
 import React, { useEffect, useRef, useState } from 'react';
 
 // Champ de score : espaces automatiques (20 467 000) et abréviations (20.467M, 12k)
