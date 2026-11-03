@@ -645,6 +645,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `leaves.ts` | Congés et absences (module 5, M5.2) : règles pures, sans écran ni serveur. |
 | `loginGuard.ts` | Blocage après trop d'essais de connexion (module 16, M16.3) : règles pures, sans écran, sans serveur, sans réseau. |
 | `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 10 entrées avec onglets. |
+| `menuMode.ts` | Menu fusionné (module 22, M22.6) : réglage de CET appareil (« Menu simplifié » ou « Ancien menu ») + dernier onglet retenu par entrée. |
+| `menuNav.ts` | Menu simplifié : aller à une entrée ou à un onglet, et quelles entrées sont dans la barre du bas (téléphone). Pur, sauf le réglage de l'onglet de Statistiques. |
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
@@ -875,6 +877,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `LiveStatus.tsx` | Pastille ronde de statut en direct posée sur une photo (LiveDot) et ligne de statut avec texte (LiveLine). |
 | `LoadingBar.tsx` | Fine barre verte sous l'en-tête, visible tant qu'une action est en cours d'envoi au serveur. |
 | `LogoutTransition.tsx` | Écran sombre de transition « déconnexion en cours » avec animation, affiché pendant la déconnexion. |
+| `MenuTabs.tsx` | Rangée d'onglets du menu simplifié (M22.6) : en haut de chaque entrée qui a plusieurs pages. Toujours au même endroit ; sur téléphone elle défile de côté. |
 | `MissionGuide.tsx` | Guide d'une mission en quatre étapes avec le justificatif attendu : contenu (MissionGuideContent), bouton d'aide (MissionGuideButton) et liste de contrôle du responsable (AdminChecklist). |
 | `MissionTemplatesSection.tsx` | Section des Réglages pour gérer les modèles de mission : créer, modifier et supprimer, avec le type et le justificatif demandé. |
 | `MyPayroll.tsx` | Page de l'opérateur pour sa paie : période en cours, fiches de paie détaillées, impression, PDF et Excel, plus le plafond d'avance (useAdvanceRoom, AdvanceRoomInfo). |
@@ -1058,6 +1061,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:menu-screen` | Contrôle du menu simplifié à l'écran (M22.6) : branchements (lecture du code) + comportements purs. Lancer : npm run check:menu-screen |
 | `npm run check:menu-groups` | Contrôle du menu fusionné (M22.5) : toutes les anciennes pages ont une place, aucun rôle ne gagne ni ne perd de page. Lancer : npm run check:menu-groups |
 | `npm run check:prefs-sync` | Contrôle : réglages synchronisés par compte (règles identiques site/serveur, plan de synchro, branchements). Lancer : npm run check:prefs-sync |
 | `npm run check:ui-sounds` | Contrôle : sons de l'appli (envoyer, J'adore, publication envoyée) + notification externe de secours. Lancer : npm run check:ui-sounds |

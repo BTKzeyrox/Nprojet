@@ -10,6 +10,7 @@ import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
 import { HIDEABLE_MODULES, parseHidden, hiddenToCsv } from '../utils/moduleSwitch';
 import type { CompanySettings } from '../types';
+import { useMenuMode, setMenuMode } from '../utils/menuMode';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
 type Kind = 'text' | 'area' | 'int' | 'num' | 'bool' | 'select' | 'lines' | 'time';
@@ -101,6 +102,7 @@ const fromRaw = (r: Raw): unknown => {
 
 export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean }> = ({ lang, openAll }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const menuMode = useMenuMode();
   const stored = db.getSettings();
   const current = useMemo(() => readCompany(stored.company), [stored.company]);
   const [raw, setRaw] = useState<Raw>(() => toRaw(current));
@@ -155,6 +157,16 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
             {isOpen && (
               <div className="px-4 pb-4 space-y-4">
                 {sec.note && <p className="text-[11px] text-slate-400">{t(sec.note[0], sec.note[1])}</p>}
+                {sec.id === 'modules' && (
+                  <div data-menu-mode className="rounded-lg border border-slate-700 p-3 space-y-2">
+                    <p className="text-xs text-slate-300">{t('Menu : 10 entrées avec des onglets (simplifié), ou l\'ancien menu avec toutes les pages. Réglage de CET appareil ; rien n\'est supprimé.', 'Menu: 10 entries with tabs (simplified), or the old menu with every page. Setting of THIS device; nothing is deleted.')}</p>
+                    <div className="flex gap-2">
+                      {(['merged', 'classic'] as const).map(m => (
+                        <button key={m} type="button" aria-pressed={menuMode === m} data-menu-mode-btn={m} onClick={() => setMenuMode(m)} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${menuMode === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{m === 'merged' ? t('Menu simplifié', 'Simplified menu') : t('Ancien menu', 'Old menu')}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {sec.id === 'modules' && (
                   <div className="space-y-3">
                     {(['work', 'money', 'team', 'talk'] as const).map(g => (

@@ -17,12 +17,18 @@ import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { OperatorsTabs } from './components/OperatorsTabs';
+import { MenuTabs, MENU_TABS_H } from './components/MenuTabs';
+import { menuFor, locate } from './utils/menuGroups';
+import { mergedFor, useMenuMode, rememberTab } from './utils/menuMode';
+import { goToTab } from './utils/menuNav';
+import { getStatsTab } from './utils/statsNav';
 import { OfflineCenter } from './components/OfflineCenter';
 import { OfflineUnlockView } from './components/OfflineUnlockView';
 import { ReportProblemModal } from './components/ReportProblemModal';
 import { setCurrentPage } from './utils/errorReport';
 import { isViewHidden } from './utils/moduleSwitch';
 import { readCompany } from './utils/companyRules';
+import { countPending } from './utils/pendingCount';
 import { hideSplash } from './utils/splash';
 import { LoadingBar } from './components/LoadingBar';
 import { PageSkeleton } from './components/PageSkeleton';
@@ -100,6 +106,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('feed');
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
+  const menuMode = useMenuMode(); // menu simplifié (10 entrées + onglets) ou ancien menu, réglage de cet appareil
+  const [, setStatsTick] = useState(0);
+  useEffect(() => { const on = () => setStatsTick(n => n + 1); window.addEventListener('df-stats-tab', on); return () => window.removeEventListener('df-stats-tab', on); }, []); // l'onglet de Statistiques change : la rangée d'onglets se remet à jour
   useEffect(() => { const open = () => setActiveView('charts'); window.addEventListener(OPEN_GRAPHS_EVENT, open); return () => window.removeEventListener(OPEN_GRAPHS_EVENT, open); }, []); // « Voir les graphiques » des anciennes pages
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   // Page cachée par le responsable (Réglages > Pages du menu) : on revient aux Actualités
@@ -399,6 +408,15 @@ export default function App() {
     setActiveView('feed');
   };
 
+  // Menu simplifié : où est la page ouverte (entrée + onglet) et la rangée d'onglets de cette entrée
+  const merged = mergedFor(viewUser.role, menuMode);
+  const hiddenCsv = readCompany(db.getSettings().company).modules.hidden;
+  const loc = merged ? locate(viewUser.role, activeView, hiddenCsv, getStatsTab()) : null;
+  const grp = loc ? menuFor(viewUser.role, hiddenCsv).find(g => g.id === loc.group) : undefined;
+  const showTabs = !!grp && grp.tabs.length > 1;
+  if (loc) rememberTab(loc.group, loc.tab);
+  const tabBadges: Record<string, number> = viewUser.role === 'admin' ? { validations: countPending().total } : {};
+  const tabsRow = showTabs && grp && loc ? <MenuTabs group={grp} activeTab={loc.tab} badges={tabBadges} fixed={activeView === 'chat'} onPick={id => { const tb = grp.tabs.find(x => x.id === id); if (tb) { setFocusOperatorId(null); goToTab(tb, view => setActiveView(view)); } }} /> : null;
   // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
   return (
     <div className={`df-bg-app min-h-screen flex flex-col font-sans transition-colors duration-200 ${
@@ -453,9 +471,11 @@ export default function App() {
         {currentUser && currentUser.role !== 'admin' && <AccessBanner user={currentUser} />}
 
         {/* Dynamic Page Content Based on activeView */}
-        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px - var(--bnh, 0px))', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
+        {showTabs && activeView === 'chat' && tabsRow}
+        <main style={activeView === 'chat' ? { top: `calc(${57 + (showTabs ? MENU_TABS_H : 0)}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - ${57 + (showTabs ? MENU_TABS_H : 0)}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
+          {showTabs && activeView !== 'chat' && tabsRow}
           <Suspense fallback={<PageSkeleton />}>
-          <ErrorBoundary scope="page" key={activeView}>
+          <ErrorBoundary scope="page" key={activeView + (activeView === 'stats' ? getStatsTab() : '')}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {activeView === 'feed' ? (
             <FeedView key={viewUser.role} currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
@@ -488,7 +508,7 @@ export default function App() {
                 <ErrorsLog />
               ) : activeView === 'employees' ? (
                 <>
-                  <OperatorsTabs active="operators" onChange={view => setActiveView(view)} />
+                  {!merged && <OperatorsTabs active="operators" onChange={view => setActiveView(view)} />}
                   <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} onOpenOperator={(id, view) => { setFocusOperatorId(id); setActiveView(view); }} />
                 </>
               ) : activeView === 'sheets' ? (
@@ -533,7 +553,7 @@ export default function App() {
               ) : (
                 /* Default Admin Views: 'grid' (missions), 'active-post' (sessions), 'dashboard', 'security' */
                 <>
-                {(activeView === 'active-post' || activeView === 'sessions') && <OperatorsTabs active="sessions" onChange={view => setActiveView(view)} />}
+                {!merged && (activeView === 'active-post' || activeView === 'sessions') && <OperatorsTabs active="sessions" onChange={view => setActiveView(view)} />}
                 <AdminDashboard
                   currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}

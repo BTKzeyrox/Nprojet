@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : les listes items, accountantItems et teamLeadItems donnent les pages par rôle ; les pages cachées dans les Conditions sont retirées. Elle se masque quand le clavier est ouvert.
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark } from 'lucide-react';
+import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark, Home, Wallet, Package } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
@@ -12,6 +12,10 @@ import { readCompany } from '../utils/companyRules';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { User } from '../types';
 import { useChatUnread } from '../utils/useChatUnread';
+import { menuFor, locate } from '../utils/menuGroups';
+import { mergedFor, useMenuMode, getLastTabs } from '../utils/menuMode';
+import { goToEntry, bottomEntriesOf } from '../utils/menuNav';
+import { getStatsTab } from '../utils/statsNav';
 
 interface BottomNavProps {
   isAdmin: boolean;
@@ -25,6 +29,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, activeView, onNavigate, onOpenMenu }) => {
   const chatUnread = useChatUnread(currentUser);
   const L = useApp().theme === 'light';
+  const merged = mergedFor(currentUser?.role, useMenuMode());
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
@@ -86,6 +91,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
   ];
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
   const shownItems = (currentUser?.role === 'accountant' ? accountantItems : currentUser?.role === 'team_lead' ? teamLeadItems : items).filter(it => !isViewHidden(hiddenPages, it.id));
+  // Menu simplifié (M22.6) : les entrées de la barre du bas (Actualités, Messages, Missions, Accueil…) à la place des pages seules
+  const ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, clients: Building2, money: Wallet, stock: Package, messages: MessageSquare };
+  const groups = merged && currentUser ? menuFor(currentUser.role, hiddenPages) : [];
+  const mergedShown = bottomEntriesOf(currentUser?.role).map(id => groups.find(g => g.id === id)).filter((g): g is NonNullable<typeof g> => !!g).map(g => ({ id: g.id, label: g.fr, icon: ICON[g.id] || Calendar, badge: g.id === 'messages' ? chatUnread : g.id === 'missions' ? (currentUser?.role === 'team_lead' ? teamPendingPosts(currentUser, db.getUsers(), db.getPosts()).length : pending) : 0 }));
+  const activeGroup = merged && currentUser ? locate(currentUser.role, activeView, hiddenPages, getStatsTab())?.group : undefined;
+  const barItems = merged ? mergedShown : shownItems;
+  const isOn = (id: string) => (merged ? activeGroup === id : activeView === id);
+  const go = (id: string) => { if (merged) { const g = groups.find(x => x.id === id); if (g) { goToEntry(g, getLastTabs()[g.id], onNavigate); return; } } onNavigate(id); };
 
   const base = `df-bottomnav fixed left-0 right-0 bottom-0 z-30 md:hidden rounded-t-2xl border-t shadow-[0_-2px_12px_rgba(15,30,58,0.12)] ${L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#0f1e3a] border-slate-700'}`;
   const btn = (active: boolean) =>
@@ -96,10 +109,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
   return (
     <nav ref={navRef} className={base} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Navigation principale">
       <div className="flex items-stretch gap-1 px-2 pt-1.5 pb-1.5">
-        {shownItems.map(it => {
+        {barItems.map(it => {
           const I = it.icon;
           return (
-            <button key={it.id} type="button" data-tour={`nav-${it.id}`} onClick={() => onNavigate(it.id)} className={btn(activeView === it.id)} aria-current={activeView === it.id ? 'page' : undefined}>
+            <button key={it.id} type="button" data-tour={`nav-${merged ? groups.find(g => g.id === it.id)?.tabs[0].view || it.id : it.id}`} onClick={() => go(it.id)} className={btn(isOn(it.id))} aria-current={isOn(it.id) ? 'page' : undefined}>
               <I className="w-5 h-5" />
               <span className="truncate max-w-full">{it.label}</span>
               {!!it.badge && it.badge > 0 && (

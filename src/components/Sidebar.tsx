@@ -7,6 +7,10 @@ import { viewAllowedFor } from '../utils/roles';
 import { isViewHidden } from '../utils/moduleSwitch';
 import { readCompany } from '../utils/companyRules';
 import { teamPendingPosts } from '../utils/teamLead';
+import { menuFor, locate } from '../utils/menuGroups';
+import { mergedFor, useMenuMode, getLastTabs } from '../utils/menuMode';
+import { goToEntry, bottomEntriesOf } from '../utils/menuNav';
+import { getStatsTab } from '../utils/statsNav';
 import React from 'react';
 import {
   BookOpen,
@@ -141,8 +145,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Réglages', icon: Settings },
   ].filter(it => viewAllowedFor(currentUser.role, it.id) && !isViewHidden(readCompany(db.getSettings().company).modules.hidden, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
+  // Menu simplifié (M22.6) : 10 entrées au lieu de 25 ; les anciennes pages sont les onglets de chaque entrée (règles dans utils/menuGroups.ts)
+  const merged = mergedFor(currentUser.role, useMenuMode());
+  const hiddenCsv = readCompany(db.getSettings().company).modules.hidden;
+  const GROUP_ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, team: Users, clients: Building2, money: Wallet, stock: Package, charts: LayoutGrid, messages: MessageSquare, control: Settings };
+  const sumHealth = (views: string[]) => views.reduce((n, v) => n + (health.byItem[v]?.count || 0), 0);
+  const mergedItems = merged ? menuFor(currentUser.role, hiddenCsv).map(g => {
+    const views = g.tabs.map(x => (x.statsTab ? 'stats' : x.view));
+    const n = g.id === 'missions' ? (isTeamLead ? teamPending : pending) : g.id === 'messages' ? chatUnread : g.id === 'home' ? alertCount : g.id === 'control' ? (isAdmin ? health.total : 0) : isAdmin ? sumHealth(g.id === 'money' ? ['stats'] : views.filter(v => v !== 'stats')) : 0;
+    return { id: g.id, label: lang === 'en' ? g.en : g.fr, icon: GROUP_ICON[g.id] || Settings, badge: n > 0 ? String(n) : undefined, tone: 'alert' as const };
+  }) : null;
+  const activeGroup = merged ? locate(currentUser.role, activeView, hiddenCsv, getStatsTab())?.group : undefined;
+  const listItems = mergedItems || navItems;
+
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
-  const inBottomBar = ['feed', 'chat', 'calendar', isAdmin || isTeamLead ? 'validations' : 'active-post'];
+  const inBottomBar = merged ? bottomEntriesOf(currentUser.role) : ['feed', 'chat', 'calendar', isAdmin || isTeamLead ? 'validations' : 'active-post'];
 
   const handleItemClick = (id: string) => {
     if (id === 'profile' && onOpenEmployeeCV) {
@@ -150,6 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       if (onCloseMobile) onCloseMobile();
       return;
     }
+    if (merged) { const g = menuFor(currentUser.role, hiddenCsv).find(x => x.id === id); if (g) { goToEntry(g, getLastTabs()[g.id], onNavigate); if (onCloseMobile) onCloseMobile(); return; } }
     onNavigate(id);
     if (onCloseMobile) onCloseMobile();
   };
@@ -216,13 +234,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 3. Navigation */}
         <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3">
           <nav className="space-y-1.5">
-            {navItems.map(item => {
+            {listItems.map(item => {
               const Icon = item.icon;
-              const isActive = activeView === item.id || (isAdmin && item.id === 'employees' && (activeView === 'active-post' || activeView === 'sessions'));
+              const isActive = merged ? activeGroup === item.id : activeView === item.id || (isAdmin && item.id === 'employees' && (activeView === 'active-post' || activeView === 'sessions'));
               return (
                 <button
                   key={item.id}
-                  data-tour={`nav-${item.id}`}
+                  data-tour={`nav-${merged ? (menuFor(currentUser.role, hiddenCsv).find(g => g.id === item.id)?.tabs[0].view || item.id) : item.id}`}
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}

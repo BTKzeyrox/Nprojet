@@ -2,4 +2,4 @@
 export type StatsTab = 'stats' | 'finance' | 'report';
 let current: StatsTab = 'stats';
 export const getStatsTab = (): StatsTab => current;
-export const setStatsTab = (t: StatsTab): void => { current = t; };
+export const setStatsTab = (t: StatsTab): void => { current = t; try { window.dispatchEvent(new Event('df-stats-tab')); } catch { /* hors navigateur */ } }; // le menu à onglets se remet à jour
