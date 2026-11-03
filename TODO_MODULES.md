@@ -734,15 +734,16 @@ Site seulement (pas de serveur, pas de base) · une étape testée avant la suiv
 - *Fait aussi :* les 4 contrôles qui testaient les anciens graphiques (`check:styled-charts`, `check:purchasing-page`, `check:stock`, `check:finance-page`) testent maintenant les cartes de la page Graphiques ; un nouveau contrôle **`check:graphs-page` dessine la page entière avec la démo** (16 cartes, filtres 16/3/8/5, FR et EN, trois périodes, plusieurs stockages, caisse vide, opérateur sans accès) : le rendu réel est donc vérifié, pas seulement le code. Ce que ces contrôles ne voient pas : l'aspect (couleurs, tailles, lisibilité) : c'est l'essai M22.11.
 - *Fini quand :* plus aucun graphique dans les 3 anciennes pages (sauf la Trésorerie du Comptable), les boutons ouvrent le bon groupe, tous les liens mènent à une carte qui existe, tous les contrôles passent. ✔
 
-**M22.4 — [ ] Décisions du menu** (taille S, accord de BTK)
+**M22.4 — [x] FAIT le 2026-11-03 (« Go m22 continue » de BTK = on garde les décisions par défaut) — Décisions du menu** (taille S, accord de BTK)
 - *Ce qu'on fait :* BTK relit le tableau « Le menu aujourd'hui → demain » et répond. Questions courtes : (1) les 10 entrées te conviennent ? (2) « Graphiques » à part ? (3) « Mes tableaux » / « Tableaux d'équipe » dans Contrôle, ou ailleurs ? (4) quels onglets pour une boutique ? **« GO » = il garde les décisions par défaut.**
-- *Fini quand :* les décisions sont notées dans ce plan.
+- *Fini quand :* les décisions sont notées dans ce plan. **Notées :** les 10 entrées du tableau ; Graphiques à part ; Tableaux d'équipe dans Contrôle ; sessions = onglet « Sessions » d'Équipe ; alertes de sécurité = onglet « Sécurité » de Contrôle ; Statistiques > Finances = onglet « Finances » d'Argent (une même vue, deux onglets) ; Comptable et Chef d'équipe : leurs entrées d'avant, leurs réglages personnels sous « Réglages » ; Opérateur : vue simple inchangée ; boutique en M22.9 (Stock, Clients, Argent, Messages).
 
-**M22.5 — [ ] Règles pures du menu fusionné** (taille M)
+**M22.5 — [x] FAIT le 2026-11-03 (règles seulement, aucun écran touché) — Règles pures du menu fusionné** (taille M)
 - *Ce qu'on fait :* on écrit **toutes les règles du menu dans un seul fichier** `src/utils/menuGroups.ts`, **sans aucun écran** : la liste des entrées, leurs onglets, **qui voit quoi** (responsable, comptable, chef d'équipe, opérateur), et surtout la **table « ancienne vue → (entrée, onglet) »**. C'est elle qui garantit que n'importe quel ancien lien (alerte, assistant, cloche, carte du site) arrive au bon endroit.
 - *Pourquoi avant l'écran :* c'est la partie risquée. On la teste à fond avant de toucher à l'écran.
 - *Contrôle :* `check:menu-groups` avec les cas piégés : vue inconnue, rôle sans droit, onglet caché par « Pages du menu », vue de l'opérateur, vide.
 - *Fini quand :* les 25 anciennes vues ont chacune une nouvelle place, et aucun rôle ne gagne ni ne perd de droit (comparé à `roles.ts`).
+- *Fait :* `src/utils/menuGroups.ts` (`menuFor(rôle, pages cachées)`, `locate(rôle, ancienne vue, pages cachées, onglet de stats)`, `reachableViews`, `openView`) ; contrôle `check:menu-groups` (115 cas : 10 entrées, 5 onglets au plus, toutes les anciennes vues placées, vues inconnues/`__proto__` refusées, Comptable / Chef d'équipe / Opérateur = exactement leurs pages d'avant, pages cachées pour tous les rôles, jamais d'entrée vide). Les droits viennent de `roles.ts` (rien de copié). Rien n'est branché à l'écran : M22.6.
 
 **M22.6 — [ ] Le nouveau menu à l'écran** (taille L)
 - *Ce qu'on fait :* le menu latéral et la barre du bas passent à 10 entrées ; une **barre d'onglets** en haut de chaque entrée ; le **dernier onglet est retenu** ; **l'intérieur des pages ne change pas** (on les met dans des onglets sans les modifier). **Actualités reste une entrée à part.**

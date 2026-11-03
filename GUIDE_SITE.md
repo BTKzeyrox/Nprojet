@@ -644,6 +644,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `keyboard.ts` | Clavier virtuel ouvert ? (iPhone : la vue visible rétrécit et la page est poussée vers le haut) |
 | `leaves.ts` | Congés et absences (module 5, M5.2) : règles pures, sans écran ni serveur. |
 | `loginGuard.ts` | Blocage après trop d'essais de connexion (module 16, M16.3) : règles pures, sans écran, sans serveur, sans réseau. |
+| `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 10 entrées avec onglets. |
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
@@ -1057,6 +1058,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:menu-groups` | Contrôle du menu fusionné (M22.5) : toutes les anciennes pages ont une place, aucun rôle ne gagne ni ne perd de page. Lancer : npm run check:menu-groups |
 | `npm run check:prefs-sync` | Contrôle : réglages synchronisés par compte (règles identiques site/serveur, plan de synchro, branchements). Lancer : npm run check:prefs-sync |
 | `npm run check:ui-sounds` | Contrôle : sons de l'appli (envoyer, J'adore, publication envoyée) + notification externe de secours. Lancer : npm run check:ui-sounds |
 | `npm run check:push-device` | Contrôle : l'appareil suit le compte ouvert (déconnexion = détaché ; ouverture d'un compte = rattaché). Lancer : npm run check:push-device |
