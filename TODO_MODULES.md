@@ -668,28 +668,113 @@ But : que chaque personne (responsable, chef d'équipe, comptable, opérateur) v
 
 ## MODULE 22 — Site plus simple : page Graphiques, menu fusionné, filtres clairs, réglage « Boutique » — taille L (demande de BTK, 2026-11-03) — **EN COURS** (M22.1 et M22.2 faites et en ligne ; M22.3 en cours ; le menu fusionné est en attente du « GO » de BTK)
 
-**Ce que BTK a demandé (2026-11-03), mis au clair :** (1) « le site devient trop complexe » : **fusionner les pages en ordre, avec des filtres clairs** (le menu du responsable a environ 26 entrées) ; (2) **Actualités doit rester propre** : une entrée à part, pas fusionnée ; (3) **tous les graphiques dans UNE page**, divisée en **4 carrés** sur grand écran ; (4) **fusionner les graphiques qui se ressemblent**, mais **détails, couleurs et design restent pros et visibles** ; (5) pour une **petite boutique**, beaucoup de fonctions ne servent à rien : prévoir un menu court.
+### En mots simples (à lire d'abord)
 
-**Décisions déjà prises par BTK :** Actualités reste à part ; une seule page Graphiques ; fusion des graphiques semblables avec un design pro ; le menu se fusionne « en ordre avec des filtres clairs ».
-**Décisions PAR DÉFAUT proposées (BTK peut les changer avant le GO du menu) :** (a) **10 entrées** : Accueil (Tableau de bord, Synthèse du mois = Direction) · **Actualités** · Missions (À valider, En cours, Toutes, Historique, Statistiques) · Équipe (Employés, Performance, Congés, Paie) · Clients (Clients, Factures, Devis, En retard) · Argent (Finances, Trésorerie, Comptabilité) · Stock (Produits, Mouvements, Achats) · **Graphiques** (entrée à part) · Messages (Messagerie, Calendrier) · Contrôle (Santé du site, Erreurs, Réglages, Mes tableaux) ; (b) les anciennes pages deviennent des **onglets** : rien n'est supprimé, les données ne bougent pas ; (c) **filtres** : une seule rangée de boutons en haut de chaque onglet, toujours au même endroit, avec un chiffre (« En retard (3) ») ; (d) le **Comptable** et le **Chef d'équipe** gardent leur menu court ; (e) le réglage **« Boutique »** = un menu court (Stock, Clients, Argent, Messages) choisi en un clic dans Réglages > Pages du menu (qui existe déjà : `moduleSwitch.ts`).
+**Le problème.** Le menu du responsable a **25 entrées** (Actualités, Tableau de bord, Validations, Historique, Clients, Facturation, Comptabilité, Trésorerie, Achats, Stockage, Performance, Statistiques, Graphiques, Tableau des missions, Direction, Opérateurs et sessions, Ressources humaines, Messagerie, Calendrier, Tableaux d'équipe, Paie, Santé du site, Journal des erreurs, Réglages…). BTK : « le site devient trop complexe ». On cherche une chose à la fois, on ne sait pas où est quoi, et les graphiques sont éparpillés dans 5 endroits.
 
-**Ce qui existe déjà (ne pas refaire) :** « Pages du menu » (cacher des pages, Réglages > Conditions) ; « Opérateurs et sessions » (2 onglets, fusion faite le 2026-10-29) ; onglets de Statistiques et de Stockage ; adresses `data-nav` et clignotement 1,5 s ; la page Graphiques (M22.1).
+**Ce qu'on fait, en trois idées.**
+1. **Les graphiques vont tous dans UNE page** (« Graphiques »), avec les mêmes couleurs et le même style pro. Fait en grande partie (M22.1 à M22.3).
+2. **Le menu passe de 25 à 10 entrées.** Chaque entrée a des **onglets** en haut (une rangée de boutons, toujours au même endroit). Les anciennes pages deviennent des onglets : **rien n'est supprimé, aucune donnée ne bouge**. (M22.4 à M22.8)
+3. **Un réglage « Boutique »** : pour un petit commerce, un menu court (Stock, Clients, Argent, Messages) en un clic. (M22.9)
 
-**Règles de ce module :** site seulement (pas de serveur, pas de base) ; une étape testée avant la suivante ; les anciens liens (alertes, assistant, cloche, carte du site, guide, recherche) doivent continuer à mener au bon endroit, avec le bon onglet ; chaque étape = un commit + un push + ce plan et `TODO.md` à jour ; tous les contrôles du dépôt (`check:*`) relancés avant de pousser ; textes FR/EN.
+**Petit vocabulaire.** *Entrée* = une ligne du menu. *Onglet* = un bouton de la rangée en haut d'une entrée. *Filtre* = un bouton qui trie la liste (ex. « En retard (3) »). *Carte* = un bloc de la page Graphiques (un graphique avec son titre).
 
-- [x] **M22.1 — FAIT le 2026-11-03 (« Go » de BTK), en ligne (commit `cb6a16d`) — Page « Graphiques »** (M) : `GraphsPage.tsx` + `graphs/` + `src/utils/graphsPage.ts` ; **16 cartes** (Missions 3, Argent 8, Stock 5) ; filtres Tout / Missions / Argent / Stock avec leur chiffre ; une seule période (Semaine, Mois, Année + flèches) ; 2 colonnes (4 carrés) sur grand écran, 1 colonne sur téléphone ; responsable seulement ; lecture seule ; cachable dans Réglages. Fusions : missions par type (grille + barres + anneau), valeur du stock dans le temps, produits les plus sortis ; **« Argent reçu et dépenses » et « Dépenses par catégorie » = un bouton « Avec salaires / Caisse (sans salaires) »** car Finances compte les salaires et la Trésorerie non (ce n'est PAS le même chiffre : erreur de ma part corrigée avec BTK). `check:graphs`.
-- [x] **M22.2 — FAIT le 2026-11-03, en ligne — Comparer chaque carte à l'ancien graphique** (S) : mêmes séries, libellés, réglages (empilé, anneau, aire, pointillé violet) et couleurs ; même fond, bordure, titre et vert des boutons.
-- [ ] **M22.3 — EN COURS (code écrit, NON poussé : 4 contrôles à réparer) — Retirer les graphiques des anciennes pages** (M) : Statistiques, Finances, Stockage (tableau de bord et Analyses) ont un bouton « Voir les graphiques » à la place ; **Trésorerie : le Comptable GARDE ses graphiques** (il n'a pas la page Graphiques, qui montre les salaires) ; les liens « Pourquoi ce chiffre ? », de l'assistant et de la Santé du site vers un graphique visent la carte `gr-<carte>` ; un clic sur un employé dans « Équipe » ouvre sa fiche. Reste : réparer `check:styled-charts`, `check:purchasing-page`, `check:stock`, `check:finance-page`, mettre à jour ce plan et le guide, tout relancer, pousser.
-- [ ] **M22.4 — Décisions du menu** (S, accord) : BTK confirme ou change les décisions par défaut ci-dessus (surtout : les 10 entrées, « Graphiques » à part, où va « Mes tableaux »). « GO » = il garde les défauts.
-- [ ] **M22.5 — Règles pures du menu fusionné** (M) : `src/utils/menuGroups.ts` : les entrées, leurs onglets, qui voit quoi (responsable, comptable, chef d'équipe, opérateur), et la correspondance **ancienne vue → (entrée, onglet)** pour que tout ancien lien arrive au bon endroit ; `check:menu-groups` avec les cas piégés (vue inconnue, rôle sans droit, onglet caché par « Pages du menu »). Aucun écran.
-- [ ] **M22.6 — Le nouveau menu à l'écran** (L) : menu latéral et barre du bas avec les entrées ; barre d'onglets en haut de chaque entrée ; le dernier onglet est retenu ; **l'intérieur des pages ne change pas**. Actualités reste une entrée à part.
-- [ ] **M22.7 — Filtres uniformes avec chiffres** (L) : un seul composant « barre de filtres » (même style, même place, un chiffre sur chaque filtre), posé page par page : Missions, Équipe, Clients et Factures, Argent, Stock. Une page à la fois, testée avant la suivante.
-- [ ] **M22.8 — Liens et doublons** (M) : alertes de l'accueil, Santé du site, cloche, assistant, recherche, carte du site, guide vidéo (module 20 : un clip par page du menu), adresses `data-nav` : tout vérifié (`check:alert-links`, `check:assistant`, `check:site-map`, `check:guide`) ; doublons enlevés.
-- [ ] **M22.9 — Réglage « Boutique »** (M) : dans Réglages > Pages du menu, un préréglage qui garde Stock, Clients, Argent, Messages et cache le reste ; réversible en un clic ; rien n'est supprimé.
-- [ ] **M22.10 — Anglais, carte du site, guide** (S) : textes FR/EN, fiches de la carte du site, `GUIDE_SITE.md`, clips du guide.
-- [ ] **M22.11 — Essai de BTK** (téléphone et grand écran) : regarder la page Graphiques (couleurs, titres, lisibilité des 4 carrés), le nouveau menu, les filtres, les anciens liens (alerte, assistant), le réglage Boutique ; tableau des défauts.
+**Ce qui NE change PAS :** les données, les calculs, le serveur, la base, les droits de chaque rôle, les alertes. Seul l'écran change. Chaque étape est testée avant la suivante, avec tous les contrôles du dépôt (`npm run check:…`).
 
-**Risques propres à ce module :** (a) un lien d'alerte ou de l'assistant qui mène à une page déplacée (mitigation : table « ancienne vue → entrée + onglet » et tests M22.5/M22.8) ; (b) le Comptable et le Chef d'équipe ne doivent rien gagner ni perdre comme droits (les graphiques de la Trésorerie restent pour le Comptable) ; (c) les clips du guide vidéo (module 20) sont liés aux pages du menu ; (d) trop d'onglets en haut sur téléphone (mitigation : 5 onglets au plus par entrée, défilement horizontal) ; (e) les graphiques et le menu n'ont jamais été vus à l'écran par BTK avant l'essai M22.11 : les contrôles lisent le code, ils ne remplacent pas ses yeux.
+**Ce que BTK a demandé (2026-11-03) :** (1) fusionner les pages « en ordre avec des filtres clairs » ; (2) **Actualités reste propre**, une entrée à part ; (3) tous les graphiques dans une page, **divisée en 4 carrés sur grand écran** ; (4) fusionner les graphiques qui se ressemblent mais **garder les détails, les couleurs et le design pro et visible** ; (5) pour une **petite boutique**, beaucoup de fonctions sont inutiles.
+
+### Le menu aujourd'hui → demain (proposition par défaut ; BTK peut tout changer en M22.4)
+
+| Nouvelle entrée | Ce qu'elle contient (onglets) | Anciennes entrées qui y vont |
+|---|---|---|
+| **1. Accueil** | Tableau de bord · Synthèse du mois | Tableau de bord, Direction |
+| **2. Actualités** | (seule, inchangée) | Actualités |
+| **3. Missions** | À valider · Tableau des missions · Historique · Statistiques | Validations, Tableau des missions (« grid »), Historique, Statistiques (chiffres) |
+| **4. Équipe** | Opérateurs et sessions · Performance · Ressources humaines · Paie | Opérateurs et sessions, Performance, Ressources humaines, Paie |
+| **5. Clients** | Clients · Facturation | Clients, Facturation (ses onglets internes restent) |
+| **6. Argent** | Finances · Trésorerie · Comptabilité | Statistiques > onglet Finances, Trésorerie, Comptabilité |
+| **7. Stock** | Stockage · Achats | Stockage (ses onglets internes restent), Achats |
+| **8. Graphiques** | la page Graphiques (entrée à part) | Graphiques |
+| **9. Messages** | Messagerie · Calendrier | Messagerie, Calendrier |
+| **10. Contrôle** | Santé du site · Journal des erreurs · Tableaux d'équipe · Réglages | Santé du site, Journal des erreurs, Tableaux d'équipe, Réglages |
+
+Qui voit quoi : le **Comptable** ne voit que Clients (Facturation), Argent (Trésorerie, Comptabilité), Stock (Achats) et Messages, comme aujourd'hui. Le **Chef d'équipe** garde Missions (À valider de son équipe) et Messages. L'**Opérateur** garde sa vue simple (missions, paie, profil, messages). Aucun rôle ne gagne ni ne perd de droit.
+
+### Décisions déjà prises par BTK
+Actualités reste à part · une seule page Graphiques · les graphiques semblables fusionnent avec un design pro · le menu se fusionne « en ordre avec des filtres clairs ».
+
+### Décisions PAR DÉFAUT proposées (BTK peut les changer avant le GO du menu)
+(a) les 10 entrées du tableau ci-dessus ; (b) « Graphiques » est une entrée à part (et non un onglet d'Accueil) ; (c) les anciennes pages deviennent des onglets, rien n'est supprimé ; (d) les filtres : une seule rangée de boutons en haut de chaque onglet, toujours au même endroit, avec un chiffre dessus ; (e) 5 onglets au plus par entrée (sur téléphone, la rangée défile de côté) ; (f) « Boutique » = Stock, Clients, Argent, Messages, choisi en un clic dans Réglages > Pages du menu (qui existe déjà : `moduleSwitch.ts`).
+
+### Règles de ce module
+Site seulement (pas de serveur, pas de base) · une étape testée avant la suivante · **les anciens liens** (alertes, assistant, cloche, carte du site, guide, recherche) doivent continuer à mener au bon endroit, avec le bon onglet · chaque étape = un commit + un push + ce plan et `TODO.md` à jour · tous les contrôles `check:*` relancés avant de pousser · textes FR/EN · boutons d'au moins 44 px sur téléphone.
+
+### Les étapes, une par une
+
+**M22.1 — [x] FAIT le 2026-11-03 (« Go » de BTK), en ligne (commit `cb6a16d`) — Page « Graphiques »** (taille M)
+- *Ce qu'on a fait :* une nouvelle page, pour le responsable seulement, avec **16 cartes** : Missions 3, Argent 8, Stock 5. En haut : les filtres **Tout / Missions / Argent / Stock** (avec le nombre de cartes) et **une seule période** (Semaine, Mois, Année, avec flèches et « Aujourd'hui ») pour toutes les cartes. Sur grand écran : 2 colonnes, donc **4 carrés** à la fois ; sur téléphone : une carte sous l'autre.
+- *Les 23 graphiques d'avant sont devenus 16 :* « missions par type » (grille + barres + anneau en une carte), « valeur du stock dans le temps » (2 pages → 1 carte), « produits les plus sortis » (2 pages → 1 carte), « argent reçu et dépenses » (2 pages → 1 carte) et « dépenses par catégorie » (2 pages → 1 carte).
+- *Attention, une vraie différence :* « Argent reçu et dépenses » de Finances **compte les salaires**, celui de la Trésorerie **non**. Ce n'est donc pas le même chiffre (j'avais d'abord dit le contraire : erreur corrigée avec BTK). La carte a un bouton **« Avec salaires / Caisse (sans salaires) »**, et la même chose pour « Dépenses par catégorie ». « Clients : argent reçu » et « D'où vient l'argent » restent 2 cartes (l'une est par client, l'autre par catégorie).
+- *Cas particulier :* les cartes de la caisse se lisent jour par jour ; pour une année, elles montrent **un mois** (le mois en cours, ou décembre d'une année passée), et c'est écrit sous la carte.
+- *Fichiers :* `src/views/admin/GraphsPage.tsx`, `src/views/admin/graphs/` (GraphCard, GraphsMissions, GraphsMoney, GraphsStock), `src/utils/graphsPage.ts`. Contrôle : `check:graphs`.
+- *Fini quand :* la page est dans le menu, cachable dans Réglages, en lecture seule, et ses contrôles passent. ✔
+
+**M22.2 — [x] FAIT le 2026-11-03, en ligne — Comparer chaque carte à l'ancien graphique** (taille S)
+- *Pourquoi :* BTK veut que « détails, couleurs et design restent pros et visibles ». Il ne faut pas qu'une carte soit plus pauvre que l'ancien graphique.
+- *Ce qu'on a fait :* `check:graphs` vérifie, point par point, que chaque carte utilise **les mêmes séries de chiffres, les mêmes libellés, les mêmes réglages** (barres empilées, anneau, aire, pointillé violet de la prévision, lignes vertes/rouges selon le signe) et **les mêmes couleurs de barres** que l'ancien graphique, avec le même fond, la même bordure, le même titre et le même vert de boutons.
+- *Limite honnête :* ce contrôle lit le code ; il ne remplace pas les yeux de BTK (voir M22.11).
+- *Fini quand :* les 27 points de comparaison passent. ✔
+
+**M22.3 — [ ] EN COURS (code écrit sur mon poste, NON poussé : 4 contrôles à réparer) — Retirer les graphiques des anciennes pages** (taille M)
+- *Ce qu'on fait :* on enlève les graphiques de **Statistiques** (missions faites par jour, par type, classement de l'équipe, salaires), de **Finances** (les 6 graphiques d'argent), du **Stockage** (tableau de bord : 2 graphiques ; onglet Analyses : 5 graphiques). À la place de chaque groupe : un bouton **« Voir les graphiques »** qui ouvre la page Graphiques **sur le bon groupe** (Missions, Argent ou Stock). **Les chiffres et les tuiles restent** (bénéfice, marge, à encaisser, trésorerie, budgets, prévu contre réel, paie).
+- *Point important, le Comptable :* il **n'a pas** la page Graphiques (elle montre les salaires, il ne doit pas les voir). Donc dans **Trésorerie**, le **responsable** a le bouton, et le **Comptable garde ses 4 graphiques**.
+- *Les liens se déplacent aussi :* un lien « Pourquoi ce chiffre ? », de l'assistant ou d'une alerte de la Santé du site qui visait un graphique (argent reçu, dépenses, facturé, bénéfice cumulé) vise maintenant la carte de la page Graphiques (`gr-flow`, `gr-categories`, `gr-billed`, `gr-cum`), qui clignote 1,5 s comme avant. Les liens vers un chiffre (bénéfice, marge, trésorerie, budgets) ne bougent pas. Si le lien vise une carte, la page s'ouvre sur le bon groupe, même si un autre filtre était choisi.
+- *Un clic sur un employé* dans la carte « Équipe : missions faites » ouvre sa fiche (comme avant dans Statistiques).
+- *Fichiers :* `StatsPage.tsx`, `FinanceInsights.tsx`, `TreasuryPage.tsx`, `StockDashboard.tsx`, `StockAnalytics.tsx`, `OpenGraphsButton.tsx` (nouveau), `graphsNav.ts` (nouveau), `financeNav.ts`, règles de la Santé du site (`stats.ts`, `finance.ts`), `App.tsx`.
+- *Où on en est :* le code compile, le build passe, `check:graphs` (97/97), `check:alert-links` et `check:assistant` sont réparés. **Il reste 4 contrôles à mettre à jour** parce qu'ils testent encore les anciens graphiques : `check:styled-charts`, `check:purchasing-page`, `check:stock`, `check:finance-page`. Puis : mettre à jour ce plan et le guide, relancer **tous** les contrôles, pousser.
+- *Fini quand :* plus aucun graphique dans les 3 anciennes pages (sauf la Trésorerie du Comptable), les boutons ouvrent le bon groupe, tous les liens mènent à une carte qui existe, tous les contrôles passent.
+
+**M22.4 — [ ] Décisions du menu** (taille S, accord de BTK)
+- *Ce qu'on fait :* BTK relit le tableau « Le menu aujourd'hui → demain » et répond. Questions courtes : (1) les 10 entrées te conviennent ? (2) « Graphiques » à part ? (3) « Mes tableaux » / « Tableaux d'équipe » dans Contrôle, ou ailleurs ? (4) quels onglets pour une boutique ? **« GO » = il garde les décisions par défaut.**
+- *Fini quand :* les décisions sont notées dans ce plan.
+
+**M22.5 — [ ] Règles pures du menu fusionné** (taille M)
+- *Ce qu'on fait :* on écrit **toutes les règles du menu dans un seul fichier** `src/utils/menuGroups.ts`, **sans aucun écran** : la liste des entrées, leurs onglets, **qui voit quoi** (responsable, comptable, chef d'équipe, opérateur), et surtout la **table « ancienne vue → (entrée, onglet) »**. C'est elle qui garantit que n'importe quel ancien lien (alerte, assistant, cloche, carte du site) arrive au bon endroit.
+- *Pourquoi avant l'écran :* c'est la partie risquée. On la teste à fond avant de toucher à l'écran.
+- *Contrôle :* `check:menu-groups` avec les cas piégés : vue inconnue, rôle sans droit, onglet caché par « Pages du menu », vue de l'opérateur, vide.
+- *Fini quand :* les 25 anciennes vues ont chacune une nouvelle place, et aucun rôle ne gagne ni ne perd de droit (comparé à `roles.ts`).
+
+**M22.6 — [ ] Le nouveau menu à l'écran** (taille L)
+- *Ce qu'on fait :* le menu latéral et la barre du bas passent à 10 entrées ; une **barre d'onglets** en haut de chaque entrée ; le **dernier onglet est retenu** ; **l'intérieur des pages ne change pas** (on les met dans des onglets sans les modifier). **Actualités reste une entrée à part.**
+- *Ce que BTK voit :* un menu court ; en cliquant une entrée, une rangée d'onglets en haut ; les pastilles de chiffres (À valider, messages non lus, alertes) restent visibles sur l'entrée.
+- *Fichiers :* `Sidebar.tsx`, `BottomNav.tsx`, `App.tsx`, un composant d'onglets, `menuGroups.ts`.
+- *Fini quand :* chaque ancienne page s'ouvre dans son onglet, les pastilles marchent, `check:*` passent.
+
+**M22.7 — [ ] Filtres uniformes avec chiffres** (taille L)
+- *Ce qu'on fait :* un **seul composant « barre de filtres »** (même style, même place, un chiffre sur chaque filtre, par exemple « En retard (3) ») posé page par page : **Missions, Équipe, Clients et Factures, Argent, Stock**. Une page à la fois, testée avant la suivante. Un filtre à 0 reste visible mais grisé (on sait qu'il existe).
+- *Pourquoi :* aujourd'hui chaque page a ses propres boutons de tri, à des endroits différents.
+- *Fini quand :* toutes les pages listées utilisent le même composant et leurs contrôles passent.
+
+**M22.8 — [ ] Liens et doublons** (taille M)
+- *Ce qu'on fait :* on vérifie **tous** les chemins vers une page : alertes de l'accueil, Santé du site, cloche, assistant (boutons exacts, messages prêts), recherche, carte du site, guide vidéo (module 20 : un clip par page du menu), adresses `data-nav`. Puis on enlève les doublons (deux boutons qui mènent au même endroit, textes devenus faux comme « va dans la page Statistiques »).
+- *Contrôles :* `check:alert-links`, `check:assistant`, `check:site-map`, `check:guide`, `check:health-notif`.
+- *Fini quand :* aucun lien ne mène à une page qui n'existe plus ; les textes d'aide disent les bons noms.
+
+**M22.9 — [ ] Réglage « Boutique »** (taille M)
+- *Ce qu'on fait :* dans Réglages > Pages du menu, un préréglage **« Boutique »** qui garde **Stock, Clients, Argent, Messages** et cache le reste, **réversible en un clic**. Rien n'est supprimé, les données restent.
+- *Qui est concerné :* un petit commerce sans employés en mission. Le préréglage existe à côté de « tout montrer ».
+- *Fini quand :* le préréglage s'applique et se retire, et le menu court reste cohérent (pas d'entrée vide).
+
+**M22.10 — [ ] Anglais, carte du site, guide** (taille S)
+- *Ce qu'on fait :* tous les textes en français **et** en anglais ; fiches de la carte du site à jour (chaque page dit où elle est dans le nouveau menu) ; `GUIDE_SITE.md` (`npm run guide`) ; clips du guide.
+- *Fini quand :* `check:site-map` et `check:guide` passent.
+
+**M22.11 — [ ] Essai de BTK** (téléphone et grand écran)
+- *Ce que BTK regarde :* la page **Graphiques** (couleurs, titres, lisibilité des 4 carrés, boutons Avec/Sans salaires) ; le **nouveau menu** et ses onglets ; les **filtres** ; les **anciens liens** (toucher une alerte, un bouton de l'assistant) ; le **réglage Boutique** ; l'écran du **Comptable** (ses graphiques de Trésorerie sont toujours là).
+- *Sortie :* un tableau des défauts (comme `ESSAI_BTK.md`). **Les contrôles lisent le code ; ils ne remplacent pas les yeux de BTK.**
+
+### Risques à surveiller
+(a) un **lien d'alerte ou de l'assistant** qui mène à une page déplacée (parade : la table « ancienne vue → entrée + onglet » et ses tests, M22.5 et M22.8) ; (b) le **Comptable** et le **Chef d'équipe** ne doivent rien gagner ni perdre comme droits (les graphiques de la Trésorerie restent pour le Comptable) ; (c) les **clips du guide vidéo** (module 20) sont liés aux pages du menu ; (d) **trop d'onglets** sur téléphone (parade : 5 au plus, la rangée défile de côté) ; (e) **personne n'a encore vu** la page Graphiques ni le menu à l'écran : seul l'essai de BTK (M22.11) le dira ; (f) le menu actuel est utilisé tous les jours : si BTK n'aime pas le résultat, on doit pouvoir **revenir à l'ancien menu** (on garde l'ancien menu derrière un réglage jusqu'à l'essai de BTK).
 
 ## Ordre conseillé
 
