@@ -1,6 +1,7 @@
 // Page Clients : liste, fiche, création, modification, archivage et import des clients, avec statut et chiffres calculés.
 // Utilisé par : App.tsx. Contrôlé par : npm run check:clients-demo, npm run check:clients-page, npm run check:import-page, npm run check:missions-link et npm run check:performance-page.
 // Pour modifier : le statut d'un client n'est jamais saisi : il se calcule avec les missions validées (src/utils/clients.ts) et les seuils de Réglages > Conditions. Réservé au responsable ; le serveur ne renvoie aucun client à un opérateur. Textes FR/EN avec t(fr, en).
+import { FilterBar } from '../../components/FilterBar';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, ArchiveRestore, ChevronDown, ChevronRight, FileSpreadsheet, Mail, MapPin, Pencil, Phone, Plus, Search, Trash2, X } from 'lucide-react';
@@ -142,14 +143,12 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
           <Search aria-hidden="true" className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Nom, contact, téléphone, e-mail…', 'Name, contact, phone, e-mail…')} className={`${field} pl-9`} />
         </label>
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('Filtrer par statut', 'Filter by status')}>
-          <button type="button" role="tab" aria-selected={status === 'all'} onClick={() => setStatus('all')} className={chip(status === 'all')}>{t('Tous', 'All')} ({counts.all})</button>
-          {attentionCount > 0 && <button type="button" role="tab" aria-selected={status === 'attention'} onClick={() => setStatus('attention')} className={chip(status === 'attention')}>{t('Points d\'attention', 'Needs attention')} ({attentionCount})</button>}
-          {STATUS_ORDER.map(s => (
-            <button key={s} type="button" role="tab" aria-selected={status === s} onClick={() => setStatus(s)} className={chip(status === s)}>{lbl(s)} ({counts[s]})</button>
-          ))}
-          {counts.archived > 0 && <button type="button" role="tab" aria-selected={status === 'archived'} onClick={() => setStatus('archived')} className={chip(status === 'archived')}>{t('Archivés', 'Archived')} ({counts.archived})</button>}
-        </div>
+        <FilterBar label={t('Filtrer par statut', 'Filter by status')} active={status} onChange={setStatus} filters={[
+          { id: 'all', label: t('Tous', 'All'), count: counts.all },
+          { id: 'attention' as const, label: t('Points d\'attention', 'Needs attention'), count: attentionCount },
+          ...STATUS_ORDER.map(s => ({ id: s as ClientStatus | 'all' | 'archived' | 'attention', label: lbl(s), count: counts[s] })),
+          { id: 'archived' as const, label: t('Archivés', 'Archived'), count: counts.archived },
+        ]} />
         <select value={sort} onChange={e => setSort(e.target.value as ClientSort)} className={field} aria-label={t('Trier', 'Sort')}>
           <option value="status">{t('Tri : à surveiller d\'abord', 'Sort: needs attention first')}</option>
           <option value="revenue">{t('Tri : chiffre d\'affaires', 'Sort: revenue')}</option>

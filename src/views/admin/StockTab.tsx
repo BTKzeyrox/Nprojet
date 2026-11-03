@@ -1,6 +1,7 @@
 // Onglet Produits du Stockage : produits, quantités calculées, entrées, sorties, ajustements, photos, import et voyant sous le seuil.
 // Utilisé par : StockDashboard.tsx et StoragePage.tsx. Contrôlé par : npm run check:import-page et npm run check:stock.
 // Pour modifier : la quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement et le total se recalcule (src/utils/stock.ts). Un seul stockage à la fois (prop spaceId). Responsable seulement ; textes FR/EN avec t(fr, en).
+import { FilterBar } from '../../components/FilterBar';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, FileSpreadsheet, History, Pencil, Plus, Search, Tag, Trash2, X } from 'lucide-react';
@@ -177,10 +178,8 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
             <option value={NONE_CAT}>{t('Sans catégorie', 'No category')}</option>
             {catOptions.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('Filtrer', 'Filter')}>
-            {([['all', t('Tous', 'All'), rows.length], ['low', t('Stock bas', 'Low'), lowCount], ['empty', t('Épuisés', 'Out'), emptyCount]] as [StockFilter, string, number][]).map(([id, label, n]) => (
-              <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`min-h-[44px] px-3 rounded-lg text-sm font-semibold border ${filter === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{label} ({n})</button>
-            ))}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <FilterBar label={t('Filtrer', 'Filter')} active={filter} onChange={setFilter} filters={([['all', t('Tous', 'All'), rows.length], ['low', t('Stock bas', 'Low'), lowCount], ['empty', t('Épuisés', 'Out'), emptyCount]] as [StockFilter, string, number][]).map(([id, label, count]) => ({ id, label, count }))} />
             <button type="button" aria-pressed={sortBy === 'qty'} onClick={() => setSortBy(sortBy === 'name' ? 'qty' : 'name')} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm ml-auto">{sortBy === 'name' ? t('Tri : nom', 'Sort: name') : t('Tri : moins en stock', 'Sort: lowest first')}</button>
           </div>
         </div>

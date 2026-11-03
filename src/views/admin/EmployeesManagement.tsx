@@ -39,7 +39,8 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { badgeLabel, formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
 import { getPresenceStatus, formatDuration } from '../../utils/presence';
 import { liveStatus, LIVE_META } from '../../utils/presenceStatus';
-import { filterOperators, liveCounts, activeFilterCount, OP_FILTERS_DEFAULT, type OpFilters, type OpItem, type OpSort } from '../../utils/operatorList';
+import { FilterBar } from '../../components/FilterBar';
+import { facetCounts, filterOperators, liveCounts, activeFilterCount, OP_FILTERS_DEFAULT, type OpFilters, type OpItem, type OpSort } from '../../utils/operatorList';
 import { OperatorSheet } from '../../components/OperatorSheet';
 import { useNow } from '../../utils/useNow';
 import { LiveDot, LiveLine } from '../../components/LiveStatus';
@@ -371,12 +372,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).filter(([, k]) => k !== 'shift' || showShift(cfg)).map(([title, key, opts]) => (
             <div key={key} className="min-w-0">
               <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">{title}</div>
-              <div className="flex flex-wrap gap-1">
-                {opts.map(([val, label]) => (
-                  <button key={val} type="button" onClick={() => setFilters(f => ({ ...f, [key]: val }))} data-testid={`op-filter-${key}-${val}`} aria-pressed={filters[key] === val}
-                    className={`min-h-[36px] px-3 rounded-lg border font-semibold cursor-pointer whitespace-nowrap ${filters[key] === val ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700'}`}>{label}</button>
-                ))}
-              </div>
+              <FilterBar label={title} active={filters[key] as string} onChange={val => setFilters(f => ({ ...f, [key]: val }))} testId={val => `op-filter-${key}-${val}`}
+                filters={(() => { const fc = facetCounts(items, filters, key, opts.map(o => o[0])); return opts.map(([val, label]) => ({ id: val, label, count: fc[val] })); })()} />
             </div>
           ))}
           <label className="min-w-0 text-[10px] font-mono uppercase text-slate-500">{en ? 'Sort by' : 'Trier par'}

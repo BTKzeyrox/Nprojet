@@ -1,6 +1,7 @@
 // Onglet Finances : paiements reçus des clients et dépenses de la période, avec ajout, modification et suppression, et les cartes finance en dessous.
 // Utilisé par : StatsPage.tsx et TreasuryPage.tsx. Contrôlé par : npm run check:finance-page.
 // Pour modifier : lignes lues dans db.getCash(). Les salaires sont calculés avec les missions validées, jamais saisis. Avec moneyOnly (Trésorerie du Comptable), salaires, graphiques, budgets et plan sont cachés. La saisie d'argent n'est possible qu'en ligne (useOnlineOnly).
+import { FilterBar } from '../../components/FilterBar';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -108,11 +109,7 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr: salariesI
       {!moneyOnly && <PlanVsActualCard lang={lang} />}
 
       <div className={card}>
-        <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={t('Type', 'Type')}>
-          {([['all', t('Tout', 'All')], ['in', t('Entrées', 'Money in')], ['out', t('Sorties', 'Money out')]] as [('all' | CashKind), string][]).map(([id, label]) => (
-            <button key={id} type="button" role="tab" aria-selected={kind === id} onClick={() => { setKind(id); setShowAll(false); }} className={chip(kind === id)}>{label}</button>
-          ))}
-        </div>
+        <FilterBar label={t('Type', 'Type')} active={kind} onChange={id => { setKind(id); setShowAll(false); }} filters={([['all', t('Tout', 'All'), inRange.length], ['in', t('Entrées', 'Money in'), inRange.filter(e => e.kind === 'in').length], ['out', t('Sorties', 'Money out'), inRange.filter(e => e.kind === 'out').length]] as [('all' | CashKind), string, number][]).map(([id, label, count]) => ({ id, label, count }))} />
         <select value={category} onChange={e => { setCategory(e.target.value); setShowAll(false); }} className={field} aria-label={t('Catégorie', 'Category')}>
           <option value="">{t('Toutes les catégories', 'All categories')}</option>
           {usedCategories.map(c => <option key={c} value={c}>{c}</option>)}

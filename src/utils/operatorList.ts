@@ -54,3 +54,10 @@ export function liveCounts(items: OpItem[]): Record<LiveStatus, number> {
 export function activeFilterCount(f: OpFilters): number {
   return (f.search.trim() ? 1 : 0) + (f.shift !== 'all' ? 1 : 0) + (f.account !== 'all' ? 1 : 0) + (f.live !== 'all' ? 1 : 0) + (f.level !== 'all' ? 1 : 0);
 }
+
+/** Chiffre de chaque choix d'un filtre : combien d'opérateurs resteraient si on le choisissait, avec la recherche et les AUTRES filtres déjà posés. */
+export function facetCounts(items: OpItem[], f: OpFilters, key: 'shift' | 'account' | 'level', values: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const v of values) out[v] = filterOperators(items, { ...f, [key]: v } as OpFilters).length;
+  return out;
+}

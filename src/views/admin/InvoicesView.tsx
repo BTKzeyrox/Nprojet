@@ -1,6 +1,7 @@
 // Page Facturation : liste des factures, brouillon, émission, paiement, avoir, créances à relancer, et onglet Devis si les devis sont activés.
 // Utilisé par : App.tsx. Contrôlé par : npm run check:invoices-page et npm run check:quotes-page.
 // Pour modifier : le numéro, le reçu et les totaux définitifs sont toujours posés par le serveur ; l'état (payée, en retard...) se calcule dans src/utils/invoices.ts. Émission et paiement en ligne seulement (useOnlineOnly). Responsable seulement ; textes FR/EN avec t(fr, en).
+import { FilterBar } from '../../components/FilterBar';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Ban, CheckCircle2, FilePlus2, Pencil, Download, FileText, Plus, Printer, Search, Send, Trash2, Wallet, X } from 'lucide-react';
@@ -97,6 +98,7 @@ export const InvoicesView: React.FC = () => {
       (!needle || `${inv.number || ''} ${inv.client?.name || ''} ${clientName(inv.client_id)}`.toLowerCase().includes(needle)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoices, cash, today, q, state, clientId, clients]);
+  const stateCounts = useMemo(() => { const c: Record<string, number> = {}; for (const inv of invoices) { const st = invoiceInfo(inv, cash, today).state; c[st] = (c[st] || 0) + 1; } return c; }, [invoices, cash, today]); // un chiffre par état (toutes les factures)
   const totals = useMemo(() => invoiceTotalsAll(invoices, cash, today), [invoices, cash, today]);
   const aged = useMemo(() => agedBalance(invoices, cash, today), [invoices, cash, today]);
   const chase = useMemo(() => toChase(invoices, cash, today, Object.fromEntries(clients.map(c => [c.id, c.name]))), [invoices, cash, today, clients]);
@@ -196,12 +198,13 @@ export const InvoicesView: React.FC = () => {
 
       {tab === 'quotes' && company.options.quotes_enabled && <QuotesSection ver={ver} onOpenInvoice={id => { setTab('list'); setState('all'); setClientId('all'); setQ(''); setOpenId(id); }} />}
 
+      {tab === 'list' && <FilterBar label={t('État', 'State')} active={state} onChange={setState} filters={[
+        { id: 'all' as InvoiceState | 'all', label: t('Toutes', 'All'), count: invoices.length },
+        ...(Object.keys(STATE_LABEL) as InvoiceState[]).map(s => ({ id: s as InvoiceState | 'all', label: lang === 'en' ? STATE_LABEL[s].en : STATE_LABEL[s].fr, count: stateCounts[s] || 0 })),
+      ]} />}
+
       {tab === 'list' && <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1"><Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Numéro ou client…', 'Number or client…')} className={`${field} pl-9`} /></div>
-        <select value={state} onChange={e => setState(e.target.value as InvoiceState | 'all')} className={field} aria-label={t('État', 'State')}>
-          <option value="all">{t('Tous les états', 'All states')}</option>
-          {(Object.keys(STATE_LABEL) as InvoiceState[]).map(s => <option key={s} value={s}>{lang === 'en' ? STATE_LABEL[s].en : STATE_LABEL[s].fr}</option>)}
-        </select>
         <select value={clientId} onChange={e => setClientId(e.target.value)} className={field} aria-label={t('Client', 'Client')}>
           <option value="all">{t('Tous les clients', 'All clients')}</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
