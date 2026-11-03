@@ -548,6 +548,8 @@ Liste complète : `TODO_AMELIORATIONS.md`.
 
 ## Site plus simple : page « Graphiques » (demande de BTK, « Go » du 2026-11-03)
 
+> **Cette section est maintenant le MODULE 22 de `TODO_MODULES.md`** (étapes M22.1 à M22.11, avec le menu fusionné et le réglage « Boutique »). Les étapes 1, 2 et 3 ci-dessous = M22.1, M22.2 et M22.3.
+
 BTK trouve le site trop complexe : il veut fusionner en ordre avec des filtres clairs. Décisions : Actualités reste une page à part ; tous les graphiques dans UNE page, divisée en 4 carrés sur grand écran ; fusionner les graphiques qui se ressemblent, en gardant les détails, couleurs et le design pro. Plan : 1) construire la page (16 cartes), 2) comparer chaque carte à l'ancienne, 3) enlever les graphiques des anciennes pages (bouton « Voir les graphiques ») et déplacer les liens. Menu à 9 entrées et réglage « Boutique » : pas encore demandés (à reprendre avec BTK).
 
 - [x] (2026-11-03) **Étape 1.** Page « Graphiques » (responsable seulement) : `GraphsPage.tsx` + `graphs/` + `utils/graphsPage.ts`. 16 cartes : Missions 3 (missions faites par type = grille + barres + anneau fusionnés ; équipe ; salaires), Argent 8 (argent reçu et dépenses ; bénéfice cumulé ; solde de la caisse ; facturé et reçu ; dépenses par catégorie ; clients ; d'où vient l'argent ; marge par type), Stock 5 (valeur dans le temps ; produits les plus sortis ; valeur par catégorie ; fournisseurs ; achats les plus chers). Filtres Tout / Missions / Argent / Stock avec chiffres ; une seule période (Semaine, Mois, Année + flèches) pour toutes les cartes ; 2 colonnes (4 carrés) sur grand écran, 1 colonne sur téléphone. Rien n'est enlevé des anciennes pages. `check:graphs` 52/52, tous les contrôles du dépôt passent. Non testé à l'écran (téléphone, grand écran).
