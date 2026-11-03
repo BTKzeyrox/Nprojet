@@ -459,6 +459,7 @@ export interface CashEntry {
   supplier_id?: string; // fournisseur d'un achat (module 4)
   po_id?: string; // bon de commande qui a créé cette dépense (module 4)
   invoice_id?: string; // facture payée par cette ligne (module 2)
+  void_of?: string; // M23.3 : cette ligne de correction annule le paiement qui porte cet id (jamais de suppression)
   receipt_no?: string; // numéro de reçu attribué par le serveur (module 2)
   payment_method?: string; // espèces, virement, mobile money…
   created_by?: string;

@@ -16,7 +16,7 @@ export function getAdminAlerts(): AlertItem[] {
   if (me?.role !== 'admin') return [];
   const today = todayMada();
   const st = db.getSettings();
-  const cash = db.getCash(), posts = db.getPosts(), advances = db.getAdvanceRequests(), products = db.getProducts(), moves = db.getStockMoves(), contracts = db.getContracts(), clients = db.getClients();
+  const cash = db.getCashNet(), posts = db.getPosts(), advances = db.getAdvanceRequests(), products = db.getProducts(), moves = db.getStockMoves(), contracts = db.getContracts(), clients = db.getClients();
   const invoices = db.getInvoices();
   // Signature bon marché des données : même si une modification ne prévenait pas les écrans, le cache ne reste jamais faux
   let sum = 0;

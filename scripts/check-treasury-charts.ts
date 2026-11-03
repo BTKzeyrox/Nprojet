@@ -19,7 +19,7 @@ const since = cashSinceStart([...cash, e('9', 'in', 999999, '2026-12-01', 'Paiem
 ok(since.received === 190999 && since.spent === 50000 && since.balance === 140999, 'en caisse depuis le début : toutes les lignes jusqu\'à aujourd\'hui (septembre compris), pas celles du futur');
 ok(cashSinceStart([], '2026-10-10').balance === 0 && cashSinceStart([null, { kind: 'in', amount_ar: NaN, date: '2026-10-01' }] as any, '2026-10-10').balance === 0, 'caisse vide ou lignes abîmées : 0, aucun plantage');
 const page = readFileSync('src/views/admin/TreasuryPage.tsx', 'utf8');
-ok(/cashSinceStart\(db\.getCash\(\)/.test(page) && /depuis le début/.test(page) && /since the start/.test(page), 'page Trésorerie : « en caisse depuis le début » affiché (FR et EN)');
+ok(/cashSinceStart\(db\.getCashNet\(\)/.test(page) && /depuis le début/.test(page) && /since the start/.test(page), 'page Trésorerie : « en caisse depuis le début » affiché (FR et EN)');
 const comp = readFileSync('src/views/admin/TreasuryCharts.tsx', 'utf8') + readFileSync('src/utils/treasuryCharts.ts', 'utf8');
 ok(!/salar|payroll|getPosts|getUsers|advance/i.test(comp), 'graphiques : aucun salaire, aucune paie, aucune mission lue');
 ok(/<TreasuryCharts /.test(readFileSync('src/views/admin/TreasuryPage.tsx', 'utf8')), 'page Trésorerie : graphiques branchés');

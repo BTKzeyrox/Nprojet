@@ -9,5 +9,5 @@ export function clientBadgesFromDb(): ClientBadgeResult {
   const clients = db.getClients(), settings = db.getSettings(), today = todayMada();
   const missions = clientMissionsFromPosts(db.getPosts(), db.getContracts(), clients, { client_price_default_ar: settings.client_price_default_ar, client_prices_by_type: settings.client_prices_by_type });
   const summaries = summarizeClients(clients, missions, today, clientThresholds(readCompany(settings.company)));
-  return computeClientBadges({ clients, summaries, missions, invoices: db.getInvoices(), cash: db.getCash(), today });
+  return computeClientBadges({ clients, summaries, missions, invoices: db.getInvoices(), cash: db.getCashNet(), today });
 }

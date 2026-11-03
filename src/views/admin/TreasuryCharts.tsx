@@ -1,6 +1,6 @@
 // Graphiques de la Trésorerie : argent reçu et dépenses jour par jour, solde du mois et répartition par catégorie, sans aucun salaire.
 // Utilisé par : TreasuryPage.tsx.
-// Pour modifier : calculés par treasuryCharts (src/utils/treasuryCharts.ts) à partir de db.getCash() ; la période vient de TreasuryPage (prop range). Textes FR/EN avec t(fr, en).
+// Pour modifier : calculés par treasuryCharts (src/utils/treasuryCharts.ts) à partir de db.getCashNet() ; la période vient de TreasuryPage (prop range). Textes FR/EN avec t(fr, en).
 import React, { useMemo } from 'react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
@@ -14,7 +14,7 @@ const box = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-
 // Graphiques de la Trésorerie : argent reçu, dépenses, solde et catégories. Aucun salaire.
 export const TreasuryCharts: React.FC<{ range: { start: string; end: string }; lang: 'fr' | 'en' }> = ({ range, lang }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  const cash = db.getCash();
+  const cash = db.getCashNet();
   const today = todayMada();
   const c = useMemo(() => treasuryCharts(cash, range, today), [cash, range.start, range.end, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const ar = (n: number) => formatCurrencyAr(n);

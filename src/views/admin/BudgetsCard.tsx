@@ -1,6 +1,6 @@
 // Carte Budgets du mois : un plafond mensuel par catégorie de dépense, avec barre d'avancement (attention dès 80 %, dépassé au-delà de 100 %).
 // Utilisé par : FinanceTab.tsx. Contrôlé par : npm run check:purchasing-page.
-// Pour modifier : plafonds lus dans db.getSettings().budgets et écrits par db.setBudgets ; dépenses du mois lues dans db.getCash(). L'alerte de l'accueil est calculée dans src/utils/alerts.ts, pas ici. Responsable seulement ; textes FR/EN avec t(fr, en).
+// Pour modifier : plafonds lus dans db.getSettings().budgets et écrits par db.setBudgets ; dépenses du mois lues dans db.getCashNet(). L'alerte de l'accueil est calculée dans src/utils/alerts.ts, pas ici. Responsable seulement ; textes FR/EN avec t(fr, en).
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Settings2, X } from 'lucide-react';
@@ -26,7 +26,7 @@ export const BudgetsCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
   useLockBodyScroll(!!editor);
 
   const month = todayMada().slice(0, 7);
-  const cash = db.getCash();
+  const cash = db.getCashNet();
   const budgets = db.getSettings().budgets;
   const rows = useMemo(() => budgetRows(budgets, cash, month), [budgets, cash, month]);
   const ar = (n: number) => formatCurrencyAr(n);

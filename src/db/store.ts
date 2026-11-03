@@ -19,6 +19,7 @@ import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MES
 import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, cleanSpaceList, DEFAULT_STOCK_CATEGORIES, DEFAULT_STOCK_SPACES, newSpaceId, productStorage, purchaseAmount, quantities, STOCK_SPACE_MAX, type MoveDraft, type ProductDraft, type StockSpace } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
+import { cashEffective } from '../utils/cashVoid';
 import { applyReceiptPrices, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_RECURRING, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
@@ -619,7 +620,10 @@ export class AppStore {
 
   // --- Fil d'actualité ---
   /** Lignes d'argent (entrées et sorties). Toujours vide pour un employé : le serveur ne lui envoie rien. */
+  /** Toutes les lignes de caisse, y compris les paiements annulés et leurs corrections : listes, comptabilité, sauvegardes. */
   public getCash(): CashEntry[] { return [...this.cash]; }
+  /** La caisse qui compte : sans les paires « paiement + correction » (M23.3a). Pour tous les chiffres, graphiques, budgets et rapports. */
+  public getCashNet(): CashEntry[] { return cashEffective(this.cash); }
 
   // Finances (responsable seulement ; le serveur revérifie chaque ligne). Les lignes partent avec la synchro habituelle.
   // En cas de refus, `error` est un code : 'admin' | 'kind' | 'amount' | 'date' | 'category' | 'missing'.

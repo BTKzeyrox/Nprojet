@@ -67,8 +67,8 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
     const prices = { client_price_default_ar: settings.client_price_default_ar, client_prices_by_type: settings.client_prices_by_type };
     const missions = clientMissionsFromPosts(db.getPosts(), db.getContracts(), clients, prices);
     const summaries = summarizeClients(clients, missions, today, clientThresholds(company));
-    const perf = computeClientBadges({ clients, summaries, missions, invoices: db.getInvoices(), cash: db.getCash(), today }); // badges et score de relation (module 3)
-    return { clients, summaries, perf, money: clientReceived(db.getCash(), clients), company, types: settings.post_types || [] };
+    const perf = computeClientBadges({ clients, summaries, missions, invoices: db.getInvoices(), cash: db.getCashNet(), today }); // badges et score de relation (module 3)
+    return { clients, summaries, perf, money: clientReceived(db.getCashNet(), clients), company, types: settings.post_types || [] };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ver, today]);
   const { clients, summaries, perf, money, company, types } = data;

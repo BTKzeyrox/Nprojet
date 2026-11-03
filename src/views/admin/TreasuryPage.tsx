@@ -24,7 +24,7 @@ export const TreasuryPage: React.FC = () => {
   const atPresent = anchor.slice(0, 7) >= today.slice(0, 7);
   const m = Number(anchor.slice(5, 7)) - 1;
   const label = `${(l === 'en' ? MONTHS_EN : MONTHS_FR)[m]} ${anchor.slice(0, 4)}`;
-  const since = cashSinceStart(db.getCash(), today);
+  const since = cashSinceStart(db.getCashNet(), today);
   const nav = 'min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-900/60 text-slate-200 flex items-center justify-center disabled:opacity-40 cursor-pointer';
   return (
     <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">

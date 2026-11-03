@@ -22,7 +22,7 @@ export const GraphsMoney: React.FC<Props> = ({ g, range: r, anchor, today, lang,
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [mode, setMode] = useState<'all' | 'cash'>('all'); // avec les salaires (Finances) ou sans (la caisse)
   const days = Math.max(1, daysBetween(r.start, r.end) + 1), range = { start: r.start, end: r.end, days };
-  const s = db.getSettings(), cash = db.getCash(), posts = db.getPosts(), contracts = db.getContracts(), clients = db.getClients();
+  const s = db.getSettings(), cash = db.getCashNet(), posts = db.getPosts(), contracts = db.getContracts(), clients = db.getClients();
   const f = useMemo(() => computeFinance({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0, clients }, g, range, lang, t('Salaires', 'Salaries')),
     [cash, posts, contracts, clients, s, g, range.start, range.end, lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const cr = cashRangeFor(g, anchor, today);

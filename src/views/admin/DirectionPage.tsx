@@ -32,11 +32,11 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
   const alerts = getHealth().alerts;
   const sum = useMemo(
     () => directionSummary({
-      today, cash: db.getCash(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(), invoices: db.getInvoices(), products: db.getProducts(), moves: db.getStockMoves(),
+      today, cash: db.getCashNet(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(), invoices: db.getInvoices(), products: db.getProducts(), moves: db.getStockMoves(),
       prices: s, pricePerMission: s.price_per_mission || 0, ranking: rankByScore(perf.res), alerts,
       entries: db.getEntries(), monthlyPlan: s.monthly_plan, budgets: s.budgets,
     }),
-    [today, db.getCash(), db.getPosts(), db.getContracts(), db.getClients(), db.getInvoices(), db.getProducts(), db.getStockMoves(), db.getEntries(), s, perf.res, alerts], // eslint-disable-line react-hooks/exhaustive-deps
+    [today, db.getCashNet(), db.getPosts(), db.getContracts(), db.getClients(), db.getInvoices(), db.getProducts(), db.getStockMoves(), db.getEntries(), s, perf.res, alerts], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const ar = (n: number) => formatCurrencyAr(n);
   const go = (view: string, fr: string, en: string) => (onNavigate ? <button type="button" className={link} onClick={() => onNavigate(view)}>{t(fr, en)}<ArrowRight className="w-4 h-4" aria-hidden="true" /></button> : null);

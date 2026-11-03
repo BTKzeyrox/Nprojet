@@ -17,7 +17,7 @@ const isAdmin = () => db.getCurrentUser()?.role === 'admin';
 
 function monthNow() {
   const s = db.getSettings();
-  const m = monthFigures({ cash: db.getCash(), posts: db.getPosts(), contracts: db.getContracts(), prices: s, pricePerMission: s.price_per_mission || 0 }, todayMada());
+  const m = monthFigures({ cash: db.getCashNet(), posts: db.getPosts(), contracts: db.getContracts(), prices: s, pricePerMission: s.price_per_mission || 0 }, todayMada());
   return { s, m };
 }
 

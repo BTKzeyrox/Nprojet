@@ -23,7 +23,7 @@ function buildHtml(kind: 'week' | 'month', anchor: string, lang: 'fr' | 'en'): s
   const settings = db.getSettings();
   const report = buildReport({
     today: todayMada(), anchor, lang, granularity: kind, settings, companyName: readCompany(settings.company).identity.name, posts: db.getPosts(), contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(),
-    cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(), invoices: db.getInvoices(),
+    cash: db.getCashNet(), products: db.getProducts(), moves: db.getStockMoves(), clients: db.getClients(), invoices: db.getInvoices(),
     ...(badgeAccess().enabled ? { performance: computePerformance(performanceInput()), clientBadges: clientBadgesFromDb() } : {}),
   });
   return reportHtml(report);

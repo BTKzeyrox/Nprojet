@@ -601,6 +601,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
 | `calendarGlobal.ts` | Calendrier GLOBAL (tous les employés) : mois, résumé et vue du jour. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:calendar-global`. |
+| `cashVoid.ts` | Paiements annulés (Module 23, M23.3a) : règle UNIQUE pour savoir quelles lignes de caisse comptent vraiment. |
 | `chartData.ts` | Données des graphiques : parties réelles, prévision en pointillé, rythme d'un objectif (purs, sans écran). |
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
@@ -1144,6 +1145,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:restore-once` | Réglages : la remise à zéro du site n'apparaît que dans l'onglet Données (et non dans chaque onglet). |
 | `npm run check:composer-min` | Actualités : le formulaire de publication est réduit tant que personne ne veut publier. |
 | `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
+| `npm run check:cash-void` | Contrôle des paiements annulés (Module 23, M23.3a) : la paire « paiement + correction » s'annule partout, et les écrans de chiffres lisent la caisse « nette ». |
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |

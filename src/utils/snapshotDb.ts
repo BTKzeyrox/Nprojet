@@ -8,7 +8,7 @@ export function getSnapshotInput(): SnapshotInput | null {
   if (db.getCurrentUser()?.role !== 'admin') return null;
   return {
     today: todayMada(), settings: db.getSettings(), users: db.getUsers(), posts: db.getPosts(), contracts: db.getContracts(), clients: db.getClients(),
-    cash: db.getCash(), products: db.getProducts(), moves: db.getStockMoves(), advances: db.getAdvanceRequests(), alerts: getHealth().alerts,
+    cash: db.getCashNet(), products: db.getProducts(), moves: db.getStockMoves(), advances: db.getAdvanceRequests(), alerts: getHealth().alerts,
     nowMs: Date.now(), invoices: db.getInvoices(), spaces: db.getStockSpaces(),
     pending: { signups: db.getSignupRequests(), resets: db.getPasswordResets(), profiles: db.getProfileRequests().filter(x => x.status === 'pending'), access: db.getAccessRequests().filter(x => x.status === 'pending') },
   };

@@ -19,7 +19,7 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const admin = db.getCurrentUser()?.role === 'admin';
-  const posts = db.getPosts(), cash = db.getCash();
+  const posts = db.getPosts(), cash = db.getCashNet();
   const settings = db.getSettings();
   const sig = posts.length + ':' + cash.length + ':' + db.getProducts().length + ':' + db.getStockMoves().length + ':' + db.getAdvanceRequests().length + ':' + db.getClients().map(c => c.name + (c.active === false ? 0 : 1)).join(',') + ':' + db.getInvoices().map(v => v.id + v.status + v.total_ar).join(',') + cash.reduce((n, e) => n + (e.invoice_id ? e.amount_ar : 0), 0);
   const report = useMemo(() => admin ? buildReport({

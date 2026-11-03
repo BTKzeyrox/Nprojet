@@ -161,6 +161,7 @@
     "check:restore-once": "tsx scripts/check-restore-once.ts",
     "check:composer-min": "tsx scripts/check-composer-min.ts",
     "check:treasury": "tsx scripts/check-treasury.ts",
+    "check:cash-void": "tsx scripts/check-cash-void.ts",
     "check:treasury-charts": "tsx scripts/check-treasury-charts.ts",
     "check:graphs": "tsx scripts/check-graphs.ts",
     "check:graphs-page": "esbuild scripts/check-graphs-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-graphs-page.mjs && node node_modules/.cache/check-graphs-page.mjs",

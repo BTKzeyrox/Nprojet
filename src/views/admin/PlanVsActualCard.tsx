@@ -29,7 +29,7 @@ export const PlanVsActualCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
   const [pay, setPay] = useState(plan.payroll_ar ? String(plan.payroll_ar) : '');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const today = todayMada();
-  const cash = db.getCash(), posts = db.getPosts(), contracts = db.getContracts(), clients = db.getClients();
+  const cash = db.getCashNet(), posts = db.getPosts(), contracts = db.getContracts(), clients = db.getClients();
   const rows = useMemo(
     () => budgetVsActual({ cash, posts, contracts, prices: s, pricePerMission: s.price_per_mission || 0, clients }, plan, s.budgets, today, 6).reverse(),
     [cash, posts, contracts, clients, s, plan.revenue_ar, plan.payroll_ar, today], // eslint-disable-line react-hooks/exhaustive-deps
