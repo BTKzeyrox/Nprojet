@@ -119,7 +119,7 @@ const EMPLOYEE: GuideStep[] = [
 // Les pages du menu de chaque rôle (Sidebar.tsx et roles.ts : `ACCOUNTANT_VIEWS`, `TEAM_LEAD_VIEWS`). Les pages qui n'ont pas déjà une étape écrite à la main reçoivent un clip de 2 scènes :
 // 1. présentation (le menu clignote, le texte vient de la carte du site) ; 2. astuce (les 2 premières lignes du mode d'emploi de la carte du site). Rien n'est inventé : tout vient de `siteKnowledge.ts`.
 export const GUIDE_MENU_PAGES: Record<GuideRole, string[]> = {
-  admin: ['feed', 'dashboard', 'validations', 'history', 'clients', 'invoices', 'accounting', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'direction', 'employees', 'hr', 'chat', 'calendar', 'sheets', 'advances', 'health', 'errors', 'settings'],
+  admin: ['feed', 'dashboard', 'validations', 'history', 'clients', 'invoices', 'accounting', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'charts', 'direction', 'employees', 'hr', 'chat', 'calendar', 'sheets', 'advances', 'health', 'errors', 'settings'],
   team_lead: ['feed', 'validations', 'chat', 'settings'],
   accountant: ['feed', 'invoices', 'accounting', 'treasury', 'clients', 'purchasing', 'chat', 'settings'],
   employee: ['feed', 'grid', 'active-post', 'hr', 'chat', 'calendar', 'my-performance', 'sheets', 'advances', 'settings'],

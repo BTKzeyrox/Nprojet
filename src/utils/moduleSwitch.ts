@@ -16,6 +16,7 @@ export const HIDEABLE_MODULES: HideableModule[] = [
   { id: 'advances', fr: 'Paie', en: 'Payroll', group: 'money' },
   { id: 'stats', fr: 'Statistiques', en: 'Statistics', group: 'money' },
   { id: 'direction', fr: 'Direction', en: 'Direction', group: 'money' },
+  { id: 'charts', fr: 'Graphiques', en: 'Charts', group: 'money' },
   { id: 'performance', fr: 'Performance', en: 'Performance', group: 'team' },
   { id: 'my-performance', fr: 'Ma performance', en: 'My performance', group: 'team' },
   { id: 'hr', fr: 'Ressources humaines', en: 'Human resources', group: 'team' },

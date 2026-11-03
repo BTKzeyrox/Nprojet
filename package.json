@@ -159,6 +159,7 @@
     "check:composer-min": "tsx scripts/check-composer-min.ts",
     "check:treasury": "tsx scripts/check-treasury.ts",
     "check:treasury-charts": "tsx scripts/check-treasury-charts.ts",
+    "check:graphs": "tsx scripts/check-graphs.ts",
     "check:day-detail": "tsx scripts/check-day-detail.ts",
     "check:work-days": "tsx scripts/check-work-days.ts",
     "check:access-request": "tsx scripts/check-access-request.ts",

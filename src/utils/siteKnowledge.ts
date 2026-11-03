@@ -187,6 +187,14 @@ export const SITE_MAP: SitePage[] = [
     figures: [{ name: b('En retard', 'Late'), formula: b('Début de la session après l\'heure de début de la vacation + la tolérance (15 min par défaut) ; pile à la tolérance n\'est pas un retard. Vacation de jour à 08:00, de nuit à 20:00 par défaut.', 'Session start after the shift start + the tolerance (15 min by default); exactly at the tolerance is not late. Day shift at 08:00, night shift at 20:00 by default.') }],
   },
   {
+    id: 'charts', audience: 'admin', title: b('Graphiques', 'Charts'),
+    purpose: b('Tous les graphiques du site sur une seule page : missions, argent et stock, avec une seule période pour toutes les cartes.', 'All the charts of the site on one page: missions, money and stock, with one period for every card.'),
+    howto: [b('Choisis le groupe en haut : Tout, Missions, Argent ou Stock.', 'Pick the group at the top: All, Missions, Money or Stock.'), b('Choisis la période (Semaine, Mois, Année) et les flèches : toutes les cartes suivent.', 'Pick the period (Week, Month, Year) and the arrows: every card follows.'), b('Sur « Argent reçu et dépenses » et « Dépenses par catégorie », choisis Avec salaires ou Caisse (sans salaires).', 'On “Money in and out” and “Expenses by category”, pick With salaries or Cash (no salaries).')],
+    rules: [b('Page en lecture seule : rien ne s\'y saisit. Les paiements et dépenses se saisissent dans Statistiques > Finances ou Trésorerie.', 'Read-only page: nothing is entered here. Payments and expenses are entered in Statistics > Finance or Treasury.'), b('Les cartes de la caisse (solde, d\'où vient l\'argent, sans salaires) se lisent jour par jour : pour une année, elles montrent un mois.', 'The cash cards (balance, where the money comes from, no salaries) are read day by day: for a year, they show one month.'), b('Un seul stockage à la fois pour les cartes du stock.', 'One storage at a time for the stock cards.')],
+    conditions: [],
+    figures: [],
+  },
+  {
     id: 'treasury', audience: 'admin', title: b('Trésorerie', 'Treasury'),
     purpose: b('L\'argent reçu et les dépenses du mois, sans salaires ni paie. Pour le Comptable et le responsable.', 'Money received and expenses of the month, with no salaries or payroll. For the Accountant and the admin.'),
     howto: [b('Choisir le mois avec les flèches ; lire les graphiques.', 'Pick the month with the arrows; read the charts.'), b('Ajouter un paiement reçu ou une dépense.', 'Add a payment received or an expense.'), b('Filtrer par type ou catégorie, modifier ou supprimer une ligne.', 'Filter by type or category, edit or delete a line.')],

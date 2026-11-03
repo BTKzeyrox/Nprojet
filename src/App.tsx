@@ -65,6 +65,7 @@ const PurchasingPage = lazy(() => import('./views/admin/PurchasingPage').then(m 
 const StoragePage = lazy(() => import('./views/admin/StoragePage').then(m => ({ default: m.StoragePage })));
 const ClientsPage = lazy(() => import('./views/admin/ClientsPage').then(m => ({ default: m.ClientsPage })));
 const StatsPage = lazy(() => import('./views/admin/StatsPage').then(m => ({ default: m.StatsPage })));
+const GraphsPage = lazy(() => import('./views/admin/GraphsPage').then(m => ({ default: m.GraphsPage })));
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
 import type { ViewAs } from './utils/roles';
 import { AccessBanner } from './components/AccessBanner';
@@ -479,6 +480,8 @@ export default function App() {
                 <HealthPage onNavigate={view => setActiveView(view)} />
               ) : activeView === 'treasury' ? (
                 <TreasuryPage />
+              ) : activeView === 'charts' ? (
+                <GraphsPage />
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
               ) : activeView === 'employees' ? (

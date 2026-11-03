@@ -42,6 +42,7 @@ import {
   Award,
   Table2,
   Landmark,
+  LayoutGrid,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -118,6 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ...(isAdmin ? [{ id: 'storage', label: 'Stockage', icon: Package }] : []),
           { id: 'performance', label: 'Performance', icon: BarChart3 },
           { id: 'stats', label: 'Statistiques', icon: TrendingUp, badge: alertCount > 0 ? String(alertCount) : undefined, tone: 'alert' as const },
+          ...(isAdmin ? [{ id: 'charts', label: lang === 'en' ? 'Charts' : 'Graphiques', icon: LayoutGrid }] : []),
         ]
       : [
           { id: 'grid', label: t('nav_grid'), icon: Layers, badge: String(db.getContracts().length), tone: 'info' as const },
