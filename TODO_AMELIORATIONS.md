@@ -52,6 +52,7 @@ Chaque lettre est une étape. « GO A1 » = seulement A1 ; « GO » seul = tout 
 ---
 
 # Suite : pages Factures et Achats (analyse du 2026-11-02, « Go all » de BTK)
+**Plan détaillé : Module 20 dans `TODO.md` (étapes M20.1 à M20.7, conceptions, risques, décisions ouvertes).** La liste ci-dessous reste la liste courte.
 Lecture des règles (`invoices.ts`, `purchasing.ts`) et du serveur. Les écrans `InvoicesView.tsx` et `PurchaseOrdersSection.tsx` n'ont pas été lus en détail. Rien n'est testé à l'écran.
 
 ## Factures

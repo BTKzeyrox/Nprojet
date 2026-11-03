@@ -558,3 +558,73 @@ BTK trouve le site trop complexe : il veut fusionner en ordre avec des filtres c
   - Pas de lien de l'assistant ou des alertes vers `gr-<carte>` pour l'instant (étape 3).
 - [x] (2026-11-03) **Étape 2.** Chaque carte comparée à l'ancien graphique : `check:graphs` vérifie, pour 27 points, que l'ancien écran et la nouvelle carte utilisent les mêmes séries, les mêmes libellés, les mêmes réglages (empilé, anneau, aire, pointillé violet, lignes de signe) et les mêmes couleurs de barres ; même fond, bordure, titre et vert des boutons. `check:graphs` 110/110. Ce contrôle lit le code : le rendu à l'écran reste à vérifier par BTK avant l'étape 3.
 - [x] (2026-11-03) **Étape 3 = M22.3.** Les graphiques ont quitté Statistiques, Finances et Stockage (tableau de bord et Analyses) : un bouton « Voir les graphiques » ouvre la page Graphiques sur le bon groupe. Trésorerie : le responsable a le bouton, le Comptable garde ses 4 graphiques (il n'a pas la page Graphiques). Les liens vers un graphique (« Pourquoi ce chiffre ? », assistant, Santé du site) visent la carte `gr-<carte>`. Clic sur un employé dans « Équipe » = sa fiche. Contrôles : `check:graphs` 97, nouveau `check:graphs-page` 32 (page dessinée avec la démo), 4 anciens contrôles repointés. Non vu à l'écran par BTK (essai M22.11).
+
+## Module 20 : Factures et Achats plus sûrs (plan détaillé, rien de codé, demande de BTK 2026-11-03)
+
+Origine : analyse des pages Factures et Achats (lecture du code, `invoices.ts`, `purchasing.ts`, `df-api`, SQL `df_cancel_invoice` / `df_pay_invoice`). Liste courte : `TODO_AMELIORATIONS.md`, section « Factures et Achats ». Les écrans `InvoicesView.tsx` et `PurchaseOrdersSection.tsx` n'ont pas été lus en détail. **Rien de ce module n'est codé ni testé à l'écran** ; chaque étape attend le « GO » de BTK. Légende : **[BTK]** à faire ou à décider par BTK, **[Claude]** après « GO ». Taille : S moins d'une heure, M une demi-journée, L une journée ou plus.
+
+Règles pour toutes les étapes serveur : sauvegarde (`select public.df_take_backup();`) juste avant ; seul le changement voulu doit différer du serveur en ligne (`git diff` contre le commit déployé) ; retour en arrière écrit dans ce fichier ; une étape testée à l'écran avant la suivante. État du serveur au 2026-11-02 : `df-api` v68 (commit `a83cad1`), version d'avant : v67 (`f612f20`).
+
+### Déjà fait (site seulement, non testé à l'écran)
+- **F3** : alerte « ligne de caisse dans un mois clos sans écriture » (`accounting.cash-closed`, 2026-11-02).
+- **P4 étape 1** : alerte « achat dont la dépense ne correspond plus à la réception » (`suppliers.po-cash-mismatch`, 2026-11-02). Limite : un vieux bon reçu avant que les dépenses citent `po_id` peut être signalé à tort.
+- **F2 (constat)** : `df_cancel_invoice` crée toujours un avoir TOTAL (toutes les lignes, le total de la facture) et refuse (`has_payments`) dès qu'un paiement existe.
+
+### M20.1. Solder le reste d'un bon de commande (P2) (M, serveur + site) **[Claude]**
+- But : un bon livré en partie dont le reste ne viendra jamais ne reste plus « Commandé » et « en retard » pour toujours.
+- Constat : `cleanPurchase` (serveur) refuse `status = received` si une ligne n'est pas entièrement reçue ; un bon commandé ne s'annule plus dès qu'une quantité est reçue.
+- Conception proposée : un champ `short_closed` (vrai) sur le bon. `received` est accepté si tout est reçu OU si `short_closed` est vrai et au moins une quantité est reçue. Le bon devient définitif (comme un bon reçu). Rien n'est créé en caisse ni en stock : on ne solde que le reste jamais livré. Le champ reste dans le bon (jamais effacé) ; une phrase « Soldé le AAAA-MM-JJ » s'affiche.
+- Étapes : (1) type `PurchaseOrder` + `purchasing.ts` (`canTransition`, nouvelle fonction `canCloseShort`) ; (2) `cleanPurchase` du serveur (même règle, garder `short_closed` à la sauvegarde) ; (3) `store.ts` : `closePurchaseShort(id)` ; (4) bouton « Solder le reste » avec confirmation sur un bon commandé en partie reçu ; (5) `isLate` : un bon reçu n'est jamais en retard (déjà le cas) ; (6) contrôles : `check:purchasing`, `check:purchasing-server` (mêmes cas client et serveur), alerte `po-cash-mismatch` inchangée (elle se base sur les quantités reçues) ; (7) fiche Achats du guide.
+- Réussite : un bon reçu à 4 sur 10 peut être soldé ; il disparaît des retards ; la caisse et le stock ne bougent pas ; un bon sans aucune réception ne peut pas être « soldé » (il s'annule).
+- Risque : faible. Serveur à redéployer (sauvegarde avant).
+
+### M20.2. Prix réel à la réception (P1) (M, site seulement) **[Claude]**
+- But : saisir le prix réellement payé à la livraison, avec la trace de l'écart.
+- Constat important : le serveur AUTORISE déjà de changer le prix d'une ligne qui n'a encore rien reçu (`cleanPurchase`, bon « Commandé ») ; il le gèle seulement une fois qu'une quantité est reçue (`frozen`). Aucun changement serveur n'est donc nécessaire.
+- Conception : à la réception, un champ « Prix réel » par ligne (prérempli avec le prix du bon). Si le prix change, le site met d'abord à jour le prix de la ligne puis fait la réception. Limite écrite à l'écran : possible seulement pour la première réception d'une ligne.
+- Étapes : (1) formulaire de réception (`PurchaseOrdersSection.tsx`) ; (2) `store.ts` : mise à jour du prix puis `receivePurchase`, avec le même ordre de synchronisation que d'habitude (`unsynced` géré) ; (3) note automatique « Prix 100 → 110 Ar » dans le mouvement de stock ; (4) contrôles `check:purchasing` ; (5) guide.
+- Réussite : un bon commandé à 100 Ar reçu à 110 donne une dépense et un coût de stock à 110 ; la 2e réception d'une ligne déjà reçue garde le prix figé.
+- Risque : faible à moyen (ordre de synchro). Pas de redéploiement.
+
+### M20.3. Annuler un paiement saisi par erreur (F1) (L, SQL + serveur + site + comptabilité) **[Claude] après choix de BTK**
+- But : une facture avec un mauvais paiement doit pouvoir être corrigée, sans jamais supprimer de ligne.
+- Constat : les lignes de paiement sont verrouillées (`invoice_locked`) ; il n'y a pas de route pour les annuler ; `df_cancel_invoice` refuse (`has_payments`).
+- Choix A (recommandé) : une **ligne de correction** liée au paiement (sens inverse, catégorie « Correction de paiement », champ `void_of` = identifiant du paiement, motif obligatoire). Le paiement reste visible, barré. Tout est tracé dans le Journal d'audit (`invoice_void_payment`).
+- Choix B : marquer le paiement `voided` et l'exclure de tous les calculs (plus simple à lire, mais chaque calcul doit l'ignorer : plus de risque d'oubli).
+- Ce que A oblige à adapter (tous doivent donner le même résultat) : `paidAmount` (`invoices.ts`) et les fonctions SQL `df_pay_invoice` / `df_cancel_invoice` ; les statistiques de Finances (reçu, dépenses, budgets : la correction ne doit pas compter comme une vraie dépense) ; la Trésorerie et ses graphiques ; la Direction ; l'écriture comptable de la correction (écriture inverse du paiement) ; la Santé du site (règle `accounting.stale`, factures) ; les reçus (le reçu n'est pas supprimé).
+- Étapes : (1) migration SQL `df_void_invoice_payment` (transaction, verrou sur la facture) ; (2) route `invoice-void-payment` (admin ou Comptable, `moneyOnly`, motif 10 caractères minimum) ; (3) adapter les calculs listés ; (4) bouton « Annuler ce paiement » sur la ligne de paiement ; (5) audit + guide + `check:invoices-server` ; (6) essai à l'écran par BTK avant tout usage réel.
+- Réussite : un paiement de 5 000 Ar saisi sur la mauvaise facture est annulé ; la facture redevient « à payer » ; la caisse du mois montre +5 000 puis −5 000 sans fausser les dépenses ; la facture peut ensuite être annulée par un avoir.
+- Risque : **élevé** (touche tout le circuit de l'argent). Sauvegarde avant, essai sur peu de données, retour en arrière écrit. **[BTK]** choisit A ou B.
+
+### M20.4. Avoir partiel (F2) (L, SQL + serveur + site + comptabilité) **[BTK]** décide d'abord
+- But : corriger une partie d'une facture (une ligne, une quantité) sans l'annuler en entier.
+- Constat : l'avoir actuel est toujours total. Le besoin dépend de l'activité de BTK : **[BTK]** dit s'il en a besoin.
+- Si oui : avoir lié à la facture (`credit_of`), montant au plus égal au reste non crédité, qui diminue ce qui est dû ; adapter `invoices.ts`, le SQL, la comptabilité (écriture inverse proportionnelle, TVA comprise) et « Reste à payer ».
+- Risque : élevé. À ne faire qu'après M20.3 (même circuit).
+
+### M20.5. Verrouiller la dépense d'un achat (P4, étape 2) (M, serveur) **[Claude]** après M20.6
+- But : empêcher qu'une dépense « Achats » reçue d'un bon soit modifiée ou supprimée par erreur dans Finances.
+- Constat : seules les lignes de paiement de factures (`invoice_id` / `receipt_no`) sont verrouillées ; une dépense qui cite un bon (`po_id`) peut être modifiée ou supprimée.
+- Dépend de M20.6 : tant qu'on ne peut pas corriger une réception, verrouiller la dépense bloquerait une vraie correction. Alerte `po-cash-mismatch` (déjà faite) en attendant.
+- Réussite : modifier le montant d'une dépense d'achat est refusé avec un message qui renvoie à la page Achats.
+
+### M20.6. Correction de réception et retour fournisseur (P3) (L) **[BTK]** décide d'abord
+- But : corriger une erreur de quantité à la réception ou rendre de la marchandise.
+- Constat : une réception est définitive ; une erreur se corrige par l'inventaire (stock) mais la dépense « Achats » reste fausse.
+- Options : (a) « Retour fournisseur » = sortie de stock avec le bon cité + dépense inverse (ligne de correction comme M20.3) ; (b) « Corriger la réception » avec motif. À décider avec BTK ; dépend du choix de M20.3 (même mécanisme de ligne de correction).
+
+### M20.7. Facture et paiement fournisseur (P5, E1 à E3) (L) **[BTK]** répond d'abord
+- Question en attente : BTK paie-t-il ses fournisseurs **à la réception** ou **plus tard sur facture** ? Si toujours à la réception, E1 et E2 suffisent et E3 n'est pas nécessaire.
+- E1 : sur le bon, numéro de facture du fournisseur, échéance, état payé / à payer (sans changer le stock ni la dépense existante).
+- E2 : « À payer aux fournisseurs » et « En retard » sur la Direction + alerte dans la Santé du site.
+- E3 : le paiement crée la dépense au moment du paiement ; la comptabilité passe par le compte 401 (qui existe dans le plan mais n'est jamais utilisé) et la TVA déductible (4456). Gros changement : serveur, caisse et comptabilité.
+
+### Ordre conseillé
+1. M20.1 (solder le reste), 2. M20.2 (prix réel), 3. M20.3 (annuler un paiement), puis M20.6, M20.5, M20.4, M20.7 après les décisions de BTK. Une étape à la fois, testée à l'écran avant la suivante.
+
+### Décisions ouvertes **[BTK]**
+- M20.3 : choix A (ligne de correction, recommandé) ou B (paiement marqué annulé) ?
+- M20.4 : un avoir partiel est-il nécessaire ?
+- M20.6 : retour fournisseur ou correction de réception ?
+- M20.7 : paiement des fournisseurs à la réception ou plus tard sur facture ?
+- Défaut si pas de réponse : M20.1 et M20.2 d'abord ; M20.3 avec le choix A ; le reste attend.
