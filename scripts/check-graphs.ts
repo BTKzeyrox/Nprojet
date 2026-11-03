@@ -44,7 +44,7 @@ ok(/Les 12 derniers mois/.test(files.stock) && /valueByMonth\(products, moves, t
 ok(/const end = range\.end > today \? today : range\.end/.test(files.stock), 'stock : jamais de période dans le futur');
 // ---------- Étape 2 : chaque carte = l'ancien graphique (mêmes données, mêmes réglages, mêmes couleurs) ----------
 const S = 'src/views/admin/';
-const old = { stats: r(S + 'StatsPage.tsx'), fin: r(S + 'FinanceInsights.tsx'), tre: r(S + 'TreasuryCharts.tsx'), dash: r(S + 'StockDashboard.tsx'), ana: r(S + 'StockAnalytics.tsx') };
+const old = { stats: r(S + 'StatsPage.tsx'), fin: r(S + 'FinanceInsights.tsx'), tre: r(S + 'TreasuryCharts.tsx'), trePage: r(S + 'TreasuryPage.tsx'), dash: r(S + 'StockDashboard.tsx'), ana: r(S + 'StockAnalytics.tsx') };
 const nw = { missions: files.missions, money: files.money, stock: files.stock };
 const same: [string, string, string, string][] = [
   // [explication, extrait, ancien fichier, nouveau fichier]
@@ -76,12 +76,10 @@ const same: [string, string, string, string][] = [
   ['stock : achats les plus chers, barres rouges', 'barClass="bg-rose-500"', 'ana', 'stock'],
   ['stock : valeur dans le temps aussi dans le tableau de bord', 'valueByMonth', 'dash', 'stock'],
 ];
-for (const [what, snippet, o, nn] of same) {
-  const oldTxt = (old as any)[o].replace(/\s+/g, ' ').replace(/\bt\b/g, 't'), newTxt = (nw as any)[nn].replace(/\s+/g, ' ');
-  // « x » (nouvelle écriture) et « t » / « r » (ancienne) ne changent rien au graphique : on compare sans le nom de la variable de boucle
-  const norm = (z: string) => z.replace(/\b(?:t|x|r|u|c)\.(margin|marginPct|done|billed|salaries)\b/g, 'ROW.$1');
-  ok(norm(oldTxt).includes(norm(snippet)) || oldTxt.includes(snippet.replace(/\bx\./g, 'r.')) || oldTxt.includes(snippet.replace(/\bx\./g, 't.')) || oldTxt.includes(snippet.replace(/\bx\./g, 'c.')) || oldTxt.includes(snippet.replace(/\bx\./g, 'u.')), `ancien écran : ${what}`);
-  ok(newTxt.includes(snippet) || norm(newTxt).includes(norm(snippet)), `nouvelle carte : ${what}`);
+// Étape 2 faite : chaque carte avait été comparée à l'ancien graphique (mêmes séries, libellés, réglages, couleurs). Les anciens écrans n'ont plus ces graphiques (étape 3) : on garde la vérification des réglages de la nouvelle carte.
+for (const [what, snippet, , nn] of same) {
+  const newTxt = (nw as any)[nn].replace(/\s+/g, ' ');
+  ok(newTxt.includes(snippet) || newTxt.replace(/\b(?:t|x|r|u|c)\.(margin|marginPct|done|billed|salaries)\b/g, 'ROW.$1').includes(snippet.replace(/\b(?:t|x|r|u|c)\.(margin|marginPct|done|billed|salaries)\b/g, 'ROW.$1')), `nouvelle carte : ${what}`);
 }
 // Les couleurs et le style des cartes sont ceux des anciennes pages
 ok(/bg-\[#0f1722\] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3/.test(card) && /bg-\[#0f1722\] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3/.test(old.fin), 'style : même fond, même bordure et mêmes marges que les cartes d\'origine');
@@ -91,13 +89,13 @@ ok(/min-h-\[44px\]/.test(page) && /min-h-\[36px\]/.test(card), 'tactile : bouton
 
 // ---------- Lecture seule, rien de caché ----------
 const all = [page, card, ...Object.values(files)].join('\n');
-ok(!/setInterval|setTimeout|Date\.now\(\)|fetch\(|XMLHttpRequest|addEventListener/.test(all), 'page et cartes : aucun minuteur, aucune horloge cachée, aucun appel réseau');
+ok(!/setInterval|setTimeout|Date\.now\(\)|fetch\(|XMLHttpRequest/.test(all) && (all.match(/addEventListener\(/g) || []).length === 1 && /addEventListener\(OPEN_GRAPHS_EVENT/.test(all) && /removeEventListener\(OPEN_GRAPHS_EVENT/.test(all), 'page et cartes : aucun minuteur, aucune horloge cachée, aucun appel réseau ; un seul écouteur (« Voir les graphiques »), bien retiré');
 ok(!/db\.(add|update|delete|save|set|remove|create|insert|post|put|patch)[A-Z(]/.test(all) && !/payrollCall|\.rpc\(/.test(all), 'page et cartes : lecture seule, rien n\'est écrit ni demandé au serveur');
 ok(/db\.subscribe/.test(page), 'page : se remet à jour quand les données changent');
 ok(/try \{ return localStorage\.getItem/.test(page) && /catch \{ return null; \}/.test(page) && /catch \{ \/\* stockage refusé/.test(page), 'page : le choix gardé dans le navigateur ne plante jamais si le stockage est refusé');
 // ---------- Branchement dans le site ----------
 const app = r('src/App.tsx'), side = r('src/components/Sidebar.tsx');
-ok(/lazy\(\(\) => import\('\.\/views\/admin\/GraphsPage'\)/.test(app) && /activeView === 'charts' \? \(\s*<GraphsPage \/>/.test(app), 'App : la page est chargée à la demande et affichée pour la vue « charts »');
+ok(/lazy\(\(\) => import\('\.\/views\/admin\/GraphsPage'\)/.test(app) && /activeView === 'charts' \? \(\s*<GraphsPage onOpenEmployee=/.test(app), 'App : la page est chargée à la demande et affichée pour la vue « charts »');
 ok(/isAdmin \? \[\{ id: 'charts'/.test(side) && /icon: LayoutGrid/.test(side), 'menu : « Graphiques » pour le responsable seulement');
 ok(isKnownView('charts') && HIDEABLE_MODULES.some(m => m.id === 'charts') && !!findPage('charts') && findPage('charts')!.audience === 'admin', 'vue connue (alertes, assistant), cachable depuis Réglages, carte du site (audience : responsable)');
 const card2 = findPage('charts')!;
@@ -105,7 +103,27 @@ ok(card2.howto.length === 3 && card2.howto.every(h => h.fr && h.en) && card2.rul
 const roles = r('src/utils/roles.ts');
 ok(!/ACCOUNTANT_VIEWS = \[[^\]]*'charts'/.test(roles) && !/TEAM_LEAD_VIEWS = \[[^\]]*'charts'/.test(roles), 'Comptable et Chef d\'équipe : pas de page Graphiques (le responsable seulement)');
 ok(/charts: \[/.test(r('scripts/make-guide.ts')) && /'stats', 'charts'/.test(r('src/utils/guideScripts.ts')), 'guide : la page a ses fichiers listés et son clip');
-// Les graphiques d'origine restent là (étape 1 : rien n'est enlevé)
-ok(/<ActivityGrid/.test(r('src/views/admin/StatsPage.tsx')) && /<MoneyFlowChart/.test(r('src/views/admin/FinanceInsights.tsx')) && /<MoneyFlowChart/.test(r('src/views/admin/TreasuryCharts.tsx')) && /<LineChart/.test(r('src/views/admin/StockAnalytics.tsx')), 'étape 1 : les graphiques des anciennes pages sont toujours là (rien n\'est enlevé)');
+// ---------- Étape 3 : les graphiques ont quitté les anciennes pages, un bouton « Voir les graphiques » les remplace ----------
+const CHART_TAGS = /<(ActivityGrid|MoneyFlowChart|BilledReceivedBars|XYChart|DonutChart|LineChart|RankBars)\b/;
+ok(!CHART_TAGS.test(old.stats) && !CHART_TAGS.test(old.fin) && !CHART_TAGS.test(old.dash) && !CHART_TAGS.test(old.ana), 'anciennes pages (Statistiques, Finances, Stockage tableau de bord et Analyses) : plus aucun graphique');
+ok(/<OpenGraphsButton filter="missions"/.test(old.stats) && /<OpenGraphsButton filter="money"/.test(old.fin) && /<OpenGraphsButton filter="stock"/.test(old.dash) && /<OpenGraphsButton filter="stock"/.test(old.ana), 'anciennes pages : le bouton « Voir les graphiques » ouvre le bon groupe (Missions, Argent, Stock)');
+ok(/role === 'admin'\s*\? <OpenGraphsButton filter="money"/.test(old.trePage) && /: <TreasuryCharts /.test(old.trePage), 'Trésorerie : le responsable a le bouton ; le Comptable (qui n\'a pas la page Graphiques, elle montre les salaires) garde ses graphiques');
+ok(CHART_TAGS.test(old.tre) && /treasuryCharts\(cash/.test(old.tre), 'Trésorerie du Comptable : ses 4 graphiques sont intacts');
+ok(!/ACCOUNTANT_VIEWS = \[[^\]]*'charts'/.test(roles), 'le Comptable n\'a pas la page Graphiques');
+const btn = r('src/components/OpenGraphsButton.tsx'), gnav = r('src/utils/graphsNav.ts');
+ok(/Voir les graphiques/.test(btn) && /See the charts/.test(btn) && /openGraphs\(filter\)/.test(btn) && /min-h-\[44px\]/.test(btn), 'bouton : « Voir les graphiques » / « See the charts », 44 px');
+ok(/OPEN_GRAPHS_EVENT/.test(gnav) && /takeGraphsIntent/.test(gnav) && /addEventListener\(OPEN_GRAPHS_EVENT/.test(app) && /setActiveView\('charts'\)/.test(app) && /removeEventListener\(OPEN_GRAPHS_EVENT/.test(app), 'App : le bouton change de page et nettoie son écouteur');
+ok(/takeGraphsIntent\(\)/.test(page) && /groupOfGraphNav\(peekNavTarget\(\)\)/.test(page), 'page : s\'ouvre sur le groupe demandé, ou sur le groupe de la carte visée par un lien');
+ok(/onOpenEmployee=\{handleOpenEmployeeCV\}/.test(app) && /onClick: onOpenEmployee && u \? \(\) => onOpenEmployee\(u\) : undefined/.test(files.missions), 'équipe : un clic sur un employé ouvre sa fiche (comme avant dans Statistiques)');
+// Liens : les graphiques sont visés dans la page Graphiques, les chiffres restent dans Finances
+const { FIN_NAV, finGo, FIGURE_GO } = await import('../src/utils/financeNav');
+const { groupOfGraphNav } = await import('../src/utils/graphsPage');
+ok(finGo('flow').view === 'charts' && finGo('flow').nav === 'gr-flow' && finGo('cum').nav === 'gr-cum' && finGo('billed').nav === 'gr-billed' && finGo('expenses').nav === 'gr-categories' && !finGo('flow').tab, 'liens : argent reçu, bénéfice cumulé, facturé et dépenses visent la carte de la page Graphiques');
+ok(finGo('profit').view === 'stats' && finGo('profit').tab === 'finance' && finGo('profit').nav === 'fin-profit' && finGo('budgets').nav === 'fin-budgets' && finGo('treasury').nav === 'fin-treasury', 'liens : bénéfice, budgets et trésorerie (des chiffres) restent dans Statistiques > Finances');
+ok(Object.values(FIN_NAV).filter(v => v.startsWith('gr-')).every(v => GRAPH_CARDS.some(c => graphNav(c.id) === v)), 'chaque lien vers une carte de la page Graphiques vise une carte qui existe');
+ok(FIGURE_GO.received.view === 'charts' && FIGURE_GO.expenses.nav === 'gr-categories' && FIGURE_GO.billed.nav === 'gr-billed' && FIGURE_GO.profit.view === 'stats', 'chiffres « Pourquoi ce chiffre ? » : reçu, dépenses, facturé → graphique ; bénéfice → tuile');
+ok(groupOfGraphNav('gr-flow') === 'money' && groupOfGraphNav('gr-team') === 'missions' && groupOfGraphNav('gr-stockused') === 'stock' && groupOfGraphNav('gr-nope') === null && groupOfGraphNav('fin-profit') === null && groupOfGraphNav(null) === null && groupOfGraphNav(undefined) === null, 'lien vers une carte : le groupe est retrouvé ; une adresse inconnue ou d\'une autre page = rien');
+ok(/finGo\('expenses'\)/.test(r('src/utils/health/rules/stats.ts')) && /finGo\('flow'\)/.test(r('src/utils/health/rules/stats.ts')) && /finGo\('expenses'\)/.test(r('src/utils/health/rules/finance.ts')), 'Santé du site : dépense en hausse, moins d\'argent reçu et « Autres » trop grosse visent la page Graphiques');
+
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);

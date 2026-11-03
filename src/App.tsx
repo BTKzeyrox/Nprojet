@@ -42,6 +42,7 @@ import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { NAV_TARGET_EVENT, peekNavTarget, flashNav, setChatThread } from './utils/navTarget';
 import { applyDeepLink, captureDeepLink, deepLinkAllowed, parseDeepLinkUrl, takeDeepLink, type DeepLink } from './utils/deepLink';
+import { OPEN_GRAPHS_EVENT } from './utils/graphsNav';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
@@ -99,6 +100,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('feed');
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
+  useEffect(() => { const open = () => setActiveView('charts'); window.addEventListener(OPEN_GRAPHS_EVENT, open); return () => window.removeEventListener(OPEN_GRAPHS_EVENT, open); }, []); // « Voir les graphiques » des anciennes pages
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   // Page cachée par le responsable (Réglages > Pages du menu) : on revient aux Actualités
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
@@ -481,7 +483,7 @@ export default function App() {
               ) : activeView === 'treasury' ? (
                 <TreasuryPage />
               ) : activeView === 'charts' ? (
-                <GraphsPage />
+                <GraphsPage onOpenEmployee={handleOpenEmployeeCV} />
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
               ) : activeView === 'employees' ? (

@@ -620,11 +620,12 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
 | `finance.ts` | Finances : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Finances » et par le contrôle `npm run check:finance`. |
-| `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances (Statistiques > Finances) : les liens des chiffres de l'assistant et des alertes |
+| `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances et de la page Graphiques : les liens des chiffres de l'assistant et des alertes |
 | `financeStats.ts` | Finances : chiffres « vraie entreprise » (sans écran, sans serveur). Utilisés par l'onglet Finances et par `npm run check:finance-stats`. |
 | `fontSize.ts` | Taille du texte, réglée sur cet appareil (garde dans le navigateur) |
 | `formatUtils.ts` | Petits formats d'affichage : points et scores abrégés (1M), montants en Ar, libellés de badge et de vacation, pluriels. |
 | `goals.ts` | Objectifs du mois et prévision simple (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
+| `graphsNav.ts` | « Voir les graphiques » : un bouton des anciennes pages ouvre la page Graphiques sur le bon groupe (Missions, Argent ou Stock). |
 | `graphsPage.ts` | Page « Graphiques » du responsable : tous les graphiques du site sur une seule page (16 cartes), classés Missions / Argent / Stock, |
 | `guideEngine.ts` | Guide interactif (visite guidée, module 16 revu le 2026-10-29) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:guide-tour`. |
 | `guideScripts.ts` | Les 4 guides interactifs (un par rôle, 2026-10-29). Chaque étape ouvre la vraie page et fait clignoter un élément réel ; certaines proposent une petite simulation. |
@@ -778,7 +779,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `DirectionPage.tsx` | Page Direction : synthèse du mois en cours (argent, retards de paiement, comptabilité, prévu contre réel, meilleurs clients, stock, alertes). |
 | `EmployeesManagement.tsx` | Page Opérateurs et avances : liste des opérateurs avec statut en direct, ajout, modification, blocage, suppression, et validation des avances sur salaire. |
 | `ErrorsLog.tsx` | Journal des erreurs : plantages, erreurs serveur et signalements des opérateurs, regroupés, à marquer résolus ou à copier pour Claude. |
-| `FinanceInsights.tsx` | Chiffres et graphiques financiers de la période : bénéfice, marge, à encaisser, trésorerie, clients, dépenses par catégorie et marge par type. |
+| `FinanceInsights.tsx` | Chiffres financiers de la période : bénéfice, marge, à encaisser, trésorerie, coût et gain par mission, factures. Les GRAPHIQUES sont dans la page Graphiques (bouton en bas). |
 | `FinanceTab.tsx` | Onglet Finances : paiements reçus des clients et dépenses de la période, avec ajout, modification et suppression, et les cartes finance en dessous. |
 | `GraphsPage.tsx` | Page « Graphiques » du responsable : tous les graphiques du site sur une seule page (16 cartes), avec un filtre Tout / Missions / Argent / Stock et UNE période pour toutes les cartes. |
 | `HealthPage.tsx` | Page Santé du site : liste des alertes que le site calcule tout seul, par page, à ouvrir, marquer vérifiées ou ignorer. |
@@ -797,9 +798,9 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `ReportTab.tsx` | Onglet Rapport du mois dans Statistiques : aperçu du rapport du mois choisi, avec impression, PDF et Excel. |
 | `SettingsView.tsx` | Page Réglages : onglets Général, Équipe, Missions, Conditions, Performance et Données ; avec personalOnly, seulement les réglages de l'appareil. |
 | `StatsPage.tsx` | Page Statistiques du responsable : choix de la période, chiffres d'activité, graphiques, et onglets Finances et Rapport. |
-| `StockAnalytics.tsx` | Onglet Analyses du Stockage : valeur du stock, produits les plus utilisés, fournisseurs et achats les plus chers, avec leur propre période. |
+| `StockAnalytics.tsx` | Onglet Analyses du Stockage : ses graphiques (valeur du stock, produits les plus sortis, fournisseurs, achats les plus chers) sont maintenant dans la page Graphiques. |
 | `StockCategoriesDialog.tsx` | Fenêtre Catégories du Stockage : ajouter, renommer, supprimer ou remettre la liste par défaut des catégories de produits. |
-| `StockDashboard.tsx` | Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements et graphiques. |
+| `StockDashboard.tsx` | Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements. Les graphiques sont dans la page Graphiques (bouton en bas). |
 | `StockMovements.tsx` | Onglet Mouvements du Stockage : historique des entrées, sorties et ajustements, filtrable par période, type et produit. |
 | `StockSpacesDialog.tsx` | Fenêtre Stockages : créer, renommer ou supprimer un stockage ; chaque stockage a ses propres produits et ne se mélange jamais aux autres. |
 | `StockTab.tsx` | Onglet Produits du Stockage : produits, quantités calculées, entrées, sorties, ajustements, photos, import et voyant sous le seuil. |
@@ -883,6 +884,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `OfflineCenter.tsx` | Fenêtre « Travail hors ligne » : actions en attente d'envoi et éléments à revoir, avec renvoi, copie du texte, annulation et suppression. |
 | `OfflinePin.tsx` | Formulaire du code de verrouillage hors ligne (4 à 8 chiffres) pour ouvrir la copie, créer ou changer le code (PinForm). |
 | `OfflineUnlockView.tsx` | Écran affiché quand l'appli s'ouvre sans réseau : on tape le code pour ouvrir la dernière copie des données, ou on efface la copie. |
+| `OpenGraphsButton.tsx` | Bouton « Voir les graphiques » des anciennes pages : les graphiques sont maintenant tous dans la page Graphiques (responsable). |
 | `OperatorSheet.tsx` | Fiche d'un opérateur : son état, ses missions ouvertes et toutes les actions possibles (profil, modifier, bloquer, supprimer, déconnexion forcée). |
 | `OperatorsTabs.tsx` | Barre à deux onglets de la page Opérateurs et sessions : la liste des opérateurs et le suivi des sessions. |
 | `PageSkeleton.tsx` | Page « squelette » grise et animée, affichée tout de suite pendant qu'une page se charge. |
@@ -1133,6 +1135,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:treasury` | Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie. |
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
+| `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
 | `npm run check:access-request` | Connexion hors horaires : règles d'heure de fin, copie serveur identique, routes, une demande par personne, formulaire et carte du responsable. |

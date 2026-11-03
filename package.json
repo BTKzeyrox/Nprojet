@@ -160,6 +160,7 @@
     "check:treasury": "tsx scripts/check-treasury.ts",
     "check:treasury-charts": "tsx scripts/check-treasury-charts.ts",
     "check:graphs": "tsx scripts/check-graphs.ts",
+    "check:graphs-page": "esbuild scripts/check-graphs-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-graphs-page.mjs && node node_modules/.cache/check-graphs-page.mjs",
     "check:day-detail": "tsx scripts/check-day-detail.ts",
     "check:work-days": "tsx scripts/check-work-days.ts",
     "check:access-request": "tsx scripts/check-access-request.ts",

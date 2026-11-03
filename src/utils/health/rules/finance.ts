@@ -4,7 +4,7 @@ import { alertId, hasEnough, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
 import { normalizeName } from '../../clients';
 import { shiftDay, plural } from './common';
-import { FIN_NAV } from '../../financeNav';
+import { FIN_NAV, finGo } from '../../financeNav';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ar = (n: number): string => `${Math.round(n).toLocaleString('fr-FR').replace(/[  ]/g, ' ')} Ar`;
@@ -101,7 +101,7 @@ export const othersBig: HealthRule = {
       id: alertId('finance', 'others-big'), page: 'finance', rule: 'others-big', severity: 'info',
       title_fr: 'La catégorie « Autres » est trop grosse', title_en: 'The "Others" category is too big',
       why_fr: `« Autres » = ${pct} % des dépenses sur 90 jours (${ar(oth)} sur ${ar(total)}). On ne sait plus à quoi sert l'argent.`, why_en: `"Others" = ${pct}% of expenses over 90 days (${arEn(oth)} of ${arEn(total)}). It is no longer clear what the money is for.`,
-      todo_fr: 'Ranger ces dépenses dans les bonnes catégories.', todo_en: 'Move these expenses to proper categories.', since: null, value: pct, go: { ...GO, nav: FIN_NAV.expenses },
+      todo_fr: 'Ranger ces dépenses dans les bonnes catégories.', todo_en: 'Move these expenses to proper categories.', since: null, value: pct, go: finGo('expenses'),
     } as HealthAlert];
   },
 };

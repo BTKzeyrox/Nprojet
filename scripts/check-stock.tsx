@@ -16,6 +16,7 @@ const { db } = await import('../src/db/store');
 const S = await import('../src/utils/stock');
 const { StockTab } = await import('../src/views/admin/StockTab');
 const { StockAnalytics } = await import('../src/views/admin/StockAnalytics');
+const { GraphsStock } = await import('../src/views/admin/graphs/GraphsStock');
 const { todayMada } = await import('../src/utils/stats');
 
 let fails = 0, n = 0;
@@ -210,7 +211,9 @@ for (const lang of ['fr', 'en'] as const) {
   ok(html.includes(lang === 'en' ? 'Stock value' : 'Valeur du stock') && html.includes(lang === 'en' ? 'New product' : 'Nouveau produit') && html.includes(lang === 'en' ? 'Running out soon' : 'Bientôt en rupture'), `${lang} : cartes et boutons dans la bonne langue`);
   ok(html.includes('Papier A4') && (html.includes(lang === 'en' ? 'low stock' : 'stock bas') || html.includes(lang === 'en' ? 'out of stock' : 'en rupture')), `${lang} : produits de la démo et alerte affichés`);
   const anHtml = renderToString(<StockAnalytics lang={lang} />);
-  ok(!bad(anHtml) && anHtml.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && anHtml.includes(lang === 'en' ? 'Most used products' : 'Produits les plus utilisés'), `${lang} : onglet Analyses : graphiques présents`);
+  ok(!bad(anHtml) && anHtml.includes('data-open-graphs="stock"') && anHtml.includes(lang === 'en' ? 'See the charts' : 'Voir les graphiques'), `${lang} : onglet Analyses : bouton « Voir les graphiques »`);
+  const gsHtml = renderToString(<GraphsStock range={range} today={today} lang={lang} spaceId="main" show={() => true} />);
+  ok(!bad(gsHtml) && gsHtml.includes(lang === 'en' ? 'Stock value over time' : 'Valeur du stock dans le temps') && gsHtml.includes(lang === 'en' ? 'Most used products' : 'Produits les plus sortis'), `${lang} : page Graphiques : cartes du stock présentes`);
   if (lang === 'fr') ok(!/Stock value|New product|Running out/.test(html), 'fr : pas de texte anglais');
   else ok(!/Nouveau produit|Valeur du stock|Bientôt en rupture|Entrée</.test(html), 'en : pas de texte français dans les cartes');
 }

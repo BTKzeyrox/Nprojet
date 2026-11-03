@@ -33,6 +33,8 @@ export const GRAPH_GROUPS: { id: GraphFilter; label: Bi }[] = [
 ];
 /** L'adresse (data-nav) de chaque carte : un lien d'alerte ou de l'assistant peut la faire clignoter. */
 export const graphNav = (id: string): string => `gr-${id}`;
+/** Le groupe d'une adresse de carte (« gr-flow » → Argent) : un lien qui vise une carte ouvre le bon groupe. Autre chose = null. */
+export const groupOfGraphNav = (nav: string | null | undefined): GraphGroup | null => (typeof nav === 'string' && nav.startsWith('gr-') ? GRAPH_CARDS.find(c => graphNav(c.id) === nav)?.group ?? null : null);
 export const graphCount = (f: GraphFilter): number => (f === 'all' ? GRAPH_CARDS.length : GRAPH_CARDS.filter(c => c.group === f).length);
 export const visibleCards = (f: GraphFilter): GraphCardDef[] => (f === 'all' ? GRAPH_CARDS : GRAPH_CARDS.filter(c => c.group === f));
 export const isGraphFilter = (v: unknown): v is GraphFilter => v === 'all' || v === 'missions' || v === 'money' || v === 'stock';

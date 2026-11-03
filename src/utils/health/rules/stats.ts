@@ -6,7 +6,7 @@ import type { HealthAlert } from '../types';
 import { compareToMedian, median, monthProgress, previousMonths } from '../stats';
 import { valueByMonth } from '../../stock';
 import { shiftDay, userName, isEmployee, isWorked } from './common';
-import { FIN_NAV } from '../../financeNav';
+import { FIN_NAV, finGo } from '../../financeNav';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ar = (n: number, en = false): string => `${Math.round(n).toLocaleString(en ? 'en-US' : 'fr-FR').replace(/[  ]/g, ' ')} Ar`;
@@ -50,7 +50,7 @@ export const expenseSpike: HealthRule = {
         why_fr: `${ar(cur)} depuis le début du mois, contre ${ar(cmp.baseline)} en général sur la même durée (médiane de ${cmp.periods} mois).`,
         why_en: `${ar(cur, true)} since the start of the month, versus ${ar(cmp.baseline, true)} usually over the same time (median of ${cmp.periods} months).`,
         todo_fr: 'Regarder ces dépenses : achat exceptionnel ou erreur de saisie ?', todo_en: 'Look at these expenses: exceptional purchase or typing error?',
-        since: ctx.today.slice(0, 7) + '-01', value: Math.round(cur), go: { ...GO, nav: FIN_NAV.expenses },
+        since: ctx.today.slice(0, 7) + '-01', value: Math.round(cur), go: finGo('expenses'),
       } as HealthAlert);
     }
     return out;
@@ -74,7 +74,7 @@ export const incomeDrop: HealthRule = {
       why_fr: `${ar(cur)} reçus depuis le début du mois, contre ${ar(cmp.baseline)} en général sur la même durée (médiane de ${cmp.periods} mois).`,
       why_en: `${ar(cur, true)} received since the start of the month, versus ${ar(cmp.baseline, true)} usually over the same time (median of ${cmp.periods} months).`,
       todo_fr: 'Vérifier les paiements clients en attente ou non saisis.', todo_en: 'Check pending or unrecorded client payments.',
-      since: ctx.today.slice(0, 7) + '-01', value: Math.round(cmp.baseline - cur), go: { ...GO, nav: FIN_NAV.flow },
+      since: ctx.today.slice(0, 7) + '-01', value: Math.round(cmp.baseline - cur), go: finGo('flow'),
     } as HealthAlert];
   },
 };

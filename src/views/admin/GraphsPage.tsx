@@ -8,7 +8,10 @@ import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { comparableRanges, periodLabel, shiftAnchor, todayMada, type StatsGranularity } from '../../utils/stats';
 import { DEFAULT_STORAGE_ID } from '../../utils/stock';
-import { GRAPH_GRANS, GRAPH_GROUPS, graphCount, isGraphFilter, isGraphGran, visibleCards, type GraphFilter } from '../../utils/graphsPage';
+import { GRAPH_GRANS, GRAPH_GROUPS, graphCount, groupOfGraphNav, isGraphFilter, isGraphGran, visibleCards, type GraphFilter } from '../../utils/graphsPage';
+import { OPEN_GRAPHS_EVENT, takeGraphsIntent } from '../../utils/graphsNav';
+import { peekNavTarget } from '../../utils/navTarget';
+import type { User } from '../../types';
 import { GraphsMissions } from './graphs/GraphsMissions';
 import { GraphsMoney } from './graphs/GraphsMoney';
 import { GraphsStock } from './graphs/GraphsStock';
@@ -20,14 +23,16 @@ let savedAnchor: string | null = null; // on garde la période quand on change d
 const btn = (on: boolean) => `min-h-[44px] rounded-lg text-sm font-semibold border transition-colors ${on ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-800'}`;
 const arrow = 'min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-white flex items-center justify-center disabled:opacity-40';
 
-export const GraphsPage: React.FC = () => {
+export const GraphsPage: React.FC<{ onOpenEmployee?: (u: User) => void }> = ({ onOpenEmployee }) => {
   const { lang } = useApp();
   const l = lang === 'en' ? 'en' : 'fr';
   const t = (fr: string, en: string) => (l === 'en' ? en : fr);
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const today = todayMada();
-  const [filter, setFilter] = useState<GraphFilter>(() => { const v = read('graphs_filter'); return isGraphFilter(v) ? v : 'all'; });
+  // Le groupe vient d'un bouton « Voir les graphiques » ou d'un lien vers une carte (alerte, assistant) ; sinon le dernier choix
+  const [filter, setFilter] = useState<GraphFilter>(() => { const asked = takeGraphsIntent(), card = groupOfGraphNav(peekNavTarget()); if (card) return card; if (asked) return asked; const v = read('graphs_filter'); return isGraphFilter(v) ? v : 'all'; });
+  useEffect(() => { const again = () => { const asked = takeGraphsIntent(); if (asked) setFilter(asked); }; window.addEventListener(OPEN_GRAPHS_EVENT, again); return () => window.removeEventListener(OPEN_GRAPHS_EVENT, again); }, []);
   const [g, setG] = useState<StatsGranularity>(() => { const v = read('graphs_gran'); return isGraphGran(v) ? v : 'month'; });
   const [anchor, setAnchor] = useState<string>(() => savedAnchor || today);
   useEffect(() => { savedAnchor = anchor; }, [anchor]);
@@ -75,7 +80,7 @@ export const GraphsPage: React.FC = () => {
         )}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
-        <GraphsMissions g={g} anchor={anchor} today={today} lang={l} show={show} />
+        <GraphsMissions g={g} anchor={anchor} today={today} lang={l} show={show} onOpenEmployee={onOpenEmployee} />
         <GraphsMoney g={g} range={range} anchor={anchor} today={today} lang={l} show={show} />
         <GraphsStock range={range} today={today} lang={l} spaceId={spaceId} show={show} />
       </div>

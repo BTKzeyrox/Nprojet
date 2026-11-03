@@ -8,14 +8,15 @@ import { variationPct } from '../../../utils/chartScale';
 import { fmtDuration } from '../../../utils/performance';
 import { formatCurrencyAr } from '../../../utils/formatUtils';
 import { GraphCard } from './GraphCard';
+import type { User } from '../../../types';
 
 const BY: Record<StatsGranularity, { fr: string; en: string }> = {
   day: { fr: 'par heure', en: 'by hour' }, week: { fr: 'par jour', en: 'by day' }, month: { fr: 'par jour', en: 'by day' }, year: { fr: 'par mois', en: 'by month' },
 };
-interface Props { g: StatsGranularity; anchor: string; today: string; lang: 'fr' | 'en'; show: (id: string) => boolean }
+interface Props { g: StatsGranularity; anchor: string; today: string; lang: 'fr' | 'en'; show: (id: string) => boolean; onOpenEmployee?: (u: User) => void }
 const stat = 'rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1';
 
-export const GraphsMissions: React.FC<Props> = ({ g, anchor, today, lang: l, show }) => {
+export const GraphsMissions: React.FC<Props> = ({ g, anchor, today, lang: l, show, onOpenEmployee }) => {
   const t = (fr: string, en: string) => (l === 'en' ? en : fr);
   const [showAll, setShowAll] = useState(false);
   const posts = db.getPosts();
@@ -51,8 +52,8 @@ export const GraphsMissions: React.FC<Props> = ({ g, anchor, today, lang: l, sho
           <RankBars lang={l} ariaLabel={t('Classement par missions faites', 'Ranking by missions done')} emptyText={t('Aucun employé actif.', 'No active employee.')}
             items={shown.map(r => {
               const hours = r.workMin / 60, perHour = hours > 0 && r.done > 0 ? Math.round((r.done / hours) * 10) / 10 : null;
-              void users;
-              return { key: r.id, label: r.name, value: r.done, valueText: String(r.done), sub: (
+              const u = users.find(x => x.id === r.id); // un clic ouvre la fiche de l'employé (comme dans Statistiques avant)
+              return { key: r.id, label: r.name, value: r.done, valueText: String(r.done), onClick: onOpenEmployee && u ? () => onOpenEmployee(u) : undefined, sub: (
                 <div className="flex flex-wrap gap-x-3 text-[11px] text-slate-400"><span>{money(r.earned)}</span><span>{fmtDuration(r.workMin || null)}</span><span>{perHour === null ? '–' : t(`${perHour} par heure`, `${perHour} per hour`)}</span></div>) };
             })} />
           {tm.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm">{showAll ? t('Voir moins', 'Show less') : t(`Voir les ${tm.ranking.length} employés`, `Show all ${tm.ranking.length} employees`)}</button>}

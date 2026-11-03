@@ -87,12 +87,13 @@ const sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
 ok((sv.match(/<ThemeLangControls \/>/g) || []).length === 2 && !/Thème clair|Thème sombre/.test(sv) && !/setLang\('fr'\)/.test(sv), 'Réglages : le contrôle remplace les gros boutons aux 2 endroits');
 
 // ---- 5. Les pages utilisent les nouveaux graphiques
-const fi = fs.readFileSync('src/views/admin/FinanceInsights.tsx', 'utf8');
+const fi = fs.readFileSync('src/views/admin/graphs/GraphsMoney.tsx', 'utf8'); // les graphiques d'argent sont dans la page Graphiques
 ok(/<MoneyFlowChart/.test(fi) && /<BilledReceivedBars/.test(fi), 'Finances : « Argent reçu et dépenses » et « Facturé et reçu » utilisent les nouveaux graphiques');
 ok(/summary="last" signColors/.test(fi), 'Finances : « Bénéfice cumulé » garde son graphique');
-const sp = fs.readFileSync('src/views/admin/StatsPage.tsx', 'utf8');
-ok(/<ActivityGrid/.test(sp) && !/series=\{\[\n\s+\{ key: 'done', label: l === 'en' \? 'Missions done'/.test(sp), 'Statistiques : « Missions faites » utilise le calendrier');
-ok(/Missions par type/.test(sp) && /stacked legend/.test(sp), 'Statistiques : « Missions par type » garde son graphique');
+const sp = fs.readFileSync('src/views/admin/graphs/GraphsMissions.tsx', 'utf8'); // les graphiques de missions sont dans la page Graphiques
+const oldStats = fs.readFileSync('src/views/admin/StatsPage.tsx', 'utf8');
+ok(!/<ActivityGrid/.test(oldStats) && /OpenGraphsButton/.test(oldStats), 'Statistiques : le calendrier de missions a quitté la page (bouton « Voir les graphiques » à la place)');
+ok(/Missions faites, par type/.test(sp) && /stacked legend/.test(sp), 'Graphiques : « Missions faites, par type » garde ses barres empilées avec légende');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

@@ -12,6 +12,7 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 const { db } = await import('../src/db/store');
 const { FinanceTab } = await import('../src/views/admin/FinanceTab');
 const { FinanceInsights } = await import('../src/views/admin/FinanceInsights');
+const { GraphsMoney } = await import('../src/views/admin/graphs/GraphsMoney');
 const { todayMada } = await import('../src/utils/stats');
 
 let fails = 0, n = 0;
@@ -54,10 +55,16 @@ ok(other.includes('Aucune ligne sur cette période.') && !other.includes('Client
 for (const lang of ['fr', 'en'] as const) {
   const html = renderToString(<FinanceInsights range={range} lang={lang} />);
   ok(!bad(html), `${lang} : graphiques financiers sans NaN ni « undefined »`);
-  ok(html.includes(lang === 'en' ? 'Money received' : 'Argent reçu') && html.includes(lang === 'en' ? 'Expenses' : 'Dépenses') && html.includes(lang === 'en' ? 'Billed' : 'Facturé'), `${lang} : légendes des graphiques financiers`);
-  ok(html.includes(lang === 'en' ? 'Cumulative profit' : 'Bénéfice cumulé'), `${lang} : graphique du bénéfice cumulé`);
+  ok(html.includes('data-open-graphs="money"') && html.includes(lang === 'en' ? 'See the charts' : 'Voir les graphiques'), `${lang} : Finances : bouton « Voir les graphiques » à la place des graphiques`);
+  // Les graphiques d'argent sont maintenant des cartes de la page Graphiques
+  const gh = renderToString(<GraphsMoney g="month" range={range} anchor={today} today={today} lang={lang} show={() => true} />);
+  ok(!bad(gh), `${lang} : cartes d'argent de la page Graphiques sans NaN ni « undefined »`);
+  ok(gh.includes(lang === 'en' ? 'Money received' : 'Argent reçu') && gh.includes(lang === 'en' ? 'Expenses' : 'Dépenses') && gh.includes(lang === 'en' ? 'Billed' : 'Facturé'), `${lang} : légendes des graphiques financiers (page Graphiques)`);
+  ok(gh.includes(lang === 'en' ? 'Cumulative profit' : 'Bénéfice cumulé'), `${lang} : graphique du bénéfice cumulé (page Graphiques)`);
+  ok(gh.includes(lang === 'en' ? 'With salaries' : 'Avec salaires') && gh.includes(lang === 'en' ? 'Cash (no salaries)' : 'Caisse (sans salaires)'), `${lang} : choix « Avec salaires / Caisse (sans salaires) » affiché`);
 }
 ok(!bad(renderToString(<FinanceInsights range={{ start: '2020-01-01', end: '2020-12-31' }} lang="fr" />)), 'année passée sans donnée : sans erreur');
+ok(!bad(renderToString(<GraphsMoney g="year" range={{ start: '2020-01-01', end: '2020-12-31' }} anchor="2020-06-15" today={today} lang="fr" show={() => true} />)), 'page Graphiques, année passée sans donnée : sans erreur');
 ok(!bad(renderToString(<FinanceInsights range={{ start: today, end: today }} lang="en" />)), 'un seul jour : sans erreur');
 
 // modifier / supprimer

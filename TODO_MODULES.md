@@ -666,7 +666,7 @@ But : que chaque personne (responsable, chef d'équipe, comptable, opérateur) v
 
 **Risques propres à ce module :** (a) « départ » ne peut être qu'une ESTIMATION quand la personne ferme l'appli sans se déconnecter (le serveur ne sait que son dernier signe de vie) : c'est écrit « estimé » ; (b) un téléphone en veille ou sans réseau paraît « hors ligne » alors que la personne travaille (hors ligne M13) : à expliquer sur l'écran ; (c) ne pas faire apparaître les chefs d'équipe et comptables dans la file d'attente ou le compteur d'opérateurs en ligne ; (d) rien ne peut être vérifié sur un vrai téléphone ici : c'est M21.6.
 
-## MODULE 22 — Site plus simple : page Graphiques, menu fusionné, filtres clairs, réglage « Boutique » — taille L (demande de BTK, 2026-11-03) — **EN COURS** (M22.1 et M22.2 faites et en ligne ; M22.3 en cours ; le menu fusionné est en attente du « GO » de BTK)
+## MODULE 22 — Site plus simple : page Graphiques, menu fusionné, filtres clairs, réglage « Boutique » — taille L (demande de BTK, 2026-11-03) — **EN COURS** (M22.1 à M22.3 faites et en ligne ; le menu fusionné M22.4 à M22.11 est la suite)
 
 ### En mots simples (à lire d'abord)
 
@@ -725,14 +725,14 @@ Site seulement (pas de serveur, pas de base) · une étape testée avant la suiv
 - *Limite honnête :* ce contrôle lit le code ; il ne remplace pas les yeux de BTK (voir M22.11).
 - *Fini quand :* les 27 points de comparaison passent. ✔
 
-**M22.3 — [ ] EN COURS (code écrit sur mon poste, NON poussé : 4 contrôles à réparer) — Retirer les graphiques des anciennes pages** (taille M)
+**M22.3 — [x] FAIT le 2026-11-03 (« Go » de BTK), en ligne — Retirer les graphiques des anciennes pages** (taille M)
 - *Ce qu'on fait :* on enlève les graphiques de **Statistiques** (missions faites par jour, par type, classement de l'équipe, salaires), de **Finances** (les 6 graphiques d'argent), du **Stockage** (tableau de bord : 2 graphiques ; onglet Analyses : 5 graphiques). À la place de chaque groupe : un bouton **« Voir les graphiques »** qui ouvre la page Graphiques **sur le bon groupe** (Missions, Argent ou Stock). **Les chiffres et les tuiles restent** (bénéfice, marge, à encaisser, trésorerie, budgets, prévu contre réel, paie).
 - *Point important, le Comptable :* il **n'a pas** la page Graphiques (elle montre les salaires, il ne doit pas les voir). Donc dans **Trésorerie**, le **responsable** a le bouton, et le **Comptable garde ses 4 graphiques**.
 - *Les liens se déplacent aussi :* un lien « Pourquoi ce chiffre ? », de l'assistant ou d'une alerte de la Santé du site qui visait un graphique (argent reçu, dépenses, facturé, bénéfice cumulé) vise maintenant la carte de la page Graphiques (`gr-flow`, `gr-categories`, `gr-billed`, `gr-cum`), qui clignote 1,5 s comme avant. Les liens vers un chiffre (bénéfice, marge, trésorerie, budgets) ne bougent pas. Si le lien vise une carte, la page s'ouvre sur le bon groupe, même si un autre filtre était choisi.
 - *Un clic sur un employé* dans la carte « Équipe : missions faites » ouvre sa fiche (comme avant dans Statistiques).
 - *Fichiers :* `StatsPage.tsx`, `FinanceInsights.tsx`, `TreasuryPage.tsx`, `StockDashboard.tsx`, `StockAnalytics.tsx`, `OpenGraphsButton.tsx` (nouveau), `graphsNav.ts` (nouveau), `financeNav.ts`, règles de la Santé du site (`stats.ts`, `finance.ts`), `App.tsx`.
-- *Où on en est :* le code compile, le build passe, `check:graphs` (97/97), `check:alert-links` et `check:assistant` sont réparés. **Il reste 4 contrôles à mettre à jour** parce qu'ils testent encore les anciens graphiques : `check:styled-charts`, `check:purchasing-page`, `check:stock`, `check:finance-page`. Puis : mettre à jour ce plan et le guide, relancer **tous** les contrôles, pousser.
-- *Fini quand :* plus aucun graphique dans les 3 anciennes pages (sauf la Trésorerie du Comptable), les boutons ouvrent le bon groupe, tous les liens mènent à une carte qui existe, tous les contrôles passent.
+- *Fait aussi :* les 4 contrôles qui testaient les anciens graphiques (`check:styled-charts`, `check:purchasing-page`, `check:stock`, `check:finance-page`) testent maintenant les cartes de la page Graphiques ; un nouveau contrôle **`check:graphs-page` dessine la page entière avec la démo** (16 cartes, filtres 16/3/8/5, FR et EN, trois périodes, plusieurs stockages, caisse vide, opérateur sans accès) : le rendu réel est donc vérifié, pas seulement le code. Ce que ces contrôles ne voient pas : l'aspect (couleurs, tailles, lisibilité) : c'est l'essai M22.11.
+- *Fini quand :* plus aucun graphique dans les 3 anciennes pages (sauf la Trésorerie du Comptable), les boutons ouvrent le bon groupe, tous les liens mènent à une carte qui existe, tous les contrôles passent. ✔
 
 **M22.4 — [ ] Décisions du menu** (taille S, accord de BTK)
 - *Ce qu'on fait :* BTK relit le tableau « Le menu aujourd'hui → demain » et répond. Questions courtes : (1) les 10 entrées te conviennent ? (2) « Graphiques » à part ? (3) « Mes tableaux » / « Tableaux d'équipe » dans Contrôle, ou ailleurs ? (4) quels onglets pour une boutique ? **« GO » = il garde les décisions par défaut.**

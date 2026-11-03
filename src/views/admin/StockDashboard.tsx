@@ -1,4 +1,4 @@
-// Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements et graphiques.
+// Tableau de bord du Stockage : valeur du stock, produits épuisés ou bas, ruptures proches, derniers mouvements. Les graphiques sont dans la page Graphiques (bouton en bas).
 // Utilisé par : StoragePage.tsx.
 // Pour modifier : lecture seule, un seul stockage à la fois (prop spaceId). Un clic sur Épuisés ou Stock bas ouvre l'onglet Produits avec le bon filtre (onOpenProducts). Textes FR/EN avec t(fr, en).
 import React, { useMemo } from 'react';
@@ -6,9 +6,8 @@ import { AlertTriangle, Plus } from 'lucide-react';
 import { db } from '../../db/store';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { DEFAULT_STORAGE_ID, inSpace, runOutSoon, stockRows, stockValue, topUsed, valueByMonth } from '../../utils/stock';
-import { LineChart, RankBars } from '../../components/charts/Charts';
-import { monthTitle } from '../../utils/chartData';
+import { DEFAULT_STORAGE_ID, inSpace, runOutSoon, stockRows, stockValue } from '../../utils/stock';
+import { OpenGraphsButton } from '../../components/OpenGraphsButton';
 import type { StockFilter } from './StockTab';
 
 // Tableau de bord du Stockage (responsable seulement) : l'essentiel d'un coup d'œil. Lecture seule : rien ne se saisit ici.
@@ -25,9 +24,6 @@ export const StockDashboard: React.FC<Props> = ({ lang, onOpenProducts, spaceId 
   const empty = rows.filter(r => r.empty);
   const low = rows.filter(r => r.low && !r.empty);
   const soon = useMemo(() => runOutSoon(rows, moves, today), [rows, moves, today]);
-  const months = useMemo(() => valueByMonth(products, moves, today, 12), [products, moves, today]);
-  const start30 = useMemo(() => { const d = new Date(`${today}T00:00:00Z`); d.setUTCDate(d.getUTCDate() - 29); return d.toISOString().slice(0, 10); }, [today]);
-  const used = useMemo(() => topUsed(products, moves, start30, today, 5), [products, moves, start30, today]);
   const names = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
   const recent = useMemo(() => [...moves].sort((a, b) => (b.date + (b.created_at || '')).localeCompare(a.date + (a.created_at || ''))).slice(0, 8), [moves]);
   const ar = (n: number) => formatCurrencyAr(n);
@@ -107,18 +103,7 @@ export const StockDashboard: React.FC<Props> = ({ lang, onOpenProducts, spaceId 
         )}
       </div>
 
-      <div className={card}>
-        <h3 className="text-sm font-bold text-white">{t('Valeur du stock dans le temps', 'Stock value over time')}</h3>
-        <LineChart values={months.values} labels={months.labels} fullLabels={months.keys.map(k => monthTitle(k, lang))} format={v => ar(v)} ariaLabel={t('Valeur du stock à la fin de chaque mois', 'Stock value at the end of each month')} emptyText={t('Pas encore de stock.', 'No stock yet.')} lang={lang} />
-      </div>
-
-      <div className={card}>
-        <h3 className="text-sm font-bold text-white">{t('Les plus utilisés (30 derniers jours)', 'Most used (last 30 days)')}</h3>
-        {used.length === 0 ? <div className="text-sm text-slate-400">{t('Aucune sortie sur les 30 derniers jours.', 'No exits in the last 30 days.')}</div> : (
-          <RankBars lang={lang} ariaLabel={t('Produits les plus utilisés', 'Most used products')} barClass="bg-sky-500"
-            items={used.map(u => ({ key: u.product.id, label: u.product.name, value: u.used, valueText: `${num(u.used)} ${u.product.unit}` }))} />
-        )}
-      </div>
+      <OpenGraphsButton filter="stock" lang={lang} hint={t('Les graphiques du stock (valeur dans le temps, produits les plus sortis…) sont maintenant dans la page Graphiques.', 'The stock charts (value over time, most used products…) are now in the Charts page.')} />
     </div>
   );
 };

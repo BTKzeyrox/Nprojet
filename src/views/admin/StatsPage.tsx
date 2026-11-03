@@ -14,8 +14,7 @@ import { GoalsBars, ForecastCard, AlertsList } from '../../components/GoalsPanel
 import { getStatsTab, setStatsTab, type StatsTab } from '../../utils/statsNav';
 import { setStorageIntent } from '../../utils/storageNav';
 import { setNavTarget } from '../../utils/navTarget';
-import { DonutChart, RankBars, XYChart, compactNumber } from '../../components/charts/Charts';
-import { ActivityGrid } from '../../components/charts/StyledCharts';
+import { OpenGraphsButton } from '../../components/OpenGraphsButton';
 import { variationPct } from '../../utils/chartScale';
 import { pacePerBar } from '../../utils/chartData';
 import { fmtDuration } from '../../utils/performance';
@@ -45,18 +44,13 @@ const Section: React.FC<{ title: string; children: React.ReactNode; right?: Reac
   </section>
 );
 
-const BY: Record<StatsGranularity, { fr: string; en: string }> = {
-  day: { fr: 'par heure', en: 'by hour' }, week: { fr: 'par jour', en: 'by day' }, month: { fr: 'par jour', en: 'by day' }, year: { fr: 'par mois', en: 'by month' },
-};
-
-export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEmployee?: (u: User) => void }> = ({ onNavigate, onOpenEmployee }) => {
+export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEmployee?: (u: User) => void }> = ({ onNavigate }) => {
   const { lang } = useApp();
   const l = lang === 'en' ? 'en' : 'fr';
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
 
   const today = todayMada();
-  const [showAll, setShowAll] = useState(false);
   const [g, setG] = useState<StatsGranularity>(loadGran);
   const [anchor, setAnchor] = useState<string>(() => savedAnchor || today);
   useEffect(() => { savedAnchor = anchor; }, [anchor]);
@@ -170,8 +164,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       })()}
 
       {/* Missions : faites sur la période, par type, et ce qui reste à faire */}
-      <Section title={l === 'en' ? `Missions done ${BY[g].en}` : `Missions faites ${BY[g].fr}`} raw={l === 'en'}>
-        <ActivityGrid labels={stats.labels} fullLabels={stats.fullLabels} values={stats.series.done} lang={l} ariaLabel={l === 'en' ? 'Missions done' : 'Missions faites'} />
+      <Section title={l === 'en' ? 'Missions done' : 'Missions faites'} raw={l === 'en'}>
         {(() => {
           // Ce que l'ancien graphique montrait en plus : la période d'avant et le rythme de l'objectif
           const prevTotal = stats.series.prevDone.reduce((x: number, v) => x + (Number(v) || 0), 0);
@@ -193,14 +186,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         </div>
       </Section>
 
-      <Section title="Missions par type">
-        {stats.byTypeSeries.length > 0 && (
-          <XYChart stacked legend labels={stats.labels} fullLabels={stats.fullLabels} lang={l} unit={l === 'en' ? undefined : 'missions'} ariaLabel={l === 'en' ? `Missions by type ${BY[g].en}` : `Missions par type ${BY[g].fr}`}
-            series={stats.byTypeSeries.map(t => ({ key: t.label, label: t.label, values: t.values, kind: 'bar' as const }))} />
-        )}
-        <DonutChart items={stats.byType.map(t => ({ label: t.label, value: t.count }))} ariaLabel={l === 'en' ? 'Missions by type' : 'Missions par type'} centerLabel={l === 'en' ? 'done' : 'missions'} lang={l} />
-      </Section>
-
       <Section title="Missions à venir" right={<span {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-[11px] text-slate-400">{l === 'en' ? `${stats.upcoming.total} on the board` : `${stats.upcoming.total} sur le tableau`}</span>}>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2"><div className="font-mono text-lg font-bold text-white">{stats.upcoming.todo}</div><div className="text-[11px] text-slate-400">À faire</div></div>
@@ -220,9 +205,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
       {/* Équipe : classement, missions par heure, personnes sans mission */}
       {(() => {
         const t = stats.team;
-        const shown = showAll ? t.ranking : t.ranking.slice(0, 8);
-        const users = db.getUsers();
-        const money = (n: number) => formatCurrencyAr(n);
         return (
           <Section title="Équipe" right={<span {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-[11px] text-slate-400">{l === 'en' ? `${t.active} active` : `${t.active} actifs`}</span>}>
             <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-slate-300">
@@ -231,24 +213,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
                 : (l === 'en' ? 'Nobody finished anything on this period.' : 'Personne n\'a terminé de mission sur cette période.')}
             </div>
             {t.ranking.length === 0 && <div className="text-sm text-slate-400">Aucun employé actif.</div>}
-            <RankBars lang={l} ariaLabel={l === 'en' ? 'Ranking by missions done' : 'Classement par missions faites'}
-              items={shown.map(r => {
-                const hours = r.workMin / 60;
-                const perHour = hours > 0 && r.done > 0 ? Math.round((r.done / hours) * 10) / 10 : null;
-                const u = users.find(x => x.id === r.id);
-                return {
-                  key: r.id, label: r.name, value: r.done, valueText: String(r.done),
-                  onClick: onOpenEmployee && u ? () => onOpenEmployee(u) : undefined,
-                  sub: (
-                    <div className="flex flex-wrap gap-x-3 text-[11px] text-slate-400">
-                      <span>{money(r.earned)}</span>
-                      <span>{fmtDuration(r.workMin || null)}</span>
-                      <span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{perHour === null ? '–' : (l === 'en' ? `${perHour} per hour` : `${perHour} par heure`)}</span>
-                    </div>
-                  ),
-                };
-              })} />
-            {t.ranking.length > 8 && <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm"><span {...(l === 'en' ? { 'data-notranslate': '' } : {})}>{showAll ? (l === 'en' ? 'Show less' : 'Voir moins') : (l === 'en' ? `Show all (${t.ranking.length})` : `Voir tout (${t.ranking.length})`)}</span></button>}
             {t.idle.length > 0 && stats.cur.workers > 0 && (
               <div {...(l === 'en' ? { 'data-notranslate': '' } : {})} className="text-xs text-amber-300">{l === 'en' ? 'Idle on this period: ' : 'Sans mission sur cette période : '}{t.idle.slice(0, 8).join(', ')}{t.idle.length > 8 ? ` +${t.idle.length - 8}` : ''}</div>
             )}
@@ -265,8 +229,6 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         const closed = pay.status === 'closed' || pay.status === 'paid';
         return (
           <Section title="Salaires">
-            <XYChart labels={stats.labels} fullLabels={stats.fullLabels} lang={l} format={v => formatCurrencyAr(v)} axisFormat={compactNumber} summary="sum" showAverage ariaLabel={l === 'en' ? 'Salaries earned' : 'Salaires gagnés'}
-              series={[{ key: 'earned', label: l === 'en' ? 'Salaries earned' : 'Salaires gagnés', values: stats.series.earned, kind: 'bar' }]} />
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.earned)}</div><div className="text-[11px] text-slate-400">Gagné</div></div>
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 py-2 px-1"><div className="font-mono text-sm sm:text-base font-bold text-white break-words">{money(stats.cur.advances)}</div><div className="text-[11px] text-slate-400">Avances accordées</div></div>
@@ -289,6 +251,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
           </Section>
         );
       })()}
+      <OpenGraphsButton filter="missions" lang={l} hint={l === 'en' ? 'The charts (missions by type, team ranking, salaries) are now in the Charts page.' : 'Les graphiques (missions par type, classement de l\'équipe, salaires) sont maintenant dans la page Graphiques.'} />
       </>)}
     </div>
   );
