@@ -10,7 +10,7 @@ import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { isLate, lineTotal, planReceipt, poHasReceipt, poReceivedValue, poTotal, remainingQty } from '../../utils/purchasing';
+import { canCloseShort, isLate, lineTotal, planReceipt, poAbandonedQty, poHasReceipt, poReceivedValue, poTotal, remainingQty } from '../../utils/purchasing';
 import type { PurchaseOrder, PurchaseStatus } from '../../types';
 
 // Section « Bons de commande » de la page Achats (responsable seulement).
@@ -37,6 +37,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
   const [recv, setRecv] = useState<Receive | null>(null);
   const [error, setError] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [soldId, setSoldId] = useState<string | null>(null); // bon pour lequel on demande « Solder le reste ? »
   useLockBodyScroll(!!editor || !!recv);
 
   const today = todayMada();
@@ -121,7 +122,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
               const late = isLate(o, today);
               return (
                 <li key={o.id} className="border-t border-slate-800 first:border-t-0">
-                  <button type="button" aria-expanded={open} onClick={() => { setOpenId(open ? null : o.id); setConfirmId(null); setError(''); }} className="w-full min-h-[56px] py-2 flex items-center gap-2 text-left">
+                  <button type="button" aria-expanded={open} onClick={() => { setOpenId(open ? null : o.id); setConfirmId(null); setSoldId(null); setError(''); }} className="w-full min-h-[56px] py-2 flex items-center gap-2 text-left">
                     {open ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-white truncate">{o.ref} · {supName(o.supplier_id)}</div>
@@ -144,12 +145,20 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                         ))}
                       </ul>
                       <div className="text-sm text-slate-200">{t('Total du bon', 'Order total')} : <b>{ar(poTotal(o))}</b>{poHasReceipt(o) ? <span className="text-slate-400"> · {t('déjà reçu', 'already received')} {ar(poReceivedValue(o))}</span> : null}</div>
+                      {o.short_closed && <p className="text-sm text-amber-200">{t(`Soldé le ${fmtDate(o.short_closed)} : ${poAbandonedQty(o)} jamais reçu(s), abandonné(s). Rien n'a été ajouté en caisse ni en stock.`, `Closed short on ${fmtDate(o.short_closed)}: ${poAbandonedQty(o)} never received, dropped. Nothing was added to cash or stock.`)}</p>}
                       {o.note && <p className="text-sm text-slate-300 whitespace-pre-wrap break-words">{o.note}</p>}
                       {error && openId === o.id && !editor && !recv && <div role="alert" className="text-sm text-rose-300">{error}</div>}
                       <div className="flex flex-wrap items-center gap-1.5">
                         {o.status === 'draft' && <button type="button" onClick={() => { setError(''); setEditor(toEditor(o)); }} className={btn}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>}
                         {o.status === 'draft' && <button type="button" onClick={() => act(() => db.setPurchaseStatus(o.id, 'ordered'))} className="min-h-[44px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold">{t('Commander', 'Place order')}</button>}
                         {o.status === 'ordered' && <button type="button" onClick={() => startReceive(o)} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 text-white text-sm font-semibold">{t('Recevoir', 'Receive')}</button>}
+                        {canCloseShort(o) && (soldId === o.id ? (
+                          <>
+                            <span className="text-[12px] text-amber-200 basis-full">{t('Le reste jamais livré sera abandonné et le bon deviendra « Reçu » (définitif). Rien n\'est ajouté en caisse ni en stock.', 'The part never delivered will be dropped and the order becomes “Received” (final). Nothing is added to cash or stock.')}</span>
+                            <button type="button" onClick={() => { act(() => db.closePurchaseShort(o.id, today)); setSoldId(null); }} className="min-h-[44px] px-3 rounded-lg bg-amber-700 text-white text-sm font-semibold">{t('Oui, solder le reste', 'Yes, close the rest')}</button>
+                            <button type="button" onClick={() => setSoldId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
+                          </>
+                        ) : <button type="button" onClick={() => { setError(''); setSoldId(o.id); }} className={btn}>{t('Solder le reste', 'Close the rest')}</button>)}
                         {(o.status === 'draft' || (o.status === 'ordered' && !poHasReceipt(o))) && <button type="button" onClick={() => act(() => db.setPurchaseStatus(o.id, 'cancelled'))} className={btn}>{t('Annuler le bon', 'Cancel order')}</button>}
                         {(o.status === 'draft' || o.status === 'cancelled') && (confirmId === o.id ? (
                           <>

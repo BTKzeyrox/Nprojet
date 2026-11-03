@@ -585,6 +585,7 @@ export interface PurchaseOrder {
   date: string; // AAAA-MM-JJ, date de la commande
   expected_date?: string; // livraison prévue
   status: PurchaseStatus; // Brouillon → Commandé → Reçu, ou Annulé
+  short_closed?: string; // AAAA-MM-JJ : bon « Reçu » soldé alors qu'une partie n'est jamais arrivée (le reste est abandonné)
   lines: PurchaseLine[]; // figées une fois commandé : seule la quantité reçue avance
   note: string;
   created_by?: string;

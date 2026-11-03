@@ -1762,13 +1762,21 @@ function cleanPurchase(rec: any, existing: any, meId: string, now: string): { ok
   const allReceived = lines.every((l) => l.received_qty === l.qty);
   const anyReceived = lines.some((l) => l.received_qty > 0);
   const note = String(rec.note ?? "").slice(0, 300);
-  if (status === "received" && !allReceived) return { ok: false, reason: "status" };
+  // « Solder le reste » : bon reçu en partie dont le reste est abandonné (date du solde obligatoire, au moins une quantité reçue)
+  let shortClosed: string | undefined;
+  if (!purNone(rec.short_closed)) {
+    const sc = stockDate(rec.short_closed);
+    if (!sc || sc < date) return { ok: false, reason: "status" };
+    shortClosed = sc;
+  }
+  if (shortClosed && (status !== "received" || allReceived || !anyReceived)) return { ok: false, reason: "status" };
+  if (status === "received" && !allReceived && !shortClosed) return { ok: false, reason: "status" };
   if (!existing) {
     if (status !== "draft" && status !== "ordered") return { ok: false, reason: "status" };
     if (anyReceived) return { ok: false, reason: "received" };
   } else if (existing.status === "received" || existing.status === "cancelled") {
     // Définitif : seule la note peut changer.
-    const same = status === existing.status && supplier === existing.supplier_id && date === existing.date && (expected || "") === (existing.expected_date || "") &&
+    const same = status === existing.status && supplier === existing.supplier_id && date === existing.date && (expected || "") === (existing.expected_date || "") && (shortClosed || "") === (existing.short_closed || "") &&
       JSON.stringify(lines) === JSON.stringify((existing.lines || []).map((l: any) => ({ product_id: l.product_id, qty: l.qty, unit_cost_ar: l.unit_cost_ar, received_qty: l.received_qty })));
     if (!same) return { ok: false, reason: "final" };
   } else if (existing.status === "draft") {
@@ -1786,9 +1794,9 @@ function cleanPurchase(rec: any, existing: any, meId: string, now: string): { ok
     }
     if (status === "cancelled") { if (anyReceived) return { ok: false, reason: "received" }; }
     else if (status === "draft") return { ok: false, reason: "status" };
-    else if (allReceived ? status !== "received" : status !== "ordered") return { ok: false, reason: "status" };
+    else if (allReceived ? status !== "received" : shortClosed ? status !== "received" : status !== "ordered") return { ok: false, reason: "status" };
   }
-  const base = { id: rec.id, ref, supplier_id: supplier, date, ...(expected ? { expected_date: expected } : {}), status, lines, note };
+  const base = { id: rec.id, ref, supplier_id: supplier, date, ...(expected ? { expected_date: expected } : {}), status, ...(shortClosed ? { short_closed: shortClosed } : {}), lines, note };
   return { ok: true, save: { ...base, created_by: existing?.created_by || meId, created_at: existing?.created_at || now, updated_at: now } };
 }
 

@@ -1,8 +1,8 @@
 // Contrôle des règles pures du module 4 (fournisseurs, bons de commande, réception, inventaire, budgets, statistiques), sans réseau.
 // Lancer : npm run check:purchasing
 import {
-  budgetRows, canTransition, checkBudgets, checkPurchaseDraft, checkSupplierDraft, inventoryAdjustments, inventoryRows, isLate, lineTotal, nextPurchaseRef,
-  planReceipt, poHasReceipt, poIsFullyReceived, poReceivedValue, poTotal, remainingQty, supplierRanking, topPurchased,
+  budgetRows, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, checkSupplierDraft, inventoryAdjustments, inventoryRows, isLate, lineTotal, nextPurchaseRef,
+  planReceipt, poAbandonedQty, poHasReceipt, poIsFullyReceived, poReceivedValue, poTotal, remainingQty, supplierRanking, topPurchased,
 } from '../src/utils/purchasing';
 import type { CashEntry, Product, PurchaseOrder, StockMove, Supplier } from '../src/types';
 
@@ -55,6 +55,9 @@ const po = (over: Partial<PurchaseOrder> = {}): PurchaseOrder => ({ id: 'po-1', 
   ok(t({ status: 'draft' }, 'ordered') && t({ status: 'draft' }, 'cancelled') && !t({ status: 'draft' }, 'received') && !t({ status: 'draft', lines: [] }, 'ordered'), 'brouillon → commandé ou annulé ; pas reçu ; pas sans ligne');
   ok(t({ status: 'ordered' }, 'cancelled') && !t({ status: 'ordered', lines: [L('p', 2, 1, 1)] }, 'cancelled') && !t({ status: 'ordered' }, 'draft') && !t({ status: 'ordered' }, 'received'), 'commandé → annulé seulement si rien reçu ; jamais brouillon ; « reçu » seulement par réception');
   ok(!t({ status: 'received' }, 'cancelled') && !t({ status: 'cancelled' }, 'ordered') && !t({ status: 'received' }, 'ordered'), 'reçu et annulé sont définitifs');
+  ok(canCloseShort(po({ status: 'ordered', lines: [L('p', 10, 1, 4)] })) && !canCloseShort(po({ status: 'ordered', lines: [L('p', 10, 1, 0)] })) && !canCloseShort(po({ status: 'ordered', lines: [L('p', 10, 1, 10)] })) && !canCloseShort(po({ status: 'draft', lines: [L('p', 10, 1, 4)] })) && !canCloseShort(po({ status: 'received', lines: [L('p', 10, 1, 4)] })), 'solder le reste : seulement un bon commandé reçu en partie (sans réception on annule, tout reçu est déjà fini)');
+  ok(poAbandonedQty(po({ lines: [L('p', 10, 1, 4), L('q', 2, 1, 2)], short_closed: '2026-10-30' })) === 6 && poAbandonedQty(po({ lines: [L('p', 10, 1, 4)] })) === 0, 'quantité abandonnée : le reste jamais reçu d\'un bon soldé, 0 sinon');
+  ok(!t({ status: 'received', short_closed: '2026-10-30' } as any, 'ordered') && !t({ status: 'received', short_closed: '2026-10-30' } as any, 'cancelled'), 'un bon soldé reste définitif');
 }
 
 // ---------- réception ----------

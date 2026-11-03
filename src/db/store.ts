@@ -19,7 +19,7 @@ import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MES
 import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, cleanSpaceList, DEFAULT_STOCK_CATEGORIES, DEFAULT_STOCK_SPACES, newSpaceId, productStorage, purchaseAmount, quantities, STOCK_SPACE_MAX, type MoveDraft, type ProductDraft, type StockSpace } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
-import { canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
+import { canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_RECURRING, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -1032,6 +1032,17 @@ export class AppStore {
     if (!old) return { success: false, error: 'missing' };
     if (old.status !== 'draft' && old.status !== 'cancelled') return { success: false, error: 'status' };
     this.purchases = this.purchases.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+  /** Solde le reste d'un bon commandé reçu en partie : il devient « Reçu » (définitif). Aucune dépense ni aucun mouvement de stock n'est créé. */
+  public closePurchaseShort(id: string, date: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
+    const old = this.purchases.find(x => x.id === id);
+    if (!old) return { success: false, error: 'missing' };
+    if (!canCloseShort(old)) return { success: false, error: 'status' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) || String(date) < old.date) return { success: false, error: 'date' };
+    this.purchases = this.purchases.map(x => x.id === id ? { ...x, status: 'received' as const, short_closed: String(date), updated_at: new Date().toISOString() } : x);
     this.notify();
     return { success: true };
   }

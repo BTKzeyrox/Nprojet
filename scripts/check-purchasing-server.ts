@@ -144,6 +144,25 @@ const ordered = (lines = [L('p-1', 10, 500), L('p-2', 4, 1200)], extra: any = {}
   tr(can, { status: 'ordered' }, false, 'annulé → commandé refusé', 'final');
   ok(cleanPurchase(mk({ note: 'x' }), clone(draft), 'a', LATER).save.created_at === '2026-10-01T00:00:00.000Z', 'modification : date de création conservée');
 
+  // « Solder le reste » (M23.1) : bon reçu en partie dont le reste est abandonné
+  const SC = '2026-10-30';
+  tr(part, { status: 'received', short_closed: SC }, true, 'solder le reste : bon reçu en partie → reçu soldé accepté');
+  ok(cleanPurchase({ ...clone(part), status: 'received', short_closed: SC }, clone(part), 'a', LATER).save.short_closed === SC, 'solder : la date du solde est gardée');
+  tr(part, { status: 'received' }, false, 'reçu sans date de solde alors que tout n\'est pas reçu : refusé', 'status');
+  tr(part, { status: 'ordered', short_closed: SC }, false, 'date de solde sur un bon encore commandé : refusée', 'status');
+  tr(o, { status: 'received', short_closed: SC }, false, 'solder un bon sans aucune réception : refusé (on l\'annule à la place)', 'status');
+  tr(part, { status: 'received', short_closed: '2026-09-01' }, false, 'date de solde avant la commande : refusée', 'status');
+  tr(part, { status: 'received', short_closed: 'pas une date' }, false, 'date de solde illisible : refusée', 'status');
+  tr(part, { status: 'received', short_closed: SC, lines: [L('p-1', 10, 500, 2), L('p-2', 4, 1200)] }, false, 'solder en faisant reculer une quantité reçue : refusé', 'received');
+  tr(part, { status: 'received', short_closed: SC, lines: [L('p-1', 10, 600, 4), L('p-2', 4, 1200)] }, false, 'solder en changeant le prix d\'une ligne déjà reçue : refusé', 'frozen');
+  tr(o, { status: 'received', short_closed: SC, lines: [L('p-1', 10, 500, 10), L('p-2', 4, 1200, 4)] }, false, 'tout reçu avec une date de solde : refusé (rien à solder)', 'status');
+  const soldOut = { ...clone(part), status: 'received', short_closed: SC };
+  tr(soldOut, { note: 'merci' }, true, 'bon soldé : la note reste modifiable');
+  tr(soldOut, { short_closed: '2026-10-31' }, false, 'bon soldé : la date du solde ne change plus', 'final');
+  const noSc = { ...clone(soldOut) }; delete (noSc as any).short_closed;
+  ok(!cleanPurchase(noSc, clone(soldOut), 'a', LATER).ok, 'bon soldé : on ne peut pas enlever le solde');
+  tr(soldOut, { status: 'ordered' }, false, 'bon soldé : ne repasse jamais à « commandé » (refusé : une date de solde exige l\'état reçu)', 'status');
+  tr(soldOut, { status: 'ordered', short_closed: undefined }, false, 'bon soldé : même sans date de solde, il ne repasse pas à « commandé »', 'final');
   // les règles du site (canTransition, planReceipt) donnent le même verdict que le serveur
   const poOf = (x: any): PurchaseOrder => ({ ...x }) as PurchaseOrder;
   const cmp: [any, string][] = [[draft, 'ordered'], [draft, 'cancelled'], [draft, 'received'], [o, 'cancelled'], [o, 'received'], [o, 'draft'], [part, 'cancelled'], [rec, 'ordered'], [can, 'ordered']];

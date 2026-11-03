@@ -570,13 +570,14 @@ Règles pour toutes les étapes serveur : sauvegarde (`select public.df_take_bac
 - **P4 étape 1** : alerte « achat dont la dépense ne correspond plus à la réception » (`suppliers.po-cash-mismatch`, 2026-11-02). Limite : un vieux bon reçu avant que les dépenses citent `po_id` peut être signalé à tort.
 - **F2 (constat)** : `df_cancel_invoice` crée toujours un avoir TOTAL (toutes les lignes, le total de la facture) et refuse (`has_payments`) dès qu'un paiement existe.
 
-### M23.1. Solder le reste d'un bon de commande (P2) (M, serveur + site) **[Claude]**
+### M23.1. Solder le reste d'un bon de commande (P2) (M, serveur + site) **FAIT le 2026-11-03, non testé à l'écran** (détail en bas de cette étape)
 - But : un bon livré en partie dont le reste ne viendra jamais ne reste plus « Commandé » et « en retard » pour toujours.
 - Constat : `cleanPurchase` (serveur) refuse `status = received` si une ligne n'est pas entièrement reçue ; un bon commandé ne s'annule plus dès qu'une quantité est reçue.
 - Conception proposée : un champ `short_closed` (vrai) sur le bon. `received` est accepté si tout est reçu OU si `short_closed` est vrai et au moins une quantité est reçue. Le bon devient définitif (comme un bon reçu). Rien n'est créé en caisse ni en stock : on ne solde que le reste jamais livré. Le champ reste dans le bon (jamais effacé) ; une phrase « Soldé le AAAA-MM-JJ » s'affiche.
 - Étapes : (1) type `PurchaseOrder` + `purchasing.ts` (`canTransition`, nouvelle fonction `canCloseShort`) ; (2) `cleanPurchase` du serveur (même règle, garder `short_closed` à la sauvegarde) ; (3) `store.ts` : `closePurchaseShort(id)` ; (4) bouton « Solder le reste » avec confirmation sur un bon commandé en partie reçu ; (5) `isLate` : un bon reçu n'est jamais en retard (déjà le cas) ; (6) contrôles : `check:purchasing`, `check:purchasing-server` (mêmes cas client et serveur), alerte `po-cash-mismatch` inchangée (elle se base sur les quantités reçues) ; (7) fiche Achats du guide.
 - Réussite : un bon reçu à 4 sur 10 peut être soldé ; il disparaît des retards ; la caisse et le stock ne bougent pas ; un bon sans aucune réception ne peut pas être « soldé » (il s'annule).
 - Risque : faible. Serveur à redéployer (sauvegarde avant).
+- **Fait** : champ `short_closed` (date) ; `canCloseShort` et `poAbandonedQty` (`purchasing.ts`) ; `closePurchaseShort` (`store.ts`) ; bouton « Solder le reste » avec confirmation et note « Soldé le … » (`PurchaseOrdersSection.tsx`) ; règle serveur dans `cleanPurchase` (date de solde obligatoire, au moins une quantité reçue, jamais sur un bon sans réception ni entièrement reçu, définitif ensuite). `check:purchasing` 92/92, `check:purchasing-server` 161/161 (21 cas ajoutés), `check:site-map`, `check:guide`, build OK. Déploiement et retour en arrière : voir la ligne « M23.1 déployé » plus bas.
 
 ### M23.2. Prix réel à la réception (P1) (M, site seulement) **[Claude]**
 - But : saisir le prix réellement payé à la livraison, avec la trace de l'écart.

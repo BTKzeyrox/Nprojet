@@ -133,6 +133,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Un fournisseur qui a servi ne se supprime pas : on l'archive.
   - Le stock n'est jamais saisi à la main : l'inventaire crée des ajustements.
   - Budgets (dans Finances) : attention à 80 % du plafond du mois, dépassé au-dessus de 100 %.
+  - « Solder le reste » clôt un bon reçu en partie : le reste jamais livré est abandonné, sans rien ajouter en caisse ni en stock.
   - Si la dépense « Achats » d'une réception est modifiée ou supprimée dans Finances, la Santé du site le signale.
 - **Dans le code** : `src/views/admin/PurchasingPage.tsx`, `src/views/admin/SuppliersSection.tsx`, `src/views/admin/PurchaseOrdersSection.tsx`, `src/views/admin/InventorySection.tsx`, `src/views/admin/BudgetsCard.tsx`
 

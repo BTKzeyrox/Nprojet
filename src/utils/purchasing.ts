@@ -84,6 +84,10 @@ export const poReceivedValue = (po: Pick<PurchaseOrder, 'lines'>): number => po.
 export const remainingQty = (l: PurchaseLine): number => round2(Math.max(0, l.qty - l.received_qty));
 export const poIsFullyReceived = (po: Pick<PurchaseOrder, 'lines'>): boolean => po.lines.length > 0 && po.lines.every(l => remainingQty(l) === 0);
 export const poHasReceipt = (po: Pick<PurchaseOrder, 'lines'>): boolean => po.lines.some(l => l.received_qty > 0);
+/** « Solder le reste » : bon commandé, déjà reçu en partie, dont le reste n'est pas arrivé. Sans aucune réception, on annule le bon à la place. */
+export const canCloseShort = (po: Pick<PurchaseOrder, 'status' | 'lines'>): boolean => po.status === 'ordered' && poHasReceipt(po) && !poIsFullyReceived(po);
+/** Quantité abandonnée d'un bon soldé (jamais reçue). */
+export const poAbandonedQty = (po: Pick<PurchaseOrder, 'lines' | 'short_closed'>): number => (po.short_closed ? round2(po.lines.reduce((n, l) => n + remainingQty(l), 0)) : 0);
 
 /** Prochain numéro « BC-0001 » : le plus grand numéro existant + 1. */
 export function nextPurchaseRef(existing: Pick<PurchaseOrder, 'ref'>[]): string {
