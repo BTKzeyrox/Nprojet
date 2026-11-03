@@ -629,3 +629,4 @@ Règles pour toutes les étapes serveur : sauvegarde (`select public.df_take_bac
 - M23.6 : retour fournisseur ou correction de réception ?
 - M23.7 : paiement des fournisseurs à la réception ou plus tard sur facture ?
 - Défaut si pas de réponse : M23.1 et M23.2 d'abord ; M23.3 avec le choix A ; le reste attend.
+- [x] (2026-11-03) **M23.1 déployé** : sauvegarde n° 92 avant ; `df-api` **version 69 = commit `87ab1f4`** (seul écart avec la v68 : 12 lignes ajoutées et 4 modifiées dans `cleanPurchase`). Retour en arrière = redéployer `df-api` sur le commit `a83cad1` (import `https://raw.githubusercontent.com/BTKzeyrox/Nprojet/a83cad1/supabase/functions/df-api/index.ts`), c'était la v68 (A2 ; la v67 est le commit `f612f20`). Les journaux montrent que la v68 a servi 257 requêtes (2 nov. 19 h → 3 nov. 9 h 51) ; la v69 en avait déjà 3 (les codes de réponse ne sont pas lisibles dans ces journaux). À essayer par BTK : un bon commandé reçu en partie → « Solder le reste ».
