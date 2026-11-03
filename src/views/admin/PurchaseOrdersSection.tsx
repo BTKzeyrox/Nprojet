@@ -10,7 +10,7 @@ import { useApp } from '../../context/AppContext';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
-import { canCloseShort, isLate, lineTotal, planReceipt, poAbandonedQty, poHasReceipt, poReceivedValue, poTotal, remainingQty } from '../../utils/purchasing';
+import { applyReceiptPrices, canCloseShort, isLate, lineTotal, planReceipt, poAbandonedQty, poHasReceipt, poReceivedValue, poTotal, remainingQty } from '../../utils/purchasing';
 import type { PurchaseOrder, PurchaseStatus } from '../../types';
 
 // Section « Bons de commande » de la page Achats (responsable seulement).
@@ -18,7 +18,7 @@ import type { PurchaseOrder, PurchaseStatus } from '../../types';
 
 interface LineEd { product_id: string; qty: string; cost: string }
 interface Editor { id?: string; supplier: string; date: string; expected: string; note: string; lines: LineEd[] }
-interface Receive { id: string; date: string; qty: Record<string, string>; expense: boolean }
+interface Receive { id: string; date: string; qty: Record<string, string>; cost: Record<string, string>; expense: boolean }
 
 const field = 'w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm text-white';
 const card = 'bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3';
@@ -88,11 +88,18 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
   const act = (fn: () => { success: boolean; error?: string }) => { const r = fn(); if (!r.success) setError(say(r.error)); else { setError(''); setConfirmId(null); } };
 
   const recvOrder = recv ? orders.find(o => o.id === recv.id) : undefined;
-  const preview = useMemo(() => (recvOrder && recv ? planReceipt(recvOrder, Object.fromEntries(Object.entries(recv.qty).filter(([, v]) => String(v).trim() !== ''))) : null), [recvOrder, recv]);
-  const startReceive = (o: PurchaseOrder) => { setError(''); setConfirmId(null); setRecv({ id: o.id, date: today, qty: Object.fromEntries(o.lines.map(l => [l.product_id, String(remainingQty(l))])), expense: true }); };
+  const preview = useMemo(() => {
+    if (!recvOrder || !recv) return null;
+    const q = Object.fromEntries(Object.entries(recv.qty).filter(([, v]) => String(v).trim() !== ''));
+    const a = applyReceiptPrices(recvOrder, q, recv.cost); // prix réel de la livraison (première réception d'une ligne)
+    if (!a.ok) return { ok: false as const, error: a.error as string };
+    const p = planReceipt({ ...recvOrder, lines: a.lines }, q);
+    return p.ok ? { ...p, changes: a.changes } : p;
+  }, [recvOrder, recv]);
+  const startReceive = (o: PurchaseOrder) => { setError(''); setConfirmId(null); setRecv({ id: o.id, date: today, qty: Object.fromEntries(o.lines.map(l => [l.product_id, String(remainingQty(l))])), cost: Object.fromEntries(o.lines.filter(l => l.received_qty === 0).map(l => [l.product_id, String(l.unit_cost_ar)])), expense: true }); };
   const doReceive = () => {
     if (!recv) return;
-    const r = db.receivePurchase(recv.id, Object.fromEntries(Object.entries(recv.qty).filter(([, v]) => String(v).trim() !== '')), { date: recv.date, withExpense: recv.expense });
+    const r = db.receivePurchase(recv.id, Object.fromEntries(Object.entries(recv.qty).filter(([, v]) => String(v).trim() !== '')), { date: recv.date, withExpense: recv.expense, prices: recv.cost });
     if (!r.success) { setError(say(r.error)); return; }
     setOpenId(recv.id); setRecv(null); setError('');
   };
@@ -235,11 +242,17 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
             {recvOrder.lines.filter(l => remainingQty(l) > 0).map(l => (
               <label key={l.product_id} className="block text-xs text-slate-400">{prod(l.product_id)?.name || '—'}{sp(prod(l.product_id))} · {t('reste', 'left')} {remainingQty(l)} {prod(l.product_id)?.unit || ''}
                 <input inputMode="decimal" value={recv.qty[l.product_id] ?? ''} onChange={e => setRecv({ ...recv, qty: { ...recv.qty, [l.product_id]: e.target.value } })} className={`${field} mt-1`} />
+                {l.received_qty === 0 ? (
+                  <span className="block mt-1">{t('Prix réel de la livraison (Ar par unité) · prix du bon :', 'Actual delivery price (Ar per unit) · order price:')} {l.unit_cost_ar}
+                    <input inputMode="numeric" value={recv.cost[l.product_id] ?? ''} onChange={e => setRecv({ ...recv, cost: { ...recv.cost, [l.product_id]: e.target.value } })} className={`${field} mt-1`} />
+                  </span>
+                ) : <span className="block mt-1 text-[11px] text-slate-500">{t('Prix déjà figé à la première réception :', 'Price already fixed at the first receipt:')} {l.unit_cost_ar} Ar</span>}
               </label>
             ))}
             <label className="block text-xs text-slate-400">{t('Date de réception', 'Receipt date')}<input type="date" value={recv.date} onChange={e => setRecv({ ...recv, date: e.target.value })} className={`${field} mt-1`} /></label>
             {preview && preview.ok && (
               <div className="rounded-lg bg-slate-900/60 border border-slate-800 p-2 space-y-1 text-sm text-slate-200">
+                {preview.changes.length > 0 && <div className="text-amber-200">{t('Prix modifié : ', 'Price changed: ')}{preview.changes.map(c => `${prod(c.product_id)?.name || '—'} ${c.from} → ${c.to} Ar`).join(' · ')}</div>}
                 <div>{t(`${preview.plan.moves.length} entrée${preview.plan.moves.length > 1 ? 's' : ''} de stock seront créées.`, `${preview.plan.moves.length} stock entr${preview.plan.moves.length > 1 ? 'ies' : 'y'} will be created.`)}</div>
                 {preview.plan.amount > 0 ? (
                   <label className="flex items-start gap-2 min-h-[44px]"><input type="checkbox" checked={recv.expense} onChange={e => setRecv({ ...recv, expense: e.target.checked })} className="mt-1 w-5 h-5" /><span>{t('Créer aussi UNE dépense « Achats » de', 'Also create ONE “Achats” expense of')} <b className="text-amber-300">{ar(preview.plan.amount)}</b></span></label>

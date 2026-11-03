@@ -103,6 +103,29 @@ export function canTransition(po: Pick<PurchaseOrder, 'status' | 'lines'>, to: P
   return false; // Reçu et Annulé sont définitifs
 }
 
+export interface PriceChange { product_id: string; from: number; to: number }
+/**
+ * Prix réel de la livraison (M23.2). Remplace le prix d'une ligne seulement si c'est sa PREMIÈRE réception (rien reçu avant) et qu'on en reçoit maintenant :
+ * le serveur gèle le prix dès qu'une quantité est reçue. Un prix vide ou identique ne change rien ; un prix illisible, négatif ou trop grand refuse tout.
+ */
+export function applyReceiptPrices(po: Pick<PurchaseOrder, 'lines'>, received: Record<string, string | number>, prices: Record<string, string | number> | undefined): { ok: true; lines: PurchaseLine[]; changes: PriceChange[] } | { ok: false; error: 'cost' } {
+  const changes: PriceChange[] = [];
+  const lines = po.lines.map(l => {
+    const raw = prices?.[l.product_id];
+    if (blank(raw) || l.received_qty > 0) return { ...l };
+    const got = received[l.product_id];
+    if (blank(got) || !numIn(got) || !(parseAmount(got as string | number) > 0)) return { ...l };
+    if (!numIn(raw)) { changes.push({ product_id: l.product_id, from: l.unit_cost_ar, to: NaN }); return { ...l }; }
+    const p = Math.round(parseAmount(raw as string | number));
+    if (!Number.isFinite(p) || p < 0 || p > MAX_AMOUNT) { changes.push({ product_id: l.product_id, from: l.unit_cost_ar, to: NaN }); return { ...l }; }
+    if (p === l.unit_cost_ar) return { ...l };
+    changes.push({ product_id: l.product_id, from: l.unit_cost_ar, to: p });
+    return { ...l, unit_cost_ar: p };
+  });
+  if (changes.some(c => !Number.isFinite(c.to))) return { ok: false, error: 'cost' };
+  return { ok: true, lines, changes };
+}
+
 export interface ReceiptPlan {
   moves: { product_id: string; qty: number; unit_cost_ar: number }[]; // entrées de stock à créer (une par ligne reçue)
   amount: number; // une seule dépense « Achats » pour toute la réception (somme des lignes)

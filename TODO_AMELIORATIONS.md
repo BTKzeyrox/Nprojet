@@ -63,7 +63,7 @@ Lecture des règles (`invoices.ts`, `purchasing.ts`) et du serveur. Les écrans 
   - Constaté : `df_pay_invoice` accepte n'importe quelle date de paiement. Fait : règle `accounting.cash-closed` (« à voir ») : une ligne de caisse datée dans un mois clos, sans écriture, est signalée (rouvrir le mois avec un motif, générer, reclore). `check:health-accounting` 46/46. Site seulement, non testé à l'écran.
 
 ## Achats
-- [ ] **P1. Prix réel à la réception.** Aujourd'hui la dépense = quantité reçue × prix commandé (lignes figées). Permettre de saisir le prix réel de la livraison, avec trace de l'écart. Serveur à redéployer.
+- [x] (2026-11-03, voir Module 23, M23.2) **P1. Prix réel à la réception.** Aujourd'hui la dépense = quantité reçue × prix commandé (lignes figées). Permettre de saisir le prix réel de la livraison, avec trace de l'écart. Serveur à redéployer.
 - [x] (2026-11-03, voir Module 23, M23.1) **P2. « Solder le reste ».** Un bon reçu en partie ne s'annule plus et reste « Commandé » et « en retard » pour toujours. Ajouter une action qui clôt le bon sans livrer le reste (état final, tracé). Serveur à redéployer.
 - [ ] **P3. Réception définitive, pas de retour fournisseur.** Une erreur de quantité se corrige par l'inventaire mais la dépense « Achats » reste. À décider avec BTK : retour fournisseur ou correction de réception.
 - [ ] **P4. Dépense d'achat modifiable.** (étape 1 faite le 2026-11-02, étape 2 à faire) Seuls les paiements de factures sont verrouillés ; la ligne « Achats » liée à un bon de commande (`po_id`) peut être modifiée ou supprimée dans Finances. Étape 1 (site seulement) : alerte dans la Santé du site quand le montant d'une dépense ne correspond plus à la réception. Étape 2 (serveur) : verrouiller ces lignes.

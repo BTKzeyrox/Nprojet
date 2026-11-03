@@ -19,7 +19,7 @@ import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MES
 import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, cleanSpaceList, DEFAULT_STOCK_CATEGORIES, DEFAULT_STOCK_SPACES, newSpaceId, productStorage, purchaseAmount, quantities, STOCK_SPACE_MAX, type MoveDraft, type ProductDraft, type StockSpace } from '../utils/stock';
 import { todayMada } from '../utils/stats';
 import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
-import { canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
+import { applyReceiptPrices, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
 import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
 import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_RECURRING, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
 import { companyForEmployee, readCompany } from '../utils/companyRules';
@@ -1051,11 +1051,16 @@ export class AppStore {
    * Crée une entrée de stock par ligne reçue (avec le bon et le fournisseur) et, si `withExpense`, UNE dépense « Achats » pour toute la réception.
    * Le serveur doit déjà connaître le bon « commandé » : sinon 'unsynced' (réessayer dans quelques secondes).
    */
-  public receivePurchase(id: string, received: Record<string, string | number>, opts: { date: string; withExpense?: boolean }): { success: boolean; error?: string; cashId?: string } {
+  public receivePurchase(id: string, received: Record<string, string | number>, opts: { date: string; withExpense?: boolean; prices?: Record<string, string | number> }): { success: boolean; error?: string; cashId?: string } {
     if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
     const po = this.purchases.find(x => x.id === id);
     if (!po) return { success: false, error: 'missing' };
-    const r = planReceipt(po, received);
+    // Prix réel de la livraison (première réception d'une ligne seulement) : la ligne du bon prend ce prix avant le calcul
+    const pr = opts.prices ? applyReceiptPrices(po, received, opts.prices) : null;
+    if (pr && !pr.ok) return { success: false, error: pr.error };
+    const priced = pr && pr.ok ? { ...po, lines: pr.lines } : po;
+    const changes = pr && pr.ok ? pr.changes : [];
+    const r = planReceipt(priced, received);
     if (!r.ok) return { success: false, error: r.error };
     if (!this.demo) {
       let seen: string | undefined;
@@ -1071,7 +1076,7 @@ export class AppStore {
     const cashId = wantCash ? `cash-${rnd()}` : undefined;
     if (cashId) this.cash = [{ id: cashId, ...dv.clean, amount_ar: r.plan.amount, note: `Bon ${po.ref} reçu`, po_id: po.id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
     const newMoves: StockMove[] = r.plan.moves.map((m, i) => ({
-      id: `mv-${rnd()}${i}`, product_id: m.product_id, type: 'in' as const, qty: m.qty, date, note: `Bon ${po.ref}`,
+      id: `mv-${rnd()}${i}`, product_id: m.product_id, type: 'in' as const, qty: m.qty, date, note: `Bon ${po.ref}${changes.find(c => c.product_id === m.product_id) ? ` · prix ${changes.find(c => c.product_id === m.product_id)!.from} → ${changes.find(c => c.product_id === m.product_id)!.to} Ar` : ''}`,
       ...(m.unit_cost_ar > 0 ? { unit_cost_ar: m.unit_cost_ar } : {}), ...(cashId ? { cash_id: cashId } : {}), supplier_id: po.supplier_id, po_id: po.id,
       created_by: this.currentUser!.id, created_at: now, updated_at: now,
     }));

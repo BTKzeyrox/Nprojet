@@ -579,13 +579,14 @@ Règles pour toutes les étapes serveur : sauvegarde (`select public.df_take_bac
 - Risque : faible. Serveur à redéployer (sauvegarde avant).
 - **Fait** : champ `short_closed` (date) ; `canCloseShort` et `poAbandonedQty` (`purchasing.ts`) ; `closePurchaseShort` (`store.ts`) ; bouton « Solder le reste » avec confirmation et note « Soldé le … » (`PurchaseOrdersSection.tsx`) ; règle serveur dans `cleanPurchase` (date de solde obligatoire, au moins une quantité reçue, jamais sur un bon sans réception ni entièrement reçu, définitif ensuite). `check:purchasing` 92/92, `check:purchasing-server` 161/161 (21 cas ajoutés), `check:site-map`, `check:guide`, build OK. Déploiement et retour en arrière : voir la ligne « M23.1 déployé » plus bas.
 
-### M23.2. Prix réel à la réception (P1) (M, site seulement) **[Claude]**
+### M23.2. Prix réel à la réception (P1) (M, site seulement) **FAIT le 2026-11-03, non testé à l'écran**
 - But : saisir le prix réellement payé à la livraison, avec la trace de l'écart.
 - Constat important : le serveur AUTORISE déjà de changer le prix d'une ligne qui n'a encore rien reçu (`cleanPurchase`, bon « Commandé ») ; il le gèle seulement une fois qu'une quantité est reçue (`frozen`). Aucun changement serveur n'est donc nécessaire.
 - Conception : à la réception, un champ « Prix réel » par ligne (prérempli avec le prix du bon). Si le prix change, le site met d'abord à jour le prix de la ligne puis fait la réception. Limite écrite à l'écran : possible seulement pour la première réception d'une ligne.
 - Étapes : (1) formulaire de réception (`PurchaseOrdersSection.tsx`) ; (2) `store.ts` : mise à jour du prix puis `receivePurchase`, avec le même ordre de synchronisation que d'habitude (`unsynced` géré) ; (3) note automatique « Prix 100 → 110 Ar » dans le mouvement de stock ; (4) contrôles `check:purchasing` ; (5) guide.
 - Réussite : un bon commandé à 100 Ar reçu à 110 donne une dépense et un coût de stock à 110 ; la 2e réception d'une ligne déjà reçue garde le prix figé.
 - Risque : faible à moyen (ordre de synchro). Pas de redéploiement.
+- **Fait** : `applyReceiptPrices` (`purchasing.ts`, pure : prix pris seulement pour une ligne reçue maintenant et jamais reçue avant ; prix illisible, négatif ou trop grand = tout refusé, code `cost`) ; `receivePurchase` accepte `prices` et note « prix 100 → 110 Ar » dans le mouvement de stock ; formulaire de réception avec « Prix réel de la livraison » (prérempli) et ligne « Prix modifié : … » dans l'aperçu ; prix déjà figé affiché pour les lignes reçues en partie. `check:purchasing` 102/102 (10 cas ajoutés), `check:site-map`, `check:guide`, build OK. Aucun changement serveur (la v69 accepte déjà ce changement). Limite : la dépense « Achats » et le coût du stock utilisent le prix réel, mais un bon déjà reçu en partie ne peut plus changer de prix.
 
 ### M23.3. Annuler un paiement saisi par erreur (F1) (L, SQL + serveur + site + comptabilité) **[Claude] après choix de BTK**
 - But : une facture avec un mauvais paiement doit pouvoir être corrigée, sans jamais supprimer de ligne.

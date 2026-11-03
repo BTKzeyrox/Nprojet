@@ -1,9 +1,10 @@
 // Contrôle des règles pures du module 4 (fournisseurs, bons de commande, réception, inventaire, budgets, statistiques), sans réseau.
 // Lancer : npm run check:purchasing
 import {
-  budgetRows, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, checkSupplierDraft, inventoryAdjustments, inventoryRows, isLate, lineTotal, nextPurchaseRef,
+  applyReceiptPrices, budgetRows, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, checkSupplierDraft, inventoryAdjustments, inventoryRows, isLate, lineTotal, nextPurchaseRef,
   planReceipt, poAbandonedQty, poHasReceipt, poIsFullyReceived, poReceivedValue, poTotal, remainingQty, supplierRanking, topPurchased,
 } from '../src/utils/purchasing';
+import { readFileSync } from 'node:fs';
 import type { CashEntry, Product, PurchaseOrder, StockMove, Supplier } from '../src/types';
 
 let fails = 0, n = 0;
@@ -47,6 +48,27 @@ const po = (over: Partial<PurchaseOrder> = {}): PurchaseOrder => ({ id: 'po-1', 
   ok(remainingQty(L('p', 5, 1, 2)) === 3 && remainingQty(L('p', 5, 1, 5)) === 0 && poIsFullyReceived(po({ lines: [L('p', 2, 1, 2)] })) && !poIsFullyReceived(po()) && !poIsFullyReceived(po({ lines: [] })), 'reste à recevoir et bon entièrement reçu');
   ok(poHasReceipt(po({ lines: [L('p', 2, 1, 0.5)] })) && !poHasReceipt(po()), 'bon avec réception ou non');
   ok(nextPurchaseRef([]) === 'BC-0001' && nextPurchaseRef([{ ref: 'BC-0007' }, { ref: 'BC-0002' }, { ref: 'FA-0099' }, { ref: 'xx' }]) === 'BC-0008' && nextPurchaseRef([{ ref: 'BC-9999' }]) === 'BC-10000', 'numéro suivant : plus grand BC existant + 1, autres ignorés');
+}
+
+// ---------- prix réel à la réception (M23.2) ----------
+{
+  const lines = [L('p', 10, 100, 0), L('q', 5, 200, 2), L('r', 3, 50, 0)];
+  const a = applyReceiptPrices({ lines }, { p: '10', q: '1', r: '' }, { p: '110', q: '999', r: '70' });
+  ok(a.ok && a.lines[0].unit_cost_ar === 110 && a.changes.length === 1 && a.changes[0].from === 100 && a.changes[0].to === 110, 'prix réel : la ligne reçue pour la première fois prend le nouveau prix, avec l\'écart noté');
+  ok(a.ok && a.lines[1].unit_cost_ar === 200, 'prix réel : une ligne déjà reçue en partie garde son prix figé (le serveur le gèle)');
+  ok(a.ok && a.lines[2].unit_cost_ar === 50, 'prix réel : une ligne qu\'on ne reçoit pas maintenant garde son prix');
+  const same = applyReceiptPrices({ lines }, { p: '10' }, { p: '100' });
+  ok(same.ok && same.changes.length === 0, 'prix réel identique au prix du bon : aucun changement');
+  ok(applyReceiptPrices({ lines }, { p: '10' }, undefined).ok && applyReceiptPrices({ lines }, { p: '10' }, { p: '' }).ok, 'prix vide ou absent : aucun changement');
+  ok(!applyReceiptPrices({ lines }, { p: '10' }, { p: 'abc' }).ok && !applyReceiptPrices({ lines }, { p: '10' }, { p: '-5' }).ok && !applyReceiptPrices({ lines }, { p: '10' }, { p: '9999999999999' }).ok, 'prix illisible, négatif ou trop grand : tout est refusé (code « cost »)');
+  const z = applyReceiptPrices({ lines }, { p: '10' }, { p: '0' });
+  ok(z.ok && z.lines[0].unit_cost_ar === 0, 'prix réel à 0 : permis (marchandise offerte), comme à la commande');
+  const comma = applyReceiptPrices({ lines }, { p: '4' }, { p: '12,6' });
+  ok(comma.ok && comma.lines[0].unit_cost_ar === 13, 'prix à virgule : arrondi à l\'Ar, comme le serveur');
+  const priced = a.ok ? planReceipt({ status: 'ordered', lines: a.lines }, { p: '10' }) : null;
+  ok(!!priced && priced.ok && priced.plan.amount === 1100 && priced.plan.moves[0].unit_cost_ar === 110, 'le calcul de réception (dépense et coût de stock) utilise le prix réel : 10 × 110 = 1 100 Ar');
+  const store = readFileSync(new URL('../src/db/store.ts', import.meta.url), 'utf8');
+  ok(/applyReceiptPrices\(po, received, opts\.prices\)/.test(store) && /planReceipt\(priced, received\)/.test(store), 'magasin de données : la réception passe par les prix réels avant le calcul');
 }
 
 // ---------- états ----------
