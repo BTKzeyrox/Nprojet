@@ -42,6 +42,6 @@ const login = readFileSync('src/views/LoginView.tsx', 'utf8'), card = readFileSy
 ok(/data-access-request/.test(login) && /axReason\.trim\(\)\.length < 5/.test(login) && /canRequestAccess/.test(login) && /axReq\?\.status === 'pending'/.test(login), 'connexion : formulaire avec raison obligatoire, une demande en attente affichée');
 ok(/status === 'refused'/.test(login) && /axReq\.reason/.test(login), 'connexion : le motif du refus est montré');
 ok(/data-access-end/.test(card) && /Heure précise/.test(card) && /Fin de ses horaires/.test(card) && /Modifier l'heure de fin/.test(card) && /decision: 'refuse', reason/.test(card), 'responsable : fin de vacation par défaut, durées, heure précise, modifier, refuser avec motif');
-ok(/access/.test(pend) && /AccessRequestsCard/.test(dash) && /\['access', 'Hors horaires', pend\.access\]/.test(dash), 'Validations : pastille et filtre « Hors horaires »');
+ok(/access/.test(pend) && /AccessRequestsCard/.test(dash) && /id: 'access', label: 'Hors horaires', count: pend\.access/.test(dash), 'Validations : pastille et filtre « Hors horaires »');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

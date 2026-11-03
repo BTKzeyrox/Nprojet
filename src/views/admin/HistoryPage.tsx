@@ -4,6 +4,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, DollarSign, ClipboardList, IdCard, UserPlus, KeyRound } from 'lucide-react';
 import { db } from '../../db/store';
+import { FilterBar } from '../../components/FilterBar';
+import { countBy } from '../../utils/filterBar';
 import { formatCurrencyAr } from '../../utils/formatUtils';
 
 type Kind = 'advance' | 'session' | 'profile' | 'signup' | 'reset';
@@ -67,6 +69,7 @@ export const HistoryPage: React.FC<{ initialOperatorId?: string }> = ({ initialO
   }, [all.length, q, kind, status, operator, period, db.getAdvanceRequests().map(a => a.status).join(), db.getPosts().map(p => p.status).join()]);
 
   const reset = () => { setQ(''); setKind('all'); setStatus('all'); setOperator('all'); setPeriod('all'); setLimit(50); };
+  const kindCounts = countBy(all.map(r => r.kind as 'all' | Kind), ['all', 'advance', 'session', 'profile', 'signup', 'reset'], 'all'); // chiffre sur chaque filtre (toute la liste, sans la recherche)
   const filtered = q || kind !== 'all' || status !== 'all' || operator !== 'all' || period !== 'all';
 
   return (
@@ -80,11 +83,7 @@ export const HistoryPage: React.FC<{ initialOperatorId?: string }> = ({ initialO
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input value={q} onChange={e => { setQ(e.target.value); setLimit(50); }} placeholder="Rechercher : nom, mission, motif…" className="w-full h-9 pl-9 pr-3 bg-[#141e2a] border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500" />
         </div>
-        <div className="flex flex-wrap gap-1.5 text-xs font-mono">
-          {([['all', 'Tout'], ['advance', 'Avances'], ['session', 'Sessions'], ['profile', 'Profils'], ['signup', 'Inscriptions'], ['reset', 'Mots de passe']] as const).map(([k, label]) => (
-            <button key={k} type="button" onClick={() => { setKind(k); setLimit(50); }} className={`px-3 py-1.5 border cursor-pointer ${kind === k ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'}`}>{label}</button>
-          ))}
-        </div>
+        <FilterBar label="Filtrer l'historique" active={kind} onChange={k => { setKind(k); setLimit(50); }} filters={([['all', 'Tout'], ['advance', 'Avances'], ['session', 'Sessions'], ['profile', 'Profils'], ['signup', 'Inscriptions'], ['reset', 'Mots de passe']] as const).map(([k, label]) => ({ id: k, label, count: kindCounts[k] }))} />
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <select aria-label="Statut" className={sel} value={status} onChange={e => { setStatus(e.target.value as any); setLimit(50); }}>
             <option value="all">Tous les statuts</option><option value="pending">En attente</option><option value="accepted">Accepté</option><option value="refused">Refusé</option>

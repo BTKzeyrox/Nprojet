@@ -65,6 +65,7 @@ import { setStatsTab } from '../../utils/statsNav';
 import { setStorageIntent } from '../../utils/storageNav';
 import { setNavTarget } from '../../utils/navTarget';
 import { setValFilterIntent } from '../../utils/navIntent';
+import { FilterBar } from '../../components/FilterBar';
 import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
 
@@ -1101,31 +1102,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <h2 className="font-tactical font-black text-white text-base sm:text-lg">Validations</h2>
             <span className={`text-xs font-mono font-bold ${pend.total > 0 ? 'text-amber-400' : 'text-slate-400'}`}>{pend.total} en attente</span>
           </div>
-          <div className="flex flex-wrap gap-1.5 text-xs font-mono">
-            {([
-              ['all', 'Tout', pend.total],
-              ['starts', 'Débuts', pend.starts],
-              ['ends', 'Fins', pend.ends],
-              ['advances', 'Avances', pend.advances],
-              ['signups', 'Inscriptions', pend.signups],
-              ['resets', 'Mots de passe', pend.resets],
-              ['access', 'Hors horaires', pend.access],
-              ['profiles', 'Profils', pend.profiles],
-            ] as const).map(([key, label, n]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setValFilter(key)}
-                className={`px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
-                  valFilter === key
-                    ? 'bg-emerald-600 border-emerald-500 text-white font-bold'
-                    : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'
-                }`}
-              >
-                {label} {n > 0 ? `(${n})` : ''}
-              </button>
-            ))}
-          </div>
+          <FilterBar label="Filtrer les validations" active={valFilter} onChange={setValFilter} filters={[
+            { id: 'all', label: 'Tout', count: pend.total },
+            { id: 'starts', label: 'Débuts', count: pend.starts },
+            { id: 'ends', label: 'Fins', count: pend.ends },
+            { id: 'advances', label: 'Avances', count: pend.advances },
+            { id: 'signups', label: 'Inscriptions', count: pend.signups },
+            { id: 'resets', label: 'Mots de passe', count: pend.resets },
+            { id: 'access', label: 'Hors horaires', count: pend.access },
+            { id: 'profiles', label: 'Profils', count: pend.profiles },
+          ]} />
           {pend.total === 0 && <div className="text-sm text-slate-400 font-mono">Rien à valider.</div>}
         </div>
       )}

@@ -621,6 +621,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
+| `filterBar.ts` | Barre de filtres commune (module 22, M22.7) : règles pures. Même texte partout : « Nom (3) » ; un filtre à 0 reste visible mais grisé. |
 | `finance.ts` | Finances : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Finances » et par le contrôle `npm run check:finance`. |
 | `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances et de la page Graphiques : les liens des chiffres de l'assistant et des alertes |
 | `financeStats.ts` | Finances : chiffres « vraie entreprise » (sans écran, sans serveur). Utilisés par l'onglet Finances et par `npm run check:finance-stats`. |
@@ -869,6 +870,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `DiagPanel.tsx` | Panneau de diagnostic du défilement de la page, affiché seulement quand l'adresse contient ?diag=1. |
 | `ErrorBoundary.tsx` | Écran de secours quand une page plante : numéro d'incident, boutons Réessayer, vider le cache, copier le rapport et se déconnecter. |
 | `FileViewerModal.tsx` | Visionneuse plein écran de fiches (PDF, texte) avec Retour, Télécharger, Ouvrir à part et Supprimer. |
+| `FilterBar.tsx` | Barre de filtres commune (M22.7) : une rangée de boutons, même style et même place sur toutes les pages, un chiffre sur chacun ; à 0 le filtre reste visible mais grisé. |
 | `FontSizePicker.tsx` | Choix de la taille du texte de l'application, en quatre boutons. |
 | `GoalsPanel.tsx` | Cartes du responsable : objectifs du mois en jauges (GoalsBars), prévision de fin de mois (ForecastCard) et liste des alertes (AlertsList). |
 | `ImportDialog.tsx` | Fenêtre d'import Excel ou CSV : choix du fichier, aperçu ligne par ligne, puis validation pour clients, produits, salariés ou tableau. |
@@ -1061,6 +1063,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:filter-bar` | Contrôle de la barre de filtres commune (M22.7) : règles pures + pages qui l'utilisent. Lancer : npm run check:filter-bar |
 | `npm run check:menu-screen` | Contrôle du menu simplifié à l'écran (M22.6) : branchements (lecture du code) + comportements purs. Lancer : npm run check:menu-screen |
 | `npm run check:menu-groups` | Contrôle du menu fusionné (M22.5) : toutes les anciennes pages ont une place, aucun rôle ne gagne ni ne perd de page. Lancer : npm run check:menu-groups |
 | `npm run check:prefs-sync` | Contrôle : réglages synchronisés par compte (règles identiques site/serveur, plan de synchro, branchements). Lancer : npm run check:prefs-sync |

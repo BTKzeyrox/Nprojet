@@ -1,6 +1,7 @@
 // Section Bons de commande de la page Achats : brouillon, commandé, reçu (total ou partiel), avec entrées de stock à la réception.
 // Utilisé par : PurchasingPage.tsx.
 // Pour modifier : à la réception, les entrées de stock et la dépense « Achats » se créent après confirmation ; un bon commandé est figé. Données : db.getPurchases(), getSuppliers(), getProducts(). Responsable seulement ; textes FR/EN avec t(fr, en).
+import { FilterBar } from '../../components/FilterBar';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -112,11 +113,11 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
           <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 min-w-0"><div className="text-[11px] text-slate-400">{t('Reste à recevoir', 'Left to receive')}</div><div className="text-base font-bold text-sky-300 truncate">{ar(toReceive)}</div></div>
         </div>
         <button type="button" onClick={() => { setError(''); setEditor(emptyEditor()); }} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau bon de commande', 'New purchase order')}</button>
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('Filtrer par état', 'Filter by state')}>
-          <button type="button" role="tab" aria-selected={filter === 'all'} onClick={() => setFilter('all')} className={chip(filter === 'all')}>{t('Tous', 'All')} ({orders.length})</button>
-          {(['draft', 'ordered', 'received', 'cancelled'] as PurchaseStatus[]).map(s => <button key={s} type="button" role="tab" aria-selected={filter === s} onClick={() => setFilter(s)} className={chip(filter === s)}>{lbl(s)} ({count(s)})</button>)}
-          {lateCount > 0 && <button type="button" role="tab" aria-selected={filter === 'late'} onClick={() => setFilter('late')} className={chip(filter === 'late')}>{t('En retard', 'Late')} ({lateCount})</button>}
-        </div>
+        <FilterBar label={t('Filtrer par état', 'Filter by state')} active={filter} onChange={setFilter} filters={[
+          { id: 'all', label: t('Tous', 'All'), count: orders.length },
+          ...(['draft', 'ordered', 'received', 'cancelled'] as PurchaseStatus[]).map(s => ({ id: s as PurchaseStatus | 'all' | 'late', label: lbl(s), count: count(s) })),
+          { id: 'late' as const, label: t('En retard', 'Late'), count: lateCount },
+        ]} />
         {error && !editor && !recv && <div role="alert" className="text-sm text-rose-300">{error}</div>}
         {orders.length === 0 ? (
           <div className="text-sm text-slate-400 py-3 text-center">{t('Aucun bon de commande pour l\'instant. Ajoute d\'abord un fournisseur, puis crée le premier bon.', 'No purchase orders yet. Add a supplier first, then create the first order.')}</div>
