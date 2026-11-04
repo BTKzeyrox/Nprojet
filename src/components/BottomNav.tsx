@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : les listes items, accountantItems et teamLeadItems donnent les pages par rôle ; les pages cachées dans les Conditions sont retirées. Elle se masque quand le clavier est ouvert.
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark, Home, Wallet, Package } from 'lucide-react';
+import { Newspaper, MessageSquare, Calendar, ClipboardCheck, ClipboardList, Menu, Receipt, Building2, Landmark, Home, Wallet, Package, Settings } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { countPending } from '../utils/pendingCount';
@@ -92,7 +92,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAdmin, currentUser, acti
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
   const shownItems = (currentUser?.role === 'accountant' ? accountantItems : currentUser?.role === 'team_lead' ? teamLeadItems : items).filter(it => !isViewHidden(hiddenPages, it.id));
   // Menu simplifié (M22.6) : les entrées de la barre du bas (Actualités, Messages, Missions, Accueil…) à la place des pages seules
-  const ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, clients: Building2, money: Wallet, stock: Package, messages: MessageSquare };
+  const ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, clients: Building2, money: Wallet, stock: Package, messages: MessageSquare, calendar: Calendar, settings: Settings };
   const groups = merged && currentUser ? menuFor(currentUser.role, hiddenPages) : [];
   const mergedShown = bottomEntriesOf(currentUser?.role).map(id => groups.find(g => g.id === id)).filter((g): g is NonNullable<typeof g> => !!g).map(g => ({ id: g.id, label: g.fr, icon: ICON[g.id] || Calendar, badge: g.id === 'messages' ? chatUnread : g.id === 'missions' ? (currentUser?.role === 'team_lead' ? teamPendingPosts(currentUser, db.getUsers(), db.getPosts()).length : pending) : 0 }));
   const activeGroup = merged && currentUser ? locate(currentUser.role, activeView, hiddenPages, getStatsTab())?.group : undefined;

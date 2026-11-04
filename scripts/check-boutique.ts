@@ -11,13 +11,13 @@ ok(parseHidden(b).length === HIDEABLE_MODULES.length - 7, 'tout est caché sauf 
 ok(parseHidden(b).length <= 400 && b.length <= 400, 'la liste tient dans la limite du serveur (400)');
 const ids = (role: string) => menuFor(role, b).map(g => g.id);
 const a = ids('admin');
-ok(['stock', 'clients', 'money', 'messages', 'feed'].every(x => a.includes(x)), 'responsable : Stock, Clients, Argent, Messages, Actualités restent');
+ok(['stock', 'clients', 'money', 'messages', 'calendar', 'feed'].every(x => a.includes(x)), 'responsable : Stock, Clients, Argent, Messages, Actualités restent');
 ok(!a.includes('missions') && !a.includes('home') && !a.includes('charts'), 'responsable : Missions, Accueil, Graphiques cachés (pas de « Missions » avec seulement Statistiques)');
 ok(menuFor('admin', b).every(g => g.tabs.length > 0), 'aucune entrée vide');
 ok(locate('admin', 'stats', b, 'finance') !== null && locate('admin', 'stats', b) === null, 'Argent > Finances reste ; Statistiques des missions disparaît');
 ok(menuFor('admin', b).find(g => g.id === 'money')!.tabs.map(x => x.id).join() === 'finance,treasury,accounting', 'Argent complet');
 ok(locate('admin', 'settings', b) !== null && locate('admin', 'health', b) !== null, 'Réglages et Santé restent');
-ok(menuFor('admin', '').length === 10, 'retiré = les 10 entrées reviennent');
+ok(menuFor('admin', '').length === 12, 'retiré = les 12 entrées reviennent');
 ok(menuFor('admin', 'validations').find(g => g.id === 'missions')!.tabs.some(x => x.id === 'stats'), 'cacher seulement À valider garde Statistiques');
 ok(ids('accountant').every(x => menuFor('accountant', b).find(g => g.id === x)!.tabs.length > 0), 'comptable : pas d\'entrée vide');
 ok(menuFor('employee', b).length > 0, 'opérateur : un menu reste');

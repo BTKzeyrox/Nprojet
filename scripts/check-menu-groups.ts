@@ -7,10 +7,10 @@ const eq = (g: unknown, w: unknown, n: string) => { t++; if (JSON.stringify(g) !
 const ok = (c: boolean, n: string) => eq(!!c, true, n);
 const sorted = (a: string[]) => [...a].sort();
 
-// ---- Responsable : 10 entrées, ≤ 5 onglets, rien ne se perd ----
+// ---- Responsable : 12 entrées (Calendrier et Réglages ont leur propre entrée), ≤ 5 onglets, rien ne se perd ----
 const admin = menuFor('admin');
-eq(admin.length, 10, 'responsable : 10 entrées');
-eq(admin.map(g => g.id), ['home', 'feed', 'missions', 'team', 'clients', 'money', 'stock', 'charts', 'messages', 'control'], 'responsable : ordre des entrées');
+eq(admin.length, 12, 'responsable : 12 entrées');
+eq(admin.map(g => g.id), ['home', 'feed', 'missions', 'team', 'clients', 'money', 'stock', 'charts', 'messages', 'calendar', 'control', 'settings'], 'responsable : ordre des entrées');
 ok(admin.every(g => g.tabs.length >= 1 && g.tabs.length <= MAX_TABS), 'responsable : 1 à 5 onglets par entrée (la rangée tient sur téléphone)');
 ok(admin.find(g => g.id === 'feed')!.tabs.length === 1, 'Actualités reste une entrée à part, seule');
 ok(admin.find(g => g.id === 'charts')!.tabs.length === 1, 'Graphiques est une entrée à part');
@@ -39,14 +39,14 @@ eq(locate('admin', 'constructor'), null, 'constructor → null');
 
 // ---- Comptable : exactement ses pages d'avant ----
 eq(sorted(reachableViews('accountant')), sorted([...ACCOUNTANT_VIEWS]), 'Comptable : mêmes pages qu\'avant (ni plus, ni moins)');
-eq(menuFor('accountant').map(g => g.id), ['feed', 'clients', 'money', 'stock', 'messages', 'control'], 'Comptable : Actualités, Clients, Argent, Stock, Messages, Réglages');
+eq(menuFor('accountant').map(g => g.id), ['feed', 'clients', 'money', 'stock', 'messages', 'settings'], 'Comptable : Actualités, Clients, Argent, Stock, Messages, Réglages');
 eq(menuFor('accountant').find(g => g.id === 'money')!.tabs.map(x => x.id), ['treasury', 'accounting'], 'Comptable : pas « Finances » (elles montrent la paie)');
-eq(menuFor('accountant').find(g => g.id === 'control')!.tabs.map(x => x.id), ['settings'], 'Comptable : seulement ses réglages');
-eq(menuFor('accountant').find(g => g.id === 'control')!.fr, 'Réglages', 'Comptable : l\'entrée s\'appelle Réglages');
+eq(menuFor('accountant').find(g => g.id === 'settings')!.tabs.map(x => x.id), ['settings'], 'Comptable : seulement ses réglages');
+eq(menuFor('accountant').find(g => g.id === 'settings')!.fr, 'Réglages', 'Comptable : l\'entrée s\'appelle Réglages');
 for (const v of ['dashboard', 'stats', 'advances', 'storage', 'employees', 'charts', 'health', 'errors', 'calendar', 'hr', 'direction', 'security']) eq(locate('accountant', v), null, `Comptable : « ${v} » refusé`);
 // ---- Chef d'équipe ----
 eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS]), 'Chef d\'équipe : mêmes pages qu\'avant');
-eq(menuFor('team_lead').map(g => g.id), ['feed', 'missions', 'messages', 'control'], 'Chef d\'équipe : Actualités, Missions, Messages, Réglages');
+eq(menuFor('team_lead').map(g => g.id), ['feed', 'missions', 'messages', 'settings'], 'Chef d\'équipe : Actualités, Missions, Messages, Réglages');
 eq(menuFor('team_lead').find(g => g.id === 'missions')!.tabs.map(x => x.id), ['validations'], 'Chef d\'équipe : seulement À valider');
 for (const v of ['clients', 'invoices', 'treasury', 'advances', 'employees', 'history', 'grid', 'charts']) eq(locate('team_lead', v), null, `Chef d'équipe : « ${v} » refusé`);
 // ---- Opérateur : vue simple inchangée ----
@@ -64,11 +64,11 @@ ok(menuFor('admin', 'clients').find(g => g.id === 'clients')!.tabs.map(x => x.id
 eq(menuFor('admin', 'clients,invoices').some(g => g.id === 'clients'), false, 'toutes les pages d\'une entrée cachées : l\'entrée disparaît (pas d\'entrée vide)');
 eq(menuFor('admin', 'stats').find(g => g.id === 'money')!.tabs.map(x => x.id), ['treasury', 'accounting'], 'Statistiques cachées : Finances (qui en fait partie) aussi');
 eq(locate('admin', 'feed', 'feed'), { group: 'feed', tab: 'feed' }, 'Actualités : jamais cachable');
-eq(locate('admin', 'settings', 'settings,health'), { group: 'control', tab: 'settings' }, 'Réglages : jamais cachables');
+eq(locate('admin', 'settings', 'settings,health'), { group: 'settings', tab: 'settings' }, 'Réglages : jamais cachables');
 eq(locate('admin', 'health', 'health'), { group: 'control', tab: 'health' }, 'Santé du site : jamais cachable');
-eq(menuFor('admin', 'nimporte,,quoi').length, 10, 'liste cachée invalide : rien n\'est caché');
-eq(menuFor('admin', undefined).length, 10, 'liste cachée absente');
-eq(menuFor('admin', 42).length, 10, 'liste cachée non texte');
+eq(menuFor('admin', 'nimporte,,quoi').length, 12, 'liste cachée invalide : rien n\'est caché');
+eq(menuFor('admin', undefined).length, 12, 'liste cachée absente');
+eq(menuFor('admin', 42).length, 12, 'liste cachée non texte');
 // tout cacher : il reste au moins Actualités + Contrôle
 const allHidden = HIDEABLE_MODULES.map(m => m.id).join(',');
 ok(menuFor('admin', allHidden).length >= 2 && menuFor('admin', allHidden).some(g => g.id === 'control') && menuFor('admin', allHidden).some(g => g.id === 'feed'), 'tout caché : Actualités et Contrôle restent (jamais de menu vide)');

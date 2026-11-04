@@ -106,7 +106,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('feed');
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
-  const menuMode = useMenuMode(); // menu simplifié (10 entrées + onglets) ou ancien menu, réglage de cet appareil
+  const menuMode = useMenuMode(); // menu simplifié (12 entrées + onglets) ou ancien menu, réglage de cet appareil
   const [, setStatsTick] = useState(0);
   useEffect(() => { const on = () => setStatsTick(n => n + 1); window.addEventListener('df-stats-tab', on); return () => window.removeEventListener('df-stats-tab', on); }, []); // l'onglet de Statistiques change : la rangée d'onglets se remet à jour
   useEffect(() => { const open = () => setActiveView('charts'); window.addEventListener(OPEN_GRAPHS_EVENT, open); return () => window.removeEventListener(OPEN_GRAPHS_EVENT, open); }, []); // « Voir les graphiques » des anciennes pages

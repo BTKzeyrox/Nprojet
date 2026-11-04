@@ -47,6 +47,7 @@ import {
   Table2,
   Landmark,
   LayoutGrid,
+  ShieldCheck,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -145,10 +146,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Réglages', icon: Settings },
   ].filter(it => viewAllowedFor(currentUser.role, it.id) && !isViewHidden(readCompany(db.getSettings().company).modules.hidden, it.id)).map(it => (isAdmin && !it.badge && health.byItem[it.id] ? { ...it, badge: String(health.byItem[it.id].count), tone: 'alert' as const } : it));
 
-  // Menu simplifié (M22.6) : 10 entrées au lieu de 25 ; les anciennes pages sont les onglets de chaque entrée (règles dans utils/menuGroups.ts)
+  // Menu simplifié (M22.6) : 12 entrées au lieu de 25 ; les anciennes pages sont les onglets de chaque entrée (règles dans utils/menuGroups.ts)
   const merged = mergedFor(currentUser.role, useMenuMode());
   const hiddenCsv = readCompany(db.getSettings().company).modules.hidden;
-  const GROUP_ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, team: Users, clients: Building2, money: Wallet, stock: Package, charts: LayoutGrid, messages: MessageSquare, control: Settings };
+  const GROUP_ICON: Record<string, React.ElementType> = { home: Home, feed: Newspaper, missions: ClipboardCheck, team: Users, clients: Building2, money: Wallet, stock: Package, charts: LayoutGrid, messages: MessageSquare, calendar: Calendar, control: ShieldCheck, settings: Settings };
   const sumHealth = (views: string[]) => views.reduce((n, v) => n + (health.byItem[v]?.count || 0), 0);
   const mergedItems = merged ? menuFor(currentUser.role, hiddenCsv).map(g => {
     const views = g.tabs.map(x => (x.statsTab ? 'stats' : x.view));

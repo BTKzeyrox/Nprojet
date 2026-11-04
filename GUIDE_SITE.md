@@ -646,7 +646,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `keyboard.ts` | Clavier virtuel ouvert ? (iPhone : la vue visible rétrécit et la page est poussée vers le haut) |
 | `leaves.ts` | Congés et absences (module 5, M5.2) : règles pures, sans écran ni serveur. |
 | `loginGuard.ts` | Blocage après trop d'essais de connexion (module 16, M16.3) : règles pures, sans écran, sans serveur, sans réseau. |
-| `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 10 entrées avec onglets. |
+| `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 12 entrées (Calendrier et Réglages ont leur propre entrée) avec onglets. |
 | `menuMode.ts` | Menu fusionné (module 22, M22.6) : réglage de CET appareil (« Menu simplifié » ou « Ancien menu ») + dernier onglet retenu par entrée. |
 | `menuNav.ts` | Menu simplifié : aller à une entrée ou à un onglet, et quelles entrées sont dans la barre du bas (téléphone). Pur, sauf le réglage de l'onglet de Statistiques. |
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |

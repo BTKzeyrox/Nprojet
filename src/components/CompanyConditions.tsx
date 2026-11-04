@@ -159,7 +159,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
                 {sec.note && <p className="text-[11px] text-slate-400">{t(sec.note[0], sec.note[1])}</p>}
                 {sec.id === 'modules' && (
                   <div data-menu-mode className="rounded-lg border border-slate-700 p-3 space-y-2">
-                    <p className="text-xs text-slate-300">{t('Menu : 10 entrées avec des onglets (simplifié), ou l\'ancien menu avec toutes les pages. Réglage de CET appareil ; rien n\'est supprimé.', 'Menu: 10 entries with tabs (simplified), or the old menu with every page. Setting of THIS device; nothing is deleted.')}</p>
+                    <p className="text-xs text-slate-300">{t('Menu : 12 entrées avec des onglets (simplifié), ou l\'ancien menu avec toutes les pages. Réglage de CET appareil ; rien n\'est supprimé.', 'Menu: 12 entries with tabs (simplified), or the old menu with every page. Setting of THIS device; nothing is deleted.')}</p>
                     <div className="flex gap-2">
                       {(['merged', 'classic'] as const).map(m => (
                         <button key={m} type="button" aria-pressed={menuMode === m} data-menu-mode-btn={m} onClick={() => setMenuMode(m)} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${menuMode === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{m === 'merged' ? t('Menu simplifié', 'Simplified menu') : t('Ancien menu', 'Old menu')}</button>

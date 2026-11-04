@@ -1,4 +1,4 @@
-// Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 10 entrées avec onglets.
+// Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 12 entrées (Calendrier et Réglages ont leur propre entrée) avec onglets.
 // Rien n'est supprimé : chaque ancienne page est un onglet. Les droits viennent de roles.ts (aucun rôle ne gagne ni ne perd de page).
 // Contrôlé par `npm run check:menu-groups`.
 import { viewAllowedFor } from './roles';
@@ -20,8 +20,10 @@ export const ADMIN_GROUPS: MenuGroup[] = [
   { id: 'money', fr: 'Argent', en: 'Money', tabs: [{ id: 'finance', view: 'stats', statsTab: 'finance', hide: 'stats', fr: 'Finances', en: 'Finances' }, tab('treasury', 'Trésorerie', 'Treasury'), tab('accounting', 'Comptabilité', 'Accounting')] },
   { id: 'stock', fr: 'Stock', en: 'Stock', tabs: [tab('storage', 'Stockage', 'Storage', { hide: 'storage' }), tab('purchasing', 'Achats', 'Purchasing', { hide: 'purchasing' })] },
   { id: 'charts', fr: 'Graphiques', en: 'Charts', tabs: [tab('charts', 'Graphiques', 'Charts', { hide: 'charts' })] },
-  { id: 'messages', fr: 'Messages', en: 'Messages', tabs: [tab('chat', 'Messagerie', 'Messaging', { hide: 'chat' }), tab('calendar', 'Calendrier', 'Calendar', { hide: 'calendar' })] },
-  { id: 'control', fr: 'Contrôle', en: 'Control', tabs: [tab('health', 'Santé du site', 'Site health'), tab('errors', 'Journal des erreurs', 'Error log'), tab('security', 'Sécurité', 'Security'), tab('sheets', 'Tableaux d\'équipe', 'Team tables', { hide: 'sheets' }), tab('settings', 'Réglages', 'Settings')] },
+  { id: 'messages', fr: 'Messages', en: 'Messages', tabs: [tab('chat', 'Messagerie', 'Messaging', { hide: 'chat' })] },
+  { id: 'calendar', fr: 'Calendrier', en: 'Calendar', tabs: [tab('calendar', 'Calendrier', 'Calendar', { hide: 'calendar' })] },
+  { id: 'control', fr: 'Contrôle', en: 'Control', tabs: [tab('health', 'Santé du site', 'Site health'), tab('errors', 'Journal des erreurs', 'Error log'), tab('security', 'Sécurité', 'Security'), tab('sheets', 'Tableaux d\'équipe', 'Team tables', { hide: 'sheets' })] },
+  { id: 'settings', fr: 'Réglages', en: 'Settings', tabs: [tab('settings', 'Réglages', 'Settings')] },
 ];
 export const MAX_TABS = 5;
 
@@ -47,8 +49,7 @@ export function menuFor(role: unknown, hiddenCsv: unknown = ''): MenuGroup[] {
   const hidden = parseHidden(hiddenCsv); // comme aujourd'hui : une page cachée par le responsable l'est pour tous les rôles
   return ADMIN_GROUPS
     .map(g => clone(g, g.tabs.filter(t => viewAllowedFor(role, t.view) && !(t.hide && hidden.includes(t.hide)) && !(t.hideIfAll && t.hideIfAll.every(h => hidden.includes(h))))))
-    .filter(g => g.tabs.length > 0)
-    .map(g => (role !== 'admin' && g.id === 'control' ? { ...g, fr: 'Réglages', en: 'Settings' } : g)); // hors responsable : seulement ses réglages personnels
+    .filter(g => g.tabs.length > 0);
 }
 
 /** Où vit une ancienne vue dans le menu d'un rôle ? `null` = pas accessible à ce rôle (ou vue inconnue). Un lien d'alerte, de l'assistant ou de la cloche passe par ici. */
