@@ -42,6 +42,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   // « Rédiger un message » : modèle + champs ; texte final modifiable avant de le copier (rien n'est envoyé)
   const [composing, setComposing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false); // menu « / » : tous les messages prêts, rangés par groupe
+  const [foldOpen, setFoldOpen] = useState<string[]>([]); // groupes repliés que l'admin a ouverts (ex. « Pages »)
   const [tplId, setTplId] = useState(TEMPLATES[0].id);
   const [vals, setVals] = useState<Partial<Record<Field, string>>>({});
   const [draft, setDraft] = useState<string | null>(null);
@@ -161,8 +162,11 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           <div className={`mb-2 rounded-xl border p-2.5 space-y-2.5 max-h-[55vh] overflow-y-auto overscroll-contain ${L ? 'border-slate-300 bg-slate-50 text-slate-800' : 'border-white/15 bg-white/5 text-slate-100'}`} role="menu" aria-label={t('Messages prêts', 'Ready messages')} data-assistant-menu>
             {menu.map(g => (
               <div key={g.id} data-menu-group={g.id}>
-                <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{l === 'en' ? g.title.en : g.title.fr}</div>
-                <div className="flex flex-wrap gap-1.5">{g.items.map(it => <button key={it.id} type="button" role="menuitem" disabled={busy} onClick={() => pick(it.send)} className={`min-h-[40px] px-3 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${L ? 'border-slate-300 bg-white text-slate-800' : 'border-white/20 bg-white/5 text-slate-100'}`}>{menuLabel(it, l)}</button>)}</div>
+                {(() => { const shut = !!g.collapsed && !foldOpen.includes(g.id); return (<>
+                {g.collapsed ? <button type="button" aria-expanded={!shut} onClick={() => setFoldOpen(v => v.includes(g.id) ? v.filter(x => x !== g.id) : [...v, g.id])} className={`w-full min-h-[40px] flex items-center justify-between text-[11px] font-bold uppercase tracking-wide mb-1 cursor-pointer ${L ? 'text-slate-600' : 'text-slate-300'}`}><span>{l === 'en' ? g.title.en : g.title.fr} ({g.items.length})</span><ChevronRight className={`w-4 h-4 transition-transform ${shut ? '' : 'rotate-90'}`} /></button>
+                  : <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{l === 'en' ? g.title.en : g.title.fr}</div>}
+                {!shut && <div className="flex flex-wrap gap-1.5">{g.items.map(it => <button key={it.id} type="button" role="menuitem" disabled={busy} onClick={() => pick(it.send)} className={`min-h-[40px] px-3 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${L ? 'border-slate-300 bg-white text-slate-800' : 'border-white/20 bg-white/5 text-slate-100'}`}>{menuLabel(it, l)}</button>)}</div>}
+                </>); })()}
               </div>
             ))}
           </div>

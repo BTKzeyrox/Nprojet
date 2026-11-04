@@ -4,10 +4,11 @@
 import { b } from './assistant';
 import { FIGURE_IDS, type Bi, type FigureId } from './siteSnapshot';
 import type { Shortcut, ShortcutId } from './assistantShortcuts';
+import { SITE_MAP } from './siteKnowledge';
 
-export type MenuGroupId = 'summaries' | 'today' | 'money' | 'help';
+export type MenuGroupId = 'summaries' | 'today' | 'money' | 'pages' | 'help';
 export interface MenuItem { id: string; label: Bi; send: Bi; count?: number | null }
-export interface MenuGroup { id: MenuGroupId; title: Bi; items: MenuItem[] }
+export interface MenuGroup { id: MenuGroupId; title: Bi; items: MenuItem[]; collapsed?: boolean } // `collapsed` : replié au départ (le titre se touche pour l'ouvrir)
 
 const item = (id: string, fr: string, en: string, sendFr = fr, sendEn = en, count?: number | null): MenuItem => ({ id, label: b(fr, en), send: b(sendFr, sendEn), ...(count !== undefined ? { count } : {}) });
 
@@ -30,11 +31,16 @@ export const FIGURE_MENU: Record<FigureId, { label: Bi; send: Bi }> = {
 /** Les boutons « chiffre du jour » repris dans le menu (toujours montrés, avec le chiffre quand il y en a un). */
 const TODAY: [ShortcutId, string, string][] = [['validate', 'À valider', 'To validate'], ['advances', 'Avances', 'Advances'], ['overdue', 'Factures en retard', 'Overdue invoices'], ['stock', 'Stock bas', 'Low stock'], ['silent', 'Clients silencieux', 'Silent clients']];
 
+/** Les pages à proposer : toutes celles de la carte du site que l'admin voit (les pages réservées aux employés sont laissées de côté). */
+export type PageLike = { id: string; audience: string; title: Bi };
+const firstTitle = (x: Bi): Bi => b(x.fr.split('/')[0].trim(), x.en.split('/')[0].trim()); // « Mission en cours / Suivi des sessions » → « Mission en cours »
+export const pageItems = (pages: PageLike[] = SITE_MAP as unknown as PageLike[]): MenuItem[] => pages.filter(p => p.audience !== 'employee').map(p => { const t = firstTitle(p.title); return item(`page-${p.id}`, t.fr, t.en, `Explique la page ${t.fr}`, `Explain the page ${t.en}`); });
+
 /**
  * Les groupes du menu. `shortcuts` = la liste du jour (`shortcutList`) pour montrer les chiffres ; sans elle, les libellés restent simples.
  * Un groupe n'est jamais vide.
  */
-export function assistantMenu(shortcuts: Shortcut[] | null = null): MenuGroup[] {
+export function assistantMenu(shortcuts: Shortcut[] | null = null, pages: PageLike[] = SITE_MAP as unknown as PageLike[]): MenuGroup[] {
   const count = (id: ShortcutId): number | undefined => (shortcuts ? (shortcuts.find(s => s.id === id)?.count ?? 0) : undefined);
   return [
     { id: 'summaries', title: b('Résumés', 'Summaries'), items: [
@@ -49,6 +55,7 @@ export function assistantMenu(shortcuts: Shortcut[] | null = null): MenuGroup[] 
       item('money', 'Argent du mois', 'Money this month'),
       ...FIGURE_IDS.map(f => item(`figure-${f}`, FIGURE_MENU[f].label.fr, FIGURE_MENU[f].label.en, FIGURE_MENU[f].send.fr, FIGURE_MENU[f].send.en)),
     ] },
+    { id: 'pages', title: b('Pages : à quoi elles servent', 'Pages: what they are for'), collapsed: true, items: pageItems(pages) },
     { id: 'help', title: b('Aide', 'Help'), items: [item('help', 'Ce que tu sais faire', 'What you can do', 'Aide', 'Help')] },
   ];
 }

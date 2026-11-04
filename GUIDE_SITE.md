@@ -278,7 +278,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
   - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
-  - Dans l'assistant, le bouton « / » du champ ouvre tous les messages prêts (résumés, à traiter, chiffres) : un toucher l'envoie.
+  - Dans l'assistant, le bouton « / » du champ ouvre tous les messages prêts (résumés, à traiter, chiffres, pages) : un toucher l'envoie.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
