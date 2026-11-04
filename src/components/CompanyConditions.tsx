@@ -8,7 +8,7 @@ import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
 import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
-import { HIDEABLE_MODULES, parseHidden, hiddenToCsv } from '../utils/moduleSwitch';
+import { HIDEABLE_MODULES, parseHidden, hiddenToCsv, boutiqueHidden, isBoutique } from '../utils/moduleSwitch';
 import type { CompanySettings } from '../types';
 import { useMenuMode, setMenuMode } from '../utils/menuMode';
 
@@ -164,6 +164,15 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
                       {(['merged', 'classic'] as const).map(m => (
                         <button key={m} type="button" aria-pressed={menuMode === m} data-menu-mode-btn={m} onClick={() => setMenuMode(m)} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${menuMode === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{m === 'merged' ? t('Menu simplifié', 'Simplified menu') : t('Ancien menu', 'Old menu')}</button>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {sec.id === 'modules' && (
+                  <div data-boutique className="rounded-lg border border-slate-700 p-3 space-y-2">
+                    <p className="text-xs text-slate-300">{t('Petit commerce : « Boutique » garde Stock, Clients, Argent et Messages et cache le reste. Rien n\'est supprimé ; « Tout montrer » remet tout.', 'Small shop: "Shop" keeps Stock, Clients, Money and Messages and hides the rest. Nothing is deleted; "Show all" brings everything back.')}</p>
+                    <div className="flex gap-2">
+                      <button type="button" data-boutique-btn="on" aria-pressed={isBoutique(String(raw['modules.hidden']))} onClick={() => set('modules.hidden', boutiqueHidden())} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${isBoutique(String(raw['modules.hidden'])) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{t('Boutique', 'Shop')}</button>
+                      <button type="button" data-boutique-btn="off" aria-pressed={parseHidden(String(raw['modules.hidden'])).length === 0} onClick={() => set('modules.hidden', '')} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${parseHidden(String(raw['modules.hidden'])).length === 0 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{t('Tout montrer', 'Show all')}</button>
                     </div>
                   </div>
                 )}

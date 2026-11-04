@@ -37,3 +37,10 @@ export const parseHidden = (csv: unknown): string[] => {
 export const hiddenToCsv = (ids: string[]): string => parseHidden(ids.join(',')).join(',');
 /** Cette page est-elle cachée par le responsable ? (feed, settings… : toujours visibles) */
 export const isViewHidden = (csv: unknown, view: string): boolean => parseHidden(csv).includes(view);
+
+// Préréglage « Boutique » (M22.9) : un petit commerce garde Stock, Clients, Argent, Messages ; le reste est caché (rien n'est supprimé).
+// Toujours visibles quand même : Actualités, Équipe (Opérateurs), Argent > Trésorerie / Comptabilité, Contrôle (réglages, santé).
+export const BOUTIQUE_KEEP = ['clients', 'invoices', 'storage', 'purchasing', 'stats', 'chat', 'calendar'] as const;
+export const boutiqueHidden = (): string => hiddenToCsv(HIDEABLE_MODULES.map(m => m.id).filter(id => !(BOUTIQUE_KEEP as readonly string[]).includes(id)));
+/** La liste cachée actuelle est-elle exactement « Boutique » ? (même ordre ou non) */
+export const isBoutique = (csv: unknown): boolean => { const a = parseHidden(csv).slice().sort().join(), b = boutiqueHidden().split(',').sort().join(); return a === b; };

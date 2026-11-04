@@ -763,7 +763,7 @@ Site seulement (pas de serveur, pas de base) · une étape testée avant la suiv
 - *Contrôles :* `check:alert-links`, `check:assistant`, `check:site-map`, `check:guide`, `check:health-notif`.
 - *Fini quand :* aucun lien ne mène à une page qui n'existe plus ; les textes d'aide disent les bons noms.
 
-**M22.9 — [ ] Réglage « Boutique »** (taille M)
+**M22.9 — [x] FAIT le 2026-11-04 (« Go » de BTK), en ligne — Réglage « Boutique »** (taille M)
 - *Ce qu'on fait :* dans Réglages > Pages du menu, un préréglage **« Boutique »** qui garde **Stock, Clients, Argent, Messages** et cache le reste, **réversible en un clic**. Rien n'est supprimé, les données restent.
 - *Qui est concerné :* un petit commerce sans employés en mission. Le préréglage existe à côté de « tout montrer ».
 - *Fini quand :* le préréglage s'applique et se retire, et le menu court reste cohérent (pas d'entrée vide).
