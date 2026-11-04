@@ -686,6 +686,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
 | `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
 | `presence.ts` | Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store. |
+| `presenceCount.ts` | « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 90 s. |
 | `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
 | `proofs.ts` | Règle pure (sans écran, sans serveur) : toutes les preuves d'une session, début puis fin, sans doublon. |
@@ -1066,6 +1067,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:presence-count` | « Opérateurs en ligne » de l'accueil (X / Y) : seuls les actifs avec un signe de vie récent comptent. Lancer : npm run check:presence-count |
 | `npm run check:boutique` | Préréglage « Boutique » (M22.9) : le menu court reste cohérent, et se retire. Lancer : npm run check:boutique |
 | `npm run check:menu-links` | Contrôle des liens du menu simplifié (M22.8) : toute page visée par une alerte, la cloche, l'assistant, la Santé du site, un lien de notification ou le guide |
 | `npm run check:filter-bar` | Contrôle de la barre de filtres commune (M22.7) : règles pures + pages qui l'utilisent. Lancer : npm run check:filter-bar |
