@@ -5,12 +5,24 @@ import { b } from './assistant';
 import { FIGURE_IDS, type Bi, type FigureId } from './siteSnapshot';
 import type { Shortcut, ShortcutId } from './assistantShortcuts';
 import { SITE_MAP } from './siteKnowledge';
+import { TEMPLATES } from './messageTemplates';
 
-export type MenuGroupId = 'summaries' | 'today' | 'money' | 'pages' | 'help';
-export interface MenuItem { id: string; label: Bi; send: Bi; count?: number | null }
+export type MenuGroupId = 'summaries' | 'today' | 'money' | 'complete' | 'compose' | 'pages' | 'help';
+/** `send` : part tout de suite · `fill` : le texte se met dans le champ, tu le complètes (nom, pourcentage) · `compose` : ouvre l'éditeur « Rédiger un message » avec ce modèle. */
+export type MenuKind = 'send' | 'fill' | 'compose';
+export interface MenuItem { id: string; label: Bi; send: Bi; kind: MenuKind; tpl?: string; count?: number | null }
 export interface MenuGroup { id: MenuGroupId; title: Bi; items: MenuItem[]; collapsed?: boolean } // `collapsed` : replié au départ (le titre se touche pour l'ouvrir)
 
-const item = (id: string, fr: string, en: string, sendFr = fr, sendEn = en, count?: number | null): MenuItem => ({ id, label: b(fr, en), send: b(sendFr, sendEn), ...(count !== undefined ? { count } : {}) });
+const item = (id: string, fr: string, en: string, sendFr = fr, sendEn = en, count?: number | null, kind: MenuKind = 'send'): MenuItem => ({ id, label: b(fr, en), send: b(sendFr, sendEn), kind, ...(count !== undefined ? { count } : {}) });
+/** Messages à compléter : le début de la phrase est écrit, il reste le nom ou le pourcentage (comprises telles quelles par l'assistant une fois complétées). */
+const FILL: [string, string, string, string, string][] = [
+  ['recap', 'Récap de… (un employé)', 'Recap of… (an employee)', 'Récap de ', 'Recap of '],
+  ['whatif-price', 'Et si le prix client monte de… %', 'What if the client price rises by… %', 'Et si le prix client monte de ', 'What if the client price rises by '],
+  ['whatif-salary', 'Et si les salaires baissent de… %', 'What if salaries drop by… %', 'Et si les salaires baissent de ', 'What if salaries drop by '],
+  ['whatif-expenses', 'Et si les dépenses baissent de… %', 'What if expenses drop by… %', 'Et si les dépenses baissent de ', 'What if expenses drop by '],
+];
+/** Les modèles de « Rédiger un message » : un toucher ouvre l'éditeur avec ce modèle déjà choisi. */
+export type TemplateLike = { id: string; name: Bi };
 
 /** Un chiffre : le libellé du menu et la question qui l'explique (formule et lignes), comme « Pourquoi la marge ? ». */
 export const FIGURE_MENU: Record<FigureId, { label: Bi; send: Bi }> = {
@@ -40,7 +52,7 @@ export const pageItems = (pages: PageLike[] = SITE_MAP as unknown as PageLike[])
  * Les groupes du menu. `shortcuts` = la liste du jour (`shortcutList`) pour montrer les chiffres ; sans elle, les libellés restent simples.
  * Un groupe n'est jamais vide.
  */
-export function assistantMenu(shortcuts: Shortcut[] | null = null, pages: PageLike[] = SITE_MAP as unknown as PageLike[]): MenuGroup[] {
+export function assistantMenu(shortcuts: Shortcut[] | null = null, pages: PageLike[] = SITE_MAP as unknown as PageLike[], templates: TemplateLike[] = TEMPLATES as unknown as TemplateLike[]): MenuGroup[] {
   const count = (id: ShortcutId): number | undefined => (shortcuts ? (shortcuts.find(s => s.id === id)?.count ?? 0) : undefined);
   return [
     { id: 'summaries', title: b('Résumés', 'Summaries'), items: [
@@ -55,6 +67,8 @@ export function assistantMenu(shortcuts: Shortcut[] | null = null, pages: PageLi
       item('money', 'Argent du mois', 'Money this month'),
       ...FIGURE_IDS.map(f => item(`figure-${f}`, FIGURE_MENU[f].label.fr, FIGURE_MENU[f].label.en, FIGURE_MENU[f].send.fr, FIGURE_MENU[f].send.en)),
     ] },
+    { id: 'complete', title: b('À compléter', 'To complete'), items: FILL.map(([id, fr, en, sf, se]) => item(id, fr, en, sf, se, undefined, 'fill')) },
+    { id: 'compose', title: b('Rédiger un message', 'Write a message'), items: templates.map(tp => ({ ...item(`compose-${tp.id}`, tp.name.fr, tp.name.en, tp.name.fr, tp.name.en, undefined, 'compose'), tpl: tp.id })) },
     { id: 'pages', title: b('Pages : à quoi elles servent', 'Pages: what they are for'), collapsed: true, items: pageItems(pages) },
     { id: 'help', title: b('Aide', 'Help'), items: [item('help', 'Ce que tu sais faire', 'What you can do', 'Aide', 'Help')] },
   ];
@@ -62,3 +76,15 @@ export function assistantMenu(shortcuts: Shortcut[] | null = null, pages: PageLi
 
 /** Libellé du menu avec son chiffre (« Factures en retard (3) ») : pas de chiffre pour 0 ou inconnu. */
 export const menuLabel = (it: MenuItem, l: 'fr' | 'en'): string => `${l === 'en' ? it.label.en : it.label.fr}${it.count ? ` (${it.count})` : ''}`;
+
+const plain = (x: string): string => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+/**
+ * Recherche dans le menu : sans accent ni majuscule, tous les mots tapés doivent se trouver dans le libellé ou le message (français ou anglais).
+ * Rien tapé = tout le menu. Les groupes sans résultat disparaissent ; l'ordre est gardé.
+ */
+export function filterMenu(menu: MenuGroup[], q: string): MenuGroup[] {
+  const words = plain(q).split(/\s+/).filter(Boolean);
+  if (!words.length) return menu;
+  return menu.map(g => ({ ...g, items: g.items.filter(it => { const hay = plain(`${it.label.fr} ${it.label.en} ${it.send.fr} ${it.send.en}`); return words.every(w => hay.includes(w)); }) })).filter(g => g.items.length > 0);
+}
+
