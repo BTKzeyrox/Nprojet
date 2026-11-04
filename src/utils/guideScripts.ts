@@ -42,7 +42,7 @@ const ADMIN: GuideStep[] = [
     text: b('La liste de ce qui demande ton attention (retards, argent, comptabilité…), avec la solution proposée pour chaque point.', 'The list of what needs your attention (delays, money, accounting…), with the proposed solution for each point.'),
     missing: b('Ouvre « Santé du site » dans le menu.', 'Open "Site health" in the menu.') },
   { id: 'settings', page: 'settings', target: { texts: THEME_TARGET }, title: b('Réglages du responsable', 'Manager settings'),
-    text: b('Le plafond du Chef d\'équipe (Missions), les tarifs, la taille du texte, le thème et la langue. Le rapport automatique est dans Statistiques > Rapport.', 'The team lead limit (Missions), prices, text size, theme and language. The automatic report is in Statistics > Report.'),
+    text: b('Le plafond du Chef d\'équipe (Missions), les tarifs, la taille du texte, le thème et la langue. Le rapport automatique est dans Missions > Statistiques > Rapport.', 'The team lead limit (Missions), prices, text size, theme and language. The automatic report is in Statistics > Report.'),
     missing: SETTINGS_MISSING },
 ];
 

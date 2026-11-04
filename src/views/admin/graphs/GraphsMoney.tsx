@@ -1,5 +1,5 @@
 // Cartes « Argent » de la page Graphiques : argent reçu et dépenses, bénéfice cumulé, solde de la caisse, facturé et reçu, dépenses par catégorie, clients, d'où vient l'argent, marge par type.
-// Mêmes calculs que Statistiques > Finances (computeFinance) et que la Trésorerie (treasuryCharts). « Argent reçu et dépenses » et « Dépenses par catégorie » se lisent AVEC les salaires (Finances) ou SANS (la caisse, comme la Trésorerie) : un seul bouton pour les deux cartes. Responsable seulement.
+// Mêmes calculs que Argent > Finances (computeFinance) et que la Trésorerie (treasuryCharts). « Argent reçu et dépenses » et « Dépenses par catégorie » se lisent AVEC les salaires (Finances) ou SANS (la caisse, comme la Trésorerie) : un seul bouton pour les deux cartes. Responsable seulement.
 import React, { useMemo, useState } from 'react';
 import { db } from '../../../db/store';
 import { formatCurrencyAr } from '../../../utils/formatUtils';
@@ -40,7 +40,7 @@ export const GraphsMoney: React.FC<Props> = ({ g, range: r, anchor, today, lang,
   const toggle = <GraphToggle label={t('Avec ou sans les salaires', 'With or without salaries')} value={mode} onChange={v => setMode(v === 'cash' ? 'cash' : 'all')} options={[['all', t('Avec salaires', 'With salaries')], ['cash', t('Caisse (sans salaires)', 'Cash (no salaries)')]]} />;
   const monthNote = cashRangeIsMonthOfYear(g) ? t(`Affiche le mois du ${cr.start.split('-').reverse().join('/')} au ${cr.end.split('-').reverse().join('/')} : la caisse se lit jour par jour.`, `Shows the month from ${cr.start} to ${cr.end}: the cash is read day by day.`) : undefined;
   const modeNote = mode === 'all'
-    ? t('Dépenses = dépenses saisies + salaires des missions validées (comme Statistiques > Finances).', 'Expenses = entered expenses + salaries of validated missions (as in Statistics > Finances).')
+    ? t('Dépenses = dépenses saisies + salaires des missions validées (comme Argent > Finances).', 'Expenses = entered expenses + salaries of validated missions (as in Money > Finances).')
     : t('Sans aucun salaire : seulement ce qui passe par la caisse (comme la page Trésorerie).', 'No salaries: only what goes through the cash book (as in the Treasury page).');
   return (
     <>

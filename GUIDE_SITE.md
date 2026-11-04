@@ -208,7 +208,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 
 ### Statistiques  `stats`
 - **Qui** : responsable
-- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances et rapport du mois.
+- **À quoi ça sert** : Les chiffres de l'entreprise : missions, finances et rapport du mois. Menu simplifié : les chiffres des missions sont dans Missions > Statistiques, les finances dans Argent > Finances.
 - **Comment l'utiliser** : 1. Choisir l'onglet (Statistiques, Finances, Rapport) puis la période. 2. Saisir les entrées et dépenses dans l'onglet Finances. 3. Lire le rapport du mois dans l'onglet Rapport.
 - **Règles** :
   - Finances est réservé à l'admin : le serveur refuse tout autre accès.
@@ -305,7 +305,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **À quoi ça sert** : Tous les graphiques du site sur une seule page : missions, argent et stock, avec une seule période pour toutes les cartes.
 - **Comment l'utiliser** : 1. Choisis le groupe en haut : Tout, Missions, Argent ou Stock. 2. Choisis la période (Semaine, Mois, Année) et les flèches : toutes les cartes suivent. 3. Sur « Argent reçu et dépenses » et « Dépenses par catégorie », choisis Avec salaires ou Caisse (sans salaires).
 - **Règles** :
-  - Page en lecture seule : rien ne s'y saisit. Les paiements et dépenses se saisissent dans Statistiques > Finances ou Trésorerie.
+  - Page en lecture seule : rien ne s'y saisit. Les paiements et dépenses se saisissent dans Argent > Finances (ancien menu : Statistiques > Finances) ou Trésorerie.
   - Les cartes de la caisse (solde, d'où vient l'argent, sans salaires) se lisent jour par jour : pour une année, elles montrent un mois.
   - Un seul stockage à la fois pour les cartes du stock.
 - **Dans le code** : `src/views/admin/GraphsPage.tsx`, `src/views/admin/graphs/GraphCard.tsx`, `src/views/admin/graphs/GraphsMissions.tsx`, `src/views/admin/graphs/GraphsMoney.tsx`, `src/views/admin/graphs/GraphsStock.tsx`, `src/utils/graphsPage.ts`
@@ -1064,6 +1064,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:menu-links` | Contrôle des liens du menu simplifié (M22.8) : toute page visée par une alerte, la cloche, l'assistant, la Santé du site, un lien de notification ou le guide |
 | `npm run check:filter-bar` | Contrôle de la barre de filtres commune (M22.7) : règles pures + pages qui l'utilisent. Lancer : npm run check:filter-bar |
 | `npm run check:menu-screen` | Contrôle du menu simplifié à l'écran (M22.6) : branchements (lecture du code) + comportements purs. Lancer : npm run check:menu-screen |
 | `npm run check:menu-groups` | Contrôle du menu fusionné (M22.5) : toutes les anciennes pages ont une place, aucun rôle ne gagne ni ne perd de page. Lancer : npm run check:menu-groups |

@@ -12,6 +12,10 @@ import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { setStorageIntent } from '../utils/storageNav';
 import { beepIfEnabled } from '../utils/notifSound';
+import { readCompany } from '../utils/companyRules';
+import { menuFor, placeOf } from '../utils/menuGroups';
+import { mergedFor, useMenuMode } from '../utils/menuMode';
+import { goToTab } from '../utils/menuNav';
 import { NOTIF_FILTERS, filterNotifs, notifWhen, type NotifFilter } from '../utils/notifView';
 import { ConnectionChip } from './ConnectionBanner';
 import { Avatar } from './Avatar';
@@ -70,6 +74,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     return () => document.removeEventListener('mousedown', away);
   }, []);
 
+  const mergedMenu = mergedFor(currentUser.role, useMenuMode());
   const home = isAdmin ? 'dashboard' : 'grid';
   const pages = useMemo(
     () =>
@@ -87,7 +92,12 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     const s = norm(q.trim());
     if (!s) return [];
     const out: Hit[] = [];
-    pages.forEach(([id, label]) => {
+    if (mergedMenu) {
+      // Menu simplifié : toutes les pages de MON menu, avec leur place (« Argent › Finances »)
+      menuFor(currentUser.role, readCompany(db.getSettings().company).modules.hidden).forEach(g => g.tabs.forEach(tb => {
+        if (norm(tb.fr).includes(s) || norm(tb.en).includes(s) || norm(g.fr).includes(s)) out.push({ id: `p-${g.id}-${tb.id}`, title: tb.fr, sub: placeOf(g, tb, 'fr'), kind: 'page', go: () => goToTab(tb, view => onNavigate(view)) });
+      }));
+    } else pages.forEach(([id, label]) => {
       if (norm(label).includes(s)) out.push({ id: `p-${id}`, title: label, sub: 'Ouvrir la page', kind: 'page', go: () => onNavigate(id) });
     });
     if (isAdmin) {
@@ -119,7 +129,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       if (`${day}/${m}`.includes(s) || d.includes(s)) out.push({ id: `d-${d}`, title: `${day}/${m}/${y}`, sub: 'Voir au calendrier', kind: 'date', go: () => { setNavTarget(`day-${d}`); onNavigate('calendar'); } });
     });
     return out.slice(0, 8);
-  }, [q, isAdmin, pages, home, onNavigate, onOpenOperator, db.getContracts().length, db.getUsers().length]);
+  }, [q, isAdmin, mergedMenu, pages, home, onNavigate, onOpenOperator, db.getContracts().length, db.getUsers().length]);
 
   const pick = (h: Hit) => { setOpen(false); setQ(''); h.go(); };
   const notifs = buildNotifications(currentUser);

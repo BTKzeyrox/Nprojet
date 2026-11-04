@@ -66,3 +66,16 @@ export const reachableViews = (role: unknown, hiddenCsv: unknown = ''): string[]
 export const openView = (g: MenuGroup, lastTab?: string): { view: string; statsTab?: 'finance' } => { const t = g.tabs.find(x => x.id === lastTab) || g.tabs[0]; return { view: t.view, statsTab: t.statsTab }; };
 /** Toutes les anciennes vues du menu du responsable (pour vérifier que rien ne se perd). */
 export const OLD_ADMIN_VIEWS: readonly string[] = [...KNOWN_VIEWS, 'grid', 'sessions', 'security', 'sheets', 'operator'];
+
+/** Où se trouve une page dans le menu, en clair : « Argent › Finances » (une entrée qui n'a qu'une page : « Actualités »). */
+export const placeOf = (g: MenuGroup, t: MenuTab, lang: 'fr' | 'en' = 'fr'): string => {
+  const gl = lang === 'en' ? g.en : g.fr, tl = lang === 'en' ? t.en : t.fr;
+  return g.tabs.length > 1 && gl !== tl ? `${gl} › ${tl}` : gl;
+};
+/** Même chose à partir d'une ancienne vue et d'un rôle ; '' si la page n'existe pas pour ce rôle. */
+export function placeOfView(role: unknown, view: string, hiddenCsv: unknown = '', lang: 'fr' | 'en' = 'fr', statsTab?: string): string {
+  const loc = locate(role, view, hiddenCsv, statsTab);
+  if (!loc) return '';
+  const g = menuFor(role, hiddenCsv).find(x => x.id === loc.group)!, t = g.tabs.find(x => x.id === loc.tab)!;
+  return placeOf(g, t, lang);
+}
