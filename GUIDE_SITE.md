@@ -278,7 +278,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Supprimer pour tous : l'auteur ou l'admin ; le message disparaît sans trace.
   - Une seule réaction par personne et par message.
   - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
-  - Dans l'assistant, le bouton « / » du champ ouvre tous les messages prêts, avec une recherche : un toucher l'envoie, ou prépare la phrase à compléter, ou ouvre un modèle à rédiger.
+  - Dans l'assistant, le bouton « / » ouvre 6 boutons sous le champ : 5 envoient un message prêt, « Rédiger un message » ouvre l'éditeur.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
@@ -589,7 +589,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `alertsDb.ts` | Liste des alertes de l'admin, gardée en mémoire jusqu'au prochain changement de données ; lit le store, aucun appel serveur. |
 | `approvalLimit.ts` | Validation à plusieurs niveaux (module 15, M15.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:approval-limit`. |
 | `assistant.ts` | Assistant « Admin IA Pro », niveau A (module 11, M11.10) : AUCUNE IA externe, que des règles et des calculs faits dans le navigateur de l'admin. |
-| `assistantMenu.ts` | Menu « / » de l'assistant (comme le menu de commandes de Telegram) : tous les messages prêts à envoyer, rangés par groupe. |
+| `assistantMenu.ts` | Menu « / » de l'assistant (comme le clavier de Telegram) : 6 gros boutons, sans défilement, sans recherche, sans titre. |
 | `assistantMessages.ts` | Messages prêts, DÉJÀ REMPLIS avec les vrais éléments du site : relancer un client en retard, répondre à une avance ou à une inscription, remercier un client, prévenir l'équipe. |
 | `assistantShortcuts.ts` | Boutons du bas de l'assistant : chacun montre un vrai chiffre du jour et mène à l'élément exact (À valider, Avances, Factures en retard, Stock bas, Qui travaille, Argent du mois, Clients silencieux, Résumé du jour). |
 | `attachments.ts` | Préparation (compression des photos) et envoi des pièces jointes des publications et commentaires ; touche le navigateur et le réseau. |
@@ -1092,7 +1092,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:push-alerts` | Contrôle des notifications externes, partie 2b : alertes calculées par la tâche planifiée. Site = serveur, mêmes règles que l'appli, anti-doublon. Sans réseau. |
 | `npm run check:speed` | Vitesse et quota (M8.3). 2 ans de données (≈17 500 missions, 10 000 lignes d'argent, 14 600 mouvements, 2 190 factures) : chaque calcul des écrans est chronométré, |
 | `npm run check:assistant` | Contrôle de l'assistant niveau A (M11.10) : résumé du jour, quoi faire, récap d'un employé, « et si », compréhension des phrases. Pur, sans réseau. Lancer : npm run check:assistant |
-| `npm run check:assistant-menu` | Contrôle du menu « / » de l'assistant : chaque message prêt déclenche bien la bonne réponse (FR et EN), sans nom de personne, et le bouton est dans le champ. |
+| `npm run check:assistant-menu` | Contrôle du menu « / » de l'assistant (M24.5) : 6 gros boutons sous le champ, à la place du clavier, sans défilement ni recherche. |
 | `npm run check:templates` | Contrôle des modèles de messages (M11.11). Pur. Lancer : npm run check:templates |
 | `npm run check:recurring` | Contrôle des missions récurrentes (M15.1). Lancer : npm run check:recurring |
 | `npm run check:mission-sheet` | Contrôle du tableau préparé par mission (M18.6) : règles, serveur (même texte), démo en mémoire, écran. Sans réseau. Lancer : npm run check:mission-sheet |

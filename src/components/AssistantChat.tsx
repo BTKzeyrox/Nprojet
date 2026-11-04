@@ -8,7 +8,7 @@ import { getSnapshotInput } from '../utils/snapshotDb';
 import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
 import { shortcutList, shortcutReply, detectShortcut } from '../utils/assistantShortcuts';
 import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } from '../utils/assistantMessages';
-import { assistantMenu, filterMenu, menuLabel, type MenuItem } from '../utils/assistantMenu';
+import { assistantMenu, menuHeightFromKeyboard, menuLabel, MENU_FALLBACK_H, type MenuItem } from '../utils/assistantMenu';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
@@ -41,9 +41,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const inputRef = useRef<HTMLInputElement>(null);
   // « Rédiger un message » : modèle + champs ; texte final modifiable avant de le copier (rien n'est envoyé)
   const [composing, setComposing] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false); // menu « / » : tous les messages prêts, rangés par groupe
-  const [foldOpen, setFoldOpen] = useState<string[]>([]); // groupes repliés que l'admin a ouverts (ex. « Pages »)
-  const [menuQ, setMenuQ] = useState(''); // recherche dans le menu
+  const [menuOpen, setMenuOpen] = useState(false); // menu « / » : 6 gros boutons, sous le champ, à la place du clavier
+  const [menuH, setMenuH] = useState<number | null>(null); // hauteur du bloc = celle du clavier mesurée à l'ouverture (220–300 px), sinon hauteur de repli
   const [tplId, setTplId] = useState(TEMPLATES[0].id);
   const [vals, setVals] = useState<Partial<Record<Field, string>>>({});
   const [draft, setDraft] = useState<string | null>(null);
@@ -51,7 +50,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const [copied, setCopied] = useState(false);
   const tpl = TEMPLATES.find(x => x.id === tplId) || TEMPLATES[0];
   useEffect(() => { void loadHealthExternal(); }, []);
-  useEffect(() => { if (!menuOpen) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenuOpen(false); setMenuQ(''); } }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [menuOpen]);
+  useEffect(() => { if (!menuOpen) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [menuOpen]);
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }); }, [msgs, busy]);
 
   const push = (add: Msg[]) => setMsgs(m => { const n = [...m, ...add].slice(-MAX); saveHistory(userId, n); return n; });
@@ -112,17 +111,20 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   };
   // Boutons du bas : les vrais chiffres du jour (un bouton sans rien à montrer se cache) ; recalculés après chaque message, pas à chaque lettre tapée
   const shortcuts = useMemo(() => { try { const si = getSnapshotInput(); return si ? shortcutList(si) : []; } catch { return []; } }, [msgs.length, busy]); // eslint-disable-line react-hooks/exhaustive-deps
-  const quick = shortcuts.length ? shortcuts.map(x => ({ key: x.id, q: l === 'en' ? x.q.en : x.q.fr, label: l === 'en' ? x.label.en : x.label.fr })) : [{ key: 'help', q: t('Aide', 'Help'), label: t('Aide', 'Help') }];
   const menu = useMemo(() => assistantMenu(shortcuts), [shortcuts]);
-  const shown = useMemo(() => filterMenu(menu, menuQ), [menu, menuQ]);
-  const searching = menuQ.trim().length > 0;
-  // Un message du menu : « send » part tout de suite et reste dans l'historique comme un message normal ; « fill » se met dans le champ à compléter ; « compose » ouvre l'éditeur avec ce modèle.
-  const pick = (it: MenuItem) => {
-    setMenuOpen(false); setMenuQ('');
-    const msg = l === 'en' ? it.send.en : it.send.fr;
-    if (it.kind === 'fill') { setText(msg); setTimeout(() => { const el = inputRef.current; if (el) { el.focus(); el.setSelectionRange(msg.length, msg.length); } }, 0); return; }
-    if (it.kind === 'compose' && it.tpl) { setComposing(true); setTplId(it.tpl); setVals({}); setDraft(null); setProblem(''); setCopied(false); return; }
-    ask(msg);
+  // Un bouton du menu : les 5 premiers envoient tout de suite (même chemin que la saisie, le message reste dans l'historique) ; « Rédiger un message » ouvre l'éditeur sans rien envoyer.
+  const pick = (m: MenuItem) => {
+    setMenuOpen(false);
+    if (m.kind === 'compose') { setComposing(true); return; }
+    ask(l === 'en' ? m.send.en : m.send.fr);
+  };
+  // Ouvre ou ferme le bloc : on mesure le clavier AVANT de le fermer, puis le bloc prend sa place (le champ ne bouge pas).
+  const toggleMenu = () => {
+    if (menuOpen) { setMenuOpen(false); return; }
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    setMenuH(menuHeightFromKeyboard(typeof window !== 'undefined' ? window.innerHeight : NaN, vv?.height, vv?.offsetTop));
+    inputRef.current?.blur();
+    setMenuOpen(true);
   };
   const bubbleBot = L ? 'bg-white text-slate-800 border-slate-200' : 'bg-[#16212e] text-slate-200 border-slate-700/80'; // mêmes couleurs que les messages reçus de la messagerie
   const area = L ? 'bg-[#e9eff8]' : 'bg-[#0a0f16]';
@@ -152,6 +154,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       <div className={`px-3 pt-2 pb-3 border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'}`}>
         {composing && (
           <div className={`mb-2 rounded-xl border p-2.5 space-y-2 text-sm ${L ? 'border-slate-300 bg-slate-50 text-slate-800' : 'border-white/15 bg-white/5 text-slate-100'}`} data-compose>
+            <div className="flex justify-end"><button type="button" onClick={() => setComposing(false)} data-compose-close className={`min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-white' : 'border-white/20 text-slate-100 bg-white/5'}`}>{t('Fermer', 'Close')}</button></div>
             {suggested.length > 0 && <div className="flex flex-wrap gap-1.5" data-suggested-messages>{suggested.map(x => <button key={x.id} type="button" onClick={() => applySuggested(x)} className={`min-h-[36px] px-2.5 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{l === 'en' ? x.label.en : x.label.fr}</button>)}</div>}
             <select aria-label={t('Modèle', 'Template')} value={tplId} onChange={e => { setTplId(e.target.value); setDraft(null); setProblem(''); }} className={`w-full min-h-[40px] rounded-lg border px-2 ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`}>
               {TEMPLATES.map(x => <option key={x.id} value={x.id}>{l === 'en' ? x.name.en : x.name.fr}</option>)}
@@ -166,30 +169,20 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
               <div className="flex items-center gap-2"><button type="button" onClick={copy} className="min-h-[40px] px-3 rounded-lg bg-emerald-700 text-white text-xs font-semibold cursor-pointer">{t('Copier', 'Copy')}</button>{copied && <span className="text-xs text-emerald-500">{t('Copié. Rien n\'a été envoyé : collez-le où vous voulez.', 'Copied. Nothing was sent: paste it where you want.')}</span>}</div></>}
           </div>
         )}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <button type="button" onClick={() => setComposing(v => !v)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'}`}>{t('Rédiger un message', 'Write a message')}</button>{quick.map(q => <button key={q.key} type="button" disabled={busy} onClick={() => ask(q.q)} className={`shrink-0 min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer ${L ? 'border-slate-300 text-slate-700 bg-slate-50' : 'border-white/20 text-slate-100 bg-white/5'}`}>{q.label}</button>)}</div>
-        {menuOpen && (
-          <div className={`mb-2 rounded-xl border p-2.5 space-y-2.5 max-h-[55vh] overflow-y-auto overscroll-contain ${L ? 'border-slate-300 bg-slate-50 text-slate-800' : 'border-white/15 bg-white/5 text-slate-100'}`} role="menu" aria-label={t('Messages prêts', 'Ready messages')} data-assistant-menu>
-            <input type="search" value={menuQ} onChange={e => setMenuQ(e.target.value)} aria-label={t('Chercher un message', 'Search a message')} placeholder={t('Chercher un message…', 'Search a message…')} autoComplete="off" data-menu-search className={`w-full h-10 rounded-lg border px-3 text-base ${L ? 'border-slate-300 bg-white text-slate-900 placeholder-slate-400' : 'border-white/20 bg-white/5 text-white placeholder-slate-400'}`} />
-            {searching && shown.length === 0 && <div className={`text-sm py-2 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Aucun message ne correspond.', 'No message matches.')}</div>}
-            {shown.map(g => (
-              <div key={g.id} data-menu-group={g.id}>
-                {(() => { const shut = !!g.collapsed && !foldOpen.includes(g.id) && !searching; return (<>
-                {g.collapsed ? <button type="button" aria-expanded={!shut} onClick={() => setFoldOpen(v => v.includes(g.id) ? v.filter(x => x !== g.id) : [...v, g.id])} className={`w-full min-h-[40px] flex items-center justify-between text-[11px] font-bold uppercase tracking-wide mb-1 cursor-pointer ${L ? 'text-slate-600' : 'text-slate-300'}`}><span>{l === 'en' ? g.title.en : g.title.fr} ({g.items.length})</span><ChevronRight className={`w-4 h-4 transition-transform ${shut ? '' : 'rotate-90'}`} /></button>
-                  : <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{l === 'en' ? g.title.en : g.title.fr}</div>}
-                {!shut && <div className="flex flex-wrap gap-1.5">{g.items.map(it => <button key={it.id} type="button" role="menuitem" disabled={busy} onClick={() => pick(it)} className={`min-h-[40px] px-3 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${L ? 'border-slate-300 bg-white text-slate-800' : 'border-white/20 bg-white/5 text-slate-100'}`}>{menuLabel(it, l)}</button>)}</div>}
-                </>); })()}
-              </div>
-            ))}
-          </div>
-        )}
         <form onSubmit={e => { e.preventDefault(); ask(text); inputRef.current?.focus(); }}>
           <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
-            <button type="button" onClick={() => { inputRef.current?.blur(); setMenuQ(''); setMenuOpen(v => !v); }} aria-label={t('Menu des messages prêts', 'Ready messages menu')} aria-expanded={menuOpen} aria-haspopup="menu" title={t('Menu des messages prêts', 'Ready messages menu')} className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-bold cursor-pointer border ${menuOpen ? 'bg-sky-600 border-sky-500 text-white' : L ? 'bg-white border-slate-300 text-sky-700' : 'bg-white/10 border-white/20 text-sky-200'}`}>/</button>
-            <input ref={inputRef} type="text" value={text} onChange={e => setText(e.target.value)} enterKeyHint="send" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-1 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none' }} />
+            <button type="button" onClick={toggleMenu} aria-label={t('Menu des messages prêts', 'Ready messages menu')} aria-expanded={menuOpen} aria-haspopup="menu" title={t('Menu des messages prêts', 'Ready messages menu')} className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-bold cursor-pointer border ${menuOpen ? 'bg-sky-600 border-sky-500 text-white' : L ? 'bg-white border-slate-300 text-sky-700' : 'bg-white/10 border-white/20 text-sky-200'}`}>/</button>
+            <input ref={inputRef} type="text" value={text} onFocus={() => setMenuOpen(false)} onChange={e => setText(e.target.value)} enterKeyHint="send" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-1 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none' }} />
             <button type="submit" disabled={busy || !text.trim()} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} aria-label={t('Envoyer', 'Send')} className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md"><Send className="w-5 h-5" /></button>
           </div>
         </form>
+        {menuOpen && (
+          <div className={`grid grid-cols-2 grid-rows-3 gap-2 px-2.5 pt-2.5 box-border shrink-0 ${L ? 'bg-slate-100' : 'bg-white/5'}`} style={{ height: menuH ? `${menuH}px` : MENU_FALLBACK_H, paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }} role="menu" aria-label={t('Messages prêts', 'Ready messages')} data-assistant-menu>
+            {menu.map(m => (
+              <button key={m.id} type="button" role="menuitem" disabled={busy && m.kind === 'send'} onClick={() => pick(m)} data-menu-item={m.id} className={`min-h-[48px] px-2 rounded-xl border text-sm font-semibold whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer disabled:opacity-50 ${m.kind === 'compose' ? (L ? 'border-sky-500 text-sky-700 bg-sky-50' : 'border-sky-400/60 text-sky-200 bg-sky-500/10') : (L ? 'border-slate-300 bg-white text-slate-800' : 'border-white/20 bg-white/5 text-slate-100')}`}>{menuLabel(m, l)}</button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
