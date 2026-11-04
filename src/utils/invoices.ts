@@ -95,11 +95,16 @@ export const STATE_NAMES: Record<InvoiceState, { fr: string; en: string }> = {
 };
 export interface InvoiceInfo { state: InvoiceState; paid: number; balance: number; overdue: boolean; days_late: number }
 
-/** Argent reçu pour une facture : les lignes « entrée » des Finances qui la citent. */
-export const paidAmount = (invoiceId: string, cash: Pick<CashEntry, 'kind' | 'amount_ar' | 'invoice_id'>[]): number =>
-  cash.reduce((t, e) => (e.kind === 'in' && e.invoice_id === invoiceId && Number.isFinite(e.amount_ar) && e.amount_ar > 0 ? t + Math.round(e.amount_ar) : t), 0);
+/** Argent reçu pour une facture : les lignes « entrée » des Finances qui la citent, moins les corrections de paiements annulés (sortie liée par `void_of`). Avec la caisse nette, il n'y a plus de correction à retirer : même résultat. */
+export const paidAmount = (invoiceId: string, cash: Pick<CashEntry, 'kind' | 'amount_ar' | 'invoice_id' | 'void_of'>[]): number =>
+  Math.max(0, cash.reduce((t, e) => {
+    if (e.invoice_id !== invoiceId || !Number.isFinite(e.amount_ar) || !(e.amount_ar > 0)) return t;
+    if (e.kind === 'in') return t + Math.round(e.amount_ar);
+    if (e.kind === 'out' && e.void_of) return t - Math.round(e.amount_ar);
+    return t;
+  }, 0));
 
-export function invoiceInfo(inv: Pick<Invoice, 'id' | 'type' | 'status' | 'total_ar' | 'due_date'>, cash: Pick<CashEntry, 'kind' | 'amount_ar' | 'invoice_id'>[], today: string): InvoiceInfo {
+export function invoiceInfo(inv: Pick<Invoice, 'id' | 'type' | 'status' | 'total_ar' | 'due_date'>, cash: Pick<CashEntry, 'kind' | 'amount_ar' | 'invoice_id' | 'void_of'>[], today: string): InvoiceInfo {
   if (inv.type === 'credit_note') return { state: 'credit_note', paid: 0, balance: 0, overdue: false, days_late: 0 };
   if (inv.status === 'draft') return { state: 'draft', paid: 0, balance: inv.total_ar, overdue: false, days_late: 0 };
   const paid = paidAmount(inv.id, cash);
@@ -158,7 +163,7 @@ export function invoiceTotalsAll(invoices: Invoice[], cash: Pick<CashEntry, 'kin
   return { billed, to_collect: toCollect, overdue, count };
 }
 
-/** Une facture émise sans aucun paiement peut être annulée par un avoir ; dès qu'elle a reçu de l'argent, non (il faut d'abord régler le paiement à la main). */
+/** Une facture émise sans aucun paiement peut être annulée par un avoir ; dès qu'elle a reçu de l'argent, non (il faut d'abord annuler le paiement : les paiements annulés ne comptent plus). */
 export const canCancel = (inv: Pick<Invoice, 'type' | 'status'>, info: Pick<InvoiceInfo, 'paid'>): boolean => inv.type !== 'credit_note' && inv.status === 'issued' && info.paid === 0;
 
 // ---------- Missions à facturer ----------

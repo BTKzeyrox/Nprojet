@@ -726,6 +726,8 @@ export class AppStore {
   public closeAccounting(through: string) { return this.invoiceCall('accounting-close', { action: 'close', through }); }
   public reopenAccounting(through: string, reason: string) { return this.invoiceCall('accounting-close', { action: 'reopen', through, reason }); }
   public payInvoice(id: string, p: { amount: number; date: string; method?: string; note?: string }) { return this.invoiceCall('invoice-pay', { id, ...p }); }
+  /** Annule un paiement saisi par erreur (ligne de correction, jamais de suppression). Motif de 10 caractères au moins. Pas de bouton à l'écran avant M23.3c. */
+  public voidInvoicePayment(id: string, paymentId: string, reason: string) { return this.invoiceCall('invoice-void-payment', { id, payment_id: paymentId, reason }); }
 
   // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
   public getClients(): Client[] { return [...this.clients]; } // admin seulement (l'opérateur n'en reçoit jamais)

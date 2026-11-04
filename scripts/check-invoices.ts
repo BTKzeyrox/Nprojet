@@ -81,6 +81,13 @@ i = invoiceInfo(inv({ due_date: '2026-09-01' }), [cashIn(10000)], today);
 ok(i.state === 'overdue' && i.paid === 10000 && i.balance === 90000 && i.days_late === 49, 'payée en partie et échue : « overdue » (le retard prime), reste 90 000, 49 jours');
 ok(invoiceInfo(inv({ due_date: '2026-09-01' }), [cashIn(100000)], today).state === 'paid', 'payée en entier après l\'échéance : « paid », plus de retard');
 ok(invoiceInfo(inv({ status: 'cancelled' }), [], today).state === 'cancelled' && invoiceInfo(inv({ type: 'credit_note' }), [], today).state === 'credit_note' && !invoiceInfo(inv({ type: 'credit_note', due_date: '2020-01-01' }), [], today).overdue, 'annulée = « cancelled » ; un avoir n\'est jamais en retard');
+const voidLine = (amount: number, invoice_id = 'i1') => ({ kind: 'out', amount_ar: amount, invoice_id, void_of: 'p' }) as any;
+ok(paidAmount('i1', [cashIn(5000), voidLine(5000)]) === 0 && paidAmount('i1', [cashIn(3000), cashIn(2000), voidLine(2000)]) === 3000 && paidAmount('i1', [cashIn(1000), voidLine(1000, 'autre')]) === 1000 && paidAmount('i1', [voidLine(900)]) === 0, 'argent reçu : un paiement annulé (ligne de correction liée) ne compte plus, seulement pour sa facture, jamais négatif');
+{
+  const inv = { id: 'i1', type: 'invoice', status: 'issued', total_ar: 5000, due_date: '2026-12-31' } as any;
+  const i = invoiceInfo(inv, [cashIn(5000), voidLine(5000)], '2026-11-03');
+  ok(i.paid === 0 && i.balance === 5000 && i.state === 'issued' && canCancel(inv, i), 'facture dont le seul paiement est annulé : de nouveau « émise », reste à payer 5 000, annulable par un avoir');
+}
 ok(paidAmount('i1', [cashIn(1000), cashIn(500, 'autre'), cashIn(300, 'i1', 'out'), cashIn(NaN), cashIn(-5), cashIn(250.4)]) === 1250, 'argent reçu : seulement les entrées de CETTE facture, montants valides (NaN et négatifs ignorés)');
 
 // ---------- Paiement ----------

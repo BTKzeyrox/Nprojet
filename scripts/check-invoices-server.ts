@@ -93,7 +93,7 @@ ok(/\(col === 'invoices' && xd\.status !== 'draft'\)/.test(syncFn), 'sync : seul
 ok(/usedI/.test(syncFn) && /T\.invoices\)\.select\('id'\)\.eq\('data->>client_id', id\)/.test(syncFn), 'sync : un client qui a des factures ne se supprime pas');
 const gate = syncFn.indexOf('!admin && ADMIN_ONLY_WRITE.includes(col)');
 ok(gate > 0 && gate < syncFn.indexOf('for (const rec of upserts)'), 'sync : refus d\'un employé AVANT toute règle de facturation');
-for (const [action, fn] of [['invoice-issue', 'invoiceIssue'], ['invoice-cancel', 'invoiceCancel'], ['invoice-pay', 'invoicePay']]) {
+for (const [action, fn] of [['invoice-issue', 'invoiceIssue'], ['invoice-cancel', 'invoiceCancel'], ['invoice-pay', 'invoicePay'], ['invoice-void-payment', 'invoiceVoidPayment']]) {
   const route = new RegExp(`action === "${action}" && req\\.method === "POST"\\) return await ${fn}\\(req, res, me\\)`).test(src);
   const body = new RegExp(`async function ${fn}\\(req: any, res: any, me: any\\) \\{\\n  const no = moneyOnly\\(res, me\\); if \\(no\\) return no;`).test(src);
   ok(route && body, `route ${action} : enregistrée en POST, et le contrôle « admin ou Comptable » (moneyOnly) est la PREMIÈRE ligne`);
@@ -102,6 +102,20 @@ const issueFn = /async function invoiceIssue[\s\S]*?\n}\n/.exec(src)?.[0] || '';
 ok(/company\.identity\.name/.test(issueFn) && /company_incomplete/.test(issueFn) && /p_expected: row\.updated_at/.test(issueFn) && /company\.billing\.invoice_prefix/.test(issueFn) && /cleanInvoice\(draft, draft/.test(issueFn) && /invoiceIssuePatch/.test(issueFn), 'émission : refusée sans nom d\'entreprise ; revérifie le brouillon ; protège contre une modification en parallèle ; préfixe lu dans les Conditions (jamais envoyé par le navigateur)');
 const payFn = /async function invoicePay[\s\S]*?\n}\n/.exec(src)?.[0] || '';
 ok(/company\.billing\.receipt_prefix/.test(payFn) && /amount !== Math\.trunc\(amount\)/.test(payFn) && /df_pay_invoice/.test(payFn) && !/p_prefix: String\(req/.test(payFn), 'paiement : montant entier contrôlé, préfixe du reçu lu dans les Conditions');
+const voidFn = /async function invoiceVoidPayment[\s\S]*?\n}\n/.exec(src)?.[0] || '';
+ok(/reason\.length < 10/.test(voidFn) && /df_void_invoice_payment/.test(voidFn) && /p_date: today/.test(voidFn) && /p_by: me\.id/.test(voidFn) && /trim\(\)\.slice\(0, 200\)/.test(voidFn), 'annulation de paiement : motif de 10 caractères au moins, date du jour (jamais choisie), auteur = l\'utilisateur connecté, fonction SQL atomique');
+ok(/p_cash_id: paymentId/.test(voidFn) && !/delete\(/.test(voidFn) && !/\.from\(T\.cash\)/.test(voidFn), 'annulation de paiement : aucune suppression, tout passe par la fonction SQL');
+const migV = read('supabase/migrations/20261103_void_invoice_payment.sql');
+ok(/function public\.df_void_invoice_payment\(p_id text, p_cash_id text, p_void_id text, p_date text, p_reason text, p_by text\)/.test(migV), 'SQL : df_void_invoice_payment avec les paramètres envoyés par le serveur');
+ok(['p_id', 'p_cash_id', 'p_void_id', 'p_date', 'p_reason', 'p_by'].every(k => voidFn.includes(k + ':')), 'annulation de paiement : le serveur envoie exactement les 6 paramètres de la fonction SQL');
+ok(/invoice_missing/.test(migV) && /not_issued/.test(migV) && /bad_reason/.test(migV) && /payment_missing/.test(migV) && /already_voided/.test(migV), 'SQL : facture absente, non émise, motif trop court, paiement absent et paiement déjà annulé sont refusés');
+ok(/for update/.test(/df_void_invoice_payment[\s\S]*?end \$\$;/.exec(migV)?.[0] || '') && !/delete from/i.test(migV) && !/update public\.df_cash/i.test(migV), 'SQL : verrou sur la facture et le paiement ; jamais de suppression ni de modification d\'une ligne de caisse');
+ok(/'kind', 'out'/.test(migV) && /'void_of', p_cash_id/.test(migV) && /'invoice_id', p_id/.test(migV) && /'amount_ar', pay->'amount_ar'/.test(migV), 'SQL : la correction est une sortie de même montant, de la même facture, qui cite le paiement');
+const payFn2 = /function public\.df_pay_invoice[\s\S]*?end \$\$;/.exec(migV)?.[0] || '', canFn2 = /function public\.df_cancel_invoice[\s\S]*?end \$\$;/.exec(migV)?.[0] || '';
+ok(/paid := public\.df_invoice_paid\(p_id\)/.test(payFn2) && /public\.df_invoice_paid\(p_id\) > 0/.test(canFn2) && !/kind' = 'in'\) then raise/.test(canFn2), 'SQL : le reste à payer et l\'annulation par avoir comptent « entrées − corrections »');
+ok(/df_invoice_paid[\s\S]*?'void_of'[\s\S]*?-\(c\.data->>'amount_ar'\)::numeric/.test(migV), 'SQL : df_invoice_paid retire les paiements annulés');
+ok(/revoke all on function public\.df_void_invoice_payment/.test(migV) && /revoke all on function public\.df_invoice_paid/.test(migV), 'SQL : appelable seulement par le serveur');
+ok(/payment_missing:\s*\[404/.test(src) && /already_voided:\s*\[409/.test(src) && /bad_reason:\s*\[400/.test(src), 'messages d\'erreur du serveur pour les 3 nouveaux codes');
 const cancelFn = /async function invoiceCancel[\s\S]*?\n}\n/.exec(src)?.[0] || '';
 ok(/p_prefix: 'AV-'/.test(cancelFn) && /df_cancel_invoice/.test(cancelFn), 'avoir : préfixe AV-, fonction SQL atomique');
 // Les noms des paramètres envoyés à la base = ceux déclarés dans la migration

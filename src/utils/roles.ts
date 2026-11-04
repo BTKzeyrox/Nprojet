@@ -24,7 +24,7 @@ export const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_
 /** Prix client et objectifs d'argent : admin et Comptable. */
 export const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
 /** Routes (hors collections) réservées à l'admin et au Comptable. */
-export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay', 'accounting-sync', 'accounting-post'];
+export const MONEY_ROUTES = ['invoice-issue', 'invoice-cancel', 'invoice-pay', 'invoice-void-payment', 'accounting-sync', 'accounting-post'];
 export const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
 /** Nom d'équipe : texte court, sans retour à la ligne ; vide = pas d'équipe. */
 export const cleanTeam = (v: unknown): string => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);

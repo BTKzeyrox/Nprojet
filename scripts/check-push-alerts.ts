@@ -59,6 +59,14 @@ const hAdv = advancePendingOld.run(hctx)[0];
 ok(!!hAdv && C.advWaitItems(advances, TODAY).length === hAdv.value, 'avances en attente : même compte que la Santé du site');
 const hVal = validationWait.run(hctx)[0];
 ok(!!hVal && C.valWaitItems(posts, NOW).length === hVal.value, 'validations en attente : même compte que la Santé du site');
+{
+  // M23.3b : un paiement annulé (ligne de correction liée) ne compte plus : la facture redevient en retard, pareil sur le site et sur le serveur
+  const inv1 = [{ id: 'fx', type: 'invoice', status: 'issued', number: 'FA-X', total_ar: 5000, due_date: '2026-10-01', client: { name: 'Acme' } }] as any;
+  const paidAll = [{ kind: 'in', amount_ar: 5000, invoice_id: 'fx' }] as any;
+  const voided = [...paidAll, { kind: 'out', amount_ar: 5000, invoice_id: 'fx', void_of: 'p' }] as any;
+  ok(C.invLateItems(inv1, paidAll, TODAY).length === 0 && C.invLateItems(inv1, voided, TODAY).length === 1, 'facture payée puis paiement annulé : de nouveau en retard (site)');
+  ok(srv.invLateItems(inv1, paidAll, TODAY).length === 0 && srv.invLateItems(inv1, voided, TODAY).length === 1, 'facture payée puis paiement annulé : de nouveau en retard (serveur, même résultat)');
+}
 const lateIds = C.invLateItems(invoices, cash, TODAY).map(x => x.id).sort();
 const expLate = invoices.filter(i => invoiceInfo(i, cash as any, TODAY).overdue).map(i => i.id).sort();
 ok(sameJ(lateIds, expLate) && sameJ(lateIds, ['i1']), 'factures en retard : même résultat que la page Factures (payée, avoir, brouillon, pas encore échue : exclus ; paiement partiel : reste en retard)');

@@ -14,7 +14,7 @@ export interface AlertInput {
   advances: { id: string; employee_name: string; status: string; request_date: string }[];
   posts: { id: string; employee_name: string; client_name: string; status: string; updated_at?: string; created_at?: string }[];
   invoices: { id: string; type?: string; status: string; number?: string; total_ar: number; due_date: string; client?: { name?: string } }[];
-  cash: { kind: string; amount_ar: number; invoice_id?: string }[];
+  cash: { kind: string; amount_ar: number; invoice_id?: string; void_of?: string }[];
 }
 export interface AlertItem { key: string; id: string; name: string; sub: string; days: number; status: string; space: string }
 export interface AlertLink { go: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
@@ -65,7 +65,11 @@ export function valWaitItems(posts: AlertInput['posts'], nowMs: number): AlertIt
 
 export function invLateItems(invoices: AlertInput['invoices'], cash: AlertInput['cash'], today: string): AlertItem[] {
   const paid = new Map<string, number>();
-  for (const e of cash) if (e.kind === 'in' && e.invoice_id && Number.isFinite(e.amount_ar) && e.amount_ar > 0) paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) + Math.round(e.amount_ar));
+  for (const e of cash) {
+    if (!e.invoice_id || !Number.isFinite(e.amount_ar) || !(e.amount_ar > 0)) continue;
+    if (e.kind === 'in') paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) + Math.round(e.amount_ar));
+    else if (e.kind === 'out' && e.void_of) paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) - Math.round(e.amount_ar)); // paiement annulé
+  }
   return invoices.filter(i => i.type !== 'credit_note' && i.status === 'issued' && i.due_date < today && Math.max(0, i.total_ar - (paid.get(i.id) || 0)) > 0)
     .map(i => ({ i, d: dayDiff(i.due_date, today) })).sort((a, b) => b.d - a.d)
     .map(x => ({ key: `alert:inv:${x.i.id}`, id: x.i.id, name: cut(x.i.client?.name, 60), sub: cut(x.i.number, 40), days: x.d, status: '', space: '' }));

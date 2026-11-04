@@ -84,7 +84,7 @@ eq(/const T = \{[\s\S]*?\n\};/.exec(src)![0].includes('df_audit'), false, 'df_au
 eq(/const ADMIN_ONLY_READ[^\n]*df_audit/.test(src), false, 'df_audit hors des collections synchronisées');
 eq(fn('auditLog').includes('catch (err)'), true, 'auditLog attrape ses erreurs (jamais bloquant)');
 eq(/AUDIT\)\.delete\(\)\.lt\('updated_at'[^\n]*auditCutoffMs/.test(src), true, 'purge de 12 mois');
-for (const [fnName, action] of [['invoiceIssue', 'invoice_issue'], ['invoiceCancel', 'invoice_cancel'], ['invoicePay', 'invoice_pay'], ['createUser', 'user_create'], ['setPassword', 'user_password'], ['profileDecision', 'profile_decision'], ['resetDecision', 'reset_decision'], ['signupDecision', 'signup_decision'], ['payrollClose', 'payroll_close'], ['payrollReopen', 'payroll_reopen'], ['payrollPay', 'payroll_pay'], ['backupNow', 'backup_now']] as const)
+for (const [fnName, action] of [['invoiceIssue', 'invoice_issue'], ['invoiceCancel', 'invoice_cancel'], ['invoicePay', 'invoice_pay'], ['invoiceVoidPayment', 'invoice_void_payment'], ['createUser', 'user_create'], ['setPassword', 'user_password'], ['profileDecision', 'profile_decision'], ['resetDecision', 'reset_decision'], ['signupDecision', 'signup_decision'], ['payrollClose', 'payroll_close'], ['payrollReopen', 'payroll_reopen'], ['payrollPay', 'payroll_pay'], ['backupNow', 'backup_now']] as const)
   eq(fn(fnName).includes(`auditLog(me, '${action}'`), true, `${fnName} écrit dans le journal`);
 const syncSrc = fn('sync');
 for (const a of ['delete', 'tariff_change', 'settings_change', 'company_change', 'cash_change']) eq(syncSrc.includes(`auditLog(me, '${a}'`), true, `sync écrit « ${a} »`);

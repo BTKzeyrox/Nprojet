@@ -10,7 +10,7 @@ import { cleanEntry, entryIdFor, type Entry, type EntryLine, type Journal } from
 // BEGIN ACCOUNTINGBUILD
 /** Ce dont on a besoin d'une facture, d'une ligne d'argent, d'une avance : les vrais types du site les contiennent (typage structurel). */
 export interface InvoiceLike { id: string; type?: string; number?: string; status: string; client?: { name?: string } | null; issue_date: string; subtotal_ar: number; tax_ar: number; total_ar: number }
-export interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string }
+export interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string; void_of?: string }
 export interface AdvanceLike { id: string; status: string; amount_ar: number; request_date: string }
 
 /** Fiche de paie telle que le serveur la garde (table de paie) : seuls les champs utiles ici. Le NOM du salarié n'est jamais utilisé : le Comptable ne doit pas voir la paie de chacun. */
@@ -71,6 +71,7 @@ export function entryForCreditNote(inv: InvoiceLike): BuildResult {
 /** Ligne d'argent des Finances : entrée (paiement d'une facture → solde du client ; paiement client sans facture → client ; autre entrée → produits divers) ou dépense (charge selon la catégorie). */
 export function entryForCash(c: CashLike): BuildResult {
   if (!isAmt(c.amount_ar)) return SKIP('amount');
+  if (c.void_of) return SKIP('void'); // ligne de correction d'un paiement annulé : son écriture inverse viendra avec M23.3c, jamais une charge
   const cash = cashAccountFor(c.payment_method);
   if (c.kind === 'in') {
     const credit = c.invoice_id || c.category === 'Paiement client' ? '411' : '758';

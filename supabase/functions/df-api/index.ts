@@ -42,7 +42,7 @@ const isOperator = (role: unknown): boolean => roleOf(role) === "employee";
 const canReadCol = (role: unknown, col: string): boolean => role === "admin" || (isMoneyRole(role) ? MONEY_COLS.includes(col) || !READ_ADMIN_COLS.includes(col) : !READ_ADMIN_COLS.includes(col));
 const canWriteMoneyCol = (role: unknown, col: string): boolean => !MONEY_COLS.includes(col) || isMoneyRole(role);
 const seesClientPrice = (role: unknown): boolean => isMoneyRole(role);
-const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay", "accounting-sync", "accounting-post"];
+const MONEY_ROUTES = ["invoice-issue", "invoice-cancel", "invoice-pay", "invoice-void-payment", "accounting-sync", "accounting-post"];
 const canRoute = (role: unknown, action: string): boolean => !MONEY_ROUTES.includes(action) || isMoneyRole(role);
 const cleanTeam = (v: unknown): string => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
 const sameTeam = (a: any, b: any): boolean => { const x = cleanTeam(a && a.team).toLowerCase(), y = cleanTeam(b && b.team).toLowerCase(); return !!x && x === y; };
@@ -344,6 +344,9 @@ const INVOICE_ERRORS: Record<string, [number, string]> = {
   refs_missing: [409, "Une mission de cette facture n'existe plus ou n'est pas validée."],
   has_payments: [409, "Cette facture a déjà reçu un paiement : elle ne peut pas être annulée par un avoir."],
   bad_amount: [400, "Montant invalide (un nombre entier d'Ar supérieur à 0)."],
+  payment_missing: [404, "Paiement introuvable pour cette facture."],
+  already_voided: [409, "Ce paiement est déjà annulé."],
+  bad_reason: [400, "Indique le motif de l'annulation (10 caractères au moins)."],
 };
 function invoiceErrorOf(message: string): { status: number; error: string; max?: number } {
   const m = /too_much:(\d+)/.exec(message || "");
@@ -1025,7 +1028,7 @@ function closingEntry(entries: Entry[], yearStart: string, end: string, id: stri
 // BEGIN ACCOUNTINGBUILD
 /** Ce dont on a besoin d'une facture, d'une ligne d'argent, d'une avance : les vrais types du site les contiennent (typage structurel). */
 interface InvoiceLike { id: string; type?: string; number?: string; status: string; client?: { name?: string } | null; issue_date: string; subtotal_ar: number; tax_ar: number; total_ar: number }
-interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string }
+interface CashLike { id: string; kind: string; category?: string; amount_ar: number; date: string; note?: string; invoice_id?: string; payment_method?: string; receipt_no?: string; client_name?: string; void_of?: string }
 interface AdvanceLike { id: string; status: string; amount_ar: number; request_date: string }
 
 /** Fiche de paie telle que le serveur la garde (table de paie) : seuls les champs utiles ici. Le NOM du salarié n'est jamais utilisé : le Comptable ne doit pas voir la paie de chacun. */
@@ -1086,6 +1089,7 @@ function entryForCreditNote(inv: InvoiceLike): BuildResult {
 /** Ligne d'argent des Finances : entrée (paiement d'une facture → solde du client ; paiement client sans facture → client ; autre entrée → produits divers) ou dépense (charge selon la catégorie). */
 function entryForCash(c: CashLike): BuildResult {
   if (!isAmt(c.amount_ar)) return SKIP('amount');
+  if (c.void_of) return SKIP('void'); // ligne de correction d'un paiement annulé : son écriture inverse viendra avec M23.3c, jamais une charge
   const cash = cashAccountFor(c.payment_method);
   if (c.kind === 'in') {
     const credit = c.invoice_id || c.category === 'Paiement client' ? '411' : '758';
@@ -1569,7 +1573,7 @@ interface AlertInput {
   advances: { id: string; employee_name: string; status: string; request_date: string }[];
   posts: { id: string; employee_name: string; client_name: string; status: string; updated_at?: string; created_at?: string }[];
   invoices: { id: string; type?: string; status: string; number?: string; total_ar: number; due_date: string; client?: { name?: string } }[];
-  cash: { kind: string; amount_ar: number; invoice_id?: string }[];
+  cash: { kind: string; amount_ar: number; invoice_id?: string; void_of?: string }[];
 }
 interface AlertItem { key: string; id: string; name: string; sub: string; days: number; status: string; space: string }
 interface AlertLink { go: string; filter?: string; nav?: string; space?: string; sfilter?: string; product?: string }
@@ -1620,7 +1624,11 @@ function valWaitItems(posts: AlertInput['posts'], nowMs: number): AlertItem[] {
 
 function invLateItems(invoices: AlertInput['invoices'], cash: AlertInput['cash'], today: string): AlertItem[] {
   const paid = new Map<string, number>();
-  for (const e of cash) if (e.kind === 'in' && e.invoice_id && Number.isFinite(e.amount_ar) && e.amount_ar > 0) paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) + Math.round(e.amount_ar));
+  for (const e of cash) {
+    if (!e.invoice_id || !Number.isFinite(e.amount_ar) || !(e.amount_ar > 0)) continue;
+    if (e.kind === 'in') paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) + Math.round(e.amount_ar));
+    else if (e.kind === 'out' && e.void_of) paid.set(e.invoice_id, (paid.get(e.invoice_id) || 0) - Math.round(e.amount_ar)); // paiement annulé
+  }
   return invoices.filter(i => i.type !== 'credit_note' && i.status === 'issued' && i.due_date < today && Math.max(0, i.total_ar - (paid.get(i.id) || 0)) > 0)
     .map(i => ({ i, d: dayDiff(i.due_date, today) })).sort((a, b) => b.d - a.d)
     .map(x => ({ key: `alert:inv:${x.i.id}`, id: x.i.id, name: cut(x.i.client?.name, 60), sub: cut(x.i.number, 40), days: x.d, status: '', space: '' }));
@@ -2606,7 +2614,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "cash_change", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "cash_change", "invoice_void_payment", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
@@ -4103,6 +4111,22 @@ async function invoicePay(req: any, res: any, me: any) {
   });
   if (error) return invoiceFail(res, error.message);
   await auditLog(me, 'invoice_pay', { type: 'invoices', id, label: id }, `${amount} Ar le ${date}${req.body?.method ? ` (${String(req.body.method).slice(0, 40)})` : ''}`);
+  return res.json({ ok: true, ...data });
+}
+
+
+/** Annule un paiement de facture saisi par erreur : une ligne de correction liée (jamais de suppression), motif obligatoire, tracé dans le Journal d'audit. */
+async function invoiceVoidPayment(req: any, res: any, me: any) {
+  const no = moneyOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || '');
+  const paymentId = String(req.body?.payment_id || '');
+  const reason = String(req.body?.reason || '').trim().slice(0, 200);
+  if (!id || !paymentId) return res.status(400).json({ error: 'Demande invalide.' });
+  if (reason.length < 10) return res.status(400).json({ error: INVOICE_ERRORS.bad_reason[1], code: 'bad_reason' });
+  const today = invTodayMada();
+  const { data, error } = await sb.rpc('df_void_invoice_payment', { p_id: id, p_cash_id: paymentId, p_void_id: newDocId('cash'), p_date: today, p_reason: reason, p_by: me.id });
+  if (error) return invoiceFail(res, error.message);
+  await auditLog(me, 'invoice_void_payment', { type: 'invoices', id, label: id }, `${data?.cash?.amount_ar ?? ''} Ar : ${reason}`);
   return res.json({ ok: true, ...data });
 }
 
@@ -5642,7 +5666,7 @@ async function pushAlertsJob(nowMs: number, adminIds: string[]): Promise<{ group
     fetchAll((a, b) => sb.from(T.advances).select('id, data').eq('data->>status', 'pending').order('id', { ascending: true }).range(a, b)),
     fetchAll((a, b) => sb.from(T.posts).select('id, data').in('data->>status', ['pending_start', 'pending_end']).order('id', { ascending: true }).range(a, b)),
     fetchAll((a, b) => sb.from(T.invoices).select('id, data').eq('data->>status', 'issued').order('id', { ascending: true }).range(a, b)),
-    fetchAll((a, b) => sb.from(T.cash).select('id, data').eq('data->>kind', 'in').not('data->>invoice_id', 'is', null).order('id', { ascending: true }).range(a, b)),
+    fetchAll((a, b) => sb.from(T.cash).select('id, data').in('data->>kind', ['in', 'out']).not('data->>invoice_id', 'is', null).order('id', { ascending: true }).range(a, b)),
     fetchAll((a, b) => sb.from(PUSH_LOG).select('id').like('id', 'alert:%').order('id', { ascending: true }).range(a, b)),
   ]);
   const settings: any = (st as any)?.data?.data || {};
@@ -5908,6 +5932,7 @@ Deno.serve(async (request: Request) => {
     if (action === "invoice-issue" && req.method === "POST") return await invoiceIssue(req, res, me);
     if (action === "invoice-cancel" && req.method === "POST") return await invoiceCancel(req, res, me);
     if (action === "invoice-pay" && req.method === "POST") return await invoicePay(req, res, me);
+    if (action === "invoice-void-payment" && req.method === "POST") return await invoiceVoidPayment(req, res, me);
     if (action === "accounting-sync" && req.method === "POST") return await accountingSync(req, res, me);
     if (action === "accounting-post" && req.method === "POST") return await accountingPost(req, res, me);
     if (action === "accounting-reverse" && req.method === "POST") return await accountingReverse(req, res, me);
