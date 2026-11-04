@@ -1089,7 +1089,11 @@ function entryForCreditNote(inv: InvoiceLike): BuildResult {
 /** Ligne d'argent des Finances : entrée (paiement d'une facture → solde du client ; paiement client sans facture → client ; autre entrée → produits divers) ou dépense (charge selon la catégorie). */
 function entryForCash(c: CashLike): BuildResult {
   if (!isAmt(c.amount_ar)) return SKIP('amount');
-  if (c.void_of) return SKIP('void'); // ligne de correction d'un paiement annulé : son écriture inverse viendra avec M23.3c, jamais une charge
+  if (c.void_of) { // ligne de correction d'un paiement annulé (M23.3c) : écriture INVERSE du reçu (411 au débit, trésorerie au crédit), jamais une charge
+    if (c.kind !== 'out') return SKIP('kind');
+    const vc = cashAccountFor(c.payment_method);
+    return finish({ id: entryIdFor({ type: 'receipt_void', id: c.id }), date: c.date, journal: vc.journal, label: `Annulation de paiement${c.client_name ? ` ${c.client_name}` : ''}`.trim(), lines: [L('411', c.amount_ar, 0), L(vc.account, 0, c.amount_ar)], source: { type: 'receipt_void', id: c.id } });
+  }
   const cash = cashAccountFor(c.payment_method);
   if (c.kind === 'in') {
     const credit = c.invoice_id || c.category === 'Paiement client' ? '411' : '758';

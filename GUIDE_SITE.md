@@ -109,7 +109,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Facturation  `invoices`
 - **Qui** : responsable
 - **À quoi ça sert** : Faire les factures des clients, enregistrer les paiements et annuler une facture par un avoir.
-- **Comment l'utiliser** : 1. Nouvelle facture : choisir le client, cocher ses missions validées, enregistrer le brouillon. 2. Émettre : le numéro est attribué par le serveur et devient définitif. 3. Enregistrer chaque paiement reçu ; annuler par un avoir si la facture est fausse.
+- **Comment l'utiliser** : 1. Nouvelle facture : choisir le client, cocher ses missions validées, enregistrer le brouillon. 2. Émettre : le numéro est attribué par le serveur et devient définitif. 3. Chaque paiement reçu s'enregistre ; une erreur s'annule (« Annuler ce paiement »). Facture fausse : avoir.
 - **Règles** :
   - Devis (si « Devis activés » est coché dans Conditions) : Brouillon, Envoyé, Accepté ou Refusé ; un devis accepté devient une facture brouillon en un clic.
   - Un brouillon n'a pas de numéro ; une facture émise ne se modifie ni ne se supprime.

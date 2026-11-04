@@ -17,6 +17,7 @@ import {
   type InvoiceError, type InvoiceState, type LineDraft,
 } from '../../utils/invoices';
 import { parseAmount } from '../../utils/finance';
+import { voidedPaymentIds } from '../../utils/cashVoid';
 import { chaseText, toChase } from '../../utils/receivables';
 import { smsLink, whatsappLink } from '../../utils/messageLinks';
 import { invoiceHtml, printDoc, receiptHtml } from '../../utils/invoiceDoc';
@@ -73,6 +74,7 @@ export const InvoicesView: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [pay, setPay] = useState<Pay | null>(null);
+  const [voidPay, setVoidPay] = useState<{ id: string; paymentId: string; label: string; reason: string } | null>(null); // annuler un paiement (M23.3c)
   const [tab, setTab] = useState<'list' | 'receivables' | 'quotes'>('list');
   const [chaseLang, setChaseLang] = useState<'fr' | 'en'>(lang === 'en' ? 'en' : 'fr');
   const [copied, setCopied] = useState('');
@@ -158,6 +160,12 @@ export const InvoicesView: React.FC = () => {
     title: t('Supprimer ce brouillon ?', 'Delete this draft?'), message: t('Un brouillon n\'a pas de numéro : rien n\'est perdu côté numérotation.', 'A draft has no number: nothing is lost in the numbering.'),
     confirmLabel: t('Supprimer', 'Delete'), danger: true, onConfirm: () => { const r = db.deleteInvoiceDraft(inv.id); if (!r.success) setError(msg(r.error || '')); else setOpenId(null); },
   });
+  const submitVoid = () => {
+    if (!voidPay) return;
+    const reason = voidPay.reason.trim();
+    if (reason.length < 10) { setError(t('Écris le motif (10 caractères au moins).', 'Write the reason (at least 10 characters).')); return; }
+    void run(() => db.voidInvoicePayment(voidPay.id, voidPay.paymentId, reason), () => setVoidPay(null));
+  };
   const submitPay = () => {
     if (!pay) return;
     const amount = Math.round(parseAmount(pay.amount));
@@ -168,6 +176,7 @@ export const InvoicesView: React.FC = () => {
   const open = invoices.find(i => i.id === openId) || null;
   const openInfo = open ? invoiceInfo(open, cash, today) : null;
   const payments = open ? cash.filter(c => c.invoice_id === open.id && c.kind === 'in') : [];
+  const voided = voidedPaymentIds(cash);
   const Badge = ({ s }: { s: InvoiceState }) => <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${STATE_LABEL[s].tone}`}>{lang === 'en' ? STATE_LABEL[s].en : STATE_LABEL[s].fr}</span>;
   const modal = (children: React.ReactNode, onClose: () => void) => createPortal(
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" onClick={onClose} {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
@@ -291,7 +300,7 @@ export const InvoicesView: React.FC = () => {
           {open.status === 'issued' && open.type !== 'credit_note' && <><p>{t('Déjà payé', 'Already paid')} : {ar(openInfo.paid)}</p><p className="font-bold">{t('Reste à payer', 'Left to pay')} : {ar(openInfo.balance)}</p></>}
         </div>
         {open.note && <p className="text-xs text-slate-400 whitespace-pre-wrap">{open.note}</p>}
-        {payments.length > 0 && <div><h3 className="text-xs font-bold text-slate-300 mb-1">{t('Paiements reçus', 'Payments received')}</h3><ul className="text-sm text-slate-200 space-y-1">{payments.map(p => <li key={p.id} className="flex items-center justify-between gap-2"><span>{fmtDate(p.date)} · {p.receipt_no || ''} {p.payment_method ? `· ${p.payment_method}` : ''}</span><span className="flex items-center gap-2">{ar(p.amount_ar)}<button type="button" onClick={() => printDoc(receiptHtml(p, open, cash, { lang, company }))} className="min-h-[36px] px-2 rounded border border-slate-600 text-xs text-slate-100 cursor-pointer inline-flex items-center gap-1"><Printer className="w-3.5 h-3.5" />{t('Reçu', 'Receipt')}</button><button type="button" onClick={() => void downloadPdfFromHtml(receiptHtml(p, open, cash, { lang, company }), `recu-${p.receipt_no || p.id}`).catch(() => setError(t('Export PDF impossible.', 'PDF export failed.')))} className="min-h-[36px] px-2 rounded border border-slate-600 text-xs text-slate-100 cursor-pointer inline-flex items-center gap-1"><FileText className="w-3.5 h-3.5" />PDF</button></span></li>)}</ul></div>}
+        {payments.length > 0 && <div><h3 className="text-xs font-bold text-slate-300 mb-1">{t('Paiements reçus', 'Payments received')}</h3><ul className="text-sm text-slate-200 space-y-1">{payments.map(p => <li key={p.id} data-payment={p.id} className="flex items-center justify-between gap-2"><span className={voided.has(p.id) ? 'line-through text-slate-400' : ''}>{fmtDate(p.date)} · {p.receipt_no || ''} {p.payment_method ? `· ${p.payment_method}` : ''}{voided.has(p.id) && <span className="no-underline ml-2 text-[10px] font-mono text-amber-300">{t('annulé', 'voided')}</span>}</span><span className="flex items-center gap-2"><span className={voided.has(p.id) ? 'line-through text-slate-400' : ''}>{ar(p.amount_ar)}</span>{open.status === 'issued' && !voided.has(p.id) && <button type="button" data-void-payment={p.id} disabled={busy} onClick={() => { setError(''); setVoidPay({ id: open.id, paymentId: p.id, label: `${p.receipt_no || ''} ${ar(p.amount_ar)}`.trim(), reason: '' }); }} className="min-h-[36px] px-2 rounded border border-rose-500/60 text-xs text-rose-200 cursor-pointer inline-flex items-center gap-1"><Ban className="w-3.5 h-3.5" />{t('Annuler ce paiement', 'Void this payment')}</button>}<button type="button" onClick={() => printDoc(receiptHtml(p, open, cash, { lang, company }))} className="min-h-[36px] px-2 rounded border border-slate-600 text-xs text-slate-100 cursor-pointer inline-flex items-center gap-1"><Printer className="w-3.5 h-3.5" />{t('Reçu', 'Receipt')}</button><button type="button" onClick={() => void downloadPdfFromHtml(receiptHtml(p, open, cash, { lang, company }), `recu-${p.receipt_no || p.id}`).catch(() => setError(t('Export PDF impossible.', 'PDF export failed.')))} className="min-h-[36px] px-2 rounded border border-slate-600 text-xs text-slate-100 cursor-pointer inline-flex items-center gap-1"><FileText className="w-3.5 h-3.5" />PDF</button></span></li>)}</ul></div>}
         {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="button" onClick={() => printDoc(invoiceHtml(open, { lang, company, paid: openInfo.paid, creditOfNumber: invoices.find(i => i.id === open.credit_of)?.number }))} className={`${btn} border-slate-600 text-slate-100`}><Printer className="w-4 h-4" />{t('Imprimer', 'Print')}</button>
@@ -364,6 +373,14 @@ export const InvoicesView: React.FC = () => {
         <p className="text-[11px] text-slate-400">{t('Le paiement ne peut pas dépasser ce qui reste à payer. Un numéro de reçu est attribué et la ligne apparaît dans Finances.', 'A payment cannot exceed what is left to pay. A receipt number is assigned and the line appears in Finances.')}</p>
         <button type="button" disabled={busy} onClick={submitPay} className={`${btn} bg-emerald-600 border-emerald-500 text-white w-full`}>{t('Enregistrer', 'Save')}</button>
       </>, () => setPay(null))}
+      {voidPay && modal(<>
+        <div className="flex items-center justify-between"><h2 className="text-base font-bold text-white">{t('Annuler ce paiement ?', 'Void this payment?')}</h2>{closeBtn(() => setVoidPay(null))}</div>
+        <p className="text-sm text-slate-200">{voidPay.label}</p>
+        <label className="block text-xs text-slate-400">{t('Motif (obligatoire, 10 caractères au moins)', 'Reason (required, at least 10 characters)')}<textarea data-void-reason value={voidPay.reason} maxLength={200} onChange={e => setVoidPay({ ...voidPay, reason: e.target.value })} className={`${field} mt-1 min-h-[80px]`} /></label>
+        {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
+        <p className="text-[11px] text-slate-400">{t('Rien n\'est supprimé : le paiement reste visible, barré, avec une ligne de correction dans Finances et une écriture inverse en comptabilité. La facture redevient à payer. Tout est noté dans le Journal d\'audit.', 'Nothing is deleted: the payment stays visible, struck through, with a correction line in Finances and a reversing accounting entry. The invoice becomes payable again. Everything is recorded in the audit log.')}</p>
+        <button type="button" disabled={busy} onClick={submitVoid} className={`${btn} bg-rose-600 border-rose-500 text-white w-full`}>{t('Annuler le paiement', 'Void the payment')}</button>
+      </>, () => setVoidPay(null))}
     </div>
   );
 };

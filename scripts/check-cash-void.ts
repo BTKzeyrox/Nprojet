@@ -58,6 +58,11 @@ const net = files.filter(f => /db\.getCashNet\(\)/.test(readFileSync(f, 'utf8'))
 ok(['TreasuryPage', 'TreasuryCharts', 'DirectionPage', 'FinanceInsights', 'BudgetsCard', 'PlanVsActualCard', 'ReportTab', 'ClientsPage', 'GraphsMoney', 'AutoReportCard', 'GoalsPanel', 'alertsDb', 'clientBadgesDb', 'snapshotDb'].every(k => net.some(f => f.includes(k))), 'les 14 écrans et outils de chiffres lisent la caisse nette');
 const store = readFileSync('src/db/store.ts', 'utf8');
 ok(/getCashNet\(\): CashEntry\[\] \{ return cashEffective\(this\.cash\); \}/.test(store), 'la caisse nette passe par cashEffective');
+const iv = readFileSync('src/views/admin/InvoicesView.tsx', 'utf8');
+ok(/data-void-payment/.test(iv) && /db\.voidInvoicePayment\(voidPay\.id, voidPay\.paymentId, reason\)/.test(iv) && /reason\.length < 10/.test(iv), 'facture : bouton « Annuler ce paiement » avec motif de 10 caractères au moins');
+ok(/voidedPaymentIds\(cash\)/.test(iv) && /line-through/.test(iv), 'facture : un paiement annulé reste visible, barré');
+const ae = readFileSync('src/utils/accountingEntries.ts', 'utf8');
+ok(/type: 'receipt_void'/.test(ae) && /L\('411', c\.amount_ar, 0\)/.test(ae), 'comptabilité : écriture inverse du reçu pour une correction');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }
