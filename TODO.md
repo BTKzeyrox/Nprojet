@@ -632,7 +632,15 @@ Règles pour toutes les étapes serveur : sauvegarde (`select public.df_take_bac
 ### Ordre conseillé
 1. M23.1 (solder le reste), 2. M23.2 (prix réel), 3. M23.3 (annuler un paiement), puis M23.6, M23.5, M23.4, M23.7 après les décisions de BTK. Une étape à la fois, testée à l'écran avant la suivante.
 
-### Décisions ouvertes **[BTK]**
+### Décisions de BTK (2026-11-04)
+- M23.3 : choix A (ligne de correction), déjà codé.
+- M23.4 : **oui**, un avoir partiel est nécessaire (à faire après l'essai de M23.3c).
+- M23.6 : **retour fournisseur** (sortie de stock avec le bon cité + dépense inverse, comme la correction de paiement).
+- M23.7 : fournisseurs payés **à la réception** : E1 et E2 suffisent, E3 inutile.
+- Autre module : aucun pour l'instant, BTK essaie d'abord M22 et M23.3c sur son téléphone.
+- Ordre : essai de M23.3c par BTK, puis M23.6, M23.5, M23.4, M23.7 (E1, E2). Une étape testée à l'écran avant la suivante.
+
+### Décisions ouvertes **[BTK]** (réponses ci-dessus)
 - M23.3 : choix A (ligne de correction, recommandé) ou B (paiement marqué annulé) ?
 - M23.4 : un avoir partiel est-il nécessaire ?
 - M23.6 : retour fournisseur ou correction de réception ?
