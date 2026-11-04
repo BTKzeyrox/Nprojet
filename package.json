@@ -103,6 +103,7 @@
     "check:push-alerts": "npx --yes tsx scripts/check-push-alerts.ts",
     "check:speed": "npx --yes tsx scripts/check-speed.ts",
     "check:assistant": "npx --yes tsx scripts/check-assistant.ts",
+    "check:assistant-menu": "tsx scripts/check-assistant-menu.ts",
     "check:templates": "npx --yes tsx scripts/check-templates.ts",
     "check:recurring": "npx --yes tsx scripts/check-recurring.ts",
     "check:mission-sheet": "esbuild scripts/check-mission-sheet.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-mission-sheet.mjs && node node_modules/.cache/check-mission-sheet.mjs",
