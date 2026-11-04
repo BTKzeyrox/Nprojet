@@ -111,7 +111,7 @@ ok(findTarget(root([own as ElLike, pageEl]), X([{ fr: 'Émettre', en: 'Issue' }]
 ok(findTarget(root([own as ElLike]), X([{ fr: 'Émettre', en: 'Issue' }])) === null, 'moteur : seul le texte du guide contient le mot → rien n\'est trouvé (pas de contour sur le guide)');
 ok(/data-guide-ui=""/.test(src['src/components/TourGuide.tsx']), 'composant : l\'écran du guide porte data-guide-ui');
 ok(/findTarget\(document, step\.target, \{ width: window\.innerWidth, height: window\.innerHeight \}\)/.test(src['src/components/TourGuide.tsx']), 'composant : la recherche connaît la taille de la fenêtre (éléments hors écran ignorés)');
-ok(/hb\.width < 8 \|\| hb\.height < 8/.test(src['src/components/TourGuide.tsx']) && /step\.page \? '' : 'bg-black\/35'/.test(src['src/components/TourGuide.tsx']) && !/bg-black\/(65|40)/.test(src['src/components/TourGuide.tsx']), 'composant : cadre trop petit (< 8 px) = pas de cadre ; une scène sur une page ne l\'assombrit JAMAIS (seule la bienvenue a un fond léger de 35 %)');
+ok(/hb\.width < 8 \|\| hb\.height < 8/.test(src['src/components/TourGuide.tsx']) && !/bg-black/.test(src['src/components/TourGuide.tsx']), 'le guide n\'assombrit jamais l\'écran (ni la bienvenue ni une page) : seul le cadre clignote');
 // Le défaut vu sur téléphone : le menu latéral fermé (poussé hors de l'écran à gauche) contient aussi « Tableau de bord »
 const VIEW = { width: 390, height: 844 };
 const at = (text: string, box: { left: number; top: number; width: number; height: number }, closestMap: Record<string, boolean> = {}) => ({ textContent: text, getBoundingClientRect: () => box, closest: (sel: string) => (closestMap[sel] ? {} : null) }) as ElLike;
@@ -147,7 +147,7 @@ ok(/markTourSeen\(store\(\), userId\)/.test(comp) && TOUR_VERSION >= 3, 'composa
 const css = fs.readFileSync('src/index.css', 'utf8');
 ok(/\.gp-tour-ring \{[^}]*animation: gp-tour-blink/.test(css) && /@keyframes gp-tour-blink/.test(css), 'CSS : le contour clignote (animation gp-tour-blink)');
 ok(/@media \(prefers-reduced-motion: reduce\) \{ \.gp-tour-ring \{ animation: none/.test(css), 'CSS : le clignotement s\'arrête si l\'appareil demande moins d\'animations');
-ok(/box-shadow: 0 0 0 100vmax rgba\(0, 0, 0, 0\.28\)/.test(css) && !/rgba\(0, 0, 0, 0\.(62|45)\)/.test(css), 'CSS : le reste de l\'écran est assombri à 28 % seulement (avant 62 % puis 45 %), le cadre reste lumineux');
+ok(!/100vmax/.test(css.slice(css.indexOf('.gp-tour-ring'), css.indexOf('.gp-tour-ring') + 900)) && /@keyframes gp-tour-blink/.test(css) && /\.gp-tour-ring \{[^}]*animation: gp-tour-blink/.test(css), 'CSS : plus aucune ombre géante (écran jamais assombri), le cadre clignote toujours');
 
 // ---- 7. M20.1 : bulle visible, jamais au milieu quand il y a une page
 ok(bubbleDock(null, 800) === 'bottom' && bubbleDock(null, 800, true) === 'center', 'bulle : sans élément trouvé elle va EN BAS (la page reste visible) ; au centre seulement pour la bienvenue');

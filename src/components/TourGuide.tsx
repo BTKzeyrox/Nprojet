@@ -138,14 +138,13 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
   const replay = () => { setEnded(false); setI(0); setEpoch(e => e + 1); setPlaying(true); };
   const cx = hole ? hole.left + hole.width / 2 : 0, cy = hole ? hole.top + hole.height / 2 : 0;
   const fx = finger === 'start' ? window.innerWidth * 0.55 : cx, fy = finger === 'start' ? window.innerHeight * 0.7 : cy;
-  const dim = step.page ? '' : 'bg-black/35'; // l'écran de bienvenue assombrit un peu ; une scène sur une page ne cache jamais la page
   return createPortal(
     <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }} role="dialog" aria-modal="true" aria-label={t('Guide interactif', 'Interactive guide')} data-notranslate="" data-guide-ui="">
       {hole
         ? <div className="gp-tour-ring" style={{ left: hole.left, top: hole.top, width: hole.width, height: hole.height }} role="button" tabIndex={0}
             aria-label={step.action ? L(step.action.hint) : t('Élément montré par le guide', 'Item shown by the guide')}
             onClick={tapRing} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapRing(); } }} />
-        : <div className={`absolute inset-0 ${dim}`} />}
+        : <div className="absolute inset-0" />}
       {hole && finger === 'tap' && <div key={`r${i}-${epoch}`} className="gp-ripple" style={{ left: cx, top: cy }} />}
       {hole && finger !== 'hidden' && <div className={`gp-finger${finger === 'tap' ? ' tap' : ''}`} style={{ left: fx, top: fy }} aria-hidden="true"><Pointer className="w-9 h-9 text-white" fill="#0f172a" strokeWidth={1.6} /></div>}
       <div className={`fixed left-2 right-2 mx-auto max-w-md max-h-[46vh] overflow-y-auto rounded-2xl bg-[#f8fafc] text-[#0f172a] border-2 border-[#10b981] shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-3 space-y-2 ${pos}`}>
