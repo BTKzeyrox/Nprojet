@@ -51,6 +51,7 @@ import { askReason } from '../../components/ReasonModal';
 import { AccessRequestsCard } from '../../components/AccessRequestsCard';
 import { countPending } from '../../utils/pendingCount';
 import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
+import { countOnline } from '../../utils/presenceCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
 import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
@@ -390,7 +391,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Computations
   const presence = db.getPresence();
-  const onlineEmployees = users.filter(u => u.role === 'employee' && getPresenceStatus(u, posts, presence).status !== 'offline');
+  const onlineCount = countOnline(users, presence); // en ligne = signe de vie récent (une mission ouverte seule ne compte pas), comptes actifs seulement
   const waitingQueue = getQueue(users, posts, presence);
   const pendingSubmissions = posts.filter(
     p => p.status === 'pending_start' || p.status === 'pending_end'
@@ -424,8 +425,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
     const running = posts.filter(p => p.status === 'active');
     const waiting = pendingSubmissions.slice(0, 5);
-    const nbEmployees = users.filter(u => u.role === 'employee').length;
-    const tile = (label: string, value: React.ReactNode, hint: string, Icon: React.ElementType, tone: string, onClick?: () => void) => (
+        const tile = (label: string, value: React.ReactNode, hint: string, Icon: React.ElementType, tone: string, onClick?: () => void) => (
       <button type="button" onClick={onClick} className="text-left bg-[#0f1722] border border-slate-800 hover:border-blue-500/60 rounded-2xl p-4 transition-colors cursor-pointer w-full">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${tone}`}>
           <Icon className="w-5 h-5" />
@@ -448,7 +448,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <GoalsBars lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {tile('Opérateurs en ligne', <>{onlineEmployees.length}<span className="text-base font-medium text-slate-400"> / {nbEmployees}</span></>, 'Voir les opérateurs', Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
+          {tile('Opérateurs en ligne', <>{onlineCount.online}<span className="text-base font-medium text-slate-400"> / {onlineCount.total}</span></>, 'Voir les opérateurs', Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
           {tile('À valider', pend.total, `${plural(pend.starts, 'départ')} · ${plural(pend.ends, 'fin')}`, Clock, pend.total > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600', () => onNavigateTab && onNavigateTab('validations'))}
           {tile('Missions terminées', doneToday.length, "Aujourd'hui", CheckCircle2, 'bg-emerald-100 text-emerald-700', () => onNavigateToCalendar && onNavigateToCalendar())}
           {tile('Quantité du jour', formatScoreM(scoreToday), 'Total produit', TrendingUp, 'bg-indigo-100 text-indigo-700', () => onNavigateToCalendar && onNavigateToCalendar())}
@@ -1731,13 +1731,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Opérateurs Connectés
             </h3>
             <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-              {onlineEmployees.length} En Ligne
+              {onlineCount.online} En Ligne
             </span>
           </div>
 
           <div className="space-y-3">
             {users
-              .filter(u => u.role === 'employee')
+              .filter(u => u.role === 'employee' && u.status !== 'blocked')
               .map(emp => {
                 const active = posts.find(
                   p => p.employee_id === emp.id && (p.status === 'active' || p.status === 'pending_start')

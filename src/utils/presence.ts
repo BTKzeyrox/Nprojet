@@ -3,9 +3,10 @@
 // Pour modifier : en ligne = signe de vie de moins de 90 s (ONLINE_MS) ; ne pas se fier à is_online (resté bloqué sur vrai) ; dayMada = jour de Madagascar (UTC+3).
 import { db } from '../db/store';
 import { ClientContract, PostSession, PresenceRow, User } from '../types';
+import { ONLINE_MS } from './presenceCount';
 
 // Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 90 s
-export const ONLINE_MS = 90_000;
+export { ONLINE_MS };
 const OPEN = ['pending_start', 'active', 'pending_end'];
 
 export type PresenceStatus = 'working' | 'connected' | 'waiting' | 'offline';
