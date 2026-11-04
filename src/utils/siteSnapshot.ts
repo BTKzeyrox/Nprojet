@@ -31,11 +31,44 @@ export interface Snapshot {
   team: { employees: number; with_missions_in_period: number };
   payroll: { advances_pending: number; advances_pending_ar: number };
   health: { urgent: number; watch: number; info: number; by_page: Record<string, number>; by_rule: Record<string, number> };
+  /** Détail de l'argent SANS aucun nom (montants par mois et par catégorie) : sert à répondre « pourquoi la trésorerie a baissé ? » avec la vraie cause. */
+  finance_detail: FinanceDetail;
+}
+export interface FinanceDetail {
+  treasury_parts: { received_total: number; expenses_total: number; salaries_total: number };
+  months: { m: string; received: number; expenses: number; salaries: number; net: number }[]; // le mois en cours puis les 3 précédents
+  top_out_month: { c: string; ar: number }[]; top_in_month: { c: string; ar: number }[]; top_out_prev: { c: string; ar: number }[];
+  biggest_out: { c: string; ar: number; d: string }[]; // les 3 plus grosses dépenses des 60 derniers jours (catégorie seulement, jamais la note)
 }
 
 const priceSettings = (s: any) => ({ client_price_default_ar: s?.client_price_default_ar, client_prices_by_type: s?.client_prices_by_type });
 const finInput = (i: SnapshotInput): FinanceInput => ({ cash: i.cash, posts: i.posts, contracts: i.contracts, prices: priceSettings(i.settings), pricePerMission: Number(i.settings?.price_per_mission) || 0, clients: i.clients });
 const range = (i: SnapshotInput, r?: { start: string; end: string }) => { const p = periodRange('month', i.today); return r ? { start: r.start, end: r.end, days: p.days } : p; };
+
+const catName = (c: unknown): string => String(c || 'Autre').replace(/[<>{}@]|https?:/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Autre';
+const addDays = (d: string, n: number): string => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const monthBounds = (today: string, back: number): { m: string; start: string; end: string } => {
+  const y = Number(today.slice(0, 4)), mo = Number(today.slice(5, 7)) - 1 - back;
+  const first = new Date(Date.UTC(y, mo, 1)), last = new Date(Date.UTC(y, mo + 1, 0));
+  return { m: first.toISOString().slice(0, 7), start: first.toISOString().slice(0, 10), end: last.toISOString().slice(0, 10) };
+};
+const byCat = (rows: CashEntry[], n: number): { c: string; ar: number }[] => {
+  const m = new Map<string, number>(); for (const c of rows) m.set(catName(c.category), (m.get(catName(c.category)) || 0) + c.amount_ar);
+  return [...m.entries()].map(([c, ar]) => ({ c, ar })).sort((a, b) => b.ar - a.ar || a.c.localeCompare(b.c)).slice(0, n);
+};
+export function buildFinanceDetail(i: SnapshotInput): FinanceDetail {
+  const fi = finInput(i), p = periodRange('month', i.today);
+  const months = [0, 1, 2, 3].map(b => { const mb = monthBounds(i.today, b), f = computeFinance(fi, 'month', { start: mb.start, end: mb.end, days: p.days }); return { m: mb.m, received: f.received, expenses: f.spent, salaries: f.salaries, net: f.received - f.spent - f.salaries }; });
+  const cur = monthBounds(i.today, 0), prev = monthBounds(i.today, 1);
+  const inM = (b: { start: string; end: string }, k: string) => i.cash.filter(c => c.kind === k && c.date >= b.start && c.date <= b.end);
+  const since = addDays(i.today, -60);
+  const salaryOf = (q: PostSession) => Math.max(0, Math.round(typeof q.calculated_ar === 'number' ? q.calculated_ar : fi.pricePerMission));
+  return {
+    treasury_parts: { received_total: i.cash.filter(c => c.kind === 'in').reduce((t, c) => t + c.amount_ar, 0), expenses_total: i.cash.filter(c => c.kind === 'out').reduce((t, c) => t + c.amount_ar, 0), salaries_total: i.posts.filter(q => q.status === 'completed').reduce((t, q) => t + salaryOf(q), 0) },
+    months, top_out_month: byCat(inM(cur, 'out'), 5), top_in_month: byCat(inM(cur, 'in'), 5), top_out_prev: byCat(inM(prev, 'out'), 5),
+    biggest_out: i.cash.filter(c => c.kind === 'out' && c.date >= since && c.date <= i.today).sort((a, b) => b.amount_ar - a.amount_ar || b.date.localeCompare(a.date)).slice(0, 3).map(c => ({ c: catName(c.category), ar: c.amount_ar, d: c.date })),
+  };
+}
 
 export function buildSnapshot(i: SnapshotInput): Snapshot {
   const r = range(i), f = computeFinance(finInput(i), 'month', r);
@@ -59,6 +92,7 @@ export function buildSnapshot(i: SnapshotInput): Snapshot {
     team: { employees: i.users.filter(u => u.role === 'employee' && (u.status === undefined || u.status === 'active')).length, with_missions_in_period: new Set(month.filter(p => p.status === 'completed').map(p => p.employee_id)).size },
     payroll: { advances_pending: pend.length, advances_pending_ar: pend.reduce((t, a) => t + (Number.isFinite(a.amount_ar) ? a.amount_ar : 0), 0) },
     health: { urgent: alerts.filter(a => a.severity === 'urgent').length, watch: alerts.filter(a => a.severity === 'watch').length, info: alerts.filter(a => a.severity === 'info').length, by_page: byPage, by_rule: byRule },
+    finance_detail: buildFinanceDetail(i),
   };
 }
 

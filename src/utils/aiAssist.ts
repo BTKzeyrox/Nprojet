@@ -1,5 +1,5 @@
 // Assistant IA externe (niveau B, M11.13) côté site. ADMIN SEULEMENT, DÉSACTIVÉ PAR DÉFAUT (case dans Réglages, réglée sur cet appareil).
-// Ce qui part : la question tapée + le résumé calculé SANS noms (siteSnapshot). Jamais de noms, de montants détaillés ni de lignes de données.
+// Ce qui part : la question tapée + le résumé calculé SANS noms (siteSnapshot), avec le détail de l'argent par mois et par catégorie (montants, jamais de noms ni de notes) pour répondre « pourquoi » avec la vraie cause.
 import { db } from '../db/store';
 import { getSnapshot } from './snapshotDb';
 import type { Bi } from './assistant';

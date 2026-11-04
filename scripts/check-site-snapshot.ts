@@ -4,6 +4,7 @@ import { buildSnapshot, explainFigure, FIGURE_IDS, type SnapshotInput } from '..
 import { computeFinance } from '../src/utils/financeStats';
 import { periodRange } from '../src/utils/stats';
 import { buildDemoData } from '../src/demo/demoData';
+import { cleanSnapshot } from '../supabase/functions/df-assistant/guard';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
@@ -25,7 +26,18 @@ const json = JSON.stringify(s);
 ok(!/NaN|undefined|null,"?\w*":NaN|Infinity/.test(json), 'instantané : aucun NaN ni undefined');
 const names = [...demo.users.map(u => u.name), ...demo.clients.map(c => c.name), ...demo.products.map(p => p.name), ...demo.users.map(u => u.username)].filter(x => x && x.length > 3);
 ok(names.every(nm => !json.includes(nm)), 'instantané : aucun nom de personne, de client ni de produit (jamais les données brutes)');
-ok(json.length < 1500, `instantané : petit (${json.length} caractères) : il pourra être donné à un assistant sans fuite`);
+ok(json.length < 5500, `instantané : assez petit (${json.length} caractères, limite du serveur 6000) pour être donné à un assistant`);
+{
+  const d = s.finance_detail;
+  ok(d.months.length === 4 && d.months[0].m === today.slice(0, 7) && d.months.every(m => m.net === m.received - m.expenses - m.salaries), 'détail : 4 mois (le mois en cours d\'abord), net = reçu − dépenses − salaires');
+  ok(d.treasury_parts.received_total - d.treasury_parts.expenses_total - d.treasury_parts.salaries_total === s.finance.treasury, 'détail : la trésorerie = total reçu − total dépenses − total salaires (la cause est visible)');
+  ok(d.months[0].received === f.received && d.months[0].expenses === f.spent && d.months[0].salaries === f.salaries, 'détail : le mois en cours = la page Finances');
+  ok(d.top_out_month.length <= 5 && d.biggest_out.length <= 3 && d.top_out_month.every((x, k, a) => k === 0 || a[k - 1].ar >= x.ar), 'détail : catégories triées, au plus 5 ; 3 plus grosses dépenses');
+  ok(d.biggest_out.every(x => x.c.length <= 40 && !/[<>{}@]|https?:/i.test(x.c)), 'détail : catégories propres (aucune note, aucun lien)');
+  ok(cleanSnapshot(s).ok, 'détail : le serveur de l\'assistant accepte l\'instantané complet (forme, profondeur, taille)');
+  const guard = fs.readFileSync(new URL('../supabase/functions/df-assistant/guard.ts', import.meta.url), 'utf8');
+  ok(/SNAP_MAX_CHARS = 6000/.test(guard) && /RÉPONSE EXACTE/.test(guard) && /JAMAIS consulter une page/.test(guard) && /EXACT ANSWER/.test(guard), 'assistant IA : consigne « réponse exacte, jamais renvoyer vers une page pour comprendre » (FR et EN)');
+}
 ok(JSON.stringify(buildSnapshot(input({ posts: [...I.posts].reverse(), cash: [...I.cash].reverse() }))) === json, 'instantané : même résultat quel que soit l\'ordre des données');
 const frozen = JSON.stringify(I); buildSnapshot(I); ok(JSON.stringify(I) === frozen, 'instantané : aucune donnée modifiée');
 const e0 = buildSnapshot(input({ users: [], posts: [], contracts: [], clients: [], cash: [], products: [], moves: [], advances: [] }));
