@@ -40,4 +40,7 @@ const stale: string[] = [];
 for (const file of ['src/utils/siteKnowledge.ts', 'src/views/admin/graphs/GraphsMoney.tsx', 'src/utils/guideScripts.ts', 'src/components/AssistantChat.tsx']) { for (const m of r(file).matchAll(/Statistiques > Finances|Statistics > Finance/g)) { const ctx = r(file).slice(Math.max(0, (m.index || 0) - 20), (m.index || 0) + 40); if (!/ancien menu|old menu/.test(ctx)) stale.push(file); } }
 eq(stale, [], 'aucun texte ne renvoie à « Statistiques > Finances » sans dire que c\'est l\'ancien menu');
 ok(/Missions > Statistiques/.test(r('src/utils/siteKnowledge.ts')) && /Argent > Finances/.test(r('src/utils/siteKnowledge.ts')), 'carte du site : dit où sont les chiffres et les finances');
+const gs = r('src/utils/guideScripts.ts'), tg = r('src/components/TourGuide.tsx');
+ok(/id: 'stats', page: 'stats', statsTab: 'finance'/.test(gs) && /setStatsTab\(step\.statsTab\)/.test(tg), 'guide : l\'étape « Les chiffres » ouvre Argent > Finances');
+ok(!/Trois onglets : Statistiques/.test(gs), 'guide : plus de texte « trois onglets » de l\'ancien menu');
 console.log(f ? `${f} ÉCHEC(S) sur ${t}` : `${t}/${t} contrôles réussis`); process.exit(f ? 1 : 0);

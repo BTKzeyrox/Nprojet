@@ -1,6 +1,7 @@
 // Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène.
 // Utilisé par : App.tsx et SettingsView.tsx.
 // Pour modifier : props userId, role, onNavigate ; les scènes viennent de utils/guideScripts.ts. S'ouvre seul à la première connexion de chaque compte sur l'appareil ; simulation sans appel au serveur.
+import { setStatsTab } from '../utils/statsNav';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Compass, List, Pause, Play, Pointer, RotateCcw, SkipBack, SkipForward, X, HelpCircle } from 'lucide-react';
@@ -70,7 +71,7 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
     if (!open) return;
     elapsed.current = 0;
     setResult(false); setFinger('hidden'); setHole(null); setWaiting(!!step.target);
-    if (step.page && step.page !== lastPage.current) { onNavigate(step.page); }
+    if (step.page && step.page !== lastPage.current) { if (step.statsTab) setStatsTab(step.statsTab); onNavigate(step.page); }
     if (step.page) lastPage.current = step.page;
     let alive = true, tries = 0, scrolled = false;
     const tick = () => {

@@ -768,7 +768,7 @@ Site seulement (pas de serveur, pas de base) · une étape testée avant la suiv
 - *Qui est concerné :* un petit commerce sans employés en mission. Le préréglage existe à côté de « tout montrer ».
 - *Fini quand :* le préréglage s'applique et se retire, et le menu court reste cohérent (pas d'entrée vide).
 
-**M22.10 — [ ] Anglais, carte du site, guide** (taille S)
+**M22.10 — [x] FAIT le 2026-11-04 (« Go » de BTK), en ligne — Anglais, carte du site, guide** (taille S)
 - *Ce qu'on fait :* tous les textes en français **et** en anglais ; fiches de la carte du site à jour (chaque page dit où elle est dans le nouveau menu) ; `GUIDE_SITE.md` (`npm run guide`) ; clips du guide.
 - *Fini quand :* `check:site-map` et `check:guide` passent.
 

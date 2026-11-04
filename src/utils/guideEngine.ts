@@ -13,6 +13,8 @@ export interface GuideStep {
   id: string;
   /** Identifiant de la page du menu à ouvrir (null = écran de bienvenue, sans page). */
   page: string | null;
+  /** Page « stats » : ouvrir l'onglet Finances (Argent > Finances dans le nouveau menu). */
+  statsTab?: 'finance';
   target: GuideTarget | null;
   title: Bi;
   text: Bi;
