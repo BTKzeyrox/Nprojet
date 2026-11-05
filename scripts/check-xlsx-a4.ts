@@ -65,7 +65,7 @@ const slip: Slip = {
   ok(ws.pageSetup.paperSize === 9, 'papier A4 (code 9)');
   ok(ws.pageSetup.orientation === 'portrait' || ws.pageSetup.orientation === 'landscape', `orientation écrite : ${ws.pageSetup.orientation}`);
   ok(!ws.pageSetup.fitToPage && (ws.pageSetup.scale ?? 100) === 100, 'taille 100 % : jamais « ajuster à une page »');
-  ok(ws.pageSetup.margins?.left === 0.7 && ws.pageSetup.margins?.top === 0.75, 'marges normales (0,7 po et 0,75 po)');
+  ok(ws.pageSetup.margins?.left === 0.31 && ws.pageSetup.margins?.top === 0.31, 'marges réduites de 8 mm (0,31 po)');
   ok(String(ws.headerFooter.oddFooter || '').includes('Page &P / &N') && String(ws.headerFooter.oddFooter).includes(EXCEL_FONT), 'pied de page : numéro de page en Times New Roman');
   let cells = 0, badFont = 0, numbers = 0, texts: string[] = [];
   ws.eachRow(row => row.eachCell(c => { if (c.value === null || c.value === undefined || c.value === '') return; cells++; if (c.font?.name !== EXCEL_FONT || c.font?.size !== EXCEL_PT) badFont++; if (c.type === ExcelJS.ValueType.Number) numbers++; if (typeof c.value === 'string') texts.push(c.value); }));
@@ -107,6 +107,15 @@ const slip: Slip = {
   ok(big.length === 3 && rowsBack === 1199 && sizeMax <= EXCEL_MAX_ROWS, `1 200 lignes : ${big.length} fichiers relus, ${rowsBack} lignes retrouvées, 500 au plus par fichier`);
   ok(headOk && fontOk, 'chaque fichier : en-tête en gras en première ligne, Times New Roman');
 
+  // Marges 8 mm, milliers et colonnes assez larges (BTK, 2026-11-05)
+  ok(ws.getCell('F5').numFmt === '#,##0' && ws.getCell('D5').numFmt === '#,##0', `montants et points : séparateur de milliers (${ws.getCell('F5').numFmt})`);
+  ok(ws.getCell('C5').numFmt !== '#,##0', 'le numéro de mission n\'a pas de milliers');
+  const wb2 = await load([{ name: 'Années', rows: [['Année', 'Montant (Ar)'], [2026, 1234567]], headerRows: 1 }]);
+  const w2 = wb2.getWorksheet('Années')!;
+  ok(w2.getCell('A2').numFmt !== '#,##0' && w2.getCell('B2').numFmt === '#,##0', 'une année reste « 2026 » (jamais « 2,026 »), un montant a ses milliers');
+  ok(w2.getColumn(2).width! >= '1,234,567'.length, `colonne Montant assez large pour 1 234 567 (${w2.getColumn(2).width}) : pas de « ### »`);
+  const src = (await import('node:fs')).readFileSync('src/utils/sheetExport.ts', 'utf8');
+  ok(/WordSection1/.test(src) && /<table width="100%"/.test(src), 'Word : section A4 à marges réduites et tableau pleine largeur');
   console.log(fails ? `\n${fails} ÉCHEC(S)` : '\nTout est OK');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.log('ERREUR', e); process.exit(1); });

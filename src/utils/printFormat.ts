@@ -8,11 +8,11 @@ export const PRINT_FONT = "'Times New Roman','Tinos','Liberation Serif',Times,se
 export const PRINT_PT = 12;
 
 export const A4_MM = { w: 210, h: 297 } as const;
-/** Marges « normales » de la page. */
-export const PRINT_MARGIN_MM = 15;
-/** Largeur utile de la page : 210 − 2 × 15 = 180 mm. */
+/** Marges réduites de la page (BTK, 2026-11-05 : « réduis la marge » ; avant : 15 mm). */
+export const PRINT_MARGIN_MM = 8;
+/** Largeur utile de la page : 210 − 2 × 8 = 194 mm. */
 export const PRINT_CONTENT_W_MM = A4_MM.w - 2 * PRINT_MARGIN_MM;
-/** 180 mm à 96 dpi : le PDF dessine la page à cette largeur, donc 12 pt à l'écran = 12 pt sur le papier (rien n'est rétréci). */
+/** 194 mm à 96 dpi : le PDF dessine la page à cette largeur, donc 12 pt à l'écran = 12 pt sur le papier (rien n'est rétréci). */
 export const PRINT_CONTENT_W_PX = Math.round((PRINT_CONTENT_W_MM / 25.4) * 96);
 
 /** Police Tinos livrée avec le site (public/fonts). Mise dans chaque page imprimable. */

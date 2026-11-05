@@ -66,7 +66,9 @@ export function partFileName(base: string, i: number, n: number): string {
 
 /** Feuille « en tableau » : au moins une ligne a deux cases remplies. Sinon (une seule colonne de texte), toutes les lignes comptent comme tableau. */
 const isTabular = (rows: XCell[][]): boolean => rows.some(r => filled(r) >= 2);
-const lineLen = (v: XCell): number => Math.max(0, ...textOf(v).split('\n').map(l => l.length));
+/** Largeur d'un nombre une fois affiché avec ses milliers (« 2 500 000 » : 2 espaces de plus que « 2500000 ») : sans cela la colonne montre « ### ». */
+const numLen = (v: number): number => { const t = String(Math.abs(v)); const int = t.split('.')[0].length; return (v < 0 ? 1 : 0) + t.length + Math.floor((int - 1) / 3) + (Number.isInteger(v) ? 0 : Math.max(0, 2 - ((t.split('.')[1] || '').length))); };
+const lineLen = (v: XCell): number => (typeof v === 'number' && Number.isFinite(v) ? numLen(v) : Math.max(0, ...textOf(v).split('\n').map(l => l.length)));
 
 /** Largeur de chaque colonne (unités Excel) d'après le contenu, entre 8 et 60. Les titres seuls sur une ligne ne comptent pas. */
 export function colUnits(rows: XCell[][]): number[] {
@@ -85,7 +87,10 @@ export const orientationFor = (units: number[]): 'portrait' | 'landscape' => (un
 /** Hauteur (en points) d'une ligne de texte long fusionnée sur toute la largeur du tableau. */
 export const wrappedHeight = (text: string, totalUnits: number): number => Math.max(1, Math.ceil(text.length / Math.max(1, totalUnits))) * LINE_PT;
 
-/** Classeur Excel prêt : Times New Roman 12 partout, A4, marges normales, taille 100 % (jamais « ajuster à une page »), en-tête répété à chaque page, numéro de page. */
+/** Colonnes de nombres à afficher avec des milliers (d'après le titre de la colonne). Les années, numéros et codes ne sont pas touchés. */
+export const MONEY_HEAD = /\(Ar\)|\bAr\b|montant|amount|total|prix|price|taux|rate|points?|solde|balance|d[ée]bit|cr[ée]dit|gagn|earned|net\b|tva|vat|avance|advance|prime|bonus|p[ée]nalit|salaire|salary|paie|pay\b|\bmois\b|month|[ée]cart|variation|valeur|value/i;
+
+/** Classeur Excel prêt : Times New Roman 12 partout, A4, marges réduites (8 mm), taille 100 % (jamais « ajuster à une page »), en-tête répété à chaque page, numéro de page. */
 export async function buildWorkbook(sheets: XSheet[]) {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
@@ -100,6 +105,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
     const headerRows = Math.min(Math.max(0, sh.headerRows ?? 1), rows.length);
     const units = colUnits(rows), n = units.length, total = units.reduce((a, b) => a + b, 0);
     const tab = isTabular(rows);
+    const headText = headerRows > 0 ? rows[headerRows - 1].map(textOf) : [];
     const ws = wb.addWorksheet(name);
     ws.columns = units.map(width => ({ width }));
     const thin = { style: 'thin' as const, color: { argb: 'FF999999' } };
@@ -116,6 +122,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
         const fmt = !isHead ? sh.cols?.[ci] : undefined;
         c.alignment = { vertical: 'top', wrapText: true, horizontal: fmt?.align ?? (typeof v === 'number' || v instanceof Date ? 'right' : 'left') };
         if (fmt?.numFmt) c.numFmt = fmt.numFmt;
+        else if (!isHead && typeof v === 'number' && Number.isFinite(v) && MONEY_HEAD.test(headText[ci] || '')) c.numFmt = Number.isInteger(v) ? '#,##0' : '#,##0.00'; // montants, points, taux : séparateur de milliers
         if (tableRow) c.border = { top: thin, left: thin, bottom: thin, right: thin };
         if (tableRow && isHead) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
       }
@@ -130,7 +137,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
       orientation: orientationFor(units),
       fitToPage: false,
       scale: 100,
-      margins: { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 },
+      margins: { left: 0.31, right: 0.31, top: 0.31, bottom: 0.45, header: 0.15, footer: 0.15 },
       ...(headerRows > 0 && rows.length > headerRows ? { printTitlesRow: `1:${headerRows}` } : {}),
     };
     ws.headerFooter.oddFooter = `&C&"${EXCEL_FONT},Regular"&${EXCEL_PT}Page &P / &N`;

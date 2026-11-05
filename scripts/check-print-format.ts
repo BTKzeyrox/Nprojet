@@ -10,8 +10,8 @@ const ok = (c: boolean, name: string) => { if (!c) { fails++; console.log(`ECHEC
 
 // ---------- constantes ----------
 ok(A4_MM.w === 210 && A4_MM.h === 297, 'A4 = 210 × 297 mm');
-ok(PRINT_MARGIN_MM === 15 && PRINT_CONTENT_W_MM === 180, 'marges normales de 15 mm, largeur utile 180 mm');
-ok(PRINT_CONTENT_W_PX === 680, '180 mm = 680 px à 96 dpi (donc 12 pt à l\'écran = 12 pt sur le papier)');
+ok(PRINT_MARGIN_MM === 8 && PRINT_CONTENT_W_MM === 194, 'marges réduites de 8 mm, largeur utile 194 mm');
+ok(PRINT_CONTENT_W_PX === 733, '194 mm = 733 px à 96 dpi (donc 12 pt à l\'écran = 12 pt sur le papier)');
 ok(PRINT_PT === 12 && PRINT_FONT.startsWith("'Times New Roman'"), 'texte normal 12 pt, Times New Roman en premier');
 ok(PRINT_FONT.includes("'Tinos'") && PRINT_FONT_FACE.includes('tinos-latin-400-normal.woff2') && PRINT_FONT_FACE.includes('tinos-latin-700-italic.woff2'), 'Tinos (remplaçante de mêmes largeurs) déclarée en 4 styles');
 for (const f of ['400-normal', '400-italic', '700-normal', '700-italic']) ok(existsSync(`public/fonts/tinos-latin-${f}.woff2`) && readFileSync(`public/fonts/tinos-latin-${f}.woff2`).length > 5000, `fichier de police tinos-latin-${f}.woff2 présent`);
@@ -46,15 +46,15 @@ const slip: Slip = {
   advance_due_before: 0, advance_deducted: 0, advance_carry: 0, net: 5000, paid: null, closed_at: '2026-11-01T00:00:00Z',
 };
 const slipPage = slipHtml(slip, { lang: 'fr', company: companyForSlip({ identity: { name: 'Soa', address: '', phone: '', email: '', logo_url: '', currency: 'Ar' }, legal: { tax_id: '', register_id: '', notes: [] } }) });
-ok(slipPage.includes("font-family:'Times New Roman'") && !slipPage.includes('Arial') && slipPage.includes('font-size:12pt') && slipPage.includes('@page{size:A4;margin:15mm}'), 'bulletin : Times New Roman, 12 pt, A4, marge 15 mm');
+ok(slipPage.includes("font-family:'Times New Roman'") && !slipPage.includes('Arial') && slipPage.includes('font-size:12pt') && slipPage.includes('@page{size:A4;margin:8mm}'), 'bulletin : Times New Roman, 12 pt, A4, marge 8 mm');
 
 const sheet = demoSheets('2026-10-27T08:00:00Z', 'fr')[0];
 const nCols = exportMatrix(sheet, '2026-10-27', 'fr').header.length;
 const sh = sheetHtml(sheet, '2026-10-27', 'fr', 'BTK', { print: true });
 ok(sh.includes("font-family:'Times New Roman'") && !sh.includes('system-ui') && sh.includes('font-size:12pt'), 'Mes tableaux : Times New Roman, 12 pt');
-ok(sh.includes(`@page{size:A4 ${nCols > 7 ? 'landscape' : 'portrait'};margin:15mm}`), `Mes tableaux : A4 ${nCols > 7 ? 'paysage' : 'portrait'} pour ${nCols} colonnes`);
+ok(sh.includes(`@page{size:A4 ${nCols > 7 ? 'landscape' : 'portrait'};margin:8mm}`), `Mes tableaux : A4 ${nCols > 7 ? 'paysage' : 'portrait'} pour ${nCols} colonnes`);
 const wide: any = { ...sheet, columns: Array.from({ length: 9 }, (_, i) => ({ ...sheet.columns[0], id: `c${i}`, name: `Col ${i}` })), rows: [] };
-ok(sheetHtml(wide, '2026-10-27', 'fr', 'BTK').includes('@page{size:A4 landscape;margin:15mm}'), 'Mes tableaux : plus de 7 colonnes = A4 paysage (pas de texte rétréci)');
+ok(sheetHtml(wide, '2026-10-27', 'fr', 'BTK').includes('@page{size:A4 landscape;margin:8mm}'), 'Mes tableaux : plus de 7 colonnes = A4 paysage (pas de texte rétréci)');
 
 console.log(fails ? `\n${fails} ÉCHEC(S)` : '\nTout est OK');
 process.exit(fails ? 1 : 0);
