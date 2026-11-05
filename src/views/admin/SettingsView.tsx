@@ -1,7 +1,7 @@
 // Page Réglages : onglets Général, Équipe, Missions, Conditions, Performance et Données ; avec personalOnly, seulement les réglages de l'appareil.
 // Utilisé par : App.tsx et prefetch.ts. Contrôlé par : npm run check:tour.
 // Pour modifier : la fonction save vérifie les valeurs puis appelle db.updateSettings. Les blocs qui s'enregistrent tout de suite (Conditions, plan mensuel, objectifs, rapport automatique, modèles de mission...) sont retirés de l'envoi pour qu'une vieille copie ne les écrase pas.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ThemeLangControls } from '../../components/ThemeLangControls';
 import { Settings, Plus, X, Save, CalendarDays, Clock, Layers, LifeBuoy, Palette, SlidersHorizontal, Tag, Target, Users, Volume2, Wallet } from 'lucide-react';
 import { db } from '../../db/store';
@@ -34,6 +34,8 @@ import { cleanLevels } from '../../utils/monthLevel';
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
 
+type SettingsTab = 'general' | 'team' | 'missions' | 'company' | 'performance' | 'data';
+const SETTINGS_TABS: readonly (readonly [SettingsTab, string])[] = [['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['company', 'Conditions'], ['performance', 'Performance'], ['data', 'Données']];
 export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnly = false }) => {
   const { theme, lang } = useApp();
   const [sound, setSound] = useSoundPrefs();
@@ -41,7 +43,10 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState<'general' | 'team' | 'missions' | 'company' | 'performance' | 'data'>('general');
+  const [tab, setTab] = useState<SettingsTab>(() => { try { const v = sessionStorage.getItem('df_settings_tab'); return SETTINGS_TABS.some(x => x[0] === v) ? (v as SettingsTab) : 'general'; } catch { return 'general'; } }); // l'onglet reste le même quand on revient dans Réglages
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // Changer d'onglet : la rangée d'onglets reste à sa place (jamais de glissement de côté) et la page repart du haut de l'onglet, sans sauter.
+  const pickTab = (id: SettingsTab) => { setTab(id); try { sessionStorage.setItem('df_settings_tab', id); } catch { /* stockage refusé : l'onglet n'est pas retenu */ } requestAnimationFrame(() => tabsRef.current?.scrollIntoView?.({ block: 'start' })); };
   const [error, setError] = useState<string | null>(null);
 
   // Si les réglages changent ailleurs (autre appareil), on les recharge tant qu'on n'a rien modifié
@@ -187,9 +192,9 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       {error && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-red-950 border-red-500/60 text-red-200'}`}>{error}</div>}
       {saved && <div className={`p-3 rounded-2xl border text-sm font-semibold ${theme === 'light' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-950 border-emerald-500/60 text-emerald-200'}`}>Réglages enregistrés.</div>}
 
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-700/60">
-        {([['general', 'Général'], ['team', 'Équipe'], ['missions', 'Missions'], ['company', 'Conditions'], ['performance', 'Performance'], ['data', 'Données']] as const).map(([id, label]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px cursor-pointer whitespace-nowrap ${tab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>{label}</button>
+      <div ref={tabsRef} role="tablist" aria-label="Réglages" data-settings-tabs className="grid grid-cols-3 gap-1.5 scroll-mt-20">
+        {SETTINGS_TABS.map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} data-settings-tab={id} onClick={() => pickTab(id)} className={`min-h-[44px] px-2 rounded-xl text-sm font-semibold border cursor-pointer whitespace-nowrap ${tab === id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/5 border-slate-600 text-slate-300 hover:text-white'}`}>{label}</button>
         ))}
       </div>
 

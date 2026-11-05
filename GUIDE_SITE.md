@@ -1069,6 +1069,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |
 | `npm run check:viewport-width` | Contrôle de la largeur d'écran après rotation (défaut vu sur iPhone / iPad, 2026-11-01). Lancer : npm run check:viewport-width |
 | `npm run check:post-stamps` | Contrôle des heures d'étapes d'une mission : demande de début envoyée, début validé, fin envoyée, fin validée (demande de BTK, 2026-11-01). Lancer : npm run check:post-stamps |
+| `npm run check:settings-tabs` | Onglets de Réglages : la rangée ne glisse plus de côté, ne bouge pas quand on change d'onglet. Lancer : npm run check:settings-tabs |
 | `npm run check:presence-count` | « Opérateurs en ligne » de l'accueil (X / Y) : seuls les actifs avec un signe de vie récent comptent. Lancer : npm run check:presence-count |
 | `npm run check:boutique` | Préréglage « Boutique » (M22.9) : le menu court reste cohérent, et se retire. Lancer : npm run check:boutique |
 | `npm run check:menu-links` | Contrôle des liens du menu simplifié (M22.8) : toute page visée par une alerte, la cloche, l'assistant, la Santé du site, un lien de notification ou le guide |
