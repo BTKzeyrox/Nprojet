@@ -155,6 +155,7 @@
     "check:login-guard": "npx --yes tsx scripts/check-login-guard.ts",
     "check:totp": "npx --yes tsx scripts/check-totp.ts",
     "check:ui-fixes": "npx --yes tsx scripts/check-ui-fixes.ts",
+    "check:chat-keyboard": "npx --yes tsx scripts/check-chat-keyboard.ts",
     "check:admin-decide": "npx --yes tsx scripts/check-admin-decide.ts",
     "check:decide-fast": "esbuild scripts/check-decide-fast.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-decide-fast.mjs && node node_modules/.cache/check-decide-fast.mjs",
     "check:message-links": "npx --yes tsx scripts/check-message-links.ts",

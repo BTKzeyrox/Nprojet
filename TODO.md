@@ -677,3 +677,8 @@ But : un bouton « / » dans le champ de saisie de l'assistant (comme le menu de
 - [x] (2026-11-05) **Onglets de Réglages qui bougent (demande de BTK).** Cause : la rangée défilait de côté (6 onglets dans une rangée trop étroite) avec un trait du bas qui décalait d'un pixel ; l'onglet repartait toujours sur Général. Maintenant : grille de 3 colonnes, les 6 onglets toujours visibles, rien ne glisse ; l'onglet choisi est retenu pendant la session ; changer d'onglet ramène en haut des onglets. Mesuré à l'écran en démo (360, 420 et 1100 px) : la rangée ne bouge pas d'un pixel d'un onglet à l'autre, pas de défilement de côté. `check:settings-tabs` 6/6. Site seulement.
 - [x] (2026-11-05) **Commentaires masqués par défaut (demande de BTK).** Sous chaque publication, plus aucun commentaire visible tant qu'on ne touche pas « Afficher N commentaires » (avant : les 2 derniers étaient montrés). Une fois ouverts, un bouton « Masquer les commentaires » les referme ; les réponses restent repliées dans chaque commentaire (« Afficher N réponses »). Vu en démo : fermé au départ, ouvert au toucher. `check:ui-fixes` 27/27. Site seulement.
 
+## Chat : clavier, fond, appui long (2026-11-05)
+- [x] Le clavier ne cache plus le dernier message (useKeepBottom : visualViewport + ResizeObserver, messagerie et assistant)
+- [x] Fond de conversation à deux couches (motif discret + dégradé), clair et sombre, comme Telegram/WhatsApp
+- [x] Appui long : le message choisi est affiché net au-dessus du fond (copie nette + cadre vert)
+- [ ] Non testé sur vrai téléphone (clavier) : à tester par BTK

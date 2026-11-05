@@ -325,7 +325,7 @@ ok(Date.now() - t0 < 1500, `vitesse : 4 réponses sur la démo en ${Date.now() -
   ok(/intent: 'ai_off'/.test(ac) && /go: \{ view: ENABLE_AI \}/.test(ac) && /setAiOptIn\(userId, true\)/.test(ac) && !/Je n'ai pas compris/.test(ac), 'conversation : question non comprise sans IA = message clair avec un bouton « Activer l\'IA externe » (jamais le « pas compris » sec)');
   ok(/intent: 'ai_error'/.test(ac), 'conversation : si l\'IA échoue, le vrai motif est affiché (quota, clé, démo…)');
   ok(/inflight\.current\) return/.test(ac) && /inflight\.current = true/.test(ac) && /inflight\.current = false/.test(ac) && /lastQ\.current\.q === q/.test(ac), 'conversation : garde anti double envoi (deux touches rapides ou « Entrée » deux fois = un seul envoi)');
-  ok(/onPointerDown=\{e => e\.preventDefault\(\)\}/.test(ac) && /enterKeyHint="send"/.test(ac) && /bg-\[#e9eff8\]/.test(ac), 'conversation : même zone de saisie et mêmes couleurs que la messagerie');
+  ok(/onPointerDown=\{e => e\.preventDefault\(\)\}/.test(ac) && /enterKeyHint="send"/.test(ac) && /chat-wallpaper-light/.test(ac), 'conversation : même zone de saisie et mêmes couleurs que la messagerie');
   ok(ac.includes('getSnapshotInput') && !/fetch\(|db\.sendMessage|XMLHttpRequest/.test(ac), 'conversation : rien n\'est envoyé au serveur, les données viennent de getSnapshotInput (refuse si pas admin)');
   ok(/localStorage/.test(ac) && /try \{/.test(ac), 'historique : gardé sur l\'appareil, avec protection si le stockage est refusé');
 }

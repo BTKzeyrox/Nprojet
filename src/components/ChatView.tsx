@@ -1,6 +1,7 @@
 // Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
+import { useKeepBottom } from '../utils/useKeepBottom';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
@@ -86,7 +87,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',
     side: L ? 'bg-white border-slate-200' : 'bg-[#0c131c] border-slate-800',
     head: L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-[#131d2a] border-slate-800',
-    area: L ? 'bg-[#e9eff8]' : 'bg-[#0a0f16]',
+    area: L ? 'chat-wallpaper chat-wallpaper-light' : 'chat-wallpaper chat-wallpaper-dark',
     title: L ? 'text-slate-900' : 'text-white',
     sub: L ? 'text-slate-500' : 'text-slate-400',
     inBub: L ? 'bg-white text-slate-800 border border-slate-200' : 'bg-[#16212e] text-slate-200 border border-slate-700/80',
@@ -121,6 +122,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const [menuHtml, setMenuHtml] = useState('');
   const [seenFor, setSeenFor] = useState<ChatMessage | null>(null);
   const [newBelow, setNewBelow] = useState(0);
   const [seenMap, setSeenMap] = useState<Record<string, number>>(() => getThreadSeen(currentUser.id));
@@ -250,6 +252,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const onAssistant = isAdmin && threadId === 'assistant';
   const current = threads.find(t => t.id === threadId) || threads[0];
+  const keep = useKeepBottom(() => scrollRef.current, () => atBottomRef.current, current?.id); // le clavier ne doit jamais couper le dernier message
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
   const vwNow = useViewportWidth(); // se met à jour à la rotation
   const convVisible = !showList || vwNow >= 768;
@@ -296,7 +299,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const el = scrollRef.current;
     if (!el) return;
     const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
-    atBottomRef.current = gap < 120;
+    if (!keep.pinned()) atBottomRef.current = gap < 120; // pendant que le clavier monte, le redimensionnement n'est pas « j'ai remonté »
     setFarFromBottom(gap > 300);
     if (atBottomRef.current) setNewBelow(0);
     if (menuMsg) setMenuMsg(null);
@@ -429,6 +432,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const openMenu = (m: ChatMessage, el: HTMLElement) => {
     window.getSelection()?.removeAllRanges(); // l'appui long ouvre le menu : jamais de sélection de texte
     setMenuRect(el.getBoundingClientRect());
+    setMenuHtml(el.outerHTML); // copie nette du message, posée AU-DESSUS du fond (jamais floue)
     setMenuMsg(m);
   };
   const startPress = (m: ChatMessage, el: HTMLElement) => {
@@ -923,6 +927,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <input
                 type="text"
                 value={text}
+                onFocus={keep.pin}
                 onChange={e => { setText(e.target.value); if (e.target.value.trim() && !editingId && !current.readOnly) db.pingTyping(current.id); }}
                 enterKeyHint="send"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
@@ -1002,7 +1007,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
       {/* Menu d'actions : petit menu juste sous le message (appui long ou clic droit) */}
       {menuMsg && createPortal(
-        <div className="fixed inset-0 z-[80] bg-black/15" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
+        <div className="fixed inset-0 z-[80] bg-black/25" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
+          {menuRect && menuHtml && (
+            <div
+              data-press-clone
+              className="fixed pointer-events-none rounded-2xl ring-2 ring-emerald-400 shadow-xl [&_*]:!blur-none [&_*]:![filter:none] [&_*]:![backdrop-filter:none]"
+              style={{ top: menuRect.top, left: menuRect.left, width: menuRect.width, height: menuRect.height, filter: 'none' }}
+              dangerouslySetInnerHTML={{ __html: menuHtml }}
+            />
+          )}
           <div className="fixed" style={popStyle()} onClick={e => e.stopPropagation()}>
           <div className={`rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`}>
             {menuActions.map(a => {

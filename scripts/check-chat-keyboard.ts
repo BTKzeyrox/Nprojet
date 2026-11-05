@@ -1,0 +1,12 @@
+import { readFileSync } from 'node:fs';
+const r = (f: string) => readFileSync(f, 'utf8');
+const chat = r('src/components/ChatView.tsx'), ass = r('src/components/AssistantChat.tsx'), css = r('src/index.css'), hook = r('src/utils/useKeepBottom.ts');
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('✗', m); } else console.log('✓', m); };
+ok(/visualViewport/.test(hook) && /ResizeObserver/.test(hook), 'hook écoute le clavier (visualViewport + ResizeObserver)');
+ok(/onFocus=\{keep\.pin\}/.test(chat), 'ChatView : focus du champ => dernier message gardé en bas');
+ok(/keep\.pin\(\)/.test(ass), 'Assistant : focus du champ => dernier message gardé en bas');
+ok(/chat-wallpaper-light/.test(chat) && /chat-wallpaper-dark/.test(chat), 'ChatView : fond à deux couches');
+ok(/chat-wallpaper-light/.test(ass), 'Assistant : fond à deux couches');
+ok(/\.chat-wallpaper-light[^}]*linear-gradient/.test(css) && /\.chat-wallpaper-dark[^}]*svg\+xml/.test(css), 'CSS : motif + dégradé, clair et sombre');
+ok(/data-press-clone/.test(chat) && /menuHtml/.test(chat), 'Appui long : message copié net au-dessus du fond');
+process.exit(bad ? 1 : 0);

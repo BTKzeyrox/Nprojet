@@ -61,7 +61,7 @@ const pill = /<div className=\{`flex items-center gap-1\.5 rounded-3xl[\s\S]*?<\
 ok(/type="button"[^>]*onClick=\{toggleMenu\}/.test(pill) && /aria-expanded=\{menuOpen\}/.test(pill) && pill.indexOf('onClick={toggleMenu}') < pill.indexOf('<input ') && />\/<\/button>/.test(pill), 'bouton « / » : dans le champ de saisie, de type "button", ouvre et ferme le bloc');
 const tog = /const toggleMenu = \(\) => \{[\s\S]*?\n  \};/.exec(ui)?.[0] || '';
 ok(/if \(menuOpen\) \{ setMenuOpen\(false\); return; \}/.test(tog) && /visualViewport/.test(tog) && /menuHeightFromKeyboard/.test(tog) && tog.indexOf('menuHeightFromKeyboard') < tog.indexOf('.blur()') && /setMenuOpen\(true\)/.test(tog), 'ouverture : mesure le clavier AVANT de le fermer (blur), 2e toucher = ferme');
-ok(/onFocus=\{\(\) => setMenuOpen\(false\)\}/.test(ui), 'toucher le champ de texte : le bloc se ferme (le clavier revient)');
+ok(/onFocus=\{\(\) => \{ setMenuOpen\(false\);/.test(ui), 'toucher le champ de texte : le bloc se ferme (le clavier revient)');
 ok(/e\.key === 'Escape'\) setMenuOpen\(false\)/.test(ui), 'Échap ferme le bloc');
 ok(/data-compose-close/.test(ui) && /setComposing\(false\)/.test(ui), 'l\'éditeur de message garde un bouton « Fermer »');
 

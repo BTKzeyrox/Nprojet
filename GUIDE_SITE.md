@@ -732,6 +732,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `treasuryCharts.ts` | Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires. |
 | `updateWatcher.ts` | Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau. |
 | `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
+| `useKeepBottom.ts` | Garde le dernier message visible quand le clavier s'ouvre (BTK 2026-11-05 : « quand je tape, le clavier s'ouvre et le message remonte, il est coupé »). |
 | `useLockBodyScroll.ts` | Bloque le défilement de la page derrière une fenêtre ouverte ; agit sur le style de la page dans le navigateur, aucun serveur. |
 | `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
@@ -1144,6 +1145,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:login-guard` | Contrôle M16.3 : blocage après trop d'essais. Règles, copie serveur identique, série d'essais simulée, panne = on laisse passer. |
 | `npm run check:totp` | Contrôle M16.4 (partie règles) : TOTP contre les vecteurs officiels RFC 6238, secours, copie serveur. Le branchement serveur est contrôlé plus bas (ajouté avec le bloc). |
 | `npm run check:ui-fixes` | Contrôle des corrections du 2026-10-26 : commentaires visibles dans l'actualité, profil cliquable avec « Message », un seul œil sur les mots de passe, vacation à l'inscription, messagerie sans emoji. |
+| `npm run check:chat-keyboard` | (voir `scripts/check-chat-keyboard.ts`) |
 | `npm run check:admin-decide` | Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé. |
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |
