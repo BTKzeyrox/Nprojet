@@ -15,6 +15,8 @@ ok(getMenuMode() === 'merged', 'par défaut (sans stockage) : menu simplifié, s
 // la barre du bas ne montre que des entrées qui existent pour ce rôle (jamais un bouton vers une page interdite)
 for (const role of Object.keys(BOTTOM_ENTRIES)) { const ids = menuFor(role).map(g => g.id); ok(bottomEntriesOf(role).every(e => ids.includes(e)), `barre du bas ${role} : entrées permises seulement`); ok(bottomEntriesOf(role).length <= 5, `barre du bas ${role} : 5 entrées au plus (+ Menu)`); }
 ok(bottomEntriesOf('employee').length === 0 && bottomEntriesOf(undefined).length === 0, 'barre du bas : rien de nouveau pour l\'opérateur');
+ok(!bottomEntriesOf('admin').includes('home'), 'barre du bas : plus de « Tableau de bord » (il est dans le menu latéral, première ligne)');
+ok(menuFor('admin')[0].id === 'home' && !bottomEntriesOf('admin').includes('home'), 'menu latéral : « Tableau de bord » en premier, visible aussi sur téléphone');
 // branchements
 ok(/menuFor\(currentUser\.role, hiddenCsv\)/.test(sb) && /locate\(currentUser\.role, activeView, hiddenCsv, getStatsTab\(\)\)/.test(sb) && /goToEntry\(g, getLastTabs\(\)\[g\.id\], onNavigate\)/.test(sb), 'menu latéral : entrées, entrée active et clic viennent des règles');
 ok(/const listItems = mergedItems \|\| navItems/.test(sb), 'menu latéral : l\'ancien menu reste intact (navItems)');

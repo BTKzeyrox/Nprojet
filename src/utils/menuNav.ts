@@ -3,7 +3,7 @@ import { menuFor, openView, type MenuGroup, type MenuTab } from './menuGroups';
 import { setStatsTab } from './statsNav';
 
 export const BOTTOM_ENTRIES: Record<string, string[]> = {
-  admin: ['feed', 'messages', 'missions', 'home'],
+  admin: ['feed', 'messages', 'missions'],
   accountant: ['feed', 'messages', 'clients', 'money', 'stock'],
   team_lead: ['feed', 'messages', 'missions'],
 };
