@@ -1,4 +1,4 @@
-// Types de travail, modes de paie et modèles d'entreprise (module 25, M25.2) : règles pures, SANS écran, SANS serveur, SANS réseau, SANS horloge.
+// Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, SANS écran, SANS serveur, SANS réseau, SANS horloge.
 // Pourquoi : le site doit s'adapter à toute entreprise (boutique, atelier, sécurité, ménage, restaurant, livraison, chantier, bureau…), y compris du travail fait SANS réseau et saisi par quelqu'un d'autre.
 // Un « type de travail » = 3 réglages : COMMENT on le mesure (preuves, présence, quantité, tâches, rien), COMMENT on le paie (par mission, jour, heure, pièce, salaire fixe), QUI le saisit (l'employé, le chef d'équipe, le responsable, papier puis saisie).
 // Le mode par défaut reste « par mission » : ce qui existe aujourd'hui ne change pas tant que le responsable ne choisit pas autre chose.

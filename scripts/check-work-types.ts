@@ -1,4 +1,4 @@
-// Types de travail, modes de paie et modèles d'entreprise (module 25, M25.2) : règles pures, sans réseau. Cas normaux ET cas piégés.
+// Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, sans réseau. Cas normaux ET cas piégés.
 import { readFileSync } from 'node:fs';
 import {
   MEASURES, PAY_MODES, ENTRY_BY, MEASURE_LABEL, PAY_LABEL, ENTRY_LABEL, PRESENCE_LABEL, DEFAULT_PAY_MODE, isMeasure, isPayMode, isEntryBy,
