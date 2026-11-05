@@ -185,3 +185,9 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Le formulaire d'inscription (LoginView) cache Jour / Nuit quand le mode n'est pas « jour et nuit » ; sans réponse du serveur, il reste comme avant.
 - Déployé le 2026-10-31 : commit 405feff1401ce6db05f311b522c74331a32bcb56 (version 62), sauvegarde n° 82 avant. Essai réel depuis la base (pg_net) : `GET signup-info` = 200 `{"shift_mode":"normal"}` ; `GET state` sans connexion = 401 ; `POST signup-info` = 401 (la route n'est publique qu'en lecture).
 - Retour arrière : redéployer v61 = SHA ea34b7bdb4fa8486d8103b5b90e49b7975abdb5b (le formulaire garde alors Jour / Nuit, rien d'autre ne casse).
+
+## df-api v73 (2026-11-06) — notifications : 2e essai et priorité haute
+- Seul `pushOne` change : 2e essai après 0,7 s sur 429 / 5xx / erreur réseau (404/410 = abonnement mort, supprimé comme avant ; autres 4xx = pas de 2e essai) ; en-tête `Urgency: high` pour les messages et les missions (`normal` pour le reste) ; erreurs notées avec l'hôte et le n° d'essai. `pushTo` passe l'urgence selon l'étiquette (`msg…`, `mission…`).
+- Base = v72 en ligne (SHA ff0273f3e13f614861f6638bf1ca5127c5da63bf), diff limité à ce bloc.
+- Déployé le 2026-11-06 : commit 3c6ddc545e189126e4e9add9da3237f664cbb2f9 (version 73), sauvegarde n° 99 avant.
+- Retour arrière : redéployer v72 = SHA ff0273f3e13f614861f6638bf1ca5127c5da63bf.
