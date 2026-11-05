@@ -36,6 +36,7 @@ import { useNow } from '../utils/useNow';
 import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge } from '../utils/attendanceView';
+import { guardScroller } from '../utils/chatScrollGuard';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
@@ -252,6 +253,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const onAssistant = isAdmin && threadId === 'assistant';
   const current = threads.find(t => t.id === threadId) || threads[0];
+  useEffect(() => { const el = scrollRef.current; return el ? guardScroller(el) : undefined; }, [current?.id]); // fin de liste : la page ne bouge pas
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = listRef.current; return el ? guardScroller(el) : undefined; }, []);
   const keep = useKeepBottom(() => scrollRef.current, () => atBottomRef.current, current?.id); // le clavier ne doit jamais couper le dernier message
   // Ordinateur : la liste et la conversation sont côte à côte ; téléphone : l'une ou l'autre
   const vwNow = useViewportWidth(); // se met à jour à la rotation
@@ -629,7 +633,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une discussion" className={`w-full h-10 pl-9 pr-3 rounded-full border text-sm focus:outline-none focus:border-emerald-500 ${P.input}`} style={{ borderRadius: 9999 }} />
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
+        <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
           {isAdmin && (
             <button type="button" data-assistant-row onClick={() => { setThreadId('assistant'); setShowList(false); setReplyTo(null); cancelEdit(); }}
               className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border border-l-sky-500 cursor-pointer shadow-sm ${onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200' : 'bg-white/5 border-white/10')}`}>
@@ -893,7 +897,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 ) : pendingFile.type.startsWith('image/') ? (
                   <img src={pendingUrls[0] || undefined} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
                 ) : (
-                  <span className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"><Paperclip className="w-6 h-6" /></span>
+                  <span className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"><Paperclip className="w-5 h-5" /></span>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFiles.length > 1 ? `${pendingFiles.length} photos` : pendingFile.name}</p>
@@ -912,17 +916,17 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </div>
             </div>
           )}
-          <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-3 pb-3 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
+          <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <button
                 type="button"
                 disabled={busy || !!editingId}
                 onClick={() => fileRef.current?.click()}
-                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`}
                 title="Joindre une photo ou un fichier (10 Mo max)"
               >
-                <Paperclip className="w-6 h-6" />
+                <Paperclip className="w-5 h-5" />
               </button>
               <input
                 type="text"
@@ -931,11 +935,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 onChange={e => { setText(e.target.value); if (e.target.value.trim() && !editingId && !current.readOnly) db.pingTyping(current.id); }}
                 enterKeyHint="send"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
-                className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
+                className={`flex-1 min-w-0 h-10 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
                 style={{ boxShadow: 'none', border: 'none' }}
               />
-              <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className={`${sendPulse ? 'df-send-pulse ' : ''}w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md`} title="Envoyer">
-                <Send className="w-5 h-5" />
+              <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className={`${sendPulse ? 'df-send-pulse ' : ''}w-10 h-10 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md`} title="Envoyer">
+                <Send className="w-[18px] h-[18px]" />
               </button>
             </div>
           </form>

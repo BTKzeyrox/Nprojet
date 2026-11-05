@@ -609,6 +609,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
 | `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
+| `chatScrollGuard.ts` | Messagerie : un glissement du doigt au bout d'une liste (tout en haut ou tout en bas) ne doit JAMAIS faire bouger la page, |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
 | `clientPrice.ts` | Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut. |
@@ -1151,6 +1152,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:totp` | Contrôle M16.4 (partie règles) : TOTP contre les vecteurs officiels RFC 6238, secours, copie serveur. Le branchement serveur est contrôlé plus bas (ajouté avec le bloc). |
 | `npm run check:ui-fixes` | Contrôle des corrections du 2026-10-26 : commentaires visibles dans l'actualité, profil cliquable avec « Message », un seul œil sur les mots de passe, vacation à l'inscription, messagerie sans emoji. |
 | `npm run check:chat-keyboard` | (voir `scripts/check-chat-keyboard.ts`) |
+| `npm run check:chat-scroll` | Messagerie : la page ne bouge pas au bout d'une liste, et le champ de message est à 40 px (BTK, 2026-11-05). |
 | `npm run check:reminders` | M25 : règles des rappels (types, rôles, séries conseillées, heures, compte à rebours, répétition, reporter) + copie serveur identique. |
 | `npm run check:admin-decide` | Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé. |
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |

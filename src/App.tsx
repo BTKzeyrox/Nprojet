@@ -158,6 +158,13 @@ export default function App() {
   }, [currentUser?.id]);
   useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
+  // Sur TOUS les écrans (téléphone, tablette, ordinateur) : la page elle-même ne défile ni ne rebondit tant que la messagerie est ouverte (les barres restent bloquées)
+  useEffect(() => {
+    if (activeView !== 'chat') return;
+    const h = document.documentElement;
+    h.classList.add('df-chat-open');
+    return () => h.classList.remove('df-chat-open');
+  }, [activeView]);
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
   useEffect(() => {
     const vv = window.visualViewport;
