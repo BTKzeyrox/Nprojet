@@ -7,6 +7,7 @@ import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { subscribeHealth } from '../utils/healthDb';
+import { remReload, remSubscribe } from '../utils/remindersState';
 import { buildNotifications, markSeen, markAllRead, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
 import { setNavTarget, setChatThread } from '../utils/navTarget';
@@ -132,6 +133,16 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   }, [q, isAdmin, mergedMenu, pages, home, onNavigate, onOpenOperator, db.getContracts().length, db.getUsers().length]);
 
   const pick = (h: Hit) => { setOpen(false); setQ(''); h.go(); };
+  // Rappels (M25) : on recharge la liste au démarrage, toutes les 3 minutes et au retour sur l'appli ; la cloche montre ceux des dernières 24 h
+  const [, setRemTick] = useState(0);
+  useEffect(() => {
+    void remReload();
+    const un = remSubscribe(() => setRemTick(x => x + 1));
+    const iv = window.setInterval(() => { void remReload(); setRemTick(x => x + 1); }, 180000);
+    const vis = () => { if (document.visibilityState === 'visible') void remReload(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { un(); window.clearInterval(iv); document.removeEventListener('visibilitychange', vis); };
+  }, []);
   const notifs = buildNotifications(currentUser);
   const count = unreadCount(currentUser, notifs);
   const seen = getSeen(currentUser);

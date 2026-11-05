@@ -35,6 +35,7 @@ import { liveStatus } from '../utils/presenceStatus';
 import { formatDuration } from '../utils/presence';
 import { useNow } from '../utils/useNow';
 import { LiveLine } from '../components/LiveStatus';
+import { RemindersCard } from '../components/RemindersCard';
 import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings, AttendanceRow } from '../types';
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
@@ -555,6 +556,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
 
   return (
     <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-2 sm:py-3">
+      <RemindersCard />
       <div className={`grid gap-3 ${isAdmin ? 'lg:grid-cols-[18rem_1fr]' : ''}`}>
         {/* ===== Opérateurs + filtres (responsable) ===== */}
         {isAdmin && (

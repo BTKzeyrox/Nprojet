@@ -518,7 +518,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `prefs`, `prefs-set`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -701,6 +701,9 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `receivables.ts` | Créances et relances (module 2, M2.7) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:receivables`. |
 | `recognition.ts` | Reconnaissance (module 3, M3.7) : règles pures. Contrôlé par `npm run check:recognition`. |
 | `recurring.ts` | Missions récurrentes (module 15, M15.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:recurring`. |
+| `remRegistry.ts` | Pont sans écran ni réseau entre la liste des rappels de la personne (remindersState.ts) et les règles de l'assistant (assistant.ts, testé sans navigateur). |
+| `reminderRules.ts` | Rappels et tâches (module 25, BTK 2026-11-05) : règles PURES (sans écran, sans réseau, sans importation). |
+| `remindersState.ts` | Rappels et tâches (M25) : copie locale des éléments de la personne, rechargée du serveur, avec abonnement pour les écrans. |
 | `report.ts` | Rapport du mois (S4.5) et données d'export Excel / PDF (S4.4). Sans écran, sans serveur : contrôlé par `npm run check:phase4`. |
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
@@ -915,6 +918,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `Reactions.tsx` | Briques des réactions emoji : choix d'un emoji, pastilles de réactions sous un message et trois points « en train d'écrire ». |
 | `ReasonModal.tsx` | Fenêtre qui demande un motif (obligatoire) ou une description facultative avant une action comme un refus, une réouverture ou une annulation. |
 | `RecurringMissionsSection.tsx` | Réglages, section Missions : crée, modifie, met en pause ou supprime les missions qui reviennent toutes seules (chaque jour, semaine ou mois). |
+| `RemindersCard.tsx` | Carte « À faire » du Calendrier (module 25) : liste des tâches, rendez-vous, échéances et rappels de la personne, bouton « + Ajouter », formulaire complet. |
 | `ReportProblemModal.tsx` | Fenêtre « Signaler un problème » : texte libre et capture d'écran facultative, envoyés à l'administrateur avec les infos techniques. |
 | `RestoreSection.tsx` | Remise à zéro du site : Gmail vérifié, sauvegarde Excel, deux confirmations et code reçu par mail. |
 | `ScoreInput.tsx` | Champ de saisie d'un score ou d'une quantité : espaces de milliers automatiques et abréviations comme 12k ou 20.467M. |
@@ -1146,6 +1150,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:totp` | Contrôle M16.4 (partie règles) : TOTP contre les vecteurs officiels RFC 6238, secours, copie serveur. Le branchement serveur est contrôlé plus bas (ajouté avec le bloc). |
 | `npm run check:ui-fixes` | Contrôle des corrections du 2026-10-26 : commentaires visibles dans l'actualité, profil cliquable avec « Message », un seul œil sur les mots de passe, vacation à l'inscription, messagerie sans emoji. |
 | `npm run check:chat-keyboard` | (voir `scripts/check-chat-keyboard.ts`) |
+| `npm run check:reminders` | M25 : règles des rappels (types, rôles, séries conseillées, heures, compte à rebours, répétition, reporter) + copie serveur identique. |
 | `npm run check:admin-decide` | Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé. |
 | `npm run check:decide-fast` | Contrôle : valider ou refuser une mission s'affiche TOUT DE SUITE, le serveur décide en arrière-plan, et tout revient comme avant s'il refuse ou si le réseau tombe. |
 | `npm run check:message-links` | Contrôle M16.6 : numéros malgaches, liens WhatsApp et SMS, aucune injection, aucun appel réseau. |

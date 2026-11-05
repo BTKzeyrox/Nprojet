@@ -1,6 +1,7 @@
 // Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions.
 // Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AiSettingsSection.tsx, AuditSection.tsx, BackupsSection.tsx, BadgeCongrats.tsx, BottomNav.tsx et 102 autres. Contrôlé par : npm run check:page et 40 autres commandes check.
 // Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
+import { remClean, remSnoozeUntil } from '../utils/reminderRules';
 import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
@@ -3250,6 +3251,39 @@ export class AppStore {
     if (this.demo || !this.token) return false;
     const r = await this.api('prefs-set', { method: 'POST', body: JSON.stringify({ changes }) });
     return r.ok;
+  }
+  // --- Rappels et tâches (module 25) : le serveur ne rend que MES éléments (et ceux partagés par mon équipe) ; en démo : mémoire locale, rien n'est envoyé ---
+  private demoRem: { items: any[]; cfg: any } = { items: [], cfg: { templates: [], morning: '08:00', hide_title: false, quiet_from: '', quiet_to: '' } };
+  public async remFetch(): Promise<{ items: any[]; cfg: any; now: number } | null> {
+    if (this.demo) return { items: this.demoRem.items, cfg: this.demoRem.cfg, now: Date.now() };
+    if (!this.token) return null;
+    const r = await this.api('reminders');
+    return r.ok && r.data && Array.isArray(r.data.items) ? r.data : null;
+  }
+  public async remSave(item: any): Promise<{ ok: boolean; item?: any; error?: string }> {
+    if (this.demo) {
+      const me = this.getCurrentUser();
+      const it = remClean(item, String(me?.role || 'employee'), String(me?.id || 'demo'), Date.now());
+      if (!it) return { ok: false, error: 'Rappel non valable.' };
+      this.demoRem.items = [...this.demoRem.items.filter(x => x.id !== it.id), it];
+      return { ok: true, item: it };
+    }
+    const r = await this.api('reminder-save', { method: 'POST', body: JSON.stringify({ item }) });
+    return r.ok ? { ok: true, item: r.data?.item } : { ok: false, error: r.data?.error || 'Enregistrement impossible (pas de réseau ?).' };
+  }
+  public async remDelete(id: string): Promise<boolean> {
+    if (this.demo) { this.demoRem.items = this.demoRem.items.filter(x => x.id !== id); return true; }
+    return (await this.api('reminder-delete', { method: 'POST', body: JSON.stringify({ id }) })).ok;
+  }
+  public async remSnooze(id: string, choice: '10m' | '1h' | 'tomorrow'): Promise<number | null> {
+    if (this.demo) { const u = remSnoozeUntil(choice, Date.now(), this.demoRem.cfg.morning); this.demoRem.items = this.demoRem.items.map(x => (x.id === id ? { ...x, snooze_until: u } : x)); return u; }
+    const r = await this.api('reminder-snooze', { method: 'POST', body: JSON.stringify({ id, choice }) });
+    return r.ok ? Number(r.data?.snooze_until) || null : null;
+  }
+  public async remCfgSave(cfg: any): Promise<any | null> {
+    if (this.demo) { this.demoRem.cfg = { ...this.demoRem.cfg, ...cfg }; return this.demoRem.cfg; }
+    const r = await this.api('reminder-cfg', { method: 'POST', body: JSON.stringify({ cfg }) });
+    return r.ok ? r.data?.cfg || null : null;
   }
   /** Interrupteurs par catégorie de cet appareil : sans `off` on lit ; avec `off` on enregistre (catégories coupées). */
   public async pushPrefs(endpoint: string, off?: string[]): Promise<{ ok: boolean; off: string[]; error?: string }> {

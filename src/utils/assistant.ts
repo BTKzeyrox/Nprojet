@@ -12,6 +12,8 @@ import { computeFinance } from './financeStats';
 import { ADVICE, GENERIC_TIPS } from './advice';
 import { isKnownView } from './health/menu';
 import { FIGURE_GO } from './financeNav';
+import { getRemItems } from './remRegistry';
+import { remDateOf, remDayDiff, remOccurrences, REM_TYPE_LABEL, type RemItem } from './reminderRules';
 
 export type Lang = 'fr' | 'en';
 export interface Bi { fr: string; en: string }
@@ -117,6 +119,7 @@ export function morningSummary(i: SnapshotInput, alerts: HealthAlert[]): Reply {
   if (cnt('profile') > 0) lines.push(b(`🟠 ${cnt('profile')} changement(s) de profil à valider.`, `🟠 ${cnt('profile')} profile change(s) to validate.`));
   if (cnt('access') > 0) lines.push(b(`🟠 ${cnt('access')} demande(s) d'accès hors horaires.`, `🟠 ${cnt('access')} out-of-hours access request(s).`));
   for (const a of watch) lines.push(b(`🟡 ${a.title_fr}`, `🟡 ${a.title_en}`));
+  if (now !== null) { const rs = remindersSummary(getRemItems(), now); if (rs.late.length + rs.today.length > 0) lines.push(b(`🗓️ Rappels : ${rs.late.length} en retard, ${rs.today.length} aujourd'hui${rs.soon.length ? `, ${rs.soon.length} dans les 7 jours` : ''}.`, `🗓️ Reminders: ${rs.late.length} overdue, ${rs.today.length} today${rs.soon.length ? `, ${rs.soon.length} in the next 7 days` : ''}.`)); }
   const shown = lines.length > 4 ? [...lines.slice(0, 3), b(`… et ${lines.length - 3} autres points (Santé du site, Validations).`, `… and ${lines.length - 3} more points (Site health, Validations).`)] : lines;
   const f = snap.finance;
   const figures = b(`Ce mois-ci : ${snap.missions.validated} mission(s) validée(s), ${ar(f.received, 'fr')} reçus, bénéfice ${ar(f.profit, 'fr')}.`, `This month: ${snap.missions.validated} validated mission(s), ${ar(f.received, 'en')} received, profit ${ar(f.profit, 'en')}.`);
@@ -139,6 +142,38 @@ export function todoReply(i: SnapshotInput, alerts: HealthAlert[]): Reply {
     lines: items.length ? items.map((x, k) => b(`${k + 1}. ${x.text.fr} (${x.why.fr})`, `${k + 1}. ${x.text.en} (${x.why.en})`)) : [b('Rien d\'urgent : tu peux souffler.', 'Nothing urgent: you can relax.')],
     actions: items.flatMap(x => [{ label: b(x.text.fr, x.text.en), go: x.go }, ...(x.more ? [{ label: moreLabel(x.more.n), go: x.more.go }] : [])]),
     sources: b(`d'après ${alerts.length} alerte(s) et les validations en attente, au ${dmy(i.today)}`, `based on ${alerts.length} alert(s) and pending validations, on ${dmy(i.today)}`),
+  };
+}
+
+
+/** Mes rappels : en retard, aujourd'hui, à venir sous 7 jours (avec « J-3 »). Lecture seule : l'assistant ne crée ni ne supprime rien. */
+export function remindersSummary(items: RemItem[], nowMs: number): { late: { it: RemItem; d: string }[]; today: { it: RemItem; d: string }[]; soon: { it: RemItem; d: string; days: number }[] } {
+  const today = remDateOf(nowMs), end = remDateOf(nowMs + 7 * 86400000);
+  const late: { it: RemItem; d: string }[] = [], tod: { it: RemItem; d: string }[] = [], soon: { it: RemItem; d: string; days: number }[] = [];
+  for (const it of items) {
+    if (it.status !== 'todo' && it.status !== 'doing') continue;
+    const d = it.repeat.freq === 'none' ? it.date : (remOccurrences(it, today, remDateOf(nowMs + 800 * 86400000))[0] || it.date);
+    if (d < today) late.push({ it, d });
+    else if (d === today) tod.push({ it, d });
+    else if (d <= end) soon.push({ it, d, days: remDayDiff(today, d) });
+  }
+  const key = (x: { it: RemItem; d: string }) => x.d + (x.it.all_day ? '00:00' : x.it.time);
+  late.sort((a, c) => key(a).localeCompare(key(c))); tod.sort((a, c) => key(a).localeCompare(key(c))); soon.sort((a, c) => key(a).localeCompare(key(c)));
+  return { late, today: tod, soon };
+}
+export function remindersReply(items: RemItem[], nowMs: number): Reply {
+  const r = remindersSummary(items, nowMs);
+  const hm = (it: RemItem) => (it.all_day ? '' : ` ${it.time}`);
+  const lines: Bi[] = [];
+  for (const x of r.late.slice(0, 5)) lines.push(b(`🔴 En retard : ${x.it.title} (${REM_TYPE_LABEL[x.it.type].fr}, ${remDayDiff(x.d, remDateOf(nowMs))} j)`, `🔴 Overdue: ${x.it.title} (${REM_TYPE_LABEL[x.it.type].en}, ${remDayDiff(x.d, remDateOf(nowMs))} d)`));
+  for (const x of r.today.slice(0, 6)) lines.push(b(`🟠 Aujourd'hui${hm(x.it)} : ${x.it.title}`, `🟠 Today${hm(x.it)}: ${x.it.title}`));
+  for (const x of r.soon.slice(0, 6)) lines.push(b(`🗓️ J-${x.days}${hm(x.it)} : ${x.it.title}`, `🗓️ D-${x.days}${hm(x.it)}: ${x.it.title}`));
+  const empty = lines.length === 0;
+  return {
+    intent: 'reminders', empty, title: b('Mes rappels', 'My reminders'),
+    lines: empty ? [b('Rien en retard, rien aujourd\'hui, rien dans les 7 jours.', 'Nothing overdue, nothing today, nothing in the next 7 days.')] : lines,
+    actions: [{ label: b('Ouvrir « À faire » (Calendrier)', 'Open “To do” (Calendar)'), go: { view: 'calendar' } }],
+    sources: b(`d'après tes ${items.length} rappel(s) enregistré(s), au ${dmy(remDateOf(nowMs))}`, `based on your ${items.length} saved reminder(s), on ${dmy(remDateOf(nowMs))}`),
   };
 }
 
@@ -353,7 +388,7 @@ const FIGURE_WORDS: Record<FigureId, string[]> = {
   gainPerMission: ['gain par mission', 'gain per mission'], stockValue: ['valeur du stock', 'stock value'], missionsDone: ['missions validees', 'validated missions'],
 };
 export type Intent =
-  | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' }
+  | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' } | { kind: 'reminders' }
   | { kind: 'page'; id: string } | { kind: 'suggest' } | { kind: 'team' } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
 
 /** Cherche le pourcentage d'une phrase : « 5 % », « -10% », « de 5 pour cent ». Null si absent ou absurde (> 500). */
@@ -378,6 +413,7 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
   }
   if (/\b(aide|help|que sais tu|que peux tu|what can you)\b/.test(t)) return { kind: 'help' };
   if (/\b(suggestion|suggestions|solution|solutions|conseil|conseils|conseille|conseilles|propose|proposes|idee|idees|suggest|advice|tips?|recommend)\b/.test(t) && !/\b(message|mail|rediger|ecris|write|draft)\b/.test(t)) return { kind: 'suggest' };
+  if (/\b(rappels?|reminders?|agenda|mes taches|my tasks|a faire aujourd|to do today|rendez vous|rendezvous|appointments?)\b/.test(t)) return { kind: 'reminders' };
   if (/\b(quoi faire|que faire|what to do|todo|priorite|priority)\b/.test(t)) return { kind: 'todo' };
   if (/\b(resume|matin|morning|summary|recap du jour|point du jour)\b/.test(t)) return { kind: 'morning' };
   if (/\b(liste|lister|listez|montre|montrer|affiche|afficher|list|show|combien|how many|qui sont|who are)\b/.test(t) && /\b(employes?|operateurs?|equipe|operators?|team|employees|staff|personnel)\b/.test(t)) return { kind: 'team' };
@@ -426,6 +462,7 @@ export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[]): 
   switch (it.kind) {
     case 'morning': return morningSummary(i, alerts);
     case 'todo': return todoReply(i, alerts);
+    case 'reminders': return remindersReply(getRemItems(), i.nowMs ?? 0);
     case 'help': return helpReply();
     case 'page': return explainPage(it.id);
     case 'suggest': return suggestionsReply(i, alerts);

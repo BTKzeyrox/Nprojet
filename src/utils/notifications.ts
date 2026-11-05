@@ -10,6 +10,8 @@ import type { ValFilter } from './navIntent';
 import { getHealthSoft } from './healthDb';
 import { todayMada } from './stats';
 import { planHealthNotifs } from './healthNotif';
+import { remItems, remCfg } from './remindersState';
+import { remDue, remCountdown } from './reminderRules';
 
 export interface Notif {
   id: string;
@@ -31,6 +33,22 @@ export const setHealthNotif = (uid: string, on: boolean): void => { try { localS
 export function healthNotifications(user: User, nowMs = Date.now()): Notif[] {
   if (user.role !== 'admin' || !healthNotifOn(user.id)) return [];
   try { return planHealthNotifs(getHealthSoft().alerts, todayMada(), nowMs, getSeen(user)); } catch { return []; } // la cloche ne doit jamais tomber à cause de la Santé du site
+}
+
+/** Rappels manqués (filet C) : ceux des dernières 24 h, un seul par élément (le plus récent). Ils restent dans la cloche jusqu'à ce que la personne les ouvre ; elle les retrouve même si le téléphone n'avait pas de réseau à l'heure dite. */
+export function reminderNotifications(user: User, nowMs = Date.now()): Notif[] {
+  const out: Notif[] = [];
+  try {
+    const cfg = remCfg();
+    const quiet = cfg.quiet_from && cfg.quiet_to ? { from: cfg.quiet_from, to: cfg.quiet_to } : null;
+    for (const it of remItems()) {
+      if (String(it.user_id) !== String(user.id)) continue;
+      const due = remDue(it, nowMs - 24 * 3600000, nowMs, quiet).sort((a, b) => b.at - a.at)[0];
+      if (!due) continue;
+      out.push({ id: due.key, title: cfg.hide_title ? 'Rappel' : it.title, sub: remCountdown('fr', it, due.occ, due.at, due.fire.id === 'snooze'), view: 'calendar', nav: `rem-${it.id}`, at: new Date(due.at).toISOString(), tone: due.fire.k === 'overdue' || it.priority === 'urgent' ? 'urgent' : 'info' });
+    }
+  } catch { /* la cloche ne doit jamais tomber à cause des rappels */ }
+  return out;
 }
 
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi
@@ -74,6 +92,7 @@ export const buildNotifications = (user: User): Notif[] => {
       out.push({ id: `advr-${a.id}-${a.status}`, title: `Avance ${formatCurrencyAr(a.amount_ar)} ${a.status === 'approved' ? 'acceptée' : 'refusée'}`, sub: a.admin_notes ? `Motif : ${a.admin_notes}` : '', view: 'advances', nav: `adv-${a.id}`, at: a.request_date, tone: a.status === 'approved' ? 'ok' : 'bad' }));
   }
   if (user.role === 'admin') out.push(...healthNotifications(user));
+  out.push(...reminderNotifications(user));
   // Messagerie : messages reçus (privés ou groupe) des 3 derniers jours, pas encore lus
   const seen = getSeen(user);
   const since = Date.now() - 3 * 24 * 3600 * 1000;
