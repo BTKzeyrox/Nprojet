@@ -12,12 +12,12 @@ export const EXCEL_TIME_FMT = 'hh:mm';
 /** Format Excel d'une colonne du site. */
 export function xlsxFormatFor(col: Column): XCol | undefined {
   switch (col.type) {
-    case 'date': return { numFmt: EXCEL_DATE_FMT, align: 'right' };
-    case 'time': return { numFmt: EXCEL_TIME_FMT, align: 'right' };
-    case 'money': return { numFmt: '#,##0.##', align: 'right' };
-    case 'number': return { numFmt: '#,##0.######', align: 'right' };
-    case 'code': case 'phone': case 'text': return { numFmt: '@', align: 'left' };
-    case 'list': return { list: col.options || [], numFmt: '@', align: 'left' };
+    case 'date': return { numFmt: EXCEL_DATE_FMT, align: 'center' };
+    case 'time': return { numFmt: EXCEL_TIME_FMT, align: 'center' };
+    case 'money': return { numFmt: '#,##0.##', align: 'center' };
+    case 'number': return { numFmt: '#,##0.######', align: 'center' };
+    case 'code': case 'phone': case 'text': return { numFmt: '@', align: 'center' };
+    case 'list': return { list: col.options || [], numFmt: '@', align: 'center' };
     case 'check': return { align: 'center' };
     default: return undefined;
   }

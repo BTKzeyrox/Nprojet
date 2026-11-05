@@ -65,7 +65,7 @@ for (const [label, sheet, rowsExpected] of [['fichier', xs, 4], ['modèle', mode
     ok((tv instanceof Date && tv.getUTCHours() === 9 && tv.getUTCMinutes() === 30) || (typeof tv === 'number' && Math.abs(tv - 0.3958333) < 0.0001), 'fichier : l\'heure 09:30 est une vraie heure Excel');
     eq(ws.getCell('B4').value, 'pas une date', 'fichier : la date invalide est gardée en texte');
     ok(ws.pageSetup.paperSize === 9, 'fichier : toujours A4');
-    eq(ws.getCell('D2').alignment?.horizontal, 'right', 'fichier : les montants sont alignés à droite');
+    eq(ws.getCell('D2').alignment?.horizontal, 'center', 'fichier : les montants sont centrés');
   }
 }
 // ---- Word et PDF : mêmes valeurs que le tableau (date jj/mm/aaaa, milliers), pas la forme technique

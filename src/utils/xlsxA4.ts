@@ -82,9 +82,9 @@ export function colUnits(rows: XCell[][]): number[] {
   return w.map(l => Math.min(MAX_COL, Math.max(MIN_COL, l + 2)));
 }
 
-/** Largeur utile d'une page A4 en unités Excel (marges de 8 mm) : environ 86 en portrait, 126 en paysage (mesuré avec LibreOffice : 146 déborde sur une 2e page). */
-export const EXCEL_PORTRAIT_FILL = 86;
-export const EXCEL_LANDSCAPE_FILL = 126;
+/** Largeur utile d'une page A4 en unités Excel (marges de 8 mm) : environ 90 en portrait, 134 en paysage (mesuré avec LibreOffice : 92 et 138 tiennent encore, 146 déborde sur une 2e page). */
+export const EXCEL_PORTRAIT_FILL = 90;
+export const EXCEL_LANDSCAPE_FILL = 134;
 /** Étire les colonnes (toutes dans la même proportion) pour que le tableau remplisse la largeur de la page ; ne rétrécit jamais. */
 export function stretchUnits(units: number[]): number[] {
   const total = units.reduce((a, b) => a + b, 0);
@@ -132,7 +132,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
         c.value = empty(v) ? null : (v as string | number | boolean | Date);
         c.font = { name: EXCEL_FONT, size: EXCEL_PT, bold: isHead };
         const fmt = !isHead ? sh.cols?.[ci] : undefined;
-        c.alignment = { vertical: 'top', wrapText: true, horizontal: fmt?.align ?? (typeof v === 'number' || v instanceof Date ? 'right' : 'left') };
+        c.alignment = { vertical: 'middle', wrapText: true, horizontal: fmt?.align ?? 'center' };
         if (fmt?.numFmt) c.numFmt = fmt.numFmt;
         else if (!isHead && typeof v === 'number' && Number.isFinite(v) && MONEY_HEAD.test(headText[ci] || '')) c.numFmt = Number.isInteger(v) ? '#,##0' : '#,##0.00'; // montants, points, taux : séparateur de milliers
         if (tableRow) c.border = { top: thin, left: thin, bottom: thin, right: thin };

@@ -74,7 +74,7 @@ const slip: Slip = {
   ok(texts.includes('Bulletin de paie') && texts.some(t => t.includes('Mission urgente')) && texts.includes('Période'), 'accents et textes gardés');
   ok(ws.getCell('A1').font?.bold === true && ws.getCell('A4').font?.bold === true, `en-têtes en gras (lignes 1 à 4) : A1=${ws.getCell('A1').font?.bold}, A4=${ws.getCell('A4').font?.bold}`);
   ok(!ws.getCell('A5').font?.bold && !ws.getCell('B5').font?.bold, `corps du tableau en police normale : A5=${ws.getCell('A5').value} gras=${ws.getCell('A5').font?.bold}`);
-  ok(ws.getCell('F5').alignment?.horizontal === 'right' && ws.getCell('A5').alignment?.horizontal === 'left', 'nombres à droite, texte à gauche');
+  ok(ws.getCell('F5').alignment?.horizontal === 'center' && ws.getCell('A5').alignment?.horizontal === 'center' && ws.getCell('A5').alignment?.vertical === 'middle', 'tous les champs centrés (horizontal et vertical)');
   ok(ws.getCell('A5').border?.top?.style === 'thin', 'cases du tableau encadrées');
   ok(String((ws.pageSetup as any).printTitlesRow || '') === '1:4', `en-têtes répétés à chaque page imprimée (${(ws.pageSetup as any).printTitlesRow})`);
 
