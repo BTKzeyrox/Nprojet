@@ -151,12 +151,12 @@ function digestPlan(count, m, en, url) {
   var n = Math.max(1, Math.floor(Number(count)) || 1);
   var safeUrl = typeof url === 'string' && url.charAt(0) === '/' && url.charAt(1) !== '/' ? url : '/';
   if (n === 1) return { title: String(m.title || 'Gestion Pro'), body: String(m.body || ''), silent: false, url: safeUrl, tag: DIGEST_TAG, count: 1 };
-  return { title: 'Gestion Pro', body: en ? 'You have ' + n + ' notifications' : 'Vous avez ' + n + ' notifications', silent: true, url: '/', tag: DIGEST_TAG, count: n };
+  return { title: 'Gestion Pro', body: en ? 'You have ' + n + ' notifications' : 'Vous avez ' + n + ' notifications', silent: false, url: '/', tag: DIGEST_TAG, count: n };
 }
 // ===== END DIGEST =====
 
 // Notifications externes groupées : TOUJOURS montrées (appli ouverte ou fermée, demande de BTK 2026-11-02). Une seule notification « Vous avez N notifications » avec un seul son
-// (la première sonne, les suivantes la mettent à jour sans bruit). Appli ouverte : la cloche de l'appli joue en plus son carillon à chaque notification.
+// (chaque nouvelle notification sonne et vibre : renotify, sinon une mise à jour muette passe inaperçue). Appli ouverte : la cloche de l'appli joue en plus son carillon à chaque notification.
 async function handlePush(d) {
   const en = /^en/i.test((self.navigator && self.navigator.language) || '');
   const m = (en ? d.en : d.fr) || d.fr || d.en || { title: 'Gestion Pro', body: '' };
@@ -166,7 +166,7 @@ async function handlePush(d) {
   let prev = 0;
   old.forEach((n) => { prev = Math.max(prev, Number(n.data && n.data.count) || 0); });
   const p = digestPlan(prev + 1, m, en, url);
-  await self.registration.showNotification(p.title, Object.assign({ body: p.body, silent: p.silent, tag: p.tag, renotify: false, data: { url: p.url, count: p.count } }, base)); // lien exact seulement pour une notification seule
+  await self.registration.showNotification(p.title, Object.assign({ body: p.body, silent: p.silent, tag: p.tag, renotify: true, data: { url: p.url, count: p.count } }, base)); // lien exact seulement pour une notification seule
 }
 self.addEventListener('push', (e) => {
   let d = {};
@@ -183,4 +183,16 @@ self.addEventListener('notificationclick', (e) => {
     for (const c of list) { if ('focus' in c) { try { c.postMessage({ type: 'open-link', url: url }); } catch (_) { /* ignore */ } return c.focus(); } }
     return self.clients.openWindow(url);
   }));
+});
+
+// Le téléphone a changé ou perdu l'abonnement : on en refait un tout de suite et on prévient l'appli (elle le rattache au compte).
+self.addEventListener('pushsubscriptionchange', (e) => {
+  e.waitUntil((async () => {
+    try {
+      const opts = (e.oldSubscription && e.oldSubscription.options) || null;
+      if (opts && opts.applicationServerKey) await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: opts.applicationServerKey });
+    } catch (_) { /* l'appli refera l'abonnement à sa prochaine ouverture */ }
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    list.forEach((c) => { try { c.postMessage({ type: 'push-resync' }); } catch (_) { /* ignore */ } });
+  })());
 });

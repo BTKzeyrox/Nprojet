@@ -81,7 +81,7 @@ const money = menuFor('admin').find(g => g.id === 'money')!;
 eq(openView(money), { view: 'stats', statsTab: 'finance' }, 'entrée Argent : ouvre Finances (stats + onglet finances)');
 eq(openView(money, 'treasury'), { view: 'treasury', statsTab: undefined }, 'dernier onglet retenu');
 eq(openView(money, 'disparu'), { view: 'stats', statsTab: 'finance' }, 'dernier onglet disparu : on ouvre le premier');
-eq(openView(menuFor('admin').find(g => g.id === 'home')!).view, 'dashboard', 'Accueil ouvre le tableau de bord');
+eq(openView(menuFor('admin').find(g => g.id === 'home')!).view, 'dashboard', 'Tableau de bord (groupe) ouvre le tableau de bord');
 // textes
 ok(ADMIN_GROUPS.every(g => g.fr && g.en && g.tabs.every(x => x.fr && x.en)), 'tous les textes en français et en anglais');
 ok(JSON.stringify(menuFor('admin')) === JSON.stringify(menuFor('admin')), 'résultat stable');

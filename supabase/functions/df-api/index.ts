@@ -5429,19 +5429,25 @@ async function pushKeys(): Promise<{ pub: string; priv: string } | null> {
 const subId = (endpoint: string) => 's_' + createHash('sha256').update(endpoint).digest('hex').slice(0, 40);
 
 // Envoie une notification à un appareil. 'ok' | 'gone' (abonnement mort : à supprimer) | 'fail'
-async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: string }): Promise<'ok' | 'gone' | 'fail'> {
-  try {
-    const body = await encryptPush(b64uDec(sub.p256dh), b64uDec(sub.auth), utf8(JSON.stringify(payload)));
-    const r = await fetch(sub.endpoint, {
-      method: 'POST',
-      headers: { Authorization: await vapidHeader(sub.endpoint, PUSH_SUBJECT, keys.pub, keys.priv, Math.floor(Date.now() / 1000)), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal' },
-      body,
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.status === 404 || r.status === 410) return 'gone';
-    if (!r.ok) { console.error('push refused:', r.status); return 'fail'; }
-    return 'ok';
-  } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120)); return 'fail'; }
+async function pushOne(sub: any, payload: unknown, keys: { pub: string; priv: string }, urgency: 'normal' | 'high' = 'normal'): Promise<'ok' | 'gone' | 'fail'> {
+  // Un 2e essai après une courte pause si le service du téléphone est occupé (429), en panne (5xx) ou injoignable : une notification perdue pour une erreur passagère
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const body = await encryptPush(b64uDec(sub.p256dh), b64uDec(sub.auth), utf8(JSON.stringify(payload)));
+      const r = await fetch(sub.endpoint, {
+        method: 'POST',
+        headers: { Authorization: await vapidHeader(sub.endpoint, PUSH_SUBJECT, keys.pub, keys.priv, Math.floor(Date.now() / 1000)), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: urgency },
+        body,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (r.status === 404 || r.status === 410) return 'gone';
+      if (r.ok) return 'ok';
+      console.error('push refused:', r.status, 'try', attempt + 1, 'host', (() => { try { return new URL(sub.endpoint).host; } catch { return '?'; } })());
+      if (r.status !== 429 && r.status < 500) return 'fail'; // 400/401/403… : réessayer ne change rien
+    } catch (e) { console.error('push error:', String((e as any)?.message || e).slice(0, 120), 'try', attempt + 1); }
+    if (attempt === 0) await new Promise(r => setTimeout(r, 700));
+  }
+  return 'fail';
 }
 // Prévient des personnes (tous leurs appareils). Rend le nombre d'envois réussis ; ne plante jamais.
 async function pushTo(userIds: string[], text: PushText, tag: string, link?: DeepLink, cat?: PushCat): Promise<number> {
@@ -5452,7 +5458,7 @@ async function pushTo(userIds: string[], text: PushText, tag: string, link?: Dee
     if (!keys) return 0;
     const { data: rows } = await sb.from(PUSH_SUBS).select('id,data').in('data->>user_id', ids);
     const subs = ((rows || []) as any[]).filter(r => !(cat && Array.isArray(r.data?.off) && r.data.off.includes(cat))); // la catégorie coupée sur cet appareil n'y arrive pas
-    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: link ? deepLinkUrl(link) : '/', tag }, keys) })));
+    const results = await Promise.all(subs.map(async (r) => ({ id: r.id, res: await pushOne(r.data, { fr: text.fr, en: text.en, url: link ? deepLinkUrl(link) : '/', tag }, keys, /^(msg|mission)/.test(tag) ? 'high' : 'normal') })));
     const dead = results.filter(x => x.res === 'gone').map(x => x.id);
     if (dead.length) await sb.from(PUSH_SUBS).delete().in('id', dead);
     return results.filter(x => x.res === 'ok').length;

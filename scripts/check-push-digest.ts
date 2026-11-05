@@ -17,7 +17,7 @@ for (const [name, plan] of [['site', digestPlan], ['service worker', swPlan]] as
   const one = plan(1, M, false, '/?go=validations');
   eq([one.title, one.body, one.silent, one.url], ['Mission à valider', 'Opérateur 1 attend ta validation.', false, '/?go=validations'], `${name} : 1 notification = son + message + lien exact`);
   const two = plan(2, M, false, '/?go=validations');
-  eq([two.title, two.body, two.silent, two.url], ['Gestion Pro', 'Vous avez 2 notifications', true, '/'], `${name} : 2 notifications = « Vous avez 2 notifications », sans nouveau son, ouvre l'appli`);
+  eq([two.title, two.body, two.silent, two.url], ['Gestion Pro', 'Vous avez 2 notifications', false, '/'], `${name} : 2 notifications = « Vous avez 2 notifications », avec son, ouvre l'appli`);
   eq(plan(7, M, false, '/x').body, 'Vous avez 7 notifications', `${name} : 7 notifications`);
   eq(plan(3, M, true, '/x').body, 'You have 3 notifications', `${name} : anglais`);
   eq(plan(1, {}, false, '/').title, 'Gestion Pro', `${name} : sans titre → Gestion Pro`);
@@ -25,9 +25,9 @@ for (const [name, plan] of [['site', digestPlan], ['service worker', swPlan]] as
   eq(plan(1, M, false, '//evil.example').url, '/', `${name} : lien vers un autre site refusé`);
   eq(plan(1, M, false, 'https://evil.example').url, '/', `${name} : adresse complète refusée`);
   eq(plan(4, M, false, '/a').tag, DIGEST_TAG, `${name} : même repère → UNE seule notification qui se met à jour`);
-  // Un seul son : seule la première est sonore
+  // Chaque nouvelle notification sonne (une mise à jour muette passait inaperçue)
   const sounds = [1, 2, 3, 4, 5].map(n => plan(n, M, false, '/a').silent);
-  eq(sounds, [false, true, true, true, true], `${name} : un seul son sur 5 notifications`);
+  eq(sounds, [false, false, false, false, false], `${name} : chaque notification sonne`);
 }
 // Le site et le service worker disent la même chose
 for (const n of [1, 2, 3, 10]) for (const en of [false, true]) eq(swPlan(n, M, en, '/?go=chat'), digestPlan(n, M, en, '/?go=chat'), `copie identique pour ${n} notification(s), ${en ? 'EN' : 'FR'}`);
@@ -35,7 +35,8 @@ for (const n of [1, 2, 3, 10]) for (const en of [false, true]) eq(swPlan(n, M, e
 // Service worker : appli ouverte = pas de bandeau ; sinon notification groupée
 ok(/getNotifications\(\{ tag: DIGEST_TAG \}\)/.test(sw), 'sw : compte les notifications déjà là');
 ok(!/visibilityState/.test(sw) && !/gp-fg/.test(sw), 'sw : la notification externe s\'affiche TOUJOURS (appli ouverte ou fermée)');
-ok(/silent: p\.silent, tag: p\.tag, renotify: false/.test(sw), 'sw : mise à jour sans bruit (silent + renotify faux)');
+ok(/silent: p\.silent, tag: p\.tag, renotify: true/.test(sw), 'sw : chaque mise à jour sonne (renotify vrai)');
+ok(/pushsubscriptionchange/.test(sw) && /push-resync/.test(sw), 'sw : abonnement changé → réabonnement + prévient l\'appli');
 ok(/e\.waitUntil\(handlePush\(d\)/.test(sw), 'sw : le travail se fait dans waitUntil');
 ok(/notificationclick/.test(sw) && /e\.notification\.close\(\)/.test(sw), 'sw : toucher la notification la ferme (le compte repart de zéro)');
 const app = readFileSync('src/App.tsx', 'utf8');

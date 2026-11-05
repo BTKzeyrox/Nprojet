@@ -135,7 +135,16 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', on);
   }, []);
   // Cet appareil appartient au compte ouvert : les notifications de l'ancien compte n'y arrivent plus
-  useEffect(() => { if (currentUser?.id) void bindPushDevice(); }, [currentUser?.id]);
+  // L'abonnement est aussi revérifié à chaque retour sur l'appli et quand le téléphone le change (message « push-resync » du service worker)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    void bindPushDevice();
+    const again = () => { if (document.visibilityState === 'visible') void bindPushDevice(); };
+    const onSw = (ev: MessageEvent) => { if (ev.data && ev.data.type === 'push-resync') void bindPushDevice(); };
+    document.addEventListener('visibilitychange', again);
+    navigator.serviceWorker?.addEventListener('message', onSw);
+    return () => { document.removeEventListener('visibilitychange', again); navigator.serviceWorker?.removeEventListener('message', onSw); };
+  }, [currentUser?.id]);
   // Réglages du compte (thème, langue, texte, son…) : les mêmes sur tous les appareils et navigateurs. Premier chargement d'un nouvel appareil : on recharge une fois pour les appliquer.
   useEffect(() => {
     installPrefsSync();

@@ -87,7 +87,12 @@ export async function bindPushDevice(): Promise<void> {
   try {
     if (pushSupport() !== 'ok' || Notification.permission !== 'granted') return;
     const reg = await navigator.serviceWorker.getRegistration('/sw.js');
-    const sub = await reg?.pushManager.getSubscription();
+    let sub = await reg?.pushManager.getSubscription();
+    // Autorisé mais abonnement perdu (le téléphone l'a retiré) : on le refait sans rien demander, puis on le rattache au compte
+    if (!sub && reg) {
+      const key = await db.pushKey();
+      if (key.ok) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(key.key) as BufferSource });
+    }
     if (sub) await db.pushSubscribe(sub.toJSON());
   } catch { /* ignore */ }
 }

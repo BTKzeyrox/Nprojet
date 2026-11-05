@@ -7,6 +7,6 @@ ok(/export async function unbindPushDevice/.test(push) && /db\.pushUnsubscribe\(
 ok(/export async function bindPushDevice/.test(push) && /Notification\.permission !== 'granted'\) return/.test(push) && /db\.pushSubscribe\(sub\.toJSON\(\)\)/.test(push), 'push : rattacher seulement si déjà autorisé');
 const lo = app.slice(app.indexOf('const handleLogout'), app.indexOf('db.logout();', app.indexOf('const handleLogout')));
 ok(/await Promise\.race\(\[unbindPushDevice\(\)/.test(lo), 'déconnexion : l\'appareil est détaché AVANT db.logout (le jeton sert encore)');
-ok(/if \(currentUser\?\.id\) void bindPushDevice\(\)/.test(app), 'ouverture d\'un compte : l\'appareil est rattaché');
+ok(/if \(!currentUser\?\.id\) return;\s*void bindPushDevice\(\)/.test(app) && /push-resync/.test(app), 'ouverture d\'un compte, retour sur l\'appli et changement d\'abonnement : l\'appareil est rattaché');
 ok(!/unsubscribe\(\)/.test(push.slice(push.indexOf('export async function unbindPushDevice'), push.indexOf('export async function bindPushDevice'))), 'l\'abonnement du navigateur est gardé (le compte suivant le reprend)');
 console.log(f ? `${f} ÉCHEC(S) sur ${t}` : `${t}/${t} contrôles réussis`); process.exit(f ? 1 : 0);
