@@ -743,6 +743,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `viewportWidth.ts` | Largeur de l'écran en pixels du site, fiable APRÈS une rotation (téléphone ou tablette). |
 | `workDays.ts` | Jours de travail réglables (Réglages) : 0 = dimanche … 6 = samedi. Par défaut lundi à samedi (le dimanche est un jour de repos). Pur : sans écran ni serveur. |
 | `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
+| `workTypes.ts` | Types de travail, modes de paie et modèles d'entreprise (module 25, M25.2) : règles pures, SANS écran, SANS serveur, SANS réseau, SANS horloge. |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |
 
 **Santé du site : moteur (`src/utils/health/`)**
@@ -1165,6 +1166,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:cash-void` | Contrôle des paiements annulés (Module 23, M23.3a) : la paire « paiement + correction » s'annule partout, et les écrans de chiffres lisent la caisse « nette ». |
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
+| `npm run check:work-types` | Types de travail, modes de paie et modèles d'entreprise (module 25, M25.2) : règles pures, sans réseau. Cas normaux ET cas piégés. |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
