@@ -65,7 +65,7 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('fr-FR');
 };
 
-const PREVIEW_COMMENTS = 2; // commentaires montrés sous la publication sans rien ouvrir
+// Commentaires et réponses : TOUT est masqué par défaut (BTK 2026-11-05). Un bouton « Afficher N commentaires » les ouvre ; les réponses restent repliées dans chaque commentaire.
 // « Visible par » : Tous (par défaut) ou un mélange de rôles. Le responsable et l'auteur voient toujours la publication.
 const AudiencePicker: React.FC<{ value: NewsRole[]; onChange: (v: NewsRole[]) => void; disabled?: boolean; light: boolean }> = ({ value, onChange, disabled, light }) => {
   const all = value.length === 0;
@@ -408,10 +408,11 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {shareOpen && <NewsShareSheet post={post} me={me} light={light} onClose={() => setShareOpen(false)} onShared={() => { void run(() => db.shareNews(post.id)); }} />}
 
       {published && (open || post.comments.length > 0) && (
-        <div className="space-y-3 pt-1">
+        <div className="space-y-3 pt-1" data-comments={open ? 'open' : 'closed'}>
           {open && post.comments.length === 0 && <div className={`text-xs ${muted}`}>Aucun commentaire pour le moment.</div>}
-          {!open && post.comments.length > PREVIEW_COMMENTS && <button type="button" onClick={() => setOpen(true)} className={`text-xs font-semibold cursor-pointer ${light ? 'text-slate-600' : 'text-slate-300'}`}>Voir les {post.comments.length} commentaires</button>}
-          {(open ? tops : tops.slice(-PREVIEW_COMMENTS)).map(c => {
+          {!open && post.comments.length > 0 && <button type="button" data-show-comments onClick={() => setOpen(true)} aria-expanded={false} className={`text-xs font-semibold cursor-pointer min-h-[36px] ${light ? 'text-slate-600' : 'text-slate-300'}`}>Afficher {post.comments.length} {post.comments.length > 1 ? 'commentaires' : 'commentaire'}</button>}
+          {open && post.comments.length > 0 && <button type="button" data-hide-comments onClick={() => { setOpen(false); setReply(null); }} aria-expanded className={`text-xs font-semibold cursor-pointer min-h-[36px] ${light ? 'text-slate-600' : 'text-slate-300'}`}>Masquer les commentaires</button>}
+          {(open ? tops : []).map(c => {
             const replies = post.comments.filter(r => r.parent_id === c.id);
             return (
               <div key={c.id} className="space-y-2">
