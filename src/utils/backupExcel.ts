@@ -6,18 +6,26 @@ import { downloadWorkbook, fromObjects, type XSheet } from './xlsxA4';
 
 // Sauvegarde Excel : une feuille par thème. Aucun mot de passe n'est exporté.
 // A4, Times New Roman 12 ; si une feuille est très longue (beaucoup de messages, par exemple), le site fait un autre fichier (-partie-2, …) : voir `xlsxA4.ts`.
+// Mots lisibles à la place des codes internes (completed, night, employee…) ; un code inconnu reste tel quel.
+const LAB: Record<string, string> = {
+  completed: 'Validée', rejected: 'Refusée', active: 'En cours', pending_start: 'À démarrer', pending_end: 'Fin à valider', force_released: 'Libérée',
+  pending: 'En attente', approved: 'Acceptée', blocked: 'Bloqué', day: 'Jour', night: 'Nuit',
+  admin: 'Responsable', employee: 'Opérateur', accountant: 'Comptable', team_lead: "Chef d'équipe",
+};
+const lab = (v: unknown): string => { const k = String(v ?? ''); return LAB[k] ?? k; };
+
 export async function downloadBackupExcel(): Promise<void> {
   const users = db.getUsers();
   const sheets: XSheet[] = [];
   const add = (name: string, rows: Record<string, unknown>[]) => { sheets.push({ name, rows: fromObjects(rows.length ? rows : [{ info: 'Aucune donnée' }]) }); };
   add('Opérateurs', users.map(u => ({
-    Nom: u.name, Pseudo: u.username, Rôle: u.role, Statut: u.status, Shift: u.shift, Téléphone: u.phone,
+    Nom: u.name, Pseudo: u.username, Rôle: lab(u.role), Statut: u.status === 'active' ? 'Actif' : lab(u.status), Vacation: lab(u.shift), Téléphone: u.phone,
     Badge: u.performance_badge, 'Volume total': u.total_score_boosted, 'Gains (Ar)': u.total_earnings_ar,
     'Avance en attente (Ar)': u.pending_advance_ar,
   })));
   add('Sessions', db.getPosts().map(p => ({
     Date: p.date, Début: p.start_time, Fin: p.end_time || '', Mission: p.post_number ?? '', Titre: p.client_name, Référence: p.account_tag,
-    Opérateur: p.employee_name, Shift: p.shift_type, Statut: p.status, 'Volume départ': p.initial_score,
+    Opérateur: p.employee_name, Vacation: lab(p.shift_type), Statut: lab(p.status), 'Volume départ': p.initial_score,
     'Quantité faite': p.current_score, 'Quantité finale': p.final_score ?? '', Cible: p.target_score,
     'Montant (Ar)': p.calculated_ar ?? '', Notes: p.notes || '', 'Motif de rejet': p.rejection_reason || '',
   })));
@@ -27,10 +35,10 @@ export async function downloadBackupExcel(): Promise<void> {
     Reste: Math.max(0, c.target_score - (c.current_score ?? c.initial_score)), Priorité: c.priority,
   })));
   add('Avances', db.getAdvanceRequests().map(a => ({
-    Date: a.request_date, Opérateur: a.employee_name, 'Montant (Ar)': a.amount_ar, Motif: a.reason, Statut: a.status, Notes: a.admin_notes || '',
+    Date: a.request_date, Opérateur: a.employee_name, 'Montant (Ar)': a.amount_ar, Motif: a.reason, Statut: lab(a.status), Notes: a.admin_notes || '',
   })));
   add('Messages', db.getMessages().map(m => ({
-    Date: m.timestamp, De: m.sender_name, Rôle: m.sender_role, Pour: m.recipient_id || '', Message: m.message, Fichier: m.attachment_name || '',
+    Date: m.timestamp, De: m.sender_name, Rôle: lab(m.sender_role), Pour: m.recipient_id || '', Message: m.message, Fichier: m.attachment_name || '',
   })));
   add('Finances', db.getCash().map(c => ({
     Date: c.date, Sens: c.kind === 'in' ? 'Entrée' : 'Sortie', Catégorie: c.category, 'Montant (Ar)': c.amount_ar,

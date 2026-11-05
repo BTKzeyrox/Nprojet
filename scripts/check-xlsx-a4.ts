@@ -1,6 +1,6 @@
 // Contrôle des fichiers Excel A4 (Times New Roman 12, un autre fichier si c'est long), sans écran ni réseau. Lancer : npm run check:xlsx-a4
 import ExcelJS from 'exceljs';
-import { EXCEL_FONT, EXCEL_MAX_ROWS, EXCEL_PORTRAIT_UNITS, EXCEL_PT, colUnits, buildWorkbook, fromObjects, orientationFor, partFileName, planFiles, sheetName, splitSheet, workbookBuffer, wrappedHeight, type XCell, type XSheet } from '../src/utils/xlsxA4';
+import { EXCEL_FONT, EXCEL_MAX_ROWS, EXCEL_PORTRAIT_UNITS, EXCEL_PT, EXCEL_PORTRAIT_FILL, EXCEL_LANDSCAPE_FILL, stretchUnits, colUnits, buildWorkbook, fromObjects, orientationFor, partFileName, planFiles, sheetName, splitSheet, workbookBuffer, wrappedHeight, type XCell, type XSheet } from '../src/utils/xlsxA4';
 import { invoiceRows, slipRows, vatRows } from '../src/utils/exportDoc';
 import type { Slip } from '../src/utils/payslip';
 
@@ -114,6 +114,9 @@ const slip: Slip = {
   const w2 = wb2.getWorksheet('Années')!;
   ok(w2.getCell('A2').numFmt !== '#,##0' && w2.getCell('B2').numFmt === '#,##0', 'une année reste « 2026 » (jamais « 2,026 »), un montant a ses milliers');
   ok(w2.getColumn(2).width! >= '1,234,567'.length, `colonne Montant assez large pour 1 234 567 (${w2.getColumn(2).width}) : pas de « ### »`);
+  const st = stretchUnits([20, 20, 20]), tot = (u: number[]) => Math.round(u.reduce((x, y) => x + y, 0));
+  ok(tot(st) === EXCEL_PORTRAIT_FILL && st.every(u => u > 20), `petit tableau : étiré sur toute la largeur de la page (${tot(st)} unités)`);
+  ok(tot(stretchUnits([40, 40, 30])) === EXCEL_LANDSCAPE_FILL && JSON.stringify(stretchUnits([60, 60, 60, 60])) === JSON.stringify([60, 60, 60, 60]), 'tableau paysage étiré ; tableau déjà plus large que la page : jamais rétréci');
   const src = (await import('node:fs')).readFileSync('src/utils/sheetExport.ts', 'utf8');
   ok(/WordSection1/.test(src) && /<table width="100%"/.test(src), 'Word : section A4 à marges réduites et tableau pleine largeur');
   console.log(fails ? `\n${fails} ÉCHEC(S)` : '\nTout est OK');

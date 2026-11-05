@@ -229,7 +229,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:4px 6px;border-bottom:1p
 ul{margin:4px 0 0 18px;padding:0}li{margin:2px 0}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.ok h2{color:#047857}.warn h2{color:#b45309}
 .bars{display:flex;align-items:flex-end;gap:2px;height:90px;border-bottom:1px solid #94a3b8}.b{flex:1;height:100%;display:flex;align-items:flex-end}.b i{display:block;width:100%;min-height:1px}.ax{display:flex;justify-content:space-between;font-size:10px;color:#64748b}
 .g{margin:6px 0}.gl{display:flex;justify-content:space-between;gap:8px}.gb{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}.gb i{display:block;height:100%}
-.note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two{break-inside:avoid}}@page{size:A4;margin:${PRINT_MARGIN_MM}mm}
+.note{color:#64748b;font-size:11px;margin-top:14px}@media print{body{padding:0}h2,table,.two,.bars,.ax,.g{break-inside:avoid}h2{break-after:avoid}}@page{size:A4;margin:${PRINT_MARGIN_MM}mm}
 </style></head><body>
 ${r.company ? `<div class="sub"><b>${esc(r.company)}</b></div>` : ''}<h1>${esc(r.title)}</h1><div class="sub">${esc(r.month)}${r.inProgress ? ' — ' + esc(t(wk ? 'semaine en cours' : 'mois en cours', wk ? 'week in progress' : 'month in progress')) : ''}</div>
 <h2>${esc(t('Résumé', 'Summary'))}</h2>

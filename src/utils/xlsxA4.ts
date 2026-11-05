@@ -82,6 +82,18 @@ export function colUnits(rows: XCell[][]): number[] {
   return w.map(l => Math.min(MAX_COL, Math.max(MIN_COL, l + 2)));
 }
 
+/** Largeur utile d'une page A4 en unités Excel (marges de 8 mm) : environ 86 en portrait, 126 en paysage (mesuré avec LibreOffice : 146 déborde sur une 2e page). */
+export const EXCEL_PORTRAIT_FILL = 86;
+export const EXCEL_LANDSCAPE_FILL = 126;
+/** Étire les colonnes (toutes dans la même proportion) pour que le tableau remplisse la largeur de la page ; ne rétrécit jamais. */
+export function stretchUnits(units: number[]): number[] {
+  const total = units.reduce((a, b) => a + b, 0);
+  const target = total > EXCEL_PORTRAIT_UNITS ? EXCEL_LANDSCAPE_FILL : EXCEL_PORTRAIT_FILL;
+  if (total <= 0 || total >= target) return units;
+  const f = target / total;
+  return units.map(u => Math.round(u * f * 10) / 10);
+}
+
 export const orientationFor = (units: number[]): 'portrait' | 'landscape' => (units.reduce((a, b) => a + b, 0) > EXCEL_PORTRAIT_UNITS ? 'landscape' : 'portrait');
 
 /** Hauteur (en points) d'une ligne de texte long fusionnée sur toute la largeur du tableau. */
@@ -103,7 +115,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
     taken.add(name.toLowerCase());
     const rows = sh.rows.length ? sh.rows : [['']];
     const headerRows = Math.min(Math.max(0, sh.headerRows ?? 1), rows.length);
-    const units = colUnits(rows), n = units.length, total = units.reduce((a, b) => a + b, 0);
+    const units0 = colUnits(rows), units = stretchUnits(units0), n = units.length, total = units.reduce((a, b) => a + b, 0);
     const tab = isTabular(rows);
     const headText = headerRows > 0 ? rows[headerRows - 1].map(textOf) : [];
     const ws = wb.addWorksheet(name);
@@ -134,7 +146,7 @@ export async function buildWorkbook(sheets: XSheet[]) {
     });
     ws.pageSetup = {
       paperSize: 9, // A4
-      orientation: orientationFor(units),
+      orientation: orientationFor(units0),
       fitToPage: false,
       scale: 100,
       margins: { left: 0.31, right: 0.31, top: 0.31, bottom: 0.45, header: 0.15, footer: 0.15 },

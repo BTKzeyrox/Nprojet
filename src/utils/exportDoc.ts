@@ -69,15 +69,17 @@ async function saveXlsx(sheets: { name: string; rows: Rows; headerRows?: number 
 }
 
 /** Lignes du bulletin de paie pour Excel (pure : testable). */
+const dmy = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d.split('-').reverse().join('/') : d);
+
 export function slipRows(s: Slip, lang: 'fr' | 'en' = 'fr'): Rows {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const tot = slipTotals(s);
   return [
     [t('Bulletin de paie', 'Payslip'), s.name || s.username],
-    [t('Période', 'Period'), `${s.period_start} → ${s.period_end}`],
+    [t('Période', 'Period'), `${dmy(s.period_start)} → ${dmy(s.period_end)}`],
     [],
     [t('Date', 'Date'), t('Client', 'Client'), t('Mission', 'Mission'), t('Points', 'Points'), t('Taux', 'Rate'), t('Montant (Ar)', 'Amount (Ar)')],
-    ...s.lines.map(l => [l.date, l.client, l.post_number ?? '', l.score, l.rate, l.amount]),
+    ...s.lines.map(l => [dmy(l.date), l.client, l.post_number ?? '', l.score, l.rate, l.amount]),
     [],
     [t('Gagné', 'Earned'), '', '', '', '', s.gross],
     ...s.bonuses.map(b => [`+ ${t('Prime', 'Bonus')} : ${b.reason}`, '', '', '', '', b.amount]),
@@ -95,8 +97,8 @@ export function invoiceRows(inv: Invoice, lang: 'fr' | 'en' = 'fr'): Rows {
   return [
     [inv.type === 'credit_note' ? t('Avoir', 'Credit note') : t('Facture', 'Invoice'), inv.number || t('Brouillon', 'Draft')],
     [t('Client', 'Client'), inv.client?.name || ''],
-    [t('Date', 'Date'), inv.issue_date],
-    [t('Échéance', 'Due date'), inv.due_date],
+    [t('Date', 'Date'), dmy(inv.issue_date)],
+    [t('Échéance', 'Due date'), dmy(inv.due_date)],
     [],
     [t('Description', 'Description'), t('Quantité', 'Quantity'), t('Prix unitaire (Ar)', 'Unit price (Ar)'), t('Total (Ar)', 'Total (Ar)')],
     ...inv.lines.map(l => [l.description, l.qty, l.unit_price_ar, l.total_ar]),
