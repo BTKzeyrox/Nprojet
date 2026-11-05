@@ -29,7 +29,7 @@ for (const lang of ['fr', 'en'] as const) {
   ok(html.includes(lang === 'en' ? 'Save conditions' : 'Enregistrer les conditions') && html.includes(lang === 'en' ? 'Starting values' : 'Valeurs de départ'), `${lang} admin : boutons Enregistrer et Valeurs de départ`);
   ok(html.includes(lang === 'en' ? 'Gestion Pro gives no legal advice' : 'Gestion Pro ne donne pas de conseil légal'), `${lang} admin : avertissement « pas de conseil légal »`);
   ok(html.includes('Société Démo') && html.includes('contact@exemple.mg'), `${lang} admin : conditions inventées de la démo affichées`);
-  ok(count(html, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') === totalFields, `${lang} admin : chaque réglage (${totalFields}) a un champ et un « ? »`);
+  ok(count(html, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') === totalFields - 1, `${lang} admin : chaque réglage (${totalFields - 1}) a un champ et un « ? » (la liste des pages cachées est dans Général > Pages du menu)`);
   ok(count(html, 'aria-expanded="true"') >= 9 && html.includes(lang === 'en' ? 'visible to operators' : 'visible par les opérateurs'), `${lang} admin : 9 sections, celle des opérateurs est marquée`);
   ok(html.includes('min-h-[44px]'), `${lang} admin : cibles tactiles de 44 px`);
 }

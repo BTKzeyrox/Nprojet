@@ -27,7 +27,8 @@ ok(/key=\{activeView \+ \(activeView === 'stats' \? getStatsTab\(\) : ''\)\}/.te
 ok(/df-stats-tab/.test(app) && /df-stats-tab/.test(r('src/utils/statsNav.ts')), 'l\'onglet de Statistiques mis à jour = la rangée suit');
 ok(/rememberTab\(loc\.group, loc\.tab\)/.test(app), 'dernier onglet retenu par entrée');
 ok(/data-menu-tab=/.test(mt) && /role="tablist"/.test(mt) && /aria-selected/.test(mt) && /min-h-\[44px\]/.test(mt) && /overflow-x-auto/.test(mt), 'onglets : accessibles, 44 px, défilent de côté');
-ok(/data-menu-mode-btn/.test(cc) && /setMenuMode\(m\)/.test(cc) && /Ancien menu/.test(cc), 'Réglages : bouton « Ancien menu » pour revenir en arrière');
+const mp = readFileSync(new URL('../src/components/MenuPagesCard.tsx', import.meta.url), 'utf8');
+ok(/data-menu-mode-btn/.test(mp) && /setMenuMode\(m\)/.test(mp) && /Ancien menu/.test(mp), 'Réglages : bouton « Ancien menu » pour revenir en arrière');
 // aucune page n'est retirée du rendu : les anciennes vues sont toujours rendues
 for (const v of ['dashboard', 'validations', 'history', 'clients', 'invoices', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'employees', 'hr', 'advances', 'chat', 'calendar', 'health', 'errors', 'charts', 'direction', 'accounting', 'sheets']) ok(new RegExp(`activeView === '${v}'`).test(app) || ['dashboard', 'validations'].includes(v), `page « ${v} » toujours rendue`);
 console.log(f ? `${f} ÉCHEC(S) sur ${t}` : `${t}/${t} contrôles réussis`); process.exit(f ? 1 : 0);

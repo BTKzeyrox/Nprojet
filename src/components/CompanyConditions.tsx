@@ -8,9 +8,7 @@ import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
 import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
-import { HIDEABLE_MODULES, parseHidden, hiddenToCsv, boutiqueHidden, isBoutique } from '../utils/moduleSwitch';
 import type { CompanySettings } from '../types';
-import { useMenuMode, setMenuMode } from '../utils/menuMode';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
 type Kind = 'text' | 'area' | 'int' | 'num' | 'bool' | 'select' | 'lines' | 'time';
@@ -27,7 +25,6 @@ const SECTIONS: Sec[] = [
   { id: 'leave', fr: 'Congés et présence', en: 'Leave and attendance', shared: true },
   { id: 'missions', fr: 'Missions', en: 'Missions' },
   { id: 'clients', fr: 'Clients (statuts)', en: 'Clients (statuses)', note: ['Ces seuils décident du statut calculé de chaque client (Nouveau, Régulier, Stratégique, Inactif). Les valeurs de départ conviennent à la plupart des entreprises.', 'These thresholds decide each client\'s calculated status (New, Regular, Strategic, Inactive). The starting values suit most companies.'] },
-  { id: 'modules', fr: 'Pages du menu (cacher)', en: 'Menu pages (hide)', shared: true, note: ['Coche une page pour la CACHER du menu. Rien n\'est supprimé : les données restent, et tu peux la remontrer à tout moment. Actualités et Réglages restent toujours visibles.', 'Tick a page to HIDE it from the menu. Nothing is deleted: the data stays, and you can show it again any time. News and Settings are always visible.'] },
   { id: 'options', fr: 'Choix de fonctionnement', en: 'How the app works' },
   { id: 'texts', fr: 'Règlement et conditions', en: 'Rules and terms' },
   { id: 'watch', fr: 'Surveillance (Santé du site)', en: 'Monitoring (Site health)', note: ['Seuils des alertes, partagés par tous les administrateurs. 0 ou vide = valeur de départ. Un appareil peut en changer pour lui seul dans Réglages > Surveillance.', 'Alert thresholds, shared by all administrators. 0 or empty = starting value. A device can override them for itself in Settings > Monitoring.'] },
@@ -102,7 +99,6 @@ const fromRaw = (r: Raw): unknown => {
 
 export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean }> = ({ lang, openAll }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
-  const menuMode = useMenuMode();
   const stored = db.getSettings();
   const current = useMemo(() => readCompany(stored.company), [stored.company]);
   const [raw, setRaw] = useState<Raw>(() => toRaw(current));
@@ -120,7 +116,8 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
   const labelOf = (path: string) => { const f = FIELDS.find(x => `${x.sec}.${x.key}` === path); return f ? t(f.fr, f.en) : path; };
 
   const save = () => {
-    const r = cleanCompany(fromRaw(raw), current);
+    const mine = fromRaw(raw) as any; // les pages cachées se règlent dans Général > Pages du menu : on garde la valeur enregistrée, jamais une copie ancienne
+    const r = cleanCompany({ ...mine, modules: { ...(mine.modules || {}), hidden: readCompany(db.getSettings().company).modules.hidden } }, current);
     if (r.errors.length) { setBad(r.errors); return; }
     db.updateSettings({ company: r.value });
     setRaw(toRaw(r.value)); // montre ce qui a vraiment été gardé (espaces retirés, HTML retiré…)
@@ -157,44 +154,6 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean 
             {isOpen && (
               <div className="px-4 pb-4 space-y-4">
                 {sec.note && <p className="text-[11px] text-slate-400">{t(sec.note[0], sec.note[1])}</p>}
-                {sec.id === 'modules' && (
-                  <div data-menu-mode className="rounded-lg border border-slate-700 p-3 space-y-2">
-                    <p className="text-xs text-slate-300">{t('Menu : 12 entrées avec des onglets (simplifié), ou l\'ancien menu avec toutes les pages. Réglage de CET appareil ; rien n\'est supprimé.', 'Menu: 12 entries with tabs (simplified), or the old menu with every page. Setting of THIS device; nothing is deleted.')}</p>
-                    <div className="flex gap-2">
-                      {(['merged', 'classic'] as const).map(m => (
-                        <button key={m} type="button" aria-pressed={menuMode === m} data-menu-mode-btn={m} onClick={() => setMenuMode(m)} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${menuMode === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{m === 'merged' ? t('Menu simplifié', 'Simplified menu') : t('Ancien menu', 'Old menu')}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {sec.id === 'modules' && (
-                  <div data-boutique className="rounded-lg border border-slate-700 p-3 space-y-2">
-                    <p className="text-xs text-slate-300">{t('Petit commerce : « Boutique » garde Stock, Clients, Argent et Messages et cache le reste. Rien n\'est supprimé ; « Tout montrer » remet tout.', 'Small shop: "Shop" keeps Stock, Clients, Money and Messages and hides the rest. Nothing is deleted; "Show all" brings everything back.')}</p>
-                    <div className="flex gap-2">
-                      <button type="button" data-boutique-btn="on" aria-pressed={isBoutique(String(raw['modules.hidden']))} onClick={() => set('modules.hidden', boutiqueHidden())} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${isBoutique(String(raw['modules.hidden'])) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{t('Boutique', 'Shop')}</button>
-                      <button type="button" data-boutique-btn="off" aria-pressed={parseHidden(String(raw['modules.hidden'])).length === 0} onClick={() => set('modules.hidden', '')} className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold border cursor-pointer ${parseHidden(String(raw['modules.hidden'])).length === 0 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/5 text-slate-200 border-slate-600'}`}>{t('Tout montrer', 'Show all')}</button>
-                    </div>
-                  </div>
-                )}
-                {sec.id === 'modules' && (
-                  <div className="space-y-3">
-                    {(['work', 'money', 'team', 'talk'] as const).map(g => (
-                      <fieldset key={g} className="space-y-1">
-                        <legend className="text-[11px] font-mono uppercase text-slate-400">{g === 'work' ? t('Travail', 'Work') : g === 'money' ? t('Argent et clients', 'Money and clients') : g === 'team' ? t('Équipe', 'Team') : t('Communication', 'Communication')}</legend>
-                        {HIDEABLE_MODULES.filter(m => m.group === g).map(m => {
-                          const off = parseHidden(String(raw['modules.hidden'])).includes(m.id);
-                          return (
-                            <label key={m.id} className="flex items-center gap-3 min-h-[44px] text-sm text-slate-200 cursor-pointer">
-                              <input type="checkbox" checked={off} onChange={e => { const cur = parseHidden(String(raw['modules.hidden'])); set('modules.hidden', hiddenToCsv(e.target.checked ? [...cur, m.id] : cur.filter(x => x !== m.id))); }} className="w-5 h-5 accent-emerald-500" />
-                              <span>{t(m.fr, m.en)}</span>
-                              {off && <span className="text-[10px] font-mono text-amber-300">{t('cachée', 'hidden')}</span>}
-                            </label>
-                          );
-                        })}
-                      </fieldset>
-                    ))}
-                  </div>
-                )}
                 {FIELDS.filter(f => f.sec === sec.id).map(f => {
                   const k = `${f.sec}.${f.key}`, v = raw[k];
                   const isBad = bad.includes(k), id = `co-${f.sec}-${f.key}`;

@@ -21,6 +21,7 @@ import { PerformanceSettings } from '../../components/PerformanceSettings';
 import { MissionTemplatesSection } from '../../components/MissionTemplatesSection';
 import { RecurringMissionsSection } from '../../components/RecurringMissionsSection';
 import { NotificationsCard } from '../../components/NotificationsCard';
+import { MenuPagesCard } from '../../components/MenuPagesCard';
 import { OfflineCard } from '../../components/OfflineCard';
 import { TourReplayCard } from '../../components/TourGuide';
 import { TwoStepCard } from '../../components/TwoStepCard';
@@ -205,6 +206,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
       </section>
       )}
 
+      {tab === 'general' && <MenuPagesCard />}
       {tab === 'general' && <NotificationsCard />}
       {tab === 'general' && <OfflineCard />}
       {tab === 'general' && <TwoStepCard />}

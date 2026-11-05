@@ -19,7 +19,9 @@ const side = r('src/components/Sidebar.tsx'), nav = r('src/components/BottomNav.
 t('menu : les pages cachées disparaissent', /!isViewHidden\(readCompany\(db\.getSettings\(\)\.company\)\.modules\.hidden, it\.id\)/.test(side));
 t('barre du bas : idem', /\.filter\(it => !isViewHidden\(hiddenPages, it\.id\)\)/.test(nav));
 t('page cachée ouverte = retour aux Actualités', /if \(isViewHidden\(hiddenPages, activeView\)\) setActiveView\('feed'\)/.test(app));
-t('réglages : cases pour cacher, par groupe', /HIDEABLE_MODULES\.filter\(m => m\.group === g\)/.test(cc) && /sec\.id === 'modules'/.test(cc));
+const mp = r('src/components/MenuPagesCard.tsx'), sv = r('src/views/admin/SettingsView.tsx');
+t('réglages : « Pages du menu » dans Général, interrupteurs rangés comme le menu, effet immédiat', /<MenuPagesCard \/>/.test(sv) && /ADMIN_GROUPS\.map/.test(mp) && /role="switch"/.test(mp) && /db\.updateSettings\(\{ company: r\.value \}\)/.test(mp));
+t('conditions : la copie des pages cachées ne remplace jamais la valeur enregistrée', /hidden: readCompany\(db\.getSettings\(\)\.company\)\.modules\.hidden/.test(cc) && !/sec\.id === 'modules'/.test(cc));
 t('serveur : même champ modules.hidden et envoyé aux opérateurs', /modules: \{ hidden: \{ t: "text", max: 400 \} \}/.test(r('supabase/functions/df-api/index.ts')) && /modules: full\.modules \}/.test(r('supabase/functions/df-api/index.ts')));
 console.log(`${ok}/${ok + bad} contrôles OK`);
 process.exit(bad ? 1 : 0);

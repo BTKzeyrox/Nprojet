@@ -651,6 +651,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 12 entrées (Calendrier et Réglages ont leur propre entrée) avec onglets. |
 | `menuMode.ts` | Menu fusionné (module 22, M22.6) : réglage de CET appareil (« Menu simplifié » ou « Ancien menu ») + dernier onglet retenu par entrée. |
 | `menuNav.ts` | Menu simplifié : aller à une entrée ou à un onglet, et quelles entrées sont dans la barre du bas (téléphone). Pur, sauf le réglage de l'onglet de Statistiques. |
+| `menuPages.ts` | Les pages qu'on peut cacher, rangées comme le menu simplifié (Réglages > Général > Pages du menu). Règles PURES (aucun écran, aucun serveur), contrôlées par check:boutique. |
 | `messageLinks.ts` | Rappels par WhatsApp et SMS (module 16, M16.6) : règles pures. Aucun envoi automatique, aucun service payant, aucune clé : |
 | `messageTemplates.ts` | Modèles de messages FR/EN (M11.11). Pur : pas d'écran, pas de serveur, pas d'envoi. L'admin relit et modifie le texte avant de l'utiliser. |
 | `missionGuides.ts` | Guides des 5 types de mission : ce qu'il faut faire, quel justificatif envoyer, ce que le responsable vérifie. |
@@ -883,6 +884,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `LiveStatus.tsx` | Pastille ronde de statut en direct posée sur une photo (LiveDot) et ligne de statut avec texte (LiveLine). |
 | `LoadingBar.tsx` | Fine barre verte sous l'en-tête, visible tant qu'une action est en cours d'envoi au serveur. |
 | `LogoutTransition.tsx` | Écran sombre de transition « déconnexion en cours » avec animation, affiché pendant la déconnexion. |
+| `MenuPagesCard.tsx` | Réglages > Général > « Pages du menu » (ADMIN) : choisir les pages affichées, simplement. |
 | `MenuTabs.tsx` | Rangée d'onglets du menu simplifié (M22.6) : en haut de chaque entrée qui a plusieurs pages. Toujours au même endroit ; sur téléphone elle défile de côté. |
 | `MissionGuide.tsx` | Guide d'une mission en quatre étapes avec le justificatif attendu : contenu (MissionGuideContent), bouton d'aide (MissionGuideButton) et liste de contrôle du responsable (AdminChecklist). |
 | `MissionTemplatesSection.tsx` | Section des Réglages pour gérer les modèles de mission : créer, modifier et supprimer, avec le type et le justificatif demandé. |
