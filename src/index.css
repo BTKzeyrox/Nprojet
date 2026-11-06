@@ -407,6 +407,13 @@ body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
   backdrop-filter: blur(14px) saturate(1.1);
 }
 
+/* Grands écrans (≥ 1024 px, 2026-11-06) : la fenêtre est centrée sur TOUT l'écran (le voile couvre déjà le header) ; on ne laisse plus la place du header en haut, sinon elle paraît descendue. Téléphone et tablette : inchangés. */
+@media (min-width: 1024px) {
+  body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
+    padding-top: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
 html { scroll-padding-bottom: 6rem; }
 main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }

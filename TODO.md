@@ -733,3 +733,4 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
 - [x] Grands écrans (≥ 1024 px) : Actualités et Messages déplacés du menu latéral vers l'en-tête (2026-11-06)
 - [x] Calendrier : le détail d'un jour est une PAGE entière (« Retour au calendrier », flèches jour précédent/suivant, rappels du jour avec « Ajouter » réglé sur ce jour), plus une petite fenêtre (2026-11-06)
 - [x] « En ligne » plus fiable : rythme des mises à jour jamais plus lent que 40 s, délai de signe de vie 90 s → 120 s ; le choix Disponible/Occupé/Absent est retiré (statut automatique) (2026-11-06)
+- [x] Grands écrans (≥ 1024 px) : les formulaires et fenêtres sont centrés sur tout l'écran (plus décalés vers le bas à cause du header) (2026-11-06)
