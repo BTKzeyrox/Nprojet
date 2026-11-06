@@ -1,6 +1,6 @@
-// « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 90 s.
+// « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 120 s.
 // Une mission ouverte sans signe de vie ne rend PAS l'opérateur « en ligne » (il est « en mission » mais hors ligne). Pur : pas de store, testé par check:presence-count.
-export const ONLINE_MS = 90_000;
+export const ONLINE_MS = 120_000;
 export interface UserLike { id: string; role: string; status?: string }
 export interface PresenceLike { user_id: string; last_seen: string }
 

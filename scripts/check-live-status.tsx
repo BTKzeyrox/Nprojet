@@ -27,9 +27,9 @@ ok(live(U('u1'), open('active', 'autre'), [row(20_000)]).status === 'online', 'l
 ok(live(U('u1'), [], [row(20_000, true)]).waiting && !live(U('u1'), open('active'), [row(20_000, true)]).waiting, '« attend une mission » seulement en ligne sans mission');
 
 // ----- limites de temps -----
-ok(live(U(), open(), [row(FRESH_MS - 1000)]).status === 'working' && live(U(), open(), [row(FRESH_MS)]).status === 'pause', 'limite 90 s : 89 s = en cours ; 90 s = en pause');
+ok(live(U(), open(), [row(FRESH_MS - 1000)]).status === 'working' && live(U(), open(), [row(FRESH_MS)]).status === 'pause', 'limite 120 s : 119 s = en cours ; 90 s = en pause');
 ok(live(U(), open(), [row(PAUSE_MAX_MS)]).status === 'pause' && live(U(), open(), [row(PAUSE_MAX_MS + 1000)]).status === 'offline', 'limite 30 min : 30 min = en pause ; 30 min + 1 s = hors ligne');
-ok(live(U(), [], [row(FRESH_MS - 1000)]).status === 'online' && live(U(), [], [row(FRESH_MS)]).status === 'offline', 'sans mission : 89 s = en ligne ; 90 s = hors ligne');
+ok(live(U(), [], [row(FRESH_MS - 1000)]).status === 'online' && live(U(), [], [row(FRESH_MS)]).status === 'offline', 'sans mission : 119 s = en ligne ; 120 s = hors ligne');
 
 // ----- pas de ligne de présence / données abîmées -----
 ok(live(U('u1', true), [], []).status === 'offline' && live(U('u1', false), [], []).status === 'offline', 'sans ligne de présence : HORS LIGNE, même si l\'ancien indicateur « en ligne » est resté bloqué sur vrai');

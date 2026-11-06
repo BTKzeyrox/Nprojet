@@ -21,7 +21,6 @@ import { goToTab } from '../utils/menuNav';
 import { NOTIF_FILTERS, filterNotifs, notifWhen, type NotifFilter } from '../utils/notifView';
 import { ConnectionChip } from './ConnectionBanner';
 import { Avatar } from './Avatar';
-import { usePresence, PRESENCE_DOT, PRESENCE_LABEL } from '../utils/availability';
 
 interface TopBarProps {
   currentUser: User;
@@ -48,7 +47,6 @@ const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\
 
 // Barre du haut fixe (clair) : recherche globale + cloche
 export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false }) => {
-  const presence = usePresence(currentUser.id);
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -308,12 +306,12 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           type="button"
           data-profile-pill
           onClick={onOpenProfile}
-          title={`Mon profil · ${PRESENCE_LABEL[presence]}`}
+          title="Mon profil · En ligne"
           aria-label="Mon profil"
           className={`relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
         >
           <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8 rounded-full" />
-          <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} ${PRESENCE_DOT[presence]}`} />
+          <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} bg-emerald-500`} />
         </button>
       </div>
     </header>

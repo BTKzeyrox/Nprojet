@@ -11,8 +11,8 @@ const ago = (s: number) => new Date(NOW - s * 1000).toISOString();
 
 // ---- Pastille ----
 eq(onlineBadge(ago(10), NOW).online, true, 'pastille : signe de vie il y a 10 s = en ligne');
-eq(onlineBadge(ago(89), NOW).online, true, 'pastille : 89 s = encore en ligne');
-eq(onlineBadge(ago(90), NOW).online, false, 'pastille : 90 s = hors ligne');
+eq(onlineBadge(ago(119), NOW).online, true, 'pastille : 119 s = encore en ligne');
+eq(onlineBadge(ago(120), NOW).online, false, 'pastille : 120 s = hors ligne');
 eq(onlineBadge(ago(10), NOW).text, 'En ligne', 'pastille : texte FR');
 eq(onlineBadge(ago(10), NOW, 'en').text, 'Online', 'pastille : texte EN');
 eq(onlineBadge(ago(600), NOW).text, 'Hors ligne depuis 11:50', 'pastille : « depuis » en heure de Madagascar (09:00 UTC = 12:00)');

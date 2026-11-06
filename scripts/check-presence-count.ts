@@ -7,11 +7,11 @@ const now = Date.parse('2026-11-05T09:00:00Z');
 const ago = (s: number) => new Date(now - s * 1000).toISOString();
 const emp = (id: string, status?: string) => ({ id, role: 'employee', status });
 const users = [emp('a'), emp('b'), emp('c'), emp('d'), emp('e', 'blocked'), { id: 'adm', role: 'admin' }];
-ok(ONLINE_MS === 90000, 'en ligne = signe de vie de moins de 90 s');
+ok(ONLINE_MS === 120000, 'en ligne = signe de vie de moins de 120 s');
 // BTK : « 4/5 en ligne alors qu'aucun opérateur n'est actif » : des vieilles lignes de présence ne comptent plus
 const stale = ['a', 'b', 'c', 'd'].map(id => ({ user_id: id, last_seen: ago(3600) }));
 ok(JSON.stringify(countOnline(users, stale, now)) === '{"online":0,"total":4}', 'personne n\'a donné signe de vie : 0 / 4 (le compte bloqué et l\'admin ne comptent pas)');
-ok(JSON.stringify(countOnline(users, [{ user_id: 'a', last_seen: ago(30) }, { user_id: 'b', last_seen: ago(89) }, { user_id: 'c', last_seen: ago(91) }], now)) === '{"online":2,"total":4}', 'signe de vie de 30 s et 89 s = en ligne ; 91 s = hors ligne');
+ok(JSON.stringify(countOnline(users, [{ user_id: 'a', last_seen: ago(30) }, { user_id: 'b', last_seen: ago(119) }, { user_id: 'c', last_seen: ago(121) }], now)) === '{"online":2,"total":4}', 'signe de vie de 30 s et 119 s = en ligne ; 121 s = hors ligne');
 ok(countOnline(users, [{ user_id: 'e', last_seen: ago(5) }], now).online === 0, 'un compte bloqué n\'est jamais compté en ligne');
 ok(countOnline(users, [{ user_id: 'adm', last_seen: ago(5) }], now).online === 0, 'l\'admin n\'est pas un opérateur');
 ok(countOnline(users, [], now).online === 0 && countOnline([], [], now).total === 0, 'aucune présence ou aucun opérateur : 0 sur 0, sans plantage');

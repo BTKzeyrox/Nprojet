@@ -14,7 +14,6 @@ import { badgeAccess, canSeeProfileBadges, usePerformance } from '../utils/usePe
 import { BadgeChips, ScoreRing } from './PerformanceBadges';
 import { ROLE_NAMES } from '../utils/roles';
 import type { ViewAs } from '../utils/roles';
-import { usePresence, setPresence, PRESENCE_LIST, PRESENCE_LABEL, PRESENCE_DOT } from '../utils/availability';
 import { effShift, showShift } from '../utils/shiftMode';
 
 interface ProfileModalProps {
@@ -29,24 +28,14 @@ interface ProfileModalProps {
   onViewAs?: (r: ViewAs) => void;
 }
 
-/** Mon statut (Disponible / Occupé / Absent) : réglé sur cet appareil. */
-const StatusPicker: React.FC<{ uid: string }> = ({ uid }) => {
-  const cur = usePresence(uid);
-  return (
-    <div data-status-picker className="space-y-1.5">
-      <div className="text-xs text-slate-300 uppercase font-mono">Mon statut</div>
-      <div className="grid grid-cols-3 gap-2">
-        {PRESENCE_LIST.map(p => (
-          <button key={p} type="button" data-status={p} onClick={() => setPresence(uid, p)} aria-pressed={cur === p}
-            className={`min-h-[44px] rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${cur === p ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200' : 'border-slate-600 bg-[#141e2a] text-slate-300'}`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${PRESENCE_DOT[p]}`} />{PRESENCE_LABEL[p]}
-          </button>
-        ))}
-      </div>
-      <p className="text-[11px] text-slate-400">Réglé sur cet appareil.</p>
-    </div>
-  );
-};
+/** Mon statut : AUTOMATIQUE (plus de choix Disponible / Occupé / Absent). En ligne dès que l'appli est ouverte ; le responsable le voit en direct. */
+const StatusInfo: React.FC = () => (
+  <div data-status-auto className="space-y-1.5">
+    <div className="text-xs text-slate-300 uppercase font-mono">Mon statut</div>
+    <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />En ligne (automatique)</div>
+    <p className="text-[11px] text-slate-400">Ton statut se met à jour tout seul selon l'appli ouverte ou fermée. Il ne se choisit plus.</p>
+  </div>
+);
 
 /** Changer mon mot de passe (ancien + nouveau). */
 const PasswordForm: React.FC<{ uid: string }> = ({ uid }) => {
@@ -327,7 +316,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
         )}
         {isSelf && (
           <div className="space-y-3 border-t border-slate-700 pt-3">
-            <StatusPicker uid={live.id} />
+            <StatusInfo />
             <PasswordForm uid={live.id} />
             {canSwitchMode && onViewAs && (
               <div data-view-as className="space-y-1.5">

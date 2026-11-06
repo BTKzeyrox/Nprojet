@@ -1,13 +1,13 @@
 // Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`.
 // Il n'y a pas de bouton « pause » : le statut se DÉDUIT de ce que le site sait vraiment (mission ouverte ou non, dernier signe de vie de l'appli).
-//   En cours   = une mission est ouverte (à valider, en cours ou fin à valider) ET l'appli a donné signe de vie il y a moins de 90 s ;
+//   En cours   = une mission est ouverte (à valider, en cours ou fin à valider) ET l'appli a donné signe de vie il y a moins de 120 s ;
 //   En ligne   = aucune mission ouverte, appli active (on ajoute « attend une mission » s'il est dans la file) ;
-//   En pause   = une mission est ouverte, mais l'appli est silencieuse depuis 90 s à 30 min (téléphone verrouillé, pause café, coupure courte) ;
-//   Hors ligne = appli silencieuse depuis plus de 30 min avec une mission ouverte, ou depuis plus de 90 s sans mission.
+//   En pause   = une mission est ouverte, mais l'appli est silencieuse depuis 120 s à 30 min (téléphone verrouillé, pause café, coupure courte) ;
+//   Hors ligne = appli silencieuse depuis plus de 30 min avec une mission ouverte, ou depuis plus de 120 s sans mission.
 // Seul le responsable reçoit les signes de vie (`db.getPresence()`) : pour les autres rôles on n'affiche RIEN plutôt qu'un faux « Hors ligne ».
 import type { PostSession, PresenceRow, User } from '../types';
 
-export const FRESH_MS = 90_000; // signe de vie récent
+export const FRESH_MS = 120_000; // signe de vie récent
 export const PAUSE_MAX_MS = 30 * 60_000; // au-delà : hors ligne
 const OPEN = ['pending_start', 'active', 'pending_end'];
 

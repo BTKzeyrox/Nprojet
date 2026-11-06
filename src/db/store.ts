@@ -444,14 +444,14 @@ export class AppStore {
     if (on && this.token) void this.pull();
   }
 
-  // Économie de quota : sans action depuis 2 min le délai double, depuis 10 min il triple.
+  // Économie de quota : sans action depuis 2 min le délai double. JAMAIS plus que ×2 (40 s) : l'appli ouverte doit rester « en ligne » (90 s de marge côté responsable,
+  // dont 40 s de retard du téléphone + 40 s de retard de l'ordinateur ; avant, le ×3 à 60 s faisait passer un opérateur présent en « Hors ligne »).
   // Une seule action (clic, touche, toucher) remet la vitesse normale et recharge tout de suite.
   // Temps écoulé depuis la dernière action de la personne (pour ralentir aussi les autres rechargements)
   public idleMs(): number { return Date.now() - this.lastActivity; }
 
   private idleFactor(): number {
     const idle = Date.now() - this.lastActivity;
-    if (idle > 10 * 60 * 1000) return 3;
     if (idle > 2 * 60 * 1000) return 2;
     return 1;
   }

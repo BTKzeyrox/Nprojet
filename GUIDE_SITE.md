@@ -597,7 +597,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `attendanceView.ts` | Arrivée, départ et pastille « en ligne / hors ligne » pour TOUS les rôles suivis (opérateur, chef d'équipe, comptable). |
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `autoReport.ts` | Rapport automatique (module 15, M15.5). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:auto-report`. |
-| `availability.ts` | Statut Disponible, Occupé ou Absent choisi par chaque personne ; gardé dans le navigateur (localStorage), pas de serveur. |
 | `avatarColor.ts` | Couleur d'une personne tirée de sa photo de profil (sinon de son nom) ; lit l'image dans le navigateur, aucun serveur. |
 | `backupExcel.ts` | Sauvegarde Excel des données du store (une feuille par thème), téléchargée par le navigateur ; aucun mot de passe exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
@@ -689,7 +688,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
 | `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
 | `presence.ts` | Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store. |
-| `presenceCount.ts` | « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 90 s. |
+| `presenceCount.ts` | « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 120 s. |
 | `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |
 | `proofs.ts` | Règle pure (sans écran, sans serveur) : toutes les preuves d'une session, début puis fin, sans doublon. |

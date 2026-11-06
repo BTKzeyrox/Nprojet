@@ -12,7 +12,7 @@ export const isTracked = (role: string | undefined | null): boolean => (TRACKED_
 
 export interface OnlineBadge { online: boolean; since: string | null; text: string }
 
-/** Pastille simple : En ligne = signe de vie depuis moins de 90 s ; sinon Hors ligne « depuis HH:MM » (null = jamais vu). */
+/** Pastille simple : En ligne = signe de vie depuis moins de 120 s ; sinon Hors ligne « depuis HH:MM » (null = jamais vu). */
 export function onlineBadge(lastSeenIso: string | null | undefined, nowMs: number, lang: Lang = 'fr'): OnlineBadge {
   const t = lastSeenIso ? new Date(lastSeenIso).getTime() : NaN;
   const en = lang === 'en';

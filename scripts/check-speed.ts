@@ -70,7 +70,7 @@ ok(ms5 < LIMIT_MS * 3, `5 recalculs de la Santé de suite : ${ms5} ms (pas de ra
 // ---- quota : appels au serveur en boucle (code lu) ----
 const store = fs.readFileSync('src/db/store.ts', 'utf8');
 ok(/private pollMs = 20000/.test(store) && /setFastPoll[\s\S]{0,300}8000 : 20000/.test(store), 'rechargement : 20 s normalement, 8 s seulement quand la messagerie ou les actualités sont ouvertes');
-ok(/idle > 10 \* 60 \* 1000\) return 3/.test(store) && /idle > 2 \* 60 \* 1000\) return 2/.test(store), 'rechargement : sans action depuis 2 min le délai double, depuis 10 min il triple');
+ok(/idle > 2 \* 60 \* 1000\) return 2/.test(store), 'rechargement : sans action depuis 2 min le délai double (jamais plus : appli ouverte reste « en ligne »)');
 ok(/document\.hidden\)\) void this\.pull\(\)/.test(store), 'rechargement : onglet caché = aucun appel');
 ok(/this\.pulling/.test(store), 'rechargement : jamais deux appels en même temps');
 const files = fs.readdirSync('src', { recursive: true }).map(String).filter(f => /\.(ts|tsx)$/.test(f));
