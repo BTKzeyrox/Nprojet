@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
+import { Bell, Menu, Search, X, LayoutDashboard, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -56,6 +56,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const [nFilter, setNFilter] = useState<NotifFilter>('all');
   const box = useRef<HTMLDivElement>(null);
   const bellBox = useRef<HTMLDivElement>(null);
+  const mbox = useRef<HTMLDivElement>(null);
+  const [mSearch, setMSearch] = useState(false); // téléphone : la recherche s'étire sur toute la barre
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   useEffect(() => subscribeHealth(() => force(n => n + 1)), []); // cloche : la Santé se calcule au repos, on se réaffiche quand elle est prête
@@ -68,6 +70,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   useEffect(() => {
     const away = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+      if (mbox.current && !mbox.current.contains(e.target as Node)) setOpen(false);
       if (bellBox.current && !bellBox.current.contains(e.target as Node)) setBellOpen(false);
     };
     document.addEventListener('mousedown', away);
@@ -172,11 +175,11 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
     <div className="h-[57px] shrink-0" aria-hidden="true" />
     <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b rounded-b-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
-      <div className="h-14 px-2.5 sm:px-4 flex items-center gap-2.5 sm:gap-4">
-        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
-          <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
+      <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-4">
+        <button type="button" data-header-dashboard onClick={() => onNavigate(home)} title="Tableau de bord" aria-label="Tableau de bord" className={`md:hidden relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+          <LayoutDashboard className="w-5 h-5" />
         </button>
-        <div ref={box} className="relative flex-1 min-w-0">
+        <div ref={box} className="hidden md:block relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={q}
@@ -216,7 +219,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         </div>
 
         {/* Actualités et Messages : toujours dans l'en-tête (plus de barre du bas, plus dans le menu latéral) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0" data-header-shortcuts>
+        <div className="contents md:flex md:items-center md:gap-2 md:shrink-0" data-header-shortcuts>
           {([['feed', 'Actualités', Newspaper, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}
@@ -233,7 +236,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           ))}
         </div>
 
-        <ConnectionChip />
+        <div className="hidden md:block" data-header-conn><ConnectionChip /></div>
 
         <div ref={bellBox} className="sm:relative shrink-0">
           <button
@@ -302,17 +305,61 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
+        <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+          <Search className="w-5 h-5" />
+        </button>
+        <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
+          <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
+        </button>
+
         <button
           type="button"
           data-profile-pill
           onClick={onOpenProfile}
           title="Mon profil · En ligne"
           aria-label="Mon profil"
-          className={`relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
+          className={`hidden md:block relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
         >
           <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8 rounded-full" />
           <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} bg-emerald-500`} />
         </button>
+
+        {/* Téléphone : la recherche s'étire sur toute la largeur de l'en-tête (X = effacer, puis fermer) */}
+        {mSearch && (
+          <div ref={mbox} data-mobile-search className={`md:hidden absolute inset-0 z-40 flex items-center gap-2 px-2.5 rounded-b-2xl ${L ? 'bg-white' : 'bg-slate-900'}`}>
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                autoFocus
+                value={q}
+                onChange={e => { setQ(e.target.value); setOpen(true); }}
+                onKeyDown={e => { if (e.key === 'Enter' && hits[0]) { pick(hits[0]); setMSearch(false); } if (e.key === 'Escape') { setQ(''); setMSearch(false); } }}
+                placeholder="Rechercher…"
+                className={`w-full h-10 pl-9 pr-3 rounded-xl ${L ? 'bg-slate-100 text-slate-800 border-slate-200 focus:bg-white' : 'bg-slate-800 text-slate-100 border-slate-700'} border text-sm placeholder:text-slate-400 focus:outline-none focus:border-emerald-500`}
+              />
+            </div>
+            <button type="button" data-mobile-search-go onClick={() => { if (hits[0]) { pick(hits[0]); setMSearch(false); } }} title="Chercher" aria-label="Chercher" className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center cursor-pointer"><Search className="w-5 h-5" /></button>
+            <button type="button" data-mobile-search-close onClick={() => { if (q) { setQ(''); } else { setMSearch(false); setOpen(false); } }} title={q ? 'Effacer' : 'Fermer'} aria-label={q ? 'Effacer' : 'Fermer'} className={`h-10 w-10 rounded-xl border flex items-center justify-center cursor-pointer ${L ? 'border-slate-200 text-slate-600' : 'border-slate-700 text-slate-300'}`}><X className="w-5 h-5" /></button>
+            {open && q.trim() && (
+              <div className={`absolute left-2 right-2 top-full mt-1 df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden`}>
+                {hits.length === 0 ? (
+                  <div className={`px-3 py-2.5 text-sm ${L ? 'text-slate-500' : 'text-slate-400'}`}>Aucun résultat.</div>
+                ) : hits.map(h => {
+                  const I = icon(h.kind);
+                  return (
+                    <button key={h.id} onClick={() => { pick(h); setMSearch(false); }} className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}>
+                      <I className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'} shrink-0`} />
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-semibold ${L ? 'text-slate-800' : 'text-slate-100'} truncate`}>{h.title}</span>
+                        <span className={`block text-xs ${L ? 'text-slate-500' : 'text-slate-400'} truncate`}>{h.sub}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
     </>

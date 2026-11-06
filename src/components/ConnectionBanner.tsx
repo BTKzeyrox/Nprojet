@@ -7,6 +7,7 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { bannerModel } from '../utils/offlineText';
 import { openOfflineCenter } from './OfflineCenter';
+import { Avatar } from './Avatar';
 
 // État de la connexion, partagé entre le composant invisible du bas (qui relance les envois ; son bandeau jaune est retiré) et la pastille du header (tous les états :
 // « Hors ligne », « Envoi en cours », « À revoir », « Copie verrouillée », puis « Tout est envoyé »). Un seul modèle, choisi par `bannerModel` (offlineText.ts).
@@ -107,4 +108,35 @@ export const ConnectionChip: React.FC = () => {
   const title = `${m.text}${m.hint ? ' : ' + m.hint : ''}`;
   if (m.kind === 'done') return <span role="status" aria-live="polite" title={title} className={box} data-testid="chip-done">{body}</span>;
   return <button type="button" onClick={openIt} title={title} aria-label={title} className={`${box} cursor-pointer`} data-testid={`chip-${m.kind}`}>{body}</button>;
+};
+
+/** Profil en haut du menu latéral (téléphone) : grande photo ronde dont le contour montre l'état de l'envoi (hors ligne, envoi, à revoir, tout est envoyé), sinon « En ligne ». */
+export const SidebarProfile: React.FC<{ name: string; avatar?: string; role?: string; light: boolean; onOpen: () => void }> = ({ name, avatar, role, light, onOpen }) => {
+  const { m, un, st, lang } = useConnectionModel(false);
+  const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
+  const n = m.kind === 'review' ? st.review.length : m.kind === 'offline' || m.kind === 'sending' ? un.count : 0;
+  const look = ({
+    offline: { ring: 'border-amber-500', txt: t('Hors ligne', 'Offline'), cls: 'bg-amber-100 text-amber-800' },
+    sending: { ring: 'border-blue-500', txt: t('Envoi en cours', 'Sending'), cls: 'bg-blue-100 text-blue-800' },
+    review: { ring: 'border-amber-500', txt: t('À revoir', 'To review'), cls: 'bg-amber-100 text-amber-800' },
+    locked: { ring: 'border-slate-500', txt: t('Copie verrouillée', 'Copy locked'), cls: 'bg-slate-200 text-slate-800' },
+    done: { ring: 'border-emerald-500', txt: t('Tout est envoyé', 'Everything is sent'), cls: 'bg-emerald-100 text-emerald-800' },
+  } as Record<string, { ring: string; txt: string; cls: string }>)[m.kind || ''] || { ring: 'border-emerald-500', txt: t('En ligne', 'Online'), cls: 'bg-emerald-100 text-emerald-800' };
+  const openIt = () => openOfflineCenter(m.kind === 'review' ? 'review' : 'pending');
+  return (
+    <div className="md:hidden flex flex-col items-center gap-2 px-4 pt-3 pb-2" data-sidebar-profile>
+      <button type="button" onClick={onOpen} title="Mon profil" aria-label="Mon profil" data-sidebar-avatar data-status-kind={m.kind || 'online'} className={`rounded-full p-1 border-4 ${look.ring} cursor-pointer`}>
+        <Avatar src={avatar} name={name} className="w-24 h-24 rounded-full" />
+      </button>
+      <div className="text-center min-w-0 max-w-full">
+        <div className={`font-extrabold truncate ${light ? 'text-slate-900' : 'text-white'}`}>{name}</div>
+        {role && <div className="text-xs text-slate-400">{role}</div>}
+      </div>
+      {m.kind && m.kind !== 'done' ? (
+        <button type="button" onClick={openIt} data-sidebar-status className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer ${look.cls}`}>{look.txt}{n > 0 ? ` · ${n}` : ''}</button>
+      ) : (
+        <span data-sidebar-status className={`px-3 py-1 rounded-full text-xs font-bold ${look.cls}`}>{look.txt}</span>
+      )}
+    </div>
+  );
 };

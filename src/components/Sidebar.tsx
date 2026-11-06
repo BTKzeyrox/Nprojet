@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : les entrées sont dans navItems selon le rôle (admin, comptable, chef d'équipe, employé) et viewAllowedFor ; props currentUser, activeView, onNavigate, onLogout, compact. Libellés surtout en français.
 import { Avatar } from './Avatar';
+import { SidebarProfile } from './ConnectionBanner';
 import { db } from '../db/store';
 import { viewAllowedFor } from '../utils/roles';
 import { isViewHidden } from '../utils/moduleSwitch';
@@ -231,6 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           )}
         </div>
+        <SidebarProfile name={currentUser.name} avatar={currentUser.avatar_url} role={(currentUser as any).job_title} light={isLight} onOpen={() => { onNavigate('profile'); onCloseMobile?.(); }} />
 
 
         {/* 3. Navigation */}

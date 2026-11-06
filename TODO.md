@@ -736,3 +736,5 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
 - [x] Grands écrans (≥ 1024 px) : les formulaires et fenêtres sont centrés sur tout l'écran (plus décalés vers le bas à cause du header) (2026-11-06)
 - [x] Accueil : la tuile « Opérateurs en ligne » indique aussi « Chefs et comptables : x / y en ligne » (l'administrateur n'est pas suivi) (2026-11-06)
 - [x] Barre du bas RETIRÉE sur tous les écrans : Actualités et Messages dans l'en-tête, tout le reste dans le menu latéral (bouton menu en haut sur téléphone) (2026-11-06). Le fichier BottomNav.tsx et menuNav.BOTTOM_ENTRIES restent, non utilisés : à supprimer plus tard avec leurs contrôles.
+
+- [x] 2026-11-06 En-tête téléphone : seulement des icônes (Tableau de bord, Actualités, Messages, Notifications, Recherche, Menu). Recherche = barre étirée avec Chercher / X. Profil + état d'envoi en haut du menu latéral (contour de la photo). Grand écran inchangé.
