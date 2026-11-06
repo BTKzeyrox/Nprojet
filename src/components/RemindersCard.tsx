@@ -255,7 +255,8 @@ const ReminderSettings: React.FC<{ L: boolean; lang: 'fr' | 'en'; cfg: RemCfg; o
 
 type Tab = 'open' | 'late' | 'done';
 /** La carte « À faire ». */
-export const RemindersCard: React.FC = () => {
+/** `day` (AAAA-MM-JJ) : version « page du jour » du Calendrier : tous les éléments de CE jour, « Ajouter » déjà réglé sur ce jour. */
+export const RemindersCard: React.FC<{ day?: string }> = ({ day }) => {
   const { theme, lang } = useApp();
   const L = theme === 'light';
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
@@ -283,7 +284,8 @@ export const RemindersCard: React.FC = () => {
     return { late, upcoming, done };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, today]);
-  const list = tab === 'late' ? view.late : tab === 'done' ? view.done : view.upcoming;
+  const dayList = day ? items.filter(i => (i.repeat.freq === 'none' ? i.date === day : remOccurrences(i, day, day).length > 0)).sort((a, b) => (a.all_day ? '00:00' : a.time).localeCompare(b.all_day ? '00:00' : b.time)).map(i => ({ i, d: day })) : [];
+  const list = day ? dayList : tab === 'late' ? view.late : tab === 'done' ? view.done : view.upcoming;
   const card = `rounded-3xl border ${L ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1b2d] border-slate-700/60'}`;
   const sub = L ? 'text-slate-500' : 'text-slate-400';
   const mine = (i: RemItem) => String(i.user_id) === String(me?.id);
@@ -299,8 +301,8 @@ export const RemindersCard: React.FC = () => {
     <div className={`${card} p-3 sm:p-4 space-y-3`} data-reminders-card>
       <div className="flex items-center justify-between gap-2">
         <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-2 font-bold text-sm cursor-pointer" aria-expanded={open}>
-          <ListChecks className="w-5 h-5 text-blue-500" />{t('À faire', 'To do')}
-          {view.late.length > 0 && <span className="text-[11px] font-bold rounded-full bg-red-500 text-white px-1.5">{view.late.length}</span>}
+          <ListChecks className="w-5 h-5 text-blue-500" />{day ? t('Rappels et tâches du jour', 'Reminders and tasks of the day') : t('À faire', 'To do')}
+          {!day && view.late.length > 0 && <span className="text-[11px] font-bold rounded-full bg-red-500 text-white px-1.5">{view.late.length}</span>}
         </button>
         <div className="flex items-center gap-2">
           <button type="button" aria-label={t('Réglages des rappels', 'Reminder settings')} onClick={() => setSettings(true)} className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${L ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-slate-300'}`}><BellRing className="w-4 h-4" /></button>
@@ -309,9 +311,9 @@ export const RemindersCard: React.FC = () => {
       </div>
       {open && (
         <>
-          <div className="flex flex-wrap gap-1.5">{tabBtn('open', t('À venir', 'Upcoming'), view.upcoming.length)}{tabBtn('late', t('En retard', 'Overdue'), view.late.length)}{tabBtn('done', t('Fait', 'Done'), 0)}</div>
+          {!day && <div className="flex flex-wrap gap-1.5">{tabBtn('open', t('À venir', 'Upcoming'), view.upcoming.length)}{tabBtn('late', t('En retard', 'Overdue'), view.late.length)}{tabBtn('done', t('Fait', 'Done'), 0)}</div>}
           {!remLoaded() && <div className={`text-sm ${sub}`}>{t('Chargement…', 'Loading…')}</div>}
-          {remLoaded() && list.length === 0 && <div className={`text-sm ${sub}`}>{tab === 'open' ? t('Rien à faire pour l\'instant. Touche « Ajouter ».', 'Nothing to do right now. Tap “Add”.') : tab === 'late' ? t('Rien en retard.', 'Nothing overdue.') : t('Rien de fait pour l\'instant.', 'Nothing done yet.')}</div>}
+          {remLoaded() && list.length === 0 && <div className={`text-sm ${sub}`}>{day ? t('Rien de prévu ce jour-là. Touche « Ajouter ».', 'Nothing planned that day. Tap “Add”.') : tab === 'open' ? t('Rien à faire pour l\'instant. Touche « Ajouter ».', 'Nothing to do right now. Tap “Add”.') : tab === 'late' ? t('Rien en retard.', 'Nothing overdue.') : t('Rien de fait pour l\'instant.', 'Nothing done yet.')}</div>}
           <ul className="space-y-1.5">
             {list.map(({ i, d }) => (
               <li key={i.id} data-nav={`rem-${i.id}`} className={`rounded-2xl border px-3 py-2 ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-white/[0.03]'}`} style={i.label ? { borderLeft: `4px solid ${i.label}` } : undefined}>
@@ -359,7 +361,7 @@ export const RemindersCard: React.FC = () => {
           </ul>
         </>
       )}
-      {form && <ReminderForm item={form.item} onClose={() => setForm(null)} L={L} lang={lang === 'en' ? 'en' : 'fr'} role={String(me?.role || 'employee')} cfg={remCfg()} />}
+      {form && <ReminderForm item={form.item} presetDate={day} onClose={() => setForm(null)} L={L} lang={lang === 'en' ? 'en' : 'fr'} role={String(me?.role || 'employee')} cfg={remCfg()} />}
       {settings && <ReminderSettings L={L} lang={lang === 'en' ? 'en' : 'fr'} cfg={remCfg()} onClose={() => setSettings(false)} />}
     </div>
   );

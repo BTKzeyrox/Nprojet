@@ -29,7 +29,7 @@ ok(/const CELL_STATUSES: DayStatus\[\] = \['objective_reached', 'late', 'in_prog
 ok((cal.match(/data-cal-chips/g) || []).length === 2 && /<StatusChip key=\{k\}/.test(cal), 'calendrier global et calendrier d\'un employé utilisent les mêmes pastilles (icône colorée + chiffre)');
 ok(!/ListChecks className="w-3 h-3"|ar\(g\.pay\)|à rendre'\}\n/.test(cal) && !/data-ecal-chips/.test(cal) && !/mission\{d\.shifts\.length > 1/.test(cal), 'cases : plus de texte, de montant ni de pastille hors légende');
 ok(/data-testid="day-due"/.test(cal), 'les missions à rendre sont dans la fenêtre du jour');
-ok(/setPopDay\(d\.dateStr\)/.test(cal) && /<DayPanel day=\{popDay\}/.test(cal) && /data-testid="ecal-popup"/.test(cal), 'un clic sur un jour ouvre la fenêtre avec flèches jour précédent / suivant');
+ok(/setPopDay\(d\.dateStr\)/.test(cal) && /<DayPanel day=\{popDay\}/.test(cal) && /ecal-day-page/.test(cal) && /Retour au calendrier/.test(cal), 'un clic sur un jour ouvre une PAGE avec « Retour au calendrier » et les flèches jour précédent / suivant');
 ok(/onSelectDay\(d, sh\)/.test(cal), 'le détail des missions du jour reste accessible');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }
