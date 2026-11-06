@@ -684,6 +684,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `planning.ts` | Planning des équipes (module 15, M15.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:planning`. |
 | `postBand.ts` | Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
+| `postPay.ts` | Paie d'une session validée (module 26, M26.4) : règles pures, sans écran ni serveur. |
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
 | `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
@@ -1169,6 +1170,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:treasury-charts` | Graphiques de la Trésorerie : calculs purs, jamais de salaires ; et calendrier d'un employé au style du global. |
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
 | `npm run check:work-types` | Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, sans réseau. Cas normaux ET cas piégés. |
+| `npm run check:payroll-modes` | Paie selon le mode (module 26, M26.4) : le serveur (bloc DECIDE de df-api) et le site (postPay.ts / postDecision.ts) donnent EXACTEMENT les mêmes montants sur des milliers de cas, |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

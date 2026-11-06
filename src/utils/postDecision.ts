@@ -1,6 +1,7 @@
 // Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur.
 // Le serveur (bloc DECIDE de df-api) a la même copie ; `npm run check:team-lead` compare les deux.
 // Pourquoi côté serveur : valider fige la paie de l'opérateur et le prix client, que le Chef d'équipe ne doit pas voir. Le calcul se fait donc chez le serveur, jamais dans son navigateur.
+import { isWorkLine, postPayAr, workLineClientPrice } from './postPay';
 export interface PostDecision { ok: boolean; error?: string; kind?: 'start_ok' | 'end_ok' | 'refused'; post?: any; contract?: any; employee?: any; payAr?: number }
 
 const validPrice = (n: unknown): n is number => typeof n === 'number' && isFinite(n) && n >= 0;
@@ -27,10 +28,10 @@ export function planPostDecision(post: any, contract: any, settings: any, employ
   if (post.status === 'pending_start') return { ok: true, kind: 'start_ok', post: { ...post, status: 'active', start_validated_at: nowIso, updated_at: nowIso } };
   const finalScore = num(post.final_score ?? post.current_score);
   const gained = Math.max(0, finalScore - num(post.initial_score));
-  const pay = Math.max(0, Math.round(num(settings && settings.price_per_mission)));
+  const pay = postPayAr(post, employee, settings); // mission normale : le prix fixe (comme avant) ; ligne de travail : selon le mode de paie (module 26)
   return {
     ok: true, kind: 'end_ok', payAr: pay,
-    post: { ...post, status: 'completed', calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
+    post: { ...post, status: 'completed', calculated_ar: pay, client_price_ar: isWorkLine(post) ? workLineClientPrice : decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
     contract: contract ? { ...contract, current_score: finalScore } : undefined,
     employee: employee ? { ...employee, total_score_boosted: num(employee.total_score_boosted) + gained, total_earnings_ar: num(employee.total_earnings_ar) + pay } : undefined,
   };

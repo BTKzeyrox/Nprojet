@@ -52,6 +52,29 @@ const canDecidePost = (me: any, owner: any): boolean => !!me && !!owner && (me.r
 // ===== BEGIN DECIDE (décision sur une session : valider ou refuser ; ce bloc est contrôlé par scripts/check-team-lead.ts) =====
 const decValidPrice = (n: unknown): boolean => typeof n === "number" && isFinite(n) && n >= 0;
 const decNum = (v: unknown): number => { const n = Number(v); return isFinite(n) ? n : 0; };
+// Paie d'une session validée (module 26, M26.4). Copie de src/utils/postPay.ts, comparée par scripts/check-payroll-modes.ts.
+// Une mission NORMALE (sans work_type) est payée exactement comme avant (prix fixe par mission). Une LIGNE DE TRAVAIL est payée selon le mode : celui de l'employé, sinon celui de l'entreprise, sinon « par mission ».
+const DEC_PAY_MODES = ["mission", "day", "hour", "piece", "fixed"];
+const decIsMode = (v: unknown): boolean => typeof v === "string" && DEC_PAY_MODES.includes(v);
+const decRate = (v: unknown): number => (typeof v === "number" && isFinite(v) && v > 0 && v <= 1e8 ? v : 0);
+const decUnits = (v: unknown, max: number): number => (typeof v === "number" && isFinite(v) && v > 0 && v <= max ? v : 0);
+const decIsWorkLine = (post: any): boolean => !!post && typeof post === "object" && typeof post.work_type === "string" && post.work_type.length > 0;
+function decPostPay(post: any, employee: any, settings: any): number {
+  const missionPay = Math.max(0, Math.round(decNum(settings && settings.price_per_mission)));
+  if (!decIsWorkLine(post)) return missionPay;
+  const work = (settings && settings.company && settings.company.work) || {};
+  const mode = decIsMode(employee && employee.pay_mode) ? employee.pay_mode : decIsMode(work.pay_default) ? work.pay_default : "mission";
+  if (mode === "mission") return missionPay;
+  if (mode === "fixed") return 0;
+  const own = decRate(employee && employee.pay_rate_ar);
+  const rate = own > 0 ? own : decRate(work["rate_" + mode + "_ar"]);
+  let units = 0;
+  if (mode === "day") { const p = post.presence; units = p === "present" || p === "late" ? 1 : p === "half" ? 0.5 : 0; }
+  else if (mode === "hour") units = decUnits(post.hours, 24);
+  else { const q = decUnits(post.quantity, 1e5), r = Math.min(decUnits(post.rejected, 1e5), q); units = Math.max(0, q - r); }
+  const amount = Math.round(units * rate);
+  return isFinite(amount) && amount > 0 ? amount : 0;
+}
 function decisionClientPrice(contract: any, settings: any): number {
   if (contract && decValidPrice(contract.client_price_ar)) return Math.round(contract.client_price_ar);
   const byType = (settings && settings.client_prices_by_type) || {};
@@ -70,10 +93,10 @@ function planPostDecision(post: any, contract: any, settings: any, employee: any
   if (post.status === "pending_start") return { ok: true, kind: "start_ok", post: { ...post, status: "active", start_validated_at: nowIso, updated_at: nowIso } };
   const finalScore = decNum(post.final_score ?? post.current_score);
   const gained = Math.max(0, finalScore - decNum(post.initial_score));
-  const pay = Math.max(0, Math.round(decNum(settings && settings.price_per_mission)));
+  const pay = decPostPay(post, employee, settings);
   return {
     ok: true, kind: "end_ok", payAr: pay,
-    post: { ...post, status: "completed", calculated_ar: pay, client_price_ar: decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
+    post: { ...post, status: "completed", calculated_ar: pay, client_price_ar: decIsWorkLine(post) ? 0 : decisionClientPrice(contract, settings), end_validated_at: nowIso, updated_at: nowIso },
     contract: contract ? { ...contract, current_score: finalScore } : undefined,
     employee: employee ? { ...employee, total_score_boosted: decNum(employee.total_score_boosted) + gained, total_earnings_ar: decNum(employee.total_earnings_ar) + pay } : undefined,
   };

@@ -69,6 +69,7 @@ import {
   NewsAttachment,
 } from '../types';
 import { clientPriceForContract } from '../utils/clientPrice';
+import { isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
 import { cleanShiftMode } from '../utils/shiftMode';
 
 const TOKEN_KEY = 'df_session_token_v2';
@@ -2863,8 +2864,8 @@ export class AppStore {
     if (post.status === 'pending_end') {
       const finalScore = post.final_score ?? post.current_score;
       const scoreGained = Math.max(0, finalScore - post.initial_score);
-      // Paie à tarif fixe : chaque mission validée rapporte le même montant (Réglages → Missions)
-      const calculatedAr = Math.max(0, Math.round(this.getSettings().price_per_mission || 0));
+      // Paie : une mission normale = le tarif fixe (Réglages → Missions), comme avant ; une ligne de travail (production, présence) = selon le mode de paie (module 26, src/utils/postPay.ts)
+      const calculatedAr = postPayAr(post, employee, this.getSettings());
 
       post.status = 'completed';
       post.calculated_ar = calculatedAr;
@@ -2873,9 +2874,9 @@ export class AppStore {
       const linkedContract =
         this.contracts.find(c => c.post_number === post.post_number) ||
         this.contracts.find(c => c.client_name === post.client_name);
-      if (linkedContract) linkedContract.current_score = finalScore;
+      if (linkedContract && !isWorkLine(post)) linkedContract.current_score = finalScore;
       // Prix client figé à la validation (comme la paie) : changer les prix ensuite ne modifie pas cette mission
-      post.client_price_ar = clientPriceForContract(linkedContract, this.getSettings());
+      post.client_price_ar = isWorkLine(post) ? workLineClientPrice : clientPriceForContract(linkedContract, this.getSettings()); // une ligne de travail n'est facturée à aucun client
       post.updated_at = new Date().toISOString();
 
       if (employee) {
