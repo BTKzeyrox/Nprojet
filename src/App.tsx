@@ -478,6 +478,7 @@ export default function App() {
           currentUser={viewUser}
           onOpenProfile={() => setCvModalUser(currentUser)}
           operatorMode={operatorMode}
+          activeView={activeView}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
           onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}

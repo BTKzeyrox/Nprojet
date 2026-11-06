@@ -19,5 +19,12 @@ ok(/removeEventListener\('pointerdown', away\)/.test(top) && /removeEventListene
 ok(/md:justify-start gap-1\.5 sm:gap-2\.5 md:gap-3"/.test(top) && /md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts/.test(top), 'en-tête grand écran : même espace (12 px) entre toutes les icônes');
 // Actualités plus larges sur grand écran
 ok(/max-w-2xl lg:max-w-4xl 2xl:max-w-5xl mx-auto w-full/.test(feed), 'Actualités : élargies sur grand écran (téléphone inchangé)');
+// En-tête (2026-11-07) : logo de l'appli à gauche sur téléphone, ordre mobile, boutons de 40 px, page ouverte mise en valeur
+const idx = (k: string) => top.indexOf(k);
+ok(/data-app-logo/.test(top) && /src="\/icon-192\.png"/.test(top), 'en-tête téléphone : l\'icône de l\'appli');
+ok(idx('data-app-logo') < idx('data-header-search') && idx('data-header-search') < idx('data-header-shortcuts') && idx('data-header-shortcuts') < idx('ref={bellBox}') && idx('ref={bellBox}') < idx('data-header-menu'), 'en-tête téléphone : logo, recherche, Actualités + Messages, cloche, menu');
+ok(!/LayoutDashboard/.test(top), 'en-tête téléphone : plus de doublon « Tableau de bord »');
+ok((top.match(/w-10 h-10 flex items-center justify-center/g) || []).length >= 4, 'en-tête : boutons de la même taille (40 px)');
+ok(/aria-current=\{activeView === view \? 'page'/.test(top) && /activeView=\{activeView\}/.test(readFileSync('src/App.tsx', 'utf8')), 'en-tête : le raccourci de la page ouverte est mis en valeur');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

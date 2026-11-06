@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, X, LayoutDashboard, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -31,6 +31,8 @@ interface TopBarProps {
   onOpenProfile: () => void;
   /** Le responsable est en vue opérateur : la pastille le rappelle. */
   operatorMode?: boolean;
+  /** La page ouverte : le raccourci correspondant (Actualités, Messages) est mis en valeur. */
+  activeView?: string;
 }
 
 interface Hit {
@@ -46,7 +48,7 @@ const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', mission: 'Missio
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false, activeView }) => {
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -179,10 +181,13 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     <>
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
     <div className="h-[57px] shrink-0" aria-hidden="true" />
-    <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b rounded-b-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
+    <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b rounded-b-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-[0_2px_12px_rgba(15,30,58,0.10)]`}>
       <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-3">
-        <button type="button" data-header-dashboard onClick={() => onNavigate(home)} title="Tableau de bord" aria-label="Tableau de bord" className={`md:hidden relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
-          <LayoutDashboard className="w-5 h-5" />
+        <button type="button" data-header-dashboard data-app-logo onClick={() => onNavigate(home)} title="Tableau de bord" aria-label="Tableau de bord" className={`md:hidden shrink-0 w-10 h-10 rounded-xl overflow-hidden border cursor-pointer ${L ? 'border-slate-200' : 'border-slate-700'}`}>
+          <img src="/icon-192.png" alt="" width={40} height={40} className="w-full h-full object-cover" draggable={false} />
+        </button>
+        <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+          <Search className="w-5 h-5" />
         </button>
         <div ref={box} className="hidden md:block relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -233,7 +238,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               title={label}
               aria-label={label}
               data-header-shortcut={view}
-              className={`relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+              aria-current={activeView === view ? 'page' : undefined}
+              className={`relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${activeView === view ? (L ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-500 bg-emerald-950/50 text-emerald-300') : L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
               <Icon className="w-5 h-5" />
               {n > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">{n > 99 ? '99+' : n}</span>}
@@ -247,7 +253,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           <button
             onClick={toggleBell}
             title="Notifications"
-            className={`relative p-2 rounded-full border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
+            className={`relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
           >
             <Bell className="w-5 h-5" />
             {count > 0 && (
@@ -310,10 +316,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
-          <Search className="w-5 h-5" />
-        </button>
-        <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
+        <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
 
