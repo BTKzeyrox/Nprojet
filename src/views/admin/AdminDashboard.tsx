@@ -51,7 +51,7 @@ import { askReason } from '../../components/ReasonModal';
 import { AccessRequestsCard } from '../../components/AccessRequestsCard';
 import { countPending } from '../../utils/pendingCount';
 import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
-import { countOnline } from '../../utils/presenceCount';
+import { countOnline, countOnlineStaff } from '../../utils/presenceCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
 import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
@@ -391,6 +391,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Computations
   const presence = db.getPresence();
+  const staffCount = countOnlineStaff(users, presence);
   const onlineCount = countOnline(users, presence); // en ligne = signe de vie récent (une mission ouverte seule ne compte pas), comptes actifs seulement
   const waitingQueue = getQueue(users, posts, presence);
   const pendingSubmissions = posts.filter(
@@ -448,7 +449,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <GoalsBars lang={appLang === 'en' ? 'en' : 'fr'} hideWhenEmpty />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {tile('Opérateurs en ligne', <>{onlineCount.online}<span className="text-base font-medium text-slate-400"> / {onlineCount.total}</span></>, 'Voir les opérateurs', Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
+          {tile('Opérateurs en ligne', <>{onlineCount.online}<span className="text-base font-medium text-slate-400"> / {onlineCount.total}</span></>, (staffCount.total > 0 ? `Chefs et comptables : ${staffCount.online} / ${staffCount.total} en ligne` : 'Voir les opérateurs'), Radio, 'bg-blue-100 text-blue-700', () => onNavigateToEmployees && onNavigateToEmployees())}
           {tile('À valider', pend.total, `${plural(pend.starts, 'départ')} · ${plural(pend.ends, 'fin')}`, Clock, pend.total > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600', () => onNavigateTab && onNavigateTab('validations'))}
           {tile('Missions terminées', doneToday.length, "Aujourd'hui", CheckCircle2, 'bg-emerald-100 text-emerald-700', () => onNavigateToCalendar && onNavigateToCalendar())}
           {tile('Quantité du jour', formatScoreM(scoreToday), 'Total produit', TrendingUp, 'bg-indigo-100 text-indigo-700', () => onNavigateToCalendar && onNavigateToCalendar())}

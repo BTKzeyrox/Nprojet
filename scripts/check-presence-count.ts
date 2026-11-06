@@ -1,6 +1,6 @@
 // « Opérateurs en ligne » de l'accueil (X / Y) : seuls les actifs avec un signe de vie récent comptent. Lancer : npm run check:presence-count
 import { readFileSync } from 'node:fs';
-import { countOnline, isFresh, ONLINE_MS } from '../src/utils/presenceCount';
+import { countOnline, countOnlineStaff, isFresh, ONLINE_MS } from '../src/utils/presenceCount';
 let f = 0, t = 0;
 const ok = (c: boolean, n: string) => { t++; if (!c) { f++; console.log('ECHEC ' + n); } };
 const now = Date.parse('2026-11-05T09:00:00Z');
@@ -20,4 +20,11 @@ ok(countOnline([emp('a')], [{ user_id: 'a', last_seen: ago(10) }], now).online <
 const dash = readFileSync('src/views/admin/AdminDashboard.tsx', 'utf8');
 ok(/countOnline\(users, presence\)/.test(dash) && /onlineCount\.online\}<span[^>]*> \/ \{onlineCount\.total\}/.test(dash) && /\{onlineCount\.online\} En Ligne/.test(dash) && !/onlineEmployees|nbEmployees/.test(dash), 'accueil : la tuile et le titre « En ligne » utilisent le même compte');
 ok(/status !== 'blocked'\)\s*\.map\(emp/.test(dash), 'accueil : la liste des opérateurs connectés ne montre pas les comptes bloqués');
+
+{
+  const us = [{ id: 'c1', role: 'team_lead' }, { id: 'c2', role: 'accountant' }, { id: 'c3', role: 'accountant', status: 'blocked' }, { id: 'e1', role: 'employee' }, { id: 'ad', role: 'admin' }];
+  const nowS = Date.now(); const agoS = (s: number) => new Date(nowS - s * 1000).toISOString();
+  const r = countOnlineStaff(us, [{ user_id: 'c1', last_seen: agoS(30) }, { user_id: 'c2', last_seen: agoS(500) }, { user_id: 'e1', last_seen: agoS(5) }, { user_id: 'ad', last_seen: agoS(5) }], nowS);
+  ok(JSON.stringify(r) === '{"online":1,"total":2}', 'chefs et comptables : comptés à part, bloqués ignorés, opérateurs et admin exclus');
+}
 console.log(f ? `${f} ÉCHEC(S) sur ${t}` : `${t}/${t} contrôles réussis`); process.exit(f ? 1 : 0);

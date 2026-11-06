@@ -15,3 +15,9 @@ export function countOnline(users: UserLike[], presence: PresenceLike[], now = D
   const active = users.filter(u => u.role === 'employee' && u.status !== 'blocked');
   return { online: active.filter(u => isFresh(presence.find(r => r.user_id === u.id), now)).length, total: active.length };
 }
+
+/** Chefs d'équipe et comptables (comptes actifs) en ligne : suivis comme les opérateurs mais comptés à part. L'administrateur n'est pas suivi. */
+export function countOnlineStaff(users: UserLike[], presence: PresenceLike[], now = Date.now()): { online: number; total: number } {
+  const active = users.filter(u => (u.role === 'team_lead' || u.role === 'accountant') && u.status !== 'blocked');
+  return { online: active.filter(u => isFresh(presence.find(r => r.user_id === u.id), now)).length, total: active.length };
+}
