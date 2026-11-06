@@ -12,7 +12,6 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import { BottomNav } from './components/BottomNav';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
@@ -630,14 +629,6 @@ export default function App() {
           </Suspense>
         </main>
 
-        {/* Barre du bas (téléphone) */}
-        <BottomNav
-          isAdmin={viewUser.role === 'admin'}
-          currentUser={viewUser}
-          activeView={activeView}
-          onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
-          onOpenMenu={() => setIsMobileSidebarOpen(true)}
-        />
       </div>
 
       {/* PHOTO DE PROFIL OBLIGATOIRE POUR LES EMPLOYÉS */}

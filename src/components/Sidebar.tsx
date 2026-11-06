@@ -9,7 +9,7 @@ import { readCompany } from '../utils/companyRules';
 import { teamPendingPosts } from '../utils/teamLead';
 import { menuFor, locate } from '../utils/menuGroups';
 import { mergedFor, useMenuMode, getLastTabs } from '../utils/menuMode';
-import { goToEntry, bottomEntriesOf } from '../utils/menuNav';
+import { goToEntry } from '../utils/menuNav';
 import { getStatsTab } from '../utils/statsNav';
 import React from 'react';
 import {
@@ -160,9 +160,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const listItems = mergedItems || navItems;
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
-  /** Grands écrans (≥ 1024 px) : Actualités et Messages sont dans l'en-tête (TopBar.tsx), plus dans le menu latéral. Téléphone et tablette : inchangés. */
+  /** Sur TOUS les écrans : Actualités et Messages sont dans l'en-tête (TopBar.tsx), plus dans le menu latéral ; il n'y a plus de barre de menu en bas (BTK 2026-11-06). */
   const MOVED_TO_HEADER = ['feed', 'chat', 'messages'];
-  const inBottomBar = merged ? bottomEntriesOf(currentUser.role) : ['feed', 'chat', 'calendar', isAdmin || isTeamLead ? 'validations' : 'active-post'];
 
   const handleItemClick = (id: string) => {
     if (id === 'profile' && onOpenEmployeeCV) {
@@ -247,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                  className={`df-sb-item w-full ${inBottomBar.includes(item.id) ? 'hidden md:flex' : 'flex'} ${MOVED_TO_HEADER.includes(item.id) ? 'lg:!hidden' : ''} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
+                  className={`df-sb-item w-full ${MOVED_TO_HEADER.includes(item.id) ? '!hidden' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="df-sb-tile w-9 h-9 rounded-full flex items-center justify-center shrink-0">

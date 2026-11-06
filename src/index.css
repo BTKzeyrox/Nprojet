@@ -416,7 +416,7 @@ body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
 
 /* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
 html { scroll-padding-bottom: 6rem; }
-main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
+main:not(.fixed) { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important; }
 
 /* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
 html.theme-light { background: #cdd6e1; }

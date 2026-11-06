@@ -215,8 +215,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        {/* Grands écrans : Actualités et Messages (retirés du menu latéral) */}
-        <div className="hidden lg:flex items-center gap-2 shrink-0" data-header-shortcuts>
+        {/* Actualités et Messages : toujours dans l'en-tête (plus de barre du bas, plus dans le menu latéral) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0" data-header-shortcuts>
           {([['feed', 'Actualités', Newspaper, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}
