@@ -1,9 +1,10 @@
 // Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, sans réseau. Cas normaux ET cas piégés.
 import { readFileSync } from 'node:fs';
+import { COMPANY_SPEC, COMPANY_DEFAULTS, cleanCompany } from '../src/utils/companyRules';
 import {
   MEASURES, PAY_MODES, ENTRY_BY, MEASURE_LABEL, PAY_LABEL, ENTRY_LABEL, PRESENCE_LABEL, DEFAULT_PAY_MODE, isMeasure, isPayMode, isEntryBy,
   MAX_QTY, MAX_RATE_AR, cleanNumber, cleanQty, cleanRate, cleanTime, hoursBetween, dayFraction, PRESENCE_VALUES, acceptedPieces, payAmount, resolvePayMode,
-  compatible, validateWorkType, describeWorkType, BUSINESS_MODELS, findModel,
+  compatible, validateWorkType, describeWorkType, BUSINESS_MODELS, findModel, WORK_SETTINGS_LIVE,
 } from '../src/utils/workTypes';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -89,6 +90,23 @@ ok(findModel('security')!.types.length === 1 && findModel('security')!.types[0].
 ok(findModel('shop')!.menu === 'boutique' && BUSINESS_MODELS.filter(m => m.menu === 'boutique').length === 1 && BUSINESS_MODELS.every(m => m.menu === 'full' || m.menu === 'boutique'), 'menu : seule la petite boutique propose le menu court ; les autres gardent le menu complet');
 ok(findModel('nimporte') === undefined && findModel(undefined) === undefined && findModel(null) === undefined && findModel('') === undefined && findModel(5) === undefined, 'modèle inconnu = rien (pas de plantage)');
 ok(BUSINESS_MODELS.flatMap(m => m.types).every(t => describeWorkType(t).fr.length > 20 && describeWorkType(t).en.length > 20 && noAccent(describeWorkType(t).en.replace(/'/g, ''))), 'chaque type de chaque modèle a une phrase claire FR et EN');
+// ---------- M26.3 : réglages et champs (site, serveur, types) ----------
+const srvSrc = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+const typesSrc = readFileSync('src/types/index.ts', 'utf8');
+const wSpec: any = (COMPANY_SPEC as any).work;
+ok(!!wSpec && Object.keys(wSpec).join() === 'business_model,pay_default,rate_day_ar,rate_hour_ar,rate_piece_ar,rate_fixed_ar,stock_gap_pct', 'réglages « work » : modèle, mode de paie par défaut, 4 tarifs, écart toléré avec le stock');
+ok(JSON.stringify(wSpec.business_model.vals) === JSON.stringify(['', ...BUSINESS_MODELS.map(m => m.id)]) && JSON.stringify(wSpec.pay_default.vals) === JSON.stringify([...PAY_MODES]), 'réglages : les choix possibles sont exactement ceux de workTypes.ts (modèles d\'entreprise et modes de paie)');
+const srvEnum = (key: string): string[] => { const m = new RegExp(`${key}: \\{ t: "enum", vals: \\[([^\\]]*)\\]`).exec(srvSrc.slice(srvSrc.indexOf('const COMPANY_SPEC'), srvSrc.indexOf('const COMPANY_DEFAULTS'))); return m ? m[1].split(',').map(x => x.trim().replace(/"/g, '')) : []; };
+ok(JSON.stringify(srvEnum('business_model')) === JSON.stringify(['', ...BUSINESS_MODELS.map(m => m.id)]) && JSON.stringify(srvEnum('pay_default')) === JSON.stringify([...PAY_MODES]), 'serveur : les mêmes choix que le site (si on ajoute un mode de paie d\'un seul côté, ce contrôle échoue)');
+ok((COMPANY_DEFAULTS as any).work.pay_default === DEFAULT_PAY_MODE && (COMPANY_DEFAULTS as any).work.business_model === '' && ['rate_day_ar', 'rate_hour_ar', 'rate_piece_ar', 'rate_fixed_ar'].every(k => (COMPANY_DEFAULTS as any).work[k] === 0) && (COMPANY_DEFAULTS as any).work.stock_gap_pct === 10, 'valeurs de départ : « par mission », aucun modèle, tarifs à 0, écart de 10 % : rien ne change pour l\'existant');
+ok(cleanCompany({}).errors.length === 0 && cleanCompany({ work: { pay_default: 'piece', rate_piece_ar: 150, business_model: 'workshop' } }).errors.length === 0 && cleanCompany({ work: { pay_default: 'x' } }).errors.join() === 'work.pay_default', 'validation : un mode inconnu est signalé « work.pay_default », un bon réglage passe');
+ok(/work: \{ business_model: ""[^\n]*stock_gap_pct: 10 \}/.test(srvSrc) && /rate_piece_ar: \{ t: "num", min: 0, max: 1e8 \}/.test(srvSrc), 'serveur : le bloc COMPANY connaît « work » (valeurs de départ et limites)');
+ok(/rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0/.test(srvSrc.slice(srvSrc.indexOf('const stripCompany'), srvSrc.indexOf('const cleanSettingsRecord'))), 'serveur : le comptable ne reçoit aucun tarif de paie du travail (testé en détail par check:company)');
+for (const f of ['work_type?: string', 'quantity?: number', 'rejected?: number', 'hours?: number', "presence?: 'present' | 'late' | 'half' | 'absent'", 'entered_by?: string']) ok(typesSrc.slice(typesSrc.indexOf('export interface PostSession')).includes(f), `types : une ligne de travail peut avoir « ${f.split('?')[0]} » (facultatif : une mission normale ne change pas)`);
+ok(/pay_mode\?: 'mission' \| 'day' \| 'hour' \| 'piece' \| 'fixed'/.test(typesSrc) && /pay_rate_ar\?: number/.test(typesSrc), 'types : un employé peut avoir son propre mode et son propre tarif de paie (facultatif)');
+ok(/work: \{ business_model: string; pay_default: 'mission' \| 'day' \| 'hour' \| 'piece' \| 'fixed'/.test(typesSrc), 'types : CompanySettings connaît « work »');
+
+ok(WORK_SETTINGS_LIVE === false && /WORK_SETTINGS_LIVE/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')) && /showWork \|\| x\.id !== 'work'/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')), 'interrupteur : la section « Types de travail et paie » est cachée tant que le serveur n\'est pas déployé (sinon l\'écran dirait « enregistré » alors que l\'ancien serveur l\'ignore)');
 // ---------- Pureté ----------
 const src = readFileSync('src/utils/workTypes.ts', 'utf8');
 ok(!/fetch\(|XMLHttpRequest|import .*db\/store|localStorage|Date\.now\(\)|new Date\(\)|setTimeout|setInterval|Math\.random/.test(src), 'règles pures : aucun appel réseau, aucun accès aux données, aucune horloge, aucun hasard');

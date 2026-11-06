@@ -2499,7 +2499,8 @@ const COMPANY_SPEC = {
   options: { invoice_per: { t: "enum", vals: ["client_month", "mission"] }, quotes_enabled: { t: "bool" }, employee_sees_badges: { t: "bool" }, employee_sees_attention: { t: "bool" }, mission_requires_client: { t: "bool" }, badges_enabled: { t: "bool" } },
   texts: { internal_rules: { t: "text", max: 5e3, multi: true }, customer_terms: { t: "text", max: 5e3, multi: true } },
   modules: { hidden: { t: "text", max: 400 } },
-  watch: { validate_hours: { t: "int", min: 0, max: 720 }, active_no_end_hours: { t: "int", min: 0, max: 720 }, late_count: { t: "int", min: 0, max: 100 }, late_window_days: { t: "int", min: 0, max: 365 }, absent_streak_days: { t: "int", min: 0, max: 60 }, refusal_rate_pct: { t: "int", min: 0, max: 100 }, refusal_min_missions: { t: "int", min: 0, max: 1000 }, min_periods: { t: "int", min: 0, max: 60 }, ignore_days: { t: "int", min: 0, max: 365 }, min_duration_minutes: { t: "int", min: 0, max: 600 }, advance_pending_days: { t: "int", min: 0, max: 90 }, inactive_days: { t: "int", min: 0, max: 365 }, strategic_silent_days: { t: "int", min: 0, max: 365 }, dormant_days: { t: "int", min: 0, max: 730 }, others_pct: { t: "int", min: 0, max: 100 }, backup_max_hours: { t: "int", min: 0, max: 720 }, error_hours: { t: "int", min: 0, max: 720 } }
+  watch: { validate_hours: { t: "int", min: 0, max: 720 }, active_no_end_hours: { t: "int", min: 0, max: 720 }, late_count: { t: "int", min: 0, max: 100 }, late_window_days: { t: "int", min: 0, max: 365 }, absent_streak_days: { t: "int", min: 0, max: 60 }, refusal_rate_pct: { t: "int", min: 0, max: 100 }, refusal_min_missions: { t: "int", min: 0, max: 1000 }, min_periods: { t: "int", min: 0, max: 60 }, ignore_days: { t: "int", min: 0, max: 365 }, min_duration_minutes: { t: "int", min: 0, max: 600 }, advance_pending_days: { t: "int", min: 0, max: 90 }, inactive_days: { t: "int", min: 0, max: 365 }, strategic_silent_days: { t: "int", min: 0, max: 365 }, dormant_days: { t: "int", min: 0, max: 730 }, others_pct: { t: "int", min: 0, max: 100 }, backup_max_hours: { t: "int", min: 0, max: 720 }, error_hours: { t: "int", min: 0, max: 720 } },
+  work: { business_model: { t: "enum", vals: ["", "shop", "workshop", "security", "cleaning", "restaurant", "delivery", "building", "office", "other"] }, pay_default: { t: "enum", vals: ["mission", "day", "hour", "piece", "fixed"] }, rate_day_ar: { t: "num", min: 0, max: 1e8 }, rate_hour_ar: { t: "num", min: 0, max: 1e8 }, rate_piece_ar: { t: "num", min: 0, max: 1e8 }, rate_fixed_ar: { t: "num", min: 0, max: 1e8 }, stock_gap_pct: { t: "int", min: 0, max: 100 } },
 };
 const COMPANY_DEFAULTS = {
   identity: { name: "", address: "", phone: "", email: "", logo_url: "", currency: "Ar" },
@@ -2513,7 +2514,8 @@ const COMPANY_DEFAULTS = {
   options: { invoice_per: "client_month", quotes_enabled: false, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
   texts: { internal_rules: "", customer_terms: "" },
   modules: { hidden: "" },
-  watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 }
+  watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 },
+  work: { business_model: "", pay_default: "mission", rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10 },
 };
 const COMPANY_EMPLOYEE_SECTIONS = ["leave"];
 const noTags = (s) => s.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");
@@ -2598,9 +2600,11 @@ function companyDiff(before, after) {
 
 // ----- Partie propre au serveur -----
 const COMPANY_LOG_MAX = 100;
-/** Employé : jamais le journal des changements, et seulement le règlement et les congés dans `company` (rien d'argent ni de TVA). */
+/** Employé : jamais le journal des changements, et seulement le règlement et les congés dans `company` (rien d'argent ni de TVA). Comptable : tout sauf les tarifs de paie du travail. */
 const stripCompany = (rec, me) => {
-  if (!rec || (me.role === "admin" || me.role === "accountant")) return rec;
+  if (!rec || me.role === "admin") return rec;
+  // Le comptable garde les conditions et le journal, mais pas les tarifs de paie du travail (jour, heure, pièce, salaire fixe).
+  if (me.role === "accountant") return rec.company && rec.company.work ? { ...rec, company: { ...rec.company, work: { ...rec.company.work, rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0 } } } : rec;
   const out = { ...rec };
   delete out.company_log;
   if (out.company) out.company = companyForEmployee(out.company);

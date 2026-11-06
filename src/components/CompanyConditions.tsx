@@ -8,6 +8,7 @@ import { askConfirm } from './ConfirmModal';
 import { COMPANY_DEFAULTS, COMPANY_SPEC, cleanCompany, readCompany } from '../utils/companyRules';
 import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
+import { BUSINESS_MODELS, PAY_MODES, PAY_LABEL, WORK_SETTINGS_LIVE } from '../utils/workTypes';
 import type { CompanySettings } from '../types';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
@@ -16,12 +17,13 @@ interface F { sec: keyof CompanySettings; key: string; kind: Kind; fr: string; e
 interface Sec { id: keyof CompanySettings; fr: string; en: string; note?: [string, string]; shared?: boolean }
 
 const NOT_SURE: [string, string] = ['Laisser vide.', 'Leave empty.'];
-const SECTIONS: Sec[] = [
+const ALL_SECTIONS: Sec[] = [
   { id: 'identity', fr: 'Identité', en: 'Identity' },
   { id: 'legal', fr: 'Mentions légales', en: 'Legal notices', note: ['Rien n\'est inventé : un document n\'affiche que ce qui est rempli ici.', 'Nothing is made up: a document only shows what is filled in here.'] },
   { id: 'tax', fr: 'Taxes (TVA)', en: 'Taxes (VAT)' },
   { id: 'billing', fr: 'Facturation', en: 'Invoicing' },
   { id: 'payroll', fr: 'Paie', en: 'Payroll', note: ['Le plafond et le remboursement des avances se règlent dans Équipe > Paie.', 'The advance cap and repayment are set in Team > Payroll.'] },
+  { id: 'work', fr: 'Types de travail et paie', en: 'Work types and pay', note: ['Pour une entreprise qui paie à la journée ou à la boîte, ou dont les employés travaillent sans réseau. « Par mission » (comme avant) reste le mode tant que tu n\'en choisis pas un autre. Pour l\'instant ces réglages sont seulement enregistrés : ils ne changent encore aucune paie (étape suivante du module 26).', 'For a company that pays by the day or by the box, or whose employees work without a network. “Per mission” (as before) stays the mode until you pick another. For now these settings are only stored: they do not change any pay yet (next step of module 26).'] },
   { id: 'leave', fr: 'Congés et présence', en: 'Leave and attendance', shared: true },
   { id: 'missions', fr: 'Missions', en: 'Missions' },
   { id: 'clients', fr: 'Clients (statuts)', en: 'Clients (statuses)', note: ['Ces seuils décident du statut calculé de chaque client (Nouveau, Régulier, Stratégique, Inactif). Les valeurs de départ conviennent à la plupart des entreprises.', 'These thresholds decide each client\'s calculated status (New, Regular, Strategic, Inactive). The starting values suit most companies.'] },
@@ -30,7 +32,7 @@ const SECTIONS: Sec[] = [
   { id: 'watch', fr: 'Surveillance (Santé du site)', en: 'Monitoring (Site health)', note: ['Seuils des alertes, partagés par tous les administrateurs. 0 ou vide = valeur de départ. Un appareil peut en changer pour lui seul dans Réglages > Surveillance.', 'Alert thresholds, shared by all administrators. 0 or empty = starting value. A device can override them for itself in Settings > Monitoring.'] },
 ];
 const WATCH_F: F[] = WATCH_FIELDS.map(w => ({ sec: 'watch' as const, key: w.key, kind: 'int' as const, fr: w.fr, en: w.en, unit: [w.unit.fr, w.unit.en] as [string, string], help: [`${w.fr} (en ${w.unit.fr}). 0 = valeur de départ.`, `${w.en} (in ${w.unit.en}). 0 = starting value.`] as [string, string], dflt: [`${HEALTH_THRESHOLDS_DEFAULT[w.key]} ${w.unit.fr}.`, `${HEALTH_THRESHOLDS_DEFAULT[w.key]} ${w.unit.en}.`] as [string, string] }));
-const FIELDS: F[] = [
+const ALL_FIELDS: F[] = [
   { sec: 'identity', key: 'name', kind: 'text', fr: 'Nom de l\'entreprise', en: 'Company name', help: ['Le nom affiché sur les rapports, et plus tard sur les factures.', 'The name shown on reports, and later on invoices.'], dflt: NOT_SURE },
   { sec: 'identity', key: 'address', kind: 'text', fr: 'Adresse', en: 'Address', help: ['L\'adresse de l\'entreprise.', 'The company address.'], dflt: NOT_SURE },
   { sec: 'identity', key: 'phone', kind: 'text', fr: 'Téléphone', en: 'Phone', help: ['Le numéro à afficher sur les documents.', 'The number to show on documents.'], dflt: NOT_SURE },
@@ -51,6 +53,13 @@ const FIELDS: F[] = [
   { sec: 'billing', key: 'invoice_footer', kind: 'text', fr: 'Texte en bas de facture', en: 'Invoice footer text', help: ['Une phrase en bas de chaque facture (exemple : merci de votre confiance).', 'A sentence at the bottom of each invoice (example: thank you for your trust).'], dflt: NOT_SURE },
   { sec: 'payroll', key: 'pay_day', kind: 'int', fr: 'Jour de paie', en: 'Pay day', unit: ['du mois', 'of month'], help: ['Le jour du mois où les salaires sont payés (1 à 31). 0 = pas réglé.', 'The day of the month when wages are paid (1 to 31). 0 = not set.'], dflt: ['0 (pas réglé).', '0 (not set).'] },
   { sec: 'payroll', key: 'pay_rounding', kind: 'select', fr: 'Arrondi de la paie', en: 'Pay rounding', opts: [['none', 'Aucun', 'None'], ['10', 'À 10 Ar', 'To 10'], ['100', 'À 100 Ar', 'To 100'], ['1000', 'À 1 000 Ar', 'To 1,000']], help: ['Arrondir les montants de paie. Pour l\'instant ce réglage est seulement enregistré.', 'Round pay amounts. For now this setting is only stored.'], dflt: ['Aucun.', 'None.'] },
+  { sec: 'work', key: 'business_model', kind: 'select', fr: 'Type d\'entreprise', en: 'Kind of business', opts: [['', 'Aucun choisi', 'None chosen'], ...BUSINESS_MODELS.map(m => [m.id, m.name.fr, m.name.en] as [string, string, string])], help: ['Un point de départ : il propose des types de travail, le menu et les mots. Tu peux tout modifier. « Autre » = tu crées tes propres types.', 'A starting point: it suggests work types, the menu and the wording. You can change everything. “Other” = you create your own types.'], dflt: ['Aucun choisi.', 'None chosen.'] },
+  { sec: 'work', key: 'pay_default', kind: 'select', fr: 'Mode de paie par défaut', en: 'Default pay mode', opts: PAY_MODES.map(m => [m, PAY_LABEL[m].fr, PAY_LABEL[m].en] as [string, string, string]), help: ['Comment les employés sont payés, sauf si un employé a son propre mode. « Par mission » = comme aujourd\'hui.', 'How employees are paid, unless an employee has their own mode. “Per mission” = as today.'], dflt: ['Par mission (comme avant).', 'Per mission (as before).'] },
+  { sec: 'work', key: 'rate_day_ar', kind: 'num', fr: 'Tarif par jour', en: 'Rate per day', unit: ['Ar', 'Ar'], help: ['Le montant payé pour une journée de travail complète (une demi-journée paie la moitié).', 'The amount paid for a full working day (a half day pays half).'], dflt: ['0 (pas réglé).', '0 (not set).'] },
+  { sec: 'work', key: 'rate_hour_ar', kind: 'num', fr: 'Tarif par heure', en: 'Rate per hour', unit: ['Ar', 'Ar'], help: ['Le montant payé pour une heure travaillée.', 'The amount paid for one hour worked.'], dflt: ['0 (pas réglé).', '0 (not set).'] },
+  { sec: 'work', key: 'rate_piece_ar', kind: 'num', fr: 'Prix par boîte ou pièce', en: 'Price per box or piece', unit: ['Ar', 'Ar'], help: ['Le montant payé pour une boîte ou une pièce faite. Les pièces refusées ou abîmées ne sont pas payées.', 'The amount paid for one box or piece made. Rejected or damaged pieces are not paid.'], dflt: ['0 (pas réglé).', '0 (not set).'] },
+  { sec: 'work', key: 'rate_fixed_ar', kind: 'num', fr: 'Salaire fixe par mois', en: 'Fixed salary per month', unit: ['Ar', 'Ar'], help: ['Le salaire mensuel d\'un employé payé en salaire fixe (une quinzaine paie la moitié).', 'The monthly salary of a fixed-salary employee (a fortnight pays half).'], dflt: ['0 (pas réglé).', '0 (not set).'] },
+  { sec: 'work', key: 'stock_gap_pct', kind: 'int', fr: 'Écart toléré avec le stock', en: 'Stock gap tolerated', unit: ['%', '%'], help: ['Pour un atelier : si les boîtes déclarées et les entrées en stock diffèrent de plus que ce pourcentage, une alerte apparaîtra (étape suivante du module 26).', 'For a workshop: if declared boxes and stock entries differ by more than this percentage, an alert will appear (next step of module 26).'], dflt: ['10 %.', '10 %.'] },
   { sec: 'leave', key: 'leave_days_per_year', kind: 'int', fr: 'Jours de congé par an', en: 'Leave days per year', unit: ['jours', 'days'], help: ['Le nombre de jours de congé par an pour un salarié (0 à 60). 0 = pas réglé.', 'Leave days per employee per year (0 to 60). 0 = not set.'], dflt: NOT_SURE },
   { sec: 'leave', key: 'work_days_per_week', kind: 'int', fr: 'Jours travaillés par semaine', en: 'Working days per week', unit: ['jours', 'days'], help: ['De 1 à 7. 0 = pas réglé.', 'From 1 to 7. 0 = not set.'], dflt: NOT_SURE },
   { sec: 'leave', key: 'late_limit_time', kind: 'time', fr: 'Heure limite avant retard', en: 'Time limit before late', help: ['Au-delà de cette heure, le salarié est en retard (format 08:30).', 'After this time the employee is late (format 08:30).'], dflt: NOT_SURE },
@@ -81,7 +90,7 @@ type Raw = Record<string, string | boolean>;
 
 const toRaw = (c: CompanySettings): Raw => {
   const r: Raw = {};
-  for (const f of FIELDS) {
+  for (const f of ALL_FIELDS) {
     const v = (c as any)[f.sec][f.key];
     r[`${f.sec}.${f.key}`] = f.kind === 'lines' ? (v as string[]).join('\n') : f.kind === 'bool' ? !!v : String(v ?? '');
   }
@@ -89,7 +98,7 @@ const toRaw = (c: CompanySettings): Raw => {
 };
 const fromRaw = (r: Raw): unknown => {
   const o: any = {};
-  for (const f of FIELDS) {
+  for (const f of ALL_FIELDS) {
     o[f.sec] = o[f.sec] || {};
     const v = r[`${f.sec}.${f.key}`];
     o[f.sec][f.key] = f.kind === 'lines' ? String(v).split('\n') : f.kind === 'bool' ? !!v : (f.kind === 'int' || f.kind === 'num') && String(v).trim() === '' ? 0 : v;
@@ -97,7 +106,8 @@ const fromRaw = (r: Raw): unknown => {
   return o;
 };
 
-export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean }> = ({ lang, openAll }) => {
+export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean; showWork?: boolean }> = ({ lang, openAll, showWork = WORK_SETTINGS_LIVE }) => {
+  const SECTIONS = ALL_SECTIONS.filter(x => showWork || x.id !== 'work'), FIELDS = ALL_FIELDS.filter(x => showWork || x.sec !== 'work'); // la section « work » attend le serveur (WORK_SETTINGS_LIVE)
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const stored = db.getSettings();
   const current = useMemo(() => readCompany(stored.company), [stored.company]);

@@ -113,6 +113,7 @@ export interface CompanySettings {
   texts: { internal_rules: string; customer_terms: string };
   modules: { hidden: string }; // pages cachées du menu (liste d'identifiants séparés par des virgules) ; les opérateurs la reçoivent aussi
   watch: { validate_hours: number; active_no_end_hours: number; late_count: number; late_window_days: number; absent_streak_days: number; refusal_rate_pct: number; refusal_min_missions: number; min_periods: number; ignore_days: number; min_duration_minutes: number; advance_pending_days: number; inactive_days: number; strategic_silent_days: number; dormant_days: number; others_pct: number; backup_max_hours: number; error_hours: number }; // seuils de la Santé du site partagés par toute l'équipe d'admins ; 0 = valeur de départ
+  work: { business_model: string; pay_default: 'mission' | 'day' | 'hour' | 'piece' | 'fixed'; rate_day_ar: number; rate_hour_ar: number; rate_piece_ar: number; rate_fixed_ar: number; stock_gap_pct: number }; // module 26 : types de travail et paie (jamais envoyé à un employé)
 }
 
 export interface CompanyLogEntry {
@@ -148,6 +149,8 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   shift: ShiftType; // 'day' (08:00 - 18:00) or 'night' (20:00 - 06:00)
+  pay_mode?: 'mission' | 'day' | 'hour' | 'piece' | 'fixed'; // module 26 : mode de paie de CET employé (absent = celui de l'entreprise, sinon « par mission »)
+  pay_rate_ar?: number; // module 26 : son tarif (par jour, heure ou pièce, ou salaire fixe) ; absent = celui de l'entreprise
   is_online: boolean;
   team?: string; // équipe (texte court, choisi par l'admin) : un Chef d'équipe valide les sessions des opérateurs de la même équipe
   access_mode?: 'auto' | 'allow' | 'block'; // accès selon le shift : auto (défaut), toute heure, bloqué
@@ -218,6 +221,13 @@ export interface PostSession {
   demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
   created_at: string;
   updated_at: string;
+  // Module 26 (types de travail) : seulement pour une ligne de production ou de présence saisie par quelqu'un d'autre (jamais pour une mission normale) ; absents = rien ne change
+  work_type?: string; // identifiant du type de travail (voir src/utils/workTypes.ts)
+  quantity?: number; // pièces ou boîtes faites
+  rejected?: number; // pièces refusées ou abîmées (non payées)
+  hours?: number; // heures travaillées
+  presence?: 'present' | 'late' | 'half' | 'absent';
+  entered_by?: string; // identifiant de celui qui a saisi (jamais celui qui valide)
 }
 
 export type ViolationType = 

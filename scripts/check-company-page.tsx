@@ -13,12 +13,13 @@ let calls = 0; g.fetch = async () => { calls++; throw new Error('RESEAU'); };
 const { db } = await import('../src/db/store');
 const { CompanyConditions, CompanyForEmployee } = await import('../src/components/CompanyConditions');
 const { COMPANY_SPEC, cleanCompany, readCompany } = await import('../src/utils/companyRules');
+const { WORK_SETTINGS_LIVE } = await import('../src/utils/workTypes');
 
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
 const bad = (html: string) => /NaN|Infinity|undefined|\[object|\bnull\b/.test(html);
 const count = (html: string, s: string) => html.split(s).length - 1;
-const totalFields = Object.values(COMPANY_SPEC).reduce((a, sec) => a + Object.keys(sec).length, 0);
+const totalFields = Object.entries(COMPANY_SPEC).reduce((a, [name, sec]) => a + (name === 'work' && !WORK_SETTINGS_LIVE ? 0 : Object.keys(sec).length), 0); // la section « work » attend le serveur (WORK_SETTINGS_LIVE)
 
 // ---------- admin (démo) ----------
 db.enterDemo('admin');
@@ -34,6 +35,16 @@ for (const lang of ['fr', 'en'] as const) {
   ok(html.includes('min-h-[44px]'), `${lang} admin : cibles tactiles de 44 px`);
 }
 ok(!renderToString(<CompanyConditions lang="fr" />).includes('Jours de congé par an'), 'sections fermées par défaut, sauf Identité');
+// Types de travail et paie : cachés tant que le serveur n'est pas déployé, visibles avec l'interrupteur
+const workKeys = Object.keys((COMPANY_SPEC as any).work);
+for (const lang of ['fr', 'en'] as const) {
+  const off = renderToString(<CompanyConditions lang={lang} openAll showWork={false} />), on = renderToString(<CompanyConditions lang={lang} openAll showWork />);
+  ok(!off.includes(lang === 'en' ? 'Work types and pay' : 'Types de travail et paie') && !off.includes(lang === 'en' ? 'Default pay mode' : 'Mode de paie par défaut'), `${lang} : section « Types de travail et paie » cachée tant que le serveur n'est pas déployé`);
+  ok(on.includes(lang === 'en' ? 'Work types and pay' : 'Types de travail et paie') && on.includes(lang === 'en' ? 'Default pay mode' : 'Mode de paie par défaut') && on.includes(lang === 'en' ? 'Price per box or piece' : 'Prix par boîte ou pièce') && on.includes(lang === 'en' ? 'Fixed salary per month' : 'Salaire fixe par mois'), `${lang} : avec l'interrupteur, la section et ses champs apparaissent`);
+  ok(count(on, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') === count(off, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') + workKeys.length && !bad(on), `${lang} : les ${workKeys.length} réglages du travail ont chacun un « ? » et aucun NaN`);
+  ok(on.includes(lang === 'en' ? 'only stored' : 'seulement enregistrés'), `${lang} : la note dit que ces réglages ne changent encore aucune paie`);
+}
+ok(WORK_SETTINGS_LIVE === false, 'interrupteur « work » : éteint tant que le serveur n\'est pas déployé');
 
 // enregistrement : un champ changé, le reste gardé
 const before = readCompany(db.getSettings().company);

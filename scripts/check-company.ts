@@ -49,6 +49,12 @@ const cases: [string, string, unknown, unknown, boolean][] = [
   ['options', 'invoice_per', 'mission', 'mission', false], ['options', 'invoice_per', 'weekly', 'client_month', true],
   ['texts', 'internal_rules', 'Règle 1\nRègle 2', 'Règle 1\nRègle 2', false], ['texts', 'internal_rules', '<img src=x onerror=alert(1)>Texte', 'Texte', false], ['texts', 'internal_rules', 'x'.repeat(5001), '', true], ['texts', 'internal_rules', 'x'.repeat(5000), 'x'.repeat(5000), false],
   ['legal', 'notes', ['RCS 123', '', '  ', 'NIF 456'], ['RCS 123', 'NIF 456'], false], ['legal', 'notes', Array.from({ length: 11 }, (_, i) => `l${i}`), [], true], ['legal', 'notes', ['a'.repeat(201)], [], true], ['legal', 'notes', 'texte seul', [], true], ['legal', 'notes', [1, 2], [], true],
+  // Types de travail et paie (module 26)
+  ['work', 'business_model', 'workshop', 'workshop', false], ['work', 'business_model', '', '', false], ['work', 'business_model', 'garage', '', true], ['work', 'business_model', 5, '', true], ['work', 'business_model', null, '', true],
+  ['work', 'pay_default', 'piece', 'piece', false], ['work', 'pay_default', 'fixed', 'fixed', false], ['work', 'pay_default', 'weekly', 'mission', true], ['work', 'pay_default', '', 'mission', true], ['work', 'pay_default', 'PIECE', 'mission', true], ['work', 'pay_default', 3, 'mission', true],
+  ['work', 'rate_piece_ar', 150, 150, false], ['work', 'rate_piece_ar', '50.5', 50.5, false], ['work', 'rate_piece_ar', 0, 0, false], ['work', 'rate_piece_ar', 1e8, 1e8, false], ['work', 'rate_piece_ar', 1e8 + 1, 0, true], ['work', 'rate_piece_ar', -1, 0, true],
+  ['work', 'rate_day_ar', 'abc', 0, true], ['work', 'rate_day_ar', '', 0, true], ['work', 'rate_hour_ar', NaN, 0, true], ['work', 'rate_hour_ar', Infinity, 0, true], ['work', 'rate_fixed_ar', 400000, 400000, false], ['work', 'rate_fixed_ar', true, 0, true],
+  ['work', 'stock_gap_pct', 10, 10, false], ['work', 'stock_gap_pct', 0, 0, false], ['work', 'stock_gap_pct', 100, 100, false], ['work', 'stock_gap_pct', 101, 10, true], ['work', 'stock_gap_pct', -1, 10, true], ['work', 'stock_gap_pct', 5.4, 5, false],
 ];
 const results: unknown[] = [];
 for (const [sec, key, sent, want, bad] of cases) {
@@ -115,6 +121,28 @@ const emp = { id: 'e1', role: 'employee', name: 'Marie' }, adm = { id: 'a1', rol
   ok(J(srv.stripCompany(sSet, adm)) === J(settings) && srv.stripCompany(sSet, adm) === sSet, 'admin : reçoit tout, journal compris');
   ok(srv.stripCompany(null, emp) === null && srv.stripCompany(undefined, emp) === undefined, 'filtre : enregistrement absent accepté');
   ok(J(srv.stripCompany({ id: 'general' }, emp)) === J({ id: 'general' }), 'employé : réglages sans « company » acceptés');
+}
+// ---------- Types de travail et paie : qui reçoit les tarifs (module 26) ----------
+{
+  const accn = { id: 'c1', role: 'accountant', name: 'Compta' };
+  const withWork: any = clone(settings);
+  withWork.company.work = { ...withWork.company.work, business_model: 'workshop', pay_default: 'piece', rate_day_ar: 12000, rate_hour_ar: 2000, rate_piece_ar: 150, rate_fixed_ar: 400000, stock_gap_pct: 15 };
+  const before = J(withWork);
+  const cutA = srv.stripCompany(withWork, accn), w = cutA.company.work;
+  ok(w.rate_day_ar === 0 && w.rate_hour_ar === 0 && w.rate_piece_ar === 0 && w.rate_fixed_ar === 0, 'comptable : ne reçoit aucun tarif de paie du travail (jour, heure, pièce, salaire fixe)');
+  ok(w.business_model === 'workshop' && w.pay_default === 'piece' && w.stock_gap_pct === 15, 'comptable : garde le modèle d\'entreprise, le mode de paie et l\'écart toléré (pas d\'argent)');
+  ok(J(cutA.company_log) === J(withWork.company_log) && cutA.company.tax.vat_rate === withWork.company.tax.vat_rate && cutA.company.billing.payment_days === 45 && cutA.company.identity.name === 'Société X', 'comptable : garde le journal, la TVA, la facturation et l\'identité (rien d\'autre n\'est retiré)');
+  ok(J(withWork) === before, 'le filtre ne modifie jamais l\'enregistrement d\'origine (comptable)');
+  const cutE = srv.stripCompany(clone(withWork), emp);
+  ok(!('work' in cutE.company) && !/12000|2000|400000|workshop|rate_|stock_gap/.test(J(cutE)), 'employé : aucune section « work » (ni tarif, ni modèle, ni écart)');
+  ok(!('work' in companyForEmployee(clone(withWork.company))) && J(srv.companyForEmployee(clone(withWork.company))) === J(companyForEmployee(clone(withWork.company))), 'site et serveur : le filtre employé ne laisse pas passer « work »');
+  ok(srv.stripCompany(clone(withWork), adm).company.work.rate_piece_ar === 150 && srv.stripCompany(clone(withWork), adm).company.work.rate_fixed_ar === 400000, 'responsable : voit tous les tarifs');
+  ok(J(srv.stripCompany({ id: 'general', company: { leave: { leave_days_per_year: 5 } } }, accn)) === J({ id: 'general', company: { leave: { leave_days_per_year: 5 } } }) && J(srv.stripCompany({ id: 'general' }, accn)) === J({ id: 'general' }) && srv.stripCompany(null, accn) === null, 'comptable : réglages anciens sans « work » acceptés, enregistrement absent accepté');
+  // Écrire : le serveur revérifie les tarifs et garde un journal
+  const existing: any = { id: 'general', company: clone(withWork.company), company_log: [] };
+  const saved = srv.cleanSettingsRecord({ id: 'general', company: { work: { pay_default: 'weekly', rate_piece_ar: -5, rate_day_ar: 9000 } } }, existing, adm, '2026-11-05T10:00:00.000Z');
+  ok(saved.company.work.pay_default === 'piece' && saved.company.work.rate_piece_ar === 150 && saved.company.work.rate_day_ar === 9000, 'écriture : un mode inconnu et un tarif négatif sont refusés (l\'ancienne valeur reste), un tarif valide passe');
+  ok(saved.company_log.length === 1 && saved.company_log[0].path === 'work.rate_day_ar' && saved.company_log[0].before === '12000' && saved.company_log[0].by === 'a1', 'écriture : le changement de tarif est inscrit au journal (qui, quoi, valeur d\'avant)');
 }
 
 // ---------- écriture par l'admin ----------
