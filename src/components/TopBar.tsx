@@ -68,13 +68,18 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     return () => window.removeEventListener(SEEN_EVENT, on);
   }, []);
   useEffect(() => {
-    const away = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
-      if (mbox.current && !mbox.current.contains(e.target as Node)) setOpen(false);
-      if (bellBox.current && !bellBox.current.contains(e.target as Node)) setBellOpen(false);
+    // Clic OU toucher à l'extérieur : ferme la liste de résultats et, sur téléphone, le champ de recherche plein écran. Seul le champ réellement affiché compte (l'autre est caché).
+    const shown = (r: React.RefObject<HTMLDivElement | null>) => !!r.current && r.current.getClientRects().length > 0;
+    const away = (e: Event) => {
+      const t = e.target as Node;
+      const inSearch = (shown(box) && box.current!.contains(t)) || (shown(mbox) && mbox.current!.contains(t));
+      if (!inSearch) { setOpen(false); setMSearch(false); }
+      if (bellBox.current && !bellBox.current.contains(t)) setBellOpen(false);
     };
+    document.addEventListener('pointerdown', away);
     document.addEventListener('mousedown', away);
-    return () => document.removeEventListener('mousedown', away);
+    document.addEventListener('touchstart', away, { passive: true });
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('mousedown', away); document.removeEventListener('touchstart', away); };
   }, []);
 
   const mergedMenu = mergedFor(currentUser.role, useMenuMode());
@@ -175,7 +180,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
     <div className="h-[57px] shrink-0" aria-hidden="true" />
     <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b rounded-b-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
-      <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-4">
+      <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-3">
         <button type="button" data-header-dashboard onClick={() => onNavigate(home)} title="Tableau de bord" aria-label="Tableau de bord" className={`md:hidden relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
           <LayoutDashboard className="w-5 h-5" />
         </button>
@@ -219,7 +224,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         </div>
 
         {/* Actualités et Messages : toujours dans l'en-tête (plus de barre du bas, plus dans le menu latéral) */}
-        <div className="contents md:flex md:items-center md:gap-2 md:shrink-0" data-header-shortcuts>
+        <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
           {([['feed', 'Actualités', Newspaper, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}

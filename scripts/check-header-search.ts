@@ -10,5 +10,14 @@ ok(/<Search className/.test(top), 'recherche : icône loupe');
 ok(/data-search-clear/.test(top) && /\{q && \(/.test(top) && /setQ\(''\)/.test(top), 'recherche : croix qui efface, seulement quand il y a du texte');
 ok(/data-report-problem/.test(log) && /ReportProblemModal/.test(log), 'Journal des erreurs : bouton « Signaler un problème »');
 ok(/onReportProblem && !isAdmin/.test(side), 'menu : le responsable n\'a plus le bouton (il est dans le Journal) ; l\'opérateur le garde');
+// Fermeture au clic / toucher extérieur (2026-11-07) : la liste ET le champ plein écran du téléphone ; seul le champ affiché compte
+const feed = r('src/views/FeedView.tsx');
+ok(/addEventListener\('pointerdown', away\)/.test(top) && /addEventListener\('touchstart', away/.test(top) && /addEventListener\('mousedown', away\)/.test(top), 'recherche : fermée par un clic ou un toucher à l\'extérieur');
+ok(/setOpen\(false\); setMSearch\(false\)/.test(top) && /getClientRects\(\)\.length > 0/.test(top), 'recherche : ferme aussi le champ du téléphone, ignore le champ caché');
+ok(/removeEventListener\('pointerdown', away\)/.test(top) && /removeEventListener\('touchstart', away\)/.test(top), 'recherche : écouteurs retirés au démontage');
+// Espaces des icônes de droite sur grand écran : un seul (12 px)
+ok(/md:justify-start gap-1\.5 sm:gap-2\.5 md:gap-3"/.test(top) && /md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts/.test(top), 'en-tête grand écran : même espace (12 px) entre toutes les icônes');
+// Actualités plus larges sur grand écran
+ok(/max-w-2xl lg:max-w-4xl 2xl:max-w-5xl mx-auto w-full/.test(feed), 'Actualités : élargies sur grand écran (téléphone inchangé)');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

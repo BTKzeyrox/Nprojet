@@ -676,7 +676,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   };
 
   return (
-    <div ref={rootRef} className="max-w-2xl mx-auto w-full p-3 sm:p-6 space-y-4">
+    <div ref={rootRef} className="max-w-2xl lg:max-w-4xl 2xl:max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Newspaper className="w-6 h-6 text-emerald-600" />
         <div>
