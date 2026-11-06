@@ -9,4 +9,7 @@ ok(/chat-wallpaper-light/.test(chat) && /chat-wallpaper-dark/.test(chat), 'ChatV
 ok(/chat-wallpaper-light/.test(ass), 'Assistant : fond à deux couches');
 ok(/\.chat-wallpaper-light[^}]*linear-gradient/.test(css) && /\.chat-wallpaper-dark[^}]*svg\+xml/.test(css), 'CSS : motif + dégradé, clair et sombre');
 ok(/data-press-clone/.test(chat) && /menuHtml/.test(chat), 'Appui long : message copié net au-dessus du fond');
+const sb = r('src/components/Sidebar.tsx'), tb = r('src/components/TopBar.tsx');
+ok(/MOVED_TO_HEADER = \['feed', 'chat', 'messages'\]/.test(sb) && /lg:!hidden/.test(sb), 'grand écran : Actualités et Messages retirés du menu latéral (téléphone et tablette inchangés)');
+ok(/hidden lg:flex/.test(tb) && /data-header-shortcut=/.test(tb) && /onNavigate\(view\)/.test(tb) && /chatUnread/.test(tb), 'grand écran : Actualités et Messages dans l\'en-tête, avec la pastille des messages non lus');
 process.exit(bad ? 1 : 0);

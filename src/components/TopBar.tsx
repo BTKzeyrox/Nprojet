@@ -2,11 +2,12 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { subscribeHealth } from '../utils/healthDb';
+import { useChatUnread } from '../utils/useChatUnread';
 import { remReload, remSubscribe } from '../utils/remindersState';
 import { buildNotifications, markSeen, markAllRead, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
@@ -143,6 +144,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     document.addEventListener('visibilitychange', vis);
     return () => { un(); window.clearInterval(iv); document.removeEventListener('visibilitychange', vis); };
   }, []);
+  const chatUnread = useChatUnread(currentUser);
   const notifs = buildNotifications(currentUser);
   const count = unreadCount(currentUser, notifs);
   const seen = getSeen(currentUser);
@@ -213,6 +215,24 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               )}
             </div>
           )}
+        </div>
+
+        {/* Grands écrans : Actualités et Messages (retirés du menu latéral) */}
+        <div className="hidden lg:flex items-center gap-2 shrink-0" data-header-shortcuts>
+          {([['feed', 'Actualités', Newspaper, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => onNavigate(view)}
+              title={label}
+              aria-label={label}
+              data-header-shortcut={view}
+              className={`relative p-2 rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+            >
+              <Icon className="w-5 h-5" />
+              {n > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">{n > 99 ? '99+' : n}</span>}
+            </button>
+          ))}
         </div>
 
         <ConnectionChip />
