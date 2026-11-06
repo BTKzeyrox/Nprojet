@@ -34,4 +34,13 @@ const mp = readFileSync(new URL('../src/components/MenuPagesCard.tsx', import.me
 ok(/data-menu-mode-btn/.test(mp) && /setMenuMode\(m\)/.test(mp) && /Ancien menu/.test(mp), 'Réglages : bouton « Ancien menu » pour revenir en arrière');
 // aucune page n'est retirée du rendu : les anciennes vues sont toujours rendues
 for (const v of ['dashboard', 'validations', 'history', 'clients', 'invoices', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'employees', 'hr', 'advances', 'chat', 'calendar', 'health', 'errors', 'charts', 'direction', 'accounting', 'sheets']) ok(new RegExp(`activeView === '${v}'`).test(app) || ['dashboard', 'validations'].includes(v), `page « ${v} » toujours rendue`);
+// Tableau de bord / Missions / Santé du site (2026-11-07)
+{
+  const dash = readFileSync('src/views/admin/AdminDashboard.tsx', 'utf8');
+  ok(/activeSubTab === 'dashboard' && homeParts\.top/.test(dash) && /activeSubTab === 'grid' && homeParts\.panels/.test(dash), 'Missions des tableaux : « À valider » et « Missions en cours » sont sur la page Missions, plus sur le Tableau de bord');
+  ok(/activeSubTab === 'grid' && <PostsGrid20/.test(dash), 'Tableau de bord : la grille « Toutes les missions » est sur la page Missions seulement');
+  ok(/<HealthSummary /.test(dash) && /onNavigateTab\('health'\)/.test(dash), 'Tableau de bord : résumé de la Santé du site avec bouton Détails');
+  ok(menuFor('admin').find(g => g.id === 'home')!.tabs.map(x => x.id).join() === 'dashboard,health,direction', 'menu : « Santé du site » est un onglet du Tableau de bord');
+  ok(!menuFor('admin').find(g => g.id === 'control')!.tabs.some(x => x.id === 'health'), 'menu : plus de « Santé du site » dans Contrôle');
+}
 console.log(f ? `${f} ÉCHEC(S) sur ${t}` : `${t}/${t} contrôles réussis`); process.exit(f ? 1 : 0);

@@ -884,6 +884,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `FilterBar.tsx` | Barre de filtres commune (M22.7) : une rangée de boutons, même style et même place sur toutes les pages, un chiffre sur chacun ; à 0 le filtre reste visible mais grisé. |
 | `FontSizePicker.tsx` | Choix de la taille du texte de l'application, en quatre boutons. |
 | `GoalsPanel.tsx` | Cartes du responsable : objectifs du mois en jauges (GoalsBars), prévision de fin de mois (ForecastCard) et liste des alertes (AlertsList). |
+| `HealthSummary.tsx` | Résumé de la Santé du site, posé en haut du Tableau de bord (le détail reste dans l'onglet « Santé du site » du même groupe). |
 | `ImportDialog.tsx` | Fenêtre d'import Excel ou CSV : choix du fichier, aperçu ligne par ligne, puis validation pour clients, produits, salariés ou tableau. |
 | `LightboxModal.tsx` | Visionneuse plein écran d'images (preuves) avec zoom, déplacement, précédent / suivant, téléchargement et suppression. |
 | `LinkedText.tsx` | Texte de message où les liens vers une page de ce site deviennent un bouton au nom clair (« Voir la publication ») au lieu de l'adresse longue. |

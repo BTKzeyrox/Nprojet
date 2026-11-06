@@ -12,7 +12,8 @@ ok(parseHidden(b).length <= 400 && b.length <= 400, 'la liste tient dans la limi
 const ids = (role: string) => menuFor(role, b).map(g => g.id);
 const a = ids('admin');
 ok(['stock', 'clients', 'money', 'messages', 'calendar', 'feed'].every(x => a.includes(x)), 'responsable : Stock, Clients, Argent, Messages, Actualités restent');
-ok(!a.includes('missions') && !a.includes('home') && !a.includes('charts'), 'responsable : Missions, Accueil, Graphiques cachés (pas de « Missions » avec seulement Statistiques)');
+ok(!a.includes('missions') && !a.includes('charts'), 'responsable : Missions, Graphiques cachés (pas de « Missions » avec seulement Statistiques)');
+ok(menuFor('admin', b).find(g => g.id === 'home')?.tabs.map(x => x.id).join() === 'health', 'responsable : le groupe Tableau de bord ne garde que « Santé du site » (jamais cachable)');
 ok(menuFor('admin', b).every(g => g.tabs.length > 0), 'aucune entrée vide');
 ok(locate('admin', 'stats', b, 'finance') !== null && locate('admin', 'stats', b) === null, 'Argent > Finances reste ; Statistiques des missions disparaît');
 ok(menuFor('admin', b).find(g => g.id === 'money')!.tabs.map(x => x.id).join() === 'finance,treasury,accounting', 'Argent complet');

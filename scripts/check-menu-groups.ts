@@ -65,7 +65,7 @@ eq(menuFor('admin', 'clients,invoices').some(g => g.id === 'clients'), false, 't
 eq(menuFor('admin', 'stats').find(g => g.id === 'money')!.tabs.map(x => x.id), ['treasury', 'accounting'], 'Statistiques cachées : Finances (qui en fait partie) aussi');
 eq(locate('admin', 'feed', 'feed'), { group: 'feed', tab: 'feed' }, 'Actualités : jamais cachable');
 eq(locate('admin', 'settings', 'settings,health'), { group: 'settings', tab: 'settings' }, 'Réglages : jamais cachables');
-eq(locate('admin', 'health', 'health'), { group: 'control', tab: 'health' }, 'Santé du site : jamais cachable');
+eq(locate('admin', 'health', 'health'), { group: 'home', tab: 'health' }, 'Santé du site : jamais cachable (dans le groupe Tableau de bord)');
 eq(menuFor('admin', 'nimporte,,quoi').length, 12, 'liste cachée invalide : rien n\'est caché');
 eq(menuFor('admin', undefined).length, 12, 'liste cachée absente');
 eq(menuFor('admin', 42).length, 12, 'liste cachée non texte');

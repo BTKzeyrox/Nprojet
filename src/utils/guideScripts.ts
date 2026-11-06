@@ -16,7 +16,7 @@ const ADMIN: GuideStep[] = [
   { id: 'welcome', page: null, target: null, title: b('Guide du responsable', 'Manager guide'),
     text: b('Tu valides le travail, tu factures, tu paies et tu suis les chiffres. Ce guide ouvre tes vraies pages et fait clignoter ce qu\'il faut regarder. Rien n\'est modifié pendant la visite.', 'You validate the work, invoice, pay and follow the figures. This guide opens your real pages and blinks what to look at. Nothing is changed during the tour.') },
   { id: 'dashboard', page: 'dashboard', target: { texts: [b('Tableau de bord', 'Dashboard')] }, title: b('Ton tableau de bord', 'Your dashboard'),
-    text: b('Les missions en cours, celles à valider et les chiffres du jour. C\'est ton point de départ chaque matin.', 'Running missions, those to validate and today\'s figures. It is your starting point every morning.'),
+    text: b('Les alertes, la santé du site et les chiffres du jour. Les missions à valider et en cours sont dans la page Missions. C\'est ton point de départ chaque matin.', 'Alerts, site health and today\'s figures. Missions to validate and running missions are in the Missions page. It is your starting point every morning.'),
     missing: b('Ouvre « Tableau de bord » dans le menu.', 'Open "Dashboard" in the menu.') },
   { id: 'validate', page: 'validations', target: { texts: [b('Débuts', 'Starts')] }, title: b('Valider le travail', 'Validate the work'),
     text: b('Quand un opérateur démarre ou termine une mission, sa demande arrive ici. Les filtres « Débuts », « Fins » et « Avances » trient la liste.', 'When an operator starts or ends a mission, the request lands here. The "Starts", "Ends" and "Advances" filters sort the list.'),

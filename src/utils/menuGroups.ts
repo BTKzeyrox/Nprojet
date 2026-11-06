@@ -12,7 +12,7 @@ const tab = (id: string, fr: string, en: string, extra: Partial<MenuTab> = {}): 
 
 /** Le menu du responsable (toutes les pages). Les autres rôles en voient une partie (voir menuFor). */
 export const ADMIN_GROUPS: MenuGroup[] = [
-  { id: 'home', fr: 'Tableau de bord', en: 'Dashboard', tabs: [tab('dashboard', 'Tableau de bord', 'Dashboard', { hide: 'dashboard' }), tab('direction', 'Direction', 'Direction', { hide: 'direction' })] },
+  { id: 'home', fr: 'Tableau de bord', en: 'Dashboard', tabs: [tab('dashboard', 'Tableau de bord', 'Dashboard', { hide: 'dashboard' }), tab('health', 'Santé du site', 'Site health'), tab('direction', 'Direction', 'Direction', { hide: 'direction' })] },
   { id: 'feed', fr: 'Actualités', en: 'News', tabs: [tab('feed', 'Actualités', 'News')] },
   { id: 'missions', fr: 'Missions', en: 'Missions', tabs: [tab('validations', 'À valider', 'To approve', { hide: 'validations' }), tab('grid', 'Tableau des missions', 'Mission board', { hide: 'grid' }), tab('history', 'Historique', 'History', { hide: 'history' }), tab('stats', 'Statistiques', 'Statistics', { hide: 'stats', hideIfAll: ['validations', 'grid', 'history'] })] },
   { id: 'team', fr: 'Équipe', en: 'Team', tabs: [tab('employees', 'Opérateurs', 'Operators'), tab('active-post', 'Sessions', 'Sessions', { hide: 'active-post' }), tab('performance', 'Performance', 'Performance', { hide: 'performance' }), tab('hr', 'Ressources humaines', 'Human resources', { hide: 'hr' }), tab('advances', 'Paie', 'Payroll', { hide: 'advances' })] },
@@ -22,7 +22,7 @@ export const ADMIN_GROUPS: MenuGroup[] = [
   { id: 'charts', fr: 'Graphiques', en: 'Charts', tabs: [tab('charts', 'Graphiques', 'Charts', { hide: 'charts' })] },
   { id: 'messages', fr: 'Messages', en: 'Messages', tabs: [tab('chat', 'Messagerie', 'Messaging', { hide: 'chat' })] },
   { id: 'calendar', fr: 'Calendrier', en: 'Calendar', tabs: [tab('calendar', 'Calendrier', 'Calendar', { hide: 'calendar' })] },
-  { id: 'control', fr: 'Contrôle', en: 'Control', tabs: [tab('health', 'Santé du site', 'Site health'), tab('errors', 'Journal des erreurs', 'Error log'), tab('security', 'Sécurité', 'Security'), tab('sheets', 'Tableaux d\'équipe', 'Team tables', { hide: 'sheets' })] },
+  { id: 'control', fr: 'Contrôle', en: 'Control', tabs: [tab('errors', 'Journal des erreurs', 'Error log'), tab('security', 'Sécurité', 'Security'), tab('sheets', 'Tableaux d\'équipe', 'Team tables', { hide: 'sheets' })] },
   { id: 'settings', fr: 'Réglages', en: 'Settings', tabs: [tab('settings', 'Réglages', 'Settings')] },
 ];
 export const MAX_TABS = 5;

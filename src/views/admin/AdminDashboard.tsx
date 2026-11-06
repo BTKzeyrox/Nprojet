@@ -1,6 +1,7 @@
 // Écran principal du responsable : tableau de bord, validations de missions, alertes de sécurité et liste des sessions, selon l'onglet demandé.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'écran affiché dépend de activeSubTab (dashboard, grid, sessions, security, validations). Données lues dans db (users, posts, securityLogs, advances). Fichier très long : chercher la zone par ses commentaires SECTION ou par isValidations, isSecurity, isSessions.
+import { HealthSummary } from '../../components/HealthSummary';
 import { showToast } from '../../components/ToastHost';
 import React, { useState, useEffect } from 'react';
 import {
@@ -417,7 +418,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const totalScoreBoosted = users.reduce((acc, u) => acc + (u.total_score_boosted || 0), 0);
 
-  const homeCards = (() => {
+  const homeParts = (() => {
     const today = new Date().toISOString().split('T')[0];
     const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
     const scoreToday = doneToday.reduce(
@@ -437,7 +438,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </button>
     );
     const panel = 'bg-[#0f1722] border border-slate-800 rounded-2xl p-4';
-    return (
+    const top = (
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-extrabold text-white">Tableau de bord</h2>
@@ -455,6 +456,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {tile('Quantité du jour', formatScoreM(scoreToday), 'Total produit', TrendingUp, 'bg-indigo-100 text-indigo-700', () => onNavigateToCalendar && onNavigateToCalendar())}
         </div>
 
+        <HealthSummary lang={appLang === 'en' ? 'en' : 'fr'} onOpen={() => onNavigateTab && onNavigateTab('health')} />
+      </div>
+    );
+    const panels = (
+      <div className="space-y-3">
+        <h2 className="text-xl font-extrabold text-white">Tableau des missions</h2>
         <div className="grid lg:grid-cols-2 gap-3">
           <section className={panel}>
             <div className="flex items-center justify-between mb-3">
@@ -508,10 +515,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
           </section>
         </div>
-
-        <h3 className="font-bold text-white pt-1">Toutes les missions</h3>
       </div>
     );
+    return { top, panels };
   })();
 
   if (activeSubTab === 'grid' || activeSubTab === 'dashboard') {
@@ -520,8 +526,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     return (
       <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
-        {activeSubTab === 'dashboard' && homeCards}
-        <PostsGrid20
+        {activeSubTab === 'dashboard' && homeParts.top}
+        {activeSubTab === 'grid' && homeParts.panels}
+        {activeSubTab === 'grid' && <h3 className="font-bold text-white pt-1">Toutes les missions</h3>}
+        {activeSubTab === 'grid' && <PostsGrid20
           currentUser={adminUser}
           allPosts={posts}
           onSelectContract={(contract) => {
@@ -555,7 +563,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           }}
           onOpenProofLightbox={onOpenProofLightbox}
           onNavigateToActivePost={() => onNavigateTab && onNavigateTab('sessions')}
-        />
+        />}
 
         {/* MODAL GESTION DE LA MISSION CLIENT POUR L'ADMIN (MODIFICATION COMPLETE & VALIDATION) */}
         {selectedAdminContract && (
