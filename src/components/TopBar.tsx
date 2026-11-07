@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { requestFeedTop } from '../utils/feedScroll';
 import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
@@ -234,7 +235,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             <button
               key={view}
               type="button"
-              onClick={() => onNavigate(view)}
+              onClick={() => { if (view === 'feed' && activeView === 'feed') requestFeedTop(); onNavigate(view); }}
               title={label}
               aria-label={label}
               data-header-shortcut={view}

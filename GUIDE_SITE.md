@@ -624,6 +624,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
+| `feedScroll.ts` | Position de défilement du fil Actualités : gardée quand on va sur une autre page (recherche, menu…) et rétablie au retour, |
 | `filterBar.ts` | Barre de filtres commune (module 22, M22.7) : règles pures. Même texte partout : « Nom (3) » ; un filtre à 0 reste visible mais grisé. |
 | `finance.ts` | Finances : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Finances » et par le contrôle `npm run check:finance`. |
 | `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances et de la page Graphiques : les liens des chiffres de l'assistant et des alertes |
@@ -1196,6 +1197,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:tasks-store` | Essai de la liste de tâches côté site (store + écrans), sans réseau. Lancer : npm run check:tasks-store |
 | `npm run check:templates-store` | Essai des modèles de mission côté site (store + écrans), sans réseau. Lancer : npm run check:templates-store |
 | `npm run check:deadlines-store` | Essai de la date limite et de la priorité côté site (store + pastille + champs), sans réseau. Lancer : npm run check:deadlines-store |
+| `npm run check:feed-scroll` | Actualités : la position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut). |
 <!-- /AUTO:checks -->
 
 ---

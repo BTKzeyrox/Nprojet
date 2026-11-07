@@ -1,7 +1,8 @@
 // Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications.
 // Utilisé par : App.tsx.
 // Pour modifier : les publications viennent de db.getNews() ; qui peut voir, modifier ou publier est décidé par utils/newsAccess.ts ; le responsable publie en direct, les autres peuvent passer par une validation.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { saveFeedScroll, feedScrollFor, FEED_TOP_EVENT } from '../utils/feedScroll';
 import { flushSync } from 'react-dom';
 import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye, MoreVertical } from 'lucide-react';
 import { db } from '../db/store';
@@ -626,6 +627,32 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     return null;
   };
   const atTop = () => { const sc = getScroller(); return (sc ? sc.scrollTop : window.scrollY) < 120; };
+
+  // Position mémorisée AU MOMENT de quitter la page (le contenu est encore là : plus tard, le navigateur remonte tout seul la page raccourcie)
+  useLayoutEffect(() => {
+    let sc: HTMLElement | null = rootRef.current?.parentElement || null;
+    while (sc) { const o = getComputedStyle(sc).overflowY; if ((o === 'auto' || o === 'scroll') && sc !== document.documentElement && sc !== document.body) break; sc = sc.parentElement; }
+    return () => saveFeedScroll(currentUser.id, sc ? sc.scrollTop : window.scrollY);
+  }, [currentUser.id]);
+  // La position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut).
+  // Le défilement est celui de la page entière (fenêtre) ou d'un conteneur : les deux sont gérés.
+  useEffect(() => {
+    let sc: HTMLElement | null = rootRef.current?.parentElement || null;
+    while (sc) { const o = getComputedStyle(sc).overflowY; if ((o === 'auto' || o === 'scroll') && sc !== document.documentElement && sc !== document.body) break; sc = sc.parentElement; }
+    const getPos = () => (sc ? sc.scrollTop : window.scrollY);
+    const maxPos = () => (sc ? sc.scrollHeight - sc.clientHeight : document.documentElement.scrollHeight - window.innerHeight);
+    const setPos = (y: number, smooth = false) => { if (sc) sc.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); };
+    const want = feedScrollFor(currentUser.id);
+    let raf = 0, tries = 0;
+    const restore = () => {
+      if (maxPos() >= want - 1 || tries++ >= 20) { setPos(want); return; }
+      raf = requestAnimationFrame(restore); // le contenu n'est pas encore assez haut : on réessaie quelques images
+    };
+    restore();
+    const goTop = () => setPos(0, true);
+    window.addEventListener(FEED_TOP_EVENT, goTop);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener(FEED_TOP_EVENT, goTop); };
+  }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualités ouvertes : rechargement toutes les 8 s
   useEffect(() => {

@@ -125,7 +125,7 @@ export default function App() {
     return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
   }, [currentUser?.id, currentUser?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
-  useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]);
+  useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && activeView !== 'feed' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]); // Actualités : le fil rétablit lui-même sa position (utils/feedScroll.ts)
   // Appli ouverte et visible : les notifications externes en attente sont retirées (la cloche les montre)
   useEffect(() => {
     closeDigestNotifications();
