@@ -747,6 +747,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
 | `viewportWidth.ts` | Largeur de l'écran en pixels du site, fiable APRÈS une rotation (téléphone ou tablette). |
+| `workChecks.ts` | Contrôles du travail saisi (module 26, M26.8) : boîtes déclarées contre entrées en Stock, boîtes par heure, régularité. Règles pures, sans écran, sans serveur. |
 | `workDays.ts` | Jours de travail réglables (Réglages) : 0 = dimanche … 6 = samedi. Par défaut lundi à samedi (le dimanche est un jour de repos). Pur : sans écran ni serveur. |
 | `workEntry.ts` | Feuille du jour (module 26, M26.5a) : règles pures pour saisir présence, heures, quantité et refus d'employés qui n'ont pas de réseau. Pas d'écran ici. |
 | `workLineText.ts` | Texte d'une ligne de travail (feuille du jour, M26.5) pour les listes de validation et l'historique : présence, heures, quantité et refusées, sans score ni preuve. |
@@ -1185,6 +1186,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:work-sheet-page` | Feuille du jour (module 26, M26.5e) : la page est branchée partout, cachée tant que le module n'est pas ouvert, et ses textes sont complets. Lancer : npm run check:work-sheet-page |
 | `npm run check:custom-work-types` | « Créer mon type de travail » (module 26, M26.6b) : le site et le serveur donnent les mêmes résultats ; un type faux est refusé ; le Chef d'équipe reçoit le modèle d'entreprise mais jamais les tarifs. Lancer : npm run check:custom-work-types |
 | `npm run check:entry-only` | Employé « suivi par saisie seulement » (module 26, M26.7) : jamais de connexion, jamais « en ligne », présent dans les listes. Lancer : npm run check:entry-only |
+| `npm run check:work-checks` | Contrôles du travail saisi (module 26, M26.8) : boîtes déclarées contre Stock, boîtes par heure, régularité. Lancer : npm run check:work-checks |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

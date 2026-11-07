@@ -5,6 +5,8 @@ import { db } from '../db/store';
 import type { PostSession } from '../types';
 import { performanceAoa, type ScoreCells } from './performanceExport';
 import { downloadWorkbook } from './xlsxA4';
+import { workRate } from './workChecks';
+import { todayMada } from './stats';
 
 // Statistiques de performance par opérateur (lecture du store, aucun appel serveur).
 export type PerfPeriod = '7' | '30' | 'all';
@@ -17,6 +19,8 @@ export interface PerfRow {
   open: number; // en cours ou à valider
   rate: number | null; // taux d'acceptation en % (null si aucune mission jugée)
   avgMin: number | null; // délai moyen en minutes (null si aucune mesure)
+  perHour?: number | null; // M26.8 : boîtes (ou pièces) acceptées par heure, d'après la Feuille du jour (null = pas de mesure)
+  regularity?: number | null; // M26.8 : 0 à 100, 100 = même quantité chaque jour (null sous 3 jours travaillés)
 }
 
 const toMs = (date: string, time?: string): number => {
@@ -56,6 +60,7 @@ export const buildPerformance = (period: PerfPeriod): PerfRow[] => {
       const open = mine.filter(p => p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end').length;
       const durs = done.map(durationMin).filter((d): d is number => d !== null);
       const judged = done.length + rejected;
+      const wr = workRate(db.getPosts(), u.id, todayMada(), period === 'all' ? 365 : Number(period));
       return {
         id: u.id,
         name: u.name,
@@ -64,6 +69,8 @@ export const buildPerformance = (period: PerfPeriod): PerfRow[] => {
         open,
         rate: judged ? Math.round((done.length / judged) * 100) : null,
         avgMin: durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) : null,
+        perHour: wr.perHour,
+        regularity: wr.regularity,
       };
     })
     .sort((a, b) => b.done - a.done || a.name.localeCompare(b.name));

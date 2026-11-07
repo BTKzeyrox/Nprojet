@@ -4,6 +4,8 @@ import { alertId, hasEnough, type HealthRule } from '../registry';
 import type { HealthAlert } from '../types';
 import { DEFAULT_STOCK_SPACES, inSpace, stockRows } from '../../stock';
 import { dayDiff, list, plural } from './common';
+import { workStockGap } from '../../workChecks';
+import { WORK_SETTINGS_LIVE } from '../../workTypes';
 
 const GO = { view: 'storage' };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -96,6 +98,23 @@ export const purchaseNoMove: HealthRule = {
   },
 };
 
+/** Boîtes déclarées dans la Feuille du jour contre entrées en Stock (module 26, M26.8). Se tait tant que le module est fermé. */
+export const workVsStock: HealthRule = {
+  id: 'stock.workgap', page: 'stock',
+  run: (ctx) => {
+    if (!WORK_SETTINGS_LIVE) return [];
+    const g = workStockGap(ctx.posts, ctx.products, ctx.moves, ctx.today);
+    if (!g) return [];
+    const fmt = (v: number) => String(v).replace('.', ',');
+    return [{
+      id: alertId('stock', 'workgap'), page: 'stock', rule: 'workgap', severity: g.pct >= 30 ? 'urgent' : 'watch',
+      title_fr: `Boîtes déclarées : ${fmt(g.missing)} de plus que les entrées en Stock`, title_en: `Boxes declared: ${fmt(g.missing)} more than stock receipts`,
+      why_fr: `Sur 30 jours, les feuilles du jour déclarent ${fmt(g.declared)} boîtes ; le Stock n'a reçu que ${fmt(g.received)} entrées (écart ${g.pct} %).`, why_en: `Over 30 days the daily sheets declare ${fmt(g.declared)} boxes; stock received only ${fmt(g.received)} (gap ${g.pct}%).`,
+      todo_fr: 'Vérifier les feuilles du jour et ajouter les entrées oubliées au Stock.', todo_en: 'Check the daily sheets and add the missing receipts to Stock.', since: null, value: g.pct, go: GO,
+    } as HealthAlert];
+  },
+};
+
 /** Une règle du stock vue stockage par stockage : jamais de mélange. Avec plusieurs stockages, chaque alerte porte le nom du stockage,
  *  son propre identifiant (stock:<règle>:<stockage>) et un lien exact : le bon stockage, le bon filtre, le produit le plus urgent. */
 const perSpace = (rule: HealthRule): HealthRule => ({
@@ -120,4 +139,4 @@ const perSpace = (rule: HealthRule): HealthRule => ({
   },
 });
 
-export const STOCK_RULES: HealthRule[] = [perSpace(negativeQty), perSpace(outOfStock), perSpace(lowStock), perSpace(dormant), purchaseNoMove];
+export const STOCK_RULES: HealthRule[] = [perSpace(negativeQty), perSpace(outOfStock), perSpace(lowStock), perSpace(dormant), purchaseNoMove, workVsStock];

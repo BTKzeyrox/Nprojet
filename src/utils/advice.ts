@@ -34,6 +34,7 @@ export const ADVICE: Record<string, Bi> = {
   'empty': b('Ces produits sont en rupture : passe une commande ou mets le produit en pause si tu ne le vends plus.', 'These products are out of stock: place an order or pause the product if you no longer sell it.'),
   'low': b('Ces produits arrivent à leur seuil : commande avant la rupture, surtout ceux qui partent vite.', 'These products are reaching their threshold: order before they run out, especially the fast sellers.'),
   'dormant': b('Ces produits ne bougent plus : fais-en la liste, solde-les ou arrête de les stocker.', 'These products no longer move: list them, clear them out or stop stocking them.'),
+  'workgap': b('Compare les feuilles du jour au Stock : ajoute les entrées de boîtes oubliées, ou vérifie les quantités saisies.', 'Compare the daily sheets with Stock: add the forgotten box receipts, or check the quantities entered.'),
   'purchase-no-move': b('Un achat a été noté sans entrée de stock : ajoute l\'entrée pour que les quantités soient justes.', 'A purchase was recorded without a stock entry: add the entry so quantities are right.'),
   'client-gone': b('Une fiche client a disparu alors que des missions s\'y rapportent : recrée la fiche ou rattache les missions à un autre client.', 'A client record disappeared while missions refer to it: recreate it or link the missions to another client.'),
   'future-dates': b('Corrige ces dates dans le futur : elles faussent les totaux du mois.', 'Fix these future dates: they distort the month totals.'),
