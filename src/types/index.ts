@@ -150,6 +150,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   shift: ShiftType; // 'day' (08:00 - 18:00) or 'night' (20:00 - 06:00)
+  entry_only?: boolean; // module 26 (M26.7) : suivi par saisie seulement (sans compte ni téléphone) ; posé par le serveur à la création, jamais modifiable ensuite
   pay_mode?: 'mission' | 'day' | 'hour' | 'piece' | 'fixed'; // module 26 : mode de paie de CET employé (absent = celui de l'entreprise, sinon « par mission »)
   pay_rate_ar?: number; // module 26 : son tarif (par jour, heure ou pièce, ou salaire fixe) ; absent = celui de l'entreprise
   is_online: boolean;

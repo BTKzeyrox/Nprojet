@@ -622,6 +622,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
 | `enTranslate.ts` | Traduit l'interface française en anglais en remplaçant les textes de la page (dictionnaire enDict.json) ; agit sur la page du navigateur. |
+| `entryOnly.ts` | Employé « suivi par saisie seulement » (module 26, M26.7) : règles pures, sans écran, sans serveur. |
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
@@ -1183,6 +1184,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:work-entry` | Feuille du jour (module 26, M26.5a) : le site (workEntry.ts) et le serveur (bloc WORKENTRY de df-api) donnent EXACTEMENT les mêmes résultats sur des milliers de feuilles ; |
 | `npm run check:work-sheet-page` | Feuille du jour (module 26, M26.5e) : la page est branchée partout, cachée tant que le module n'est pas ouvert, et ses textes sont complets. Lancer : npm run check:work-sheet-page |
 | `npm run check:custom-work-types` | « Créer mon type de travail » (module 26, M26.6b) : le site et le serveur donnent les mêmes résultats ; un type faux est refusé ; le Chef d'équipe reçoit le modèle d'entreprise mais jamais les tarifs. Lancer : npm run check:custom-work-types |
+| `npm run check:entry-only` | Employé « suivi par saisie seulement » (module 26, M26.7) : jamais de connexion, jamais « en ligne », présent dans les listes. Lancer : npm run check:entry-only |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

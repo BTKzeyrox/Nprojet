@@ -71,6 +71,7 @@ import {
 import { clientPriceForContract } from '../utils/clientPrice';
 import { isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
 import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
+import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 
@@ -3023,6 +3024,24 @@ export class AppStore {
     Object.assign(user, data);
     this.notify();
     return { success: true };
+  }
+
+  /** Employé « suivi par saisie seulement » (M26.7) : sans compte, sans mot de passe, sans téléphone. Responsable seulement. */
+  public async addEntryOnlyEmployee(d: { name: string; team?: string; shift?: 'day' | 'night' }): Promise<{ success: boolean; user?: User; error?: string }> {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    if (this.demo) {
+      const e = entryOnlyRecord({ ...d, entry_only: true }, Date.now());
+      if (!e.ok) return { success: false, error: 'Nom complet manquant.' };
+      this.users.push(e.rec as User); this.notify();
+      return { success: true, user: e.rec as User };
+    }
+    const r = await this.api('create-user', { method: 'POST', body: JSON.stringify({ user: { ...d, entry_only: true } }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
+    const u = r.data.user as User;
+    this.users.push(u);
+    this.synced.users.set(u.id, JSON.stringify(u));
+    this.emit();
+    return { success: true, user: u };
   }
 
   public async addUser(

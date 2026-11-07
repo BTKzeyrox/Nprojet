@@ -154,6 +154,19 @@ function cleanCustomTypes(list: unknown): any[] {
   return out;
 }
 // ===== END CUSTOMWORK =====
+// ===== BEGIN ENTRYONLY (employé suivi par saisie seulement, module 26 M26.7 : copie de src/utils/entryOnly.ts, contrôlée par scripts/check-entry-only.ts) =====
+/** Employé « suivi par saisie seulement » : sans compte, sans mot de passe, sans téléphone. Il ne se connecte jamais, n'est jamais « en ligne » ; le responsable ou le Chef d'équipe saisit son travail. */
+const isEntryOnly = (u: any): boolean => !!u && u.entry_only === true;
+/** Le dossier créé par le responsable : toujours un opérateur actif, jamais en ligne, un pseudo interne qui ne sert à rien (aucun mot de passe n'existe). Refus : nom de moins de 2 lettres. */
+function entryOnlyRecord(user: any, nowMs: number): { ok: true; rec: any } | { ok: false; error: string } {
+  const name = String((user && user.name) ?? "").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (name.length < 2) return { ok: false, error: "name" };
+  const team = String((user && user.team) ?? "").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+  const shift = user && user.shift === "night" ? "night" : "day";
+  const id = "user-emp-" + nowMs;
+  return { ok: true, rec: { id, username: "saisie-" + nowMs, name, phone: "", shift, role: "employee", team, status: "active", is_online: false, avatar_url: "", performance_badge: "Standard", entry_only: true, total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0 } };
+}
+// ===== END ENTRYONLY =====
 // ===== BEGIN WORKENTRY (feuille du jour, module 26 M26.5a : copie de src/utils/workEntry.ts, contrôlée par scripts/check-work-entry.ts) =====
 const wePay = decPostPay;
 const WE_MAX_LINES = 100;
@@ -3526,6 +3539,7 @@ async function login(req: any, res: any) {
     const notice = await authNotice(uname, password);
     return res.status(401).json({ error: notice || 'Pseudo ou mot de passe incorrect.' });
   }
+  try { if (isEntryOnly(await getUserRow(cred.user_id))) return res.status(403).json({ error: 'Ce compte est suivi par saisie : il ne se connecte pas.' }); } catch { /* ligne illisible : le reste du contrôle décide */ }
   // M16.4 : double étape (facultative). Mot de passe bon + code absent = on le demande (pas compté comme un essai raté) ; code faux = compté comme un raté.
   let totpRow: TotpRow | null = null;
   try { totpRow = await totpGet(cred.user_id); }
@@ -3969,6 +3983,7 @@ async function sync(req: any, res: any, me: any) {
         toSave = { ...toSave };
         if (hv.hr) (toSave as any).hr = hv.hr; else delete (toSave as any).hr;
       }
+      if (col === 'users') { if (isEntryOnly(existing)) (toSave as any).entry_only = true; else delete (toSave as any).entry_only; } // M26.7 : le drapeau « suivi par saisie » ne se change que par la création
       if (admin && col === 'users') {
         // Paie de CET employé (module 26, M26.6) : mode connu et tarif 0 à 100 000 000 Ar, sinon refusé ; vide = on retombe sur le réglage de l'entreprise
         const pm = (rec as any).pay_mode, pr = (rec as any).pay_rate_ar;
@@ -4388,6 +4403,14 @@ async function workEntryRoute(req: any, res: any, me: any) {
 async function createUser(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   const { user, password } = req.body || {};
+  if (user && user.entry_only === true) {
+    // M26.7 : employé suivi par saisie seulement : AUCUN mot de passe, AUCUN compte de connexion
+    const e = entryOnlyRecord(user, Date.now());
+    if (!e.ok) return res.status(400).json({ error: 'Nom complet manquant.' });
+    await sb.from(T.users).upsert({ id: e.rec.id, data: e.rec, updated_at: new Date().toISOString() });
+    await auditLog(me, 'user_create', { type: 'users', id: e.rec.id, label: e.rec.name }, 'Suivi par saisie seulement (sans compte)');
+    return res.json({ user: e.rec });
+  }
   const uname = String(user?.username || '').trim().toLowerCase();
   if (!/^[a-z0-9_.-]{3,30}$/.test(uname)) return res.status(400).json({ error: 'Pseudo invalide (3 à 30 lettres/chiffres).' });
   if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
@@ -4398,7 +4421,7 @@ async function createUser(req: any, res: any, me: any) {
   if (!newRole) return res.status(400).json({ error: 'Rôle inconnu.' });
   const id = `user-emp-${Date.now()}`;
   const rec = {
-    ...user, id, username: uname, role: newRole, status: 'active', is_online: false,
+    ...user, id, username: uname, role: newRole, status: 'active', is_online: false, entry_only: undefined,
     team: cleanTeam(user?.team),
     total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0,
   };
@@ -4412,6 +4435,7 @@ async function setPassword(req: any, res: any, me: any) {
   const { userId, password, currentPassword } = req.body || {};
   if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
   const target = me.role === 'admin' && userId ? userId : me.id;
+  if (isEntryOnly(await getUserRow(target))) return res.status(400).json({ error: 'Cet employé est suivi par saisie : pas de mot de passe.' });
   if (me.role !== 'admin') {
     const { data: c } = await sb.from('df_credentials').select('password_hash').eq('user_id', me.id).maybeSingle();
     if (!c || !checkPw(String(currentPassword || ''), c.password_hash)) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });

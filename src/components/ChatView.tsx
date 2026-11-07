@@ -209,12 +209,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       if (m.sender_id === currentUser.id) withMsgs.add(rid);
       else if (rid === currentUser.id) withMsgs.add(m.sender_id);
     });
-    if (isAdmin) users.filter(u => u.role === 'employee').forEach(u => withMsgs.add(u.id));
+    if (isAdmin) users.filter(u => u.role === 'employee' && !u.entry_only).forEach(u => withMsgs.add(u.id)); // M26.7 : un employé « saisie » n'a pas de compte : pas de discussion
     else withMsgs.add(adminId);
     pickedUsers.forEach(id => withMsgs.add(id));
     withMsgs.forEach(id => {
       const u = users.find(x => x.id === id);
-      if (u && id !== currentUser.id) list.push({ id, kind: 'user', title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u });
+      if (u && !u.entry_only && id !== currentUser.id) list.push({ id, kind: 'user', title: u.name, subtitle: u.role === 'admin' ? 'Conversation privée' : `@${u.username}`, user: u });
     });
     // Vue admin : discussions entre deux opérateurs (l'admin voit tout)
     if (isAdmin) {

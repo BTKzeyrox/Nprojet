@@ -117,6 +117,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [importing, setImporting] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newEntryOnly, setNewEntryOnly] = useState(false); // M26.7 : suivi par saisie seulement (sans compte)
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('261 ');
   const [newShift, setNewShift] = useState<ShiftType>('day');
@@ -233,6 +234,13 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddUserError(null);
+    if (WORK_SETTINGS_LIVE && newEntryOnly) {
+      if (newName.trim().length < 2) { setAddUserError('Nom complet manquant.'); return; }
+      const made = await db.addEntryOnlyEmployee({ name: newName.trim(), team: cleanTeam(newTeam), shift: newShift });
+      if (!made.success) { setAddUserError(made.error || 'Création impossible.'); return; }
+      setShowAddModal(false); setNewName(''); setNewTeam(''); setNewEntryOnly(false);
+      return;
+    }
     if (!newUsername.trim()) {
       setAddUserError('Identifiant manquant.');
       return;
@@ -698,6 +706,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             )}
 
             <form onSubmit={handleCreateUser} className="space-y-4">
+              {WORK_SETTINGS_LIVE && (
+              <label data-entry-only-toggle className="flex items-start gap-3 min-h-[44px] text-slate-200 cursor-pointer rounded-lg border border-slate-700 p-3">
+                <input type="checkbox" checked={newEntryOnly} onChange={e => setNewEntryOnly(e.target.checked)} className="w-5 h-5 mt-0.5 accent-emerald-500" />
+                <span>Suivi par saisie seulement<span className="block text-[11px] text-slate-400 font-normal normal-case">Sans compte, sans mot de passe, sans téléphone : il ne se connecte jamais. Toi ou le chef d'équipe saisissez son travail dans la Feuille du jour.</span></span>
+              </label>
+              )}
+
+              {!newEntryOnly && (<>
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Identifiant Unique (Username)</label>
                 <input
@@ -724,6 +740,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>}
 
+              </>)}
+
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
@@ -736,6 +754,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
+              {!newEntryOnly && (<>
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Téléphone de Contact</label>
                 <input
@@ -760,7 +779,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 </select>
               </div>
 
-              {(newRole === 'employee' || newRole === 'team_lead') && (
+              </>)}
+
+              {(newRole === 'employee' || newRole === 'team_lead' || newEntryOnly) && (
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Équipe (facultatif)</label>
                 <input list="df-teams" value={newTeam} onChange={e => setNewTeam(e.target.value)} maxLength={40} placeholder="ex: Équipe Nord" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
@@ -769,7 +790,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
-              {newRole === 'employee' && showShift(cfg) && (
+              {(newRole === 'employee' || newEntryOnly) && showShift(cfg) && (
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Vacation Initial</label>
                 <select
