@@ -48,7 +48,7 @@ for (const v of ['dashboard', 'stats', 'advances', 'storage', 'employees', 'char
 // ---- Chef d'équipe ----
 eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS].filter(v => WORK_SETTINGS_LIVE || v !== 'worksheet')), 'Chef d\'équipe : mêmes pages qu\'avant (la Feuille du jour est cachée tant que le module n\'est pas ouvert)');
 eq(menuFor('team_lead').map(g => g.id), ['feed', 'missions', 'messages', 'settings'], 'Chef d\'équipe : Actualités, Missions, Messages, Réglages');
-eq(menuFor('team_lead').find(g => g.id === 'missions')!.tabs.map(x => x.id), ['validations'], 'Chef d\'équipe : seulement À valider');
+eq(menuFor('team_lead').find(g => g.id === 'missions')!.tabs.map(x => x.id), WORK_SETTINGS_LIVE ? ['validations', 'worksheet'] : ['validations'], 'Chef d\'équipe : À valider (et la Feuille du jour quand le module est ouvert)');
 for (const v of ['clients', 'invoices', 'treasury', 'advances', 'employees', 'history', 'grid', 'charts']) eq(locate('team_lead', v), null, `Chef d'équipe : « ${v} » refusé`);
 // ---- Opérateur : vue simple inchangée ----
 eq(sorted(reachableViews('employee')), sorted([...EMPLOYEE_VIEWS]), 'Opérateur : mêmes pages qu\'avant');

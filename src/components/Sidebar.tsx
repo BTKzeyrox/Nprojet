@@ -1,6 +1,7 @@
 // Menu de gauche : profil, entrées de navigation selon le rôle, pastilles de comptage et boutons de thème, déconnexion et signalement.
 // Utilisé par : App.tsx.
 // Pour modifier : les entrées sont dans navItems selon le rôle (admin, comptable, chef d'équipe, employé) et viewAllowedFor ; props currentUser, activeView, onNavigate, onLogout, compact. Libellés surtout en français.
+import { WORK_SETTINGS_LIVE } from '../utils/workTypes';
 import { Avatar } from './Avatar';
 import { SidebarProfile } from './ConnectionBanner';
 import { db } from '../db/store';
@@ -137,6 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ? { id: 'employees', label: t('nav_employees'), icon: Users }
       : { id: 'profile', label: t('nav_profile'), icon: UserCheck },
     { id: 'hr', label: isAdmin ? 'Ressources humaines' : 'Mon dossier et congés', icon: Briefcase },
+    ...(WORK_SETTINGS_LIVE && (isAdmin || currentUser.role === 'team_lead') ? [{ id: 'worksheet', label: lang === 'en' ? 'Daily sheet' : 'Feuille du jour', icon: ClipboardList }] : []),
     { id: 'chat', label: t('nav_chat'), icon: MessageSquare, badge: chatUnread > 0 ? String(chatUnread) : undefined, tone: 'alert' as const },
     { id: 'calendar', label: t('nav_calendar'), icon: Calendar },
     ...(currentUser.role === 'employee' && badgeAccess().enabled && badgeAccess().seesBadges ? [{ id: 'my-performance', label: lang === 'en' ? 'My performance' : 'Ma performance', icon: Award }] : []), // module 3 : son propre score et ses badges

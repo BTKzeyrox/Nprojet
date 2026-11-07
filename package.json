@@ -175,6 +175,7 @@
     "check:work-types": "tsx scripts/check-work-types.ts",
     "check:payroll-modes": "esbuild scripts/check-payroll-modes.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-payroll-modes.mjs && node node_modules/.cache/check-payroll-modes.mjs",
     "check:work-entry": "esbuild scripts/check-work-entry.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-entry.mjs && node node_modules/.cache/check-work-entry.mjs",
+    "check:work-sheet-page": "esbuild scripts/check-work-sheet-page.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-sheet-page.mjs && node node_modules/.cache/check-work-sheet-page.mjs",
     "check:graphs-page": "esbuild scripts/check-graphs-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-graphs-page.mjs && node node_modules/.cache/check-graphs-page.mjs",
     "check:day-detail": "tsx scripts/check-day-detail.ts",
     "check:work-days": "tsx scripts/check-work-days.ts",

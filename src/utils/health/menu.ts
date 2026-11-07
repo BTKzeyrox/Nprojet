@@ -22,6 +22,7 @@ export function menuBadges(alerts: HealthAlert[]): Record<string, { count: numbe
 }
 
 /** Vues du menu admin qui existent vraiment (une alerte ne doit jamais mener à une page qui n'existe pas). */
-export const KNOWN_VIEWS = ['dashboard', 'validations', 'history', 'clients', 'invoices', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'active-post', 'employees', 'chat', 'calendar', 'advances', 'errors', 'settings', 'health', 'hr', 'direction', 'accounting', 'charts'] as const;
-export const isKnownView = (v: string): boolean => (KNOWN_VIEWS as readonly string[]).includes(v);
+import { WORK_SETTINGS_LIVE } from '../workTypes';
+export const KNOWN_VIEWS: readonly string[] = ['dashboard', 'validations', 'history', 'clients', 'invoices', 'treasury', 'purchasing', 'storage', 'performance', 'stats', 'active-post', 'employees', 'chat', 'calendar', 'advances', 'errors', 'settings', 'health', 'hr', 'direction', 'accounting', 'charts', ...(WORK_SETTINGS_LIVE ? ['worksheet'] : [])]
+export const isKnownView = (v: string): boolean => KNOWN_VIEWS.includes(v);
 export const allPagesCovered = (): boolean => HEALTH_PAGES.every(p => p in MENU_ITEM_OF_PAGE);
