@@ -3174,6 +3174,7 @@ export class AppStore {
     const done = (r: { ok: boolean; error?: string }) => ({ ...r, settled: Promise.resolve(r) });
     const me = this.currentUser;
     if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return done({ ok: false, error: 'Réservé au chef d\'équipe.' });
+    if (weSelfEntered(me, this.posts.find(p => p.id === id))) return done({ ok: false, error: 'Tu ne peux pas valider ta propre saisie.' }); // M26.5c
     if (this.demo) { const r = approve ? this.validatePost(id, note) : this.rejectPost(id, reason || ''); return done(r.success ? { ok: true } : { ok: false, error: r.error }); }
     if (!approve && !(reason || '').trim()) return done({ ok: false, error: 'Un motif de rejet est obligatoire' });
     if (this.pendingDecisions.has(id)) return done({ ok: false, error: 'Une décision est déjà en cours pour cette mission.' });

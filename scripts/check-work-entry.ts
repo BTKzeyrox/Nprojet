@@ -126,6 +126,18 @@ const guard = readFileSync('src/db/store.ts', 'utf8');
 ok(/weSelfEntered\(this\.currentUser, post\)/.test(guard) && /async addWorkEntries/.test(guard) && /'work-entry'/.test(guard), 'le magasin a la saisie, la route serveur et le refus de se valider soi-même');
 ok(/weSelfEntered\(me, post\)\) return res\.status\(403\)/.test(src), 'le serveur refuse qu\'on valide sa propre saisie');
 ok(/action === "work-entry" && req\.method === "POST"/.test(src), 'la route work-entry est branchée aux deux endroits du serveur');
+
+// M26.5c : affichage dans les listes
+const txt = await import('../src/utils/workLineText');
+const tl = await import('../src/utils/teamLead');
+ok(txt.workLineDetail({ quantity: 200, rejected: 10 }) === '200 faites · 10 refusées (5 %)', 'texte : « 200 faites · 10 refusées (5 %) »');
+ok(txt.workLineDetail({ presence: 'present', hours: 8 }) === 'Présent · 8 h' && txt.workLineDetail({ presence: 'absent' }).length > 0, 'texte : présence et heures');
+ok(txt.workLineDetail({ quantity: 1, rejected: 0 }) === '1 faite' && txt.workLineDetail(null) === '' && txt.workLineDetail({ quantity: 'x' }) !== undefined, 'texte : 1 faite, rien, valeur absurde sans erreur');
+ok(txt.workLineBy({ entered_by_name: 'Chef' }) === 'Saisi par Chef' && txt.workLineBy({}) === '', 'texte : « Saisi par … »');
+ok(tl.teamPendingPosts(lead as any, users as any, l.saved).length === 0, 'le Chef d\'équipe ne voit pas sa propre saisie à valider');
+ok(tl.teamPendingPosts(lead2 as any, users as any, l.saved).length === 1, 'un AUTRE Chef d\'équipe de la même équipe la voit');
+const ds = readFileSync('src/db/store.ts', 'utf8');
+ok(/weSelfEntered\(me, this\.posts\.find\(p => p\.id === id\)\)/.test(ds), 'décider sur sa propre saisie est refusé avant tout envoi');
 void db;
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

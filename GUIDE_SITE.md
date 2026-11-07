@@ -745,6 +745,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `viewportWidth.ts` | Largeur de l'écran en pixels du site, fiable APRÈS une rotation (téléphone ou tablette). |
 | `workDays.ts` | Jours de travail réglables (Réglages) : 0 = dimanche … 6 = samedi. Par défaut lundi à samedi (le dimanche est un jour de repos). Pur : sans écran ni serveur. |
 | `workEntry.ts` | Feuille du jour (module 26, M26.5a) : règles pures pour saisir présence, heures, quantité et refus d'employés qui n'ont pas de réseau. Pas d'écran ici. |
+| `workLineText.ts` | Texte d'une ligne de travail (feuille du jour, M26.5) pour les listes de validation et l'historique : présence, heures, quantité et refusées, sans score ni preuve. |
 | `workMode.ts` | « Ma façon de travailler » (module 19, M19.5) : sur le SITE (le tableau de la mission est préparé tout seul) ou sur un EXCEL EXTERNE |
 | `workTypes.ts` | Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, SANS écran, SANS serveur, SANS réseau, SANS horloge. |
 | `xlsxA4.ts` | Excel au format A4 (règle de BTK) : Times New Roman 12, page A4 prête à imprimer, texte jamais rétréci. |

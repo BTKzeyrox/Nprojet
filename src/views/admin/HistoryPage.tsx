@@ -1,6 +1,8 @@
 // Page Historique : liste filtrable des demandes d'avance, sessions, profils, inscriptions et mots de passe oubliés, avec leur statut.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : la fonction buildHistory rassemble les lignes depuis db (avances, missions, demandes de profil, inscriptions, réinitialisations). Piège : les inscriptions et mots de passe déjà traités ne laissent pas de trace, seuls ceux en attente apparaissent. Textes en français seulement.
+import { isWorkLine } from '../../utils/postPay';
+import { workLineDetail, workLineBy } from '../../utils/workLineText';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, DollarSign, ClipboardList, IdCard, UserPlus, KeyRound } from 'lucide-react';
 import { db } from '../../db/store';
@@ -27,8 +29,9 @@ export const buildHistory = (): Row[] => {
   db.getPosts().forEach(p => {
     const st: St | null = p.status === 'pending_start' || p.status === 'pending_end' ? 'pending' : p.status === 'completed' ? 'accepted' : p.status === 'rejected' ? 'refused' : null;
     if (!st) return;
-    const label = p.status === 'pending_start' ? 'Début' : p.status === 'pending_end' ? 'Fin' : p.status === 'completed' ? 'Session terminée' : 'Session refusée';
-    rows.push({ id: `post-${p.id}`, kind: 'session', who: p.employee_name, whoId: p.employee_id, title: `${label} · ${p.client_name}`, detail: `Mission ${p.post_number ?? ''}${p.admin_notes ? ` · ${p.admin_notes}` : ''}`.trim(), motif: st === 'refused' ? p.rejection_reason || '' : '', status: st, date: p.updated_at || p.date, blob: `${p.client_name} ${p.rejection_reason || ''} ${p.admin_notes || ''}` });
+    const wl = isWorkLine(p); // ligne de la feuille du jour (M26.5c)
+    const label = wl ? (p.status === 'completed' ? 'Saisie validée' : p.status === 'rejected' ? 'Saisie refusée' : 'Saisie à valider') : p.status === 'pending_start' ? 'Début' : p.status === 'pending_end' ? 'Fin' : p.status === 'completed' ? 'Session terminée' : 'Session refusée';
+    rows.push({ id: `post-${p.id}`, kind: 'session', who: p.employee_name, whoId: p.employee_id, title: `${label} · ${p.client_name}`, detail: (wl ? [workLineDetail(p), workLineBy(p)].filter(Boolean).join(' · ') : `Mission ${p.post_number ?? ''}${p.admin_notes ? ` · ${p.admin_notes}` : ''}`.trim()), motif: st === 'refused' ? p.rejection_reason || '' : '', status: st, date: p.updated_at || p.date, blob: `${p.client_name} ${p.rejection_reason || ''} ${p.admin_notes || ''}` });
   });
   db.getProfileRequests().forEach(r => {
     const u = db.getUsers().find(x => x.id === r.user_id);

@@ -1,6 +1,8 @@
 // Écran principal du responsable : tableau de bord, validations de missions, alertes de sécurité et liste des sessions, selon l'onglet demandé.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'écran affiché dépend de activeSubTab (dashboard, grid, sessions, security, validations). Données lues dans db (users, posts, securityLogs, advances). Fichier très long : chercher la zone par ses commentaires SECTION ou par isValidations, isSecurity, isSessions.
+import { isWorkLine } from '../../utils/postPay';
+import { workLineDetail, workLineBy } from '../../utils/workLineText';
 import { HealthSummary } from '../../components/HealthSummary';
 import { showToast } from '../../components/ToastHost';
 import React, { useState, useEffect } from 'react';
@@ -1519,6 +1521,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 const isStart = post.status === 'pending_start';
                 const finalScore = post.final_score ?? post.current_score;
                 const scoreDiff = isStart ? 0 : Math.max(0, finalScore - post.initial_score);
+                const wl = isWorkLine(post); // ligne de la feuille du jour : ni score ni preuve
 
                 return (
                   <div
@@ -1537,14 +1540,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 : 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                             }`}
                           >
-                            {isStart ? 'Demande de départ' : 'Travail terminé à vérifier'}
+                            {wl ? 'Saisie à valider' : isStart ? 'Demande de départ' : 'Travail terminé à vérifier'}
                           </span>
                           <span className="text-xs font-mono text-slate-400">
-                            {showShift(db.getSettings()) ? `Vacation ${post.shift_type.toUpperCase()} · ` : ''}Reçu à {post.start_time}
+                            {wl ? post.date : <>{showShift(db.getSettings()) ? `Vacation ${post.shift_type.toUpperCase()} · ` : ''}Reçu à {post.start_time}</>}
                           </span>
                         </div>
                         <h4 className="text-base font-bold text-white mt-1">
-                          Mission : {post.client_name} ({post.account_tag}) <PendingMark col="posts" id={post.id} className="align-middle" />
+                          {wl ? '' : 'Mission : '}{post.client_name}{wl ? '' : ` (${post.account_tag})`} <PendingMark col="posts" id={post.id} className="align-middle" />
                         </h4>
                         <p className="text-xs text-slate-300 font-mono">
                           Opérateur : <strong className="text-emerald-400">{post.employee_name}</strong>
@@ -1552,7 +1555,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       {/* Quantité faite */}
-                      {!isStart && (
+                      {!isStart && !wl && (
                         <div className="bg-blue-950/50 border border-blue-500/40 p-3 rounded-lg text-right font-mono">
                           <div className="text-[10px] uppercase text-blue-300">Quantité faite</div>
                           <div className="text-lg font-bold text-blue-200">
@@ -1562,10 +1565,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       )}
                     </div>
 
-                    {!isStart && <AdminChecklist type={db.getContracts().find(c => c.client_name === post.client_name)?.post_type} />}
+                    {wl && (
+                      <div data-work-line className="rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-100">
+                        <div className="font-semibold">{workLineDetail(post) || 'Ligne vide'}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{workLineBy(post)}</div>
+                      </div>
+                    )}
+
+                    {!isStart && !wl && <AdminChecklist type={db.getContracts().find(c => c.client_name === post.client_name)?.post_type} />}
 
                     {/* Scores Comparison */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                    <div className={wl ? 'hidden' : 'grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono'}>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
                         <span className="text-slate-500 text-[10px] block uppercase">Quantité de départ</span>
                         <span className="text-white font-bold">{formatScoreM(post.initial_score)} unités</span>
@@ -1587,7 +1597,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     {/* Clickable Thumbnail Previews for Lightbox */}
-                    <div className="pt-2">
+                    <div className={wl ? 'hidden' : 'pt-2'}>
                       <span className="text-xs uppercase font-mono font-semibold text-slate-400 block mb-2">
                         Justificatifs Captures d'Écran (Cliquez pour agrandir dans la Lightbox)
                       </span>
@@ -1671,7 +1681,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     {/* Action Buttons: [ Validate ], [ Reject ], [ Force Release Post ] */}
                     <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
-                      <div>
+                      <div className={wl ? 'hidden' : undefined}>
                         {/* Emergency Force Release button to unstick bugged shifts */}
                         <button
                           onClick={() => handleOpenForceRelease(post.id)}
@@ -1699,7 +1709,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="w-full sm:w-auto px-5 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-tactical font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/60"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Valider la mission</span>
+                          <span>{wl ? 'Valider la saisie' : 'Valider la mission'}</span>
                         </button>
                       </div>
                     </div>

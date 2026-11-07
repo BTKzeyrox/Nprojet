@@ -6,6 +6,8 @@ import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { db } from '../db/store';
 import type { PostSession, User } from '../types';
 import { teamPendingPosts } from '../utils/teamLead';
+import { isWorkLine } from '../utils/postPay';
+import { workLineDetail, workLineBy } from '../utils/workLineText';
 
 type Lightbox = (p: { imageUrl: string; gallery?: string[]; title: string; subtitle?: string; score?: number; clientTag?: string; operatorName?: string; timestamp?: string }) => void;
 
@@ -50,6 +52,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
         {list.map(p => {
           const imgs = proofs(p);
           const end = p.status === 'pending_end';
+          const wl = isWorkLine(p); // ligne de la feuille du jour : ni score ni preuve
           return (
             <li key={p.id} className="bg-[#0f1722] border border-slate-700 rounded-2xl p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
@@ -57,9 +60,10 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
                   <div className="text-sm text-white font-semibold truncate">{p.employee_name}</div>
                   <div className="text-[12px] text-slate-300 truncate">{p.client_name}{p.post_number ? ` · mission ${p.post_number}` : ''}</div>
                 </div>
-                <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${end ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{end ? 'Fin' : 'Départ'}</span>
+                <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${end ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{wl ? 'Saisie' : end ? 'Fin' : 'Départ'}</span>
               </div>
-              <div className="text-[11px] text-slate-400">{p.date} · {(end ? p.end_time : p.start_time) || ''}{end ? ` · score ${p.initial_score} → ${p.final_score ?? p.current_score}` : ` · score de départ ${p.initial_score}`}</div>
+              {wl ? <div data-work-line className="text-sm text-emerald-200">{workLineDetail(p) || 'Ligne vide'}<div className="text-[11px] text-slate-400">{p.date}{workLineBy(p) ? ` · ${workLineBy(p)}` : ''}</div></div> : (
+              <div className="text-[11px] text-slate-400">{p.date} · {(end ? p.end_time : p.start_time) || ''}{end ? ` · score ${p.initial_score} → ${p.final_score ?? p.current_score}` : ` · score de départ ${p.initial_score}`}</div>)}
               {p.start_notes && <div className="text-[12px] text-slate-300 break-words">{p.start_notes}</div>}
               {imgs.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
