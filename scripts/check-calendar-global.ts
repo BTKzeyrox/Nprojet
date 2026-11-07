@@ -1,5 +1,6 @@
 // Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau.
 // Principe : chaque total global = la somme exacte des calendriers individuels (même règle `dayStatus`). Lancer : npm run check:calendar-global
+import { readFileSync } from 'node:fs';
 import { dayStatus } from '../src/utils/dayStatus';
 import { empMonth, globalMonth, globalSummary, dayView, hasLeaveInMonth, firstActivityOf } from '../src/utils/calendarGlobal';
 import { buildSimulation } from '../src/sim/simulation';
@@ -120,6 +121,14 @@ const sdays = globalMonth(2026, 9, simEmps, sctx, sfirst);
 const ndays = globalMonth(2026, 10, simEmps, sctx, sfirst);
 ok(sdays.some(d => d.onLeave > 0 && d.leaveNames.length > 0) && ndays.some(d => d.pendingLeave > 0 && d.pendingNames.length > 0) && ndays.some(d => d.onLeave > 0), 'simulation : congés acceptés en octobre, congé à venir et demande en attente en novembre, tous visibles dans le calendrier global');
 ok(sdays.every(d => ![d.pay, d.missions, d.present].some(x => !Number.isFinite(x))), 'simulation : aucun NaN');
+
+
+// Défilement du calendrier sur grand écran (BTK, 2026-11-08) : le panneau de gauche défile SEUL, le calendrier défile avec la page
+{
+  const cal = readFileSync('src/views/CalendarView.tsx', 'utf8');
+  ok(/lg:sticky lg:top-\[5rem\] lg:max-h-\[calc\(100vh-6rem\)\] lg:overflow-y-auto lg:overscroll-y-contain`\} data-calendar-aside/.test(cal), 'calendrier grand écran : panneau de gauche collé sous l\'en-tête, avec son propre défilement qui ne passe pas à la page');
+  ok(/lg:max-h-none overflow-y-auto lg:overflow-visible/.test(cal), 'calendrier grand écran : plus de défilement imbriqué dans la liste des employés');
+}
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) process.exit(1);

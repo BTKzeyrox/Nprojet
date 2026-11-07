@@ -570,7 +570,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       <div className={`grid gap-3 ${isAdmin ? 'lg:grid-cols-[18rem_1fr]' : ''}`}>
         {/* ===== Opérateurs + filtres (responsable) ===== */}
         {isAdmin && (
-          <aside className={`${card} p-4 space-y-3 lg:self-start lg:sticky lg:top-2`}>
+          <aside className={`${card} p-4 space-y-3 lg:self-start lg:sticky lg:top-[5rem] lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:overscroll-y-contain`} data-calendar-aside>
             <div className={`flex items-center gap-2 font-bold text-sm ${txt}`}>
               <Users className="w-4 h-4 text-blue-500" /> Opérateurs
               <span className={`ml-auto text-xs font-semibold ${sub}`}>{list.length}/{operators.length}</span>
@@ -624,7 +624,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               )}
             </div>
 
-            <div className="max-h-64 lg:max-h-[50vh] overflow-y-auto space-y-1 -mx-1 px-1">
+            <div className="max-h-64 lg:max-h-none overflow-y-auto lg:overflow-visible space-y-1 -mx-1 px-1">
               <button type="button" onClick={() => setSelectedId('all')} data-testid="select-all-employees" className={`w-full flex items-center gap-2.5 p-2 rounded-2xl text-left transition-colors cursor-pointer ${globalMode ? (L ? 'bg-blue-50 ring-1 ring-blue-300' : 'bg-blue-500/15 ring-1 ring-blue-500/40') : (L ? 'hover:bg-slate-50' : 'hover:bg-white/5')}`}>
                 <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${L ? 'bg-blue-100 text-blue-600' : 'bg-blue-500/20 text-blue-400'}`}><Users className="w-4 h-4" /></span>
                 <div className="min-w-0 flex-1"><div className={`text-sm font-semibold leading-tight ${txt}`}>Tous les employés</div><div className={`text-[11px] ${sub}`}>Calendrier global · {list.length}</div></div>
