@@ -4,6 +4,7 @@
 import { viewAllowedFor } from './roles';
 import { parseHidden } from './moduleSwitch';
 import { KNOWN_VIEWS } from './health/menu';
+import { WORK_SETTINGS_LIVE } from './workTypes';
 
 export interface MenuTab { id: string; view: string; statsTab?: 'finance'; hide?: string; hideIfAll?: string[]; fr: string; en: string }
 export interface MenuGroup { id: string; fr: string; en: string; tabs: MenuTab[] }
@@ -15,7 +16,7 @@ export const ADMIN_GROUPS: MenuGroup[] = [
   { id: 'home', fr: 'Tableau de bord', en: 'Dashboard', tabs: [tab('dashboard', 'Tableau de bord', 'Dashboard', { hide: 'dashboard' }), tab('health', 'Santé du site', 'Site health'), tab('direction', 'Direction', 'Direction', { hide: 'direction' })] },
   { id: 'feed', fr: 'Actualités', en: 'News', tabs: [tab('feed', 'Actualités', 'News')] },
   { id: 'missions', fr: 'Missions', en: 'Missions', tabs: [tab('validations', 'À valider', 'To approve', { hide: 'validations' }), tab('grid', 'Tableau des missions', 'Mission board', { hide: 'grid' }), tab('history', 'Historique', 'History', { hide: 'history' }), tab('stats', 'Statistiques', 'Statistics', { hide: 'stats', hideIfAll: ['validations', 'grid', 'history'] })] },
-  { id: 'team', fr: 'Équipe', en: 'Team', tabs: [tab('employees', 'Opérateurs', 'Operators'), tab('active-post', 'Sessions', 'Sessions', { hide: 'active-post' }), tab('performance', 'Performance', 'Performance', { hide: 'performance' }), tab('hr', 'Ressources humaines', 'Human resources', { hide: 'hr' }), tab('advances', 'Paie', 'Payroll', { hide: 'advances' })] },
+  { id: 'team', fr: 'Équipe', en: 'Team', tabs: [tab('employees', 'Opérateurs', 'Operators'), tab('active-post', 'Sessions', 'Sessions', { hide: 'active-post' }), tab('worksheet', 'Feuille du jour', 'Daily sheet'), tab('performance', 'Performance', 'Performance', { hide: 'performance' }), tab('hr', 'Ressources humaines', 'Human resources', { hide: 'hr' }), tab('advances', 'Paie', 'Payroll', { hide: 'advances' })] },
   { id: 'clients', fr: 'Clients', en: 'Clients', tabs: [tab('clients', 'Clients', 'Clients', { hide: 'clients' }), tab('invoices', 'Facturation', 'Invoicing', { hide: 'invoices' })] },
   { id: 'money', fr: 'Argent', en: 'Money', tabs: [{ id: 'finance', view: 'stats', statsTab: 'finance', hide: 'stats', fr: 'Finances', en: 'Finances' }, tab('treasury', 'Trésorerie', 'Treasury'), tab('accounting', 'Comptabilité', 'Accounting')] },
   { id: 'stock', fr: 'Stock', en: 'Stock', tabs: [tab('storage', 'Stockage', 'Storage', { hide: 'storage' }), tab('purchasing', 'Achats', 'Purchasing', { hide: 'purchasing' })] },
@@ -48,7 +49,7 @@ export function menuFor(role: unknown, hiddenCsv: unknown = ''): MenuGroup[] {
   }
   const hidden = parseHidden(hiddenCsv); // comme aujourd'hui : une page cachée par le responsable l'est pour tous les rôles
   return ADMIN_GROUPS
-    .map(g => clone(g, g.tabs.filter(t => viewAllowedFor(role, t.view) && !(t.hide && hidden.includes(t.hide)) && !(t.hideIfAll && t.hideIfAll.every(h => hidden.includes(h))))))
+    .map(g => clone(g, g.tabs.filter(t => (WORK_SETTINGS_LIVE || t.view !== 'worksheet') && viewAllowedFor(role, t.view) && !(t.hide && hidden.includes(t.hide)) && !(t.hideIfAll && t.hideIfAll.every(h => hidden.includes(h))))))
     .filter(g => g.tabs.length > 0);
 }
 

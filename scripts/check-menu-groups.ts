@@ -1,4 +1,5 @@
 // Contrôle du menu fusionné (M22.5) : toutes les anciennes pages ont une place, aucun rôle ne gagne ni ne perd de page. Lancer : npm run check:menu-groups
+import { WORK_SETTINGS_LIVE } from '../src/utils/workTypes';
 import { menuFor, locate, reachableViews, openView, ADMIN_GROUPS, EMPLOYEE_VIEWS, OLD_ADMIN_VIEWS, MAX_TABS, VIEW_ALIASES, NON_MENU_VIEWS } from '../src/utils/menuGroups';
 import { ACCOUNTANT_VIEWS, TEAM_LEAD_VIEWS, ROLES } from '../src/utils/roles';
 import { HIDEABLE_MODULES } from '../src/utils/moduleSwitch';
@@ -45,7 +46,7 @@ eq(menuFor('accountant').find(g => g.id === 'settings')!.tabs.map(x => x.id), ['
 eq(menuFor('accountant').find(g => g.id === 'settings')!.fr, 'Réglages', 'Comptable : l\'entrée s\'appelle Réglages');
 for (const v of ['dashboard', 'stats', 'advances', 'storage', 'employees', 'charts', 'health', 'errors', 'calendar', 'hr', 'direction', 'security']) eq(locate('accountant', v), null, `Comptable : « ${v} » refusé`);
 // ---- Chef d'équipe ----
-eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS]), 'Chef d\'équipe : mêmes pages qu\'avant');
+eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS].filter(v => WORK_SETTINGS_LIVE || v !== 'worksheet')), 'Chef d\'équipe : mêmes pages qu\'avant (la Feuille du jour est cachée tant que le module n\'est pas ouvert)');
 eq(menuFor('team_lead').map(g => g.id), ['feed', 'missions', 'messages', 'settings'], 'Chef d\'équipe : Actualités, Missions, Messages, Réglages');
 eq(menuFor('team_lead').find(g => g.id === 'missions')!.tabs.map(x => x.id), ['validations'], 'Chef d\'équipe : seulement À valider');
 for (const v of ['clients', 'invoices', 'treasury', 'advances', 'employees', 'history', 'grid', 'charts']) eq(locate('team_lead', v), null, `Chef d'équipe : « ${v} » refusé`);

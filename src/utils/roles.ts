@@ -35,7 +35,7 @@ export const canDecidePost = (me: any, owner: any): boolean => !!me && !!owner &
 /** Pages du Comptable (identifiants de vue du site). Jamais : paie, comptes, présence, réglages du site, statistiques (elles montrent la paie : sa « Trésorerie » montre l'argent sans salaires). */
 export const ACCOUNTANT_VIEWS = ['feed', 'invoices', 'accounting', 'treasury', 'clients', 'purchasing', 'chat', 'settings'] as const;
 /** Pages du Chef d'équipe : Actualités, Validations de son équipe, Messages, réglages personnels. Jamais l'argent, la paie ni les comptes. */
-export const TEAM_LEAD_VIEWS = ['feed', 'validations', 'chat', 'settings'] as const;
+export const TEAM_LEAD_VIEWS = ['feed', 'validations', 'worksheet', 'chat', 'settings'] as const; // « worksheet » = Feuille du jour (M26.5b), caché tant que WORK_SETTINGS_LIVE est faux
 /** Le Comptable et le Chef d'équipe ne peuvent ouvrir que leurs pages ; les autres rôles ne sont pas limités ici (le serveur reste juge). */
 export const viewAllowedFor = (role: unknown, view: string): boolean => role === 'accountant' ? (ACCOUNTANT_VIEWS as readonly string[]).includes(view) : role === 'team_lead' ? (TEAM_LEAD_VIEWS as readonly string[]).includes(view) : true;
 /** « Voir comme » du responsable : l'écran d'un type de compte (affichage seulement). */

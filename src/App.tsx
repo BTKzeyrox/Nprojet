@@ -5,6 +5,7 @@ import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
 import { bindPushDevice, unbindPushDevice } from './utils/push';
 import { installPrefsSync, syncPrefsFromAccount } from './utils/prefsSync';
+import { WORK_SETTINGS_LIVE } from './utils/workTypes';
 import { TeamValidations } from './views/TeamValidations';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -55,6 +56,7 @@ let enLoaded = false; // le module anglais a déjà été chargé (pour pouvoir 
 
 // Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
 captureDeepLink(); // lien exact d'une notification externe : lu dès l'ouverture, appliqué une fois connecté
+const WorksheetView = lazy(() => import('./views/WorksheetView').then(m => ({ default: m.WorksheetView })));
 const FeedView = lazy(() => import('./views/FeedView').then(m => ({ default: m.FeedView })));
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
@@ -499,6 +501,7 @@ export default function App() {
             /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */
             activeView === 'chat' ? <ChatView currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               : activeView === 'settings' ? <SettingsView personalOnly />
+              : activeView === 'worksheet' && WORK_SETTINGS_LIVE ? <WorksheetView currentUser={viewUser} />
               : <TeamValidations currentUser={viewUser} onOpenProofLightbox={handleOpenProofLightbox} />
           ) : viewUser.role === 'accountant' ? (
             /* ================= COMPTABLE : factures, clients, achats, messages (toute autre page -> Facturation) ================= */
@@ -558,6 +561,8 @@ export default function App() {
                   onGo={view => setActiveView(view)}
                   onOpenCV={handleOpenEmployeeCV}
                 />
+              ) : activeView === 'worksheet' && WORK_SETTINGS_LIVE ? (
+                <WorksheetView currentUser={viewUser} />
               ) : activeView === 'calendar' ? (
                 <CalendarView
                   currentUser={viewUser}

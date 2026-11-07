@@ -847,6 +847,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `FeedView.tsx` | Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications. |
 | `LoginView.tsx` | Écran de connexion : identifiant et mot de passe, code de sécurité en double étape, demande de compte et mot de passe oublié. |
 | `TeamValidations.tsx` | Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché. |
+| `WorksheetView.tsx` | Feuille du jour (module 26, M26.5b) : le responsable ou le Chef d'équipe saisit présence, heures, quantité et refus des opérateurs sans réseau. |
 
 **Écran de l'opérateur (`src/views/employee/`)**
 
