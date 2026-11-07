@@ -41,5 +41,7 @@ ok(/focus\(\{ preventScroll: true \}\)/.test(bar) && !/autoFocus/.test(bar.slice
 ok(/pinnedFeedScroll\(currentUser\.id\) \?\?/.test(feed) && /data-feed-root/.test(feed), 'fil : mémorise la position gardée si un résultat ouvre une autre page');
 ok(/setTimeout\(\(\) => \{ if \(!touched/.test(feed), 'fil : position réappliquée si un autre écran (Messages) remet la page en haut juste après');
 
+ok(/ae\.blur\(\);\s*closeLater\.current = setTimeout\(\(\) => \{ closeLater\.current = null; setOpen\(false\); setMSearch\(false\); \}, 220\)/.test(bar), 'recherche : toucher à l\'extérieur = le clavier se ferme d\'abord, la recherche se ferme 0,2 s après (comme la croix)');
+ok(/if \(closeLater\.current\) \{/.test(bar), 'recherche : les 3 événements du même toucher ne court-circuitent pas le délai');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

@@ -65,6 +65,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   // (sauf si un résultat ouvre une autre page : le fil mémorise alors la position gardée, voir FeedView).
   const viewRef = useRef(activeView); viewRef.current = activeView;
   const searchY = useRef<number | null>(null);
+  const closeLater = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (closeLater.current) clearTimeout(closeLater.current); }, []);
   useEffect(() => {
     if (mSearch) {
       if (viewRef.current === 'feed') { searchY.current = readFeedPos(); pinFeedScroll(currentUser.id, searchY.current); }
@@ -74,8 +76,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     if (y === null) return;
     if (viewRef.current === 'feed') {
       writeFeedPos(y);
-      const t1 = setTimeout(() => writeFeedPos(y), 60); const t2 = setTimeout(() => { writeFeedPos(y); unpinFeedScroll(); }, 300); // le clavier se referme après un instant
-      return () => { clearTimeout(t1); clearTimeout(t2); unpinFeedScroll(); };
+      const t1 = setTimeout(() => writeFeedPos(y), 60); const t2 = setTimeout(() => { writeFeedPos(y); }, 300); const t3 = setTimeout(() => { writeFeedPos(y); unpinFeedScroll(); }, 700); // le clavier se referme après un instant
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); unpinFeedScroll(); };
     }
     const t = setTimeout(unpinFeedScroll, 0);
     return () => clearTimeout(t);
@@ -95,7 +97,15 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     const away = (e: Event) => {
       const t = e.target as Node;
       const inSearch = (shown(box) && box.current!.contains(t)) || (shown(mbox) && mbox.current!.contains(t));
-      if (!inSearch) { setOpen(false); setMSearch(false); }
+      if (!inSearch) {
+        // Téléphone : on retire d'abord le focus (le clavier se ferme, comme avec la croix), puis on ferme la recherche. Supprimer un champ qui a encore le focus peut faire remonter la page.
+        const ae = document.activeElement as HTMLElement | null;
+        if (closeLater.current) { /* fermeture déjà en route (pointerdown + mousedown + touchstart se suivent) */ }
+        else if (shown(mbox) && ae && ae.tagName === 'INPUT' && mbox.current!.contains(ae)) {
+          ae.blur();
+          closeLater.current = setTimeout(() => { closeLater.current = null; setOpen(false); setMSearch(false); }, 220);
+        } else { setOpen(false); setMSearch(false); }
+      }
       if (bellBox.current && !bellBox.current.contains(t)) setBellOpen(false);
     };
     document.addEventListener('pointerdown', away);
