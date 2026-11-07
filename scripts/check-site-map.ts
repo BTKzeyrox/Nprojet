@@ -1,4 +1,5 @@
 // Contrôle de la carte du site (M11.8) : chaque page du menu a sa fiche, fiches complètes en FR et EN, réglages liés qui existent. Pur. Lancer : npm run check:site-map
+import { WORK_SETTINGS_LIVE } from '../src/utils/workTypes';
 import fs from 'node:fs';
 import { SITE_MAP, findPage, pagesFor } from '../src/utils/siteKnowledge';
 import { COMPANY_SPEC } from '../src/utils/companyRules';
@@ -10,7 +11,7 @@ const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECH
 // Les pages du menu, lues dans le vrai fichier du menu
 const sidebar = fs.readFileSync('src/components/Sidebar.tsx', 'utf8');
 const navBlock = sidebar.slice(sidebar.indexOf('const navItems'), sidebar.indexOf('];', sidebar.indexOf('const navItems')));
-const menuIds = [...new Set([...navBlock.matchAll(/\{ id: '([a-z-]+)'/g)].map(m => m[1]))];
+const menuIds = [...new Set([...navBlock.matchAll(/\{ id: '([a-z-]+)'/g)].map(m => m[1]))].filter(id => id !== 'worksheet' || WORK_SETTINGS_LIVE); // la Feuille du jour est cachée tant que le module est fermé
 ok(menuIds.length >= 15, `menu : ${menuIds.length} pages trouvées dans le menu (${menuIds.join(', ')})`);
 for (const id of menuIds) ok(!!findPage(id), `fiche : la page « ${id} » du menu a sa fiche`);
 const mapIds = SITE_MAP.map(p => p.id);
