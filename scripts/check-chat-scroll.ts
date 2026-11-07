@@ -17,4 +17,10 @@ ok(/classList\.add\('df-chat-open'\)/.test(app) && /classList\.remove\('df-chat-
 ok(/html\.df-chat-open, html\.df-chat-open body \{[^}]*overflow: hidden[^}]*overscroll-behavior: none/.test(css), 'CSS : page figée et sans rebond quand la messagerie est ouverte, sur tous les écrans');
 ok(/flex-1 min-w-0 h-10 [^"]*text-base/.test(chat), 'champ de message : 40 px de haut, texte 16 px (en dessous l\'iPhone zoome)');
 ok(!/flex-1 min-w-0 h-12/.test(chat) && /w-10 h-10 rounded-full[^`]*bg-blue-600/.test(chat), 'boutons Joindre et Envoyer : 40 px');
+// Citation d'une réponse : elle remplit le haut et les côtés de la bulle (BTK, 2026-11-07)
+{
+  const chat = r('src/components/ChatView.tsx');
+  ok(/data-reply-quote className=\{`[^`]*-mx-3 w-\[calc\(100%\+1\.5rem\)\]/.test(chat), 'citation : étirée sur toute la largeur de la bulle (côtés gauche et droit)');
+  ok(/'rounded-t-lg' : '-mt-1\.5 rounded-t-2xl'/.test(chat), 'citation : collée en haut de la bulle (sous le nom de l\'expéditeur quand il est affiché)');
+}
 process.exit(bad ? 1 : 0);
