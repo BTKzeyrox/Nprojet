@@ -719,6 +719,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
 | `sheetsStore.ts` | « Mes tableaux » : ancien rangement sur l'appareil (avant le serveur). Sert seulement à REPRENDRE une fois les tableaux déjà saisis, puis la copie est retirée. Jamais d'accès sans try/catch. |
 | `shiftMode.ts` | Mode des horaires (Réglages) : « normal » = un seul horaire pour tous, « day » / « night » = une seule vacation, « both » = jour et nuit. |
+| `shortcutEvents.ts` | Message interne « va dans la recherche » (raccourci / ou Ctrl+K) : envoyé par App.tsx, reçu par TopBar.tsx. |
+| `shortcuts.ts` | Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : logique pure, sans écran. Utilisé par App.tsx (écoute), ShortcutsHelp.tsx (liste affichée) et check:shortcuts. |
 | `siteKnowledge.ts` | Carte du site (module 11, M11.8) : pour CHAQUE page du menu, à quoi elle sert, comment l'utiliser, ses règles et ses chiffres avec leur formule. FR et EN. |
 | `siteSnapshot.ts` | Instantané du site et « Pourquoi ce chiffre ? » (module 11, M11.9). Pur : pas d'écran, pas de serveur. ADMIN SEULEMENT (chiffres d'argent). |
 | `snapshotDb.ts` | Relie l'instantané et « Pourquoi ce chiffre ? » aux données du site. ADMIN SEULEMENT : sans admin, aucune donnée n'est lue. |
@@ -931,6 +933,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `ScoreInput.tsx` | Champ de saisie d'un score ou d'une quantité : espaces de milliers automatiques et abréviations comme 12k ou 20.467M. |
 | `ScrollButtons.tsx` | Boutons ronds « Haut » et « Bas » toujours disponibles quand la page est plus longue que l'écran, même si le défilement est bloqué. |
 | `SheetForm.tsx` | Vue Formulaire d'un tableau : une fiche par ligne avec champs étiquetés, recherche et navigation, lisible sur téléphone. |
+| `ShortcutsHelp.tsx` | Liste des raccourcis clavier (touche « ? »). Utilisé par : App.tsx. Contenu : utils/shortcuts.ts (SHORTCUT_LIST). |
 | `Sidebar.tsx` | Menu de gauche : profil, entrées de navigation selon le rôle, pastilles de comptage et boutons de thème, déconnexion et signalement. |
 | `SignupSettings.tsx` | Réglages, section Inscriptions : le responsable ouvre ou ferme la création de compte. |
 | `SmartField.tsx` | Champ de saisie intelligent d'une colonne de tableau : dates, nombres, montants, téléphone, heure et suggestions de texte. |
@@ -1203,6 +1206,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:templates-store` | Essai des modèles de mission côté site (store + écrans), sans réseau. Lancer : npm run check:templates-store |
 | `npm run check:deadlines-store` | Essai de la date limite et de la priorité côté site (store + pastille + champs), sans réseau. Lancer : npm run check:deadlines-store |
 | `npm run check:feed-scroll` | Actualités : la position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut). |
+| `npm run check:shortcuts` | Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : jamais pendant l'écriture, navigateur intact, liste affichée = liste qui marche. |
 <!-- /AUTO:checks -->
 
 ---

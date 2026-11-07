@@ -77,6 +77,9 @@ const GraphsPage = lazy(() => import('./views/admin/GraphsPage').then(m => ({ de
 const HealthPage = lazy(() => import('./views/admin/HealthPage').then(m => ({ default: m.HealthPage })));
 import type { ViewAs } from './utils/roles';
 import { AccessBanner } from './components/AccessBanner';
+import { ShortcutsHelp } from './components/ShortcutsHelp';
+import { isTypingElement, resolveShortcut } from './utils/shortcuts';
+import { FOCUS_SEARCH_EVENT } from './utils/shortcutEvents';
 const TreasuryPage = lazy(() => import('./views/admin/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
@@ -175,6 +178,28 @@ export default function App() {
     h.classList.add('df-chat-open');
     return () => h.classList.remove('df-chat-open');
   }, [activeView]);
+  // Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : jamais pendant l'écriture dans un champ (sauf Ctrl+K) ; voir utils/shortcuts.ts
+  const [helpOpen, setHelpOpen] = useState(false);
+  const kbRef = useRef({ admin: false, g: 0 });
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return; // téléphone, tablette : pas de clavier physique
+    const onKey = (e: KeyboardEvent) => {
+      const typing = isTypingElement(e.target);
+      const afterG = Date.now() - kbRef.current.g < 1500;
+      const a = resolveShortcut(e, typing, afterG, kbRef.current.admin);
+      if (a.kind === 'none') { if (afterG && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) kbRef.current.g = 0; return; }
+      const dialogOpen = !!document.querySelector('dialog[open], [role="dialog"], [aria-modal="true"]');
+      if (a.kind === 'prefix') { if (!dialogOpen) kbRef.current.g = Date.now(); return; }
+      kbRef.current.g = 0;
+      if (a.kind === 'help') { e.preventDefault(); setHelpOpen(true); return; }
+      if (dialogOpen) return; // une fenêtre est ouverte : elle garde la main
+      e.preventDefault();
+      if (a.kind === 'search') { window.dispatchEvent(new Event(FOCUS_SEARCH_EVENT)); return; }
+      setFocusOperatorId(null); setActiveView(a.view as typeof activeView);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
   useEffect(() => {
     const vv = window.visualViewport;
@@ -419,6 +444,7 @@ export default function App() {
 
   // Utilisateur « vu » par l'interface : en mode opérateur, l'admin est traité comme un opérateur
   const realIsAdmin = currentUser.role === 'admin';
+  kbRef.current.admin = realIsAdmin && !operatorMode;
   const viewUser: User = realIsAdmin && operatorMode ? { ...currentUser, role: viewAs } : currentUser;
   const changeViewAs = (r: ViewAs) => {
     setViewAs(r);
@@ -657,6 +683,7 @@ export default function App() {
       {showReport && <ReportProblemModal onClose={() => setShowReport(false)} />}
 
       {/* PROFILE MODAL */}
+      {helpOpen && <ShortcutsHelp isAdmin={realIsAdmin && !operatorMode} onClose={() => setHelpOpen(false)} />}
       {cvModalUser !== null && (
         <Suspense fallback={null}>
           <CVViewerModal

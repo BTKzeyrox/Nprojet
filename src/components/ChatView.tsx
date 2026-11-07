@@ -933,6 +933,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 value={text}
                 onFocus={keep.pin}
                 onChange={e => { setText(e.target.value); if (e.target.value.trim() && !editingId && !current.readOnly) db.pingTyping(current.id); }}
+                onKeyDown={e => {
+                  if (e.nativeEvent.isComposing) return; // saisie en cours (clavier asiatique, accents) : on ne touche à rien
+                  if (e.key === 'Escape') { if (editingId) { e.preventDefault(); cancelEdit(); } else if (replyTo) { e.preventDefault(); setReplyTo(null); } }
+                  else if (e.key === 'ArrowUp' && !text && !editingId) { // champ vide : modifier mon dernier message (si le délai de 15 min le permet)
+                    const mine = [...visible].reverse().find(m => m.sender_id === currentUser.id && m.message && db.canEditMessage(m, currentUser.id));
+                    if (mine) { e.preventDefault(); startEdit(mine); }
+                  } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); }
+                }}
                 enterKeyHint="send"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
                 className={`flex-1 min-w-0 h-10 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}

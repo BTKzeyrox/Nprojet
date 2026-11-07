@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
@@ -66,6 +67,22 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const viewRef = useRef(activeView); viewRef.current = activeView;
   const searchY = useRef<number | null>(null);
   const closeLater = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Raccourcis clavier : « / » ou Ctrl+K met le curseur dans la recherche ; Échap la ferme (et ferme la cloche)
+  useEffect(() => {
+    const focusSearch = () => {
+      if (box.current && box.current.getClientRects().length > 0) { setOpen(true); box.current.querySelector('input')?.focus(); }
+      else setMSearch(true);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const el = document.activeElement as HTMLElement | null;
+      const inMine = !!el && ((box.current && box.current.contains(el)) || (mbox.current && mbox.current.contains(el)));
+      if (inMine || open || mSearch || bellOpen) { setOpen(false); setMSearch(false); setBellOpen(false); if (inMine) el!.blur(); }
+    };
+    window.addEventListener(FOCUS_SEARCH_EVENT, focusSearch);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener(FOCUS_SEARCH_EVENT, focusSearch); window.removeEventListener('keydown', onKey); };
+  }, [open, mSearch, bellOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (closeLater.current) clearTimeout(closeLater.current); }, []);
   useEffect(() => {
     if (mSearch) {
