@@ -755,7 +755,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
                         return { WebkitTouchCallout: 'none', backgroundColor: ac.bubbleBg, borderColor: ac.bubbleBorder } as React.CSSProperties;
                       })()}
-                      className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.9375rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
+                      className={`relative ${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.9375rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && !msg.message && !msg.reply_to && msg.attachment_url
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
@@ -808,6 +808,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                             </button>
                           )}
                           {!isAlbum && msg.message && <span className="whitespace-pre-line"><LinkedText text={msg.message} onOpen={link => { if (deepLinkAllowed(currentUser.role, link.go)) applyDeepLink(link, v => onNavigate?.(v)); }} /></span>}
+                          {/* Heure DANS la bulle, en bas à droite, comme WhatsApp : posée par-dessus, elle ne change pas la forme du message (un vide réservé évite qu'elle touche le texte) */}
+                          {(msg.message || msg.reply_to) && (
+                            <>
+                              <span className="inline-block align-bottom" style={{ width: isMe && current.kind === 'user' ? '4.6rem' : '3rem' }} aria-hidden="true" />
+                              <span data-bubble-time className={`absolute right-2.5 bottom-1 flex items-center gap-1 text-[10px] leading-none ${isMe && !L ? 'text-white/70' : isMe ? 'text-white/75' : P.sub}`}>
+                                {msg.edited_at && <span className="italic">modifié</span>}
+                                <span>{time}</span>
+                                {isMe && <PendingMark col="messages" id={msg.id} />}
+                                {isMe && current.kind === 'user' && (isRead(msg) ? <CheckCheck className="w-3.5 h-3.5 text-sky-500" /> : <Check className="w-3.5 h-3.5" />)}
+                              </span>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
@@ -815,9 +827,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                     {!gone && (
                       <div className={`flex items-center gap-1 mt-0.5 px-1 text-[10px] ${P.sub}`}>
                         {msg.pinned && <Pin className="w-3 h-3 text-amber-500" />}
-                        {msg.edited_at && <span className="italic">modifié ·</span>}
-                        <span>{time}</span>
-                        {isMe && <PendingMark col="messages" id={msg.id} />}
+                        {!(msg.message || msg.reply_to) && <span>{time}</span>}
+                        {!(msg.message || msg.reply_to) && isMe && <PendingMark col="messages" id={msg.id} />}
                         {isMe && (current.kind === 'user' || current.kind === 'group') && (
                           current.kind === 'user' ? (
                             isRead(msg)
