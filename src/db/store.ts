@@ -70,6 +70,7 @@ import {
 } from '../types';
 import { clientPriceForContract } from '../utils/clientPrice';
 import { isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
+import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
 import { cleanShiftMode } from '../utils/shiftMode';
 
 const TOKEN_KEY = 'df_session_token_v2';
@@ -2850,6 +2851,7 @@ export class AppStore {
   public validatePost(postId: string, note?: string): { success: boolean; error?: string; payrollAr?: number } {
     const post = this.posts.find(p => p.id === postId);
     if (!post) return { success: false, error: 'Mission introuvable' };
+    if (weSelfEntered(this.currentUser, post)) return { success: false, error: 'Tu ne peux pas valider ta propre saisie.' }; // M26.5a : personne ne valide sa propre saisie
     if (note && note.trim()) post.admin_notes = note.trim();
 
     const employee = this.users.find(u => u.id === post.employee_id);
@@ -2889,6 +2891,30 @@ export class AppStore {
     }
 
     return { success: false, error: 'Statut de la mission non éligible pour validation' };
+  }
+
+  /** Feuille du jour (M26.5a) : présence, heures, quantité et refus saisis par le responsable ou le Chef d'équipe. Réponse : nombre de lignes enregistrées et lignes refusées (numéro + raison). */
+  public async addWorkEntries(sheet: { date: string; type_label?: string; lines: any[] }): Promise<{ ok: boolean; error?: string; saved?: number; failed?: { line: number; error: string }[]; validated?: boolean }> {
+    const me = this.currentUser;
+    if (!me || (me.role !== 'admin' && me.role !== 'team_lead')) return { ok: false, error: 'Réservé au responsable et au chef d\'équipe.' };
+    if (this.demo) {
+      const now = new Date();
+      const today = new Date(now.getTime() + 3 * 3600000).toISOString().slice(0, 10);
+      const plan = planWorkEntries(me, this.users, this.posts, sheet, this.getSettings(), now.toISOString(), today);
+      if (!plan.ok) return { ok: false, error: ({ role: 'Réservé au responsable et au chef d\'équipe.', bad: 'Feuille illisible.', date: 'Date impossible : aujourd\'hui ou les 31 derniers jours.', empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' } as Record<string, string>)[plan.error] || 'Feuille refusée.' };
+      for (const post of plan.saved) {
+        const i = this.posts.findIndex(p => p.id === post.id);
+        if (i >= 0) this.posts[i] = post; else this.posts.push(post);
+      }
+      for (const u of plan.users) { const t = this.users.find(x => x.id === u.id); if (t) t.total_earnings_ar = u.total_earnings_ar; }
+      this.notify();
+      return { ok: true, saved: plan.saved.length, failed: plan.failed, validated: plan.validated };
+    }
+    const r = await this.api('work-entry', { method: 'POST', body: JSON.stringify(sheet) });
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
+    this.since = '';
+    void this.pull(true);
+    return { ok: true, saved: Number(r.data?.saved) || 0, failed: Array.isArray(r.data?.failed) ? r.data.failed : [], validated: !!r.data?.validated };
   }
 
   public rejectPost(postId: string, reason: string): { success: boolean; error?: string } {

@@ -117,6 +117,93 @@ function stampPostTimes(existing: any, next: any, nowIso: string): any {
   return out;
 }
 // ===== END DECIDE =====
+// ===== BEGIN WORKENTRY (feuille du jour, module 26 M26.5a : copie de src/utils/workEntry.ts, contrôlée par scripts/check-work-entry.ts) =====
+const wePay = decPostPay;
+const WE_MAX_LINES = 100;
+const WE_DAYS_BACK = 31;
+const WE_PRESENCE = ["present", "late", "half", "absent"];
+const weIsoDate = (s: unknown): boolean => { if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const d = new Date(s + "T00:00:00Z"); return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s; };
+const weDayNo = (s: string): number => Math.round(new Date(s + "T00:00:00Z").getTime() / 86400000);
+/** Aujourd'hui ou les 31 derniers jours ; jamais le futur, jamais un jour qui n'existe pas. */
+const weDateOk = (date: unknown, today: string): boolean => weIsoDate(date) && weIsoDate(today) && weDayNo(date as string) <= weDayNo(today) && weDayNo(today) - weDayNo(date as string) <= WE_DAYS_BACK;
+/** Nombre tapé à la main : « 12 500 », « 12,5 ». Texte, négatif, « 1e3 », infini, trop grand : null. Vide : undefined (pas de valeur). */
+const weNum = (v: unknown, max: number): number | null | undefined => {
+  if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) return undefined;
+  let n: number;
+  if (typeof v === "number") n = v;
+  else if (typeof v === "string") { const t = v.replace(/[\s  ]/g, "").replace(",", "."); if (!/^\d+(\.\d{1,2})?$/.test(t)) return null; n = Number(t); }
+  else return null;
+  if (!isFinite(n) || n < 0 || n > max) return null;
+  return Math.round(n * 100) / 100;
+};
+/** Qui peut saisir pour qui : le responsable pour tout opérateur ; le Chef d'équipe pour les opérateurs de SON équipe (jamais lui-même) ; personne d'autre. */
+const weCanEnterFor = (me: any, emp: any): boolean => !!me && !!emp && isOperator(emp.role) && emp.id !== me.id && (me.role === "admin" || (me.role === "team_lead" && sameTeam(me, emp)));
+const weSafe = (s: string): string => s.replace(/[^A-Za-z0-9_-]/g, "_");
+/**
+ * Une feuille du jour : { date, type_label?, lines: [{ employee_id, work_type, presence?, hours?, quantity?, rejected? }] }.
+ * Renvoie { ok:false, error } si la feuille entière est refusée, sinon { ok:true, saved, failed, users, validated } : chaque ligne est enregistrée ou refusée avec son numéro et sa raison.
+ * Un employé, un jour, un type de travail = UNE seule ligne (identifiant fixe) ; une ligne refusée avant peut être ressaisie.
+ * Saisie du responsable : validée tout de suite (montant calculé maintenant). Saisie du Chef d'équipe : en attente du responsable (personne ne valide sa propre saisie : voir `weSelfEntered`).
+ */
+function planWorkEntries(me: any, users: any[], existing: any[], sheet: any, settings: any, nowIso: string, today: string): any {
+  if (!me || (me.role !== "admin" && me.role !== "team_lead")) return { ok: false, error: "role" };
+  if (!sheet || typeof sheet !== "object") return { ok: false, error: "bad" };
+  if (!weDateOk(sheet.date, today)) return { ok: false, error: "date" };
+  const lines = sheet.lines;
+  if (!Array.isArray(lines) || lines.length === 0) return { ok: false, error: "empty" };
+  if (lines.length > WE_MAX_LINES) return { ok: false, error: "too_many" };
+  const label = String(sheet.type_label ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  const byId = new Map<string, any>();
+  for (const u of users || []) if (u && typeof u.id === "string") byId.set(u.id, { ...u });
+  const taken = new Set<string>();
+  for (const p of existing || []) if (p && typeof p.id === "string" && p.status !== "rejected") taken.add(p.id);
+  const admin = me.role === "admin";
+  const saved: any[] = [];
+  const failed: { line: number; error: string }[] = [];
+  const touched = new Set<string>();
+  lines.forEach((raw: any, i: number) => {
+    const line = i + 1;
+    const bad = (error: string) => { failed.push({ line, error }); };
+    if (!raw || typeof raw !== "object") return bad("bad");
+    const empId = typeof raw.employee_id === "string" ? raw.employee_id : "";
+    const emp = byId.get(empId);
+    if (!weCanEnterFor(me, emp)) return bad("employee");
+    const type = typeof raw.work_type === "string" ? raw.work_type : "";
+    if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(type)) return bad("type");
+    let presence: string | undefined;
+    if (raw.presence !== undefined && raw.presence !== null && raw.presence !== "") { if (typeof raw.presence !== "string" || !WE_PRESENCE.includes(raw.presence)) return bad("presence"); presence = raw.presence; }
+    const hours = weNum(raw.hours, 24); if (hours === null) return bad("hours");
+    const quantity = weNum(raw.quantity, 100000); if (quantity === null) return bad("quantity");
+    const rejected = weNum(raw.rejected, 100000); if (rejected === null) return bad("rejected");
+    if ((rejected || 0) > (quantity || 0)) return bad("rejected");
+    if (presence === undefined && !(hours && hours > 0) && !(quantity && quantity > 0)) return bad("empty");
+    const id = "we-" + sheet.date + "-" + weSafe(empId) + "-" + type;
+    if (id.length > 80) return bad("bad");
+    if (taken.has(id)) return bad("duplicate");
+    taken.add(id);
+    const e = byId.get(empId);
+    const post: any = {
+      id, employee_id: empId, employee_name: String(e.name ?? ""), client_name: label || type, account_tag: "", target_score: 0, initial_score: 0, current_score: 0, remaining_score: 0,
+      status: admin ? "completed" : "pending_end", shift_type: "day", date: sheet.date, start_time: "00:00:00", start_proof_url: "", calculated_ar: 0, client_price_ar: 0,
+      work_type: type, entered_by: me.id, entered_by_name: String(me.name ?? ""), created_at: nowIso, updated_at: nowIso,
+    };
+    if (presence !== undefined) post.presence = presence;
+    if (hours !== undefined) post.hours = hours;
+    if (quantity !== undefined) post.quantity = quantity;
+    if (rejected !== undefined) post.rejected = rejected;
+    if (admin) {
+      const pay = wePay(post, e, settings);
+      post.calculated_ar = pay; post.start_validated_at = nowIso; post.end_validated_at = nowIso;
+      e.total_earnings_ar = Math.round((Number(e.total_earnings_ar) || 0) + pay);
+      touched.add(empId);
+    }
+    saved.push(post);
+  });
+  return { ok: true, saved, failed, users: [...touched].map(id => byId.get(id)), validated: admin };
+}
+/** Personne ne valide sa propre saisie. */
+const weSelfEntered = (me: any, post: any): boolean => !!me && !!post && typeof post.entered_by === "string" && post.entered_by === me.id;
+// ===== END WORKENTRY =====
 // ===== BEGIN NEWSACCESS (actualités : qui publie, modifie, voit ; copie de src/utils/newsAccess.ts, contrôlée par scripts/check-news-access.ts) =====
 const NEWS_AUDIENCE_ROLES = ["employee", "team_lead", "accountant"];
 const newsIsMode = (v: unknown): boolean => v === "off" || v === "review" || v === "direct";
@@ -4191,6 +4278,7 @@ async function postDecide(req: any, res: any, me: any) {
   const post = prow.data;
   const owner = await getUserRow(String(post.employee_id || ''));
   if (!canDecidePost(me, owner)) return res.status(403).json({ error: "Cette mission n'est pas dans ton équipe." });
+  if (weSelfEntered(me, post)) return res.status(403).json({ error: 'Tu ne peux pas valider ta propre saisie.' }); // M26.5a : personne ne valide sa propre saisie
   const approve = b.approve === true;
   const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
   const teamLimit = cleanTeamLeadLimit(st?.data?.team_lead_limit_ar); // plafond du Chef d'équipe (M15.6) : 0 = aucun
@@ -4219,6 +4307,30 @@ async function postDecide(req: any, res: any, me: any) {
   if (k && post.employee_id) await pushTo([String(post.employee_id)], pushText(k, { post_number: post.post_number, title: post.client_name, reason: plan.post.rejection_reason }), `${k}:${id}`.slice(0, 60), { go: 'active-post' }, 'missions');
   await auditLog(me, 'mission_decision', { type: 'posts', id, label: `${auditLabelOf(owner)} · ${post.client_name || post.post_number || id}` }, plan.kind === 'refused' ? `Refusée : ${plan.post.rejection_reason}` : plan.kind === 'start_ok' ? 'Début validé' : 'Mission validée');
   return res.json({ ok: true, kind: plan.kind });
+}
+
+// ---------- Feuille du jour (module 26, M26.5a) : le responsable ou le Chef d'équipe saisit présence, heures, quantité et refus ; TOUT se vérifie ici ----------
+async function workEntryRoute(req: any, res: any, me: any) {
+  if (me.role !== 'admin' && me.role !== 'team_lead') return res.status(403).json({ error: "Réservé au responsable et au chef d'équipe." });
+  const b = req.body || {};
+  const now = new Date();
+  const today = new Date(now.getTime() + 3 * 3600000).toISOString().slice(0, 10); // jour de Madagascar (UTC+3)
+  if (!weDateOk(b.date, today)) return res.status(400).json({ error: "Date impossible : aujourd'hui ou les 31 derniers jours." });
+  const { data: urows } = await sb.from(T.users).select('id, data');
+  const users = (urows || []).map((r: any) => r.data).filter((u: any) => u && typeof u.id === 'string');
+  const { data: prows } = await sb.from(T.posts).select('id, data').like('id', `we-${b.date}-%`);
+  const existing = (prows || []).map((r: any) => r.data).filter(Boolean);
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  const plan = planWorkEntries(me, users, existing, b, st?.data || {}, now.toISOString(), today);
+  if (!plan.ok) {
+    const msg: Record<string, string> = { role: "Réservé au responsable et au chef d'équipe.", bad: 'Feuille illisible.', date: "Date impossible : aujourd'hui ou les 31 derniers jours.", empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' };
+    return res.status(plan.error === 'role' ? 403 : 400).json({ error: msg[plan.error] || 'Feuille refusée.' });
+  }
+  const at = now.toISOString();
+  for (const post of plan.saved) await sb.from(T.posts).upsert({ id: post.id, data: post, updated_at: at });
+  for (const u of plan.users) await sb.from(T.users).upsert({ id: u.id, data: u, updated_at: at });
+  if (plan.saved.length > 0) await auditLog(me, 'work_entry', { type: 'posts', id: `we-${b.date}`, label: `Feuille du ${b.date}` }, `${plan.saved.length} ligne(s) enregistrée(s), ${plan.failed.length} refusée(s)${plan.validated ? ' · validées' : ' · en attente du responsable'}`);
+  return res.json({ ok: true, saved: plan.saved.length, failed: plan.failed, validated: plan.validated });
 }
 
 // ---------- comptes ----------
@@ -6178,6 +6290,7 @@ const actionStore: ActionStore = {
 async function callOnce(action: string, req: any, res: any, me: any): Promise<Response> {
   if (action === "report-error") return await reportError(req, res);
   if (action === "post-decide") return await postDecide(req, res, me);
+  if (action === "work-entry") return await workEntryRoute(req, res, me);
   if (action === "news-react") return await newsAction('react', req, res, me);
   if (action === "news-comment") return await newsAction('comment', req, res, me);
   if (action === "news-comment-delete") return await newsAction('comment-delete', req, res, me);
@@ -6263,6 +6376,7 @@ Deno.serve(async (request: Request) => {
     if (action === "report-open" && req.method === "POST") return await reportOpen(req, res, me);
     if (action === "report-freeze" && req.method === "POST") return await reportFreeze(req, res, me);
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
+    if (action === "work-entry" && req.method === "POST") return await workEntryRoute(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "prefs" && req.method === "GET") return await prefsGetRoute(req, res, me);
     if (action === "prefs-set" && req.method === "POST") return await prefsSetRoute(req, res, me);

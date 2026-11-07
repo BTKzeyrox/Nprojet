@@ -754,3 +754,5 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
 - [x] 2026-11-06 En-tête téléphone : seulement des icônes (Tableau de bord, Actualités, Messages, Notifications, Recherche, Menu). Recherche = barre étirée avec Chercher / X. Profil + état d'envoi en haut du menu latéral (contour de la photo). Grand écran inchangé.
 
 - [x] 2026-11-07 Messagerie : bulle de réponse, la citation est un bloc arrondi à l'intérieur de la bulle avec de l'espace en haut, à gauche et à droite (l'heure reste sous la bulle).
+
+- [x] 2026-11-07 **M26.5a RÉÉCRIT (le code annoncé dans le TODO n'était pas dans le dépôt)** : `src/utils/workEntry.ts` (règles pures), bloc WORKENTRY + route `work-entry` + refus « personne ne valide sa propre saisie » dans `df-api` (**NON DÉPLOYÉ**), `addWorkEntries` dans le magasin (démo et réel), `npm run check:work-entry` (site = serveur sur 6 000 feuilles, droits, dates, nombres, doublons). `work-entry` n'est pas encore dans les actions numérotées (ONCE_ROUTES) : c'est M26.5d. Reste : M26.5b (écran), c, d, e.
