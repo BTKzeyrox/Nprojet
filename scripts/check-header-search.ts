@@ -26,5 +26,10 @@ ok(idx('data-app-logo') < idx('data-header-search') && idx('data-header-search')
 ok(!/LayoutDashboard/.test(top), 'en-tête téléphone : plus de doublon « Tableau de bord »');
 ok((top.match(/w-10 h-10 flex items-center justify-center/g) || []).length >= 4, 'en-tête : boutons de la même taille (40 px)');
 ok(/aria-current=\{activeView === view \? 'page'/.test(top) && /activeView=\{activeView\}/.test(readFileSync('src/App.tsx', 'utf8')), 'en-tête : le raccourci de la page ouverte est mis en valeur');
+// Relief léger de l'en-tête (2026-11-07) : il se détache des cartes des pages
+const css = readFileSync('src/index.css', 'utf8');
+ok(/html\.theme-light header\.df-topbar \{\s*background-image: linear-gradient[\s\S]{0,400}box-shadow: inset 0 1px 0[^;]*!important;/.test(css), 'en-tête clair : dégradé + ombre en relief (l\'ancien « box-shadow: none » ne l\'annule plus)');
+ok(/html\.theme-dark header\.df-topbar \{\s*background-image: linear-gradient[\s\S]{0,400}box-shadow: inset 0 1px 0[^;]*!important;/.test(css), 'en-tête sombre : dégradé + ombre en relief');
+ok(/\[data-header-bell\]:active/.test(css) && /data-header-bell/.test(top), 'boutons de l\'en-tête : relief léger, enfoncés quand on appuie (cloche comprise)');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

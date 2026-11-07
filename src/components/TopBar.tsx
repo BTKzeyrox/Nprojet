@@ -282,6 +282,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         <div ref={bellBox} className="sm:relative shrink-0">
           <button
             onClick={toggleBell}
+            data-header-bell
             title="Notifications"
             className={`relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
           >
