@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : les publications viennent de db.getNews() ; qui peut voir, modifier ou publier est décidé par utils/newsAccess.ts ; le responsable publie en direct, les autres peuvent passer par une validation.
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { saveFeedScroll, feedScrollFor, FEED_TOP_EVENT } from '../utils/feedScroll';
+import { saveFeedScroll, feedScrollFor, pinnedFeedScroll, FEED_TOP_EVENT } from '../utils/feedScroll';
 import { flushSync } from 'react-dom';
 import { Heart, MessageCircle, Share2, Pin, Trash2, Send, Newspaper, Paperclip, X, FileText, Clock, Ban, Loader2, Check, ChevronUp, Pencil, Eye, MoreVertical } from 'lucide-react';
 import { db } from '../db/store';
@@ -632,7 +632,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   useLayoutEffect(() => {
     let sc: HTMLElement | null = rootRef.current?.parentElement || null;
     while (sc) { const o = getComputedStyle(sc).overflowY; if ((o === 'auto' || o === 'scroll') && sc !== document.documentElement && sc !== document.body) break; sc = sc.parentElement; }
-    return () => saveFeedScroll(currentUser.id, sc ? sc.scrollTop : window.scrollY);
+    return () => saveFeedScroll(currentUser.id, pinnedFeedScroll(currentUser.id) ?? (sc ? sc.scrollTop : window.scrollY));
   }, [currentUser.id]);
   // La position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut).
   // Le défilement est celui de la page entière (fenêtre) ou d'un conteneur : les deux sont gérés.
@@ -649,9 +649,14 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
       raf = requestAnimationFrame(restore); // le contenu n'est pas encore assez haut : on réessaie quelques images
     };
     restore();
+    // D'autres écrans (ex. Messages : page figée sur téléphone) remettent la page à leur position juste après : on réapplique si la personne n'a pas encore touché au défilement
+    let touched = false;
+    const mark = () => { touched = true; };
+    window.addEventListener('wheel', mark, { passive: true }); window.addEventListener('touchstart', mark, { passive: true });
+    const again = [80, 250, 600].map(ms => setTimeout(() => { if (!touched && want > 0 && Math.abs(getPos() - want) > 2 && maxPos() >= want - 1) setPos(want); }, ms));
     const goTop = () => setPos(0, true);
     window.addEventListener(FEED_TOP_EVENT, goTop);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener(FEED_TOP_EVENT, goTop); };
+    return () => { cancelAnimationFrame(raf); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
   }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualités ouvertes : rechargement toutes les 8 s
@@ -703,7 +708,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   };
 
   return (
-    <div ref={rootRef} className="max-w-2xl lg:max-w-4xl 2xl:max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-4">
+    <div ref={rootRef} data-feed-root className="max-w-2xl lg:max-w-4xl 2xl:max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Newspaper className="w-6 h-6 text-emerald-600" />
         <div>

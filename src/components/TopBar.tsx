@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx.
 // Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { requestFeedTop } from '../utils/feedScroll';
+import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
@@ -61,6 +61,25 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const bellBox = useRef<HTMLDivElement>(null);
   const mbox = useRef<HTMLDivElement>(null);
   const [mSearch, setMSearch] = useState(false); // téléphone : la recherche s'étire sur toute la barre
+  // Sur Actualités, la recherche du téléphone ne doit pas déplacer le fil : position gardée à l'ouverture, rétablie à la fermeture
+  // (sauf si un résultat ouvre une autre page : le fil mémorise alors la position gardée, voir FeedView).
+  const viewRef = useRef(activeView); viewRef.current = activeView;
+  const searchY = useRef<number | null>(null);
+  useEffect(() => {
+    if (mSearch) {
+      if (viewRef.current === 'feed') { searchY.current = readFeedPos(); pinFeedScroll(currentUser.id, searchY.current); }
+      return;
+    }
+    const y = searchY.current; searchY.current = null;
+    if (y === null) return;
+    if (viewRef.current === 'feed') {
+      writeFeedPos(y);
+      const t1 = setTimeout(() => writeFeedPos(y), 60); const t2 = setTimeout(() => { writeFeedPos(y); unpinFeedScroll(); }, 300); // le clavier se referme après un instant
+      return () => { clearTimeout(t1); clearTimeout(t2); unpinFeedScroll(); };
+    }
+    const t = setTimeout(unpinFeedScroll, 0);
+    return () => clearTimeout(t);
+  }, [mSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   useEffect(() => subscribeHealth(() => force(n => n + 1)), []); // cloche : la Santé se calcule au repos, on se réaffiche quand elle est prête
@@ -339,7 +358,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
-                autoFocus
+                ref={el => { if (el && document.activeElement !== el) el.focus({ preventScroll: true }); }}
                 value={q}
                 onChange={e => { setQ(e.target.value); setOpen(true); }}
                 onKeyDown={e => { if (e.key === 'Enter' && hits[0]) { pick(hits[0]); setMSearch(false); } if (e.key === 'Escape') { setQ(''); setMSearch(false); } }}

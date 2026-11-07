@@ -1,6 +1,6 @@
 // Actualités : la position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut).
 import { readFileSync } from 'node:fs';
-import { saveFeedScroll, feedScrollFor, resetFeedScroll, requestFeedTop, FEED_TOP_EVENT } from '../src/utils/feedScroll';
+import { saveFeedScroll, feedScrollFor, resetFeedScroll, requestFeedTop, pinFeedScroll, unpinFeedScroll, pinnedFeedScroll, FEED_TOP_EVENT } from '../src/utils/feedScroll';
 
 let n = 0, fails = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ÉCHEC : ' + m); } else console.log('ok : ' + m); };
@@ -27,6 +27,19 @@ ok(/useLayoutEffect\(\(\) => \{[\s\S]{0,500}return \(\) => saveFeedScroll\(curre
 ok(/feedScrollFor\(currentUser\.id\)/.test(feed) && /setPos\(want\)/.test(feed), 'fil : position rétablie au retour (avec quelques essais si le contenu arrive après)');
 ok(/activeView !== 'feed' && !peekNavTarget\(\)\) window\.scrollTo\(0, 0\)/.test(app), 'application : les autres pages s\'ouvrent en haut, pas Actualités');
 ok(/view === 'feed' && activeView === 'feed'\) requestFeedTop\(\)/.test(top), 'en-tête : « Actualités » touché sur Actualités = retour en haut');
+
+
+// Recherche du téléphone : le fil ne bouge pas quand on ouvre / ferme la recherche
+pinFeedScroll('u1', 500.2);
+ok(pinnedFeedScroll('u1') === 500 && pinnedFeedScroll('u2') === null, 'position gardée à l\'ouverture de la recherche (pour la bonne personne)');
+unpinFeedScroll();
+ok(pinnedFeedScroll('u1') === null, 'position libérée après la recherche');
+const bar = readFileSync('src/components/TopBar.tsx', 'utf8');
+ok(/if \(viewRef\.current === 'feed'\) \{ searchY\.current = readFeedPos\(\); pinFeedScroll\(currentUser\.id, searchY\.current\)/.test(bar), 'recherche : position du fil gardée à l\'ouverture (sur Actualités seulement)');
+ok(/writeFeedPos\(y\)/.test(bar) && /setTimeout\(\(\) => \{ writeFeedPos\(y\); unpinFeedScroll\(\)/.test(bar), 'recherche : position rétablie à la fermeture, encore après le clavier');
+ok(/focus\(\{ preventScroll: true \}\)/.test(bar) && !/autoFocus/.test(bar.slice(bar.indexOf('mSearch &&'))), 'recherche : le champ prend le focus sans décaler la page');
+ok(/pinnedFeedScroll\(currentUser\.id\) \?\?/.test(feed) && /data-feed-root/.test(feed), 'fil : mémorise la position gardée si un résultat ouvre une autre page');
+ok(/setTimeout\(\(\) => \{ if \(!touched/.test(feed), 'fil : position réappliquée si un autre écran (Messages) remet la page en haut juste après');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
