@@ -71,6 +71,7 @@ import {
 import { clientPriceForContract } from '../utils/clientPrice';
 import { isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
 import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
+import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 
 const TOKEN_KEY = 'df_session_token_v2';
@@ -2025,6 +2026,30 @@ export class AppStore {
   }
 
   /** Modèles de mission (M6.2) : gardés dans les réglages, sans nouvelle table. */
+  /** Types de travail créés à la main (M26.6b). Visibles par le responsable et le Chef d'équipe. */
+  public getCustomWorkTypes(): any[] { return cleanCustomTypes(this.getSettings().work_types); }
+
+  /** Crée un type de travail (sans `id`) : le nom français et anglais, la mesure, la paie, qui saisit, l'unité. Responsable seulement ; 12 types au plus. */
+  public saveCustomWorkType(d: any): { success: boolean; error?: string; type?: any } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getCustomWorkTypes();
+    if (list.length >= CW_MAX_TYPES) return { success: false, error: `${CW_MAX_TYPES} types au plus : supprime-en un d'abord.` };
+    const slug = String(d?.name?.fr || 'type').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 18) || 'type';
+    let id = `c-${slug.length < 2 ? slug + '-type' : slug}`; for (let i = 2; list.some(t => t.id === id); i++) id = `c-${slug}-${i}`;
+    const v = cwValidate({ ...d, id });
+    if (!v.ok) return { success: false, error: ({ id: 'Nom impossible.', name: 'Donne un nom en français ET en anglais.', measure: 'Mesure inconnue.', pay: 'Mode de paie inconnu.', entry: 'Choisis qui saisit.', incompatible: 'Cette mesure ne va pas avec ce mode de paie.', unit: 'Donne l\'unité en français ET en anglais (ex : boîte / box).' } as Record<string, string>)[v.error] || 'Type refusé.' };
+    this.updateSettings({ work_types: [...list, v.value] });
+    return { success: true, type: v.value };
+  }
+
+  public removeCustomWorkType(id: string): { success: boolean; error?: string } {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const list = this.getCustomWorkTypes();
+    if (!list.some(t => t.id === id)) return { success: false, error: 'Type introuvable.' };
+    this.updateSettings({ work_types: list.filter(t => t.id !== id) });
+    return { success: true };
+  }
+
   public getMissionTemplates(): MissionTemplate[] { return cleanTemplates(this.getSettings().mission_templates); }
 
   /** Crée (sans `id`) ou modifie (avec `id`) un modèle. Admin seulement. */

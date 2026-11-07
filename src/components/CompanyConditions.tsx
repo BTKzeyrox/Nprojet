@@ -1,6 +1,7 @@
 // Page des Conditions de l'entreprise : identité, taxes, facturation, paie, congés, missions, pages du menu à cacher, règlement et seuils de surveillance.
 // Utilisé par : SettingsView.tsx. Contrôlé par : npm run check:company-page.
 // Pour modifier : un nouveau réglage s'ajoute dans SECTIONS et FIELDS (textes fr/en et aide). Le responsable modifie ; CompanyForEmployee donne à l'opérateur la lecture du règlement et des congés.
+import { CustomWorkTypes } from './CustomWorkTypes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, HelpCircle, Save, RotateCcw, History, Building2, CalendarDays } from 'lucide-react';
 import { db } from '../db/store';
@@ -187,6 +188,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean;
                     </div>
                   );
                 })}
+                {sec.id === 'work' && <CustomWorkTypes lang={lang} />}
               </div>
             )}
           </section>

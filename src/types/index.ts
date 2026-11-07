@@ -88,6 +88,7 @@ export interface AppSettings {
   team_goals?: TeamGoal[]; // objectifs par salarié et par équipe (module 15, M15.3) ; admin seulement
   recurring_missions?: RecurringRule[]; // missions récurrentes (module 15, M15.1) ; admin seulement
   auto_report?: AutoReportSetting; // rapport automatique (module 15, M15.5) : arrêté / chaque semaine / chaque mois ; admin seulement
+  work_types?: any[]; // module 26 (M26.6b) : types de travail créés par le responsable ; visibles du Chef d'équipe (pas d'argent)
   mission_templates?: MissionTemplate[]; // modèles de mission (module 6, M6.2) ; admin seulement
   performance?: import('../utils/performanceScore').PerformanceConfig; // Réglages de la performance (module 3) : le serveur revérifie tout
   company?: CompanySettings; // Conditions de l'entreprise (module 0) : l'employé ne reçoit que le règlement et les congés

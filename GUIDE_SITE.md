@@ -614,6 +614,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clientPrice.ts` | Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut. |
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
+| `customWorkTypes.ts` | Types de travail créés par le responsable (module 26, M26.6b) : « Créer mon type de travail ». Règles pures, sans écran, sans serveur. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
 | `dayDetail.ts` | Règles pures (sans écran, sans serveur) du détail d'un employé pour un jour : connexions, missions et totaux. |
 | `dayStatus.ts` | Statut d'une journée pour un opérateur (calendrier individuel ET calendrier global : la MÊME règle, donc les mêmes chiffres). Pur, sans écran. |
@@ -882,6 +883,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `CompanyConditions.tsx` | Page des Conditions de l'entreprise : identité, taxes, facturation, paie, congés, missions, pages du menu à cacher, règlement et seuils de surveillance. |
 | `ConfirmModal.tsx` | Fenêtre de confirmation (Annuler / Confirmer, en rouge si danger), avec le hook useConfirm et la fonction globale askConfirm. |
 | `ConnectionBanner.tsx` | État de la connexion : pastille du header (hors ligne, envoi, à revoir, copie verrouillée, tout est envoyé) et relance automatique des envois. |
+| `CustomWorkTypes.tsx` | « Créer mon type de travail » (module 26, M26.6b) : dans Réglages > Conditions > Types de travail et paie. Enregistre tout de suite (pas besoin du bouton Enregistrer des Conditions). |
 | `DayDetailsModal.tsx` | Fenêtre du détail d'une journée du calendrier : missions du jour, points gagnés, présence, preuves et contrats à échéance. |
 | `DeadlineFields.tsx` | Champs « date limite, heure, priorité » d'une mission (DeadlineFields) et pastilles d'échéance et de priorité sur une carte (DeadlineBadges). |
 | `DiagPanel.tsx` | Panneau de diagnostic du défilement de la page, affiché seulement quand l'adresse contient ?diag=1. |
@@ -1180,6 +1182,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:payroll-modes` | Paie selon le mode (module 26, M26.4) : le serveur (bloc DECIDE de df-api) et le site (postPay.ts / postDecision.ts) donnent EXACTEMENT les mêmes montants sur des milliers de cas, |
 | `npm run check:work-entry` | Feuille du jour (module 26, M26.5a) : le site (workEntry.ts) et le serveur (bloc WORKENTRY de df-api) donnent EXACTEMENT les mêmes résultats sur des milliers de feuilles ; |
 | `npm run check:work-sheet-page` | Feuille du jour (module 26, M26.5e) : la page est branchée partout, cachée tant que le module n'est pas ouvert, et ses textes sont complets. Lancer : npm run check:work-sheet-page |
+| `npm run check:custom-work-types` | « Créer mon type de travail » (module 26, M26.6b) : le site et le serveur donnent les mêmes résultats ; un type faux est refusé ; le Chef d'équipe reçoit le modèle d'entreprise mais jamais les tarifs. Lancer : npm run check:custom-work-types |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

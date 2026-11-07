@@ -33,7 +33,8 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const today = madaToday();
   const company = readCompany(db.getSettings().company);
   const model = findModel(company.work.business_model);
-  const types = useMemo(() => sheetTypes(model ? model.types : [], me.role), [model, me.role]);
+  const custom = db.getCustomWorkTypes() as WorkType[];
+  const types = useMemo(() => sheetTypes([...(model ? model.types : []), ...custom], me.role), [model, me.role, JSON.stringify(custom)]); // eslint-disable-line react-hooks/exhaustive-deps
   const [date, setDate] = useState(today);
   const [typeId, setTypeId] = useState('');
   const type = types.find(t => t.id === typeId) || types[0];
@@ -80,7 +81,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
       <h1 className={`text-xl font-bold ${L ? 'text-slate-900' : 'text-white'}`}>Feuille du jour</h1>
       {types.length === 0 ? (
         <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`} data-worksheet-notype>
-          Aucun type de travail à saisir ici. Choisis ton modèle d'entreprise dans Réglages &gt; Entreprise (présence, heures ou quantité).
+          Aucun type de travail à saisir ici. Choisis ton modèle d'entreprise ou crée ton type de travail dans Réglages &gt; Conditions (présence, heures ou quantité).
         </div>
       ) : (
         <>
