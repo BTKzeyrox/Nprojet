@@ -137,7 +137,7 @@ async function suite(M: typeof site, label: string) {
     const j = JSON.parse(b.body);
     ok(b.kind === 'replay' && b.status === 200 && j.ok === true && j.replayed === true && b.body.length < 400, L('rejouée : code gardé + note claire (jamais vide)'));
   }
-  eq([...M.ONCE_ROUTES].sort(), ['news-comment', 'news-comment-delete', 'news-comment-react', 'news-react', 'news-share', 'news-submit', 'post-decide', 'report-error'], L('les 8 appels non répétables sont numérotés'));
+  eq([...M.ONCE_ROUTES].sort(), ['news-comment', 'news-comment-delete', 'news-comment-react', 'news-react', 'news-share', 'news-submit', 'post-decide', 'report-error', 'work-entry'], L('les 9 appels non répétables sont numérotés (dont la feuille du jour)'));
   ok(!M.ONCE_ROUTES.includes('sync') && !M.ONCE_ROUTES.includes('login') && !M.ONCE_ROUTES.includes('invoice-pay'), L('sync (déjà sans danger), connexion et argent ne sont pas concernés'));
   ok(M.ACTION_RUNNING_MS === 120_000 && M.ACTION_KEEP_DAYS === 30 && M.ACTION_BODY_MAX === 16_000, L('limites : 2 min, 30 jours, 16 000 caractères'));
 }

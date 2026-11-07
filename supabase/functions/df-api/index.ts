@@ -6196,7 +6196,7 @@ async function remindersDue(request: Request, res: any) {
 
 // ----- M13.7 : actions numérotées (une seule exécution par numéro) -----
 // ===== BEGIN OFFLINE_ACTIONS (M13.7 : copie exacte de src/utils/offlineServer.ts ; ce bloc est contrôlé par scripts/check-offline-server.ts) =====
-const ONCE_ROUTES: readonly string[] = ['news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'report-error'];
+const ONCE_ROUTES: readonly string[] = ['news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'work-entry', 'report-error'];
 const ACTION_RUNNING_MS = 120_000; // un appel « en cours » depuis plus longtemps est considéré comme tombé en panne : il peut être refait
 const ACTION_KEEP_DAYS = 30; // les fiches plus anciennes sont effacées
 const ACTION_BODY_MAX = 16_000; // réponse gardée : 16 000 caractères au plus (au-delà : seulement le code)

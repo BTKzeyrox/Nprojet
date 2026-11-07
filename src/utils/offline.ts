@@ -67,7 +67,7 @@ export function collectionPolicy(role: Role, collection: string, rec?: { status?
 }
 
 const BOTH_CALLS = new Set(['upload', 'report-error', 'news-comment', 'news-comment-delete', 'news-share', 'news-react', 'news-submit', 'news-withdraw']);
-const ADMIN_CALLS = new Set(['post-decide', 'news-decision']);
+const ADMIN_CALLS = new Set(['post-decide', 'news-decision', 'work-entry']); // feuille du jour (M26.5d) : le responsable peut la saisir hors ligne ; le Chef d'équipe, pas encore
 const MONEY_CALLS = new Set<string>([]);
 const ACCOUNT_CALLS = new Set(['login', 'forgot', 'signup', 'signup-decision', 'create-user', 'set-password', 'reset-decision', 'profile-request', 'profile-decision']);
 
