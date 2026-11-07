@@ -3927,6 +3927,15 @@ async function sync(req: any, res: any, me: any) {
         toSave = { ...toSave };
         if (hv.hr) (toSave as any).hr = hv.hr; else delete (toSave as any).hr;
       }
+      if (admin && col === 'users') {
+        // Paie de CET employé (module 26, M26.6) : mode connu et tarif 0 à 100 000 000 Ar, sinon refusé ; vide = on retombe sur le réglage de l'entreprise
+        const pm = (rec as any).pay_mode, pr = (rec as any).pay_rate_ar;
+        if (pm === undefined || pm === null || pm === '') delete (toSave as any).pay_mode;
+        else if (!decIsMode(pm)) { rejected.push({ col, id: rec.id, reason: 'pay_mode' }); continue; }
+        if (pr === undefined || pr === null || pr === '' || pr === 0) delete (toSave as any).pay_rate_ar;
+        else if (typeof pr !== 'number' || !isFinite(pr) || pr < 0 || pr > 100000000) { rejected.push({ col, id: rec.id, reason: 'pay_rate' }); continue; }
+        else (toSave as any).pay_rate_ar = Math.round(pr);
+      }
       if (col === 'clients') {
         const v = cleanClient(rec, existing, me.id, now);
         if (!v.ok) { rejected.push({ col, id: rec.id, reason: v.reason }); continue; }

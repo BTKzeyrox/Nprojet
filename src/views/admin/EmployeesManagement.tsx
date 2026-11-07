@@ -1,6 +1,7 @@
 // Page Opérateurs et avances : liste des opérateurs avec statut en direct, ajout, modification, blocage, suppression, et validation des avances sur salaire.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : la prop section choisit l'affichage : 'employees' (équipe) ou 'advances' (paie et avances). Données lues dans db (users, posts, presence, profileRequests). Téléphone au format fixe « 261 34 12 345 67 », mot de passe de 6 caractères au moins. Beaucoup de textes sont écrits en français seulement.
+import { PAY_MODES, PAY_LABEL, WORK_SETTINGS_LIVE, isPayMode } from '../../utils/workTypes';
 import { CREATABLE_ROLES, ROLE_NAMES, roleOf, cleanTeam } from '../../utils/roles';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -73,6 +74,9 @@ const phoneDigits = (v: string) => v.replace(/\D/g, '');
 const phoneIsEmpty = (v: string) => phoneDigits(v) === PHONE_PREFIX || phoneDigits(v) === '';
 const phoneIsComplete = (v: string) => phoneDigits(v).length === 12;
 
+/** Tarif tapé à la main : vide = pas de tarif propre ; sinon un nombre de 0 à 100 000 000. */
+const payRateOk = (v: string): boolean => { const t = v.trim().replace(/[\s\u00a0]/g, '').replace(',', '.'); return t === '' || (/^\d+(\.\d{1,2})?$/.test(t) && Number(t) <= 100000000); };
+
 export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onOpenEmployeeCV,
   onNavigate,
@@ -118,6 +122,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [newShift, setNewShift] = useState<ShiftType>('day');
   const [newTeam, setNewTeam] = useState('');
   const [editTeam, setEditTeam] = useState('');
+  const [editPayMode, setEditPayMode] = useState(''); // M26.6 : '' = comme l'entreprise
+  const [editPayRate, setEditPayRate] = useState('');
   const [newRole, setNewRole] = useState<(typeof CREATABLE_ROLES)[number]>('employee');
 
   // Delete User Confirmation State
@@ -184,6 +190,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setEditPhone(formatPhone(user.phone || ''));
     setEditShift(user.shift);
     setEditTeam(user.team || '');
+    setEditPayMode(user.pay_mode || '');
+    setEditPayRate(user.pay_rate_ar ? String(user.pay_rate_ar) : '');
     setEditBadge(user.performance_badge);
     setEditPassword('');
   };
@@ -209,12 +217,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       }
     }
 
+    if (WORK_SETTINGS_LIVE && editingUser.role === 'employee' && !payRateOk(editPayRate)) return; // tarif impossible : le message est affiché sous le champ
     db.updateUser(editingUser.id, {
       name: editName,
       phone: phoneIsEmpty(editPhone) ? '' : editPhone,
       shift: editShift,
       team: cleanTeam(editTeam),
       performance_badge: editBadge,
+      ...(WORK_SETTINGS_LIVE && editingUser.role === 'employee' ? { pay_mode: isPayMode(editPayMode) ? editPayMode : undefined, pay_rate_ar: payRateOk(editPayRate) ? Math.round(Number(editPayRate.replace(/[\s\u00a0]/g, '').replace(',', '.'))) : undefined } : {}),
     });
 
     setEditingUser(null);
@@ -617,6 +627,20 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <label className="block text-slate-300 uppercase mb-1">Équipe</label>
                 <input list="df-teams" value={editTeam} onChange={e => setEditTeam(e.target.value)} maxLength={40} placeholder="ex: Équipe Nord (vide = aucune)" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
                 <datalist id="df-teams">{[...new Set(users.map(u => (u.team || '').trim()).filter(Boolean))].map(t => <option key={t} value={t} />)}</datalist>
+              </div>
+              )}
+
+              {WORK_SETTINGS_LIVE && editingUser && editingUser.role === 'employee' && (
+              <div data-employee-pay className="space-y-2">
+                <label className="block text-slate-300 uppercase mb-1">Mode de paie de cet employé</label>
+                <select value={editPayMode} onChange={e => setEditPayMode(e.target.value)} className="w-full bg-[#141e2a] border border-slate-700 rounded px-3 py-2 text-white">
+                  <option value="">Comme l'entreprise</option>
+                  {PAY_MODES.map(m => <option key={m} value={m}>{PAY_LABEL[m].fr}</option>)}
+                </select>
+                {editPayMode && editPayMode !== 'mission' && (
+                  <input inputMode="decimal" value={editPayRate} onChange={e => setEditPayRate(e.target.value)} placeholder="Son tarif en Ar (vide = tarif de l'entreprise)" className="w-full bg-[#141e2a] border border-slate-700 rounded px-3 py-2 text-white" />
+                )}
+                {!payRateOk(editPayRate) && editPayRate.trim() !== '' && <div role="alert" className="text-rose-300 text-[11px]">Tarif impossible : un nombre de 0 à 100 000 000.</div>}
               </div>
               )}
 

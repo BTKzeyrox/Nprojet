@@ -22,5 +22,11 @@ ok(!card || (card.howto.length === 3 && card.rules.length >= 3 && [card.title, c
 ok(/addWorkEntries/.test(view) && /data-worksheet-save/.test(view) && /data-worksheet-date/.test(view) && /max=\{today\}/.test(view), 'la page enregistre par le magasin et limite la date à aujourd\'hui');
 ok(/localStorage/.test(view) && /try \{/.test(view), 'brouillon gardé sur l\'appareil avec protection si le stockage manque');
 ok(/role === 'admin' \|\| t\.entry\.includes/.test(view) && /weCanEnterFor/.test(view), 'la liste des opérateurs et des types suit les droits (mêmes règles que le serveur)');
+// M26.6 : paie propre à chaque employé
+const emp = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8'), srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+ok(/WORK_SETTINGS_LIVE && editingUser && editingUser\.role === 'employee'/.test(emp) && /data-employee-pay/.test(emp), 'fiche employé : le bloc « Mode de paie » n\'existe que module ouvert et pour un opérateur');
+ok(/!payRateOk\(editPayRate\)\) return/.test(emp), 'un tarif impossible bloque l\'enregistrement');
+ok(/pay_mode: isPayMode\(editPayMode\) \? editPayMode : undefined/.test(emp), 'mode vide = comme l\'entreprise (le champ est retiré)');
+ok(/reason: 'pay_mode'/.test(srv) && /reason: 'pay_rate'/.test(srv) && /pr > 100000000/.test(srv), 'serveur : mode inconnu et tarif hors 0 à 100 000 000 refusés à l\'enregistrement');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
