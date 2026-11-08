@@ -67,7 +67,7 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('fr-FR');
 };
 
-// Commentaires et réponses : TOUT est masqué par défaut (BTK 2026-11-05). Un bouton « Afficher N commentaires » les ouvre ; les réponses restent repliées dans chaque commentaire.
+// Commentaires et réponses : TOUT est masqué par défaut (BTK 2026-11-05). Seule l'icône « Commenter » les ouvre et les ferme (BTK 2026-11-08 : plus de bouton « Afficher N commentaires ») ; les réponses restent repliées dans chaque commentaire.
 // « Visible par » : Tous (par défaut) ou un mélange de rôles. Le responsable et l'auteur voient toujours la publication.
 const AudiencePicker: React.FC<{ value: NewsRole[]; onChange: (v: NewsRole[]) => void; disabled?: boolean; light: boolean }> = ({ value, onChange, disabled, light }) => {
   const all = value.length === 0;
@@ -402,7 +402,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
         <button type="button" disabled={busy} onClick={() => { if (!loved) playUiSound('like'); void run(() => db.toggleLoveNews(post.id)); }} className={`${btn} ${loved ? 'text-red-500' : ''}`} aria-pressed={loved}>
           <Heart className="w-3.5 h-3.5 shrink-0" fill={loved ? 'currentColor' : 'none'} />J’adore
         </button>
-        <button type="button" onClick={() => setOpen(v => !v)} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
+        <button type="button" data-comment-toggle aria-expanded={open} onClick={() => { if (open) setReply(null); setOpen(v => !v); }} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
         <button type="button" onClick={share} data-share-open className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
       </div>
       </>)}
@@ -410,11 +410,9 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {msg && <div className="text-xs text-amber-600">{msg}</div>}
       {shareOpen && <NewsShareSheet post={post} me={me} light={light} onClose={() => setShareOpen(false)} onShared={() => { void run(() => db.shareNews(post.id)); }} />}
 
-      {published && (open || post.comments.length > 0) && (
-        <div className="space-y-3 pt-1" data-comments={open ? 'open' : 'closed'}>
+      {published && open && (
+        <div className="space-y-3 pt-1" data-comments="open">
           {open && post.comments.length === 0 && <div className={`text-xs ${muted}`}>Aucun commentaire pour le moment.</div>}
-          {!open && post.comments.length > 0 && <button type="button" data-show-comments onClick={() => setOpen(true)} aria-expanded={false} className={`text-xs font-semibold cursor-pointer min-h-[36px] ${light ? 'text-slate-600' : 'text-slate-300'}`}>Afficher {post.comments.length} {post.comments.length > 1 ? 'commentaires' : 'commentaire'}</button>}
-          {open && post.comments.length > 0 && <button type="button" data-hide-comments onClick={() => { setOpen(false); setReply(null); }} aria-expanded className={`text-xs font-semibold cursor-pointer min-h-[36px] ${light ? 'text-slate-600' : 'text-slate-300'}`}>Masquer les commentaires</button>}
           {(open ? tops : []).map(c => {
             const replies = post.comments.filter(r => r.parent_id === c.id);
             return (
