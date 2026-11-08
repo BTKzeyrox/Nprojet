@@ -933,6 +933,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `OpenGraphsButton.tsx` | Bouton « Voir les graphiques » des anciennes pages : les graphiques sont maintenant tous dans la page Graphiques (responsable). |
 | `OperatorSheet.tsx` | Fiche d'un opérateur : son état, ses missions ouvertes et toutes les actions possibles (profil, modifier, bloquer, supprimer, déconnexion forcée). |
 | `OperatorsTabs.tsx` | Barre à deux onglets de la page Opérateurs et sessions : la liste des opérateurs et le suivi des sessions. |
+| `PageHelp.tsx` | Bouton « ? » : l'aide de la page ouverte en 3 lignes (celles de la carte du site : siteKnowledge.ts), sans visite ni surbrillance. Guide G2 (2026-11-08). |
 | `PageSkeleton.tsx` | Page « squelette » grise et animée, affichée tout de suite pendant qu'une page se charge. |
 | `PayrollAdmin.tsx` | Paie : choix de la période, fiches de paie des opérateurs, primes, retenues, paiement, clôture, réouverture et exports (CSV, Excel, PDF). |
 | `PendingMark.tsx` | Petite marque « En attente » sur un élément modifié ici et pas encore reçu par le serveur, avec deux aides pour les actions qui exigent le réseau. |
@@ -1202,6 +1203,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:work-checks` | Contrôles du travail saisi (module 26, M26.8) : boîtes déclarées contre Stock, boîtes par heure, régularité. Lancer : npm run check:work-checks |
 | `npm run check:paper-sheet` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Lancer : npm run check:paper-sheet |
 | `npm run check:work-words` | Anglais et vocabulaire du modèle d'entreprise (module 26, M26.10). Lancer : npm run check:work-words |
+| `npm run check:page-help` | Bouton « ? » d'aide de la page (guide G2). Lancer : npm run check:page-help |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

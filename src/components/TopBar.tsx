@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
+import { PageHelp } from './PageHelp';
 import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
@@ -295,6 +296,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         </div>
 
         <div className="hidden md:block" data-header-conn><ConnectionChip /></div>
+
+        <div className="hidden md:block shrink-0" data-header-help><PageHelp pageId={activeView || ""} /></div>
 
         <div ref={bellBox} className="sm:relative shrink-0">
           <button

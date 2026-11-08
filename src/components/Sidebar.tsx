@@ -3,6 +3,7 @@
 // Pour modifier : les entrées sont dans navItems selon le rôle (admin, comptable, chef d'équipe, employé) et viewAllowedFor ; props currentUser, activeView, onNavigate, onLogout, compact. Libellés surtout en français.
 import { WORK_SETTINGS_LIVE } from '../utils/workTypes';
 import { Avatar } from './Avatar';
+import { PageHelp } from './PageHelp';
 import { SidebarProfile } from './ConnectionBanner';
 import { db } from '../db/store';
 import { viewAllowedFor } from '../utils/roles';
@@ -235,6 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
         <SidebarProfile name={currentUser.name} avatar={currentUser.avatar_url} role={(currentUser as any).job_title} light={isLight} onOpen={() => { onNavigate('profile'); onCloseMobile?.(); }} />
+        <div className="md:hidden px-3 pb-2" data-sidebar-help><PageHelp pageId={activeView} variant="row" /></div>
 
 
         {/* 3. Navigation */}
