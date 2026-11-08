@@ -1,7 +1,7 @@
 // Écran principal de l'employé : grille des missions, mission en cours (début, preuves, fin), avances sur salaire et messages.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'onglet affiché dépend de activeSubTab (grid, active-post, advances, chat) ; les données viennent de db (posts, contrats). Fichier très long : chercher la zone par son nom d'état.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Clock,
@@ -54,6 +54,7 @@ import { ScoreInput } from '../../components/ScoreInput';
 import { QueueButton } from '../../components/QueueButton';
 import { PendingMark } from '../../components/PendingMark';
 import { todayMada } from '../../utils/stats';
+import { composerEnter, isDesktopPointer, useAutoGrow } from '../../utils/composerKeys';
 import { levelNow, levelLine } from '../../utils/monthLevel';
 
 interface EmployeeDashboardProps {
@@ -178,6 +179,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
   // Messaging states
   const [chatMessage, setChatMessage] = useState('');
+  const chatBoxRef = useRef<HTMLTextAreaElement>(null);
+  useAutoGrow(chatBoxRef, chatMessage, 42);
   const [messages, setMessages] = useState(db.getMessages());
 
   // Listen to DB updates
@@ -1112,7 +1115,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <span>{msg.timestamp}</span>
                   </div>
                   <div
-                    className={`max-w-md p-3 rounded-xl text-xs font-mono leading-relaxed ${
+                    className={`max-w-md p-3 rounded-xl text-xs font-mono leading-relaxed whitespace-pre-line break-words ${
                       isMe
                         ? 'bg-emerald-600 text-white rounded-tr-none shadow-md shadow-emerald-950/40'
                         : 'bg-[#16212e] text-slate-200 border border-slate-700/80 rounded-tl-none shadow-md'
@@ -1128,14 +1131,18 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           {/* Send Input */}
           <form
             onSubmit={handleSendMessage}
-            className="p-3 bg-[#131d2a] border-t border-slate-800 flex items-center gap-2"
+            className="p-3 bg-[#131d2a] border-t border-slate-800 flex items-end gap-2"
           >
-            <input
-              type="text"
+            <textarea
+              ref={chatBoxRef}
+              rows={1}
               value={chatMessage}
               onChange={e => setChatMessage(e.target.value)}
+              onKeyDown={e => { if (composerEnter(e.nativeEvent, isDesktopPointer()) === 'send') { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
+              enterKeyHint="enter"
               placeholder="Écrire un message au superviseur (sans limite de messages)..."
-              className="flex-1 bg-[#0b1017] border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+              className="flex-1 min-w-0 resize-none max-h-36 bg-[#0b1017] border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs leading-5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+              style={{ height: 42 }}
             />
             <button
               type="submit"

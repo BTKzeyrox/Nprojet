@@ -18,6 +18,7 @@ import { NewsShareSheet } from '../components/NewsShareSheet';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { newsIdFromNav, newsNavId } from '../utils/newsLink';
 import { playUiSound } from '../utils/notifSound';
+import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
@@ -200,7 +201,8 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const [cPrep, setCPrep] = useState(false);
   const [cProg, setCProg] = useState<{ d: number; t: number } | null>(null);
   const cFile = useRef<HTMLInputElement>(null);
-  const cInput = useRef<HTMLInputElement>(null);
+  const cInput = useRef<HTMLTextAreaElement>(null);
+  useAutoGrow(cInput, text, 38);
   const [reply, setReply] = useState<{ parentId: string; name: string; excerpt: string } | null>(null); // réponse en cours : à quel commentaire, à qui, et un extrait de ce qu'il dit
   const [shownReplies, setShownReplies] = useState<Set<string>>(new Set()); // fils de réponses dépliés : tout est replié par défaut
   const toggleReplies = (id: string) => setShownReplies(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -454,15 +456,17 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             <button type="button" disabled={busy || cPrep} onClick={() => cFile.current?.click()} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} aria-label="Joindre une photo ou un fichier">
               {cPrep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </button>
-            <input
+            <textarea
               ref={cInput}
-              enterKeyHint="send"
+              rows={1}
+              enterKeyHint="enter"
               value={text}
               maxLength={500}
               onChange={e => setText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') void send(); }}
+              onKeyDown={e => { if (composerEnter(e.nativeEvent, isDesktopPointer()) === 'send') { e.preventDefault(); void send(); } }}
               placeholder={reply ? `Répondre à ${reply.name}…` : 'Écrire un commentaire…'}
-              className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`}
+              className={`flex-1 min-w-0 resize-none max-h-36 rounded-lg border px-3 py-2 text-sm leading-5 outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`}
+              style={{ height: 38 }}
             />
             <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
               {cProg ? `${cProg.d}/${cProg.t}` : <Send className="w-4 h-4" />}

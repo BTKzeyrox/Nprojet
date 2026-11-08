@@ -625,6 +625,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clientPrice.ts` | Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut. |
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
+| `composerKeys.ts` | Champs de message à plusieurs lignes (BTK, 2026-11-08) : même règle partout. |
 | `customWorkTypes.ts` | Types de travail créés par le responsable (module 26, M26.6b) : « Créer mon type de travail ». Règles pures, sans écran, sans serveur. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
 | `dayDetail.ts` | Règles pures (sans écran, sans serveur) du détail d'un employé pour un jour : connexions, missions et totaux. |

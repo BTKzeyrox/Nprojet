@@ -9,6 +9,7 @@ import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFI
 import { shortcutList, shortcutReply, detectShortcut } from '../utils/assistantShortcuts';
 import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } from '../utils/assistantMessages';
 import { useKeepBottom } from '../utils/useKeepBottom';
+import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { assistantMenu, menuHeightFromKeyboard, menuLabel, MENU_FALLBACK_H, type MenuItem } from '../utils/assistantMenu';
 import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
@@ -41,7 +42,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const mountedAt = useRef(Date.now()); // seuls les messages arrivés après l'ouverture jouent l'animation d'entrée
   const inflight = useRef(false); // garde synchrone : l'état `busy` arrive trop tard si on touche deux fois vite
   const lastQ = useRef<{ q: string; at: number }>({ q: '', at: 0 });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useAutoGrow(inputRef, text, 48);
   // « Rédiger un message » : modèle + champs ; texte final modifiable avant de le copier (rien n'est envoyé)
   const [composing, setComposing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false); // menu « / » : 6 gros boutons, sous le champ, à la place du clavier
@@ -142,7 +144,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       <div ref={listRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2 ${area}`} aria-live="polite">
         {msgs.length === 0 && <p className={`text-sm text-center py-6 ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Posez une question ou touchez un bouton. Je ne devine pas, je montre toujours d\'où viennent les chiffres, et je ne fais rien tout seul.', 'Ask a question or tap a button. I do not guess, I always show where figures come from, and I never act on my own.')}</p>}
         {msgs.map(m => m.who === 'me' ? (
-          <div key={m.id} className={`ml-auto max-w-[85%] w-fit rounded-2xl rounded-br-md bg-emerald-700 text-white text-[0.9375rem] leading-relaxed px-3 py-1.5 shadow-sm ${m.at >= mountedAt.current ? 'df-msg-in-right' : ''}`}>{m.text}</div>
+          <div key={m.id} className={`ml-auto max-w-[85%] w-fit rounded-2xl rounded-br-md bg-emerald-700 text-white text-[0.9375rem] leading-relaxed whitespace-pre-line break-words px-3 py-1.5 shadow-sm ${m.at >= mountedAt.current ? 'df-msg-in-right' : ''}`}>{m.text}</div>
         ) : m.reply && (
           <div key={m.id} className={`max-w-[92%] w-fit rounded-2xl rounded-bl-md border px-3 py-1.5 space-y-1.5 text-[0.9375rem] leading-relaxed shadow-sm ${bubbleBot} ${m.at >= mountedAt.current ? 'df-msg-in-left' : ''}`}>
             {(l === 'en' ? m.reply.title.en : m.reply.title.fr) && <div className="font-bold">{l === 'en' ? m.reply.title.en : m.reply.title.fr}</div>}
@@ -173,9 +175,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
           </div>
         )}
         <form onSubmit={e => { e.preventDefault(); ask(text); inputRef.current?.focus(); }}>
-          <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
+          <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
             <button type="button" onClick={toggleMenu} aria-label={t('Menu des messages prêts', 'Ready messages menu')} aria-expanded={menuOpen} aria-haspopup="menu" title={t('Menu des messages prêts', 'Ready messages menu')} className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg font-bold cursor-pointer border ${menuOpen ? 'bg-sky-600 border-sky-500 text-white' : L ? 'bg-white border-slate-300 text-sky-700' : 'bg-white/10 border-white/20 text-sky-200'}`}>/</button>
-            <input ref={inputRef} type="text" value={text} onFocus={() => { setMenuOpen(false); keep.pin(); }} onChange={e => setText(e.target.value)} enterKeyHint="send" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 h-12 bg-transparent border-0 px-1 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none' }} />
+            <textarea ref={inputRef} rows={1} value={text} onFocus={() => { setMenuOpen(false); keep.pin(); }} onChange={e => setText(e.target.value)} onKeyDown={e => { if (composerEnter(e.nativeEvent, isDesktopPointer()) === 'send') { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} enterKeyHint="enter" autoComplete="off" aria-label={t('Question', 'Question')} placeholder={busy ? t('L\'assistant écrit…', 'Assistant is typing…') : t('Écrire un message…', 'Write a message…')} className={`flex-1 min-w-0 resize-none bg-transparent border-0 px-1 py-3 text-base leading-6 max-h-36 focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`} style={{ boxShadow: 'none', border: 'none', height: 48 }} />
             <button type="submit" disabled={busy || !text.trim()} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} aria-label={t('Envoyer', 'Send')} className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md"><Send className="w-5 h-5" /></button>
           </div>
         </form>

@@ -3,6 +3,7 @@
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
 import { useKeepBottom } from '../utils/useKeepBottom';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
@@ -143,7 +144,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const fileRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   // Le champ grandit avec le texte (jusqu'à ~6 lignes) puis défile
-  useEffect(() => { const el = composerRef.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 144)}px`; }, [text, threadId]);
+  useAutoGrow(composerRef, `${threadId}|${text}`, 40);
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ url: string; msg: ChatMessage } | null>(null);
@@ -943,8 +944,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   else if (e.key === 'ArrowUp' && !e.shiftKey && !text && !editingId) { // champ vide : modifier mon dernier message (si le délai de 15 min le permet)
                     const mine = [...visible].reverse().find(m => m.sender_id === currentUser.id && m.message && db.canEditMessage(m, currentUser.id));
                     if (mine) { e.preventDefault(); startEdit(mine); }
-                  } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); }
-                  else if (e.key === 'Enter' && !e.shiftKey && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } // ordinateur : Entrée envoie, Maj+Entrée passe à la ligne ; téléphone : Entrée passe à la ligne
+                  } else if (composerEnter(e, isDesktopPointer()) === 'send') { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } // ordinateur : Entrée envoie, Maj+Entrée = ligne ; téléphone : Entrée = ligne
                 }}
                 enterKeyHint="enter"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}

@@ -57,8 +57,8 @@ const pickFn = /const pick = \(m: MenuItem\) => \{[\s\S]*?\n  \};/.exec(ui)?.[0]
 ok(/setMenuOpen\(false\)/.test(pickFn) && /ask\(l === 'en' \? m\.send\.en : m\.send\.fr\)/.test(pickFn), 'toucher un bouton : ferme le bloc et envoie par la même fonction `ask` que la saisie');
 ok(/m\.kind === 'compose'\) \{ setComposing\(true\); return; \}/.test(pickFn) && !/ask\(/.test(pickFn.split("m.kind === 'compose'")[1].split('\n')[0]), '« Rédiger un message » : ouvre l\'éditeur (setComposing(true)) sans rien envoyer');
 ok(/disabled=\{busy && m\.kind === 'send'\}/.test(block), 'pendant que l\'assistant écrit, les 5 boutons qui envoient sont désactivés');
-const pill = /<div className=\{`flex items-center gap-1\.5 rounded-3xl[\s\S]*?<\/form>/.exec(ui)?.[0] || '';
-ok(/type="button"[^>]*onClick=\{toggleMenu\}/.test(pill) && /aria-expanded=\{menuOpen\}/.test(pill) && pill.indexOf('onClick={toggleMenu}') < pill.indexOf('<input ') && />\/<\/button>/.test(pill), 'bouton « / » : dans le champ de saisie, de type "button", ouvre et ferme le bloc');
+const pill = /<div className=\{`flex items-(?:center|end) gap-1\.5 rounded-3xl[\s\S]*?<\/form>/.exec(ui)?.[0] || '';
+ok(/type="button"[^>]*onClick=\{toggleMenu\}/.test(pill) && /aria-expanded=\{menuOpen\}/.test(pill) && pill.indexOf('onClick={toggleMenu}') < pill.indexOf('<textarea ') && />\/<\/button>/.test(pill), 'bouton « / » : dans le champ de saisie, de type "button", ouvre et ferme le bloc');
 const tog = /const toggleMenu = \(\) => \{[\s\S]*?\n  \};/.exec(ui)?.[0] || '';
 ok(/if \(menuOpen\) \{ setMenuOpen\(false\); return; \}/.test(tog) && /visualViewport/.test(tog) && /menuHeightFromKeyboard/.test(tog) && tog.indexOf('menuHeightFromKeyboard') < tog.indexOf('.blur()') && /setMenuOpen\(true\)/.test(tog), 'ouverture : mesure le clavier AVANT de le fermer (blur), 2e toucher = ferme');
 ok(/onFocus=\{\(\) => \{ setMenuOpen\(false\);/.test(ui), 'toucher le champ de texte : le bloc se ferme (le clavier revient)');

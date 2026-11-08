@@ -25,7 +25,7 @@ t('réponses : supprimer un commentaire supprime ses réponses (serveur et démo
 t('réponses : le site envoie parentId et affiche « Répondre »', /parentId: reply\.parentId/.test(store) && feed.includes('>Répondre</button>') && /Réponse à <b>\{reply\.name\}/.test(feed));
 t('réponses : décalées sous leur commentaire', /ml-10/.test(feed) && /replies\.map\(r => renderComment\(r, true\)\)/.test(feed));
 t('réponses : repliées par défaut, un bouton Afficher / Masquer par commentaire', feed.includes('useState<Set<string>>(new Set())') && feed.includes('shownReplies.has(c.id) && replies.map(r => renderComment(r, true))') && feed.includes('Masquer les réponses') && feed.includes('`Afficher ${replies.length}'));
-t('réponses : « Répondre » prend le curseur dans le geste du doigt (clavier du téléphone)', /flushSync\(\(\) => \{ setReply\(/.test(feed) && /el\.focus\(\{ preventScroll: true \}\)/.test(feed) && /enterKeyHint="send"/.test(feed));
+t('réponses : « Répondre » prend le curseur dans le geste du doigt (clavier du téléphone)', /flushSync\(\(\) => \{ setReply\(/.test(feed) && /el\.focus\(\{ preventScroll: true \}\)/.test(feed) && /enterKeyHint="enter"/.test(feed) && /composerEnter\(/.test(feed));
 t('réponses : le commentaire cité s\'affiche au-dessus du champ', /reply\.excerpt/.test(feed) && /Réponse à <b>\{reply\.name\}/.test(feed));
 t('réponses : sa propre réponse est dépliée après l\'envoi', /setShownReplies\(prev => new Set\(prev\)\.add\(reply\.parentId\)\)/.test(feed));
 // Albums de photos (comme WhatsApp)

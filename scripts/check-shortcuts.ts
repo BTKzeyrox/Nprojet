@@ -1,5 +1,6 @@
 // Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : jamais pendant l'écriture, navigateur intact, liste affichée = liste qui marche.
 import { readFileSync } from 'node:fs';
+import { composerEnter, growTo } from '../src/utils/composerKeys';
 import { resolveShortcut, isTypingElement, SHORTCUT_LIST, GO_TARGETS } from '../src/utils/shortcuts';
 
 let n = 0, fails = 0;
@@ -28,7 +29,19 @@ ok(/hover: hover\) and \(pointer: fine\)/.test(app) && /isTypingElement\(e\.targ
 ok(/\{helpOpen && <ShortcutsHelp/.test(app) && /FOCUS_SEARCH_EVENT/.test(bar), 'application : liste branchée, recherche branchée');
 ok(/e\.key === 'Escape'/.test(bar) && /setMSearch\(false\); setBellOpen\(false\)/.test(bar), 'en-tête : Échap ferme recherche et cloche');
 ok(/cancelEdit\(\)/.test(chat) && /e\.key === 'ArrowUp' && !e\.shiftKey && !text && !editingId/.test(chat) && /requestSubmit\(\)/.test(chat) && /isComposing/.test(chat), 'messagerie : Échap annule, ↑ modifie le dernier message, Ctrl+Entrée envoie, composition respectée');
-ok(/<textarea/.test(chat) && /key === 'Enter' && !e\.shiftKey/.test(chat) && /enterKeyHint="enter"/.test(chat) && /whitespace-pre-line/.test(chat), 'messagerie : champ multi-lignes, Entrée envoie sur ordinateur, Maj+Entrée passe à la ligne');
+ok(/<textarea/.test(chat) && /composerEnter\(e, isDesktopPointer\(\)\) === 'send'/.test(chat) && /enterKeyHint="enter"/.test(chat) && /whitespace-pre-line/.test(chat), 'messagerie : champ multi-lignes, Entrée envoie sur ordinateur, Maj+Entrée passe à la ligne');
+{
+  const asst = readFileSync('src/components/AssistantChat.tsx', 'utf8'), feedSrc = readFileSync('src/views/FeedView.tsx', 'utf8'), emp = readFileSync('src/views/employee/EmployeeDashboard.tsx', 'utf8');
+  ok(/<textarea ref=\{inputRef\}/.test(asst) && /composerEnter\(/.test(asst) && /useAutoGrow\(inputRef/.test(asst) && /whitespace-pre-line/.test(asst), 'assistant : champ multi-lignes, Maj+Entrée = ligne, retours à la ligne visibles');
+  ok(/<textarea\s+ref=\{cInput\}/.test(feedSrc) && /composerEnter\(/.test(feedSrc) && /useAutoGrow\(cInput/.test(feedSrc), 'commentaires : champ multi-lignes, Maj+Entrée = ligne');
+  ok(/<textarea\s+ref=\{chatBoxRef\}/.test(emp) && /composerEnter\(/.test(emp) && /useAutoGrow\(chatBoxRef/.test(emp) && /whitespace-pre-line/.test(emp), 'message au superviseur : champ multi-lignes, Maj+Entrée = ligne');
+  const E = (o: object) => composerEnter({ key: 'Enter', ...o }, true), T = (o: object) => composerEnter({ key: 'Enter', ...o }, false);
+  ok(E({}) === 'send' && E({ ctrlKey: true }) === 'send' && E({ metaKey: true }) === 'send' && E({ shiftKey: true }) === 'newline', 'Enter : ordinateur = envoie, Ctrl/Cmd+Entrée = envoie, Maj+Entrée = ligne');
+  ok(T({}) === 'newline' && T({ shiftKey: true }) === 'newline' && T({ ctrlKey: true }) === 'send', 'Enter : téléphone = ligne (le bouton envoie)');
+  ok(E({ isComposing: true }) === 'none' && composerEnter({ key: 'a' }, true) === 'none', 'Enter : composition et autres touches ignorées');
+  const box = { style: { height: '' }, scrollHeight: 300 };
+  ok(growTo(box, 40) === 144 && growTo({ style: { height: '' }, scrollHeight: 10 }, 40) === 40 && growTo({ style: { height: '' }, scrollHeight: 88 }, 40) === 88, 'champ : grandit avec le texte, minimum 40 px, maximum ~6 lignes');
+}
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
