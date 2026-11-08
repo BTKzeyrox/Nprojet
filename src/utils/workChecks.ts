@@ -18,8 +18,9 @@ const inWindow = (date: string, today: string, days: number): boolean => DATE.te
 
 export interface StockGap { declared: number; received: number; missing: number; pct: number; products: number }
 /** Boîtes déclarées (quantité acceptée des lignes validées) contre entrées en Stock des produits « boîte », sur 30 jours.
- *  `null` = rien à dire : pas de produit en boîtes, trop peu déclaré, ou écart dans la tolérance (déclaré ≤ reçu + 10 %). */
-export function workStockGap(posts: PostSession[], products: Product[], moves: StockMove[], today: string, days = WC_WINDOW_DAYS): StockGap | null {
+ *  `null` = rien à dire : pas de produit en boîtes, trop peu déclaré, ou écart dans la tolérance (déclaré ≤ reçu + tolérance, 10 % par défaut ou « Écart toléré avec le stock »). */
+export function workStockGap(posts: PostSession[], products: Product[], moves: StockMove[], today: string, days = WC_WINDOW_DAYS, tolerancePct: unknown = WC_TOLERANCE_PCT): StockGap | null {
+  const tol = typeof tolerancePct === 'number' && Number.isFinite(tolerancePct) && tolerancePct >= 0 && tolerancePct <= 100 ? tolerancePct : WC_TOLERANCE_PCT; // T4 : réglage de l'entreprise (Réglages > Conditions), sinon 10 %
   if (!DATE.test(today)) return null;
   const box = products.filter(isBoxProduct);
   if (!box.length) return null;
@@ -29,7 +30,7 @@ export function workStockGap(posts: PostSession[], products: Product[], moves: S
   if (declared < WC_MIN_DECLARED) return null;
   let received = 0;
   for (const m of moves) if (m.type === 'in' && ids.has(m.product_id) && inWindow(m.date, today, days)) received += n(m.qty);
-  if (declared <= received * (1 + WC_TOLERANCE_PCT / 100)) return null;
+  if (declared <= received * (1 + tol / 100)) return null;
   const missing = Math.round((declared - received) * 100) / 100;
   return { declared: Math.round(declared * 100) / 100, received: Math.round(received * 100) / 100, missing, pct: Math.round((missing / declared) * 100), products: box.length };
 }

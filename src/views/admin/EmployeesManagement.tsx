@@ -119,6 +119,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [importing, setImporting] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [giveName, setGiveName] = useState('');
+  const [givePass, setGivePass] = useState('');
+  const [giveErr, setGiveErr] = useState<string | null>(null);
   const [newEntryOnly, setNewEntryOnly] = useState(false); // M26.7 : suivi par saisie seulement (sans compte)
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('261 ');
@@ -606,7 +609,18 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>
 
-              {<div>
+              {editingUser && (editingUser as any).entry_only && (
+                <div data-give-account className="rounded-lg border border-emerald-700 p-2 space-y-2">
+                  <p className="text-slate-300 uppercase">Donner un compte</p>
+                  <p className="text-[11px] text-slate-400">Cet employé est suivi par saisie seulement. S'il a maintenant un téléphone, donne-lui un identifiant et un mot de passe : son historique et sa paie restent.</p>
+                  <input data-give-username value={giveName} onChange={e => setGiveName(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Identifiant" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
+                  <input data-give-password type="text" value={givePass} onChange={e => setGivePass(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Mot de passe (6 caractères min.)" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
+                  {giveErr && <p role="alert" className="text-red-400 text-[11px]">{giveErr}</p>}
+                  <button type="button" data-give-submit className="min-h-[44px] px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold cursor-pointer" onClick={async () => { setGiveErr(null); const r = await db.giveAccount(editingUser.id, giveName, givePass); if (!r.success) { setGiveErr(r.error || 'Impossible.'); return; } setGiveName(''); setGivePass(''); }}>Donner le compte</button>
+                </div>
+              )}
+
+              {editingUser && !(editingUser as any).entry_only && <div>
                 <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe (optionnel)</label>
                 <input
                   type="text"

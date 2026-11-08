@@ -821,3 +821,8 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
   - **T3 Employé « saisie seulement » : pas de passage vers un vrai compte.** À faire : bouton « Donner un compte » (identifiant + mot de passe), qui retire le drapeau.
   - **T4 Réglage `stock_gap_pct` ignoré.** L'alerte Stock utilise 10 % fixe au lieu du réglage de l'entreprise.
   - **OK vérifié** : la paie des lignes validées passe bien dans la fiche de paie (somme de `calculated_ar`) donc dans la compta, le calendrier et les statistiques d'argent. Saisie hors ligne : le responsable seulement (le chef d'équipe, pas encore).
+- [x] 2026-11-09 **M26.14 FAIT (« Go fait tous » de BTK) : les 4 trous T1 à T4 corrigés dans le code et la démo — SERVEUR df-api À REDÉPLOYER (sauvegarde + accord écrit de BTK ; une autre session a déployé la v77 : relire la version en ligne avant).**
+  - T1 salaire fixe : `src/utils/fixedSalary.ts` + bloc FIXEDSALARY dans `df-api` (`computeSlips` ajoute une ligne « Salaire fixe » par fiche : mois entier, moitié pour une quinzaine ; tarif propre sinon réglage de l'entreprise) + démo. `check:fixed-salary`.
+  - T2 annuler une ligne : `planWorkCancel` (bloc WORKENTRY), route `work-line-cancel` (responsable seulement, refuse si la période de paie est clôturée, journalisée), liste « Déjà saisi ce jour-là » avec « Annuler » dans la Feuille du jour. `check:work-cancel`. Testé en navigateur (démo : 4 000 Ar ajoutés puis retirés).
+  - T3 donner un compte : route `give-account`, bloc « Donner un compte » dans la fiche d'un employé « saisie seulement » (l'historique et la paie restent). `check:give-account`.
+  - T4 : l'alerte Stock lit « Écart toléré avec le stock » (10 % par défaut). `check:work-checks`.

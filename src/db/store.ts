@@ -76,6 +76,8 @@ import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 import { setServerClock } from '../utils/serverClock';
+import { fixedSalaryAr } from '../utils/fixedSalary';
+import { planWorkCancel } from '../utils/workEntry';
 
 const TOKEN_KEY = 'df_session_token_v2';
 // Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
@@ -1707,7 +1709,8 @@ export class AppStore {
         const emps = this.users.filter(u => u.role === 'employee');
         const slips = emps.map((u, i) => {
           const mine = this.posts.filter(x => x.employee_id === u.id && x.status === 'completed' && x.date >= start && x.date <= end);
-          const gross = mine.reduce((tt, x) => tt + Math.max(0, Math.round(typeof x.calculated_ar === 'number' ? x.calculated_ar : 0)), 0);
+          const fixedPay = fixedSalaryAr(u, this.settings, pidStr); // salaire fixe (T1)
+          const gross = mine.reduce((tt, x) => tt + Math.max(0, Math.round(typeof x.calculated_ar === 'number' ? x.calculated_ar : 0)), 0) + fixedPay;
           return { id: `slip-${pidStr}-${u.id}`, pid: pidStr, period_start: start, period_end: end, user_id: u.id, name: u.name, username: u.username, phone: u.phone || '', lines: [], gross, bonuses: [], penalties: [], penalty_applied: 0, advance_due_before: 0, advance_deducted: 0, advance_carry: 0, net: gross, paid: isClosed && i % 2 === 0 && gross > 0 ? { at: `${end}T10:00:00.000Z`, method: 'Mobile money', ref: '', by_name: 'Responsable' } : null };
         }).filter(sl => sl.gross > 0);
         const pending = this.posts.filter(x => ['pending_start', 'pending_end', 'active'].includes(x.status) && x.date >= start && x.date <= end).length;
@@ -2965,6 +2968,25 @@ export class AppStore {
     return { ok: true, saved: Number(r.data?.saved) || 0, failed: Array.isArray(r.data?.failed) ? r.data.failed : [], validated: !!r.data?.validated };
   }
 
+  /** Annule une ligne de la feuille du jour (responsable seulement) : retire sa paie, la supprime ; elle peut être saisie à nouveau. En ligne seulement. */
+  public async cancelWorkLine(postId: string): Promise<{ ok: boolean; error?: string }> {
+    if (this.demo) {
+      const post = this.posts.find(p => p.id === postId);
+      const emp = post ? this.users.find(u => u.id === post.employee_id) : undefined;
+      const plan = planWorkCancel(this.currentUser, post, emp, false);
+      if (!plan.ok) return { ok: false, error: plan.error === 'role' ? 'Réservé au responsable.' : "Ce n'est pas une ligne de la feuille du jour." };
+      this.posts = this.posts.filter(p => p.id !== plan.id);
+      if (plan.user && emp) emp.total_earnings_ar = plan.user.total_earnings_ar;
+      this.notify();
+      return { ok: true };
+    }
+    const r = await this.api('work-line-cancel', { method: 'POST', body: JSON.stringify({ id: postId }) });
+    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
+    this.posts = this.posts.filter(p => p.id !== postId);
+    this.notify();
+    return { ok: true };
+  }
+
   public rejectPost(postId: string, reason: string): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);
     if (!post) return { success: false, error: 'Mission introuvable' };
@@ -3045,6 +3067,25 @@ export class AppStore {
 
     Object.assign(user, data);
     this.notify();
+    return { success: true };
+  }
+
+  /** T3 : donne un vrai compte (pseudo + mot de passe) à un employé « suivi par saisie seulement ». Responsable seulement. */
+  public async giveAccount(userId: string, username: string, password: string): Promise<{ success: boolean; error?: string }> {
+    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
+    const uname = String(username || '').trim().toLowerCase();
+    if (!/^[a-z0-9_.-]{3,30}$/.test(uname)) return { success: false, error: 'Pseudo invalide (3 à 30 lettres/chiffres).' };
+    if (typeof password !== 'string' || password.length < 6) return { success: false, error: 'Mot de passe : 6 caractères minimum.' };
+    const u = this.users.find(x => x.id === userId);
+    if (!u || !(u as any).entry_only) return { success: false, error: "Cet employé n'est pas suivi par saisie seulement." };
+    if (this.users.some(x => x.id !== userId && String(x.username).toLowerCase() === uname)) return { success: false, error: 'Ce pseudo existe déjà.' };
+    if (!this.demo) {
+      const r = await this.api('give-account', { method: 'POST', body: JSON.stringify({ userId, username: uname, password }) });
+      if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
+    }
+    u.username = uname; delete (u as any).entry_only;
+    if (!this.demo) this.synced.users.set(u.id, JSON.stringify(u));
+    this.emit();
     return { success: true };
   }
 

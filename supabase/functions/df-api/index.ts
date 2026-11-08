@@ -251,6 +251,19 @@ function planWorkEntries(me: any, users: any[], existing: any[], sheet: any, set
   });
   return { ok: true, saved, failed, users: [...touched].map(id => byId.get(id)), validated: admin };
 }
+/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable seulement. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
+function planWorkCancel(me: any, post: any, employee: any, closed: boolean): { ok: true; id: string; user: any } | { ok: false; error: "role" | "notline" | "closed" } {
+  if (!me || me.role !== "admin") return { ok: false, error: "role" };
+  if (!post || typeof post !== "object" || typeof post.id !== "string" || !post.id.startsWith("we-") || typeof post.work_type !== "string" || !post.work_type) return { ok: false, error: "notline" };
+  if (post.status !== "completed" && post.status !== "pending_end") return { ok: false, error: "notline" };
+  if (closed) return { ok: false, error: "closed" };
+  let user: any = null;
+  if (post.status === "completed" && employee && typeof employee === "object") {
+    const pay = Math.max(0, Math.round(Number(post.calculated_ar) || 0));
+    user = { ...employee, total_earnings_ar: Math.max(0, Math.round((Number(employee.total_earnings_ar) || 0) - pay)) };
+  }
+  return { ok: true, id: post.id, user };
+}
 /** Personne ne valide sa propre saisie. */
 const weSelfEntered = (me: any, post: any): boolean => !!me && !!post && typeof post.entered_by === "string" && post.entered_by === me.id;
 // ===== END WORKENTRY =====
@@ -4410,6 +4423,27 @@ async function workEntryRoute(req: any, res: any, me: any) {
   return res.json({ ok: true, saved: plan.saved.length, failed: plan.failed, validated: plan.validated });
 }
 
+async function workCancelRoute(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  const id = String((req.body || {}).id || '');
+  if (!id.startsWith('we-')) return res.status(400).json({ error: 'Ligne illisible.' });
+  const { data: prow } = await sb.from(T.posts).select('id, data').eq('id', id).maybeSingle();
+  const post = prow?.data;
+  if (!post) return res.status(404).json({ error: 'Ligne introuvable (déjà annulée ?).' });
+  const { data: urow } = await sb.from(T.users).select('id, data').eq('id', post.employee_id).maybeSingle();
+  const { data: prs } = await sb.from(PAYROLL).select('data').eq('data->>kind', 'period');
+  const closed = (prs || []).some((r: any) => r.data && r.data.status === 'closed' && String(r.data.period_start) <= String(post.date) && String(post.date) <= String(r.data.period_end));
+  const plan = planWorkCancel(me, post, urow?.data || null, closed);
+  if (!plan.ok) {
+    const msg: Record<string, string> = { role: 'Réservé au responsable.', notline: "Ce n'est pas une ligne de la feuille du jour.", closed: 'La période de paie de ce jour est clôturée : impossible de l\'annuler.' };
+    return res.status(plan.error === 'role' ? 403 : plan.error === 'closed' ? 409 : 400).json({ error: msg[plan.error] || 'Annulation refusée.' });
+  }
+  await sb.from(T.posts).delete().eq('id', plan.id);
+  if (plan.user) await sb.from(T.users).upsert({ id: plan.user.id, data: plan.user, updated_at: new Date().toISOString() });
+  await auditLog(me, 'work_cancel', { type: 'posts', id: post.id, label: `Ligne du ${post.date}` }, `Ligne annulée : ${String(post.employee_name || '').slice(0, 60)} · ${String(post.work_type).slice(0, 40)}`);
+  return res.json({ ok: true });
+}
+
 // ---------- comptes ----------
 async function createUser(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
@@ -4439,6 +4473,24 @@ async function createUser(req: any, res: any, me: any) {
   await sb.from(T.users).upsert({ id, data: rec, updated_at: new Date().toISOString() });
   await sb.from('df_credentials').insert({ user_id: id, username: uname, password_hash: hashPw(password) });
   await auditLog(me, 'user_create', { type: 'users', id, label: rec.name || uname }, `Pseudo : ${uname}`);
+  return res.json({ user: rec });
+}
+
+// T3 : donner un vrai compte (identifiant + mot de passe) à un employé « suivi par saisie seulement ». Le drapeau entry_only est retiré ; son historique (lignes, paie) reste.
+async function giveAccount(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  const { userId, username, password } = req.body || {};
+  const target = await getUserRow(String(userId || ''));
+  if (!target || !isEntryOnly(target)) return res.status(400).json({ error: "Cet employé n'est pas suivi par saisie seulement." });
+  const uname = String(username || '').trim().toLowerCase();
+  if (!/^[a-z0-9_.-]{3,30}$/.test(uname)) return res.status(400).json({ error: 'Pseudo invalide (3 à 30 lettres/chiffres).' });
+  if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
+  const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
+  if (dup) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
+  const rec: any = { ...target, username: uname }; delete rec.entry_only;
+  await sb.from('df_credentials').insert({ user_id: target.id, username: uname, password_hash: hashPw(password) });
+  await sb.from(T.users).upsert({ id: target.id, data: rec, updated_at: new Date().toISOString() });
+  await auditLog(me, 'user_create', { type: 'users', id: target.id, label: auditLabelOf(rec) }, `Compte donné (pseudo : ${uname}) à un employé suivi par saisie`);
   return res.json({ user: rec });
 }
 
@@ -4795,6 +4847,23 @@ const audit = (pid: string, action: string, me: any, detail: string) =>
     updated_at: new Date().toISOString(),
   });
 
+// Salaire fixe (T1) : copie de src/utils/fixedSalary.ts, comparée par scripts/check-fixed-salary.ts.
+// ===== BEGIN FIXEDSALARY =====
+function fixedSalaryAr(employee: any, settings: any, pid: unknown): number {
+  if (!employee || typeof employee !== "object" || employee.role !== "employee") return 0;
+  if (employee.status !== undefined && employee.status !== "active") return 0;
+  const work = (settings && settings.company && settings.company.work) || {};
+  const okMode = (v: unknown) => typeof v === "string" && ["mission", "day", "hour", "piece", "fixed"].includes(v);
+  const mode = okMode(employee.pay_mode) ? employee.pay_mode : okMode(work.pay_default) ? work.pay_default : "mission";
+  if (mode !== "fixed") return 0;
+  const rate = (v: unknown) => (typeof v === "number" && isFinite(v) && v > 0 && v <= 100000000 ? v : 0);
+  const own = rate(employee.pay_rate_ar);
+  const monthly = own > 0 ? own : rate(work.rate_fixed_ar);
+  const m = /^\d{4}-(0[1-9]|1[0-2])(?:-([AB]))?$/.exec(String(pid ?? ""));
+  if (!m || monthly <= 0) return 0;
+  return Math.round(monthly * (m[2] ? 0.5 : 1));
+}
+// ===== END FIXEDSALARY =====
 // Calcule les fiches d'une période (aperçu, ou base de la clôture). Les montants par session viennent de calculated_ar (figé à la validation).
 async function computeSlips(info: { pid: string; start: string; end: string }, cfg: PayCfg, onlyUser?: string) {
   const posts = await fetchAll((a, b) => {
@@ -4830,6 +4899,12 @@ async function computeSlips(info: { pid: string; start: string; end: string }, c
     const amount = Math.max(0, Math.round(Number(p.calculated_ar) || 0));
     const score = Math.max(0, (Number(p.final_score ?? p.current_score) || 0) - (Number(p.initial_score) || 0));
     get(p.employee_id).lines.push({ post_id: p.id, date: p.date, client: p.client_name, post_number: p.post_number ?? null, score, rate: score > 0 ? Math.round((amount / score) * 1_000_000) : 0, amount });
+  }
+  const stg = await getSettings();
+  for (const [uid, u] of users) { // salaire fixe : une ligne par fiche (le mois entier, la moitié pour une quinzaine)
+    if (onlyUser && uid !== onlyUser) continue;
+    const fixed = fixedSalaryAr(u, stg, info.pid);
+    if (fixed > 0) get(uid).lines.push({ post_id: `fixed-${info.pid}-${uid}`, date: info.end, client: 'Salaire fixe', post_number: null, score: 0, rate: 0, amount: fixed });
   }
   for (const r of bonusRows) {
     const b = r.data;
@@ -6600,6 +6675,7 @@ Deno.serve(async (request: Request) => {
     if (action === "report-freeze" && req.method === "POST") return await reportFreeze(req, res, me);
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
     if (action === "work-entry" && req.method === "POST") return await workEntryRoute(req, res, me);
+    if (action === "work-line-cancel" && req.method === "POST") return await workCancelRoute(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "prefs" && req.method === "GET") return await prefsGetRoute(req, res, me);
     if (action === "prefs-set" && req.method === "POST") return await prefsSetRoute(req, res, me);
@@ -6631,6 +6707,7 @@ Deno.serve(async (request: Request) => {
     if (action === "news-edit" && req.method === "POST") return await newsEdit(req, res, me);
     if (action === "news-delete" && req.method === "POST") return await newsDelete(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
+    if (action === "give-account" && req.method === "POST") return await giveAccount(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "totp-status" && req.method === "GET") return await totpStatus(req, res, me);
     if (action === "totp-start" && req.method === "POST") return await totpStart(req, res, me);

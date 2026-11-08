@@ -86,6 +86,19 @@ export function planWorkEntries(me: any, users: any[], existing: any[], sheet: a
   });
   return { ok: true, saved, failed, users: [...touched].map(id => byId.get(id)), validated: admin };
 }
+/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable seulement. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
+export function planWorkCancel(me: any, post: any, employee: any, closed: boolean): { ok: true; id: string; user: any } | { ok: false; error: "role" | "notline" | "closed" } {
+  if (!me || me.role !== "admin") return { ok: false, error: "role" };
+  if (!post || typeof post !== "object" || typeof post.id !== "string" || !post.id.startsWith("we-") || typeof post.work_type !== "string" || !post.work_type) return { ok: false, error: "notline" };
+  if (post.status !== "completed" && post.status !== "pending_end") return { ok: false, error: "notline" };
+  if (closed) return { ok: false, error: "closed" };
+  let user: any = null;
+  if (post.status === "completed" && employee && typeof employee === "object") {
+    const pay = Math.max(0, Math.round(Number(post.calculated_ar) || 0));
+    user = { ...employee, total_earnings_ar: Math.max(0, Math.round((Number(employee.total_earnings_ar) || 0) - pay)) };
+  }
+  return { ok: true, id: post.id, user };
+}
 /** Personne ne valide sa propre saisie. */
 export const weSelfEntered = (me: any, post: any): boolean => !!me && !!post && typeof post.entered_by === "string" && post.entered_by === me.id;
 // ===== END WORKENTRY =====

@@ -103,7 +103,7 @@ export const workVsStock: HealthRule = {
   id: 'stock.workgap', page: 'stock',
   run: (ctx) => {
     if (!WORK_SETTINGS_LIVE) return [];
-    const g = workStockGap(ctx.posts, ctx.products, ctx.moves, ctx.today);
+    const g = workStockGap(ctx.posts, ctx.products, ctx.moves, ctx.today, undefined, (ctx.settings as any)?.company?.work?.stock_gap_pct);
     if (!g) return [];
     const fmt = (v: number) => String(v).replace('.', ',');
     return [{

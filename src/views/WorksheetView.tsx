@@ -9,6 +9,7 @@ import type { User } from '../types';
 import { readCompany } from '../utils/companyRules';
 import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
+import { workLineDetail } from '../utils/workLineText';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
@@ -56,6 +57,12 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const showPresence = !!type && type.measure === 'presence';
   const filled = (r?: Row) => !!r && !!(r.presence || (r.hours || '').trim() || (r.quantity || '').trim());
 
+  const dayLines = db.getPosts().filter(p => typeof p.id === 'string' && p.id.startsWith(`we-${date}-`) && (p.status === 'completed' || p.status === 'pending_end')); // lignes déjà saisies ce jour-là (M26 T2)
+  const cancelLine = async (p: { id: string; employee_name?: string; client_name?: string }) => {
+    if (!window.confirm(t(`Annuler la ligne de ${p.employee_name || ''} (${p.client_name || ''}) ? Sa paie sera retirée.`, `Cancel ${p.employee_name || ''}'s line (${p.client_name || ''})? Its pay will be removed.`))) return;
+    const r = await db.cancelWorkLine(p.id);
+    setMsg(r.ok ? { ok: true, text: t('Ligne annulée. Tu peux la saisir à nouveau.', 'Line cancelled. You can enter it again.') } : { ok: false, text: r.error || t('Annulation impossible.', 'Could not cancel.') });
+  };
   const groupApply = (patch: { presence?: string; hours?: string; quantity?: string; rejected?: string }) => setRows(prev => { const next = applyGroup(prev, people.map(u => u.id), patch); if (key) saveDraft(key, next); return next; });
   const printPaper = () => { if (!type) return; const ok = printPaperSheet(paperSheetHtml(people.map(u => u.name), { name: en ? type.name.en : type.name.fr, measure: type.measure, unit: en ? type.unit?.en : type.unit?.fr }, date, 7, en ? 'en' : 'fr', String((db.getSettings() as any).company_name || ''))); if (!ok) setMsg({ ok: false, text: t("Le navigateur a bloqué la fenêtre d'impression : autorise-la puis réessaie.", 'The browser blocked the print window: allow it and try again.') }); };
 
@@ -155,6 +162,18 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
           <button type="button" data-worksheet-save onClick={save} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
             <Save className="w-5 h-5" />{busy ? t('Enregistrement…', 'Saving…') : t('Enregistrer la feuille', 'Save the sheet')}
           </button>
+
+          {me.role === 'admin' && dayLines.length > 0 && (
+            <div className={`${card} space-y-2`} data-worksheet-existing>
+              <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>{t('Déjà saisi ce jour-là : une erreur ? Annule la ligne et saisis-la à nouveau.', 'Already entered that day: a mistake? Cancel the line and enter it again.')}</div>
+              {dayLines.map(p => (
+                <div key={p.id} data-existing-line={p.id} className={`flex items-center gap-2 rounded-xl border p-2 ${L ? 'border-slate-200 bg-white' : 'border-slate-700 bg-slate-800'}`}>
+                  <div className="flex-1 min-w-0 text-sm"><div className="font-semibold truncate">{p.employee_name} · {p.client_name}</div><div className={`text-xs ${L ? 'text-slate-500' : 'text-slate-400'}`}>{workLineDetail(p)}</div></div>
+                  <button type="button" data-cancel-line onClick={() => cancelLine(p)} className="min-h-[44px] px-3 rounded-xl border border-red-500 text-red-600 text-sm font-semibold cursor-pointer">{t('Annuler', 'Cancel')}</button>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

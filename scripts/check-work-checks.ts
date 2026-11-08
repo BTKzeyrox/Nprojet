@@ -51,5 +51,10 @@ ok(/!isWorkLine\(p\)\); \/\/ M26\.12/.test(pf) && /entryDays/.test(pf), 'perform
 ok(/!isWorkLine\(p\)\); \/\/ les lignes de la Feuille du jour/.test(dsh), 'Tableau de bord : « Missions terminées » sans les lignes de saisie');
 ok(/!\(\(p as any\)\.work_type\)/.test(mc) && /\(p as any\)\.work_type\) continue; \/\/ M26\.12/.test(ps), 'niveaux du mois et score de performance : sans les lignes de saisie');
 ok(/data-perf-entrydays/.test(pp), 'page Performance : colonne « Jours saisis »');
+// T4 : « Écart toléré avec le stock » (réglage de l'entreprise)
+ok(workStockGap([line({ quantity: 500 })] as any, [box], [mv(380)], TODAY, 30, 35) === null, 'tolérance réglée à 35 % : 500 déclarées pour 380 reçues (32 % de plus) ne dit rien');
+ok(workStockGap([line({ quantity: 500 })] as any, [box], [mv(380)], TODAY, 30, 5)!.pct === 24, 'tolérance réglée à 5 % : alerte');
+ok(workStockGap([line({ quantity: 500 })] as any, [box], [mv(480)], TODAY, 30, 'x') === null && workStockGap([line({ quantity: 500 })] as any, [box], [mv(380)], TODAY, 30, -5) !== null && workStockGap([line({ quantity: 500 })] as any, [box], [mv(380)], TODAY, 30, NaN) !== null, 'réglage absurde (texte, négatif, NaN) : retour à 10 %');
+ok(/stock_gap_pct/.test(st), 'alerte Santé du site : lit le réglage « Écart toléré avec le stock »');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
