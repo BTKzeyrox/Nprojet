@@ -1691,15 +1691,16 @@ async function vapidHeader(endpoint: string, subject: string, publicKey: string,
 }
 // ===== END PUSH =====
 // ===== BEGIN NOTIFY (notifications externes, partie 2a : textes, catégories ; ce bloc est contrôlé par scripts/check-push-events.ts) =====
-type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message" | "access";
-const PUSH_CATS = ["missions", "validations", "advances", "security", "messages", "stock", "invoices"] as const;
+type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message" | "access" | "news_new" | "news_pending" | "news_ok" | "news_no" | "news_comment" | "news_reply";
+const PUSH_CATS = ["missions", "validations", "advances", "security", "messages", "stock", "invoices", "news"] as const;
 type PushCat = typeof PUSH_CATS[number];
 const ncut = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
 function notifyCat(kind: NotifyKind): PushCat {
   if (kind === "advance_ok" || kind === "advance_no") return "advances";
   if (kind === "security") return "security";
   if (kind === "message") return "messages";
-  return "validations";
+  if (kind === "news_new" || kind === "news_ok" || kind === "news_no" || kind === "news_comment" || kind === "news_reply") return "news";
+  return "validations"; // « news_pending » (publication à valider) reste avec les validations du responsable
 }
 /** Texte d'un push (les deux langues). Jamais de montant ni de contenu de message : un push s'affiche sur l'écran verrouillé. */
 function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean }): PushText {
@@ -1718,6 +1719,13 @@ function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reaso
     case "profile": return { fr: { title: "Changement de profil à valider", body: name }, en: { title: "Profile change to approve", body: name } };
     case "security": return { fr: { title: "Alerte de sécurité", body: name }, en: { title: "Security alert", body: name } };
     case "message": { const t = m.group ? `${name} · groupe` : name; const te = m.group ? `${name} · group` : name; return { fr: { title: t, body: "Nouveau message" }, en: { title: te, body: "New message" } }; }
+    // Publications : jamais le titre ni le texte de la publication ou du commentaire (un push s'affiche sur l'écran verrouillé) ; seulement qui, et quoi.
+    case "news_new": return { fr: { title: "Nouvelle publication", body: name }, en: { title: "New post", body: name } };
+    case "news_pending": return { fr: { title: "Publication à valider", body: name }, en: { title: "Post to approve", body: name } };
+    case "news_ok": return { fr: { title: "Publication validée", body: "Ta publication est en ligne." }, en: { title: "Post approved", body: "Your post is now live." } };
+    case "news_no": { const r = ncut(m.reason, 100); return { fr: { title: "Publication refusée", body: r ? `Motif : ${r}` : "Ta publication a été refusée." }, en: { title: "Post refused", body: r ? `Reason: ${r}` : "Your post was refused." } }; }
+    case "news_comment": return { fr: { title: "Nouveau commentaire", body: `${name} a commenté ta publication` }, en: { title: "New comment", body: `${name} commented on your post` } };
+    case "news_reply": return { fr: { title: "Nouvelle réponse", body: `${name} a répondu à ton commentaire` }, en: { title: "New reply", body: `${name} replied to your comment` } };
   }
 }
 /** Les catégories coupées sur un appareil : seulement des catégories connues, sans doublon. */
@@ -4135,6 +4143,7 @@ async function sync(req: any, res: any, me: any) {
       }
       if (col === 'securityLogs' && !existing && toSave) pushJobs.push(pushAdmins('security', notifyText('security', { name: toSave.employee_name }), `sec:${rec.id}`.slice(0, 60), { go: 'security', nav: `sec-${rec.id}` }));
       if (col === 'messages' && !existing && toSave && toSave.sender_id) pushJobs.push(pushMessage(toSave));
+      if (col === 'news' && !existing && toSave && (toSave.status || 'published') === 'published') pushJobs.push(pushNewsNew(toSave)); // publication du responsable : tout le public concerné
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
 
@@ -5442,6 +5451,7 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
   if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
   const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
   if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
+  let newComment: any = null, newParent: any = null; // pour prévenir après l'enregistrement
   const d: any = {
     ...row.data,
     loves: Array.isArray(row.data.loves) ? [...row.data.loves] : [],
@@ -5466,6 +5476,7 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
     }
     const replyName = String(replyToName ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 80);
     d.comments.push({ id: `c-${Date.now()}-${randomBytes(3).toString('hex')}`, user_id: me.id, user_name: String(me.name || '').slice(0, 80), role: me.role, text: clean, ...(cf.length ? { files: cf } : {}), ...(parent ? { parent_id: parent.id, ...(replyName ? { reply_to_name: replyName } : {}) } : {}), created_at: new Date().toISOString() });
+    newComment = d.comments[d.comments.length - 1]; newParent = parent;
   } else if (kind === 'comment-react') {
     if (!REACTION_EMOJIS.includes(String(emoji))) return res.status(400).json({ error: 'Réaction inconnue.' });
     const idx = d.comments.findIndex((x: any) => x.id === commentId);
@@ -5491,6 +5502,7 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
     d.shares += 1;
   }
   await sb.from(T.news).upsert({ id, data: d, updated_at: new Date().toISOString() });
+  if (newComment) await later(pushNewsComment(d, newComment, newParent, me));
   return res.json({ ok: true, news: d });
 }
 
@@ -5521,6 +5533,7 @@ async function newsSubmit(req: any, res: any, me: any) {
     files, loves: [], comments: [], shares: 0,
   };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  await later(d.status === 'published' ? pushNewsNew(d) : pushAdmins('validations', notifyText('news_pending', { name: d.author_name }), `news_pend:${id}`.slice(0, 60), { go: 'feed', nav: `news:${id}` }));
   return res.json({ ok: true, news: d });
 }
 
@@ -5598,6 +5611,7 @@ async function newsDecision(req: any, res: any, me: any) {
     return res.status(400).json({ error: 'Décision invalide.' });
   }
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
+  await later(decision === 'approve' ? Promise.all([pushNewsNew(d), pushNewsDecision(d, true)]) : pushNewsDecision(d, false));
   return res.json({ ok: true, news: d });
 }
 
@@ -5690,6 +5704,30 @@ async function pushMessage(m: any): Promise<number> {
   if (group) { const { data: us } = await sb.from(T.users).select('id,data'); ids = (us || []).filter((r: any) => String(r.id) !== String(m.sender_id) && r.data?.status !== 'blocked').map((r: any) => String(r.id)); }
   else if (String(m.recipient_id) !== String(m.sender_id)) ids = [String(m.recipient_id)];
   return await pushTo(ids, notifyText('message', { name: m.sender_name, group }), `msg:${m.id}`.slice(0, 60), { go: 'chat', thread: group ? 'all' : String(m.sender_id) }, 'messages');
+}
+// Publications (Actualités) : le titre et le texte ne sont jamais envoyés (un push s'affiche sur l'écran verrouillé), seulement qui et quoi.
+// Nouvelle publication en ligne : toutes les personnes qui ont le droit de la voir (même règle que le fil : canSeeNews), sauf l'auteur et les comptes bloqués
+async function pushNewsNew(d: any): Promise<number> {
+  try {
+    const { data: us } = await sb.from(T.users).select('id,data');
+    const ids = (us || []).filter((r: any) => String(r.id) !== String(d.author_id) && r.data?.status !== 'blocked' && canSeeNews(d, { id: String(r.id), role: r.data?.role })).map((r: any) => String(r.id));
+    return await pushTo(ids, notifyText('news_new', { name: d.author_name }), `news_new:${d.id}`.slice(0, 60), { go: 'feed', nav: `news:${d.id}` }, 'news');
+  } catch (e) { console.error('pushNewsNew error:', String((e as any)?.message || e).slice(0, 120)); return 0; }
+}
+// Décision du responsable : l'auteur apprend que sa publication est validée ou refusée (avec le motif)
+async function pushNewsDecision(d: any, approved: boolean): Promise<number> {
+  if (!d?.author_id) return 0;
+  return await pushTo([String(d.author_id)], notifyText(approved ? 'news_ok' : 'news_no', { reason: d.reject_reason }), `news_dec:${d.id}`.slice(0, 60), { go: 'feed', nav: `news:${d.id}` }, 'news');
+}
+// Nouveau commentaire : celui à qui on répond reçoit « réponse » ; l'auteur de la publication reçoit « commentaire » (une seule fois, jamais pour son propre commentaire)
+async function pushNewsComment(d: any, c: any, parent: any, me: any): Promise<number> {
+  const link = { go: 'feed', nav: `news:${d.id}` };
+  const replyTo = parent && parent.user_id && String(parent.user_id) !== String(me.id) ? String(parent.user_id) : '';
+  let sent = 0;
+  if (replyTo) sent += await pushTo([replyTo], notifyText('news_reply', { name: me.name }), `news_reply:${c.id}`.slice(0, 60), link, 'news');
+  const author = String(d.author_id || '');
+  if (author && author !== String(me.id) && author !== replyTo) sent += await pushTo([author], notifyText('news_comment', { name: me.name }), `news_comment:${c.id}`.slice(0, 60), link, 'news');
+  return sent;
 }
 // Un résultat envoyé « en arrière-plan » quand c'est possible, pour ne pas ralentir la réponse
 function later(p: Promise<unknown>): Promise<unknown> { const rt = (globalThis as any).EdgeRuntime; if (rt && typeof rt.waitUntil === 'function') { rt.waitUntil(p); return Promise.resolve(); } return p; }

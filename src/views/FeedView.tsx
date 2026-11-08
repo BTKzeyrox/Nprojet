@@ -20,6 +20,7 @@ import { newsIdFromNav, newsNavId } from '../utils/newsLink';
 import { playUiSound } from '../utils/notifSound';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
+import { markNewsSeen } from '../utils/notifications';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -660,6 +661,9 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     window.addEventListener(FEED_TOP_EVENT, goTop);
     return () => { cancelAnimationFrame(raf); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
   }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Actualités ouvertes : les notifications « nouvelle publication » de la cloche sont lues (à l'ouverture, et quand une publication arrive)
+  useEffect(() => { markNewsSeen(currentUser); return db.subscribe(() => markNewsSeen(currentUser)); }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualités ouvertes : rechargement toutes les 8 s
   useEffect(() => {

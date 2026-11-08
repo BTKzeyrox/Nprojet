@@ -51,6 +51,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Modifier ou supprimer une publication publiée : seulement les siennes, si « Peut modifier » est coché. Épingler : l'admin seul.
   - Partager : cocher une ou plusieurs personnes puis Envoyer, ou copier le lien. Il s'affiche « Voir la publication » ; hors public : « introuvable ».
   - Les derniers commentaires se voient sous la publication ; « Répondre » répond à un commentaire ; toucher un nom ouvre son profil.
+  - Cloche et notifications du téléphone (Réglages > Notifications) : nouvelle publication, à valider, validée ou refusée, commentaire, réponse. Jamais le texte.
 - **Dans le code** : `src/views/FeedView.tsx`
 
 ### Tableau de bord  `dashboard`
@@ -686,7 +687,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `newsLink.ts` | Lien direct vers une publication des Actualités, et lecture de ces liens dans un message (règles pures, sans écran, sans réseau ; contrôlé par scripts/check-news-link.ts) |
 | `notifSound.ts` | Bip de notification et préférence du son (activé, volume) gardée sur cet appareil ; utilise l'audio et le stockage du navigateur. |
 | `notifView.ts` | Affichage de la cloche : heure de Madagascar + filtres (règles pures, testées dans scripts/check-notif-view.ts) |
-| `notifications.ts` | Construit la liste de la cloche (à valider, refus, messages, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur. |
+| `notifications.ts` | Construit la liste de la cloche (à valider, refus, messages, Actualités, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur. |
 | `offline.ts` | Mode hors ligne (module 13, M13.2) : règles pures, SANS écran, SANS serveur, SANS stockage. Contrôlé par `npm run check:offline`. |
 | `offlineServer.ts` | Règles du SERVEUR pour les actions envoyées après une coupure (module 13, M13.7) : « une même action n'est exécutée qu'une fois ». |
 | `offlineShell.ts` | Enregistre le service worker pour que l'appli s'ouvre sans réseau (module 13, M13.4). Seulement en production (jamais en développement : |
@@ -1102,6 +1103,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
 | `npm run check:operator-list` | Contrôle de la page « Opérateurs et sessions » : liste compacte (recherche, filtres, tri), fiche opérateur avec les actions, fusion avec le suivi des sessions. |
 | `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
+| `npm run check:news-notif` | Cloche de notifications : publications (Actualités). Sans serveur : le store est remplacé par une liste de publications d'essai. |
 | `npm run check:server-clock` | Horloge du serveur : un appareil dont l'horloge avance ou retarde ne doit plus fausser « En ligne / Hors ligne ». |
 | `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:news-access` | Contrôle des actualités : qui publie, modifie, voit (règles du site = copie du serveur) + protections du serveur. Lancer : npm run check:news-access |

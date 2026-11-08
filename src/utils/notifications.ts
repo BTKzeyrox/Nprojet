@@ -1,10 +1,10 @@
-// Construit la liste de la cloche (à valider, refus, messages, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur.
+// Construit la liste de la cloche (à valider, refus, messages, Actualités, alertes Santé) et l'état lu ou non lu ; lit le store et le navigateur.
 // Utilisé par : ChatView.tsx, TopBar.tsx, WatchSettingsSection.tsx et useChatUnread.ts. Contrôlé par : npm run check:notif-read.
 // Pour modifier : l'état « lu » est gardé par personne sur cet appareil (400 derniers id) ; une nouvelle notification a besoin d'un id stable pour pouvoir être marquée lue.
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
-import { previewText } from './newsLink';
+import { previewText, newsNavId } from './newsLink';
 import { getQueue, getFreePosts } from './presence';
 import type { ValFilter } from './navIntent';
 import { getHealthSoft } from './healthDb';
@@ -54,6 +54,44 @@ export function reminderNotifications(user: User, nowMs = Date.now()): Notif[] {
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi
 const ts = (s?: string) => (s ? new Date(s.replace(' ', 'T')).getTime() || 0 : 0);
 
+// Actualités : même liste que les push « Actualités » (jamais d'argent, tout lu dans le store déjà filtré par le serveur selon « Visible par »).
+// Nouvelle publication des autres (7 jours) ; à valider (responsable) ; ma publication validée ou refusée (14 jours) ; commentaire sur ma publication et réponse à mon commentaire (7 jours).
+const NEWS_DAYS = 7, NEWS_DECISION_DAYS = 14;
+const NEWS_PREFIX = 'news-'; // id des « nouvelle publication » : seules celles-ci passent en « lues » quand on ouvre les Actualités
+export function newsNotifications(user: User, nowMs = Date.now()): Notif[] {
+  const out: Notif[] = [];
+  try {
+    const origin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
+    const since = nowMs - NEWS_DAYS * 24 * 3600000, sinceDecision = nowMs - NEWS_DECISION_DAYS * 24 * 3600000;
+    const label = (p: { title?: string; text?: string }) => ((p.title || '').trim() || previewText(p.text || '', origin)).slice(0, 80);
+    const admin = user.role === 'admin';
+    for (const p of db.getNews()) {
+      const status = p.status || 'published';
+      const mine = p.author_id === user.id;
+      const nav = newsNavId(p.id);
+      if (status === 'pending') {
+        if (admin && !mine) out.push({ id: `newsp-${p.id}-${p.submitted_at || p.created_at}`, title: `${p.author_name} · publication à valider`, sub: label(p), view: 'feed', nav, at: p.submitted_at || p.created_at, tone: 'urgent' });
+        continue;
+      }
+      if (status === 'rejected') {
+        if (mine && !admin && ts(p.submitted_at || p.created_at) > sinceDecision) out.push({ id: `newsr-${p.id}-${p.submitted_at || p.created_at}`, title: 'Publication refusée', sub: p.reject_reason ? `Motif : ${p.reject_reason}`.slice(0, 100) : label(p), view: 'feed', nav, at: p.submitted_at || p.created_at, tone: 'bad' });
+        continue;
+      }
+      // publiée
+      if (!mine && ts(p.created_at) > since) out.push({ id: `${NEWS_PREFIX}${p.id}-${p.created_at}`, title: `${p.author_name} · nouvelle publication`, sub: label(p), view: 'feed', nav, at: p.created_at, tone: 'info' });
+      // validée par le responsable : la validation remet la date de la publication à « maintenant » (created_at devient différent de submitted_at)
+      if (mine && !admin && p.submitted_at && p.created_at !== p.submitted_at && ts(p.created_at) > sinceDecision) out.push({ id: `newsok-${p.id}-${p.created_at}`, title: 'Publication validée', sub: label(p), view: 'feed', nav, at: p.created_at, tone: 'ok' });
+      for (const c of p.comments || []) {
+        if (c.user_id === user.id || ts(c.created_at) <= since) continue;
+        const parent = c.parent_id ? (p.comments || []).find(x => x.id === c.parent_id) : undefined;
+        if (parent && parent.user_id === user.id) out.push({ id: `newsrp-${c.id}`, title: `${c.user_name} a répondu à ton commentaire`, sub: label(p), view: 'feed', nav, at: c.created_at, tone: 'info' });
+        else if (mine) out.push({ id: `newsc-${c.id}`, title: `${c.user_name} a commenté ta publication`, sub: label(p), view: 'feed', nav, at: c.created_at, tone: 'info' });
+      }
+    }
+  } catch { /* la cloche ne doit jamais tomber à cause des Actualités */ }
+  return out.sort((a, b) => ts(b.at) - ts(a.at)).slice(0, 40);
+}
+
 // Admin : tout ce qui attend une décision. Opérateur : réponses de l'admin (refus, avances).
 export const buildNotifications = (user: User): Notif[] => {
   const out: Notif[] = [];
@@ -93,6 +131,7 @@ export const buildNotifications = (user: User): Notif[] => {
   }
   if (user.role === 'admin') out.push(...healthNotifications(user));
   out.push(...reminderNotifications(user));
+  out.push(...newsNotifications(user));
   // Messagerie : messages reçus (privés ou groupe) des 3 derniers jours, pas encore lus
   const seen = getSeen(user);
   const since = Date.now() - 3 * 24 * 3600 * 1000;
@@ -105,6 +144,16 @@ export const buildNotifications = (user: User): Notif[] => {
       out.push({ id: `msg-${m.id}`, title: group ? `${m.sender_name} · groupe` : m.sender_name, sub: m.message ? previewText(m.message, (typeof window !== 'undefined' && window.location ? window.location.origin : '')).slice(0, 80) : 'Pièce jointe', view: 'chat', thread: group ? 'all' : m.sender_id, at: m.timestamp, tone: 'info' });
     });
   return out.sort((a, b) => ts(b.at) - ts(a.at));
+};
+
+// Ouvrir les Actualités = les « nouvelle publication » sont lues (les commentaires, réponses, validations et refus restent à lire jusqu'au clic : les commentaires sont repliés)
+export const markNewsSeen = (user: User): void => {
+  const ids = newsNotifications(user).filter(n => n.id.startsWith(NEWS_PREFIX)).map(n => n.id);
+  if (ids.length === 0) return;
+  const seen = getSeen(user);
+  if (ids.every(id => seen.includes(id))) return;
+  markSeen(user, ids);
+  window.dispatchEvent(new Event(SEEN_EVENT));
 };
 
 // Ouvrir la messagerie = messages lus

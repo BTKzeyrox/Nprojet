@@ -13,7 +13,7 @@ const m = /\/\/ ===== BEGIN NOTIFY[^\n]*\n([\s\S]*?)\/\/ ===== END NOTIFY =====/
 ok(!!m, 'bloc « NOTIFY » trouvé dans le serveur');
 const srv = new Function(`${transformSync(m![1], { loader: 'ts' }).code}\nreturn { notifyText, notifyCat, cleanPushOff, PUSH_CATS };`)() as any;
 
-const kinds: NotifyKind[] = ['val_start', 'val_end', 'advance_new', 'advance_ok', 'advance_no', 'signup', 'reset', 'access', 'profile', 'security', 'message'];
+const kinds: NotifyKind[] = ['val_start', 'val_end', 'advance_new', 'advance_ok', 'advance_no', 'signup', 'reset', 'access', 'profile', 'security', 'message', 'news_new', 'news_pending', 'news_ok', 'news_no', 'news_comment', 'news_reply'];
 const ctxs = [{ name: 'Rina', client: 'Acme', reason: 'Plafond atteint', group: false }, { name: 'Rina', group: true }, {}, { name: 'x'.repeat(200), client: 'y'.repeat(200), reason: 'z'.repeat(300) }, { name: 'Ligne\nsuivante\u0007', client: 'A\tB' }];
 for (const k of kinds) for (const [i, c] of ctxs.entries()) ok(J(notifyText(k, c)) === J(srv.notifyText(k, c)), `site = serveur : ${k} (cas ${i + 1})`);
 for (const k of kinds) ok(notifyCat(k) === srv.notifyCat(k), `catégorie site = serveur : ${k}`);
@@ -33,6 +33,12 @@ ok(kinds.every(k => { const t = notifyText(k, { name: 'A' }); return t.fr.title 
 
 // Événements du serveur (lecture du code)
 const has = (re: RegExp, msg: string) => ok(re.test(src), msg);
+// Publications (Actualités)
+ok(notifyCat('news_new') === 'news' && notifyCat('news_ok') === 'news' && notifyCat('news_no') === 'news' && notifyCat('news_comment') === 'news' && notifyCat('news_reply') === 'news' && notifyCat('news_pending') === 'validations', 'publications : catégorie « news » (sauf « à valider » qui reste avec les validations du responsable)');
+ok(PUSH_CATS.includes('news' as any), 'liste des catégories : « news » présente');
+ok(['news_new', 'news_pending', 'news_comment', 'news_reply'].every(k => !/titre secret|texte secret/.test(J(notifyText(k as NotifyKind, { name: 'Rina', client: 'titre secret', reason: 'texte secret' })))), 'confidentialité : jamais le titre ni le texte d\'une publication ou d\'un commentaire dans un push');
+ok(notifyText('news_no', { reason: 'Hors sujet' }).fr.body === 'Motif : Hors sujet' && notifyText('news_no', {}).fr.body.includes('refusée'), 'publication refusée : le motif est repris');
+ok(notifyText('news_comment', { name: 'Rina' }).fr.body === 'Rina a commenté ta publication' && notifyText('news_reply', { name: 'Rina' }).fr.body === 'Rina a répondu à ton commentaire', 'commentaire et réponse : qui, et quoi');
 has(/col === 'posts' && !admin && toSave && \(toSave\.status === 'pending_start' \|\| toSave\.status === 'pending_end'\) && \(!existing \|\| existing\.status !== toSave\.status\)/, 'serveur : début ou fin envoyé par l\'employé → les responsables (une seule fois par changement de statut)');
 has(/\{ go: 'validations', filter: toSave\.status === 'pending_start' \? 'starts' : 'ends', nav: `val-post-\$\{rec\.id\}` \}/, 'serveur : lien exact vers la mission à valider (comme la cloche)');
 has(/!existing && !admin && toSave\.status === 'pending'\) pushJobs\.push\(pushAdmins\('validations', notifyText\('advance_new'/, 'serveur : nouvelle demande d\'avance → les responsables');
@@ -51,5 +57,14 @@ has(/\(row as any\)\.data\?\.user_id !== me\.id\) return res\.status\(404\)/, 's
 has(/se réabonner ne remet pas les interrupteurs à zéro/, 'serveur : se réabonner garde les interrupteurs');
 ok((src.match(/, 'missions'\)/g) || []).length >= 3, 'serveur : les push de missions existants sont dans la catégorie « missions »');
 ok(/pushPrefs\(ep\)/.test(read('src/components/NotificationsCard.tsx')) && /type="checkbox"/.test(read('src/components/NotificationsCard.tsx')), 'écran : un interrupteur par catégorie dans Réglages > Notifications');
+// Publications : événements du serveur (lecture du code)
+has(/async function pushNewsNew\(d: any\)[\s\S]*?r\.data\?\.status !== 'blocked' && canSeeNews\(d, \{ id: String\(r\.id\), role: r\.data\?\.role \}\)/, 'serveur : nouvelle publication → seulement ceux qui ont le droit de la voir (canSeeNews), jamais un compte bloqué');
+has(/String\(r\.id\) !== String\(d\.author_id\)/, 'serveur : nouvelle publication → jamais l\'auteur');
+has(/col === 'news' && !existing && toSave && \(toSave\.status \|\| 'published'\) === 'published'\) pushJobs\.push\(pushNewsNew\(toSave\)\)/, 'serveur : publication du responsable → le public concerné');
+has(/d\.status === 'published' \? pushNewsNew\(d\) : pushAdmins\('validations', notifyText\('news_pending'/, 'serveur : un employé propose → en ligne (public) ou « à valider » (responsables)');
+has(/decision === 'approve' \? Promise\.all\(\[pushNewsNew\(d\), pushNewsDecision\(d, true\)\]\) : pushNewsDecision\(d, false\)/, 'serveur : validation → public + auteur ; refus → auteur (avec le motif)');
+has(/if \(newComment\) await later\(pushNewsComment\(d, newComment, newParent, me\)\)/, 'serveur : commentaire enregistré, puis envoi (jamais avant)');
+has(/author !== String\(me\.id\) && author !== replyTo/, 'serveur : l\'auteur reçoit « commentaire » une seule fois (pas en double avec « réponse », jamais pour son propre commentaire)');
+has(/go: 'feed', nav: `news:\$\{d\.id\}`/, 'serveur : le lien ouvre la publication exacte (page Actualités)');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

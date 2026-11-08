@@ -3,9 +3,9 @@
 // Confidentialité : un push s'affiche sur l'écran verrouillé. On n'y écrit jamais un montant, un motif de refus de paie ni le texte d'un message.
 import type { PushText } from './pushRules';
 
-export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message';
+export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message' | 'news_new' | 'news_pending' | 'news_ok' | 'news_no' | 'news_comment' | 'news_reply';
 /** Les catégories qu'on peut couper (appareil par appareil). */
-export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages', 'stock', 'invoices'] as const;
+export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages', 'stock', 'invoices', 'news'] as const;
 export type PushCat = typeof PUSH_CATS[number];
 
 const ncut = (s: unknown, n: number) => String(s ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
@@ -14,7 +14,8 @@ export function notifyCat(kind: NotifyKind): PushCat {
   if (kind === 'advance_ok' || kind === 'advance_no') return 'advances';
   if (kind === 'security') return 'security';
   if (kind === 'message') return 'messages';
-  return 'validations';
+  if (kind === 'news_new' || kind === 'news_ok' || kind === 'news_no' || kind === 'news_comment' || kind === 'news_reply') return 'news';
+  return 'validations'; // « news_pending » (publication à valider) reste avec les validations du responsable
 }
 
 /** Texte d'un push (les deux langues). `m.name` = la personne concernée, `m.client` = le client de la mission. Jamais de montant ni de contenu de message. */
@@ -34,6 +35,13 @@ export function notifyText(kind: NotifyKind, m: { name?: string; client?: string
     case 'profile': return { fr: { title: 'Changement de profil à valider', body: name }, en: { title: 'Profile change to approve', body: name } };
     case 'security': return { fr: { title: 'Alerte de sécurité', body: name }, en: { title: 'Security alert', body: name } };
     case 'message': { const t = m.group ? `${name} · groupe` : name; const te = m.group ? `${name} · group` : name; return { fr: { title: t, body: 'Nouveau message' }, en: { title: te, body: 'New message' } }; }
+    // Publications : jamais le titre ni le texte de la publication ou du commentaire (un push s'affiche sur l'écran verrouillé) ; seulement qui, et quoi.
+    case 'news_new': return { fr: { title: 'Nouvelle publication', body: name }, en: { title: 'New post', body: name } };
+    case 'news_pending': return { fr: { title: 'Publication à valider', body: name }, en: { title: 'Post to approve', body: name } };
+    case 'news_ok': return { fr: { title: 'Publication validée', body: 'Ta publication est en ligne.' }, en: { title: 'Post approved', body: 'Your post is now live.' } };
+    case 'news_no': { const r = ncut(m.reason, 100); return { fr: { title: 'Publication refusée', body: r ? `Motif : ${r}` : 'Ta publication a été refusée.' }, en: { title: 'Post refused', body: r ? `Reason: ${r}` : 'Your post was refused.' } }; }
+    case 'news_comment': return { fr: { title: 'Nouveau commentaire', body: `${name} a commenté ta publication` }, en: { title: 'New comment', body: `${name} commented on your post` } };
+    case 'news_reply': return { fr: { title: 'Nouvelle réponse', body: `${name} a répondu à ton commentaire` }, en: { title: 'New reply', body: `${name} replied to your comment` } };
   }
 }
 
