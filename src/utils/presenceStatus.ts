@@ -6,6 +6,7 @@
 //   Hors ligne = appli silencieuse depuis plus de 30 min avec une mission ouverte, ou depuis plus de 120 s sans mission.
 // Seul le responsable reçoit les signes de vie (`db.getPresence()`) : pour les autres rôles on n'affiche RIEN plutôt qu'un faux « Hors ligne ».
 import type { PostSession, PresenceRow, User } from '../types';
+import { serverNowMs } from './serverClock';
 
 export const FRESH_MS = 120_000; // signe de vie récent
 export const PAUSE_MAX_MS = 30 * 60_000; // au-delà : hors ligne
@@ -14,7 +15,7 @@ const OPEN = ['pending_start', 'active', 'pending_end'];
 export type LiveStatus = 'working' | 'online' | 'pause' | 'offline';
 export interface LiveInfo { status: LiveStatus; waiting: boolean; openMission: boolean; silentMin: number | null }
 
-export function liveStatus(user: Pick<User, 'id'> & Partial<Pick<User, 'is_online'>>, posts: PostSession[], presence: PresenceRow[], now = Date.now()): LiveInfo {
+export function liveStatus(user: Pick<User, 'id'> & Partial<Pick<User, 'is_online'>>, posts: PostSession[], presence: PresenceRow[], now = serverNowMs()): LiveInfo {
   const row = presence.find(r => r.user_id === user.id);
   const last = row ? new Date(row.last_seen).getTime() : NaN;
   const silentMs = row && Number.isFinite(last) ? Math.max(0, now - last) : null;

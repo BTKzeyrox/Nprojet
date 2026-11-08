@@ -74,6 +74,7 @@ import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
 import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
+import { setServerClock } from '../utils/serverClock';
 
 const TOKEN_KEY = 'df_session_token_v2';
 // Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
@@ -560,6 +561,7 @@ export class AppStore {
       }
     }
     this.since = r.data.serverTime || this.since;
+    setServerClock(r.data.serverTime); // écart serveur - appareil : les statuts « En ligne » se comparent à l'heure du serveur, pas à celle du PC ou du téléphone
 
     // Demandes de modification de profil (admin : toutes ; opérateur : la sienne)
     if (Array.isArray(r.data.profileRequests)) {

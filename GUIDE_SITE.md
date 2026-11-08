@@ -61,7 +61,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Les objectifs d'argent ne sont jamais envoyés aux employés.
   - Les objectifs se règlent dans Réglages (missions, bénéfice, plafond de dépenses).
   - Carte « Équipe connectée » : opérateurs (En cours, En ligne, En pause, Hors ligne) ; chefs d'équipe et comptables (En ligne ou Hors ligne).
-  - « En ligne » = l'appli a donné signe de vie il y a moins de 120 s. La carte se recharge toute seule (8 s) tant qu'elle est ouverte.
+  - « En ligne » = signe de vie de l'appli il y a moins de 120 s, à l'heure du serveur (une horloge d'appareil fausse ne change rien). La carte se recharge toute seule (8 s).
 - **Chiffres et formules** :
   - Objectif du mois : Chiffre du mois (du 1er au dernier jour) comparé à l'objectif réglé : missions validées, bénéfice, dépenses.
 - **Réglages liés** (Réglages > Conditions) : `options.mission_requires_client`
@@ -730,6 +730,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
+| `serverClock.ts` | Horloge du SERVEUR : les signes de vie (dernière activité, arrivée, départ) sont écrits avec l'heure du serveur. Comparés à l'heure de l'appareil, un PC ou un téléphone |
 | `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
@@ -762,7 +763,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
 | `useKeepBottom.ts` | Garde le dernier message visible quand le clavier s'ouvre (BTK 2026-11-05 : « quand je tape, le clavier s'ouvre et le message remonte, il est coupé »). |
 | `useLockBodyScroll.ts` | Bloque le défilement de la page derrière une fenêtre ouverte ; agit sur le style de la page dans le navigateur, aucun serveur. |
-| `useNow.ts` | Horloge locale : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
+| `useNow.ts` | Horloge (à l'heure du SERVEUR, voir serverClock.ts) : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
 | `useOfflineStatus.ts` | Petits « crochets » React pour le mode hors ligne (module 13, M13.6) : savoir si on est hors ligne, et suivre ce qui n'est pas encore envoyé |
 | `usePerformance.ts` | Performance des salariés (module 3, M3.3) : branche les règles pures (performanceScore.ts) sur les données du site. |
 | `viewportWidth.ts` | Largeur de l'écran en pixels du site, fiable APRÈS une rotation (téléphone ou tablette). |
@@ -1101,6 +1102,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:reason-modal` | Contrôle de la fenêtre de validation / refus (ReasonModal) : un clic qui atterrit sur le fond ne doit pas la fermer quand l'appui |
 | `npm run check:operator-list` | Contrôle de la page « Opérateurs et sessions » : liste compacte (recherche, filtres, tri), fiche opérateur avec les actions, fusion avec le suivi des sessions. |
 | `npm run check:live-status` | Contrôle du statut EN DIRECT (En cours / En ligne / En pause / Hors ligne) et de son affichage (messagerie, gestion des employés, calendrier global, |
+| `npm run check:server-clock` | Horloge du serveur : un appareil dont l'horloge avance ou retarde ne doit plus fausser « En ligne / Hors ligne ». |
 | `npm run check:calendar-global` | Contrôle du calendrier GLOBAL (tous les employés) : mois, résumé, vue du jour, filtre congés. Pur, sans réseau. |
 | `npm run check:news-access` | Contrôle des actualités : qui publie, modifie, voit (règles du site = copie du serveur) + protections du serveur. Lancer : npm run check:news-access |
 | `npm run check:attendance-view` | Contrôle de l'arrivée, du départ et de la pastille en ligne / hors ligne. Lancer : npm run check:attendance-view |

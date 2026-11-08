@@ -6,6 +6,7 @@ import { db } from '../db/store';
 import { ClientContract, PostSession, PresenceRow, User } from '../types';
 import { ONLINE_MS } from './presenceCount';
 import { liveStatus } from './presenceStatus';
+import { serverNowMs } from './serverClock';
 
 // Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 120 s
 export { ONLINE_MS };
@@ -15,7 +16,7 @@ export const hasOpenPost = (userId: string, posts: PostSession[]) =>
   posts.some(p => p.employee_id === userId && OPEN.includes(p.status));
 
 /** Secondes de connexion AUJOURD'HUI (jour de Madagascar) d'une personne ; 0 sans ligne de présence ou si la ligne date d'un autre jour. */
-export const onlineSecToday = (userId: string, presence: PresenceRow[], now = Date.now()): number => {
+export const onlineSecToday = (userId: string, presence: PresenceRow[], now = serverNowMs()): number => {
   const row = presence.find(r => r.user_id === userId);
   return row && row.day === dayMada(now) ? row.online_sec : 0;
 };
@@ -23,7 +24,7 @@ export const onlineSecToday = (userId: string, presence: PresenceRow[], now = Da
 export const dayMada = (now = Date.now()) => new Date(now + 3 * 3600 * 1000).toISOString().slice(0, 10);
 
 // File d'attente vue par l'admin : du plus ancien au plus récent
-export const getQueue = (users: User[], posts: PostSession[], presence: PresenceRow[], now = Date.now()) =>
+export const getQueue = (users: User[], posts: PostSession[], presence: PresenceRow[], now = serverNowMs()) =>
   users
     .filter(u => u.role === 'employee' && u.status !== 'blocked')
     .map(u => ({ user: u, waitingSince: liveStatus(u, posts, presence, now).waiting ? (presence.find(r => r.user_id === u.id)?.waiting_since ?? null) : null }))

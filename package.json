@@ -72,6 +72,7 @@
     "check:reason-modal": "npx --yes tsx scripts/check-reason-modal.ts",
     "check:operator-list": "esbuild scripts/check-operator-list.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-operator-list.mjs && node node_modules/.cache/check-operator-list.mjs",
     "check:live-status": "npx --yes tsx scripts/check-live-status.tsx",
+    "check:server-clock": "npx --yes tsx scripts/check-server-clock.ts",
     "check:calendar-global": "npx --yes tsx scripts/check-calendar-global.ts",
     "check:news-access": "npx --yes tsx scripts/check-news-access.ts",
     "check:attendance-view": "npx --yes tsx scripts/check-attendance-view.ts",
