@@ -9,6 +9,11 @@ const KEY = (uid: string) => `df_ai_optin_${uid}`;
 export const aiOptIn = (uid: string): boolean => { try { return localStorage.getItem(KEY(uid)) === '1'; } catch { return false; } };
 export const setAiOptIn = (uid: string, on: boolean): void => { try { if (on) localStorage.setItem(KEY(uid), '1'); else localStorage.removeItem(KEY(uid)); } catch { /* stockage refusé : reste désactivé */ } };
 
+// Mémoire envoyée à l'IA : case à part dans Réglages, coupée par défaut. Seules les notes liées à la question partent (400 caractères au plus).
+const MKEY = (uid: string) => `df_ai_mem_optin_${uid}`;
+export const aiMemOptIn = (uid: string): boolean => { try { return localStorage.getItem(MKEY(uid)) === '1'; } catch { return false; } };
+export const setAiMemOptIn = (uid: string, on: boolean): void => { try { if (on) localStorage.setItem(MKEY(uid), '1'); else localStorage.removeItem(MKEY(uid)); } catch { /* stockage refusé : reste désactivé */ } };
+
 export const AI_ERRORS: Record<string, Bi> = {
   not_configured: { fr: 'L\'IA externe n\'est pas encore activée sur le serveur (il manque la clé).', en: 'The external AI is not enabled on the server yet (the key is missing).' },
   quota: { fr: 'Le quota gratuit de l\'IA est atteint pour le moment. Réessayez plus tard : les règles continuent de marcher.', en: 'The AI free quota is reached for now. Try again later: the rules keep working.' },

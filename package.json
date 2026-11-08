@@ -207,7 +207,8 @@
     "check:templates-store": "esbuild scripts/check-templates-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-templates-store.mjs && node node_modules/.cache/check-templates-store.mjs",
     "check:deadlines-store": "esbuild scripts/check-deadlines-store.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-deadlines-store.mjs && node node_modules/.cache/check-deadlines-store.mjs",
     "check:feed-scroll": "npx --yes tsx scripts/check-feed-scroll.ts",
-    "check:shortcuts": "npx --yes tsx scripts/check-shortcuts.ts"
+    "check:shortcuts": "npx --yes tsx scripts/check-shortcuts.ts",
+    "check:assistant-memory": "npx --yes tsx scripts/check-assistant-memory.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

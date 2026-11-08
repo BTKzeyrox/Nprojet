@@ -3325,6 +3325,30 @@ export class AppStore {
     return r.ok;
   }
   // --- Rappels et tâches (module 25) : le serveur ne rend que MES éléments (et ceux partagés par mon équipe) ; en démo : mémoire locale, rien n'est envoyé ---
+  // Mémoire de l'assistant (admin) : notes enregistrées sur le serveur (ligne `mem:<compte>`), en démo seulement dans le navigateur.
+  private demoMem: { id: string; text: string; at: number }[] = [];
+  public async memFetch(): Promise<{ id: string; text: string; at: number }[] | null> {
+    if (this.demo) return [...this.demoMem].sort((a, b) => a.at - b.at);
+    if (!this.token) return null;
+    const r = await this.api('assistant-memory');
+    return r.ok && r.data && Array.isArray(r.data.notes) ? r.data.notes : null;
+  }
+  public async memSave(note: { id?: string; text: string }): Promise<{ ok: boolean; note?: { id: string; text: string; at: number }; error?: string }> {
+    if (this.demo) {
+      const text = String(note.text || '').trim().slice(0, 500);
+      if (!text) return { ok: false, error: 'Note vide.' };
+      const old = note.id ? this.demoMem.find(x => x.id === note.id) : undefined;
+      const n = { id: old?.id || `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, text, at: old?.at || Date.now() };
+      this.demoMem = [...this.demoMem.filter(x => x.id !== n.id), n];
+      return { ok: true, note: n };
+    }
+    const r = await this.api('assistant-memory-save', { method: 'POST', body: JSON.stringify({ note }) });
+    return r.ok ? { ok: true, note: r.data?.note } : { ok: false, error: r.data?.error || 'Enregistrement impossible (pas de réseau ?).' };
+  }
+  public async memDelete(id: string): Promise<boolean> {
+    if (this.demo) { this.demoMem = this.demoMem.filter(x => x.id !== id); return true; }
+    return (await this.api('assistant-memory-delete', { method: 'POST', body: JSON.stringify({ id }) })).ok;
+  }
   private demoRem: { items: any[]; cfg: any } = { items: [], cfg: { templates: [], morning: '08:00', hide_title: false, quiet_from: '', quiet_to: '' } };
   public async remFetch(): Promise<{ items: any[]; cfg: any; now: number } | null> {
     if (this.demo) return { items: this.demoRem.items, cfg: this.demoRem.cfg, now: Date.now() };

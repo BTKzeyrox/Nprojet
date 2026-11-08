@@ -6214,6 +6214,49 @@ async function remCfgSetRoute(req: any, res: any, me: any) {
   return res.json({ ok: true, cfg });
 }
 
+// ===== Mémoire de l'assistant (AI_STUDIO v75) : ADMIN seulement ; notes de la personne dans UNE ligne de df_reminders (id `mem:<compte>`, kind 'mem'),
+// jamais lue par les rappels (ils filtrent kind = 'item'). Chacun ne lit et n'écrit que SA ligne. Mêmes limites que src/utils/assistantMemory.ts.
+const MEM_MAX_NOTES = 100;
+const MEM_MAX_CHARS = 500;
+function memCleanText(v: unknown): string {
+  return String(v ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MEM_MAX_CHARS);
+}
+async function memLoad(uid: string): Promise<{ id: string; text: string; at: number }[]> {
+  const { data: row } = await sb.from(REMINDERS).select('data').eq('id', `mem:${uid}`).maybeSingle();
+  const raw = (row as any)?.data?.notes;
+  return (Array.isArray(raw) ? raw : []).map((n: any) => ({ id: remStr(n?.id, 40), text: memCleanText(n?.text), at: Number(n?.at) || 0 })).filter((n: any) => n.id && n.text).sort((a: any, b: any) => a.at - b.at).slice(0, MEM_MAX_NOTES);
+}
+async function memListRoute(_req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  return res.json({ notes: await memLoad(String(me.id)) });
+}
+async function memSaveRoute(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  const uid = String(me.id);
+  const text = memCleanText(req.body?.note?.text);
+  if (!text) return res.status(400).json({ error: 'La note est vide.' });
+  const id = remStr(req.body?.note?.id, 40);
+  const notes = await memLoad(uid);
+  const old = id ? notes.find(n => n.id === id) : undefined;
+  if (id && !old) return res.status(404).json({ error: 'Cette note n\'existe plus.' });
+  if (!old && notes.length >= MEM_MAX_NOTES) return res.status(400).json({ error: `Ma mémoire est pleine (${MEM_MAX_NOTES} notes au plus).` });
+  const note = { id: old?.id || `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, text, at: old?.at || Date.now() };
+  const next = [...notes.filter(n => n.id !== note.id), note].sort((a, b) => a.at - b.at);
+  const { error } = await sb.from(REMINDERS).upsert({ id: `mem:${uid}`, data: { kind: 'mem', user_id: uid, notes: next }, updated_at: new Date().toISOString() });
+  if (error) return res.status(500).json({ error: 'Enregistrement impossible.' });
+  return res.json({ ok: true, note });
+}
+async function memDeleteRoute(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  const uid = String(me.id);
+  const id = remStr(req.body?.id, 40);
+  const notes = await memLoad(uid);
+  if (!notes.some(n => n.id === id)) return res.json({ ok: true });
+  const { error } = await sb.from(REMINDERS).upsert({ id: `mem:${uid}`, data: { kind: 'mem', user_id: uid, notes: notes.filter(n => n.id !== id) }, updated_at: new Date().toISOString() });
+  if (error) return res.status(500).json({ error: 'Suppression impossible.' });
+  return res.json({ ok: true });
+}
+
 // Mail (M25.5) : seulement pour un ADMIN qui l'a activé, et seulement si le secret RESEND_API_KEY et l'adresse REMINDER_MAIL_TO existent dans les secrets du serveur (Resend n'écrit qu'à l'adresse du propriétaire du compte). Sinon : rien n'est envoyé, sans erreur.
 async function remSendMail(text: { fr: { title: string; body: string } }): Promise<boolean> {
   try {
@@ -6460,6 +6503,9 @@ Deno.serve(async (request: Request) => {
     if (action === "reminder-delete" && req.method === "POST") return await remDeleteRoute(req, res, me);
     if (action === "reminder-snooze" && req.method === "POST") return await remSnoozeRoute(req, res, me);
     if (action === "reminder-cfg" && req.method === "POST") return await remCfgSetRoute(req, res, me);
+    if (action === "assistant-memory" && req.method === "GET") return await memListRoute(req, res, me);
+    if (action === "assistant-memory-save" && req.method === "POST") return await memSaveRoute(req, res, me);
+    if (action === "assistant-memory-delete" && req.method === "POST") return await memDeleteRoute(req, res, me);
     if (action === "push-key" && req.method === "GET") return await pushKeyRoute(req, res, me);
     if (action === "push-subscribe" && req.method === "POST") return await pushSubscribeRoute(req, res, me);
     if (action === "push-prefs" && req.method === "POST") return await pushPrefsRoute(req, res, me);

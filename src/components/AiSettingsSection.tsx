@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
-import { aiOptIn, setAiOptIn } from '../utils/aiAssist';
+import { aiOptIn, setAiOptIn, aiMemOptIn, setAiMemOptIn } from '../utils/aiAssist';
 
 /** Réglages > Général : « IA externe pour l'assistant ». Désactivée par défaut, réglée sur cet appareil, avec l'avertissement de confidentialité. */
 export const AiSettingsSection: React.FC = () => {
@@ -13,6 +13,7 @@ export const AiSettingsSection: React.FC = () => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const uid = db.getCurrentUser()?.id || '';
   const [on, setOn] = useState(() => aiOptIn(uid));
+  const [memOn, setMemOn] = useState(() => aiMemOptIn(uid));
   const [status, setStatus] = useState<{ configured: boolean; left: number; max: number } | 'error' | null>(null);
   useEffect(() => {
     let alive = true;
@@ -27,6 +28,10 @@ export const AiSettingsSection: React.FC = () => {
       <label className="flex items-center gap-3 min-h-[44px] cursor-pointer text-sm text-white">
         <input type="checkbox" className="w-5 h-5" checked={on} onChange={e => { setOn(e.target.checked); setAiOptIn(uid, e.target.checked); }} />
         {t('Utiliser l\'IA externe sur cet appareil', 'Use the external AI on this device')}
+      </label>
+      <label className="flex items-start gap-3 min-h-[44px] cursor-pointer text-sm text-white" data-ai-memory-optin>
+        <input type="checkbox" className="w-5 h-5 mt-0.5" checked={memOn} onChange={e => { setMemOn(e.target.checked); setAiMemOptIn(uid, e.target.checked); }} />
+        <span>{t('Envoyer à l\'IA mes notes liées à la question', 'Send my notes related to the question to the AI')}<span className="block text-[11px] text-slate-400">{t('Seules les notes qui ressemblent à la question partent (400 caractères au plus), jamais toute ta mémoire. Coupé par défaut.', 'Only notes that look like the question are sent (400 characters at most), never your whole memory. Off by default.')}</span></span>
       </label>
       <p className="text-[11px] text-slate-400" data-ai-status>
         {status === null ? t('Vérification du serveur…', 'Checking the server…')

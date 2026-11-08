@@ -5,13 +5,15 @@ import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getHealth, loadHealthExternal } from '../utils/healthDb';
 import { getSnapshotInput } from '../utils/snapshotDb';
-import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, type Reply } from '../utils/assistant';
+import { respond, helpReply, pageLinks, entityLinks, recapPrintHtml, PRINT_PREFIX, b, type Reply } from '../utils/assistant';
 import { shortcutList, shortcutReply, detectShortcut } from '../utils/assistantShortcuts';
 import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } from '../utils/assistantMessages';
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
+import { db } from '../db/store';
+import { parseMemoryIntent, runMemory, forgetDone, searchNotes, notesAnswer, notesForAi, norm, MEM_FORGET_PREFIX, MEM_EDIT_PREFIX, type MemIntent, type MemNote, type MemApi } from '../utils/assistantMemory';
 import { assistantMenu, menuHeightFromKeyboard, menuLabel, MENU_FALLBACK_H, type MenuItem } from '../utils/assistantMenu';
-import { aiOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
+import { aiOptIn, aiMemOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
 import { TypingDots } from './Reactions';
 import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplates';
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
@@ -40,6 +42,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const listRef = useRef<HTMLDivElement>(null);
   const keep = useKeepBottom(() => listRef.current, () => true, 'assistant'); // le clavier ne coupe jamais le dernier message
   const mountedAt = useRef(Date.now()); // seuls les messages arrivés après l'ouverture jouent l'animation d'entrée
+  const pendingMem = useRef(false); // « mémorise » est venu seul : le prochain message est la phrase à retenir
+  const memApi: MemApi = useMemo(() => ({ fetch: () => db.memFetch(), save: n => db.memSave(n), remove: id => db.memDelete(id) }), []);
   const inflight = useRef(false); // garde synchrone : l'état `busy` arrive trop tard si on touche deux fois vite
   const lastQ = useRef<{ q: string; at: number }>({ q: '', at: 0 });
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -72,11 +76,20 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     window.setTimeout(async () => { // petite pause : il « écrit » (le calcul des règles, lui, est instantané)
       const i = getSnapshotInput();
       const sid = detectShortcut(q); // un bouton du bas (ou son texte écrit à la main) : réponse avec les vrais chiffres et des boutons exacts
-      let reply = i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
-      if (reply.intent === 'unknown' && i) {
-        if (aiOptIn(userId)) { // question libre : seulement si l'admin a activé l'IA externe (Réglages), sinon rien ne sort du site
+      // Mémoire : « mémorise : … », « ma mémoire », « oublie la 2 » ; « mémorise » seul = la phrase vient au message d'après
+      let mi: MemIntent | 'cancel' | null = parseMemoryIntent(q);
+      if (!mi && pendingMem.current && !sid) mi = /^(annule|annuler|laisse tomber|laisse|non|cancel|stop)\b/.test(norm(q)) ? 'cancel' : { kind: 'save', text: q };
+      pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      if (!mi && reply.intent === 'unknown' && i) {
+        let hits: MemNote[] = [];
+        try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
+        const useAi = aiOptIn(userId);
+        if (hits.length && !(useAi && aiMemOptIn(userId))) reply = notesAnswer(hits);
+        else if (useAi) { // question libre : seulement si l'admin a activé l'IA externe (Réglages), sinon rien ne sort du site
           const turns = msgs.slice(-6).map(m => ({ role: (m.who === 'me' ? 'user' : 'model') as 'user' | 'model', text: m.text || (m.reply ? [l === 'en' ? m.reply.title.en : m.reply.title.fr, ...m.reply.lines.slice(0, 3).map(x => (l === 'en' ? x.en : x.fr))].join(' ') : '') }));
-          const r = await askAi(q, l, turns);
+          const noteTurn = hits.length ? notesForAi(hits, l) : ''; // seulement les notes liées à la question, 380 caractères au plus, et seulement si la case est cochée dans Réglages
+          const r = await askAi(q, l, noteTurn ? [{ role: 'user', text: noteTurn }, { role: 'model', text: l === 'en' ? 'Understood.' : 'Compris.' }, ...turns.slice(-4)] : turns);
           reply = r.ok
             ? { intent: 'ai', title: { fr: '', en: '' }, lines: r.text.split(/\n+/).filter(Boolean).map(x => ({ fr: x, en: x })), actions: [...entityLinks(r.text, i), ...pageLinks(r.text, l)], sources: { fr: '', en: '' } }
             : { intent: 'ai_error', title: { fr: '', en: '' }, lines: [r.error], actions: [], sources: { fr: '', en: '' } };
@@ -107,6 +120,8 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const go = (g: { view: string; tab?: string; storage?: StorageIntent; nav?: string; filter?: string }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view.startsWith(MSG_PREFIX)) { const si = getSnapshotInput(), sm = si && findSuggested(si, g.view.slice(MSG_PREFIX.length), l); if (sm) applySuggested(sm); return; }
+    if (g.view.startsWith(MEM_FORGET_PREFIX)) { void db.memDelete(g.view.slice(MEM_FORGET_PREFIX.length)).then(ok => push([{ id: `b${Date.now()}`, who: 'bot', reply: forgetDone(ok), at: Date.now() }])); return; }
+    if (g.view.startsWith(MEM_EDIT_PREFIX)) { const id = g.view.slice(MEM_EDIT_PREFIX.length); void db.memFetch().then(ns => { const k = ns ? ns.findIndex(x => x.id === id) : -1; if (ns && k >= 0) { setText(`${l === 'en' ? 'edit' : 'modifie'} ${k + 1} : ${ns[k].text}`); inputRef.current?.focus(); } }); return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
     if (g.view === 'stats' && g.tab) setStatsTab(g.tab as StatsTab);
     if (g.storage) setStorageIntent(g.storage);
