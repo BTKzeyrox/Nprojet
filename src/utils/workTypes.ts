@@ -166,4 +166,6 @@ export const BUSINESS_MODELS: BusinessModel[] = [
     types: [T('office-fixed', 'Salaire fixe', 'Fixed salary', 'none', 'fixed', ['admin']), T('office-tasks', 'Tâches internes', 'Internal tasks', 'tasks', 'mission', ['employee'])] },
   { id: 'other', name: b('Autre (je crée mes types)', 'Other (I create my own types)'), about: b('Aucun type au départ : le responsable décrit son travail avec les 3 réglages.', 'No type at the start: the manager describes the work with the 3 settings.'), menu: 'full', work: b('travail', 'work'), types: [] },
 ];
+/** Le mot que l'écran emploie à la place de « mission » pour ce modèle d'entreprise (« course », « intervention »…). Modèle inconnu ou absent : « mission » / « mission ». */
+export const workWord = (modelId: unknown, lang: 'fr' | 'en'): string => { const m = findModel(modelId); return m ? (lang === 'en' ? m.work.en : m.work.fr) : 'mission'; };
 export const findModel = (id: unknown): BusinessModel | undefined => BUSINESS_MODELS.find(m => m.id === id);

@@ -709,7 +709,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               {WORK_SETTINGS_LIVE && (
               <label data-entry-only-toggle className="flex items-start gap-3 min-h-[44px] text-slate-200 cursor-pointer rounded-lg border border-slate-700 p-3">
                 <input type="checkbox" checked={newEntryOnly} onChange={e => setNewEntryOnly(e.target.checked)} className="w-5 h-5 mt-0.5 accent-emerald-500" />
-                <span>Suivi par saisie seulement<span className="block text-[11px] text-slate-400 font-normal normal-case">Sans compte, sans mot de passe, sans téléphone : il ne se connecte jamais. Toi ou le chef d'équipe saisissez son travail dans la Feuille du jour.</span></span>
+                <span>{lang === 'en' ? 'Tracked by entry only' : 'Suivi par saisie seulement'}<span className="block text-[11px] text-slate-400 font-normal normal-case">{lang === 'en' ? 'No account, no password, no phone: never logs in. You or the team lead enter their work in the Daily sheet.' : "Sans compte, sans mot de passe, sans téléphone : il ne se connecte jamais. Toi ou le chef d'équipe saisissez son travail dans la Feuille du jour."}</span></span>
               </label>
               )}
 

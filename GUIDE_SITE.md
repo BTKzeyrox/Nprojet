@@ -1189,6 +1189,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:entry-only` | Employé « suivi par saisie seulement » (module 26, M26.7) : jamais de connexion, jamais « en ligne », présent dans les listes. Lancer : npm run check:entry-only |
 | `npm run check:work-checks` | Contrôles du travail saisi (module 26, M26.8) : boîtes déclarées contre Stock, boîtes par heure, régularité. Lancer : npm run check:work-checks |
 | `npm run check:paper-sheet` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Lancer : npm run check:paper-sheet |
+| `npm run check:work-words` | Anglais et vocabulaire du modèle d'entreprise (module 26, M26.10). Lancer : npm run check:work-words |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

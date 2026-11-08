@@ -7,15 +7,17 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import type { User } from '../types';
 import { readCompany } from '../utils/companyRules';
-import { findModel, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
+import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
-const REASON: Record<string, string> = {
+const REASON_FR: Record<string, string> = {
   employee: "Cet opérateur n'est pas dans ta liste", type: 'Type de travail inconnu', presence: 'Présence inconnue', hours: 'Heures : 0 à 24', quantity: 'Quantité impossible (0 à 100 000)',
   rejected: 'Refusées : pas plus que les faites', empty: 'Rien à enregistrer', duplicate: 'Déjà saisi pour ce jour et ce type', bad: 'Ligne illisible',
 };
+const REASON_EN: Record<string, string> = { employee: 'This operator is not in your list', type: 'Unknown work type', presence: 'Unknown presence', hours: 'Hours: 0 to 24', quantity: 'Impossible quantity (0 to 100,000)', rejected: 'Rejected: no more than made', empty: 'Nothing to save', duplicate: 'Already entered for this day and type', bad: 'Unreadable line' };
+const SHEET_ERR_EN: Record<string, string> = { date: 'Impossible date: today or the last 31 days.', empty: 'The sheet is empty.', too_many: 'Too many lines (100 at most).' };
 const SHEET_ERR: Record<string, string> = { date: "Date impossible : aujourd'hui ou les 31 derniers jours.", empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' };
 const madaToday = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
 const addDays = (iso: string, n: number) => new Date(new Date(iso + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
@@ -27,7 +29,7 @@ const saveDraft = (k: string, v: Record<string, Row>) => { try { if (Object.keys
 const sheetTypes = (types: WorkType[], role: string): WorkType[] => types.filter(t => (t.measure === 'presence' || t.measure === 'quantity') && (role === 'admin' || t.entry.includes(role as any)));
 
 export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
-  const L = useApp().theme === 'light';
+  const app = useApp(); const L = app.theme === 'light'; const en = app.lang === 'en'; const t = (fr: string, e: string) => (en ? e : fr);
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const me = db.getCurrentUser() || currentUser;
@@ -55,16 +57,16 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const filled = (r?: Row) => !!r && !!(r.presence || (r.hours || '').trim() || (r.quantity || '').trim());
 
   const groupApply = (patch: { presence?: string; hours?: string; quantity?: string; rejected?: string }) => setRows(prev => { const next = applyGroup(prev, people.map(u => u.id), patch); if (key) saveDraft(key, next); return next; });
-  const printPaper = () => { if (!type) return; const ok = printPaperSheet(paperSheetHtml(people.map(u => u.name), { name: type.name.fr, measure: type.measure, unit: type.unit?.fr }, date, 7, 'fr', String((db.getSettings() as any).company_name || ''))); if (!ok) setMsg({ ok: false, text: "Le navigateur a bloqué la fenêtre d'impression : autorise-la puis réessaie." }); };
+  const printPaper = () => { if (!type) return; const ok = printPaperSheet(paperSheetHtml(people.map(u => u.name), { name: en ? type.name.en : type.name.fr, measure: type.measure, unit: en ? type.unit?.en : type.unit?.fr }, date, 7, en ? 'en' : 'fr', String((db.getSettings() as any).company_name || ''))); if (!ok) setMsg({ ok: false, text: t("Le navigateur a bloqué la fenêtre d'impression : autorise-la puis réessaie.", 'The browser blocked the print window: allow it and try again.') }); };
 
   const save = async () => {
     if (!type) return;
     const entries = people.filter(u => filled(rows[u.id]));
-    if (entries.length === 0) { setMsg({ ok: false, text: 'Remplis au moins une ligne.' }); return; }
+    if (entries.length === 0) { setMsg({ ok: false, text: t('Remplis au moins une ligne.', 'Fill in at least one line.') }); return; }
     setBusy(true); setMsg(null);
     const r = await db.addWorkEntries({ date, type_label: type.name.fr, lines: entries.map(u => ({ employee_id: u.id, work_type: type.id, presence: rows[u.id].presence, hours: rows[u.id].hours, quantity: rows[u.id].quantity, rejected: rows[u.id].rejected })) });
     setBusy(false);
-    if (!r.ok) { setMsg({ ok: false, text: r.error === 'Erreur.' || !r.error ? 'Pas de réseau ou erreur : ta saisie est gardée sur cet appareil, réessaie plus tard.' : (SHEET_ERR[r.error] || r.error) }); return; }
+    if (!r.ok) { setMsg({ ok: false, text: r.error === 'Erreur.' || !r.error ? t('Pas de réseau ou erreur : ta saisie est gardée sur cet appareil, réessaie plus tard.', 'No network or error: your entry is kept on this device, try again later.') : ((en ? SHEET_ERR_EN : SHEET_ERR)[r.error] || r.error) }); return; }
     const failed = r.failed || [];
     const failedIds = new Set(failed.map(f => entries[f.line - 1]?.id).filter(Boolean) as string[]);
     const kept: Record<string, Row> = {}; for (const id of failedIds) kept[id] = rows[id];
@@ -72,8 +74,10 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
     const n = r.saved || 0;
     setMsg({
       ok: failed.length === 0,
-      text: `${n} ligne${n > 1 ? 's' : ''} enregistrée${n > 1 ? 's' : ''}${r.validated ? ' et validée' + (n > 1 ? 's' : '') : ' : en attente du responsable'}${failed.length ? `, ${failed.length} refusée${failed.length > 1 ? 's' : ''}` : ''}.`,
-      lines: failed.map(f => `${entries[f.line - 1]?.name || `Ligne ${f.line}`} : ${REASON[f.error] || 'refusée'}`),
+      text: en
+        ? `${n} line${n > 1 ? 's' : ''} saved${r.validated ? ' and approved' : ': waiting for the manager'}${failed.length ? `, ${failed.length} rejected` : ''}.`
+        : `${n} ligne${n > 1 ? 's' : ''} enregistrée${n > 1 ? 's' : ''}${r.validated ? ' et validée' + (n > 1 ? 's' : '') : ' : en attente du responsable'}${failed.length ? `, ${failed.length} refusée${failed.length > 1 ? 's' : ''}` : ''}.`,
+      lines: failed.map(f => `${entries[f.line - 1]?.name || `${t('Ligne', 'Line')} ${f.line}`} : ${(en ? REASON_EN : REASON_FR)[f.error] || t('refusée', 'rejected')}`),
     });
   };
 
@@ -83,36 +87,37 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
 
   return (
     <div className="max-w-3xl mx-auto space-y-4" data-worksheet>
-      <h1 className={`text-xl font-bold ${L ? 'text-slate-900' : 'text-white'}`}>Feuille du jour</h1>
+      <h1 className={`text-xl font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{t('Feuille du jour', 'Daily sheet')}</h1>
+      {model && <p data-worksheet-word className={`text-xs ${L ? 'text-slate-500' : 'text-slate-400'}`}>{en ? model.name.en : model.name.fr} · {t('ici on dit', 'here we say')} « {workWord(model.id, en ? 'en' : 'fr')} »</p>}
       {types.length === 0 ? (
         <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`} data-worksheet-notype>
-          Aucun type de travail à saisir ici. Choisis ton modèle d'entreprise ou crée ton type de travail dans Réglages &gt; Conditions (présence, heures ou quantité).
+          {t("Aucun type de travail à saisir ici. Choisis ton modèle d'entreprise ou crée ton type de travail dans Réglages > Conditions (présence, heures ou quantité).", 'No work type to enter here. Choose your business model or create your own work type in Settings > Conditions (presence, hours or quantity).')}
         </div>
       ) : (
         <>
           <div className={`${card} grid gap-3 sm:grid-cols-2`}>
-            <label className="block space-y-1"><span className={label}>Date</span>
+            <label className="block space-y-1"><span className={label}>{t('Date', 'Date')}</span>
               <input type="date" data-worksheet-date value={date} min={addDays(today, -WE_DAYS_BACK)} max={today} onChange={e => setDate(e.target.value || today)} className={input} /></label>
-            <label className="block space-y-1"><span className={label}>Type de travail</span>
-              <select data-worksheet-type value={type?.id || ''} onChange={e => setTypeId(e.target.value)} className={input}>{types.map(t => <option key={t.id} value={t.id}>{t.name.fr}</option>)}</select></label>
+            <label className="block space-y-1"><span className={label}>{t('Type de travail', 'Work type')}</span>
+              <select data-worksheet-type value={type?.id || ''} onChange={e => setTypeId(e.target.value)} className={input}>{types.map(wt => <option key={wt.id} value={wt.id}>{en ? wt.name.en : wt.name.fr}</option>)}</select></label>
           </div>
 
           {people.length > 0 && (
             <div className={`${card} space-y-2`} data-worksheet-group>
-              <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>Saisie groupée : remplit d'un coup les cases vides de toute la liste</div>
+              <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>{t('Saisie groupée : remplit d\'un coup les cases vides de toute la liste', 'Group entry: fills the empty boxes of the whole list at once')}</div>
               <div className="flex flex-wrap gap-2 items-end">
-                {showPresence && <button type="button" data-group-present onClick={() => groupApply({ presence: 'present' })} className="min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer bg-emerald-600 border-emerald-600 text-white">Tous présents</button>}
-                {showHours && <><label className="block space-y-1"><span className={label}>Heures pour tous</span><input inputMode="decimal" data-group-hours value={grp.hours} onChange={e => setGrp({ ...grp, hours: e.target.value })} className={`${input} !w-28`} /></label>
-                  <button type="button" data-group-hours-apply onClick={() => groupApply({ hours: grp.hours })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Appliquer</button></>}
-                {showQty && <><label className="block space-y-1"><span className={label}>Quantité pour tous</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
-                  <button type="button" data-group-qty-apply onClick={() => groupApply({ quantity: grp.quantity })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Appliquer</button></>}
-                <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Imprimer la feuille papier</button>
+                {showPresence && <button type="button" data-group-present onClick={() => groupApply({ presence: 'present' })} className="min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer bg-emerald-600 border-emerald-600 text-white">{t('Tous présents', 'All present')}</button>}
+                {showHours && <><label className="block space-y-1"><span className={label}>{t('Heures pour tous', 'Hours for all')}</span><input inputMode="decimal" data-group-hours value={grp.hours} onChange={e => setGrp({ ...grp, hours: e.target.value })} className={`${input} !w-28`} /></label>
+                  <button type="button" data-group-hours-apply onClick={() => groupApply({ hours: grp.hours })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
+                {showQty && <><label className="block space-y-1"><span className={label}>{t('Quantité pour tous', 'Quantity for all')}</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
+                  <button type="button" data-group-qty-apply onClick={() => groupApply({ quantity: grp.quantity })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
+                <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Imprimer la feuille papier', 'Print the paper sheet')}</button>
               </div>
             </div>
           )}
 
           {people.length === 0 ? (
-            <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`}>Aucun opérateur dans ta liste{me.role === 'team_lead' ? ' (ton équipe est vide ou non renseignée)' : ''}.</div>
+            <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`}>{t('Aucun opérateur dans ta liste', 'No operator in your list')}{me.role === 'team_lead' ? t(' (ton équipe est vide ou non renseignée)', ' (your team is empty or not set)') : ''}.</div>
           ) : (
             <div className="space-y-2">
               {people.map(u => {
@@ -124,15 +129,15 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
                       <div className="grid grid-cols-4 gap-1.5" role="group" aria-label={`Présence de ${u.name}`}>
                         {PRESENCE_VALUES.map(p => (
                           <button key={p} type="button" aria-pressed={r.presence === p} data-presence={p} onClick={() => set(u.id, { presence: r.presence === p ? undefined : p })}
-                            className={`min-h-[44px] px-1 rounded-xl border text-xs font-semibold cursor-pointer ${r.presence === p ? 'bg-emerald-600 border-emerald-600 text-white' : L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{PRESENCE_LABEL[p].fr}</button>
+                            className={`min-h-[44px] px-1 rounded-xl border text-xs font-semibold cursor-pointer ${r.presence === p ? 'bg-emerald-600 border-emerald-600 text-white' : L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{en ? PRESENCE_LABEL[p].en : PRESENCE_LABEL[p].fr}</button>
                         ))}
                       </div>
                     )}
                     {(showHours || showQty) && (
                       <div className="grid grid-cols-2 gap-2">
-                        {showHours && <label className="block space-y-1 col-span-2"><span className={label}>Heures</span><input inputMode="decimal" data-field="hours" value={r.hours || ''} onChange={e => set(u.id, { hours: e.target.value })} className={input} placeholder="8" /></label>}
-                        {showQty && <label className="block space-y-1"><span className={label}>Quantité{type?.unit ? ` (${type.unit.fr})` : ''}</span><input inputMode="decimal" data-field="quantity" value={r.quantity || ''} onChange={e => set(u.id, { quantity: e.target.value })} className={input} placeholder="0" /></label>}
-                        {showQty && <label className="block space-y-1"><span className={label}>Refusées</span><input inputMode="decimal" data-field="rejected" value={r.rejected || ''} onChange={e => set(u.id, { rejected: e.target.value })} className={input} placeholder="0" /></label>}
+                        {showHours && <label className="block space-y-1 col-span-2"><span className={label}>{t('Heures', 'Hours')}</span><input inputMode="decimal" data-field="hours" value={r.hours || ''} onChange={e => set(u.id, { hours: e.target.value })} className={input} placeholder="8" /></label>}
+                        {showQty && <label className="block space-y-1"><span className={label}>{t('Quantité', 'Quantity')}{type?.unit ? ` (${en ? type.unit.en : type.unit.fr})` : ''}</span><input inputMode="decimal" data-field="quantity" value={r.quantity || ''} onChange={e => set(u.id, { quantity: e.target.value })} className={input} placeholder="0" /></label>}
+                        {showQty && <label className="block space-y-1"><span className={label}>{t('Refusées', 'Rejected')}</span><input inputMode="decimal" data-field="rejected" value={r.rejected || ''} onChange={e => set(u.id, { rejected: e.target.value })} className={input} placeholder="0" /></label>}
                       </div>
                     )}
                   </div>
@@ -148,7 +153,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
             </div>
           )}
           <button type="button" data-worksheet-save onClick={save} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
-            <Save className="w-5 h-5" />{busy ? 'Enregistrement…' : 'Enregistrer la feuille'}
+            <Save className="w-5 h-5" />{busy ? t('Enregistrement…', 'Saving…') : t('Enregistrer la feuille', 'Save the sheet')}
           </button>
         </>
       )}
