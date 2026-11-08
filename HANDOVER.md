@@ -52,7 +52,7 @@ Mots à utiliser : **Gestion Pro** (nom du site), **Opérateur** (ou Collaborate
 
 Garder les noms internes du code (`df_`, `employee`, `admin`, `user-admin-1`) : seuls les **textes affichés** utilisent ces mots.
 
-À vérifier : `index.html` (titre et écran de démarrage « BTK »), `public/manifest.webmanifest`, les icônes, les textes chinois (`src/utils/zhDict.json`, à adapter ou garder).
+À vérifier : `index.html` (titre et écran de démarrage « BTK »), `public/manifest.webmanifest`, les icônes.
 
 ## 4. Design
 Sobre et professionnel : fond clair, bleu marine (comme l'en-tête du CV de BTK), une seule police, grands boutons, tableaux lisibles, bon sur téléphone.
@@ -100,7 +100,6 @@ Pour la mise en ligne du serveur : pousser sur `main`, relever le commit, redép
 - Mots de passe stockés avec `scrypt` (`scrypt$sel$hash`) : jamais en clair.
 - Photos : seules les images vont sur Cloudinary ; PDF et textes vont dans `df-files`.
 - À la première connexion de l'admin, si la base n'a aucun poste, le site crée 50 postes d'exemple (`src/db/initialData.ts`) : à vider ou supprimer.
-- Tout nouveau texte visible doit être ajouté au dictionnaire chinois (`zhDict.json`) si on garde le chinois.
 - Toute fenêtre plein écran dans une page `fixed` doit passer par `createPortal(..., document.body)`.
 - Ne jamais écrire `document.body.style.overflow` à la main : utiliser `useLockBodyScroll`.
 - Le plan Supabase gratuit limite les appels (≈ 500 000 par mois) : la synchro du site se fait toutes les 20 s par personne connectée.

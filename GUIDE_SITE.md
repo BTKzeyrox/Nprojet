@@ -12,7 +12,7 @@
 
 - **Un site = une entreprise.** Il n'y a pas de gestion de plusieurs entreprises sur le même site.
 - **Pour qui** : une équipe de 5 à 50 personnes (saisie de données, contrôle, administratif, support, tâches web). Le responsable gère tout ; les opérateurs font les missions.
-- **Langues** : français et anglais. Le français est la source. L'anglais vient soit de `t(fr, en)` écrit dans la page (pages récentes, marquées `data-notranslate` pour que la traduction automatique n'y touche pas), soit de la traduction automatique `src/utils/enTranslate.ts` qui s'appuie sur le dictionnaire `src/utils/enDict.json`. Le chinois n'existe plus dans le code (`HANDOVER.md` en parle encore : cette partie est périmée).
+- **Langues** : français et anglais. Le français est la source. L'anglais vient soit de `t(fr, en)` écrit dans la page (pages récentes, marquées `data-notranslate` pour que la traduction automatique n'y touche pas), soit de la traduction automatique `src/utils/enTranslate.ts` qui s'appuie sur le dictionnaire `src/utils/enDict.json`. Le chinois n'existe plus (ni le code, ni la police).
 - **Thème** : clair et sombre, tailles de texte réglables sur l'appareil.
 - **Coût** : tout tourne sur des offres gratuites (Vercel pour le site, Supabase pour la base et le serveur, Cloudinary pour les photos). Voir §9 pour ce qui change en usage commercial.
 - **Plus de mode démo (M18.3, 2026-10-28)** : plus de bouton « Voir la démo », plus de lien `?demo=`, plus de bandeau, plus de suppression des données de démonstration dans les Réglages. Le site ne montre que la vraie base. Les données inventées servent seulement aux essais automatiques (`src/demo/demoData.ts`).
