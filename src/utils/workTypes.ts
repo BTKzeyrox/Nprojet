@@ -31,7 +31,7 @@ export const ENTRY_LABEL: Record<EntryBy, Bi> = {
 export const DEFAULT_PAY_MODE: PayMode = 'mission';
 /** INTERRUPTEUR : la section « Types de travail et paie » de Réglages > Conditions n'est montrée qu'une fois le serveur déployé avec la section `work`.
  * Sinon l'écran dirait « enregistré » mais l'ancien serveur ignorerait ces réglages (ils disparaîtraient au rechargement). À passer à `true` APRÈS le déploiement de df-api (avec sauvegarde et accord de BTK). */
-export const WORK_SETTINGS_LIVE = false;
+export const WORK_SETTINGS_LIVE = true;
 export const isMeasure = (v: unknown): v is Measure => typeof v === 'string' && (MEASURES as readonly string[]).includes(v);
 export const isPayMode = (v: unknown): v is PayMode => typeof v === 'string' && (PAY_MODES as readonly string[]).includes(v);
 export const isEntryBy = (v: unknown): v is EntryBy => typeof v === 'string' && (ENTRY_BY as readonly string[]).includes(v);

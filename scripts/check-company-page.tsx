@@ -44,7 +44,7 @@ for (const lang of ['fr', 'en'] as const) {
   ok(count(on, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') === count(off, lang === 'en' ? 'aria-label="Help"' : 'aria-label="Aide"') + workKeys.length && !bad(on), `${lang} : les ${workKeys.length} réglages du travail ont chacun un « ? » et aucun NaN`);
   ok(on.includes(lang === 'en' ? 'only stored' : 'seulement enregistrés'), `${lang} : la note dit que ces réglages ne changent encore aucune paie`);
 }
-ok(WORK_SETTINGS_LIVE === false, 'interrupteur « work » : éteint tant que le serveur n\'est pas déployé');
+ok((WORK_SETTINGS_LIVE as boolean) === true, 'interrupteur « work » : allumé, le serveur est déployé (version 74, 2026-11-08)');
 
 // enregistrement : un champ changé, le reste gardé
 const before = readCompany(db.getSettings().company);

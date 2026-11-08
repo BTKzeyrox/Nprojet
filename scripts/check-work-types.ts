@@ -106,7 +106,7 @@ for (const f of ['work_type?: string', 'quantity?: number', 'rejected?: number',
 ok(/pay_mode\?: 'mission' \| 'day' \| 'hour' \| 'piece' \| 'fixed'/.test(typesSrc) && /pay_rate_ar\?: number/.test(typesSrc), 'types : un employé peut avoir son propre mode et son propre tarif de paie (facultatif)');
 ok(/work: \{ business_model: string; pay_default: 'mission' \| 'day' \| 'hour' \| 'piece' \| 'fixed'/.test(typesSrc), 'types : CompanySettings connaît « work »');
 
-ok(WORK_SETTINGS_LIVE === false && /WORK_SETTINGS_LIVE/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')) && /showWork \|\| x\.id !== 'work'/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')), 'interrupteur : la section « Types de travail et paie » est cachée tant que le serveur n\'est pas déployé (sinon l\'écran dirait « enregistré » alors que l\'ancien serveur l\'ignore)');
+ok(/WORK_SETTINGS_LIVE/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')) && /showWork \|\| x\.id !== 'work'/.test(readFileSync('src/components/CompanyConditions.tsx', 'utf8')), 'interrupteur : la section « Types de travail et paie » dépend de l\'interrupteur (cachée s\'il est éteint)');
 // ---------- Pureté ----------
 const src = readFileSync('src/utils/workTypes.ts', 'utf8');
 ok(!/fetch\(|XMLHttpRequest|import .*db\/store|localStorage|Date\.now\(\)|new Date\(\)|setTimeout|setInterval|Math\.random/.test(src), 'règles pures : aucun appel réseau, aucun accès aux données, aucune horloge, aucun hasard');

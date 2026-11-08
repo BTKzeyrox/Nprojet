@@ -442,6 +442,17 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Une mission récurrente manquée de plus de 2 h (serveur arrêté) n'est pas rattrapée.
   - Plafond du Chef d'équipe : au-dessus de ce prix client, seul le responsable décide (valider un début, une fin ou refuser). Le serveur refuse sans donner le montant ; 0 = pas de plafond.
 - **Dans le code** : `src/views/admin/SettingsView.tsx`, `src/components/CompanyConditions.tsx`
+
+### Feuille du jour  `worksheet`
+- **Qui** : responsable
+- **À quoi ça sert** : Saisir pour les opérateurs qui n'ont pas de réseau : présence, heures, quantité faite et refusée, jour par jour.
+- **Comment l'utiliser** : 1. Choisir la date et le type ; « Tous présents » ou une quantité pour tous remplit d'un coup. 2. Pas de réseau : « Imprimer la feuille papier » (7 jours), à saisir plus tard. 3. Enregistrer : les lignes refusées restent à corriger.
+- **Règles** :
+  - Un opérateur, un jour, un type de travail = une seule ligne ; une ligne déjà saisie est refusée.
+  - La date va d'aujourd'hui à 31 jours en arrière, jamais dans le futur.
+  - Saisie du responsable : validée tout de suite. Saisie du Chef d'équipe : en attente du responsable ; personne ne valide sa propre saisie.
+  - Le Chef d'équipe ne saisit que pour les opérateurs de son équipe.
+- **Dans le code** : `src/views/WorksheetView.tsx`, `src/utils/workEntry.ts`, `src/utils/paperSheet.ts`, `src/utils/workTypes.ts`, `src/utils/entryOnly.ts`, `src/utils/workChecks.ts`
 <!-- /AUTO:pages -->
 
 **Fenêtres et écrans qui ne sont pas des pages du menu** : connexion (`src/views/LoginView.tsx`), fiche CV d'un employé (`src/components/CVViewerModal.tsx`), « Pourquoi ce chiffre ? » (`src/components/WhyFigure.tsx`), assistant du site (`src/components/AssistantChat.tsx`), cloche de notifications, bannière de démo.
