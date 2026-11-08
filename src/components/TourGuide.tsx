@@ -8,7 +8,7 @@ import { Compass, List, Pause, Play, Pointer, RotateCcw, SkipBack, SkipForward, 
 import { useApp } from '../context/AppContext';
 import { markTourSeen, shouldShowTour } from '../utils/tour';
 import { guideSteps } from '../utils/guideScripts';
-import { bubbleDock, findTarget, holeBox, sceneDuration, sceneEvents, type Box } from '../utils/guideEngine';
+import { bubbleDock, findTarget, holeBox, sceneDuration, sceneEvents, type Box, type GuideStep } from '../utils/guideEngine';
 
 // Guide « vidéo courte » (module 20, 2026-10-30) : s'ouvre tout seul à la première connexion de CHAQUE compte sur cet appareil (suivi par compte ; en « Voir comme », par rôle regardé), un guide DIFFÉRENT par rôle (src/utils/guideScripts.ts).
 // Chaque scène ouvre la VRAIE page, fait clignoter un contour autour de l'élément réel, puis (s'il y a une action) un doigt glisse vers l'élément, touche, et la bulle montre le résultat : SIMULATION, rien n'est modifié.
@@ -16,6 +16,7 @@ import { bubbleDock, findTarget, holeBox, sceneDuration, sceneEvents, type Box }
 // Aucun appel au serveur, aucune donnée lue ou écrite.
 
 const OPEN_EVENT = 'gp-tour-open';
+export const TASK_EVENT = 'gp-task-open'; // detail = { steps } : joue ce petit guide de tâche à la place de la visite complète
 const store = (): Storage | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 const prefersReduced = (): boolean => { try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
 // Couleurs FIXES (pas de classes slate : le thème clair les changerait) : la bulle est claire et nette sur page sombre comme sur page claire.
@@ -40,7 +41,8 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
   const lastPage = useRef<string | null>(null);
   const holeRef = useRef<Box | null>(null);
   const elapsed = useRef(0);                            // ms déjà jouées dans la scène (reprise après pause)
-  const steps = guideSteps(role);
+  const [task, setTask] = useState<GuideStep[] | null>(null); // guide de tâche en cours (null = la visite complète)
+  const steps = task || guideSteps(role);
   const step = steps[Math.min(i, steps.length - 1)];
   const dur = sceneDuration(step, lang === 'en' ? 'en' : 'fr');
   const reduced = prefersReduced();
@@ -56,12 +58,15 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
 
   useEffect(() => {
     const again = () => { setI(0); setEnded(false); setShowList(false); setPlaying(!prefersReduced()); lastPage.current = null; setEpoch(e => e + 1); setOffer(false); setOpen(true); };
-    window.addEventListener(OPEN_EVENT, again);
-    return () => window.removeEventListener(OPEN_EVENT, again);
+    const oneTask = (e: Event) => { const st = (e as CustomEvent).detail?.steps; if (!Array.isArray(st) || !st.length) return; setTask(st as GuideStep[]); again(); };
+    const full = () => { setTask(null); again(); };
+    window.addEventListener(OPEN_EVENT, full); window.addEventListener(TASK_EVENT, oneTask);
+    return () => { window.removeEventListener(OPEN_EVENT, full); window.removeEventListener(TASK_EVENT, oneTask); };
   }, []);
 
   const close = () => {
-    markTourSeen(store(), userId);
+    if (!task) markTourSeen(store(), userId); // un petit guide de tâche ne compte pas comme « visite vue »
+    setTask(null);
     setOpen(false);
     if (lastPage.current && lastPage.current !== 'feed') onNavigate('feed'); // retour à l'accueil si on a ouvert d'autres pages
     lastPage.current = null;

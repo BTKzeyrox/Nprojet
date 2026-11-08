@@ -748,6 +748,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
 | `storageNav.ts` | « Va exactement au bon endroit du Stockage » : une alerte ou une notification dit QUEL stockage, QUEL filtre et QUEL produit. |
 | `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
+| `taskGuides.ts` | Guides par tâche (guide G3, 2026-11-08) : « Que veux-tu faire ? ». 2 à 3 étapes par tâche, une phrase par étape, mêmes bulles et même doigt que la visite guidée. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
 | `teamGoals.ts` | Objectifs par salarié et par équipe (module 15, M15.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:team-goals`. |
 | `teamLead.ts` | Règle pure (sans écran, sans serveur) : sessions en attente des opérateurs de l'équipe d'un Chef d'équipe, les plus anciennes d'abord. |
@@ -1204,6 +1205,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:paper-sheet` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Lancer : npm run check:paper-sheet |
 | `npm run check:work-words` | Anglais et vocabulaire du modèle d'entreprise (module 26, M26.10). Lancer : npm run check:work-words |
 | `npm run check:page-help` | Bouton « ? » d'aide de la page (guide G2). Lancer : npm run check:page-help |
+| `npm run check:task-guides` | Guides par tâche « Que veux-tu faire ? » (guide G3). Lancer : npm run check:task-guides |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

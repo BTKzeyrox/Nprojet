@@ -236,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
         <SidebarProfile name={currentUser.name} avatar={currentUser.avatar_url} role={(currentUser as any).job_title} light={isLight} onOpen={() => { onNavigate('profile'); onCloseMobile?.(); }} />
-        <div className="md:hidden px-3 pb-2" data-sidebar-help><PageHelp pageId={activeView} variant="row" /></div>
+        <div className="md:hidden px-3 pb-2" data-sidebar-help><PageHelp pageId={activeView} role={currentUser.role} variant="row" /></div>
 
 
         {/* 3. Navigation */}

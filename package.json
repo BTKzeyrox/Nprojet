@@ -182,6 +182,7 @@
     "check:paper-sheet": "esbuild scripts/check-paper-sheet.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-paper-sheet.mjs && node node_modules/.cache/check-paper-sheet.mjs",
     "check:work-words": "esbuild scripts/check-work-words.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-words.mjs && node node_modules/.cache/check-work-words.mjs",
     "check:page-help": "esbuild scripts/check-page-help.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-page-help.mjs && node node_modules/.cache/check-page-help.mjs",
+    "check:task-guides": "esbuild scripts/check-task-guides.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-task-guides.mjs && node node_modules/.cache/check-task-guides.mjs",
     "check:graphs-page": "esbuild scripts/check-graphs-page.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-graphs-page.mjs && node node_modules/.cache/check-graphs-page.mjs",
     "check:day-detail": "tsx scripts/check-day-detail.ts",
     "check:work-days": "tsx scripts/check-work-days.ts",

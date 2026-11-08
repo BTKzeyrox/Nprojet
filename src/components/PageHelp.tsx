@@ -5,15 +5,17 @@ import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { findPage } from '../utils/siteKnowledge';
+import { taskGuides } from '../utils/taskGuides';
 
 export const TOUR_OPEN_EVENT = 'gp-tour-open'; // même événement que TourGuide.tsx
 
-export const PageHelp: React.FC<{ pageId: string; variant?: 'icon' | 'row'; onOpened?: () => void }> = ({ pageId, variant = 'icon', onOpened }) => {
+export const PageHelp: React.FC<{ pageId: string; role?: string; variant?: 'icon' | 'row'; onOpened?: () => void }> = ({ pageId, role, variant = 'icon', onOpened }) => {
   const { lang, theme } = useApp();
   const en = lang === 'en', L = theme === 'light';
   const t = (fr: string, e: string) => (en ? e : fr);
   const [open, setOpen] = useState(false);
   const page = findPage(pageId);
+  const tasks = taskGuides(role);
   useEffect(() => { setOpen(false); }, [pageId]);
   useEffect(() => {
     if (!open) return;
@@ -39,6 +41,14 @@ export const PageHelp: React.FC<{ pageId: string; variant?: 'icon' | 'row'; onOp
             <ol className="space-y-2 text-sm list-decimal pl-5" data-page-help-steps>
               {page.howto.map((h, i) => <li key={i}>{pick(h)}</li>)}
             </ol>
+            {tasks.length > 0 && (
+              <div data-page-help-tasks className="space-y-2 pt-1">
+                <div className="text-xs font-bold text-[#334155]">{t('Que veux-tu faire ?', 'What do you want to do?')}</div>
+                {tasks.map(tk => (
+                  <button key={tk.id} type="button" data-task={tk.id} onClick={() => { setOpen(false); window.dispatchEvent(new CustomEvent('gp-task-open', { detail: { steps: tk.steps } })); }} className="min-h-[44px] w-full text-left px-3 rounded-lg border border-[#cbd5e1] bg-white text-sm font-semibold cursor-pointer">{pick(tk.title)}</button>
+                ))}
+              </div>
+            )}
             <button type="button" data-page-help-tour onClick={() => { setOpen(false); window.dispatchEvent(new Event(TOUR_OPEN_EVENT)); }} className="min-h-[44px] w-full rounded-lg border border-[#cbd5e1] bg-white text-sm font-semibold cursor-pointer">{t('Voir le guide animé', 'See the animated guide')}</button>
           </div>
         </div>,

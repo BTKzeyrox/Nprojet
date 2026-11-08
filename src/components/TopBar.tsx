@@ -297,7 +297,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         <div className="hidden md:block" data-header-conn><ConnectionChip /></div>
 
-        <div className="hidden md:block shrink-0" data-header-help><PageHelp pageId={activeView || ""} /></div>
+        <div className="hidden md:block shrink-0" data-header-help><PageHelp pageId={activeView || ""} role={currentUser?.role} /></div>
 
         <div ref={bellBox} className="sm:relative shrink-0">
           <button
