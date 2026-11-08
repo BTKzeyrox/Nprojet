@@ -7,7 +7,9 @@ import { db } from '../../db/store';
 import { User } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { badgeLabel, formatScoreM } from '../../utils/formatUtils';
-import { getPresenceStatus, STATUS_LABEL, formatDuration } from '../../utils/presence';
+import { formatDuration, onlineSecToday } from '../../utils/presence';
+import { liveStatus, liveText } from '../../utils/presenceStatus';
+import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
 import { levelNow } from '../../utils/monthLevel';
 import { todayMada } from '../../utils/stats';
@@ -31,6 +33,9 @@ const h = 'font-tactical font-bold text-white text-sm';
 export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }) => {
   const [, force] = useState(0);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
+  const { lang } = useApp();
+  // Statut de l'équipe en direct : rechargement rapide (8 s) tant que cet écran est ouvert, et tout de suite à l'ouverture (première connexion vue sans attendre)
+  useEffect(() => { db.setFastPoll(true); return () => db.setFastPoll(false); }, []);
 
   const u = db.getUsers().find(x => x.id === userId);
   if (!u) {
@@ -48,7 +53,8 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
   const alerts = db.getSecurityLogs().filter(l => l.employee_id === u.id && !l.resolved);
   const pendingAdv = advances.filter(a => a.status === 'pending');
   const doneCount = posts.filter(p => p.status === 'completed').length;
-  const ps = getPresenceStatus(u, db.getPosts(), db.getPresence());
+  const live = liveStatus(u, db.getPosts(), db.getPresence());
+  const onlineSec = onlineSecToday(u.id, db.getPresence());
 
   const link = 'flex items-center gap-2.5 p-3 bg-[#141e2a] border border-slate-700 hover:border-emerald-500 text-left text-sm text-slate-100 cursor-pointer';
 
@@ -65,8 +71,8 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
           </div>
           <div className="flex flex-wrap gap-1.5 mt-1.5 text-[10px] font-mono">
             <span className={`px-1.5 py-0.5 border ${u.status === 'blocked' ? 'border-red-500/60 text-red-300' : 'border-emerald-500/50 text-emerald-300'}`}>{u.status === 'blocked' ? 'Bloqué' : 'Actif'}</span>
-            <span className={`px-1.5 py-0.5 border ${ps.status === 'offline' ? 'border-slate-600 text-slate-400' : ps.status === 'waiting' ? 'border-amber-500/60 text-amber-300' : 'border-cyan-500/50 text-cyan-300'}`}>{STATUS_LABEL[ps.status]}</span>
-            {ps.onlineSec > 0 && <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">Connecté aujourd'hui : {formatDuration(ps.onlineSec)}</span>}
+            <span className={`px-1.5 py-0.5 border ${live.status === 'offline' ? 'border-slate-600 text-slate-400' : live.status === 'pause' || live.waiting ? 'border-amber-500/60 text-amber-300' : 'border-cyan-500/50 text-cyan-300'}`}>{liveText(live, lang === 'en' ? 'en' : 'fr')}</span>
+            {onlineSec > 0 && <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">Connecté aujourd'hui : {formatDuration(onlineSec)}</span>}
             <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">{levelNow(db.getPosts(), u.id, db.getSettings(), todayMada()).name}</span>
           </div>
         </div>

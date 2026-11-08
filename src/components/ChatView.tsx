@@ -36,7 +36,7 @@ import { liveStatus, type LiveInfo } from '../utils/presenceStatus';
 import { useNow } from '../utils/useNow';
 import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
-import { onlineBadge } from '../utils/attendanceView';
+import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
@@ -83,7 +83,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const chatLang: 'fr' | 'en' = lang === 'en' ? 'en' : 'fr';
   const nowMs = useNow(15000); // les statuts changent d'eux-mêmes (En ligne → En pause → Hors ligne)
   // Statut EN DIRECT d'un opérateur : seul le responsable reçoit les signes de vie ; pour les autres on n'affiche rien plutôt qu'un faux « Hors ligne »
-  const liveOf = (u?: User | null): LiveInfo | null => (isAdmin && u && u.role === 'employee' ? liveStatus(u, db.getPosts(), db.getPresence(), nowMs) : null);
+  const liveOf = (u?: User | null): LiveInfo | null => (isAdmin && u && isTracked(u.role) ? liveStatus(u, db.getPosts(), db.getPresence(), nowMs) : null);
   // Couleurs de la messagerie (clair par défaut, sombre en option)
   const P = {
     root: L ? 'bg-white border-slate-300' : 'bg-[#0f1722] border-slate-800',

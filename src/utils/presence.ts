@@ -1,47 +1,23 @@
-// Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store.
+// Présence des opérateurs : file d'attente « sans mission », missions libres, durée de connexion du jour ; lit le store.
+// Le STATUT (En cours / En ligne / En pause / Hors ligne) n'est PLUS calculé ici : une seule règle pour tout le site, `liveStatus` dans presenceStatus.ts.
 // Utilisé par : DayDetailsModal.tsx, OperatorSheet.tsx, PayrollAdmin.tsx, QueueButton.tsx, notifications.ts, CalendarView.tsx, AdminDashboard.tsx, EmployeesManagement.tsx et 1 autre.
 // Pour modifier : en ligne = signe de vie de moins de 120 s (ONLINE_MS) ; ne pas se fier à is_online (resté bloqué sur vrai) ; dayMada = jour de Madagascar (UTC+3).
 import { db } from '../db/store';
 import { ClientContract, PostSession, PresenceRow, User } from '../types';
 import { ONLINE_MS } from './presenceCount';
+import { liveStatus } from './presenceStatus';
 
 // Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 120 s
 export { ONLINE_MS };
 const OPEN = ['pending_start', 'active', 'pending_end'];
 
-export type PresenceStatus = 'working' | 'connected' | 'waiting' | 'offline';
-
-export const STATUS_LABEL: Record<PresenceStatus, string> = {
-  working: 'En mission',
-  connected: 'Connecté sans mission',
-  waiting: 'Sans mission (en attente)',
-  offline: 'Hors ligne',
-};
-export const STATUS_DOT: Record<PresenceStatus, string> = {
-  working: 'bg-emerald-400',
-  connected: 'bg-cyan-400',
-  waiting: 'bg-amber-400',
-  offline: 'bg-slate-600',
-};
-
 export const hasOpenPost = (userId: string, posts: PostSession[]) =>
   posts.some(p => p.employee_id === userId && OPEN.includes(p.status));
 
-// Règle : une session en cours = « En poste » même si l'opérateur a quitté le site.
-export const getPresenceStatus = (
-  user: User,
-  posts: PostSession[],
-  presence: PresenceRow[],
-  now = Date.now()
-): { status: PresenceStatus; onlineSec: number; waitingSince: string | null } => {
-  const row = presence.find(r => r.user_id === user.id);
-  const fresh = row ? now - new Date(row.last_seen).getTime() < ONLINE_MS : false; // sans signe de vie reçu : hors ligne. L'ancien indicateur `is_online` reste bloqué sur « vrai » quand on ferme l'appli sans se déconnecter (BTK 2026-11-01 : tous les opérateurs « en ligne » sans l'être) : on ne s'y fie plus.
-  const waitingSince = fresh && row?.waiting_since ? row.waiting_since : null;
-  const onlineSec = row && row.day === dayMada(now) ? row.online_sec : 0;
-  if (hasOpenPost(user.id, posts)) return { status: 'working', onlineSec, waitingSince: null };
-  if (!fresh) return { status: 'offline', onlineSec, waitingSince: null };
-  if (waitingSince) return { status: 'waiting', onlineSec, waitingSince };
-  return { status: 'connected', onlineSec, waitingSince: null };
+/** Secondes de connexion AUJOURD'HUI (jour de Madagascar) d'une personne ; 0 sans ligne de présence ou si la ligne date d'un autre jour. */
+export const onlineSecToday = (userId: string, presence: PresenceRow[], now = Date.now()): number => {
+  const row = presence.find(r => r.user_id === userId);
+  return row && row.day === dayMada(now) ? row.online_sec : 0;
 };
 
 export const dayMada = (now = Date.now()) => new Date(now + 3 * 3600 * 1000).toISOString().slice(0, 10);
@@ -50,10 +26,10 @@ export const dayMada = (now = Date.now()) => new Date(now + 3 * 3600 * 1000).toI
 export const getQueue = (users: User[], posts: PostSession[], presence: PresenceRow[], now = Date.now()) =>
   users
     .filter(u => u.role === 'employee' && u.status !== 'blocked')
-    .map(u => ({ user: u, ...getPresenceStatus(u, posts, presence, now) }))
-    .filter(x => x.status === 'waiting' && x.waitingSince)
-    .sort((a, b) => String(a.waitingSince).localeCompare(String(b.waitingSince)))
-    .map((x, i) => ({ ...x, position: i + 1, minutes: Math.floor((now - new Date(x.waitingSince as string).getTime()) / 60000) }));
+    .map(u => ({ user: u, waitingSince: liveStatus(u, posts, presence, now).waiting ? (presence.find(r => r.user_id === u.id)?.waiting_since ?? null) : null }))
+    .filter((x): x is { user: User; waitingSince: string } => !!x.waitingSince)
+    .sort((a, b) => a.waitingSince.localeCompare(b.waitingSince))
+    .map((x, i) => ({ ...x, position: i + 1, minutes: Math.floor((now - new Date(x.waitingSince).getTime()) / 60000) }));
 
 // Missions libres : avec compte, et aucune session en cours dessus
 export const getFreePosts = (contracts: ClientContract[], posts: PostSession[]) =>

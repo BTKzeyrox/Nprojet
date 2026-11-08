@@ -18,8 +18,8 @@ ok(countOnline(users, [], now).online === 0 && countOnline([], [], now).total ==
 ok(!isFresh(undefined, now) && !isFresh({ user_id: 'a', last_seen: 'pas une date' }, now) && !isFresh({ user_id: 'a', last_seen: ago(-3600) }, now), 'sans ligne, date illisible ou date dans le futur : hors ligne');
 ok(countOnline([emp('a')], [{ user_id: 'a', last_seen: ago(10) }], now).online <= countOnline([emp('a')], [{ user_id: 'a', last_seen: ago(10) }], now).total, 'en ligne ne dépasse jamais le total');
 const dash = readFileSync('src/views/admin/AdminDashboard.tsx', 'utf8');
-ok(/countOnline\(users, presence\)/.test(dash) && /onlineCount\.online\}<span[^>]*> \/ \{onlineCount\.total\}/.test(dash) && /\{onlineCount\.online\} En Ligne/.test(dash) && !/onlineEmployees|nbEmployees/.test(dash), 'accueil : la tuile et le titre « En ligne » utilisent le même compte');
-ok(/status !== 'blocked'\)\s*\.map\(emp/.test(dash), 'accueil : la liste des opérateurs connectés ne montre pas les comptes bloqués');
+ok(/countOnline\(users, presence\)/.test(dash) && /onlineCount\.online\}<span[^>]*> \/ \{onlineCount\.total\}/.test(dash) && /\{onlineCount\.online \+ staffCount\.online\} En Ligne/.test(dash) && !/onlineEmployees|nbEmployees/.test(dash), 'accueil : la tuile et le titre « En ligne » utilisent les mêmes comptes (opérateurs + chefs et comptables)');
+ok(/isTracked\(u\.role\) && u\.status !== 'blocked'\)/.test(dash) && /ROLE_RANK/.test(dash), 'accueil : la liste de l\'équipe connectée (opérateurs, chefs d\'équipe, comptables) ne montre pas les comptes bloqués');
 
 {
   const us = [{ id: 'c1', role: 'team_lead' }, { id: 'c2', role: 'accountant' }, { id: 'c3', role: 'accountant', status: 'blocked' }, { id: 'e1', role: 'employee' }, { id: 'ad', role: 'admin' }];

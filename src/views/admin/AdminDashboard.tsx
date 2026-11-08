@@ -53,7 +53,10 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
 import { AccessRequestsCard } from '../../components/AccessRequestsCard';
 import { countPending } from '../../utils/pendingCount';
-import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
+import { getQueue } from '../../utils/presence';
+import { liveStatus, liveText, LIVE_META } from '../../utils/presenceStatus';
+import { isTracked } from '../../utils/attendanceView';
+import { useNow } from '../../utils/useNow';
 import { countOnline, countOnlineStaff } from '../../utils/presenceCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
@@ -72,6 +75,9 @@ import { setValFilterIntent } from '../../utils/navIntent';
 import { FilterBar } from '../../components/FilterBar';
 import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
+
+// Ordre d'affichage dans la carte « Équipe connectée » : opérateurs, puis chefs d'équipe, puis comptables
+const ROLE_RANK: Record<string, number> = { employee: 0, team_lead: 1, accountant: 2 };
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -112,6 +118,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [advances, setAdvances] = useState(db.getAdvanceRequests());
   const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'access' | 'profiles'>('all');
+  // Statut de l'équipe en direct : rechargement rapide (8 s) tant que cet écran est ouvert, et tout de suite à l'ouverture (première connexion vue sans attendre)
+  useEffect(() => { db.setFastPoll(true); return () => db.setFastPoll(false); }, []);
+  useNow(15000); // la carte « Équipe connectée » se recalcule toute seule (En ligne → Hors ligne) même sans nouvelle donnée
   // Clic sur une notification : ouvre Validations avec le bon filtre
   useEffect(() => {
     const apply = () => {
@@ -1747,21 +1756,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-tactical font-bold text-white text-base flex items-center gap-2">
               <Radio className="w-4 h-4 text-cyan-400" />
-              Opérateurs Connectés
+              Équipe connectée
             </h3>
             <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-              {onlineCount.online} En Ligne
+              {onlineCount.online + staffCount.online} En Ligne
             </span>
           </div>
 
           <div className="space-y-3">
             {users
-              .filter(u => u.role === 'employee' && u.status !== 'blocked')
+              .filter(u => isTracked(u.role) && u.status !== 'blocked')
+              .sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role])
               .map(emp => {
                 const active = posts.find(
                   p => p.employee_id === emp.id && (p.status === 'active' || p.status === 'pending_start')
                 );
-                const ps = getPresenceStatus(emp, posts, presence);
+                const live = liveStatus(emp, posts, presence);
+                const isStaff = emp.role !== 'employee';
 
                 return (
                   <div
@@ -1772,7 +1783,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="relative">
                         <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8" />
                         <span
-                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${STATUS_DOT[ps.status]}`}
+                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${LIVE_META[live.status].dot}`}
                         />
                       </div>
                       <div>
@@ -1783,7 +1794,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {showShift(db.getSettings()) ? `Vacation ${emp.shift.toUpperCase()} · ` : ''}{active ? `En cours : ${active.client_name}` : STATUS_LABEL[ps.status]}
+                          {isStaff ? `${emp.role === 'team_lead' ? "Chef d'équipe" : 'Comptable'} · ` : showShift(db.getSettings()) ? `Vacation ${emp.shift.toUpperCase()} · ` : ''}{active && !isStaff ? `En cours : ${active.client_name}` : liveText(live, appLang === 'en' ? 'en' : 'fr')}
                         </div>
                       </div>
                     </div>

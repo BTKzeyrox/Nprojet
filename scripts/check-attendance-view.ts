@@ -57,8 +57,9 @@ eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }, { first_seen: '2026-11
 eq(monthPresence([{ first_seen: '2026-11-01T05:00:00Z' }]).days, 1, 'mois : 1 jour');
 
 // ---- Plus jamais « en ligne » à cause de l'ancien indicateur is_online (BTK 2026-11-01 : opérateurs « en ligne » sans s'être connectés) ----
-const presSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/presence.ts', import.meta.url), 'utf-8');
-ok(/const fresh = row \? [^;]*: false;/.test(presSrc) && !/: !!user\.is_online/.test(presSrc), 'présence : aucun signe de vie reçu = HORS LIGNE (plus jamais l\'ancien indicateur is_online)');
+const presSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/presenceStatus.ts', import.meta.url), 'utf-8');
+const oldSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/presence.ts', import.meta.url), 'utf-8');
+ok(/const fresh = silentMs !== null && silentMs < FRESH_MS;/.test(presSrc) && !/\.is_online/.test(presSrc) && !/\.is_online/.test(oldSrc) && !/getPresenceStatus/.test(oldSrc), 'présence : une seule règle (presenceStatus.ts) ; aucun signe de vie reçu = HORS LIGNE (plus jamais l\'ancien indicateur is_online)');
 const aboutSrc = (await import('node:fs')).readFileSync(new URL('../src/utils/chatAbout.ts', import.meta.url), 'utf-8');
 ok(!/u\.is_online/.test(aboutSrc), 'fiche « À propos » : n\'utilise plus is_online');
 

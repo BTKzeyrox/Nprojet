@@ -60,6 +60,8 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 - **Règles** :
   - Les objectifs d'argent ne sont jamais envoyés aux employés.
   - Les objectifs se règlent dans Réglages (missions, bénéfice, plafond de dépenses).
+  - Carte « Équipe connectée » : opérateurs (En cours, En ligne, En pause, Hors ligne) ; chefs d'équipe et comptables (En ligne ou Hors ligne).
+  - « En ligne » = l'appli a donné signe de vie il y a moins de 120 s. La carte se recharge toute seule (8 s) tant qu'elle est ouverte.
 - **Chiffres et formules** :
   - Objectif du mois : Chiffre du mois (du 1er au dernier jour) comparé à l'objectif réglé : missions validées, bénéfice, dépenses.
 - **Réglages liés** (Réglages > Conditions) : `options.mission_requires_client`
@@ -704,7 +706,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `prefetch.ts` | Précharge les pages en arrière-plan (quand le navigateur est au repos) : l'ouverture devient instantanée |
 | `prefsRules.ts` | Réglages synchronisés par compte (BTK, 2026-11-02) : le même compte retrouve les mêmes réglages sur tous ses appareils et navigateurs. |
 | `prefsSync.ts` | Réglages synchronisés par compte : branchement navigateur (règles pures dans prefsRules.ts). |
-| `presence.ts` | Règles de présence des opérateurs (en mission, connecté, en attente, hors ligne), file d'attente et missions libres ; lit le store. |
+| `presence.ts` | Présence des opérateurs : file d'attente « sans mission », missions libres, durée de connexion du jour ; lit le store. |
 | `presenceCount.ts` | « Opérateurs en ligne » de l'accueil : compte seulement les opérateurs ACTIFS (non bloqués) qui ont donné un signe de vie il y a moins de 120 s. |
 | `presenceStatus.ts` | Statut EN DIRECT d'un opérateur : En cours / En ligne / En pause / Hors ligne. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:live-status`. |
 | `printFormat.ts` | Règles communes des documents imprimés et téléchargés (PDF et pages imprimables) : A4, Times New Roman, taille normale (12 pt). |

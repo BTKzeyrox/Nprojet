@@ -38,7 +38,7 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { badgeLabel, formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
-import { getPresenceStatus, formatDuration } from '../../utils/presence';
+import { formatDuration, onlineSecToday } from '../../utils/presence';
 import { liveStatus, LIVE_META } from '../../utils/presenceStatus';
 import { FilterBar } from '../../components/FilterBar';
 import { facetCounts, filterOperators, liveCounts, activeFilterCount, OP_FILTERS_DEFAULT, type OpFilters, type OpItem, type OpSort } from '../../utils/operatorList';
@@ -85,6 +85,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 }) => {
   const { lang } = useApp();
   const nowMs = useNow(15000); // les statuts en direct changent d'eux-mêmes (En ligne → En pause → Hors ligne)
+  // Statut de l'équipe en direct : rechargement rapide (8 s) tant que cet écran est ouvert, et tout de suite à l'ouverture (première connexion vue sans attendre)
+  useEffect(() => { db.setFastPoll(true); return () => db.setFastPoll(false); }, []);
   const perf = usePerformance();
   const badgesOn = badgeAccess().enabled;
   /** Badges calculés du salarié (module 3) : rien si le module est désactivé ou s'il n'a aucun badge. */
@@ -479,7 +481,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {sheetUser && (
         <OperatorSheet user={sheetUser} cfg={cfg} lang={en ? 'en' : 'fr'} nowMs={nowMs} live={liveStatus(sheetUser, posts, presence, nowMs)} posts={posts}
-          onlineSec={getPresenceStatus(sheetUser, posts, presence).onlineSec}
+          onlineSec={onlineSecToday(sheetUser.id, presence, nowMs)}
           chips={(() => { const pend = pendingOf(sheetUser.id); return pend.length ? (
             <div className="flex flex-wrap gap-1">{pend.map(b => {
               const cls = 'px-2 py-1 text-[11px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 rounded';
