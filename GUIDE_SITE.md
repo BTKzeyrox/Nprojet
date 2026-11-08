@@ -602,6 +602,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `alertsDb.ts` | Liste des alertes de l'admin, gardée en mémoire jusqu'au prochain changement de données ; lit le store, aucun appel serveur. |
 | `approvalLimit.ts` | Validation à plusieurs niveaux (module 15, M15.6). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:approval-limit`. |
 | `assistant.ts` | Assistant « Admin IA Pro », niveau A (module 11, M11.10) : AUCUNE IA externe, que des règles et des calculs faits dans le navigateur de l'admin. |
+| `assistantActions.ts` | Assistant : créer un rappel, un événement ou une tâche à partir d'une phrase (BTK, 2026-11-08, étape C1). |
 | `assistantMemory.ts` | Mémoire de l'assistant (BTK, 2026-11-08) : « mémorise : … » enregistre la phrase telle quelle, « qu'est-ce que tu as retenu ? » la relit, |
 | `assistantMenu.ts` | Menu « / » de l'assistant (comme le clavier de Telegram) : 6 gros boutons, sans défilement, sans recherche, sans titre. |
 | `assistantMessages.ts` | Messages prêts, DÉJÀ REMPLIS avec les vrais éléments du site : relancer un client en retard, répondre à une avance ou à une inscription, remercier un client, prévenir l'équipe. |
@@ -1236,6 +1237,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:feed-scroll` | Actualités : la position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut). |
 | `npm run check:shortcuts` | Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : jamais pendant l'écriture, navigateur intact, liste affichée = liste qui marche. |
 | `npm run check:assistant-memory` | Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ». |
+| `npm run check:assistant-actions` | Assistant : créer un rappel / événement / tâche / liste depuis une phrase (étape C1) : aperçu d'abord, confirmation ensuite, dates comprises, rien d'inventé. |
 <!-- /AUTO:checks -->
 
 ---

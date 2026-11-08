@@ -11,6 +11,8 @@ import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } f
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { db } from '../db/store';
+import { remSave as saveReminder } from '../utils/remindersState'; // met aussi à jour la liste partagée (Calendrier, « Mes rappels », cloche)
+import { parseActionIntent, actionPreview, actionDone, actionCanceled, decodeAct, buildItem, ACT_NO } from '../utils/assistantActions';
 import { parseMemoryIntent, runMemory, forgetDone, searchNotes, notesAnswer, notesForAi, norm, MEM_FORGET_PREFIX, MEM_EDIT_PREFIX, type MemIntent, type MemNote, type MemApi } from '../utils/assistantMemory';
 import { assistantMenu, menuHeightFromKeyboard, menuLabel, MENU_FALLBACK_H, type MenuItem } from '../utils/assistantMenu';
 import { aiOptIn, aiMemOptIn, askAi, setAiOptIn } from '../utils/aiAssist';
@@ -80,8 +82,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       let mi: MemIntent | 'cancel' | null = parseMemoryIntent(q);
       if (!mi && pendingMem.current && !sid) mi = /^(annule|annuler|laisse tomber|laisse|non|cancel|stop)\b/.test(norm(q)) ? 'cancel' : { kind: 'save', text: q };
       pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
-      if (!mi && reply.intent === 'unknown' && i) {
+      const act = mi ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      if (!mi && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
         const useAi = aiOptIn(userId);
@@ -120,6 +123,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const go = (g: { view: string; tab?: string; storage?: StorageIntent; nav?: string; filter?: string }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view.startsWith(MSG_PREFIX)) { const si = getSnapshotInput(), sm = si && findSuggested(si, g.view.slice(MSG_PREFIX.length), l); if (sm) applySuggested(sm); return; }
+    if (g.view === ACT_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: actionCanceled(), at: Date.now() }]); return; }
+    const da = decodeAct(g.view);
+    if (da) { void saveReminder(buildItem(da)).then(r => push([{ id: `b${Date.now()}`, who: 'bot', reply: actionDone(da, r.ok, r.error), at: Date.now() }])); return; }
     if (g.view.startsWith(MEM_FORGET_PREFIX)) { void db.memDelete(g.view.slice(MEM_FORGET_PREFIX.length)).then(ok => push([{ id: `b${Date.now()}`, who: 'bot', reply: forgetDone(ok), at: Date.now() }])); return; }
     if (g.view.startsWith(MEM_EDIT_PREFIX)) { const id = g.view.slice(MEM_EDIT_PREFIX.length); void db.memFetch().then(ns => { const k = ns ? ns.findIndex(x => x.id === id) : -1; if (ns && k >= 0) { setText(`${l === 'en' ? 'edit' : 'modifie'} ${k + 1} : ${ns[k].text}`); inputRef.current?.focus(); } }); return; }
     if (g.view === ENABLE_AI) { setAiOptIn(userId, true); const q = lastQ.current.q; lastQ.current = { q: '', at: 0 }; if (q) ask(q); return; } // active l'IA sur cet appareil puis repose la dernière question
