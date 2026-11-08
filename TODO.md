@@ -178,6 +178,28 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 ### Ordre conseillé
 1. P6 (BTK, 15 min) → 2. P1-2 (quota, protège le site) → 3. P1-1 (notifications) → 4. P5-1 (démo) → 5. P1-3 (PDF) → 6. P2-1 (échéances) → 7. P4-1 (absences) → 8. le reste.
 
+## 2 sexies. Assistant IA : mémoire et actions + champs multi-lignes (demandé par BTK le 2026-11-08, RIEN de codé)
+Constat : l'assistant (`assistant.ts`, `AI_STUDIO.md`) fonctionne par règles sans réseau + IA externe facultative ; il ne fait AUCUNE action et ne mémorise rien (quand BTK écrit « mémorise… », il répond par une suggestion).
+### A. `Maj+Entrée` = nouvelle ligne dans les autres champs (à faire, GO attendu)
+1. Assistant IA (champ de discussion, une ligne aujourd'hui).
+2. Commentaires des Actualités (« Écrire un commentaire… », « Répondre à… »).
+3. Message au superviseur (tableau de bord employé).
+Même comportement que la messagerie : zone de texte qui grandit (~6 lignes), ordinateur : `Entrée` / `Ctrl+Entrée` envoie, `Maj+Entrée` passe à la ligne ; téléphone : `Entrée` = ligne, bouton = envoi. Code partagé pour les 4 champs.
+### B. Assistant : mémoire (à faire en premier)
+- « mémorise / retiens / note que… » enregistre la phrase telle quelle et répond « C'est noté » ; liste « Ma mémoire » (relire, modifier, supprimer) sur le compte, tous appareils ; « qu'est-ce que tu as retenu ? » ; « oublie… ».
+- Demande un stockage serveur : modification de `df-api` (accord de BTK, sauvegarde `df_take_backup()` avant, note `AI_STUDIO.md` avec version + retour arrière).
+### C. Assistant : actions avec aperçu puis confirmation (jamais sans confirmer)
+1. Rappel (« rappelle-moi demain 9 h… ») : les rappels existent déjà.
+2. Événement au calendrier (« ajoute au calendrier : réunion jeudi 10 h »).
+3. Liste de tâches (cases à cocher), affichable sur le calendrier : pour soi seul ou donnée à un employé (à trancher).
+4. Sondage (question + choix) : dans la messagerie de l'équipe ou publié dans les Actualités (à trancher). Demande d'enregistrer les réponses de chacun.
+5. Annonce publiée dans les Actualités.
+6. Fichier à télécharger (texte ou CSV) à partir de la demande.
+### D. Idées proches (à choisir par BTK, pas décidées)
+Choix d'une date type Doodle (créneaux cochés par l'équipe) ; vote oui/non en un appui ; confirmation de lecture « J'ai lu » sur une annonce ; création d'une mission par phrase (fiche remplie, BTK valide) ; message modèle prêt à envoyer (relance facture, convocation) ; résumé de la journée / semaine ; commandes « oublie… ».
+### Ordre proposé
+A, puis B (mémoire), puis C1, C2, C3 (rappel, calendrier, tâches), puis C4 (sondage), puis C5, C6 et D. Une étape = un commit. Sans IA externe activée, l'assistant ne comprend que des phrases simples (« mémorise : … », « ajoute au calendrier … »).
+
 ## 3. Questions ouvertes (défaut si pas de réponse)
 1. Les commentaires des employés partent-ils aussi en validation ? Défaut : non.
 2. Compression `gzip` des fichiers texte ? Défaut : non.
