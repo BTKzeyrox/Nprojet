@@ -192,9 +192,9 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Déployé le 2026-11-06 : commit 3c6ddc545e189126e4e9add9da3237f664cbb2f9 (version 73), sauvegarde n° 99 avant.
 - Retour arrière : redéployer v72 = SHA ff0273f3e13f614861f6638bf1ca5127c5da63bf.
 
-## df-api v75 (2026-11-08) — mémoire de l'assistant (CODE DANS LE DÉPÔT, NON DÉPLOYÉ : en attente de l'accord écrit de BTK)
+## df-api v75 (2026-11-08) — mémoire de l'assistant (DÉPLOYÉ le 2026-11-08, accord de BTK : « Go déployer »)
 - Ajoute seulement 3 routes (`assistant-memory` GET, `assistant-memory-save` POST, `assistant-memory-delete` POST) et leurs 3 fonctions (bloc « Mémoire de l'assistant », avant « Mail (M25.5) »). Réservées au responsable (403 sinon). Chacun ne lit et n'écrit que sa ligne `mem:<compte>` de `df_reminders` (kind `mem`, jamais lue par les rappels qui filtrent kind = `item`). Aucune migration, aucune nouvelle table.
 - Base = v74 en ligne (commit 0d960cf2861b6ca0cb76779c492522548d7813f6), diff limité à ce bloc et aux 3 lignes de routes.
-- Avant le déploiement : `select public.df_take_backup();` puis déployer en important le fichier au SHA complet du commit.
-- Tant que ce n'est pas déployé, côté site : « mémorise » répond « Je n'ai pas pu joindre le serveur » (jamais de faux « C'est noté »), rien d'autre ne casse.
+- Déployé le 2026-11-08 : commit a35de03a62fb30c77abcca4f9c72932e50bc1d47 (version 75, importé de GitHub, verify_jwt false), sauvegarde n° 104 avant ; diff par rapport à v74 = 46 lignes ajoutées, aucune supprimée ; après déploiement les appels planifiés répondent 200 sur la version 75. Les 3 routes mémoire n'ont PAS été essayées en vrai avec un compte (pas d'identifiants ici) : à essayer par BTK dans l'assistant.
+- Si le serveur est injoignable, côté site : « mémorise » répond « Je n'ai pas pu joindre le serveur » (jamais de faux « C'est noté »).
 - Retour arrière : redéployer v74 = SHA 0d960cf2861b6ca0cb76779c492522548d7813f6 ; les lignes `mem:*` peuvent rester (inoffensives) ou être supprimées : `delete from public.df_reminders where id like 'mem:%';`.
