@@ -3789,6 +3789,7 @@ async function state(req: any, res: any, me: any) {
     }
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
+    if (col === 'news' && !admin) recs = recs.map((r: any) => viewNews(r, me)); // sondage : comptes et son vote seulement
     if (col === 'reviews' && me.role !== 'admin') recs = recs.map((r: any) => { const { improvements: _hidden, ...mine } = r; return mine; }); // jamais les « points à améliorer » côté salarié (D9)
     if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me, teamMates));
     if (col === 'contracts') recs = recs.map((c: any) => withoutClientPrice(c, me));
@@ -4101,6 +4102,7 @@ async function sync(req: any, res: any, me: any) {
           files: existing ? (Array.isArray(existing.files) ? existing.files : []) : cleanFiles(rec.files, me.id),
           loves: Array.isArray(existing?.loves) ? existing.loves : [], comments: Array.isArray(existing?.comments) ? existing.comments : [],
           shares: Number(existing?.shares) || 0,
+          ...(existing ? (existing.poll ? { poll: existing.poll } : {}) : (pollClean(rec.poll) ? { poll: pollClean(rec.poll) } : {})), // sondage : créé une seule fois ; votes et clôture seulement par les routes news-vote / news-poll-close
           ...(existing?.reject_reason ? { reject_reason: existing.reject_reason } : {}),
           ...(existing?.submitted_at ? { submitted_at: existing.submitted_at } : {}),
           ...(existing?.files_removed ? { files_removed: existing.files_removed } : {}),
@@ -5410,8 +5412,9 @@ async function purgeEmployee(uid: string) {
       const comments: any[] = Array.isArray(d.comments) ? d.comments : [];
       const mine = comments.filter(c => c?.user_id === uid);
       const loved = Array.isArray(d.loves) && d.loves.includes(uid);
+      const voted = !!(d.poll && d.poll.votes && uid in d.poll.votes);
       const reacted = comments.some(c => JSON.stringify(c?.reactions || {}).includes(uid));
-      if (!mine.length && !loved && !reacted) continue;
+      if (!mine.length && !loved && !reacted && !voted) continue;
       mine.forEach(c => (Array.isArray(c.files) ? c.files : []).forEach((f: any) => addUrl(f?.url)));
       const kept = comments.filter(c => c?.user_id !== uid).map(c => {
         if (!c?.reactions) return c;
@@ -5419,7 +5422,7 @@ async function purgeEmployee(uid: string) {
         if (rx) next.reactions = rx; else delete next.reactions;
         return next;
       });
-      await sb.from(T.news).upsert({ id: r.id, data: { ...d, comments: kept, loves: (Array.isArray(d.loves) ? d.loves : []).filter((x: string) => x !== uid) }, updated_at: now });
+      await sb.from(T.news).upsert({ id: r.id, data: { ...d, comments: kept, loves: (Array.isArray(d.loves) ? d.loves : []).filter((x: string) => x !== uid), ...(voted ? { poll: { ...d.poll, votes: Object.fromEntries(Object.entries(d.poll.votes).filter(([k]) => k !== uid)) } } : {}) }, updated_at: now });
     }
   });
 
@@ -5446,9 +5449,65 @@ async function purgeEmployee(uid: string) {
   await dropFiles(urls.map(url => ({ url })));
 }
 
-async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'comment-react' | 'share', req: any, res: any, me: any) {
-  const { id, text, commentId, files, emoji, parentId, replyToName } = req.body || {};
+// ===== BEGIN POLL (copie dans supabase/functions/df-api/index.ts) =====
+const POLL_MIN_OPTIONS = 2;
+const POLL_MAX_OPTIONS = 6;
+const POLL_MAX_QUESTION = 200;
+const POLL_MAX_OPTION = 100;
+const POLL_MAX_VOTES = 2000;
+interface PollOpt { id: string; text: string }
+interface PollStored { question: string; options: PollOpt[]; closed: boolean; votes: Record<string, string> }
+const pollText = (v: unknown, n: number): string => String(typeof v === 'object' && v && 'text' in (v as object) ? (v as { text: unknown }).text : v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+/** Un sondage valable : une question, 2 à 6 choix différents. Les votes repartent toujours de zéro (le serveur ne reprend jamais les votes envoyés par un navigateur). */
+function pollClean(input: unknown): PollStored | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const o = input as Record<string, unknown>;
+  const question = pollText(o.question, POLL_MAX_QUESTION);
+  if (!question || !Array.isArray(o.options)) return null;
+  const seen = new Set<string>();
+  const options: PollOpt[] = [];
+  for (const raw of o.options) {
+    const text = pollText(raw, POLL_MAX_OPTION);
+    const key = text.toLowerCase();
+    if (!text || seen.has(key)) continue;
+    seen.add(key);
+    options.push({ id: `o${options.length + 1}`, text });
+    if (options.length >= POLL_MAX_OPTIONS) break;
+  }
+  return options.length >= POLL_MIN_OPTIONS ? { question, options, closed: false, votes: {} } : null;
+}
+/** Nombre de votes par choix (les votes pour un choix qui n'existe plus ne comptent pas). */
+function pollCounts(poll: { options: PollOpt[]; votes?: Record<string, string> }): Record<string, number> {
+  const c: Record<string, number> = {};
+  for (const o of poll.options) c[o.id] = 0;
+  for (const v of Object.values(poll.votes || {})) if (typeof v === 'string' && v in c) c[v]++;
+  return c;
+}
+/** Voter : un autre choix remplace le vote, le même choix le retire. Refusé si le sondage est clos. */
+function pollApplyVote(poll: PollStored, userId: string, optionId: string): { ok: true; poll: PollStored } | { ok: false; error: string } {
+  if (poll.closed) return { ok: false, error: 'Ce sondage est clos.' };
+  if (!poll.options.some(o => o.id === optionId)) return { ok: false, error: 'Choix inconnu.' };
+  const votes = { ...(poll.votes || {}) };
+  if (votes[userId] === optionId) delete votes[userId];
+  else {
+    if (!(userId in votes) && Object.keys(votes).length >= POLL_MAX_VOTES) return { ok: false, error: 'Trop de votes sur ce sondage.' };
+    votes[userId] = optionId;
+  }
+  return { ok: true, poll: { ...poll, votes } };
+}
+/** Ce que voit chacun : le responsable reçoit aussi qui a voté quoi ; les autres, seulement les comptes et leur propre vote. */
+function pollView(poll: PollStored, userId: string, isAdmin: boolean): Record<string, unknown> {
+  const base = { question: poll.question, options: poll.options, closed: !!poll.closed, counts: pollCounts(poll) };
+  return isAdmin ? { ...base, votes: { ...(poll.votes || {}) } } : { ...base, ...(poll.votes && typeof poll.votes[userId] === 'string' ? { my: poll.votes[userId] } : {}) };
+}
+// ===== END POLL =====
+// Ce que chacun reçoit d'une publication : un sondage n'expose jamais QUI a voté quoi, sauf au responsable.
+const viewNews = (d: any, me: any): any => (d && d.poll ? { ...d, poll: pollView(d.poll, String(me?.id || ''), me?.role === 'admin') } : d);
+
+async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'comment-react' | 'share' | 'vote' | 'poll-close', req: any, res: any, me: any) {
+  const { id, text, commentId, files, emoji, parentId, replyToName, option, closed } = req.body || {};
   if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'Publication inconnue.' });
+  if (kind === 'poll-close' && me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
   const { data: row } = await sb.from(T.news).select('data').eq('id', id).maybeSingle();
   if (!row) return res.status(404).json({ error: 'Publication introuvable.' });
   let newComment: any = null, newParent: any = null; // pour prévenir après l'enregistrement
@@ -5460,7 +5519,14 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
   };
   if (d.status && d.status !== 'published') return res.status(400).json({ error: 'Cette publication n’est pas encore validée.' });
   if (!canSeeNews(d, me)) return res.status(404).json({ error: 'Publication introuvable.' }); // hors public : comme si elle n'existait pas
-  if (kind === 'react') {
+  if (kind === 'vote' || kind === 'poll-close') {
+    if (!d.poll) return res.status(400).json({ error: 'Cette publication n\'a pas de sondage.' });
+    if (kind === 'vote') {
+      const r = pollApplyVote(d.poll, String(me.id), String(option ?? ''));
+      if (!r.ok) return res.status(400).json({ error: r.error });
+      d.poll = r.poll;
+    } else d.poll = { ...d.poll, closed: closed === true };
+  } else if (kind === 'react') {
     d.loves = d.loves.includes(me.id) ? d.loves.filter((x: string) => x !== me.id) : [...d.loves, me.id];
   } else if (kind === 'comment') {
     const clean = String(text || '').trim().slice(0, NEWS_MAX_COMMENT);
@@ -5503,7 +5569,7 @@ async function newsAction(kind: 'react' | 'comment' | 'comment-delete' | 'commen
   }
   await sb.from(T.news).upsert({ id, data: d, updated_at: new Date().toISOString() });
   if (newComment) await later(pushNewsComment(d, newComment, newParent, me));
-  return res.json({ ok: true, news: d });
+  return res.json({ ok: true, news: viewNews(d, me) });
 }
 
 // L'employé propose une publication : elle reste « en attente » jusqu'à la décision du responsable
@@ -5534,7 +5600,7 @@ async function newsSubmit(req: any, res: any, me: any) {
   };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
   await later(d.status === 'published' ? pushNewsNew(d) : pushAdmins('validations', notifyText('news_pending', { name: d.author_name }), `news_pend:${id}`.slice(0, 60), { go: 'feed', nav: `news:${id}` }));
-  return res.json({ ok: true, news: d });
+  return res.json({ ok: true, news: viewNews(d, me) });
 }
 
 // L'auteur modifie sa publication déjà publiée (texte, titre, public) si le responsable l'a autorisé. Les fichiers, réactions et commentaires ne changent jamais ici.
@@ -5569,7 +5635,7 @@ async function newsEdit(req: any, res: any, me: any) {
   const kept = new Set(files.map((f: any) => String(f?.url)));
   const gone = oldFiles.filter((f: any) => !kept.has(String(f?.url)));
   if (gone.length) await dropFiles(gone);
-  return res.json({ ok: true, news: d });
+  return res.json({ ok: true, news: viewNews(d, me) });
 }
 
 // L'auteur supprime sa publication déjà publiée (même droit que la modification) : la publication, ses commentaires et tous ses fichiers disparaissent
@@ -5612,7 +5678,7 @@ async function newsDecision(req: any, res: any, me: any) {
   }
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
   await later(decision === 'approve' ? Promise.all([pushNewsNew(d), pushNewsDecision(d, true)]) : pushNewsDecision(d, false));
-  return res.json({ ok: true, news: d });
+  return res.json({ ok: true, news: viewNews(d, me) });
 }
 
 // L'auteur retire sa publication tant qu'elle n'est pas validée (en attente ou refusée)
@@ -6352,7 +6418,7 @@ async function remindersDue(request: Request, res: any) {
 
 // ----- M13.7 : actions numérotées (une seule exécution par numéro) -----
 // ===== BEGIN OFFLINE_ACTIONS (M13.7 : copie exacte de src/utils/offlineServer.ts ; ce bloc est contrôlé par scripts/check-offline-server.ts) =====
-const ONCE_ROUTES: readonly string[] = ['news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'work-entry', 'report-error'];
+const ONCE_ROUTES: readonly string[] = ['news-vote', 'news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'work-entry', 'report-error'];
 const ACTION_RUNNING_MS = 120_000; // un appel « en cours » depuis plus longtemps est considéré comme tombé en panne : il peut être refait
 const ACTION_KEEP_DAYS = 30; // les fiches plus anciennes sont effacées
 const ACTION_BODY_MAX = 16_000; // réponse gardée : 16 000 caractères au plus (au-delà : seulement le code)
@@ -6447,6 +6513,7 @@ async function callOnce(action: string, req: any, res: any, me: any): Promise<Re
   if (action === "report-error") return await reportError(req, res);
   if (action === "post-decide") return await postDecide(req, res, me);
   if (action === "work-entry") return await workEntryRoute(req, res, me);
+  if (action === "news-vote") return await newsAction('vote', req, res, me);
   if (action === "news-react") return await newsAction('react', req, res, me);
   if (action === "news-comment") return await newsAction('comment', req, res, me);
   if (action === "news-comment-delete") return await newsAction('comment-delete', req, res, me);
@@ -6549,6 +6616,8 @@ Deno.serve(async (request: Request) => {
     if (action === "push-prefs" && req.method === "POST") return await pushPrefsRoute(req, res, me);
     if (action === "push-unsubscribe" && req.method === "POST") return await pushUnsubscribeRoute(req, res, me);
     if (action === "push-test" && req.method === "POST") return await pushTestRoute(req, res, me);
+    if (action === "news-vote" && req.method === "POST") return await newsAction('vote', req, res, me);
+    if (action === "news-poll-close" && req.method === "POST") return await newsAction('poll-close', req, res, me);
     if (action === "news-react" && req.method === "POST") return await newsAction('react', req, res, me);
     if (action === "news-comment" && req.method === "POST") return await newsAction('comment', req, res, me);
     if (action === "news-comment-delete" && req.method === "POST") return await newsAction('comment-delete', req, res, me);

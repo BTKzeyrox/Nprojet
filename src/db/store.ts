@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AiSettingsSection.tsx, AuditSection.tsx, BackupsSection.tsx, BadgeCongrats.tsx, 102 autres. Contrôlé par : npm run check:page et 40 autres commandes check.
 // Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
 import { remClean, remSnoozeUntil } from '../utils/reminderRules';
+import { pollClean, pollCounts, pollApplyVote } from '../utils/pollRules';
 import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
@@ -1346,16 +1347,19 @@ export class AppStore {
   public getNewsPolicy(): NewsPolicy { return cleanNewsPolicy(this.getSettings().news_publish); }
 
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[] }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; poll?: { question: string; options: string[] } }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
     const files = p.files || [];
     if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou joins un fichier.' };
+    const poll = p.poll ? pollClean(p.poll) : null; // sondage : question + 2 à 6 choix ; les votes partent de zéro
+    if (p.poll && !poll) return { success: false, error: 'Un sondage demande une question et 2 à 6 choix différents.' };
     const rec: NewsPost = {
       id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
       text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
       loves: [], comments: [], shares: 0, ...(cleanAudience(p.audience) ? { audience: cleanAudience(p.audience) } : {}),
+      ...(poll ? { poll: { ...poll, counts: pollCounts(poll) } } : {}),
     };
     this.news = [rec, ...this.news].sort(SORTERS.news!);
     this.notify();
@@ -1455,6 +1459,9 @@ export class AppStore {
     }
     return r;
   }
+  // Sondage : voter (un autre choix remplace, le même choix retire) et clore / rouvrir (responsable). Le serveur répond avec la vue de la personne.
+  public voteNews(id: string, option: string) { return this.newsCall('news-vote', { id, option }); }
+  public closePollNews(id: string, closed: boolean) { return this.newsCall('news-poll-close', { id, closed }); }
   public commentNews(id: string, text: string, files?: NewsAttachment[], reply?: { parentId: string; replyToName: string }) { return this.newsCall('news-comment', { id, text, files: files || [], ...(reply ? { parentId: reply.parentId, replyToName: reply.replyToName } : {}) }); }
   public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
   public shareNews(id: string) { return this.newsCall('news-share', { id }); }
@@ -1615,6 +1622,19 @@ export class AppStore {
       case 'news-react': {
         const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
         n.loves = n.loves.includes(me.id) ? n.loves.filter(x => x !== me.id) : [...n.loves, me.id];
+        return keep(n);
+      }
+      case 'news-vote': { // faux serveur du sondage : mêmes règles que le vrai (pollApplyVote), vue du responsable
+        const n = post(body.id); if (!n || !me || !n.poll) return fail('Publication introuvable.');
+        const r = pollApplyVote({ question: n.poll.question, options: n.poll.options, closed: !!n.poll.closed, votes: n.poll.votes || {} }, me.id, String(body.option ?? ''));
+        if (!r.ok) return fail(r.error);
+        n.poll = { ...n.poll, votes: r.poll.votes, counts: pollCounts(r.poll) };
+        return keep(n);
+      }
+      case 'news-poll-close': {
+        const n = post(body.id); if (!n || !me || !n.poll) return fail('Publication introuvable.');
+        if (me.role !== 'admin') return fail('Réservé au responsable.');
+        n.poll = { ...n.poll, closed: body.closed === true };
         return keep(n);
       }
       case 'news-comment': {

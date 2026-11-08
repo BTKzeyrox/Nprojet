@@ -5,7 +5,7 @@
 // Qui est concerné : seulement les appels qui NE se répètent PAS sans risque (commentaire, réaction-bascule, publication, décision de mission, rapport d'erreur).
 
 // ===== BEGIN OFFLINE_ACTIONS (M13.7 : copie exacte de src/utils/offlineServer.ts ; ce bloc est contrôlé par scripts/check-offline-server.ts) =====
-export const ONCE_ROUTES: readonly string[] = ['news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'work-entry', 'report-error'];
+export const ONCE_ROUTES: readonly string[] = ['news-vote', 'news-react', 'news-comment', 'news-comment-delete', 'news-comment-react', 'news-share', 'news-submit', 'post-decide', 'work-entry', 'report-error'];
 export const ACTION_RUNNING_MS = 120_000; // un appel « en cours » depuis plus longtemps est considéré comme tombé en panne : il peut être refait
 export const ACTION_KEEP_DAYS = 30; // les fiches plus anciennes sont effacées
 export const ACTION_BODY_MAX = 16_000; // réponse gardée : 16 000 caractères au plus (au-delà : seulement le code)

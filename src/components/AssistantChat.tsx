@@ -11,7 +11,7 @@ import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } f
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { db } from '../db/store';
-import { parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
+import { parsePollIntent, pollPreview, pollIncomplete, pollDone, pollCanceled, decodePoll, POLL_NO, parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
 import { remSave as saveReminder } from '../utils/remindersState'; // met aussi à jour la liste partagée (Calendrier, « Mes rappels », cloche)
 import { parseActionIntent, actionPreview, actionDone, actionCanceled, decodeAct, buildItem, ACT_NO } from '../utils/assistantActions';
 import { parseMemoryIntent, runMemory, forgetDone, searchNotes, notesAnswer, notesForAi, norm, MEM_FORGET_PREFIX, MEM_EDIT_PREFIX, type MemIntent, type MemNote, type MemApi } from '../utils/assistantMemory';
@@ -84,9 +84,10 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       if (!mi && pendingMem.current && !sid) mi = /^(annule|annuler|laisse tomber|laisse|non|cancel|stop)\b/.test(norm(q)) ? 'cancel' : { kind: 'save', text: q };
       pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
       const ann = mi ? null : parseAnnounceIntent(q); // « publie : fermé lundi » : aperçu d'abord
-      const act = mi || ann ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
-      if (!mi && !ann && !act && reply.intent === 'unknown' && i) {
+      const poll = mi || ann ? null : parsePollIntent(q); // « sondage : question ? choix, choix »
+      const act = mi || ann || poll ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      if (!mi && !ann && !poll && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
         const useAi = aiOptIn(userId);
@@ -128,6 +129,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.view === ANN_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: announceCanceled(), at: Date.now() }]); return; }
     const dn = decodeAnn(g.view);
     if (dn) { const r = db.publishNews({ title: '', text: dn.text }); push([{ id: `b${Date.now()}`, who: 'bot', reply: announceDone(r.success, r.error), at: Date.now() }]); return; }
+    if (g.view === POLL_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: pollCanceled(), at: Date.now() }]); return; }
+    const dp = decodePoll(g.view);
+    if (dp) { const r = db.publishNews({ title: '', text: dp.question, poll: { question: dp.question, options: dp.options } }); push([{ id: `b${Date.now()}`, who: 'bot', reply: pollDone(r.success, r.error), at: Date.now() }]); return; }
     if (g.view === ACT_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: actionCanceled(), at: Date.now() }]); return; }
     const da = decodeAct(g.view);
     if (da) { void saveReminder(buildItem(da)).then(r => push([{ id: `b${Date.now()}`, who: 'bot', reply: actionDone(da, r.ok, r.error), at: Date.now() }])); return; }
@@ -138,7 +142,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.storage) setStorageIntent(g.storage);
     if (g.filter) setValFilterIntent(g.filter as ValFilter);
     if (g.nav) setNavTarget(g.nav);
-    if (isKnownView(g.view)) onNavigate?.(g.view);
+    if (isKnownView(g.view) || g.view === 'feed') onNavigate?.(g.view);
   };
   // Boutons du bas : les vrais chiffres du jour (un bouton sans rien à montrer se cache) ; recalculés après chaque message, pas à chaque lettre tapée
   const shortcuts = useMemo(() => { try { const si = getSnapshotInput(); return si ? shortcutList(si) : []; } catch { return []; } }, [msgs.length, busy]); // eslint-disable-line react-hooks/exhaustive-deps

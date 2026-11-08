@@ -532,7 +532,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-vote`, `news-poll-close`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -703,6 +703,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `performanceScore.ts` | Performance des salariés (module 3, partie A) : score 0-100, badges à niveaux, tendance, points d'attention, employé du mois. |
 | `phoneUtils.ts` | Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 » |
 | `planning.ts` | Planning des équipes (module 15, M15.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:planning`. |
+| `pollRules.ts` | Sondage dans les Actualités (BTK, 2026-11-08) : règles PURES (sans écran, sans réseau, sans importation). |
 | `postBand.ts` | Couleur d'une carte de mission selon le « Reste » (score qu'il reste à faire) |
 | `postDecision.ts` | Décision sur une session (M7.1 d) : valider ou refuser. Règles pures, sans écran ni serveur. |
 | `postPay.ts` | Paie d'une session validée (module 26, M26.4) : règles pures, sans écran ni serveur. |
@@ -945,6 +946,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `PendingPostActions.tsx` | Boutons Modifier et Annuler sur la carte d'une mission en attente de validation, côté opérateur. |
 | `PerformanceBadges.tsx` | Affiche les scores et badges de performance d'un opérateur : pastilles, détail, anneau du score, tendance, barres et carte complète. |
 | `PerformanceSettings.tsx` | Réglages de la performance : période du score, minimums de missions, poids du score et seuils des badges Bronze, Argent, Or. |
+| `PollBlock.tsx` | Sondage d'une publication des Actualités (étape C2) : un vote par personne (changer ou retirer son vote est possible), |
 | `PostsGrid20.tsx` | Grille des missions : liste filtrable et triable, et pour le responsable l'ajout d'une mission (client, modèle, échéance, tâches). |
 | `ProfilePhotoGate.tsx` | Écran obligatoire : l'employé doit ajouter sa photo de profil (appareil photo ou galerie) avant d'utiliser le site. |
 | `PullToRefresh.tsx` | Tirer la page vers le bas en haut de page : une roue tourne puis les données sont actualisées. |
@@ -1244,6 +1246,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:assistant-memory` | Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ». |
 | `npm run check:assistant-actions` | Assistant : créer un rappel / événement / tâche / liste depuis une phrase (étape C1) : aperçu d'abord, confirmation ensuite, dates comprises, rien d'inventé. |
 | `npm run check:assistant-publish` | Assistant : publier une annonce dans les Actualités depuis une phrase (étape C2) : aperçu d'abord, confirmation ensuite. |
+| `npm run check:poll` | Sondage dans les Actualités (étape C2) : règles, vue selon la personne (anonymat), copie serveur identique, routes, écran, assistant. |
 <!-- /AUTO:checks -->
 
 ---

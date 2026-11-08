@@ -74,7 +74,7 @@ const txt = (r: { title: { fr: string }; lines: { fr: string }[] }) => [r.title.
 
   // branchement
   const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8'), store = readFileSync('src/db/store.ts', 'utf8'), srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), set = readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), ai = readFileSync('src/utils/aiAssist.ts', 'utf8');
-  ok(/parseMemoryIntent\(q\)/.test(chat) && /pendingMem\.current/.test(chat) && /runMemory\(mi, memApi\)/.test(chat) && /!mi && !ann && !act && reply\.intent === 'unknown'/.test(chat), 'assistant : la mémoire passe avant les règles ; « mémorise » seul garde la phrase du message suivant');
+  ok(/parseMemoryIntent\(q\)/.test(chat) && /pendingMem\.current/.test(chat) && /runMemory\(mi, memApi\)/.test(chat) && /!mi && !ann && !poll && !act && reply\.intent === 'unknown'/.test(chat), 'assistant : la mémoire passe avant les règles ; « mémorise » seul garde la phrase du message suivant');
   ok(/MEM_FORGET_PREFIX\)\) \{ void db\.memDelete/.test(chat) && /MEM_EDIT_PREFIX\)\)/.test(chat), 'assistant : boutons Oublier (après confirmation) et Modifier branchés');
   ok(/aiMemOptIn\(userId\)/.test(chat) && /aiMemOptIn/.test(set) && /df_ai_mem_optin_/.test(ai) && /data-ai-memory-optin/.test(set), 'notes envoyées à l\'IA : seulement si la case de Réglages est cochée (coupée par défaut)');
   ok(/memFetch\(\)/.test(store) && /'assistant-memory-save'/.test(store) && /'assistant-memory-delete'/.test(store) && /if \(this\.demo\) return \[\.\.\.this\.demoMem\]/.test(store), 'store : lire / enregistrer / supprimer, démo dans le navigateur');

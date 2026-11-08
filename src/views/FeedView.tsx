@@ -18,6 +18,7 @@ import { NewsShareSheet } from '../components/NewsShareSheet';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import { newsIdFromNav, newsNavId } from '../utils/newsLink';
 import { playUiSound } from '../utils/notifSound';
+import PollBlock from '../components/PollBlock';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 import { markNewsSeen } from '../utils/notifications';
@@ -328,6 +329,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
         {post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
         <PostMenu light={light} busy={busy} items={[
           ...(canEdit && !editing ? [{ key: 'edit', label: 'Modifier', icon: <Pencil className="w-4 h-4" />, onClick: () => setEditing(true) }] : []),
+          ...(isAdmin && published && post.poll ? [{ key: 'poll', label: post.poll.closed ? 'Rouvrir le sondage' : 'Clore le sondage', icon: <Ban className="w-4 h-4" />, onClick: () => { void run(() => db.closePollNews(post.id, !post.poll?.closed)); } }] : []),
           ...(isAdmin && published ? [{ key: 'pin', label: post.pinned ? 'Retirer l’épingle' : 'Épingler', icon: <Pin className="w-4 h-4" fill={post.pinned ? 'currentColor' : 'none'} />, onClick: () => db.togglePinNews(post.id) }] : []),
           ...(isAdmin || canEdit ? [{ key: 'delete', label: 'Supprimer', icon: <Trash2 className="w-4 h-4" />, danger: true, onClick: () => onAsk({ title: 'Supprimer cette publication ?', message: 'Les commentaires et les fichiers joints seront supprimés aussi.', confirmLabel: 'Supprimer', danger: true, onConfirm: () => void run(() => db.deleteNewsPost(post.id)) }) }] : []),
         ]} />
@@ -377,6 +379,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {post.title && <h2 className="font-bold text-base sm:text-lg leading-snug break-words">{post.title}</h2>}
       {post.text && <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">{post.text}</p>}
       </>}
+      {post.poll && <PollBlock post={post} meId={me.id} isAdmin={isAdmin} light={light} busy={busy} users={users} onVote={optionId => { void run(() => db.voteNews(post.id, optionId)); }} />}
 
       {images.length > 0 && (
         <ImageCarousel images={images} onOpen={url => setLb({ url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} />
