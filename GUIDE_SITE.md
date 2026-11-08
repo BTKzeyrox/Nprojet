@@ -606,6 +606,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `assistantMemory.ts` | Mémoire de l'assistant (BTK, 2026-11-08) : « mémorise : … » enregistre la phrase telle quelle, « qu'est-ce que tu as retenu ? » la relit, |
 | `assistantMenu.ts` | Menu « / » de l'assistant (comme le clavier de Telegram) : 6 gros boutons, sans défilement, sans recherche, sans titre. |
 | `assistantMessages.ts` | Messages prêts, DÉJÀ REMPLIS avec les vrais éléments du site : relancer un client en retard, répondre à une avance ou à une inscription, remercier un client, prévenir l'équipe. |
+| `assistantPublish.ts` | Assistant : publier une annonce (et plus tard un sondage) dans les Actualités depuis une phrase (BTK, 2026-11-08, étape C2). |
 | `assistantShortcuts.ts` | Boutons du bas de l'assistant : chacun montre un vrai chiffre du jour et mène à l'élément exact (À valider, Avances, Factures en retard, Stock bas, Qui travaille, Argent du mois, Clients silencieux, Résumé du jour). |
 | `attachments.ts` | Préparation (compression des photos) et envoi des pièces jointes des publications et commentaires ; touche le navigateur et le réseau. |
 | `attendance.ts` | Retard d'une session (utilisé par le calendrier et par les alertes). Pur, sans écran. |
@@ -1238,6 +1239,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:shortcuts` | Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : jamais pendant l'écriture, navigateur intact, liste affichée = liste qui marche. |
 | `npm run check:assistant-memory` | Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ». |
 | `npm run check:assistant-actions` | Assistant : créer un rappel / événement / tâche / liste depuis une phrase (étape C1) : aperçu d'abord, confirmation ensuite, dates comprises, rien d'inventé. |
+| `npm run check:assistant-publish` | Assistant : publier une annonce dans les Actualités depuis une phrase (étape C2) : aperçu d'abord, confirmation ensuite. |
 <!-- /AUTO:checks -->
 
 ---

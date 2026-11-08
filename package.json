@@ -212,7 +212,8 @@
     "check:feed-scroll": "npx --yes tsx scripts/check-feed-scroll.ts",
     "check:shortcuts": "npx --yes tsx scripts/check-shortcuts.ts",
     "check:assistant-memory": "npx --yes tsx scripts/check-assistant-memory.ts",
-    "check:assistant-actions": "npx --yes tsx scripts/check-assistant-actions.ts"
+    "check:assistant-actions": "npx --yes tsx scripts/check-assistant-actions.ts",
+    "check:assistant-publish": "npx --yes tsx scripts/check-assistant-publish.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

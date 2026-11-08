@@ -1,0 +1,20 @@
+// Assistant : publier une annonce dans les Actualités depuis une phrase (étape C2) : aperçu d'abord, confirmation ensuite.
+import { readFileSync } from 'node:fs';
+import { parseAnnounceIntent, announcePreview, decodeAnn, announceDone, ANN_OK_PREFIX, ANN_NO, ANN_MAX_TEXT } from '../src/utils/assistantPublish';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const P = parseAnnounceIntent;
+ok(P('Publie : fermé lundi')?.text === 'fermé lundi' && P('publie une annonce : réunion jeudi à 10 h')?.text === 'réunion jeudi à 10 h', 'publie : … / publie une annonce : …');
+ok(P('Poste dans les actualités : nouvelle règle de justificatif')?.text === 'nouvelle règle de justificatif' && P('annonce : le bureau ferme à 16 h')?.text === 'le bureau ferme à 16 h', 'poste dans les actualités : … / annonce : …');
+ok(P('publish: office closed Monday')?.text === 'office closed Monday' && P('post an announcement: closed')?.text === undefined, 'anglais : publish: …');
+ok(P('Publie : ligne 1\nligne 2')?.text === 'ligne 1\nligne 2', 'les retours à la ligne sont gardés');
+ok(P('annonce') === null && P('publie') === null && P('je veux faire une annonce') === null && P('publie : ') === null && P('mes publications') === null && P('quelle est l\'annonce de Hugo ?') === null && P('') === null, 'sans « : » ou sans texte, ce n\'est pas une publication');
+ok((P('publie : ' + 'x'.repeat(3000))?.text.length ?? 0) === ANN_MAX_TEXT, `texte coupé à ${ANN_MAX_TEXT} caractères (comme le serveur)`);
+const pv = announcePreview(P('Publie : fermé lundi')!);
+ok(pv.intent === 'announce_preview' && /fermé lundi/.test(pv.lines[0].fr) && pv.actions.length === 2 && pv.actions[0].go.view.startsWith(ANN_OK_PREFIX) && pv.actions[1].go.view === ANN_NO && /Rien n'est publié tant que tu n'as pas confirmé/.test(pv.lines.map(l => l.fr).join(' ')), 'aperçu : le texte exact, Confirmer / Annuler, « rien n\'est publié » avant la confirmation');
+ok(decodeAnn(pv.actions[0].go.view)?.text === 'fermé lundi' && decodeAnn(ANN_OK_PREFIX + 'xx') === null && decodeAnn(ANN_OK_PREFIX + encodeURIComponent('{"t":"  "}')) === null && decodeAnn('autre') === null, 'Confirmer redonne le texte ; bouton abîmé ou vide refusé');
+ok(announceDone(true).intent === 'announce_done' && announceDone(false, 'Réservé au responsable.').lines[0].fr === 'Réservé au responsable.' && announceDone(false).intent === 'announce_error', '« C\'est publié » seulement si ça a marché ; sinon l\'erreur');
+const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
+ok(/parseAnnounceIntent\(q\)/.test(chat) && /announcePreview\(ann\)/.test(chat) && /decodeAnn\(g\.view\)/.test(chat) && /db\.publishNews\(\{ title: '', text: dn\.text \}\)/.test(chat) && /g\.view === ANN_NO/.test(chat), 'assistant : phrase → aperçu ; Confirmer → publication habituelle (db.publishNews) ; Annuler → rien');
+ok(/parseMemoryIntent\(q\)[\s\S]{0,900}parseAnnounceIntent\(q\)[\s\S]{0,300}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'ordre : mémoire, annonce, créations (rappel / calendrier / tâche)');
+console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
+process.exit(bad ? 1 : 0);
