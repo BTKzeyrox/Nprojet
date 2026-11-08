@@ -1,6 +1,6 @@
 // Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène.
 // Utilisé par : App.tsx et SettingsView.tsx.
-// Pour modifier : props userId, role, onNavigate ; les scènes viennent de utils/guideScripts.ts. S'ouvre seul à la première connexion de chaque compte sur l'appareil ; simulation sans appel au serveur.
+// Pour modifier : props userId, role, onNavigate ; les scènes viennent de utils/guideScripts.ts. Ne s'ouvre plus seul : une petite carte « Voir le guide ? » est proposée à la première connexion de chaque compte (Voir le guide / Plus tard / Non merci) ; simulation sans appel au serveur.
 import { setStatsTab } from '../utils/statsNav';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -26,7 +26,8 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
   const { lang } = useApp();
   const en = lang === 'en';
   const t = (fr: string, e: string) => (en ? e : fr);
-  const [open, setOpen] = useState(() => shouldShowTour(store(), userId));
+  const [open, setOpen] = useState(false); // plus d'ouverture automatique : on PROPOSE seulement (carte « Voir le guide ? »)
+  const [offer, setOffer] = useState(() => shouldShowTour(store(), userId));
   const [i, setI] = useState(0);
   const [hole, setHole] = useState<Box | null>(null);   // le cadre qui clignote (null = élément pas trouvé ou scène sans élément)
   const [waiting, setWaiting] = useState(false);        // on cherche encore l'élément (la page vient de s'ouvrir)
@@ -50,11 +51,11 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setI(0); setEnded(false); setShowList(false); lastPage.current = null; setPlaying(!prefersReduced());
-    setOpen(shouldShowTour(store(), userId));
+    setOpen(false); setOffer(shouldShowTour(store(), userId));
   }, [userId, role]);
 
   useEffect(() => {
-    const again = () => { setI(0); setEnded(false); setShowList(false); setPlaying(!prefersReduced()); lastPage.current = null; setEpoch(e => e + 1); setOpen(true); };
+    const again = () => { setI(0); setEnded(false); setShowList(false); setPlaying(!prefersReduced()); lastPage.current = null; setEpoch(e => e + 1); setOffer(false); setOpen(true); };
     window.addEventListener(OPEN_EVENT, again);
     return () => window.removeEventListener(OPEN_EVENT, again);
   }, []);
@@ -126,6 +127,22 @@ export const TourGuide: React.FC<{ userId: string; role: string; onNavigate: (pa
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   });
+  if (!open && offer && typeof document !== 'undefined') {
+    const later = () => setOffer(false); // « Plus tard » : la carte revient à la prochaine ouverture
+    const never = () => { markTourSeen(store(), userId); setOffer(false); }; // « Non merci » : plus jamais proposée sur cet appareil
+    return createPortal(
+      <div data-guide-ui data-tour-offer role="dialog" aria-label={t('Guide', 'Guide')} className="fixed left-2 right-2 bottom-20 md:bottom-4 md:left-auto md:right-4 mx-auto md:mx-0 max-w-sm z-[60] rounded-2xl bg-[#f8fafc] text-[#0f172a] border-2 border-[#10b981] shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-3 space-y-2">
+        <div className="font-bold text-sm flex items-center gap-2"><HelpCircle className="w-4 h-4 text-[#047857]" />{t('Voir le guide ?', 'See the guide?')}</div>
+        <p className="text-xs text-[#334155]">{t('Une courte visite de ton rôle. Tu peux aussi la lancer plus tard dans Réglages > Aide.', 'A short tour of your role. You can also start it later in Settings > Help.')}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" data-tour-offer-yes className={ctlMain} onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}>{t('Voir le guide', 'See the guide')}</button>
+          <button type="button" data-tour-offer-later className={ctl} onClick={later}>{t('Plus tard', 'Later')}</button>
+          <button type="button" data-tour-offer-never className={ctl} onClick={never}>{t('Non merci', 'No thanks')}</button>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
   if (!open || typeof document === 'undefined') return null;
 
   const last = i >= steps.length - 1;

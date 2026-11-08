@@ -162,7 +162,7 @@ ok(!/\b(text|bg|border)-slate-/.test(bubbleSrc.slice(bubbleSrc.indexOf('return c
 // ---- 8. M20.2 : détection par compte et « Voir comme »
 const app = src['src/App.tsx'];
 ok(/<TourGuide userId=\{realIsAdmin && operatorMode \? `\$\{currentUser\.id\}~\$\{viewAs\}` : currentUser\.id\} role=\{realIsAdmin && operatorMode \? viewAs : currentUser\.role\}/.test(app), '« Voir comme » : le guide reçoit le rôle REGARDÉ et une clé « compte~rôle » (une ouverture par rôle regardé)');
-ok(/\}, \[userId, role\]\);/.test(bubbleSrc) && /setOpen\(shouldShowTour\(store\(\), userId\)\)/.test(bubbleSrc), 'composant : changement de compte ou de rôle regardé → on regarde si ce guide doit s\'ouvrir (sans recharger la page)');
+ok(/\}, \[userId, role\]\);/.test(bubbleSrc) && /setOffer\(shouldShowTour\(store\(\), userId\)\)/.test(bubbleSrc), 'composant : changement de compte ou de rôle regardé → on regarde si on doit proposer ce guide (sans recharger la page)');
 import { tourKey, shouldShowTour, markTourSeen } from '../src/utils/tour';
 const memStore = (() => { const m: Record<string, string> = {}; return { getItem: (k: string) => m[k] ?? null, setItem: (k: string, v: string) => { m[k] = v; } }; })();
 for (const r of roles) { const uid = `nouveau-${r}`; const first = shouldShowTour(memStore, uid); markTourSeen(memStore, uid); ok(first && !shouldShowTour(memStore, uid), `nouveau compte ${r} : le guide s'ouvre une fois, jamais deux fois`); }

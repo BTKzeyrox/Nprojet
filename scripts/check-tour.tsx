@@ -68,5 +68,12 @@ db.enterDemo('employee');
 ok(view('fr', true).includes('Revoir la visite guidée') && view('en', true).includes('Replay the guided tour'), 'Réglages personnels (opérateur, Comptable, Chef d\'équipe) : bouton pour revoir la visite, FR et EN');
 ok(view('fr', true).includes('min-h-[44px]'), 'cible tactile de 44 px');
 ok(calls === 0, 'aucun appel réseau');
+{
+  const { readFileSync } = await import('node:fs');
+  const tg = readFileSync('src/components/TourGuide.tsx', 'utf8');
+  ok(/const \[open, setOpen\] = useState\(false\)/.test(tg) && /const \[offer, setOffer\] = useState\(\(\) => shouldShowTour/.test(tg), 'la visite ne s\'ouvre plus toute seule : elle est seulement proposée');
+  ok(/data-tour-offer-yes/.test(tg) && /data-tour-offer-later/.test(tg) && /data-tour-offer-never/.test(tg), 'carte de proposition : Voir le guide, Plus tard, Non merci');
+  ok(/const never = \(\) => \{ markTourSeen/.test(tg) && /const later = \(\) => setOffer\(false\)/.test(tg), '« Non merci » ne revient plus ; « Plus tard » revient à la prochaine ouverture');
+}
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }
