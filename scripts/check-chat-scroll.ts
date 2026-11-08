@@ -15,7 +15,7 @@ const chat = r('src/components/ChatView.tsx'), app = r('src/App.tsx'), css = r('
 ok((chat.match(/guardScroller\(el\)/g) || []).length === 2, 'ChatView : garde-fou sur la liste des messages ET la liste des discussions');
 ok(/classList\.add\('df-chat-open'\)/.test(app) && /classList\.remove\('df-chat-open'\)/.test(app), 'App : classe df-chat-open posée à l\'ouverture et retirée à la sortie (jamais de blocage resté)');
 ok(/html\.df-chat-open, html\.df-chat-open body \{[^}]*overflow: hidden[^}]*overscroll-behavior: none/.test(css), 'CSS : page figée et sans rebond quand la messagerie est ouverte, sur tous les écrans');
-ok(/flex-1 min-w-0 h-10 [^"]*text-base/.test(chat), 'champ de message : 40 px de haut, texte 16 px (en dessous l\'iPhone zoome)');
+ok(/<textarea[\s\S]{0,1800}flex-1 min-w-0 resize-none[^"]*text-base[\s\S]{0,200}height: 40/.test(chat), 'champ de message : 40 px de haut au départ (grandit ensuite), texte 16 px (en dessous l\'iPhone zoome)');
 ok(!/flex-1 min-w-0 h-12/.test(chat) && /w-10 h-10 rounded-full[^`]*bg-blue-600/.test(chat), 'boutons Joindre et Envoyer : 40 px');
 // Citation d'une réponse : bloc arrondi AÉRÉ dans la bulle, avec de l'espace en haut, à gauche et à droite (BTK, 2026-11-07 : « trop serré »)
 {

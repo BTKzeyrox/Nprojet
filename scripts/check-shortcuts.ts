@@ -27,7 +27,8 @@ const app = readFileSync('src/App.tsx', 'utf8'), bar = readFileSync('src/compone
 ok(/hover: hover\) and \(pointer: fine\)/.test(app) && /isTypingElement\(e\.target\)/.test(app), 'application : seulement avec un vrai clavier, et frappe dans un champ testée');
 ok(/\{helpOpen && <ShortcutsHelp/.test(app) && /FOCUS_SEARCH_EVENT/.test(bar), 'application : liste branchée, recherche branchée');
 ok(/e\.key === 'Escape'/.test(bar) && /setMSearch\(false\); setBellOpen\(false\)/.test(bar), 'en-tête : Échap ferme recherche et cloche');
-ok(/cancelEdit\(\)/.test(chat) && /e\.key === 'ArrowUp' && !text && !editingId/.test(chat) && /requestSubmit\(\)/.test(chat) && /isComposing/.test(chat), 'messagerie : Échap annule, ↑ modifie le dernier message, Ctrl+Entrée envoie, composition respectée');
+ok(/cancelEdit\(\)/.test(chat) && /e\.key === 'ArrowUp' && !e\.shiftKey && !text && !editingId/.test(chat) && /requestSubmit\(\)/.test(chat) && /isComposing/.test(chat), 'messagerie : Échap annule, ↑ modifie le dernier message, Ctrl+Entrée envoie, composition respectée');
+ok(/<textarea/.test(chat) && /key === 'Enter' && !e\.shiftKey/.test(chat) && /enterKeyHint="enter"/.test(chat) && /whitespace-pre-line/.test(chat), 'messagerie : champ multi-lignes, Entrée envoie sur ordinateur, Maj+Entrée passe à la ligne');
 
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);

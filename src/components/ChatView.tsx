@@ -141,6 +141,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const prevThreadRef = useRef('');
   const prevLenRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Le champ grandit avec le texte (jusqu'à ~6 lignes) puis défile
+  useEffect(() => { const el = composerRef.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 144)}px`; }, [text, threadId]);
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ url: string; msg: ChatMessage } | null>(null);
@@ -917,7 +920,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             </div>
           )}
           <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
-            <div className={`flex items-center gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
+            <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <button
                 type="button"
@@ -928,23 +931,25 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               >
                 <Paperclip className="w-5 h-5" />
               </button>
-              <input
-                type="text"
+              <textarea
+                ref={composerRef}
+                rows={1}
                 value={text}
                 onFocus={keep.pin}
                 onChange={e => { setText(e.target.value); if (e.target.value.trim() && !editingId && !current.readOnly) db.pingTyping(current.id); }}
                 onKeyDown={e => {
                   if (e.nativeEvent.isComposing) return; // saisie en cours (clavier asiatique, accents) : on ne touche à rien
                   if (e.key === 'Escape') { if (editingId) { e.preventDefault(); cancelEdit(); } else if (replyTo) { e.preventDefault(); setReplyTo(null); } }
-                  else if (e.key === 'ArrowUp' && !text && !editingId) { // champ vide : modifier mon dernier message (si le délai de 15 min le permet)
+                  else if (e.key === 'ArrowUp' && !e.shiftKey && !text && !editingId) { // champ vide : modifier mon dernier message (si le délai de 15 min le permet)
                     const mine = [...visible].reverse().find(m => m.sender_id === currentUser.id && m.message && db.canEditMessage(m, currentUser.id));
                     if (mine) { e.preventDefault(); startEdit(mine); }
                   } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); }
+                  else if (e.key === 'Enter' && !e.shiftKey && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } // ordinateur : Entrée envoie, Maj+Entrée passe à la ligne ; téléphone : Entrée passe à la ligne
                 }}
-                enterKeyHint="send"
+                enterKeyHint="enter"
                 placeholder={busy ? 'Envoi du fichier…' : 'Écrire un message…'}
-                className={`flex-1 min-w-0 h-10 bg-transparent border-0 px-2 text-base focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
-                style={{ boxShadow: 'none', border: 'none' }}
+                className={`flex-1 min-w-0 resize-none bg-transparent border-0 px-2 py-2 text-base leading-6 max-h-36 focus:outline-none focus:ring-0 ${L ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'}`}
+                style={{ boxShadow: 'none', border: 'none', height: 40 }}
               />
               <button type="submit" disabled={busy} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} className={`${sendPulse ? 'df-send-pulse ' : ''}w-10 h-10 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50 shrink-0 shadow-md`} title="Envoyer">
                 <Send className="w-[18px] h-[18px]" />
