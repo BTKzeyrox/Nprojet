@@ -36,6 +36,7 @@ import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { TourGuide } from './components/TourGuide';
+import { OPEN_VIEW_EVENT } from './components/WorksheetShortcut';
 import { ToastHost } from './components/ToastHost';
 import { BadgeCongrats } from './components/BadgeCongrats';
 import { LoginView } from './views/LoginView';
@@ -118,6 +119,7 @@ export default function App() {
   // Page cachée par le responsable (Réglages > Pages du menu) : on revient aux Actualités
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
   useEffect(() => { if (isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
+  useEffect(() => { const open = (e: Event) => { const v = (e as CustomEvent).detail; if (typeof v === 'string' && v) { setFocusOperatorId(null); setActiveView(v); } }; window.addEventListener(OPEN_VIEW_EVENT, open); return () => window.removeEventListener(OPEN_VIEW_EVENT, open); }, []); // raccourcis (Feuille du jour…)
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
   // Clic sur une notification externe : le bon endroit s'ouvre (au démarrage, ou tout de suite si l'appli est déjà ouverte)
   useEffect(() => {

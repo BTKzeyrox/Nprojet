@@ -1,6 +1,7 @@
 // Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché.
 // Utilisé par : App.tsx.
 // Pour modifier : la liste vient de teamPendingPosts (utils/teamLead.ts) selon l'équipe du chef ; décider passe par db.decidePostNow et une session refusée revient en attente si le serveur échoue.
+import { WorksheetShortcut } from '../components/WorksheetShortcut';
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { db } from '../db/store';
@@ -43,6 +44,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
   return (
     <section className="space-y-3 max-w-3xl mx-auto">
       <h2 className="font-tactical font-bold text-white text-lg flex items-center gap-2"><Clock className="w-5 h-5 text-emerald-400" /> Validations de mon équipe</h2>
+      <WorksheetShortcut />
       {!team && <div className="text-sm text-amber-300 bg-amber-950/40 border border-amber-800 rounded-xl p-3">Tu n'as pas encore d'équipe. Demande au responsable de t'en attribuer une : tu verras alors les sessions des opérateurs de la même équipe.</div>}
       {team && <div className="text-[12px] text-slate-400">Équipe : <span className="text-white font-semibold">{team}</span> · {list.length} en attente</div>}
       {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}

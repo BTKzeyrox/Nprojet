@@ -970,6 +970,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `WelcomeAnimation.tsx` | Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde. |
 | `WhyFigure.tsx` | Bouton « Pourquoi ce chiffre ? » qui ouvre une fenêtre avec la formule, la période, les composantes, les plus grosses lignes et les sources. |
 | `WorkModeCard.tsx` | Carte « Ma façon de travailler » : tableau préparé sur le site ou fichier Excel externe, mission par mission. |
+| `WorksheetShortcut.tsx` | Raccourci « Saisir la feuille du jour » (module 26) : visible sur le Tableau de bord du responsable et sur la page du chef d'équipe, seulement quand le module est ouvert. |
 
 **Graphiques (`src/components/charts/`)**
 
@@ -1206,6 +1207,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:work-words` | Anglais et vocabulaire du modèle d'entreprise (module 26, M26.10). Lancer : npm run check:work-words |
 | `npm run check:page-help` | Bouton « ? » d'aide de la page (guide G2). Lancer : npm run check:page-help |
 | `npm run check:task-guides` | Guides par tâche « Que veux-tu faire ? » (guide G3). Lancer : npm run check:task-guides |
+| `npm run check:worksheet-shortcut` | Raccourci « Saisir la feuille du jour » (module 26) sur le Tableau de bord et la page du chef d'équipe. Lancer : npm run check:worksheet-shortcut |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |
