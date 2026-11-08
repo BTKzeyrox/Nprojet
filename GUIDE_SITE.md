@@ -677,6 +677,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
+| `paperSheet.ts` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Règles pures, sans écran, sans serveur. |
 | `payslip.ts` | Met en page le bulletin de paie imprimable (A4, FR ou EN) et le CSV ; le serveur calcule les montants, ici on les affiche et on les vérifie. |
 | `pendingCount.ts` | Compte ce que l'admin doit valider (débuts, fins, avances, inscriptions, mots de passe, accès, profils) ; lit le store. |
 | `performance.ts` | Statistiques de performance par opérateur (missions validées, refusées, taux, délai moyen) avec export Excel et CSV ; lit le store. |
@@ -1187,6 +1188,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:custom-work-types` | « Créer mon type de travail » (module 26, M26.6b) : le site et le serveur donnent les mêmes résultats ; un type faux est refusé ; le Chef d'équipe reçoit le modèle d'entreprise mais jamais les tarifs. Lancer : npm run check:custom-work-types |
 | `npm run check:entry-only` | Employé « suivi par saisie seulement » (module 26, M26.7) : jamais de connexion, jamais « en ligne », présent dans les listes. Lancer : npm run check:entry-only |
 | `npm run check:work-checks` | Contrôles du travail saisi (module 26, M26.8) : boîtes déclarées contre Stock, boîtes par heure, régularité. Lancer : npm run check:work-checks |
+| `npm run check:paper-sheet` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Lancer : npm run check:paper-sheet |
 | `npm run check:graphs-page` | Essai de la page « Graphiques » dessinée pour de vrai (sans écran réel, sans réseau) : démo admin, 16 cartes, filtres, FR et EN, opérateur sans accès. |
 | `npm run check:day-detail` | Détail du jour : connexions (connexion / déconnexion) et missions ; sessions côté serveur. |
 | `npm run check:work-days` | Jours de travail : règle pure, copie du serveur identique, calendrier et Réglages branchés. |

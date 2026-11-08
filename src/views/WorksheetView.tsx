@@ -9,6 +9,7 @@ import type { User } from '../types';
 import { readCompany } from '../utils/companyRules';
 import { findModel, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
+import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
 const REASON: Record<string, string> = {
@@ -40,6 +41,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const type = types.find(t => t.id === typeId) || types[0];
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [busy, setBusy] = useState(false);
+  const [grp, setGrp] = useState({ hours: '', quantity: '', rejected: '' }); // saisie groupée (M26.9)
   const [msg, setMsg] = useState<{ ok: boolean; text: string; lines?: string[] } | null>(null);
 
   const people = db.getUsers().filter(u => u.status !== 'blocked' && weCanEnterFor(me, u)).sort((a, b) => a.name.localeCompare(b.name));
@@ -51,6 +53,9 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const showQty = !!type && type.measure === 'quantity';
   const showPresence = !!type && type.measure === 'presence';
   const filled = (r?: Row) => !!r && !!(r.presence || (r.hours || '').trim() || (r.quantity || '').trim());
+
+  const groupApply = (patch: { presence?: string; hours?: string; quantity?: string; rejected?: string }) => setRows(prev => { const next = applyGroup(prev, people.map(u => u.id), patch); if (key) saveDraft(key, next); return next; });
+  const printPaper = () => { if (!type) return; const ok = printPaperSheet(paperSheetHtml(people.map(u => u.name), { name: type.name.fr, measure: type.measure, unit: type.unit?.fr }, date, 7, 'fr', String((db.getSettings() as any).company_name || ''))); if (!ok) setMsg({ ok: false, text: "Le navigateur a bloqué la fenêtre d'impression : autorise-la puis réessaie." }); };
 
   const save = async () => {
     if (!type) return;
@@ -91,6 +96,20 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
             <label className="block space-y-1"><span className={label}>Type de travail</span>
               <select data-worksheet-type value={type?.id || ''} onChange={e => setTypeId(e.target.value)} className={input}>{types.map(t => <option key={t.id} value={t.id}>{t.name.fr}</option>)}</select></label>
           </div>
+
+          {people.length > 0 && (
+            <div className={`${card} space-y-2`} data-worksheet-group>
+              <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>Saisie groupée : remplit d'un coup les cases vides de toute la liste</div>
+              <div className="flex flex-wrap gap-2 items-end">
+                {showPresence && <button type="button" data-group-present onClick={() => groupApply({ presence: 'present' })} className="min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer bg-emerald-600 border-emerald-600 text-white">Tous présents</button>}
+                {showHours && <><label className="block space-y-1"><span className={label}>Heures pour tous</span><input inputMode="decimal" data-group-hours value={grp.hours} onChange={e => setGrp({ ...grp, hours: e.target.value })} className={`${input} !w-28`} /></label>
+                  <button type="button" data-group-hours-apply onClick={() => groupApply({ hours: grp.hours })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Appliquer</button></>}
+                {showQty && <><label className="block space-y-1"><span className={label}>Quantité pour tous</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
+                  <button type="button" data-group-qty-apply onClick={() => groupApply({ quantity: grp.quantity })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Appliquer</button></>}
+                <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>Imprimer la feuille papier</button>
+              </div>
+            </div>
+          )}
 
           {people.length === 0 ? (
             <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`}>Aucun opérateur dans ta liste{me.role === 'team_lead' ? ' (ton équipe est vide ou non renseignée)' : ''}.</div>
