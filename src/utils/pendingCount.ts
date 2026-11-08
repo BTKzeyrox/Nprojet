@@ -1,5 +1,5 @@
 // Compte ce que l'admin doit valider (débuts, fins, avances, inscriptions, mots de passe, accès, profils) ; lit le store.
-// Utilisé par : BottomNav.tsx, Sidebar.tsx et AdminDashboard.tsx.
+// Utilisé par : Sidebar.tsx et AdminDashboard.tsx.
 // Pour modifier : c'est la source unique du compteur (cloche, menu, accueil) ; un nouveau type de demande s'ajoute ici et dans le total.
 import { db } from '../db/store';
 

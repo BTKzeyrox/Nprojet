@@ -81,11 +81,11 @@ for (const r of roles) for (const s of GUIDE_SCRIPTS[r]) {
   }
 }
 ok(textsChecked >= 20 && badTexts.length === 0, `les ${textsChecked} textes visés existent dans la bonne page${badTexts.length ? ' : ' + badTexts.slice(0, 4).join(' ; ') : ''}`);
-const navIds = new Set([...(sidebar.match(/id: '([a-z-]+)'/g) || []).map(x => x.slice(5, -1)), ...((src['src/components/BottomNav.tsx'].match(/id: '([a-z-]+)'/g) || []).map(x => x.slice(5, -1)))]);
+const navIds = new Set([...(sidebar.match(/id: '([a-z-]+)'/g) || []).map(x => x.slice(5, -1))]);
 const tourIds = roles.flatMap(r => GUIDE_SCRIPTS[r].flatMap(s => s.target?.tour ? [s.target.tour] : []));
 const staticIds = new Set([...all.matchAll(/data-tour="([a-z0-9-]+)"/g)].map(m => m[1]));
 ok(tourIds.length > 0 && tourIds.every(id => (id.startsWith('nav-') && navIds.has(id.slice(4))) || staticIds.has(id)), `les ${tourIds.length} repères « data-tour » existent (menus et pages)`);
-ok(/data-tour=\{`nav-\$\{merged \? .*: item\.id\}`\}/.test(sidebar) && /data-tour=\{`nav-\$\{merged \? .*: it\.id\}`\}/.test(src['src/components/BottomNav.tsx']), 'menu latéral et menu du bas : chaque entrée porte son repère nav-…');
+ok(/data-tour=\{`nav-\$\{merged \? .*: item\.id\}`\}/.test(sidebar), 'menu latéral : chaque entrée porte son repère nav-…');
 ok(/data-tour="sheets-new"/.test(src['src/components/MySheets.tsx']) && /data-tour="leave-request"/.test(src['src/views/hr/LeavesSection.tsx']), 'repères posés dans Mes tableaux et Congés');
 
 // ---- 5. Le moteur, sur de faux éléments

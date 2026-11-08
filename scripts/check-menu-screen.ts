@@ -6,7 +6,7 @@ import { menuFor } from '../src/utils/menuGroups';
 let f = 0, t = 0;
 const ok = (c: boolean, n: string) => { t++; if (!c) { f++; console.log('ECHEC ' + n); } };
 const r = (p: string) => readFileSync(p, 'utf8');
-const app = r('src/App.tsx'), sb = r('src/components/Sidebar.tsx'), bn = r('src/components/BottomNav.tsx'), mt = r('src/components/MenuTabs.tsx'), cc = r('src/components/CompanyConditions.tsx');
+const app = r('src/App.tsx'), sb = r('src/components/Sidebar.tsx'), mt = r('src/components/MenuTabs.tsx'), cc = r('src/components/CompanyConditions.tsx');
 
 ok(mergedFor('admin', 'merged') && mergedFor('accountant', 'merged') && mergedFor('team_lead', 'merged'), 'menu simplifié : responsable, Comptable, Chef d\'équipe');
 ok(!mergedFor('employee', 'merged') && !mergedFor(undefined, 'merged') && !mergedFor('inconnu', 'merged'), 'opérateur et rôle inconnu : vue simple inchangée');
@@ -22,7 +22,6 @@ ok(/menuFor\(currentUser\.role, hiddenCsv\)/.test(sb) && /locate\(currentUser\.r
 ok(/const listItems = mergedItems \|\| navItems/.test(sb), 'menu latéral : l\'ancien menu reste intact (navItems)');
 ok(!/inBottomBar/.test(sb) && /MOVED_TO_HEADER\.includes\(item\.id\) \? '!hidden'/.test(sb), 'menu latéral : plus de barre du bas ; seules Actualités et Messages (dans l\'en-tête) en sont absentes, sur tous les écrans');
 ok(!/<BottomNav/.test(app), 'App : la barre du bas n\'est plus affichée');
-ok(/menuFor\(currentUser\.role, hiddenPages\)/.test(bn) && /const barItems = merged \? mergedShown : shownItems/.test(bn), 'barre du bas : entrées du menu simplifié, ancienne barre intacte');
 ok(/showTabs && activeView !== 'chat' && tabsRow/.test(app) && /showTabs && activeView === 'chat' && tabsRow/.test(app), 'appli : rangée d\'onglets sur chaque page (messagerie : fixe, sous la barre du haut)');
 ok(/MENU_TABS_H : 0/.test(app), 'messagerie : la zone de discussion est décalée de la hauteur des onglets');
 ok(/!merged && <OperatorsTabs active="operators"/.test(app) && /!merged && \(activeView === 'active-post'/.test(app), 'les anciens onglets Opérateurs / Sessions ne font pas doublon');

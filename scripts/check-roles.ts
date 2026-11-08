@@ -76,11 +76,10 @@ for (const r of ['admin', 'employee', undefined, null, 'zzz']) eq(R.viewAllowedF
 eq(R.viewAllowedFor('team_lead', 'advances'), false, 'Chef d\'équipe : limité à ses pages (voir check:team-lead)');
 eq([...R.ACCOUNTANT_VIEWS].some(v => ['advances', 'employees', 'stats', 'health', 'errors'].includes(v)), false, 'liste du Comptable : jamais paie, comptes, statistiques, santé, erreurs');
 const rd = (f: string) => readFileSync(f, 'utf8');
-const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), bottom = rd('src/components/BottomNav.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = rd('src/db/store.ts'), types = rd('src/types/index.ts');
+const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = rd('src/db/store.ts'), types = rd('src/types/index.ts');
 eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>/.test(app), true, 'App : écran du Comptable branché (toute autre page mène à Facturation)');
 eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>\s*\) : viewUser\.role === 'admin'/.test(app) || /<InvoicesView \/>\s*\n?\s*\) : viewUser\.role === 'admin'/.test(app), true, 'App : le Comptable passe avant l\'écran admin');
 eq(/viewAllowedFor\(currentUser\.role, it\.id\)/.test(side), true, 'Menu : filtré par rôle');
-eq(/currentUser\?\.role === 'accountant' \? accountantItems/.test(bottom), true, 'Barre du bas : jeu du Comptable');
 eq(/CREATABLE_ROLES\.map/.test(emp) && /role: newRole/.test(emp), true, 'Création de compte : rôle choisi parmi CREATABLE_ROLES');
 eq(/\{\(newRole === 'employee' \|\| newEntryOnly\) && showShift\(cfg\) && \(/.test(emp), true, 'Création : vacation demandée aux opérateurs seulement (ou employé saisie)');
 eq(/const staff = users\.filter\(u => u\.role !== 'employee' && u\.role !== 'admin'\)/.test(emp), true, 'Liste des Comptables et chefs d\'équipe (bloquer, supprimer)');

@@ -1,5 +1,5 @@
 // Règle pure (sans écran, sans serveur) : sessions en attente des opérateurs de l'équipe d'un Chef d'équipe, les plus anciennes d'abord.
-// Utilisé par : BottomNav.tsx, Sidebar.tsx et TeamValidations.tsx.
+// Utilisé par : Sidebar.tsx et TeamValidations.tsx.
 // Pour modifier : qui décide pour qui vient de canDecidePost (roles.ts) ; un autre rôle reçoit une liste vide.
 import type { PostSession, User } from '../types';
 import { canDecidePost } from './roles';

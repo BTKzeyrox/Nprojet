@@ -1,5 +1,5 @@
 // Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications.
-// Utilisé par : BottomNav.tsx et Sidebar.tsx.
+// Utilisé par : Sidebar.tsx.
 // Pour modifier : il compte les notifications dont l'id commence par msg- (voir notifications.ts) ; recalcul à chaque changement des données et à l'ouverture de la messagerie.
 import { useEffect, useState } from 'react';
 import { db } from '../db/store';

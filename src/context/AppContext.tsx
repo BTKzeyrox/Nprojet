@@ -1,5 +1,5 @@
 // Contexte global de l'appli : thème clair ou sombre, langue FR ou EN, traduction t(clé) et animation de déconnexion.
-// Utilisé par : App.tsx, AiSettingsSection.tsx, AssistantChat.tsx, BadgeCongrats.tsx, BottomNav.tsx et 66 autres. Contrôlé par : npm run check:page et 29 autres commandes check.
+// Utilisé par : App.tsx, AiSettingsSection.tsx, AssistantChat.tsx, BadgeCongrats.tsx, 66 autres. Contrôlé par : npm run check:page et 29 autres commandes check.
 // Pour modifier : thème et langue sont gardés dans le navigateur (delta_theme, delta_lang) ; les clés de t(clé) sont dans utils/i18n.ts ; useLang() marche même sans fournisseur.
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, TranslationKey, getTranslation } from '../utils/i18n';

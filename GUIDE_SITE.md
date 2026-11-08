@@ -889,7 +889,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `Avatar.tsx` | Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo. |
 | `BackupsSection.tsx` | Section des Réglages pour les sauvegardes : liste des sauvegardes de nuit, sauvegarde immédiate, export, import d'un fichier et restauration protégée par code. |
 | `BadgeCongrats.tsx` | Composant invisible qui affiche un petit message « Bravo ! » quand l'opérateur gagne un nouveau badge de performance. |
-| `BottomNav.tsx` | Barre de navigation du bas, sur téléphone seulement : quatre ou cinq pages directes selon le rôle, plus le bouton Menu. |
 | `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
@@ -962,7 +961,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `TopBar.tsx` | Barre du haut : bouton du menu, recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil. |
 | `TourGuide.tsx` | Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène. |
 | `TwoStepCard.tsx` | Réglages, carte de sécurité en deux étapes : activer, désactiver et refaire les codes de secours. |
-| `TwoStepDialog.tsx` | Fenêtre de confirmation en deux étapes : lire ce qui va se passer, puis taper un mot pour valider. |
 | `TypeHintBanner.tsx` | Bandeau qui propose de transformer une colonne de tableau (code, date, heure, téléphone, nombre ou liste de choix), avec Oui ou Non merci. |
 | `WatchSettingsSection.tsx` | Réglages, section Surveillance : seuils de la Santé du site et notifications, réglés sur cet appareil. |
 | `WelcomeAnimation.tsx` | Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde. |
@@ -984,7 +982,6 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 
 | Fichier | Rôle |
 |---|---|
-| `db/initialData.ts` | Missions d'exemple (2 par type) et liste des types de mission, que le responsable peut modifier ou supprimer. |
 | `db/offlineController.ts` | Contrôleur du mode hors ligne (module 13, M13.5) : branche la copie locale (offlineVault.ts) et la file d'actions (offlineSync.ts) sur le magasin de données. |
 | `db/store.ts` | Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions. |
 | `types/index.ts` | Types TypeScript des données de l'appli : utilisateurs, missions, avances, messages, actualités, clients, finances, stock, factures et achats. |
@@ -1283,7 +1280,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 - Pas de plusieurs entreprises sur le même site (étude M17 proposée).
 - WhatsApp et SMS (M16.6) : seulement des **liens** qui ouvrent le message de relance déjà écrit ; la personne appuie sur « envoyer ». Pas d'envoi automatique (il demande un service payant et une clé, à décider par BTK). L'adresse e-mail d'un client ouvre seulement le logiciel de mail.
 - Export complet (M16.5) : le fichier contient les mots de passe chiffrés et les secrets de double étape : à garder comme un mot de passe. Un fichier importé s'ajoute aux sauvegardes (gardé 14 jours) ; le remettre en service passe par « Restaurer » avec ses protections. Les photos et fichiers ne sont pas dans le fichier (ils restent sur Cloudinary).
-- Pas d'envoi automatique du rapport mensuel (Excel et PDF à la demande).
+- Rapport mensuel : envoi automatique possible (carte « Rapport automatique », tâche planifiée `20261027_auto_report_cron.sql`) ; Excel et PDF aussi à la demande.
 - Le Comptable n'a pas accès aux statistiques ni aux dépenses.
 - L'historique de tarifs d'un salarié (dossier) est **informatif** : la paie utilise les tarifs globaux des réglages.
 - Le Chef d'équipe ne décide pas des congés (seul le responsable).
