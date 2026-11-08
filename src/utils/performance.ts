@@ -6,6 +6,7 @@ import type { PostSession } from '../types';
 import { performanceAoa, type ScoreCells } from './performanceExport';
 import { downloadWorkbook } from './xlsxA4';
 import { workRate } from './workChecks';
+import { isWorkLine } from './postPay';
 import { todayMada } from './stats';
 
 // Statistiques de performance par opérateur (lecture du store, aucun appel serveur).
@@ -19,6 +20,7 @@ export interface PerfRow {
   open: number; // en cours ou à valider
   rate: number | null; // taux d'acceptation en % (null si aucune mission jugée)
   avgMin: number | null; // délai moyen en minutes (null si aucune mesure)
+  entryDays?: number; // M26.12 : nombre de jours saisis dans la Feuille du jour (à part des missions terminées)
   perHour?: number | null; // M26.8 : boîtes (ou pièces) acceptées par heure, d'après la Feuille du jour (null = pas de mesure)
   regularity?: number | null; // M26.8 : 0 à 100, 100 = même quantité chaque jour (null sous 3 jours travaillés)
 }
@@ -54,7 +56,8 @@ export const buildPerformance = (period: PerfPeriod): PerfRow[] => {
     .getUsers()
     .filter(u => u.role === 'employee')
     .map(u => {
-      const mine = posts.filter(p => p.employee_id === u.id);
+      const mine = posts.filter(p => p.employee_id === u.id && !isWorkLine(p)); // M26.12 : une ligne de la Feuille du jour n'est pas une mission terminée
+      const entryDays = new Set(posts.filter(p => p.employee_id === u.id && isWorkLine(p) && p.status === 'completed').map(p => p.date)).size;
       const done = mine.filter(p => p.status === 'completed');
       const rejected = mine.filter(p => p.status === 'rejected').length;
       const open = mine.filter(p => p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end').length;
@@ -69,6 +72,7 @@ export const buildPerformance = (period: PerfPeriod): PerfRow[] => {
         open,
         rate: judged ? Math.round((done.length / judged) * 100) : null,
         avgMin: durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) : null,
+        entryDays,
         perHour: wr.perHour,
         regularity: wr.regularity,
       };

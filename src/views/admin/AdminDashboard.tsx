@@ -432,7 +432,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const homeParts = (() => {
     const today = new Date().toISOString().split('T')[0];
-    const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
+    const doneToday = posts.filter(p => p.status === 'completed' && p.date === today && !isWorkLine(p)); // les lignes de la Feuille du jour ne sont pas des missions
     const scoreToday = doneToday.reduce(
       (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
       0

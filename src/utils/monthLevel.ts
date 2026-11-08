@@ -21,7 +21,7 @@ export function cleanLevels(raw: unknown): LevelConfig {
 export const monthOf = (date: string): string => String(date || '').slice(0, 7);
 /** Missions validées d'un opérateur dans un mois « AAAA-MM ». */
 export const monthCount = (posts: Pick<PostSession, 'employee_id' | 'status' | 'date'>[], empId: string, month: string): number =>
-  posts.filter(p => p.employee_id === empId && p.status === 'completed' && monthOf(p.date) === month).length;
+  posts.filter(p => p.employee_id === empId && p.status === 'completed' && !((p as any).work_type) && monthOf(p.date) === month).length; // hors lignes de la Feuille du jour
 
 export interface LevelInfo { count: number; index: 0 | 1 | 2 | 3; name: string; veryLow: boolean; next: { name: string; missing: number } | null }
 export function levelInfo(count: number, cfg: LevelConfig): LevelInfo {

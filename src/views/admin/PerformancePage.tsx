@@ -39,7 +39,7 @@ export const PerformancePage: React.FC = () => {
   };
 
   const cell = 'px-3 py-2 text-xs font-mono whitespace-nowrap';
-  const showWork = WORK_SETTINGS_LIVE && rows.some(r => r.perHour !== null && r.perHour !== undefined); // M26.8 : colonnes de la Feuille du jour, module ouvert seulement
+  const showWork = WORK_SETTINGS_LIVE && rows.some(r => (r.perHour !== null && r.perHour !== undefined) || (r.entryDays || 0) > 0); // M26.8 : colonnes de la Feuille du jour, module ouvert seulement
   const line = (r: PerfRow, strong = false) => (
     <tr key={r.id} className={`border-t border-slate-700 ${strong ? 'font-bold text-white bg-[#141e2a]' : 'text-slate-200'}`}>
       <td className={`${cell} text-left`}>{r.name}</td>
@@ -48,6 +48,7 @@ export const PerformancePage: React.FC = () => {
       <td className={`${cell} text-right`}>{r.open}</td>
       <td className={`${cell} text-right`}>{r.rate === null ? '–' : `${r.rate} %`}</td>
       <td className={`${cell} text-right`}>{fmtDuration(r.avgMin)}</td>
+      {showWork && <td data-perf-entrydays className={`${cell} text-right`}>{r.entryDays ? r.entryDays : '–'}</td>}
       {showWork && <td data-perf-perhour className={`${cell} text-right`}>{r.perHour === null || r.perHour === undefined ? '–' : String(r.perHour).replace('.', ',')}</td>}
       {showWork && <td data-perf-regularity className={`${cell} text-right`}>{r.regularity === null || r.regularity === undefined ? '–' : `${r.regularity} %`}</td>}
     </tr>
@@ -99,6 +100,7 @@ export const PerformancePage: React.FC = () => {
                 <th className={`${cell} text-right font-normal`}>En cours</th>
                 <th className={`${cell} text-right font-normal`}>Taux d’acceptation</th>
                 <th className={`${cell} text-right font-normal`}>Délai moyen</th>
+                {showWork && <th className={`${cell} text-right font-normal`}>{t('Jours saisis', 'Days entered')}</th>}
                 {showWork && <th className={`${cell} text-right font-normal`}>{t('Boîtes / heure', 'Boxes / hour')}</th>}
                 {showWork && <th className={`${cell} text-right font-normal`}>{t('Régularité', 'Consistency')}</th>}
               </tr>

@@ -143,7 +143,7 @@ function prepare(posts: PostSession[], contracts: ClientContract[]): Row[] {
     return (c?.post_type || '').trim();
   };
   for (const p of posts) {
-    if (!p || !p.employee_id || !DATE_RE.test(String(p.date)) || seen.has(p.id)) continue;
+    if (!p || !p.employee_id || !DATE_RE.test(String(p.date)) || seen.has(p.id) || (p as any).work_type) continue; // M26.12 : les lignes de la Feuille du jour ne sont pas des missions
     seen.add(p.id);
     rows.push({ id: p.id, emp: p.employee_id, date: p.date, status: p.status, start: String(p.start_time || '').slice(0, 5), dur: durationMin(p), type: typeOf(p) });
   }

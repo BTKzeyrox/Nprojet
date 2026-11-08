@@ -45,5 +45,11 @@ const st = readFileSync('src/utils/health/rules/stock.ts', 'utf8'), pf = readFil
 ok(/if \(!WORK_SETTINGS_LIVE\) return \[\];[\s\S]{0,200}workStockGap/.test(st) && /purchaseNoMove, workVsStock\]/.test(st), 'alerte Santé du site : dans la liste du Stock, muette module fermé');
 ok(/workRate\(db\.getPosts\(\)/.test(pf), 'performance : boîtes par heure et régularité calculées');
 ok(/showWork = WORK_SETTINGS_LIVE/.test(pp) && /data-perf-perhour/.test(pp) && /data-perf-regularity/.test(pp), 'page Performance : colonnes visibles module ouvert seulement');
+// M26.12 : une ligne de la Feuille du jour n'est pas une « mission terminée »
+const mc = readFileSync('src/utils/monthLevel.ts', 'utf8'), ps = readFileSync('src/utils/performanceScore.ts', 'utf8'), dsh = readFileSync('src/views/admin/AdminDashboard.tsx', 'utf8');
+ok(/!isWorkLine\(p\)\); \/\/ M26\.12/.test(pf) && /entryDays/.test(pf), 'performance : les lignes de saisie sont comptées à part (jours saisis), pas en missions terminées');
+ok(/!isWorkLine\(p\)\); \/\/ les lignes de la Feuille du jour/.test(dsh), 'Tableau de bord : « Missions terminées » sans les lignes de saisie');
+ok(/!\(\(p as any\)\.work_type\)/.test(mc) && /\(p as any\)\.work_type\) continue; \/\/ M26\.12/.test(ps), 'niveaux du mois et score de performance : sans les lignes de saisie');
+ok(/data-perf-entrydays/.test(pp), 'page Performance : colonne « Jours saisis »');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
