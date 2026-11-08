@@ -199,6 +199,9 @@ Repars toujours du fichier du repo (contenu complet) : un fichier incomplet supp
 - Si le serveur est injoignable, côté site : « mémorise » répond « Je n'ai pas pu joindre le serveur » (jamais de faux « C'est noté »).
 - Retour arrière : redéployer v74 = SHA 0d960cf2861b6ca0cb76779c492522548d7813f6 ; les lignes `mem:*` peuvent rester (inoffensives) ou être supprimées : `delete from public.df_reminders where id like 'mem:%';`.
 
+## df-api v77 (sondage) — DÉPLOYÉ (SHA 3b1c0a26d8608d200855fec41f42868e901baee7, sauvegarde 106, rollback v76 = d994d8258aec6a000383c4d47e9e9cffbbb43feb)
+
+Ancienne note (écrite avant déploiement, numéro devenu v77) :
 ## df-api v76 (2026-11-08/09) — sondage dans les Actualités (CODE DANS LE DÉPÔT, NON DÉPLOYÉ : en attente de l'accord écrit de BTK)
 - Ajoute : le bloc `POLL` (copie IDENTIQUE de `src/utils/pollRules.ts`, comparée par `check:poll`), `viewNews` (le sondage n'expose jamais QUI a voté quoi sauf au responsable ; appliqué aux 4 réponses « publication » et à la synchro des non-responsables), les routes `news-vote` (une seule fois par appel, comme les autres actions des Actualités) et `news-poll-close` (responsable seulement), la création d'un sondage par la synchro du responsable (votes toujours remis à zéro, jamais repris du navigateur ; une publication existante garde son sondage), et le retrait des votes d'un compte supprimé. Aucune migration, aucune nouvelle table : le sondage vit dans la ligne de la publication (`df_news`).
 - Base = v75 en ligne (commit a35de03a62fb30c77abcca4f9c72932e50bc1d47) ; le nouveau commit à déployer est celui de ce paragraphe (SHA complet à reprendre au déploiement).
