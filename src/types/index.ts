@@ -438,6 +438,7 @@ export interface NewsPost {
   submitted_at?: string;
   files_removed?: number; // fichiers supprimés au refus
   audience?: ('employee' | 'team_lead' | 'accountant')[]; // qui peut voir la publication (absent = tout le monde ; le responsable et l'auteur voient toujours)
+  audience_users?: string[]; // personnes choisies une à une (en plus des rôles entiers de « audience ») ; absent = personne en particulier
   edited_at?: string; // dernière modification du texte, du titre ou du public (une publication déjà publiée)
   poll?: { question: string; kind?: 'poll' | 'date' | 'ack'; options: { id: string; text: string }[]; closed: boolean; counts?: Record<string, number>; my?: string | string[]; votes?: Record<string, string | string[]> }; // sondage (étape C2) : tout le monde reçoit les comptes + son vote ; `votes` (qui a voté quoi) seulement le responsable
 }

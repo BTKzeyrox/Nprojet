@@ -7,7 +7,7 @@ import { Check, Copy, Link2, Loader2, Search, Send, Share2, Users, X } from 'luc
 import { db } from '../db/store';
 import { Avatar } from './Avatar';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
-import { audienceLabel, cleanAudience } from '../utils/newsAccess';
+import { audienceLabel, isRestricted } from '../utils/newsAccess';
 import { newsLink, newsShareText, withShareNote, SHARE_NOTE_MAX } from '../utils/newsLink';
 import { LinkedText } from './LinkedText';
 import type { NewsPost, User } from '../types';
@@ -25,7 +25,7 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
   const baseText = useMemo(() => newsShareText(post, origin), [post, origin]);
   const text = useMemo(() => withShareNote(baseText, note), [baseText, note]);
   const url = newsLink(origin, post.id);
-  const restricted = !!cleanAudience(post.audience);
+  const restricted = isRestricted(post);
 
   const targets = useMemo(() => {
     const list: { id: string; title: string; sub: string; user?: User }[] = [{ id: 'all', title: 'Groupe général', sub: 'Tous les opérateurs + responsable' }];
@@ -66,7 +66,7 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
           <button type="button" onClick={onClose} aria-label="Fermer" className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg cursor-pointer hover:bg-slate-500/10"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-3 space-y-2 overflow-y-auto">
-          {restricted && <div className="rounded-lg px-3 py-2 text-xs bg-sky-500/10 text-sky-600" data-share-restricted>Cette publication est réservée à : {audienceLabel(post.audience, 'fr')}. Le message ne contient que le lien : les autres personnes verront « publication introuvable ».</div>}
+          {restricted && <div className="rounded-lg px-3 py-2 text-xs bg-sky-500/10 text-sky-600" data-share-restricted>Cette publication est réservée à : {audienceLabel(post.audience, 'fr', post.audience_users)}. Le message ne contient que le lien : les autres personnes verront « publication introuvable ».</div>}
           <div className={`whitespace-pre-line break-words text-xs rounded-lg p-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`} data-share-preview><LinkedText text={text} /></div>
           <div className="flex flex-col">
             <button type="button" onClick={() => void copy()} className={btn} data-share-copy><Copy className="w-4 h-4" />Copier le lien</button>

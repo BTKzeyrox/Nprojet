@@ -280,6 +280,24 @@ const cleanAudience = (v: unknown): string[] | undefined => {
   const out = NEWS_AUDIENCE_ROLES.filter((r) => v.includes(r));
   return out.length === 0 || out.length === NEWS_AUDIENCE_ROLES.length ? undefined : out;
 };
+const NEWS_AUDIENCE_USERS_MAX = 200;
+const cleanAudienceUsers = (v: unknown): string[] => {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const x of v) { const id = typeof x === "string" ? x.trim() : ""; if (id && id.length <= 80 && !out.includes(id)) out.push(id); if (out.length >= NEWS_AUDIENCE_USERS_MAX) break; }
+  return out;
+};
+const newsAudience = (post: any): { roles: string[]; users: string[]; open: boolean } => {
+  const raw = post && Array.isArray(post.audience) ? NEWS_AUDIENCE_ROLES.filter((r) => post.audience.includes(r)) : [];
+  const users = cleanAudienceUsers(post?.audience_users);
+  const open = raw.length === NEWS_AUDIENCE_ROLES.length || (raw.length === 0 && users.length === 0);
+  return { roles: open ? [] : raw, users: open ? [] : users, open };
+};
+const pickAudience = (roles: unknown, users: unknown): any => {
+  const a = newsAudience({ audience: roles, audience_users: users });
+  if (a.open) return {};
+  return { ...(a.roles.length ? { audience: a.roles } : {}), ...(a.users.length ? { audience_users: a.users } : {}) };
+};
 const publishModeFor = (role: unknown, policy: unknown): string => {
   if (role === "admin") return "direct";
   if (role !== "employee" && role !== "team_lead" && role !== "accountant") return "off";
@@ -290,8 +308,9 @@ const canSeeNews = (post: any, me: any): boolean => {
   if (me.role === "admin") return true;
   if (post.author_id && post.author_id === me.id) return true;
   if (post.status !== undefined && post.status !== "published") return false;
-  const aud = cleanAudience(post.audience);
-  return !aud || (me.role === "employee" || me.role === "team_lead" || me.role === "accountant" ? aud.includes(me.role) : false);
+  const a = newsAudience(post);
+  if (a.open) return true;
+  return (!!me.id && a.users.includes(me.id)) || ((me.role === "employee" || me.role === "team_lead" || me.role === "accountant") && a.roles.includes(me.role));
 };
 const canEditNews = (post: any, me: any, policy: unknown): boolean => {
   if (!post || !me) return false;
@@ -4145,7 +4164,7 @@ async function sync(req: any, res: any, me: any) {
           author_role: existing?.author_role || 'admin',
           title: String(rec.title || '').slice(0, 120), text: String(rec.text || '').slice(0, NEWS_MAX_TEXT),
           created_at: existing?.created_at || rec.created_at || now, pinned: !!rec.pinned,
-          ...(cleanAudience(rec.audience === undefined ? existing?.audience : rec.audience) ? { audience: cleanAudience(rec.audience === undefined ? existing?.audience : rec.audience) } : {}), // ancien site qui n'envoie pas le public : on garde l'existant
+          ...pickAudience(rec.audience === undefined && rec.audience_users === undefined ? existing?.audience : rec.audience, rec.audience === undefined && rec.audience_users === undefined ? existing?.audience_users : rec.audience_users), // ancien site qui n'envoie pas le public : on garde l'existant
           ...(existing && (String(rec.text || '').slice(0, NEWS_MAX_TEXT) !== String(existing.text || '') || String(rec.title || '').slice(0, 120) !== String(existing.title || '')) && (existing.status || 'published') === 'published' ? { edited_at: now } : (existing?.edited_at ? { edited_at: existing.edited_at } : {})),
           status: existing?.status || 'published',
           files: existing ? (Array.isArray(existing.files) ? existing.files : []) : cleanFiles(rec.files, me.id),
@@ -5716,11 +5735,11 @@ async function newsSubmit(req: any, res: any, me: any) {
   }
   const now = new Date().toISOString();
   const id = `news-${Date.now()}-${randomBytes(3).toString('hex')}`;
-  const aud = cleanAudience(b.audience);
+  const aud = pickAudience(b.audience, b.audience_users); // audience: pickAudience( rôles entiers + personnes choisies, nettoyés avant d'être gardés
   const d = {
     id, author_id: me.id, author_name: String(me.name || '').slice(0, 80), author_role: me.role === 'employee' ? 'employee' : me.role,
     title: String(b.title || '').trim().slice(0, 120), text, created_at: now, submitted_at: now, pinned: false, status: mode === 'direct' ? 'published' : 'pending',
-    ...(aud ? { audience: aud } : {}),
+    ...aud,
     files, loves: [], comments: [], shares: 0,
   };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
@@ -5753,9 +5772,10 @@ async function newsEdit(req: any, res: any, me: any) {
   }
   if (!text && !files.length) return res.status(400).json({ error: 'Écris un texte ou garde un fichier.' });
   const now = new Date().toISOString();
-  const aud = b.audience === undefined ? cleanAudience(row.data.audience) : cleanAudience(b.audience);
-  const { audience: _old, ...rest } = row.data;
-  const d: any = { ...rest, title: String(b.title ?? row.data.title ?? '').trim().slice(0, 120), text, files, edited_at: now, ...(aud ? { audience: aud } : {}) };
+  const keepAud = b.audience === undefined && b.audience_users === undefined;
+  const aud = keepAud ? pickAudience(row.data.audience, row.data.audience_users) : pickAudience(b.audience, b.audience_users);
+  const { audience: _old, audience_users: _oldU, ...rest } = row.data;
+  const d: any = { ...rest, title: String(b.title ?? row.data.title ?? '').trim().slice(0, 120), text, files, edited_at: now, ...aud };
   await sb.from(T.news).upsert({ id, data: d, updated_at: now });
   const kept = new Set(files.map((f: any) => String(f?.url)));
   const gone = oldFiles.filter((f: any) => !kept.has(String(f?.url)));

@@ -3,7 +3,7 @@
 // Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
 import { remClean, remSnoozeUntil } from '../utils/reminderRules';
 import { pollClean, pollCounts, pollApplyVote, pollPicks, pollMulti } from '../utils/pollRules';
-import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
+import { canEditNews, canSeeNews, pickAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
 import type { Role as OfflineRole } from '../utils/offline';
@@ -1349,7 +1349,7 @@ export class AppStore {
   public getNewsPolicy(): NewsPolicy { return cleanNewsPolicy(this.getSettings().news_publish); }
 
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' } }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; audience_users?: string[]; poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' } }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
@@ -1360,7 +1360,7 @@ export class AppStore {
     const rec: NewsPost = {
       id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
       text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
-      loves: [], comments: [], shares: 0, ...(cleanAudience(p.audience) ? { audience: cleanAudience(p.audience) } : {}),
+      loves: [], comments: [], shares: 0, ...pickAudience(p.audience, p.audience_users),
       ...(poll ? { poll: { ...poll, counts: pollCounts(poll) } } : {}),
     };
     this.news = [rec, ...this.news].sort(SORTERS.news!);
@@ -1369,12 +1369,12 @@ export class AppStore {
   }
 
   // L'employé propose une publication : le serveur la garde « en attente » jusqu'à la décision du responsable
-  public submitNews(p: { title: string; text: string; files?: NewsAttachment[]; audience?: NewsRole[] }) {
-    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [], audience: p.audience || [] });
+  public submitNews(p: { title: string; text: string; files?: NewsAttachment[]; audience?: NewsRole[]; audience_users?: string[] }) {
+    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [], audience: p.audience || [], audience_users: p.audience_users || [] });
   }
 
   // Modifier une publication déjà publiée (texte, titre, public, fichiers) : le responsable ou son auteur si le responsable l'a autorisé. Tout passe par le serveur, qui vérifie le droit et supprime les fichiers retirés.
-  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[]; files?: NewsAttachment[] }): Promise<{ success: boolean; error?: string }> {
+  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[]; audience_users?: string[]; files?: NewsAttachment[] }): Promise<{ success: boolean; error?: string }> {
     const me = this.currentUser;
     const n = this.news.find(x => x.id === id);
     if (!me || !n) return { success: false, error: 'Publication introuvable.' };
@@ -1382,7 +1382,7 @@ export class AppStore {
     const text = p.text.trim().slice(0, 2000), title = p.title.trim().slice(0, 120);
     const files = p.files ?? (n.files || []);
     if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou garde un fichier.' };
-    return this.newsCall('news-edit', { id, title, text, audience: p.audience || [], files });
+    return this.newsCall('news-edit', { id, title, text, audience: p.audience || [], audience_users: p.audience_users || [], files });
   }
 
   // Supprimer une publication déjà publiée : le responsable (synchro habituelle) ou son auteur si le responsable l'a autorisé (route du serveur)
@@ -1661,10 +1661,10 @@ export class AppStore {
         if (!me) return fail('Connexion perdue.');
         const mode = publishModeFor(me.role, this.getSettings().news_publish);
         if (mode === 'off') return fail('Le responsable n’a pas autorisé ton rôle à publier.');
-        const aud = cleanAudience(body.audience);
+        const aud = pickAudience(body.audience, body.audience_users);
         const n: NewsPost = {
           id: `demo_n${Date.now()}`, author_id: me.id, author_name: me.name, author_role: me.role, title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 4000),
-          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: mode === 'direct' ? 'published' : 'pending', ...(aud ? { audience: aud } : {}),
+          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: mode === 'direct' ? 'published' : 'pending', ...aud,
         };
         this.news = [n, ...this.news];
         return keep(n);
@@ -1677,10 +1677,10 @@ export class AppStore {
       case 'news-edit': {
         const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
         if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas modifier cette publication.');
-        const aud = cleanAudience(body.audience);
-        const { audience: _old, ...rest } = n;
+        const aud = pickAudience(body.audience, body.audience_users);
+        const { audience: _old, audience_users: _oldU, ...rest } = n;
         Object.assign(n, rest, { title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 2000), edited_at: nowIso, ...(Array.isArray(body.files) ? { files: body.files } : {}) });
-        if (aud) n.audience = aud; else delete n.audience;
+        delete n.audience; delete n.audience_users; Object.assign(n, aud);
         return keep(n);
       }
       case 'news-delete': {

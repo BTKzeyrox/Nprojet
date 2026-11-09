@@ -1,6 +1,6 @@
 // Lien direct vers une publication des Actualités, et lecture de ces liens dans un message (règles pures, sans écran, sans réseau ; contrôlé par scripts/check-news-link.ts)
 import { cleanDeepLink, deepLinkUrl, parseDeepLinkUrl, type DeepLink } from './deepLink';
-import { audienceLabel, cleanAudience } from './newsAccess';
+import { audienceLabel, isRestricted } from './newsAccess';
 
 export const NEWS_NAV_PREFIX = 'news:';
 /** Repère d'une publication dans la page (attribut data-nav). */
@@ -15,9 +15,9 @@ export function newsLink(origin: string, postId: string): string {
 }
 
 /** Texte du message de partage. Une publication réservée à certains rôles ne montre NI titre NI extrait : seulement le lien (la personne hors public verra « publication introuvable »). */
-export function newsShareText(post: { id: string; title?: string; text?: string; audience?: unknown }, origin: string, lang: 'fr' | 'en' = 'fr'): string {
+export function newsShareText(post: { id: string; title?: string; text?: string; audience?: unknown; audience_users?: unknown }, origin: string, lang: 'fr' | 'en' = 'fr'): string {
   const url = newsLink(origin, post.id);
-  if (cleanAudience(post.audience)) return `${lang === 'en' ? 'Post' : 'Publication'} (${audienceLabel(post.audience, lang)}) : ${url}`;
+  if (isRestricted(post)) return `${lang === 'en' ? 'Post' : 'Publication'} (${audienceLabel(post.audience, lang, post.audience_users)}) : ${url}`;
   const text = String(post.text || '').trim();
   const body = `${post.title ? `${post.title} — ` : ''}${text.slice(0, 140)}${text.length > 140 ? '…' : ''}`.trim();
   return body ? `${body}\n${url}` : url;

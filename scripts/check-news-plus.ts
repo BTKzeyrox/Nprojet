@@ -1,0 +1,26 @@
+// Actualités : bouton « + » (Photo / fichier, Sondage, Choix de date, « J'ai lu ») et public par personne (étape A1 + A2, BTK 2026-11-09).
+import { readFileSync } from 'node:fs';
+import { newExtra, extraToPoll, extraMax } from '../src/components/ComposerExtras';
+import { AUDIENCE_USERS_MAX, canSeeNews, newsAudience, pickAudience, isRestricted } from '../src/utils/newsAccess';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const x = newExtra('poll'); x.question = 'Faut-il ouvrir samedi ?'; x.options = ['Oui', 'Non', '', 'Oui'];
+const r1 = extraToPoll(x, '') as any;
+ok(r1.poll && r1.poll.question === 'Faut-il ouvrir samedi ?' && r1.poll.options.join() === 'Oui,Non' && r1.poll.kind === undefined, 'sondage : vides et doublons retirés, type simple');
+const d = newExtra('date'); d.question = 'Réunion ?'; d.options = ['lundi 10', 'mardi 11'];
+ok((extraToPoll(d, '') as any).poll.kind === 'date' && extraMax('date') === 10 && extraMax('poll') === 6 && newExtra('poll').options.length === 2 && newExtra('ack').options.length === 0, 'choix de date : type « date », 10 dates au plus ; départ à 2 lignes');
+const bad1 = newExtra('poll'); bad1.question = 'Q ?'; bad1.options = ['seul', ''];
+ok('error' in (extraToPoll(bad1, '') as any) && /2 à 6/.test((extraToPoll(bad1, '') as any).error) && 'error' in (extraToPoll(newExtra('date'), '') as any), 'moins de 2 choix ou question vide : on dit ce qui manque, rien n\'est publié');
+ok('error' in (extraToPoll(newExtra('ack'), '  ') as any) && (extraToPoll(newExtra('ack'), 'Nouvelle règle\nsuite') as any).poll.question === 'Nouvelle règle' && (extraToPoll(newExtra('ack'), 'x') as any).poll.kind === 'ack', '« J\'ai lu » : le texte est obligatoire, la 1re ligne sert de question');
+const post = (extra: Record<string, unknown>) => ({ author_id: 'adm', status: 'published', ...extra });
+ok(canSeeNews(post({ audience_users: ['o1'] }), { id: 'o1', role: 'employee' }) && !canSeeNews(post({ audience_users: ['o1'] }), { id: 'o2', role: 'employee' }), 'public par personne : seulement la personne choisie');
+ok(JSON.stringify(pickAudience(['employee'], ['t1'])) === '{"audience":["employee"],"audience_users":["t1"]}' && isRestricted({ audience_users: ['t1'] }) && !isRestricted({}) && AUDIENCE_USERS_MAX === 200 && newsAudience({ audience: ['employee', 'team_lead', 'accountant'], audience_users: ['x'] }).open, 'rôle entier + personne ; « tous » reste tous');
+const feed = readFileSync('src/views/FeedView.tsx', 'utf8'), plus = readFileSync('src/components/ComposerExtras.tsx', 'utf8'), store = readFileSync('src/db/store.ts', 'utf8'), api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+ok(/<PlusMenu isAdmin=\{isAdmin\}/.test(feed) && !/Photo \/ fichier'}\s*<\/button>/.test(feed.slice(feed.indexOf('const Composer'))) && /data-plus-file/.test(plus) && /Photo \/ fichier/.test(plus), 'le bouton « Photo / fichier » devient « + » ; la photo / le fichier restent dans le menu');
+ok(/\{isAdmin && <>[\s\S]*data-plus-poll[\s\S]*data-plus-date[\s\S]*data-plus-ack/.test(plus), 'sondage, choix de date, « J\'ai lu » : réservés au responsable (le serveur ne garde un sondage que de lui)');
+ok(/aria-haspopup="menu"/.test(plus) && /min-h-\[44px\]/.test(plus) && /key === 'Escape'/.test(plus) && /mousedown/.test(plus) && /touchstart/.test(plus), 'menu : 44 px, fermé par Échap ou un clic dehors (souris et doigt)');
+ok(/extra && isAdmin && <ExtraForm/.test(feed) && /extraToPoll\(extra, text\)/.test(feed) && /\.\.\.\(pr && 'poll' in pr \? \{ poll: pr\.poll \} : \{\}\)/.test(feed) && /setExtra\(null\)/.test(feed), 'publication : le sondage part avec la publication, formulaire vidé ensuite');
+ok(/audience_users: aud\.users/.test(feed) && /data-audience-user/.test(feed) && /data-audience-people-toggle/.test(feed) && /tout le groupe est choisi/.test(feed), 'sélecteur de public : rôles entiers ET personnes (« tout le groupe est choisi » grise les noms du groupe)');
+ok(/audience_users: p\.audience_users \|\| \[\]/.test(store) && /pickAudience\(body\.audience, body\.audience_users\)/.test(store), 'site : le public par personne est envoyé (propose, modifie) et gardé en démo');
+ok(/pickAudience\(b\.audience, b\.audience_users\)/.test(api) && /newsAudience\(post\)/.test(api), 'serveur : même public, gardé à la création et à la modification');
+console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
+process.exit(bad ? 1 : 0);

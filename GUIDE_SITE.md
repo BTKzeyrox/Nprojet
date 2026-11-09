@@ -44,7 +44,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
 ### Actualités  `feed`
 - **Qui** : responsable et opérateur
 - **À quoi ça sert** : Les annonces de l'équipe : ce qu'il faut savoir avant de travailler.
-- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Écrire une publication si ton rôle y est autorisé, puis choisir « Visible par ». 3. Le menu ⋮ : Modifier (texte, photos, public), Supprimer, Épingler.
+- **Comment l'utiliser** : 1. Lire les publications, les plus récentes en premier. 2. Écrire une publication si ton rôle l'autorise, puis « Visible par » : Tous, des rôles, ou des personnes choisies. 3. Menu ⋮ : Modifier, Supprimer, Épingler. « + Ajouter » : fichier, sondage, date, « J'ai lu ».
 - **Règles** :
   - Réglage par rôle (Réglages > Équipe) : ne publie pas, validation par l'admin, ou publie directement. Par défaut : validation.
   - « Visible par » : le serveur ne donne la publication qu'aux rôles choisis ; l'auteur et l'admin la voient toujours.
@@ -909,6 +909,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `ClientBadges.tsx` | Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement. |
 | `ClientPicker.tsx` | Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client. |
 | `CompanyConditions.tsx` | Page des Conditions de l'entreprise : identité, taxes, facturation, paie, congés, missions, pages du menu à cacher, règlement et seuils de surveillance. |
+| `ComposerExtras.tsx` | Bouton « + » du formulaire des Actualités (BTK 2026-11-09) : Photo / fichier, Sondage, Choix de date, « J'ai lu ». |
 | `ConfirmModal.tsx` | Fenêtre de confirmation (Annuler / Confirmer, en rouge si danger), avec le hook useConfirm et la fonction globale askConfirm. |
 | `ConnectionBanner.tsx` | État de la connexion : pastille du header (hors ligne, envoi, à revoir, copie verrouillée, tout est envoyé) et relance automatique des envois. |
 | `CustomWorkTypes.tsx` | « Créer mon type de travail » (module 26, M26.6b) : dans Réglages > Conditions > Types de travail et paie. Enregistre tout de suite (pas besoin du bouton Enregistrer des Conditions). |
@@ -1258,6 +1259,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:assistant-memory` | Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ». |
 | `npm run check:assistant-actions` | Assistant : créer un rappel / événement / tâche / liste depuis une phrase (étape C1) : aperçu d'abord, confirmation ensuite, dates comprises, rien d'inventé. |
 | `npm run check:assistant-publish` | Assistant : publier une annonce dans les Actualités depuis une phrase (étape C2) : aperçu d'abord, confirmation ensuite. |
+| `npm run check:news-plus` | Actualités : bouton « + » (Photo / fichier, Sondage, Choix de date, « J'ai lu ») et public par personne (étape A1 + A2, BTK 2026-11-09). |
 | `npm run check:poll-kinds` | Choix de date (plusieurs dates par personne) et « J'ai lu » (confirmation de lecture) : étape C3, points 5 et 6. Même moteur que le sondage. |
 | `npm run check:assistant-mission` | Assistant : créer une mission depuis une phrase (étape C3, point 1) : aperçu d'abord, confirmation ensuite, rien d'inventé. |
 | `npm run check:assistant-extras` | Assistant : résumé de la journée / semaine, fichier à télécharger, modèles de messages (étape C3, points 3, 2 et 4). Lecture seule. |

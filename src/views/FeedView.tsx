@@ -12,6 +12,7 @@ import { Avatar } from '../components/Avatar';
 import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
+import { PlusMenu, ExtraForm, newExtra, extraToPoll, type Extra } from '../components/ComposerExtras';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
 import { NewsShareSheet } from '../components/NewsShareSheet';
@@ -20,7 +21,7 @@ import { newsIdFromNav, newsNavId } from '../utils/newsLink';
 import { playUiSound } from '../utils/notifSound';
 import PollBlock from '../components/PollBlock';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
-import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, cleanAudience, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
+import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, newsAudience, isRestricted, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 import { markNewsSeen } from '../utils/notifications';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
@@ -70,22 +71,49 @@ const timeAgo = (iso: string) => {
 };
 
 // Commentaires et réponses : TOUT est masqué par défaut (BTK 2026-11-05). Seule l'icône « Commenter » les ouvre et les ferme (BTK 2026-11-08 : plus de bouton « Afficher N commentaires ») ; les réponses restent repliées dans chaque commentaire.
-// « Visible par » : Tous (par défaut) ou un mélange de rôles. Le responsable et l'auteur voient toujours la publication.
-const AudiencePicker: React.FC<{ value: NewsRole[]; onChange: (v: NewsRole[]) => void; disabled?: boolean; light: boolean }> = ({ value, onChange, disabled, light }) => {
-  const all = value.length === 0;
+// « Visible par » : Tous (par défaut), des rôles entiers, et/ou des personnes choisies une à une (BTK 2026-11-09). Le responsable et l'auteur voient toujours la publication.
+interface Aud { roles: NewsRole[]; users: string[] }
+const audOf = (post: { audience?: unknown; audience_users?: unknown }): Aud => { const a = newsAudience(post); return { roles: a.roles, users: a.users }; };
+const AudiencePicker: React.FC<{ value: Aud; onChange: (v: Aud) => void; disabled?: boolean; light: boolean }> = ({ value, onChange, disabled, light }) => {
+  const [open, setOpen] = useState(value.users.length > 0);
+  const all = value.roles.length === 0 && value.users.length === 0;
   const chip = (on: boolean) => `inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border text-xs font-semibold cursor-pointer disabled:opacity-50 ${on ? 'bg-emerald-600 text-white border-emerald-600' : light ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50' : 'bg-white/5 text-slate-200 border-white/20 hover:bg-white/10'}`;
-  const toggle = (r: NewsRole) => {
-    const next = value.includes(r) ? value.filter(x => x !== r) : [...value, r];
-    onChange(next.length === AUDIENCE_ROLES.length ? [] : next); // les trois rôles = tous
+  const people = db.getUsers().filter(u => u.status === 'active' && (u.role === 'employee' || u.role === 'team_lead' || u.role === 'accountant')).sort((x, y) => x.name.localeCompare(y.name));
+  const nameOf = (id: string) => people.find(u => u.id === id)?.name;
+  const norm = (roles: NewsRole[], users: string[]): Aud => roles.length === AUDIENCE_ROLES.length ? { roles: [], users: [] } : { roles, users }; // les trois rôles = tous
+  const toggleRole = (r: NewsRole) => {
+    const roles = value.roles.includes(r) ? value.roles.filter(x => x !== r) : [...value.roles, r];
+    const users = value.users.filter(id => !roles.includes(people.find(u => u.id === id)?.role as NewsRole)); // une personne déjà couverte par son rôle n'est plus listée à part
+    onChange(norm(roles, users));
   };
+  const toggleUser = (id: string) => onChange({ roles: value.roles, users: value.users.includes(id) ? value.users.filter(x => x !== id) : [...value.users, id] });
+  const textColor = light ? 'text-slate-500' : 'text-slate-400';
   return (
     <div data-audience-picker className="space-y-1.5">
       <div className={`flex items-center gap-1.5 text-xs font-semibold ${light ? 'text-slate-600' : 'text-slate-300'}`}><Eye className="w-3.5 h-3.5" />Visible par</div>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Visible par">
-        <button type="button" disabled={disabled} aria-pressed={all} onClick={() => onChange([])} className={chip(all)} data-audience="all">Tous</button>
-        {AUDIENCE_ROLES.map(r => <button key={r} type="button" disabled={disabled} aria-pressed={value.includes(r)} onClick={() => toggle(r)} className={chip(value.includes(r))} data-audience={r}>{roleLabel(r, 'fr')}</button>)}
+        <button type="button" disabled={disabled} aria-pressed={all} onClick={() => onChange({ roles: [], users: [] })} className={chip(all)} data-audience="all">Tous</button>
+        {AUDIENCE_ROLES.map(r => <button key={r} type="button" disabled={disabled} aria-pressed={value.roles.includes(r)} onClick={() => toggleRole(r)} className={chip(value.roles.includes(r))} data-audience={r}>{roleLabel(r, 'fr')}</button>)}
+        {people.length > 0 && <button type="button" disabled={disabled} aria-expanded={open} onClick={() => setOpen(o => !o)} className={chip(value.users.length > 0)} data-audience-people-toggle>{value.users.length ? `${value.users.length} personne${value.users.length > 1 ? 's' : ''} choisie${value.users.length > 1 ? 's' : ''}` : 'Choisir des personnes'}</button>}
       </div>
-      <div className={`text-[11px] ${light ? 'text-slate-500' : 'text-slate-400'}`}>{all ? 'Toute l’équipe la voit.' : `Seulement : ${audienceLabel(value, 'fr')}. Toi et le responsable la voyez toujours.`}</div>
+      {open && people.length > 0 && (
+        <div data-audience-people className={`rounded-lg border p-2 space-y-2 max-h-56 overflow-y-auto ${light ? 'border-slate-200 bg-slate-50' : 'border-white/15 bg-white/5'}`}>
+          {AUDIENCE_ROLES.map(r => {
+            const list = people.filter(u => u.role === r);
+            if (!list.length) return null;
+            const whole = value.roles.includes(r);
+            return (
+              <div key={r}>
+                <div className={`text-[11px] font-semibold mb-1 ${textColor}`}>{roleLabel(r, 'fr')}{whole ? ' (tout le groupe est choisi)' : ''}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {list.map(u => { const on = whole || value.users.includes(u.id); return <button key={u.id} type="button" disabled={disabled || whole} aria-pressed={on} onClick={() => toggleUser(u.id)} className={chip(on)} data-audience-user={u.id}>{u.name}</button>; })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className={`text-[11px] ${textColor}`}>{all ? 'Toute l’équipe la voit.' : `Seulement : ${audienceLabel(value.roles, 'fr', value.users, nameOf)}. Toi et le responsable la voyez toujours.`}</div>
     </div>
   );
 };
@@ -94,7 +122,7 @@ const AudiencePicker: React.FC<{ value: NewsRole[]; onChange: (v: NewsRole[]) =>
 const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void }> = ({ post, light, onDone }) => {
   const [title, setTitle] = useState(post.title || '');
   const [text, setText] = useState(post.text || '');
-  const [aud, setAud] = useState<NewsRole[]>(cleanAudience(post.audience) || []);
+  const [aud, setAud] = useState<Aud>(audOf(post));
   const [kept, setKept] = useState<NewsAttachment[]>(post.files || []); // fichiers déjà joints (la croix les retire)
   const [items, setItems] = useState<DraftAttachment[]>([]); // nouveaux fichiers à ajouter
   const [preparing, setPreparing] = useState(false);
@@ -120,7 +148,7 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
     setBusy(true); setErr('');
     const up = await uploadAttachments(items, () => undefined);
     if (!up.ok) { setErr(up.error); setBusy(false); return; }
-    const r = await db.editNews(post.id, { title, text, audience: aud, files: [...kept, ...up.files] });
+    const r = await db.editNews(post.id, { title, text, audience: aud.roles, audience_users: aud.users, files: [...kept, ...up.files] });
     setBusy(false);
     if (!r.success) { setErr(r.error || 'Impossible de modifier.'); return; }
     onDone();
@@ -213,7 +241,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const mine = post.author_id === me.id;
   const canEdit = published && canEditNews(post, me, db.getNewsPolicy());
   const personAuthor = !!post.author_role && post.author_role !== 'admin'; // opérateur, chef d'équipe ou comptable : photo et nom de la personne
-  const restricted = !!cleanAudience(post.audience);
+  const restricted = isRestricted(post);
   const files = post.files || [];
   const images = files.filter(f => f.kind === 'image');
   const others = files.filter(f => f.kind !== 'image');
@@ -324,7 +352,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           {personAuthor
             ? <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Opérateur'}</button>
             : <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Responsable'}</button>}
-          <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}{post.edited_at ? ' · modifiée' : ''}{restricted && (isAdmin || mine) ? <span data-audience-badge className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold"><Eye className="w-3 h-3" />{audienceLabel(post.audience, 'fr')}</span> : null}</div>
+          <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}{post.edited_at ? ' · modifiée' : ''}{restricted && (isAdmin || mine) ? <span data-audience-badge className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold"><Eye className="w-3 h-3" />{audienceLabel(post.audience, 'fr', post.audience_users, id => db.getUsers().find(u => u.id === id)?.name)}</span> : null}</div>
         </div>
         {post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
         <PostMenu light={light} busy={busy} items={[
@@ -485,7 +513,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
 // Zone de publication : le responsable publie tout de suite, l'opérateur envoie pour validation
 const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: boolean }> = ({ isAdmin, mode, light }) => {
   const direct = mode === 'direct'; // le responsable, ou un rôle que le responsable a autorisé à publier sans validation
-  const [aud, setAud] = useState<NewsRole[]>([]); // vide = visible par tous
+  const [aud, setAud] = useState<Aud>({ roles: [], users: [] }); // rien de choisi = visible par tous
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [pinned, setPinned] = useState(false);
@@ -496,6 +524,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
   const [preparing, setPreparing] = useState(false);
   const [progress, setProgress] = useState<{ d: number; t: number } | null>(null);
   const [open, setOpen] = useState(false); // formulaire réduit tant que personne ne veut publier
+  const [extra, setExtra] = useState<Extra | null>(null); // sondage / choix de date / « J'ai lu » (bouton +), responsable seulement
   const fileRef = useRef<HTMLInputElement>(null);
 
   const field = `w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`;
@@ -517,17 +546,19 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
   };
 
   const submit = async () => {
-    if (busy || preparing || (!text.trim() && items.length === 0)) return;
+    if (busy || preparing || (!text.trim() && items.length === 0 && !(extra && extra.kind !== 'ack' && extra.question.trim()))) return;
+    const pr = isAdmin && extra ? extraToPoll(extra, text) : null;
+    if (pr && 'error' in pr) { setErr(pr.error); return; }
     setBusy(true); setErr(''); setInfo('');
     const up = await uploadAttachments(items, (d, t) => setProgress({ d, t }));
     setProgress(null);
     if (!up.ok) { setErr(up.error); setBusy(false); return; }
     const r = isAdmin
-      ? db.publishNews({ title, text, pinned, files: up.files, audience: aud })
-      : await db.submitNews({ title, text, files: up.files, audience: aud });
+      ? db.publishNews({ title, text: text.trim() || (pr && 'poll' in pr ? pr.poll.question : ''), pinned, files: up.files, audience: aud.roles, audience_users: aud.users, ...(pr && 'poll' in pr ? { poll: pr.poll } : {}) })
+      : await db.submitNews({ title, text, files: up.files, audience: aud.roles, audience_users: aud.users });
     if (!r.success) { setErr(r.error || 'Impossible de publier.'); setBusy(false); return; }
     playUiSound('published');
-    setTitle(''); setText(''); setPinned(false); setItems([]); setAud([]);
+    setTitle(''); setText(''); setPinned(false); setItems([]); setAud({ roles: [], users: [] }); setExtra(null);
     if (!direct) setInfo('Envoyée au responsable. Elle sera visible par l’équipe après validation.');
     else if (!isAdmin) setInfo('Publiée.');
     setBusy(false);
@@ -557,6 +588,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
       {!direct && <div className={`text-xs ${muted}`}>Propose une publication à l’équipe. Le responsable doit la valider avant qu’elle soit visible.</div>}
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
       <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} placeholder={direct ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
+      {extra && isAdmin && <ExtraForm value={extra} onChange={setExtra} onRemove={() => setExtra(null)} disabled={busy} light={light} />}
       <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
 
       {items.length > 0 && (
@@ -582,17 +614,14 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <input ref={fileRef} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void onPick(e)} />
-          <button type="button" disabled={busy || preparing} onClick={() => fileRef.current?.click()} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`}>
-            {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-            {preparing ? 'Préparation…' : 'Photo / fichier'}
-          </button>
+          <PlusMenu isAdmin={isAdmin} disabled={busy} preparing={preparing} light={light} hasExtra={!!extra} onFile={() => fileRef.current?.click()} onExtra={k => { setExtra(newExtra(k)); setErr(''); }} />
           {isAdmin && (
             <label className={`flex items-center gap-2 text-sm ${light ? 'text-slate-700' : 'text-slate-300'}`}>
               <input type="checkbox" checked={pinned} disabled={busy} onChange={e => setPinned(e.target.checked)} />Épingler en haut
             </label>
           )}
         </div>
-        <button type="button" onClick={() => void submit()} disabled={busy || preparing || (!text.trim() && items.length === 0)} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+        <button type="button" onClick={() => void submit()} disabled={busy || preparing || (!text.trim() && items.length === 0 && !(extra && extra.kind !== 'ack' && extra.question.trim()))} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">
           {busy && <Loader2 className="w-4 h-4 animate-spin" />}
           {busy ? (progress ? `Envoi ${progress.d}/${progress.t}…` : 'Envoi…') : direct ? 'Publier' : 'Envoyer pour validation'}
         </button>
