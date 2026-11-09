@@ -12,6 +12,9 @@ import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { db } from '../db/store';
 import { parsePollIntent, pollPreview, pollIncomplete, pollDone, pollCanceled, decodePoll, POLL_NO, parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
+import { parseMissionIntent, missionPreview, missionIncomplete, missionDone, missionCanceled, decodeMis, MIS_NO } from '../utils/assistantMission';
+import { missionRequiresClient } from '../utils/clients';
+import { readCompany } from '../utils/companyRules';
 import { parseExtraIntent, summaryReply, fileReply, fileDone, buildFile, templatesReply, isFileKind, TPL_PREFIX, FILE_PREFIX } from '../utils/assistantExtras';
 import { getRemItems } from '../utils/remRegistry';
 import { remSave as saveReminder } from '../utils/remindersState'; // met aussi à jour la liste partagée (Calendrier, « Mes rappels », cloche)
@@ -87,10 +90,11 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
       const ann = mi ? null : parseAnnounceIntent(q); // « publie : fermé lundi » : aperçu d'abord
       const poll = mi || ann ? null : parsePollIntent(q); // « sondage : question ? choix, choix »
-      const ext = mi || ann || poll ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
-      const act = mi || ann || poll || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
-      if (!mi && !ann && !poll && !ext && !act && reply.intent === 'unknown' && i) {
+      const mis = mi || ann || poll ? null : parseMissionIntent(q, Date.now(), db.getClients().map(c => ({ id: c.id, name: c.name })), missionRequiresClient(readCompany(db.getSettings().company))); // « mission : titre, pour Acme, demain, urgente » : aperçu d'abord
+      const ext = mi || ann || poll || mis ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
+      const act = mi || ann || poll || mis || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : mis ? (mis === 'incomplete' ? missionIncomplete() : missionPreview(mis)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      if (!mi && !ann && !poll && !mis && !ext && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
         const useAi = aiOptIn(userId);
@@ -136,6 +140,9 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       if (isFileKind(kind)) { try { const f = buildFile(kind, getRemItems(), db.getContracts(), Date.now()); name = f.name; const url = URL.createObjectURL(new Blob([f.content], { type: f.mime })); const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 4000); ok = true; } catch { ok = false; } }
       push([{ id: `b${Date.now()}`, who: 'bot', reply: fileDone(name, ok), at: Date.now() }]); return;
     }
+    if (g.view === MIS_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: missionCanceled(), at: Date.now() }]); return; }
+    const dm = decodeMis(g.view);
+    if (dm) { const r = db.addContract({ client_name: dm.title, initial_score: 0, objective: 0, client_id: dm.clientId || undefined, due_date: dm.date || undefined, due_time: dm.time || undefined, priority: dm.priority, requireClient: missionRequiresClient(readCompany(db.getSettings().company)) }); push([{ id: `b${Date.now()}`, who: 'bot', reply: missionDone(r.success, r.error), at: Date.now() }]); return; }
     if (g.view === ANN_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: announceCanceled(), at: Date.now() }]); return; }
     const dn = decodeAnn(g.view);
     if (dn) { const r = db.publishNews({ title: '', text: dn.text }); push([{ id: `b${Date.now()}`, who: 'bot', reply: announceDone(r.success, r.error), at: Date.now() }]); return; }
@@ -152,7 +159,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.storage) setStorageIntent(g.storage);
     if (g.filter) setValFilterIntent(g.filter as ValFilter);
     if (g.nav) setNavTarget(g.nav);
-    if (isKnownView(g.view) || g.view === 'feed') onNavigate?.(g.view);
+    if (isKnownView(g.view) || g.view === 'feed' || g.view === 'grid') onNavigate?.(g.view);
   };
   // Boutons du bas : les vrais chiffres du jour (un bouton sans rien à montrer se cache) ; recalculés après chaque message, pas à chaque lettre tapée
   const shortcuts = useMemo(() => { try { const si = getSnapshotInput(); return si ? shortcutList(si) : []; } catch { return []; } }, [msgs.length, busy]); // eslint-disable-line react-hooks/exhaustive-deps

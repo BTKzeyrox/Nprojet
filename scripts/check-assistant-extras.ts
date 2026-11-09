@@ -29,7 +29,7 @@ ok(isFileKind('csv') && !isFileKind('../x') && fileReply('csv').actions[0].go.vi
 const tl = templatesReply(null), t1 = templatesReply('payment_reminder');
 ok(tl.actions.length === 6 && tl.actions.every(a => a.go.view.startsWith(TPL_PREFIX)) && t1.actions[0].go.view === TPL_PREFIX + 'payment_reminder', 'modèles : 6 boutons ; un seul modèle = bouton direct');
 const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
-ok(/parseExtraIntent\(q\)/.test(chat) && /summaryReply\(getRemItems\(\), db\.getContracts\(\)/.test(chat) && /g\.view\.startsWith\(FILE_PREFIX\)/.test(chat) && /URL\.createObjectURL/.test(chat) && /g\.view\.startsWith\(TPL_PREFIX\)/.test(chat) && /!ext && !act/.test(chat), 'assistant : branché (résumé, fichier fabriqué sur l\'appareil, modèle ouvert dans l\'éditeur, ordre)');
+ok(/parseExtraIntent\(q\)/.test(chat) && /summaryReply\(getRemItems\(\), db\.getContracts\(\)/.test(chat) && /g\.view\.startsWith\(FILE_PREFIX\)/.test(chat) && /URL\.createObjectURL/.test(chat) && /g\.view\.startsWith\(TPL_PREFIX\)/.test(chat) && /!mis && !ext && !act/.test(chat), 'assistant : branché (résumé, fichier fabriqué sur l\'appareil, modèle ouvert dans l\'éditeur, ordre)');
 ok(!/fetch\(|XMLHttpRequest/.test(readFileSync('src/utils/assistantExtras.ts', 'utf8')), 'aucun envoi réseau dans ce module');
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);

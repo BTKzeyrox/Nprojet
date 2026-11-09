@@ -63,6 +63,6 @@ ok(encodeAct(a).length < 900, 'bouton Confirmer : petit');
 // branchement
 const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
 ok(/parseActionIntent\(q, Date\.now\(\)\)/.test(chat) && /actionPreview\(act\)/.test(chat) && /decodeAct\(g\.view\)/.test(chat) && /saveReminder\(buildItem/.test(chat) && /g\.view === ACT_NO/.test(chat), 'assistant : phrase → aperçu ; Confirmer → db.remSave ; Annuler → rien');
-ok(/parseMemoryIntent\(q\)[\s\S]{0,900}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'la mémoire passe avant les créations');
+ok(/parseMemoryIntent\(q\)[\s\S]{0,1800}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'la mémoire passe avant les créations');
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);
