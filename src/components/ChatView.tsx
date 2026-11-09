@@ -7,7 +7,7 @@ import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerK
 import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
-  Send, Paperclip, FileText, Users, MessageSquare, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
+  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Eye, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown,
 } from 'lucide-react';
 import { db } from '../db/store';
@@ -38,6 +38,7 @@ import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
+import { ChatPoll, PollComposer } from './ChatPoll';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
@@ -352,6 +353,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   };
 
   const lastSent = useRef<{ key: string; at: number }>({ key: '', at: 0 });
+  const [plusOpen, setPlusOpen] = useState(false);
+  useEffect(() => { if (!plusOpen) return; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setPlusOpen(false); }; window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f); }, [plusOpen]);
+  const [pollKind, setPollKind] = useState<'poll' | 'date' | 'ack' | null>(null);
+  const sendPoll = (poll: { question: string; options: string[]; kind: 'poll' | 'date' | 'ack' }) => {
+    if (current.readOnly) return;
+    playUiSound('send');
+    db.sendMessage({ senderId: currentUser.id, message: '', recipientId: current.id === 'all' ? 'all' : current.id, poll });
+    setPollKind(null);
+  };
   const send = (extra?: { url: string; name: string; kind: 'image' | 'file'; albumId?: string; noText?: boolean; noReply?: boolean }) => {
     if (current.readOnly) return;
     if (editingId) {
@@ -811,7 +821,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
                           )}
-                          {!isAlbum && msg.message && <span className="whitespace-pre-line"><LinkedText text={msg.message} onOpen={link => { if (deepLinkAllowed(currentUser.role, link.go)) applyDeepLink(link, v => onNavigate?.(v)); }} /></span>}
+                          {msg.poll && <ChatPoll msg={msg} meId={currentUser.id} isAdmin={currentUser.role === 'admin'} light={L} users={users} />}
+                          {!isAlbum && !msg.poll && msg.message && <span className="whitespace-pre-line"><LinkedText text={msg.message} onOpen={link => { if (deepLinkAllowed(currentUser.role, link.go)) applyDeepLink(link, v => onNavigate?.(v)); }} /></span>}
                         </>
                       )}
                     </div>
@@ -923,15 +934,19 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
-              <button
-                type="button"
-                disabled={busy || !!editingId}
-                onClick={() => fileRef.current?.click()}
-                className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`}
-                title="Joindre une photo ou un fichier (10 Mo max)"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
+              <div className="relative shrink-0">
+                <button type="button" data-chat-plus disabled={busy || !!editingId} aria-haspopup="menu" aria-expanded={plusOpen} onClick={() => setPlusOpen(o => !o)} className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`} title="Ajouter : fichier, sondage…" aria-label="Ajouter : fichier, sondage…"><Plus className="w-5 h-5" /></button>
+                {plusOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} aria-hidden />
+                    <div role="menu" data-chat-plus-menu className={`absolute bottom-12 left-0 z-50 w-60 rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
+                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye]] as const).map(([k, label, Icon]) => (
+                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <textarea
                 ref={composerRef}
                 rows={1}
@@ -963,6 +978,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </div>
         )}
       </div>
+
+      {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
       {/* Menu des options de la conversation */}
       {threadMenu && createPortal(

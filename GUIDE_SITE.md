@@ -903,6 +903,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
+| `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : affichage dans la bulle + fenêtre de création. |
 | `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
 | `ClientBadges.tsx` | Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement. |
 | `ClientPicker.tsx` | Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client. |
@@ -1080,6 +1081,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:offline-store` | Contrôle du mode hors ligne branché sur le VRAI magasin de données (module 13, M13.5), sans réseau réel. |
 | `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
+| `npm run check:chat-poll` | Messagerie : sondage, choix de date et « J'ai lu » dans les discussions et groupes (S1, 2026-11-09). Règles du stockage (vote, retrait, comptes sans noms) + câblage (menu « + », serveur). |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

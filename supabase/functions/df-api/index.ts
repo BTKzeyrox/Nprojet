@@ -3634,6 +3634,29 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       if (Object.keys(next).length) save2.reactions = next; else delete save2.reactions;
       return { ok: true, save: save2 };
     }
+    // Sondage de la discussion (messagerie S1) : tout participant vote (sa propre voix seulement) ; l'auteur ou le responsable clôt. La question et les choix ne changent jamais.
+    if (existing.poll && rec.poll && typeof rec.poll === 'object' && !existing.deleted_at && rec.message === existing.message && !!rec.pinned === !!existing.pinned) {
+      const to = existing.recipient_id || 'all';
+      let visible = admin || to === 'all' || existing.sender_id === me.id || to === me.id;
+      if (!visible && to.startsWith(GROUP_PREFIX)) { const g = await getGroup(to); visible = !!g && (g.members || []).includes(me.id); }
+      if (!visible) return { ok: false };
+      const cur: any = existing.poll;
+      const next: any = { ...cur, votes: { ...(cur.votes || {}) } };
+      const want = rec.poll.votes && typeof rec.poll.votes === 'object' ? rec.poll.votes[me.id] : undefined; // « ma » liste de choix ([] = je retire mon vote) ; absente = on n'y touche pas
+      if (want !== undefined) {
+        const picks = pollPicks(want), have = pollPicks(next.votes[me.id]);
+        if (picks.join('|') !== have.join('|')) {
+          if (cur.closed || picks.some((id: string) => !(cur.options || []).some((o: any) => o.id === id)) || (!pollMulti(cur) && picks.length > 1)) return { ok: false };
+          if (picks.length && !(me.id in next.votes) && Object.keys(next.votes).length >= POLL_MAX_VOTES) return { ok: false };
+          if (picks.length) next.votes[me.id] = pollMulti(cur) ? picks : picks[0]; else delete next.votes[me.id];
+        }
+      }
+      if (!!rec.poll.closed !== !!cur.closed) {
+        if (existing.sender_id !== me.id && !admin) return { ok: false };
+        next.closed = !!rec.poll.closed;
+      }
+      return { ok: true, save: { ...existing, poll: next } };
+    }
     // Modifier ou épingler : seulement l'auteur (même l'admin ne modifie jamais le message d'un autre)
     if (existing.sender_id !== me.id || existing.deleted_at) return { ok: false };
     if (typeof rec.message !== 'string' || rec.message.length > 4000) return { ok: false };
@@ -3664,6 +3687,11 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
   for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'reactions']) delete save[k];
+  if (rec.poll !== undefined) { // sondage : jamais de votes reçus d'un navigateur, la question et les choix sont nettoyés
+    const pc = pollClean(rec.poll);
+    if (!pc) return { ok: false };
+    save.poll = pc; save.message = `${pc.kind === 'date' ? '📅' : pc.kind === 'ack' ? '👁' : '📊'} ${pc.question}`;
+  }
   const rt = clipReply(rec.reply_to);
   if (rt) save.reply_to = rt; else delete save.reply_to;
   return { ok: true, save };
@@ -3803,6 +3831,7 @@ async function state(req: any, res: any, me: any) {
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'news' && !admin) recs = recs.map((r: any) => viewNews(r, me)); // sondage : comptes et son vote seulement
+    if (col === 'messages') recs = recs.map((r: any) => (r.poll && r.sender_id !== me.id ? { ...r, poll: pollView(r.poll, String(me.id), false) } : r)); // sondage d'une discussion : seul l'auteur voit les noms
     if (col === 'reviews' && me.role !== 'admin') recs = recs.map((r: any) => { const { improvements: _hidden, ...mine } = r; return mine; }); // jamais les « points à améliorer » côté salarié (D9)
     if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me, teamMates));
     if (col === 'contracts') recs = recs.map((c: any) => withoutClientPrice(c, me));

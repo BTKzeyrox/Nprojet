@@ -2,7 +2,7 @@
 // Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AiSettingsSection.tsx, AuditSection.tsx, BackupsSection.tsx, BadgeCongrats.tsx, 102 autres. Contrôlé par : npm run check:page et 40 autres commandes check.
 // Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
 import { remClean, remSnoozeUntil } from '../utils/reminderRules';
-import { pollClean, pollCounts, pollApplyVote } from '../utils/pollRules';
+import { pollClean, pollCounts, pollApplyVote, pollPicks, pollMulti } from '../utils/pollRules';
 import { canEditNews, canSeeNews, cleanAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
@@ -3193,9 +3193,12 @@ export class AppStore {
     attachmentKind?: 'image' | 'file';
     replyTo?: ChatMessage; // message cité
     albumId?: string; // photos envoyées ensemble
+    poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' }; // sondage (messagerie S1) : 2 à 6 choix, ou dates, ou « J'ai lu »
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
-    if (!sender || (!params.message.trim() && !params.attachmentUrl)) return { success: false };
+    const poll = params.poll ? pollClean(params.poll) : null;
+    if (params.poll && !poll) return { success: false };
+    if (!sender || (!params.message.trim() && !params.attachmentUrl && !poll)) return { success: false };
 
     const now = new Date();
     const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
@@ -3207,9 +3210,10 @@ export class AppStore {
       sender_name: sender.name,
       sender_role: sender.role,
       recipient_id: params.recipientId || 'all',
-      message: params.message.trim(),
+      message: poll ? `${poll.kind === 'date' ? '📅' : poll.kind === 'ack' ? '👁' : '📊'} ${poll.question}` : params.message.trim(),
       timestamp: timeStr,
       sent_ms: now.getTime(),
+      ...(poll ? { poll } : {}),
       ...(q && !q.deleted_at
         ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }
         : {}),
@@ -3238,6 +3242,37 @@ export class AppStore {
     if (!this.isOwnMessage(msg, userId)) return false;
     if (!msg.message && msg.attachment_url && msg.attachment_kind) return !!msg.message; // une photo sans texte : rien à modifier
     return !msg.sent_ms || Date.now() - msg.sent_ms <= AppStore.EDIT_WINDOW_MS;
+  }
+
+  /** Voter dans un sondage de la discussion (même règle que les Actualités : sondage simple = un autre choix remplace, le même retire ; dates et « J'ai lu » = on ajoute ou retire chaque choix). Le serveur cache les noms : un participant garde seulement les comptes et SON vote ; l'auteur garde tout. */
+  public voteMessage(id: string, userId: string, optionId: string): { success: boolean; error?: string } {
+    const msg = this.messages.find(m => m.id === id);
+    const poll = msg?.poll;
+    if (!msg || msg.deleted_at || !poll) return { success: false, error: 'Sondage introuvable.' };
+    const before = pollPicks(poll.votes ? poll.votes[userId] : poll.my);
+    const r = pollApplyVote({ question: poll.question, kind: poll.kind, options: poll.options, closed: !!poll.closed, votes: before.length ? { [userId]: pollMulti(poll) ? before : before[0] } : {} }, userId, optionId);
+    if (!r.ok) return { success: false, error: r.error };
+    const after = pollPicks(r.poll.votes[userId]);
+    const next = { ...poll, votes: { ...(poll.votes || {}), [userId]: after } }; // « [] » = je retire mon vote (le serveur le sait ainsi)
+    if (poll.counts) {
+      const counts = { ...poll.counts };
+      for (const o of poll.options) counts[o.id] = Math.max(0, (counts[o.id] || 0) - (before.includes(o.id) ? 1 : 0) + (after.includes(o.id) ? 1 : 0));
+      next.counts = counts;
+      next.my = after.length ? (pollMulti(poll) ? after : after[0]) : undefined;
+      if (next.my === undefined) delete next.my;
+    }
+    msg.poll = next;
+    this.notify();
+    return { success: true };
+  }
+  /** Clore ou rouvrir un sondage : son auteur ou le responsable. */
+  public setMessagePollClosed(id: string, userId: string, closed: boolean): { success: boolean } {
+    const msg = this.messages.find(m => m.id === id);
+    const u = this.users.find(x => x.id === userId);
+    if (!msg || !msg.poll || msg.deleted_at || !u || (msg.sender_id !== userId && u.role !== 'admin')) return { success: false };
+    msg.poll = { ...msg.poll, closed };
+    this.notify();
+    return { success: true };
   }
 
   // Réaction emoji sur un message : une seule par personne ; le même emoji une 2e fois la retire
