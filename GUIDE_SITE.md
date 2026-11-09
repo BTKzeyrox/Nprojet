@@ -912,7 +912,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
-| `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : affichage dans la bulle + fenêtre de création. |
+| `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : carte SANS bulle autour, avec contour et ombre (BTK 2026-11-09), de taille fixe : elle ne bouge pas quand on vote. + fenêtre de création. |
 | `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
 | `ClientBadges.tsx` | Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement. |
 | `ClientPicker.tsx` | Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client. |
@@ -1094,6 +1094,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:offline-store` | Contrôle du mode hors ligne branché sur le VRAI magasin de données (module 13, M13.5), sans réseau réel. |
 | `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
+| `npm run check:chat-poll-card` | Messagerie : le sondage est une carte SANS bulle, avec contour et ombre, de taille fixe (BTK 2026-11-09). Contrôle du code (la mesure avant / après clic est faite en navigateur, voir TODO). |
 | `npm run check:chat-poll` | Messagerie : sondage, choix de date et « J'ai lu » dans les discussions et groupes (S1, 2026-11-09). Règles du stockage (vote, retrait, comptes sans noms) + câblage (menu « + », serveur). |
 | `npm run check:chat-tools` | Messagerie S3 + S4 (2026-11-09) : rappel/tâche/événement depuis un message, modèles de messages, message programmé. Règles pures + câblage (écran et serveur). |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |

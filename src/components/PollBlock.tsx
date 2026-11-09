@@ -5,8 +5,9 @@ import { Check, Lock } from 'lucide-react';
 import type { NewsPost, User } from '../types';
 import { pollCounts, pollPicks, pollMulti } from '../utils/pollRules';
 
-export default function PollBlock({ post, meId, isAdmin, light, busy, users, onVote }: {
+export default function PollBlock({ post, meId, isAdmin, light, busy, users, onVote, fixed }: {
   post: NewsPost; meId: string; isAdmin: boolean; light: boolean; busy: boolean; users: User[]; onVote: (optionId: string) => void;
+  fixed?: boolean; // messagerie : la carte garde exactement la même taille avant et après un vote (texte d'aide court et constant, pied de ligne réservé)
 }) {
   const poll = post.poll;
   const [who, setWho] = useState(false);
@@ -27,10 +28,10 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
     const first = poll.options[0];
     const nonReaders = isAdmin ? users.filter(u => u.role !== 'admin' && u.status === 'active' && !(poll.votes && u.id in poll.votes)).map(u => u.name) : [];
     return (
-      <div data-poll data-ack className={`rounded-xl border p-2.5 space-y-2 ${light ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-[#0b1118]'}`}>
+      <div data-poll data-ack className={fixed ? 'space-y-2' : `rounded-xl border p-2.5 space-y-2 ${light ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-[#0b1118]'}`}>
         <button type="button" data-ack-button disabled={!canVote || busy} onClick={() => onVote(first.id)} aria-pressed={my}
           className={`w-full min-h-[44px] rounded-lg border px-3 text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ${my ? 'border-emerald-500 bg-emerald-500/20 text-emerald-600' : light ? 'border-slate-300 bg-white' : 'border-slate-600 bg-[#0f1722]'}`}>
-          {my && <Check className="w-4 h-4" />}{my ? 'Tu as lu (toucher pour retirer)' : 'J’ai lu'}
+          {my && <Check className="w-4 h-4" />}{my ? (fixed ? 'Tu as lu' : 'Tu as lu (toucher pour retirer)') : 'J’ai lu'}
         </button>
         <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${muted}`}>
           <span data-ack-count>{readers} personne{readers > 1 ? 's ont' : ' a'} lu</span>
@@ -48,7 +49,7 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
     );
   }
   return (
-    <div data-poll className={`rounded-xl border p-2.5 space-y-2 ${light ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-[#0b1118]'}`}>
+    <div data-poll className={fixed ? 'space-y-2' : `rounded-xl border p-2.5 space-y-2 ${light ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-[#0b1118]'}`}>
       <ul className="space-y-1.5" role="list">
         {poll.options.map(o => {
           const n = counts[o.id] || 0;
@@ -63,7 +64,7 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
                 <span className="relative flex items-center gap-2 px-3 py-2">
                   {mineChoice && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
                   <span className="flex-1 min-w-0 break-words">{o.text}</span>
-                  {best && <span data-date-best className="shrink-0 text-[11px] font-bold text-emerald-600">★ la plus choisie</span>}
+                  {best && <span data-date-best className="shrink-0 text-[11px] font-bold text-emerald-600">{fixed ? '★' : '★ la plus choisie'}</span>}
                   <span className={`shrink-0 text-xs tabular-nums ${muted}`}>{multi ? `${n} dispo${n > 1 ? 's' : ''}` : `${n} · ${pct} %`}</span>
                 </span>
               </button>
@@ -71,11 +72,11 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
           );
         })}
       </ul>
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${muted}`}>
-        <span>{multi ? `${total} disponibilité${total > 1 ? 's' : ''} indiquée${total > 1 ? 's' : ''}` : `${total} vote${total > 1 ? 's' : ''}`}</span>
-        {poll.closed && <span data-poll-closed className="inline-flex items-center gap-1 font-semibold text-amber-600"><Lock className="w-3 h-3" /> Sondage clos</span>}
-        {canVote && <span>{multi ? 'Touche toutes les dates où tu es disponible (touche encore pour retirer).' : my ? 'Touche ton choix pour le retirer, ou un autre pour changer.' : 'Touche un choix pour voter.'}</span>}
-        {isAdmin && (multi ? readers > 0 : total > 0) && <button type="button" data-poll-who onClick={() => setWho(v => !v)} className="underline cursor-pointer min-h-[32px]">{who ? 'Masquer qui a voté' : 'Voir qui a voté'}</button>}
+      <div className={fixed ? `flex flex-nowrap items-center justify-between gap-2 min-h-[32px] text-xs overflow-hidden ${muted}` : `flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${muted}`}>
+        <span className={fixed ? 'shrink-0' : ''}>{multi ? `${total} disponibilité${total > 1 ? 's' : ''} indiquée${total > 1 ? 's' : ''}` : `${total} vote${total > 1 ? 's' : ''}`}</span>
+        {poll.closed && <span data-poll-closed className="inline-flex items-center gap-1 font-semibold text-amber-600 shrink-0"><Lock className="w-3 h-3" /> {fixed ? 'Clos' : 'Sondage clos'}</span>}
+        {canVote && !fixed && <span>{multi ? 'Touche toutes les dates où tu es disponible (touche encore pour retirer).' : my ? 'Touche ton choix pour le retirer, ou un autre pour changer.' : 'Touche un choix pour voter.'}</span>}
+        {isAdmin && (fixed || (multi ? readers > 0 : total > 0)) && <button type="button" data-poll-who disabled={fixed && !(multi ? readers > 0 : total > 0)} onClick={() => setWho(v => !v)} className={`underline cursor-pointer min-h-[32px] disabled:no-underline disabled:cursor-default ${fixed ? 'shrink-0' : ''} ${fixed && !(multi ? readers > 0 : total > 0) ? 'invisible' : ''}`}>{who ? 'Masquer qui a voté' : 'Voir qui a voté'}</button>}
       </div>
       {isAdmin && who && (
         <div data-poll-voters className={`text-xs space-y-1 ${muted}`}>

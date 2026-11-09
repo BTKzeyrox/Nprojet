@@ -44,6 +44,7 @@
     "check:offline-store": "esbuild scripts/check-offline-store.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-offline-store.mjs && node node_modules/.cache/check-offline-store.mjs",
     "check:offline-ui": "esbuild scripts/check-offline-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-offline-ui.mjs && node node_modules/.cache/check-offline-ui.mjs",
     "check:offline-server": "npx --yes tsx scripts/check-offline-server.ts",
+    "check:chat-poll-card": "npx --yes tsx scripts/check-chat-poll-card.ts",
     "check:chat-poll": "esbuild scripts/check-chat-poll.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-poll.mjs && node node_modules/.cache/check-chat-poll.mjs",
     "check:chat-tools": "esbuild scripts/check-chat-tools.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-tools.mjs && node node_modules/.cache/check-chat-tools.mjs",
     "check:sheet-day": "esbuild scripts/check-sheet-day.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-day.mjs && node node_modules/.cache/check-sheet-day.mjs",

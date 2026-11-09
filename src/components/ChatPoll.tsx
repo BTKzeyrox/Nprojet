@@ -1,4 +1,4 @@
-// Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : affichage dans la bulle + fenêtre de création.
+// Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : carte SANS bulle autour, avec contour et ombre (BTK 2026-11-09), de taille fixe : elle ne bouge pas quand on vote. + fenêtre de création.
 // Règles : utils/pollRules.ts (2 à 6 choix, un vote par personne, changer ou retirer son vote). Ici les votes sont visibles de tous les participants (comme dans une messagerie).
 // Utilisé par : ChatView.tsx. Le serveur (checkMessage de df-api) refait les mêmes vérifications. Aucun autre appel réseau.
 import React, { useState } from 'react';
@@ -15,9 +15,9 @@ export const ChatPoll: React.FC<{ msg: ChatMessage; meId: string; isAdmin: boole
   const canClose = msg.sender_id === meId || isAdmin;
   const post = { id: msg.id, status: 'published', poll: { ...msg.poll } } as unknown as NewsPost;
   return (
-    <div data-chat-poll={msg.id} className={`space-y-1.5 min-w-[220px] rounded-xl p-2 ${light ? 'bg-white text-slate-900' : 'bg-[#0f1722] text-slate-100'}`}>
+    <div data-chat-poll={msg.id} className={`space-y-1.5 w-72 max-w-full rounded-2xl border p-3 ${light ? 'bg-white text-slate-900 border-slate-300 shadow-[0_4px_16px_rgba(15,23,42,0.3)]' : 'bg-[#0f1722] text-slate-100 border-slate-600 shadow-[0_4px_18px_rgba(0,0,0,0.75)]'}`}>
       <div className="font-semibold text-sm break-words">{msg.poll.kind === 'date' ? '📅' : msg.poll.kind === 'ack' ? '👁' : '📊'} {msg.poll.question}</div>
-      <PollBlock post={post} meId={meId} isAdmin={msg.sender_id === meId} light={light} busy={false} users={users} onVote={optionId => { const r = db.voteMessage(msg.id, meId, optionId); setErr(r.success ? null : r.error || 'Vote impossible.'); }} />
+      <PollBlock post={post} meId={meId} isAdmin={msg.sender_id === meId} light={light} busy={false} fixed users={users} onVote={optionId => { const r = db.voteMessage(msg.id, meId, optionId); setErr(r.success ? null : r.error || 'Vote impossible.'); }} />
       {err && <div role="alert" className="text-xs text-red-500">{err}</div>}
       {canClose && <button type="button" data-chat-poll-close onClick={() => db.setMessagePollClosed(msg.id, meId, !msg.poll!.closed)} className="min-h-[36px] text-xs underline cursor-pointer">{msg.poll.closed ? 'Rouvrir' : 'Clore'}</button>}
     </div>

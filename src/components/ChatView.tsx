@@ -770,13 +770,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={(() => {
-                        if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
+                        if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
                         const sd = users.find(u => u.id === msg.sender_id);
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
                         return { WebkitTouchCallout: 'none', backgroundColor: ac.bubbleBg, borderColor: ac.bubbleBorder } as React.CSSProperties;
                       })()}
                       className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.9375rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
-                        !gone && !msg.message && !msg.reply_to && msg.attachment_url
+                        !gone && ((!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to))
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
