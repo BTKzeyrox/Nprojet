@@ -11,6 +11,7 @@ import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } f
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { summarizeSheet } from '../utils/sheetSummary';
 import { workLineDetail } from '../utils/workLineText';
+import { missingPeople, dayTotals } from '../utils/sheetDay';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
@@ -61,6 +62,8 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const sum = useMemo(() => (type ? summarizeSheet(rows, people, type.id, me, db.getSettings()) : null), [rows, people, type, me.role]); // eslint-disable-line react-hooks/exhaustive-deps
   const money = (n: number) => `${n.toLocaleString('fr-FR')} Ar`;
   const dayLines = db.getPosts().filter(p => typeof p.id === 'string' && p.id.startsWith(`we-${date}-`) && (p.status === 'completed' || p.status === 'pending_end')); // lignes déjà saisies ce jour-là (M26 T2)
+  const missing = type && sum && sum.lines > 0 ? missingPeople(rows, people, dayLines, date, type.id) : []; // M27.1 : personnes oubliées (ne bloque jamais l'enregistrement)
+  const totals = dayTotals(dayLines);
   const cancelLine = async (p: { id: string; employee_name?: string; client_name?: string }) => {
     if (!window.confirm(t(`Annuler la ligne de ${p.employee_name || ''} (${p.client_name || ''}) ? Sa paie sera retirée.`, `Cancel ${p.employee_name || ''}'s line (${p.client_name || ''})? Its pay will be removed.`))) return;
     const r = await db.cancelWorkLine(p.id);
@@ -177,6 +180,16 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
               )}
             </div>
           )}
+          {missing.length > 0 && (
+            <div data-worksheet-missing role="status" className={`rounded-xl border p-3 text-sm ${L ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-amber-950 border-amber-600 text-amber-100'}`}>
+              {missing.length} {missing.length > 1 ? t('opérateurs sans ligne', 'operators without a line') : t('opérateur sans ligne', 'operator without a line')} :{' '}
+              {missing.slice(0, 6).map((u, i) => (
+                <React.Fragment key={u.id}>{i > 0 && ', '}<button type="button" data-missing-name onClick={() => document.querySelector(`[data-worksheet-row="${u.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="underline font-semibold cursor-pointer min-h-[44px]">{u.name}</button></React.Fragment>
+              ))}
+              {missing.length > 6 && <> {t('et', 'and')} {missing.length - 6} {t('autres', 'more')}</>}
+              <div className="text-xs mt-1 opacity-80">{t("Tu peux enregistrer quand même (absent, en congé…).", 'You can still save (absent, on leave…).')}</div>
+            </div>
+          )}
           <button type="button" data-worksheet-save onClick={save} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
             <Save className="w-5 h-5" />{busy ? t('Enregistrement…', 'Saving…') : t('Enregistrer la feuille', 'Save the sheet')}
           </button>
@@ -184,6 +197,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
           {me.role === 'admin' && dayLines.length > 0 && (
             <div className={`${card} space-y-2`} data-worksheet-existing>
               <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>{t('Déjà saisi ce jour-là : une erreur ? Annule la ligne et saisis-la à nouveau.', 'Already entered that day: a mistake? Cancel the line and enter it again.')}</div>
+              <div data-day-totals className={`text-xs font-semibold ${L ? 'text-slate-700' : 'text-slate-200'}`}>{totals.lines} {totals.lines > 1 ? t('lignes', 'lines') : t('ligne', 'line')} · {totals.present} {totals.present > 1 ? t('présents', 'present') : t('présent', 'present')} · {t('total', 'total')} {money(totals.validatedAr)}{totals.pending > 0 && <> · {t('en attente', 'pending')} : {totals.pending} {totals.pending > 1 ? t('lignes', 'lines') : t('ligne', 'line')}</>}</div>
               {dayLines.map(p => (
                 <div key={p.id} data-existing-line={p.id} className={`flex items-center gap-2 rounded-xl border p-2 ${L ? 'border-slate-200 bg-white' : 'border-slate-700 bg-slate-800'}`}>
                   <div className="flex-1 min-w-0 text-sm"><div className="font-semibold truncate">{p.employee_name} · {p.client_name}</div><div className={`text-xs ${L ? 'text-slate-500' : 'text-slate-400'}`}>{workLineDetail(p)}</div></div>

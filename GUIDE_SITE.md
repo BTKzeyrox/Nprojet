@@ -740,6 +740,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
 | `serverClock.ts` | Horloge du SERVEUR : les signes de vie (dernière activité, arrivée, départ) sont écrits avec l'heure du serveur. Comparés à l'heure de l'appareil, un PC ou un téléphone |
 | `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
+| `sheetDay.ts` | Feuille du jour : qui manque, total du jour, avancement du jour (M27.1, M27.2, M27.6, 2026-11-09). Règles pures, sans écran ni serveur. |
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
 | `sheetMerge.ts` | Remettre un fichier Excel rempli hors du site dans le tableau d'une mission (module 19, M19.5) : fonction PURE. |
@@ -1090,6 +1091,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
 | `npm run check:chat-poll` | Messagerie : sondage, choix de date et « J'ai lu » dans les discussions et groupes (S1, 2026-11-09). Règles du stockage (vote, retrait, comptes sans noms) + câblage (menu « + », serveur). |
 | `npm run check:chat-tools` | Messagerie S3 + S4 (2026-11-09) : rappel/tâche/événement depuis un message, modèles de messages, message programmé. Règles pures + câblage (écran et serveur). |
+| `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

@@ -8,6 +8,7 @@ ok(/openView\('worksheet'\)/.test(sc) && /min-h-\[56px\]/.test(sc), 'ouvre la Fe
 ok(/Fill in the daily sheet/.test(sc) && /Saisir la feuille du jour/.test(sc), 'français et anglais');
 ok(/<WorksheetShortcut \/>/.test(ad) && /<WorksheetShortcut \/>/.test(tv), 'présent sur le Tableau de bord et chez le chef d\'équipe');
 ok(/addEventListener\(OPEN_VIEW_EVENT/.test(app) && /removeEventListener\(OPEN_VIEW_EVENT/.test(app), 'App écoute l\'événement (et le retire en partant)');
-ok(!/fetch\(|supabase|db\./.test(sc), 'aucun appel au serveur');
+const dbCalls = [...sc.matchAll(/db\.(\w+)/g)].map(m => m[1]);
+ok(!/fetch\(|supabase/.test(sc) && dbCalls.every(c => ['subscribe', 'getCurrentUser', 'getUsers', 'getPosts'].includes(c)), 'aucun appel au serveur (seulement la lecture des données déjà sur l\'appareil)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
