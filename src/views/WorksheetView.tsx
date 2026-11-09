@@ -9,6 +9,7 @@ import type { User } from '../types';
 import { readCompany } from '../utils/companyRules';
 import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
+import { summarizeSheet } from '../utils/sheetSummary';
 import { workLineDetail } from '../utils/workLineText';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
@@ -57,6 +58,8 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   const showPresence = !!type && type.measure === 'presence';
   const filled = (r?: Row) => !!r && !!(r.presence || (r.hours || '').trim() || (r.quantity || '').trim());
 
+  const sum = useMemo(() => (type ? summarizeSheet(rows, people, type.id, me, db.getSettings()) : null), [rows, people, type, me.role]); // eslint-disable-line react-hooks/exhaustive-deps
+  const money = (n: number) => `${n.toLocaleString('fr-FR')} Ar`;
   const dayLines = db.getPosts().filter(p => typeof p.id === 'string' && p.id.startsWith(`we-${date}-`) && (p.status === 'completed' || p.status === 'pending_end')); // lignes déjà saisies ce jour-là (M26 T2)
   const cancelLine = async (p: { id: string; employee_name?: string; client_name?: string }) => {
     if (!window.confirm(t(`Annuler la ligne de ${p.employee_name || ''} (${p.client_name || ''}) ? Sa paie sera retirée.`, `Cancel ${p.employee_name || ''}'s line (${p.client_name || ''})? Its pay will be removed.`))) return;
@@ -157,6 +160,21 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
             <div role="status" data-worksheet-result className={`rounded-2xl border p-3 text-sm ${msg.ok ? (L ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-emerald-950 border-emerald-700 text-emerald-100') : (L ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-amber-950 border-amber-600 text-amber-100')}`}>
               <div className="flex items-start gap-2 font-semibold">{msg.ok ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}<span>{msg.text}</span></div>
               {msg.lines && msg.lines.length > 0 && <ul className="mt-1.5 ml-7 list-disc space-y-0.5">{msg.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>}
+            </div>
+          )}
+          {sum && sum.lines > 0 && (
+            <div data-worksheet-summary className={`${card} space-y-1 text-sm ${L ? 'text-slate-700' : 'text-slate-200'}`}>
+              <div className={`text-xs font-bold ${L ? 'text-slate-600' : 'text-slate-300'}`}>{t("Résumé avant d'enregistrer", 'Summary before saving')}</div>
+              <div data-summary-lines>{sum.lines} {t(sum.lines > 1 ? 'lignes' : 'ligne', sum.lines > 1 ? 'lines' : 'line')}
+                {showPresence && <> · {sum.present} {t(sum.present > 1 ? 'présents' : 'présent', 'present')} · {sum.late} {t('en retard', 'late')} · {sum.half} {t(sum.half > 1 ? 'demi-journées' : 'demi-journée', sum.half > 1 ? 'half days' : 'half day')} · {sum.absent} {t(sum.absent > 1 ? 'absents' : 'absent', 'absent')}</>}
+                {showHours && sum.hours > 0 && <> · {sum.hours} {t('h au total', 'h in total')}</>}
+                {showQty && <> · {t('quantité', 'quantity')} {sum.quantity}{sum.rejected > 0 ? ` (${t('refusées', 'rejected')} ${sum.rejected})` : ''}</>}
+              </div>
+              {sum.totalAr !== null ? (
+                <div data-summary-total className="font-bold">{t('Paie à inscrire', 'Pay to record')} : {money(sum.totalAr)}{sum.fixed > 0 && <span className="font-normal"> · {sum.fixed} {t('en salaire fixe (payé par période, pas par ligne)', 'on a fixed salary (paid per period, not per line)')}</span>}</div>
+              ) : (
+                <div data-summary-total className={`text-xs ${L ? 'text-slate-500' : 'text-slate-400'}`}>{t('Le montant sera calculé quand le responsable validera cette feuille.', 'The amount will be worked out when the manager approves this sheet.')}</div>
+              )}
             </div>
           )}
           <button type="button" data-worksheet-save onClick={save} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">

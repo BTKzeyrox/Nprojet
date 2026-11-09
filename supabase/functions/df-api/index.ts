@@ -167,6 +167,11 @@ function entryOnlyRecord(user: any, nowMs: number): { ok: true; rec: any } | { o
   return { ok: true, rec: { id, username: "saisie-" + nowMs, name, phone: "", shift, role: "employee", team, status: "active", is_online: false, avatar_url: "", performance_badge: "Standard", entry_only: true, total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0 } };
 }
 // ===== END ENTRYONLY =====
+// Un jour est-il dans une période de paie déjà clôturée (ou payée) ? Copie de src/utils/payrollClosed.ts (`npm run check:work-closed` compare)
+const dayInClosedPeriod = (periods: any[], date: string): boolean => (periods || []).some((r: any) => {
+  const d = r && typeof r === 'object' ? (r.data ?? r) : null;
+  return !!d && (d.status === 'closed' || d.status === 'paid') && String(d.period_start) <= String(date) && String(date) <= String(d.period_end);
+});
 // ===== BEGIN WORKENTRY (feuille du jour, module 26 M26.5a : copie de src/utils/workEntry.ts, contrôlée par scripts/check-work-entry.ts) =====
 const wePay = decPostPay;
 const WE_MAX_LINES = 100;
@@ -4461,6 +4466,9 @@ async function workEntryRoute(req: any, res: any, me: any) {
   const now = new Date();
   const today = new Date(now.getTime() + 3 * 3600000).toISOString().slice(0, 10); // jour de Madagascar (UTC+3)
   if (!weDateOk(b.date, today)) return res.status(400).json({ error: "Date impossible : aujourd'hui ou les 31 derniers jours." });
+  // Période de paie clôturée (ou payée) : plus de saisie sur ce jour, sinon une paie s'ajouterait après la clôture. Pour corriger : rouvrir la période (Paie).
+  const { data: closedPeriods } = await sb.from(PAYROLL).select('data').eq('data->>kind', 'period');
+  if (dayInClosedPeriod(closedPeriods || [], String(b.date))) return res.status(409).json({ error: 'La période de paie de ce jour est clôturée : impossible de saisir ce jour-là. Choisis une date plus récente, ou rouvre la période dans Paie.' });
   const { data: urows } = await sb.from(T.users).select('id, data');
   const users = (urows || []).map((r: any) => r.data).filter((u: any) => u && typeof u.id === 'string');
   const { data: prows } = await sb.from(T.posts).select('id, data').like('id', `we-${b.date}-%`);
@@ -4487,7 +4495,7 @@ async function workCancelRoute(req: any, res: any, me: any) {
   if (!post) return res.status(404).json({ error: 'Ligne introuvable (déjà annulée ?).' });
   const { data: urow } = await sb.from(T.users).select('id, data').eq('id', post.employee_id).maybeSingle();
   const { data: prs } = await sb.from(PAYROLL).select('data').eq('data->>kind', 'period');
-  const closed = (prs || []).some((r: any) => r.data && r.data.status === 'closed' && String(r.data.period_start) <= String(post.date) && String(post.date) <= String(r.data.period_end));
+  const closed = dayInClosedPeriod(prs || [], String(post.date)); // clôturée OU payée
   const plan = planWorkCancel(me, post, urow?.data || null, closed);
   if (!plan.ok) {
     const msg: Record<string, string> = { role: 'Réservé au responsable.', notline: "Ce n'est pas une ligne de la feuille du jour.", closed: 'La période de paie de ce jour est clôturée : impossible de l\'annuler.' };

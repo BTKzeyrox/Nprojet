@@ -35,7 +35,7 @@ for (let i = 0; i < N; i++) {
 ok(same === N, `site = serveur sur ${N} cas au hasard (${same} identiques)`);
 const st = readFileSync('src/db/store.ts', 'utf8'), ws = readFileSync('src/views/WorksheetView.tsx', 'utf8');
 ok(/async workCancelRoute|async function workCancelRoute/.test(src) && /action === "work-line-cancel" && req\.method === "POST"/.test(src) && /planWorkCancel\(me, post, urow\?\.data \|\| null, closed\)/.test(src), 'serveur : route branchée, période clôturée vérifiée');
-ok(/closed = \(prs \|\| \[\]\)\.some/.test(src) && /'work_cancel'/.test(src), 'serveur : période clôturée et journal d\'audit');
+ok(/const closed = dayInClosedPeriod\(prs \|\| \[\], String\(post\.date\)\)/.test(src) && /'work_cancel'/.test(src), 'serveur : période clôturée (ou payée) et journal d\'audit');
 ok(/async cancelWorkLine/.test(st) && /'work-line-cancel'/.test(st), 'magasin : démo et serveur');
 ok(/data-worksheet-existing/.test(ws) && /me\.role === 'admin' && dayLines\.length > 0/.test(ws) && /window\.confirm/.test(ws), 'écran : liste des lignes du jour avec « Annuler » (responsable, avec confirmation)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');

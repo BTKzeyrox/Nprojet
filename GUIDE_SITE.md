@@ -455,6 +455,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - La date va d'aujourd'hui à 31 jours en arrière, jamais dans le futur.
   - Saisie du responsable : validée tout de suite. Saisie du Chef d'équipe : en attente du responsable ; personne ne valide sa propre saisie.
   - Le Chef d'équipe ne saisit que pour les opérateurs de son équipe.
+  - Avant d'enregistrer, un résumé montre les lignes, présents, retards, absents et la paie à inscrire. Un jour d'une période de paie clôturée est refusé : rouvre la période.
 - **Dans le code** : `src/views/WorksheetView.tsx`, `src/utils/workEntry.ts`, `src/utils/paperSheet.ts`, `src/utils/workTypes.ts`, `src/utils/entryOnly.ts`, `src/utils/workChecks.ts`
 <!-- /AUTO:pages -->
 
@@ -700,6 +701,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
 | `paperSheet.ts` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Règles pures, sans écran, sans serveur. |
+| `payrollClosed.ts` | Un jour est-il dans une période de paie déjà clôturée (ou payée) ? Règle pure, sans écran ni serveur. |
 | `payslip.ts` | Met en page le bulletin de paie imprimable (A4, FR ou EN) et le CSV ; le serveur calcule les montants, ici on les affiche et on les vérifie. |
 | `pendingCount.ts` | Compte ce que l'admin doit valider (débuts, fins, avances, inscriptions, mots de passe, accès, profils) ; lit le store. |
 | `performance.ts` | Statistiques de performance par opérateur (missions validées, refusées, taux, délai moyen) avec export Excel et CSV ; lit le store. |
@@ -742,6 +744,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
 | `sheetMerge.ts` | Remettre un fichier Excel rempli hors du site dans le tableau d'une mission (module 19, M19.5) : fonction PURE. |
 | `sheetRetype.ts` | Changer le type d'une colonne SANS casser ce qu'elle contient, et DEVINER le bon type (module 19, suite). |
+| `sheetSummary.ts` | Résumé d'une feuille du jour AVANT de l'enregistrer : combien de lignes, de présents, de retards, d'absents, d'heures, de quantité, et le total à payer. Règle pure, sans écran ni serveur. |
 | `sheetXlsx.ts` | Un tableau → un fichier Excel « comme Excel » (module 19, M19.5) : de VRAIS types de cellules (dates, heures, nombres avec milliers, codes et téléphones en texte |
 | `sheets.ts` | « Mes tableaux » (module 12) : règles pures d'un tableau (colonnes, lignes, corbeille, calcul, contrôle de saisie, tri/filtre, totaux, graphique, modèles, annuler/rétablir). |
 | `sheetsStore.ts` | « Mes tableaux » : ancien rangement sur l'appareil (avant le serveur). Sert seulement à REPRENDRE une fois les tableaux déjà saisis, puis la copie est retirée. Jamais d'accès sans try/catch. |
@@ -1216,6 +1219,8 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
 | `npm run check:work-types` | Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, sans réseau. Cas normaux ET cas piégés. |
 | `npm run check:payroll-modes` | Paie selon le mode (module 26, M26.4) : le serveur (bloc DECIDE de df-api) et le site (postPay.ts / postDecision.ts) donnent EXACTEMENT les mêmes montants sur des milliers de cas, |
+| `npm run check:work-summary` | Résumé avant d'enregistrer la feuille du jour : mêmes chiffres que ceux que le serveur inscrira à la validation. |
+| `npm run check:work-closed` | Saisie sur une période de paie clôturée : refusée par le serveur (et l'annulation voit aussi les périodes « payées »). |
 | `npm run check:work-entry` | Feuille du jour (module 26, M26.5a) : le site (workEntry.ts) et le serveur (bloc WORKENTRY de df-api) donnent EXACTEMENT les mêmes résultats sur des milliers de feuilles ; |
 | `npm run check:work-sheet-page` | Feuille du jour (module 26, M26.5e) : la page est branchée partout, cachée tant que le module n'est pas ouvert, et ses textes sont complets. Lancer : npm run check:work-sheet-page |
 | `npm run check:custom-work-types` | « Créer mon type de travail » (module 26, M26.6b) : le site et le serveur donnent les mêmes résultats ; un type faux est refusé ; le Chef d'équipe reçoit le modèle d'entreprise mais jamais les tarifs. Lancer : npm run check:custom-work-types |
