@@ -901,3 +901,14 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
 **Correspondance avec la liste de l'avis (« GO 3 4 7 10 ») :** 3 = M27.1 · 4 = M27.3 · 5 = M27.5 · 6 = M27.9 · 7 = M27.4 · 8 = M27.8 · 9 = M27.7 · 10 = M27.2 · 11 = M27.10 · 12 = M27.6. (1 et 2 sont faits.)
 **Ordre conseillé :** M27.1 → M27.2 → M27.6 (site seulement, sans risque) ; puis M27.3 et M27.4 (serveur, avec accord) ; M27.5 et M27.7 ; M27.10 ; M27.8 et M27.9 seulement après les décisions de BTK. M27.12 (essais) à faire dès maintenant, en parallèle.
 **Risques à surveiller :** la formule de paie (M27.8) ; l'annulation d'une ligne déjà validée (M27.3) ; le double rejeu hors ligne (M27.9) ; le changement de jour à minuit de Madagascar (M27.2, M27.4) ; une autre session peut modifier `df-api` en parallèle : relire la version en ligne avant tout déploiement.
+
+## 2026-11-09 — Audit complet du site (parcours automatique des 31 pages, admin + employé, téléphone + ordinateur, mode démo ; rien modifié)
+Limites : démo seulement, pas de vrai téléphone, chef d'équipe non testé (le démo ne l'affiche pas), pages réservées au responsable non montrées à l'employé.
+- [ ] **A1 Bug** : page « Paie » (advances) : plante en démo pour l'employé (`MyPayroll`, `Cannot read 'pid'` : la réponse `payroll-mine` n'a pas de `current`). À rendre robuste (message au lieu du plantage).
+- [ ] **A2 Bug** : page Validations : l'avertissement navigateur « chaîne vide dans src/href » (une image ou un lien avec adresse vide) ; à retrouver et corriger.
+- [ ] **A3 Boutons trop petits au doigt (< 32 px)** : « Hors ligne » (24), filtres « Tous / En attente / Départs / Fins » (24), « 7 jours / 30 jours / Tout » (30), « Voir le profil » (21-26), « Tout voir » (16), « Fiche / Prime » (30), lignes du graphique (28).
+- [ ] **A4 Champs sans étiquette** (lecteur d'écran) : Tableau des missions (16 listes), RH (3), Calendrier (1), Réglages (curseur).
+- [ ] **A5 Textes trop petits (< 11 px)** : Historique (59), Validations (32), Santé du site (29), Opérateurs (15), Grille (17).
+- [ ] **A6 Page « Paie » et « Avances »** toujours dans le code mais hors du menu : décider supprimer ou garder (déjà dans TODO depuis des semaines).
+- [ ] **A7 Poids** : `store.ts` 3 735 lignes, `df-api` 6 847 lignes, AdminDashboard 1 960, EmployeeDashboard 1 848 : à découper un jour (risque de régression à chaque changement).
+- [ ] **A8 Déploiement df-api** repose sur GitHub brut (fragile) : le remplacer par un fichier complet envoyé directement.
