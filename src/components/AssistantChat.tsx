@@ -12,6 +12,8 @@ import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { db } from '../db/store';
 import { parsePollIntent, pollPreview, pollIncomplete, pollDone, pollCanceled, decodePoll, POLL_NO, parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
+import { parseExtraIntent, summaryReply, fileReply, fileDone, buildFile, templatesReply, isFileKind, TPL_PREFIX, FILE_PREFIX } from '../utils/assistantExtras';
+import { getRemItems } from '../utils/remRegistry';
 import { remSave as saveReminder } from '../utils/remindersState'; // met aussi à jour la liste partagée (Calendrier, « Mes rappels », cloche)
 import { parseActionIntent, actionPreview, actionDone, actionCanceled, decodeAct, buildItem, ACT_NO } from '../utils/assistantActions';
 import { parseMemoryIntent, runMemory, forgetDone, searchNotes, notesAnswer, notesForAi, norm, MEM_FORGET_PREFIX, MEM_EDIT_PREFIX, type MemIntent, type MemNote, type MemApi } from '../utils/assistantMemory';
@@ -85,9 +87,10 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
       const ann = mi ? null : parseAnnounceIntent(q); // « publie : fermé lundi » : aperçu d'abord
       const poll = mi || ann ? null : parsePollIntent(q); // « sondage : question ? choix, choix »
-      const act = mi || ann || poll ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
-      if (!mi && !ann && !poll && !act && reply.intent === 'unknown' && i) {
+      const ext = mi || ann || poll ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
+      const act = mi || ann || poll || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      if (!mi && !ann && !poll && !ext && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
         const useAi = aiOptIn(userId);
@@ -126,6 +129,13 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const go = (g: { view: string; tab?: string; storage?: StorageIntent; nav?: string; filter?: string }) => {
     if (g.view.startsWith(PRINT_PREFIX)) { const i = getSnapshotInput(), h = i && recapPrintHtml(i, g.view.slice(PRINT_PREFIX.length), l); if (h) { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(h); w.document.close(); } } return; }
     if (g.view.startsWith(MSG_PREFIX)) { const si = getSnapshotInput(), sm = si && findSuggested(si, g.view.slice(MSG_PREFIX.length), l); if (sm) applySuggested(sm); return; }
+    if (g.view.startsWith(TPL_PREFIX)) { const id = g.view.slice(TPL_PREFIX.length); const t0 = TEMPLATES.find(x => x.id === id); if (!t0) { push([{ id: `b${Date.now()}`, who: 'bot', reply: templatesReply(null), at: Date.now() }]); return; } setComposing(true); setTplId(t0.id); setVals({}); setDraft(null); setProblem(''); setCopied(false); return; }
+    if (g.view.startsWith(FILE_PREFIX)) {
+      const kind = g.view.slice(FILE_PREFIX.length);
+      let ok = false, name = '';
+      if (isFileKind(kind)) { try { const f = buildFile(kind, getRemItems(), db.getContracts(), Date.now()); name = f.name; const url = URL.createObjectURL(new Blob([f.content], { type: f.mime })); const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 4000); ok = true; } catch { ok = false; } }
+      push([{ id: `b${Date.now()}`, who: 'bot', reply: fileDone(name, ok), at: Date.now() }]); return;
+    }
     if (g.view === ANN_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: announceCanceled(), at: Date.now() }]); return; }
     const dn = decodeAnn(g.view);
     if (dn) { const r = db.publishNews({ title: '', text: dn.text }); push([{ id: `b${Date.now()}`, who: 'bot', reply: announceDone(r.success, r.error), at: Date.now() }]); return; }

@@ -219,6 +219,7 @@
     "check:assistant-memory": "npx --yes tsx scripts/check-assistant-memory.ts",
     "check:assistant-actions": "npx --yes tsx scripts/check-assistant-actions.ts",
     "check:assistant-publish": "npx --yes tsx scripts/check-assistant-publish.ts",
+    "check:assistant-extras": "npx --yes tsx scripts/check-assistant-extras.ts",
     "check:poll": "npx --yes tsx scripts/check-poll.ts"
   },
   "dependencies": {

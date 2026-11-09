@@ -1,0 +1,35 @@
+// Assistant : résumé de la journée / semaine, fichier à télécharger, modèles de messages (étape C3, points 3, 2 et 4). Lecture seule.
+import { readFileSync } from 'node:fs';
+import { parseExtraIntent, summaryReply, buildFile, fileReply, templatesReply, findTemplateId, collectEntries, isFileKind, TPL_PREFIX, FILE_PREFIX } from '../src/utils/assistantExtras';
+import { remClean, remMs } from '../src/utils/reminderRules';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const P = parseExtraIntent;
+const NOW = remMs('2026-11-09', '08:00'); // lundi 9 novembre 2026, 08:00 à Madagascar
+ok(JSON.stringify(P('Résume ma journée')) === '{"kind":"summary","span":"day"}' && JSON.stringify(P('résume ma semaine')) === '{"kind":"summary","span":"week"}' && P('fais-moi un récap de la semaine')?.kind === 'summary' && P('summarize my week')?.kind === 'summary', 'résumé : journée / semaine (FR, EN)');
+ok(P('résume le mois') === null && P('résume la facture de Hugo') === null && P('comment va ma semaine de travail ?') === null && P('') === null, 'autres phrases : pas un résumé jour/semaine');
+ok(P('fais-moi un fichier de mes rappels')?.kind === 'file' && P('télécharge mes tâches en fichier')?.kind === 'file' && P('exporte mes rappels')?.kind === 'file' && JSON.stringify(P('fichier de ma semaine : résumé')) === '{"kind":"file","what":"txt-week"}', 'fichier : rappels / tâches / résumé');
+ok(P('fichier') === null && P('envoie un fichier à Hugo') === null, 'fichier sans sujet clair : rien de deviné');
+ok(P('modèle : relance de paiement')?.kind === 'template' && (P('modèle : relance de paiement') as any).id === 'payment_reminder' && (P('modèles') as any).id === null && (P('message modèle remerciement') as any).id === 'client_thanks', 'modèle : mot-clé trouvé, sinon liste');
+ok(findTemplateId('bonjour') === null && findTemplateId('avance') === 'advance_answer', 'aucun modèle deviné sans mot-clé');
+const mk = (o: Record<string, unknown>) => remClean({ id: 'x' + Math.random(), title: 'T', ...o }, 'admin', 'u1', NOW)!;
+const items = [mk({ title: 'Appeler Jean', type: 'call', date: '2026-11-09', time: '10:00' }), mk({ title: 'Réunion équipe', type: 'event', date: '2026-11-11', time: '09:00' }), mk({ title: 'Vieille tâche', type: 'task', date: '2026-11-05', all_day: true }), mk({ title: 'Fini', type: 'task', date: '2026-11-09', status: 'done', all_day: true }), mk({ title: 'Loin', type: 'task', date: '2026-12-25', all_day: true })].filter(Boolean) as any[];
+const missions = [{ client_name: 'Acme', post_number: 7, due_date: '2026-11-10', due_time: '15:00' }, { client_name: 'Sans date', post_number: 8 }];
+const c = collectEntries(items, missions, NOW, 1);
+ok(c.list.length === 1 && /Appeler Jean/.test(c.list[0].text) && c.late.length === 1 && /Vieille tâche/.test(c.late[0].text), 'journée : le rappel du jour, le retard à part, ni terminé ni lointain');
+const w = collectEntries(items, missions, NOW, 7);
+ok(w.list.length === 3 && w.list.some(e => /Mission n°7/.test(e.text)) && !w.list.some(e => /Sans date|Fini|Loin/.test(e.text)), 'semaine : rappels + mission avec date limite, pas de mission sans date');
+const r = summaryReply(items, missions, NOW, 'week');
+ok(r.intent === 'summary_week' && r.lines.some(l => /demain — 15:00 Mission n°7/.test(l.fr)) && r.actions.some(a => a.go.view === FILE_PREFIX + 'txt-week') && !r.empty, 'résumé de la semaine : jours nommés, bouton Télécharger');
+ok(summaryReply([], [], NOW, 'day').empty === true && /Rien de prévu/.test(summaryReply([], [], NOW, 'day').lines[0].fr), 'rien de prévu = on le dit, sans inventer');
+const f = buildFile('csv', items, missions, NOW);
+ok(f.name === 'rappels-2026-11-09.csv' && f.content.startsWith('﻿Type;Titre;Date;Heure;Statut;Priorité;Sous-tâches') && /Appeler Jean/.test(f.content) && !/Fini/.test(f.content), 'csv : en-têtes, lignes ouvertes seulement, BOM pour Excel');
+ok(/^Ma semaine/.test(buildFile('txt-week', items, missions, NOW).content) && /EN RETARD/.test(buildFile('txt-day', items, missions, NOW).content) && buildFile('txt-day', [], [], NOW).content.includes('Rien de prévu.'), 'txt : titre, retards, « rien de prévu »');
+ok(buildFile('csv', [mk({ title: 'A;B "c"', type: 'task', date: '2026-11-09', all_day: true })] as any, [], NOW).content.includes('"A;B ""c"""'), 'csv : point-virgule et guillemets protégés');
+ok(isFileKind('csv') && !isFileKind('../x') && fileReply('csv').actions[0].go.view === FILE_PREFIX + 'csv', 'bouton Télécharger : types connus seulement');
+const tl = templatesReply(null), t1 = templatesReply('payment_reminder');
+ok(tl.actions.length === 6 && tl.actions.every(a => a.go.view.startsWith(TPL_PREFIX)) && t1.actions[0].go.view === TPL_PREFIX + 'payment_reminder', 'modèles : 6 boutons ; un seul modèle = bouton direct');
+const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
+ok(/parseExtraIntent\(q\)/.test(chat) && /summaryReply\(getRemItems\(\), db\.getContracts\(\)/.test(chat) && /g\.view\.startsWith\(FILE_PREFIX\)/.test(chat) && /URL\.createObjectURL/.test(chat) && /g\.view\.startsWith\(TPL_PREFIX\)/.test(chat) && /!ext && !act/.test(chat), 'assistant : branché (résumé, fichier fabriqué sur l\'appareil, modèle ouvert dans l\'éditeur, ordre)');
+ok(!/fetch\(|XMLHttpRequest/.test(readFileSync('src/utils/assistantExtras.ts', 'utf8')), 'aucun envoi réseau dans ce module');
+console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
+process.exit(bad ? 1 : 0);

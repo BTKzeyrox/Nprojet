@@ -15,6 +15,6 @@ ok(decodeAnn(pv.actions[0].go.view)?.text === 'fermé lundi' && decodeAnn(ANN_OK
 ok(announceDone(true).intent === 'announce_done' && announceDone(false, 'Réservé au responsable.').lines[0].fr === 'Réservé au responsable.' && announceDone(false).intent === 'announce_error', '« C\'est publié » seulement si ça a marché ; sinon l\'erreur');
 const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
 ok(/parseAnnounceIntent\(q\)/.test(chat) && /announcePreview\(ann\)/.test(chat) && /decodeAnn\(g\.view\)/.test(chat) && /db\.publishNews\(\{ title: '', text: dn\.text \}\)/.test(chat) && /g\.view === ANN_NO/.test(chat), 'assistant : phrase → aperçu ; Confirmer → publication habituelle (db.publishNews) ; Annuler → rien');
-ok(/parseMemoryIntent\(q\)[\s\S]{0,900}parseAnnounceIntent\(q\)[\s\S]{0,300}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'ordre : mémoire, annonce, créations (rappel / calendrier / tâche)');
+ok(/parseMemoryIntent\(q\)[\s\S]{0,900}parseAnnounceIntent\(q\)[\s\S]{0,600}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'ordre : mémoire, annonce, créations (rappel / calendrier / tâche)');
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);
