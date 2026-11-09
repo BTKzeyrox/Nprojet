@@ -1252,6 +1252,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:assistant-memory` | Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ». |
 | `npm run check:assistant-actions` | Assistant : créer un rappel / événement / tâche / liste depuis une phrase (étape C1) : aperçu d'abord, confirmation ensuite, dates comprises, rien d'inventé. |
 | `npm run check:assistant-publish` | Assistant : publier une annonce dans les Actualités depuis une phrase (étape C2) : aperçu d'abord, confirmation ensuite. |
+| `npm run check:poll-kinds` | Choix de date (plusieurs dates par personne) et « J'ai lu » (confirmation de lecture) : étape C3, points 5 et 6. Même moteur que le sondage. |
 | `npm run check:assistant-mission` | Assistant : créer une mission depuis une phrase (étape C3, point 1) : aperçu d'abord, confirmation ensuite, rien d'inventé. |
 | `npm run check:assistant-extras` | Assistant : résumé de la journée / semaine, fichier à télécharger, modèles de messages (étape C3, points 3, 2 et 4). Lecture seule. |
 | `npm run check:poll` | Sondage dans les Actualités (étape C2) : règles, vue selon la personne (anonymat), copie serveur identique, routes, écran, assistant. |

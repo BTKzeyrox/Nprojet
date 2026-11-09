@@ -107,7 +107,7 @@ export function parseActionIntent(q: string, nowMs: number): ActionIntent | null
   };
   let m = LIST_RE.exec(raw);
   if (m) {
-    const subs = m[2].split(/\n|;|,|\s+\+\s+/).map(x => x.replace(/^[\s\-•*·\d.)]+/, '').trim().slice(0, 120)).filter(Boolean).slice(0, ACT_MAX_SUBS);
+    const subs = m[2].split(/\n|;|,|\s+\+\s+/).map(x => x.replace(/^\s*(?:[-•*·]|\d{1,2}[.)])\s+/, '').trim().slice(0, 120)).filter(Boolean).slice(0, ACT_MAX_SUBS);
     if (!subs.length) return null;
     const today = remDateOf(nowMs);
     return { kind: 'checklist', type: 'checklist', title: cap(m[1].trim().slice(0, 120)), date: today, time: '09:00', allDay: true, subs, needDate: false, past: false, guessed: ['date : aujourd\'hui'] };

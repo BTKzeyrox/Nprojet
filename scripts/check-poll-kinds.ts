@@ -1,0 +1,53 @@
+// Choix de date (plusieurs dates par personne) et « J'ai lu » (confirmation de lecture) : étape C3, points 5 et 6. Même moteur que le sondage.
+import { readFileSync } from 'node:fs';
+import { pollClean, pollCounts, pollApplyVote, pollView, POLL_ACK_TEXT, POLL_MAX_DATES } from '../src/utils/pollRules';
+import { parseDateIntent, parseAckIntent, parsePollIntent, pollPreview, dateIncomplete, decodePoll, encodePoll, decodeAck, encodeAck, ackPreview, ackQuestion, ACK_OK_PREFIX, ACK_NO, POLL_OK_PREFIX } from '../src/utils/assistantPublish';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const D = pollClean({ question: 'Réunion ?', kind: 'date', options: ['lundi 10', 'mardi 11', 'jeudi 13'] })!;
+ok(D.kind === 'date' && D.options.length === 3 && Object.keys(D.votes).length === 0 && !D.closed, 'choix de date : valable, votes à zéro');
+ok(pollClean({ question: 'Réunion ?', kind: 'date', options: Array.from({ length: 15 }, (_, i) => 'jour ' + i) })!.options.length === POLL_MAX_DATES && pollClean({ question: 'Q ?', options: Array.from({ length: 15 }, (_, i) => 'c' + i) })!.options.length === 6, 'jusqu\'à 10 dates ; un sondage simple reste à 6 choix');
+ok(pollClean({ question: 'Q ?', kind: 'date', options: ['seule'] }) === null && pollClean({ question: 'Q ?', options: ['a', 'b'] })!.kind === undefined, 'une seule date refusée ; sondage simple sans « kind » (anciens sondages inchangés)');
+const A = pollClean({ question: 'Nouvelle règle', kind: 'ack', options: ['x', 'y', 'z'], votes: { u1: 'o1' } })!;
+ok(A.kind === 'ack' && A.options.length === 1 && A.options[0].text === POLL_ACK_TEXT && Object.keys(A.votes).length === 0 && pollClean({ question: '', kind: 'ack' }) === null, '« J\'ai lu » : un seul bouton, votes jamais repris du navigateur, texte obligatoire');
+let p = D;
+const v = (u: string, o: string) => { const r = pollApplyVote(p, u, o); if (r.ok) p = r.poll; return r; };
+v('u1', 'o1'); v('u1', 'o3'); v('u2', 'o1');
+ok(JSON.stringify(p.votes) === '{"u1":["o1","o3"],"u2":["o1"]}', 'dates : plusieurs choix par personne, dans l\'ordre des dates');
+ok(JSON.stringify(pollCounts(p)) === '{"o1":2,"o2":0,"o3":1}', 'comptes : une personne compte une fois par date');
+v('u1', 'o1');
+ok(JSON.stringify(p.votes) === '{"u1":["o3"],"u2":["o1"]}', 'retirer une date ne touche pas les autres');
+v('u1', 'o3');
+ok(!('u1' in p.votes), 'plus aucune date = la personne disparaît des votes');
+ok((pollApplyVote(p, 'u1', 'oX') as any).ok === false && (pollApplyVote({ ...p, closed: true }, 'u1', 'o1') as any).error.includes('clos'), 'date inconnue ou sondage clos : refusé');
+const pa = pollApplyVote(A, 'u9', 'o1') as any;
+ok(pa.ok && JSON.stringify(pa.poll.votes) === '{"u9":["o1"]}' && !(pollApplyVote(pa.poll, 'u9', 'o1') as any).poll.votes.u9 && /lecture est close/.test((pollApplyVote({ ...A, closed: true }, 'u9', 'o1') as any).error), '« J\'ai lu » : lire / retirer ; clos = refusé avec son propre message');
+const sg = pollClean({ question: 'Q ?', options: ['a', 'b'] })!;
+const s1 = (pollApplyVote(pollApplyVote(sg, 'u1', 'o1') as any && (pollApplyVote(sg, 'u1', 'o1') as any).poll, 'u1', 'o2') as any).poll;
+ok(s1.votes.u1 === 'o2', 'sondage simple : toujours un seul vote, remplacé par le suivant (inchangé)');
+const vw = pollView({ ...D, votes: { u1: ['o1', 'o3'], u2: ['o1'] } }, 'u1', false) as any;
+ok(vw.kind === 'date' && JSON.stringify(vw.my) === '["o1","o3"]' && !('votes' in vw) && vw.counts.o1 === 2, 'élève : comptes + ses dates, jamais « qui »');
+const va = pollView({ ...D, votes: { u1: ['o1'], u2: ['o1'] } }, 'adm', true) as any;
+ok(Object.keys(va.votes).length === 2 && !('my' in va), 'responsable : voit qui est dispo quand');
+ok(!('kind' in (pollView(sg, 'u', false) as object)), 'sondage simple : vue sans « kind » (comme avant)');
+// Assistant
+const d = parseDateIntent('choix de date : réunion d\'équipe ? lundi 10, mardi 11, jeudi 13 à 9 h') as any;
+ok(d && d.kind === 'date' && d.question === 'réunion d\'équipe ?' && d.options.length === 3 && d.options[2] === 'jeudi 13 à 9 h', 'assistant : « choix de date : … ? d1, d2, d3 »');
+ok(!!parseDateIntent('doodle : atelier ? 12/11, 14/11') && parseDateIntent('Crée un sondage de dates : formation ? lundi ; mardi') !== null && parseDateIntent('disponibilités: apéro ? vendredi, samedi') !== null, 'assistant : doodle / sondage de dates / disponibilités');
+ok((parseDateIntent('doodle : atelier ? 12/11, 14/11') as any).options.join() === '12/11,14/11', 'dates écrites avec des chiffres (12/11) : gardées entières')
+ok(parseDateIntent('choix de date : réunion ? lundi') === 'incomplete' && parseDateIntent('choix de date : réunion ?') === 'incomplete' && parseDateIntent('date de la réunion') === null && parseDateIntent('choix de dates') === null && parseDateIntent('') === null, 'une seule date, ou aucune : « incomplete » ; sans « : » ce n\'est pas une création');
+ok(dateIncomplete().intent === 'date_incomplete' && parsePollIntent('sondage : Faut-il ouvrir ?')!.hasOwnProperty('yesNo') && (parsePollIntent('sondage : Faut-il ouvrir samedi ?') as any).options.join() === 'Oui,Non' && parseDateIntent('choix de date : réunion ?') === 'incomplete', 'sondage simple garde Oui / Non ; un choix de date n\'a JAMAIS Oui / Non par défaut');
+const pv = pollPreview(d);
+ok(pv.intent === 'date_preview' && pv.actions.length === 2 && /Rien n'est publié tant que tu n'as pas confirmé/.test(pv.lines.map(l => l.fr).join(' ')) && pv.actions[0].go.view.startsWith(POLL_OK_PREFIX), 'aperçu du choix de date : dates écrites, Confirmer / Annuler');
+const dd = decodePoll(encodePoll(d))!;
+ok((dd as any).kind === 'date' && dd.options.length === 3 && decodePoll(encodePoll(parsePollIntent('sondage : Quel jour ? lundi, mardi') as any))!.hasOwnProperty('kind') === false, 'Confirmer redonne le même type (date / simple)');
+const k = parseAckIntent('Publie avec confirmation de lecture : nouvelle règle de justificatif')!;
+ok(k.text === 'nouvelle règle de justificatif' && parseAckIntent('annonce avec accusé de lecture : fermé lundi')?.text === 'fermé lundi' && parseAckIntent('publie : fermé lundi') === null && parseAckIntent('publie avec confirmation de lecture :') === null && parseAckIntent('lecture') === null, 'assistant : « publie avec confirmation de lecture : … » (une annonce simple reste une annonce simple)');
+ok(decodeAck(encodeAck(k))?.text === k.text && decodeAck(ACK_OK_PREFIX + 'xx') === null && decodeAck(ACK_OK_PREFIX + encodeURIComponent('{"t":" "}')) === null && ackPreview(k).actions[1].go.view === ACK_NO && /toi seul vois qui a lu/.test(ackPreview(k).lines.map(l => l.fr).join(' ')), 'aperçu « J\'ai lu » : Confirmer redonne le texte ; bouton abîmé refusé ; anonymat dit');
+ok(ackQuestion('première ligne\nseconde') === 'première ligne' && ackQuestion('x'.repeat(500)).length === 200, 'ack : la question est la 1re ligne (200 caractères au plus)');
+// Écran, serveur, branchement
+const blk = readFileSync('src/components/PollBlock.tsx', 'utf8'), chat = readFileSync('src/components/AssistantChat.tsx', 'utf8'), api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+ok(/data-ack-button/.test(blk) && /Voir qui a lu/.test(blk) && /Pas encore lu/.test(blk) && /data-date-best/.test(blk) && /u\.role !== 'admin' && u\.status === 'active'/.test(blk) && /aria-pressed/.test(blk), 'écran : bouton « J\'ai lu », liste lus / pas encore lus (responsable), date la plus choisie');
+ok(/parseAckIntent\(q\)/.test(chat) && /decodeAck\(g\.view\)/.test(chat) && /kind: 'ack'/.test(chat) && /parseDateIntent\(q\)/.test(chat) && /dateIncomplete\(\)/.test(chat), 'assistant : branché (J\'ai lu, choix de date)');
+ok(/const pollMulti/.test(api) && /POLL_MAX_DATES/.test(api) && /pollApplyVote\(d\.poll, String\(me\.id\)/.test(api), 'serveur : même bloc, vote par la même route');
+console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
+process.exit(bad ? 1 : 0);

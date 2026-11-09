@@ -437,7 +437,7 @@ export interface NewsPost {
   files_removed?: number; // fichiers supprimés au refus
   audience?: ('employee' | 'team_lead' | 'accountant')[]; // qui peut voir la publication (absent = tout le monde ; le responsable et l'auteur voient toujours)
   edited_at?: string; // dernière modification du texte, du titre ou du public (une publication déjà publiée)
-  poll?: { question: string; options: { id: string; text: string }[]; closed: boolean; counts?: Record<string, number>; my?: string; votes?: Record<string, string> }; // sondage (étape C2) : tout le monde reçoit les comptes + son vote ; `votes` (qui a voté quoi) seulement le responsable
+  poll?: { question: string; kind?: 'poll' | 'date' | 'ack'; options: { id: string; text: string }[]; closed: boolean; counts?: Record<string, number>; my?: string | string[]; votes?: Record<string, string | string[]> }; // sondage (étape C2) : tout le monde reçoit les comptes + son vote ; `votes` (qui a voté quoi) seulement le responsable
 }
 
 /** Fiche client (module 1) : visible par l'admin seulement. Le statut n'est jamais stocké : il se calcule (src/utils/clients.ts). */

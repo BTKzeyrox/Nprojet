@@ -87,7 +87,7 @@ eq(/export type UserRole = 'admin' \| 'employee' \| 'accountant' \| 'team_lead'/
 // côté site : l'argent est ouvert au Comptable, tout le reste reste réservé au responsable
 const money = ['addCash', 'updateCash', 'deleteCash', 'saveInvoiceDraft', 'deleteInvoiceDraft', 'addClient', 'updateClient', 'setClientActive', 'deleteClient', 'addSupplier', 'updateSupplier', 'setSupplierActive', 'deleteSupplier', 'addProduct', 'updateProduct', 'deleteProduct', 'addStockMove', 'deleteStockMove'];
 for (const f of money) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,260}?\\n    if \\(([^\\n]*)\\) return`).exec(store); eq(!!mm && mm[1].includes('isMoneyRole'), true, `store.${f} : admin ou Comptable`); }
-for (const f of ['publishNews', 'deleteNews', 'togglePinNews']) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,260}?role !== 'admin'`).exec(store); eq(!!mm, true, `store.${f} : reste réservé au responsable`); }
+for (const f of ['publishNews', 'deleteNews', 'togglePinNews']) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,340}?role !== 'admin'`).exec(store); eq(!!mm, true, `store.${f} : reste réservé au responsable`); }
 
 console.log(fails ? `\n${fails} contrôle(s) en échec` : '\nRôles : tout est bon.');
 process.exit(fails ? 1 : 0);

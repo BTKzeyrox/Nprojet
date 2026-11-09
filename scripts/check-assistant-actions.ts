@@ -64,5 +64,6 @@ ok(encodeAct(a).length < 900, 'bouton Confirmer : petit');
 const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
 ok(/parseActionIntent\(q, Date\.now\(\)\)/.test(chat) && /actionPreview\(act\)/.test(chat) && /decodeAct\(g\.view\)/.test(chat) && /saveReminder\(buildItem/.test(chat) && /g\.view === ACT_NO/.test(chat), 'assistant : phrase → aperçu ; Confirmer → db.remSave ; Annuler → rien');
 ok(/parseMemoryIntent\(q\)[\s\S]{0,1800}parseActionIntent\(q, Date\.now\(\)\)/.test(chat), 'la mémoire passe avant les créations');
+{ const L = parseActionIntent('crée une liste de courses : 2 kg de riz, 1. sucre, - huile', Date.UTC(2026, 10, 9, 5)); ok(!!L && JSON.stringify(L.subs) === '["2 kg de riz","sucre","huile"]', 'liste : un chiffre au début d\'un élément est gardé (« 2 kg de riz »), seules les puces et « 1. » sont retirées'); }
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);

@@ -1349,14 +1349,14 @@ export class AppStore {
   public getNewsPolicy(): NewsPolicy { return cleanNewsPolicy(this.getSettings().news_publish); }
 
   // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; poll?: { question: string; options: string[] } }): { success: boolean; error?: string } {
+  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' } }): { success: boolean; error?: string } {
     const me = this.currentUser;
     if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
     const text = p.text.trim();
     const files = p.files || [];
     if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou joins un fichier.' };
     const poll = p.poll ? pollClean(p.poll) : null; // sondage : question + 2 à 6 choix ; les votes partent de zéro
-    if (p.poll && !poll) return { success: false, error: 'Un sondage demande une question et 2 à 6 choix différents.' };
+    if (p.poll && !poll) return { success: false, error: p.poll.kind === 'ack' ? 'Une confirmation de lecture demande un texte.' : p.poll.kind === 'date' ? 'Un choix de date demande une question et 2 à 10 dates différentes.' : 'Un sondage demande une question et 2 à 6 choix différents.' };
     const rec: NewsPost = {
       id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
       text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
@@ -1628,7 +1628,7 @@ export class AppStore {
       }
       case 'news-vote': { // faux serveur du sondage : mêmes règles que le vrai (pollApplyVote), vue du responsable
         const n = post(body.id); if (!n || !me || !n.poll) return fail('Publication introuvable.');
-        const r = pollApplyVote({ question: n.poll.question, options: n.poll.options, closed: !!n.poll.closed, votes: n.poll.votes || {} }, me.id, String(body.option ?? ''));
+        const r = pollApplyVote({ question: n.poll.question, kind: n.poll.kind, options: n.poll.options, closed: !!n.poll.closed, votes: n.poll.votes || {} }, me.id, String(body.option ?? ''));
         if (!r.ok) return fail(r.error);
         n.poll = { ...n.poll, votes: r.poll.votes, counts: pollCounts(r.poll) };
         return keep(n);

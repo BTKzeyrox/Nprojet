@@ -11,7 +11,7 @@ import { suggestedMessages, findSuggested, MSG_PREFIX, type SuggestedMessage } f
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { db } from '../db/store';
-import { parsePollIntent, pollPreview, pollIncomplete, pollDone, pollCanceled, decodePoll, POLL_NO, parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
+import { parseDateIntent, dateIncomplete, parseAckIntent, ackPreview, ackQuestion, decodeAck, ACK_NO, parsePollIntent, pollPreview, pollIncomplete, pollDone, pollCanceled, decodePoll, POLL_NO, parseAnnounceIntent, announcePreview, announceDone, announceCanceled, decodeAnn, ANN_NO } from '../utils/assistantPublish';
 import { parseMissionIntent, missionPreview, missionIncomplete, missionDone, missionCanceled, decodeMis, MIS_NO } from '../utils/assistantMission';
 import { missionRequiresClient } from '../utils/clients';
 import { readCompany } from '../utils/companyRules';
@@ -88,12 +88,14 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       let mi: MemIntent | 'cancel' | null = parseMemoryIntent(q);
       if (!mi && pendingMem.current && !sid) mi = /^(annule|annuler|laisse tomber|laisse|non|cancel|stop)\b/.test(norm(q)) ? 'cancel' : { kind: 'save', text: q };
       pendingMem.current = !!mi && mi !== 'cancel' && mi.kind === 'save-ask';
-      const ann = mi ? null : parseAnnounceIntent(q); // « publie : fermé lundi » : aperçu d'abord
-      const poll = mi || ann ? null : parsePollIntent(q); // « sondage : question ? choix, choix »
-      const mis = mi || ann || poll ? null : parseMissionIntent(q, Date.now(), db.getClients().map(c => ({ id: c.id, name: c.name })), missionRequiresClient(readCompany(db.getSettings().company))); // « mission : titre, pour Acme, demain, urgente » : aperçu d'abord
-      const ext = mi || ann || poll || mis ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
-      const act = mi || ann || poll || mis || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : poll ? (poll === 'incomplete' ? pollIncomplete() : pollPreview(poll)) : mis ? (mis === 'incomplete' ? missionIncomplete() : missionPreview(mis)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      const ack = mi ? null : parseAckIntent(q); // « publie avec confirmation de lecture : … » : aperçu d'abord
+      const ann = mi || ack ? null : parseAnnounceIntent(q); // « publie : fermé lundi » : aperçu d'abord
+      const dat = mi || ack || ann ? null : parseDateIntent(q); // « choix de date : réunion ? lundi, mardi » (plusieurs dates possibles)
+      const poll = mi || ack || ann ? null : (parsePollIntent(q) ?? dat); // « sondage : question ? choix, choix »
+      const mis = mi || ann || ack || poll ? null : parseMissionIntent(q, Date.now(), db.getClients().map(c => ({ id: c.id, name: c.name })), missionRequiresClient(readCompany(db.getSettings().company))); // « mission : titre, pour Acme, demain, urgente » : aperçu d'abord
+      const ext = mi || ann || ack || poll || mis ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
+      const act = mi || ann || ack || poll || mis || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : ack ? ackPreview(ack) : poll ? (poll === 'incomplete' ? (dat === 'incomplete' ? dateIncomplete() : pollIncomplete()) : pollPreview(poll)) : mis ? (mis === 'incomplete' ? missionIncomplete() : missionPreview(mis)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
       if (!mi && !ann && !poll && !mis && !ext && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
@@ -146,9 +148,12 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.view === ANN_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: announceCanceled(), at: Date.now() }]); return; }
     const dn = decodeAnn(g.view);
     if (dn) { const r = db.publishNews({ title: '', text: dn.text }); push([{ id: `b${Date.now()}`, who: 'bot', reply: announceDone(r.success, r.error), at: Date.now() }]); return; }
+    if (g.view === ACK_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: announceCanceled(), at: Date.now() }]); return; }
+    const dk = decodeAck(g.view);
+    if (dk) { const r = db.publishNews({ title: '', text: dk.text, poll: { question: ackQuestion(dk.text), options: [], kind: 'ack' } }); push([{ id: `b${Date.now()}`, who: 'bot', reply: announceDone(r.success, r.error), at: Date.now() }]); return; }
     if (g.view === POLL_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: pollCanceled(), at: Date.now() }]); return; }
     const dp = decodePoll(g.view);
-    if (dp) { const r = db.publishNews({ title: '', text: dp.question, poll: { question: dp.question, options: dp.options } }); push([{ id: `b${Date.now()}`, who: 'bot', reply: pollDone(r.success, r.error), at: Date.now() }]); return; }
+    if (dp) { const r = db.publishNews({ title: '', text: dp.question, poll: { question: dp.question, options: dp.options, ...(dp.kind === 'date' ? { kind: 'date' as const } : {}) } }); push([{ id: `b${Date.now()}`, who: 'bot', reply: pollDone(r.success, r.error), at: Date.now() }]); return; }
     if (g.view === ACT_NO) { push([{ id: `b${Date.now()}`, who: 'bot', reply: actionCanceled(), at: Date.now() }]); return; }
     const da = decodeAct(g.view);
     if (da) { void saveReminder(buildItem(da)).then(r => push([{ id: `b${Date.now()}`, who: 'bot', reply: actionDone(da, r.ok, r.error), at: Date.now() }])); return; }
