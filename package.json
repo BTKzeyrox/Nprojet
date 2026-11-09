@@ -179,6 +179,8 @@
     "check:graphs": "tsx scripts/check-graphs.ts",
     "check:work-types": "tsx scripts/check-work-types.ts",
     "check:payroll-modes": "esbuild scripts/check-payroll-modes.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-payroll-modes.mjs && node node_modules/.cache/check-payroll-modes.mjs",
+    "check:sheet-batch": "npx --yes tsx scripts/check-sheet-batch.ts",
+    "check:month-grid": "npx --yes tsx scripts/check-month-grid.ts",
     "check:work-summary": "npx --yes tsx scripts/check-work-summary.ts",
     "check:work-closed": "npx --yes tsx scripts/check-work-closed.ts",
     "check:work-entry": "esbuild scripts/check-work-entry.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-work-entry.mjs && node node_modules/.cache/check-work-entry.mjs",

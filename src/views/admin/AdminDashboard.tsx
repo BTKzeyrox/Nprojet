@@ -1,7 +1,7 @@
 // Écran principal du responsable : tableau de bord, validations de missions, alertes de sécurité et liste des sessions, selon l'onglet demandé.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'écran affiché dépend de activeSubTab (dashboard, grid, sessions, security, validations). Données lues dans db (users, posts, securityLogs, advances). Fichier très long : chercher la zone par ses commentaires SECTION ou par isValidations, isSecurity, isSessions.
-import { isWorkLine } from '../../utils/postPay';
+import { isWorkLine, postPayAr } from '../../utils/postPay';
 import { workLineDetail, workLineBy } from '../../utils/workLineText';
 import { HealthSummary } from '../../components/HealthSummary';
 import { showToast } from '../../components/ToastHost';
@@ -57,6 +57,7 @@ import { getQueue } from '../../utils/presence';
 import { liveStatus, liveText, LIVE_META } from '../../utils/presenceStatus';
 import { isTracked } from '../../utils/attendanceView';
 import { useNow } from '../../utils/useNow';
+import { groupPendingSheets, decideSheet } from '../../utils/sheetBatch';
 import { countOnline, countOnlineStaff } from '../../utils/presenceCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
@@ -411,6 +412,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     p => p.status === 'pending_start' || p.status === 'pending_end'
   );
   const isValidations = activeSubTab === 'validations';
+  // Feuilles saisies par un chef d'équipe, en attente : « Tout valider » (M27.5). Montant = estimation (le serveur calcule la paie à la validation, comme pour une ligne seule).
+  const pendingSheets = groupPendingSheets(pendingSubmissions, currentUser, p => postPayAr(p, users.find(u => u.id === p.employee_id), db.getSettings()));
+  const [batchConfirm, setBatchConfirm] = useState<string | null>(null);
+  const [batchBusy, setBatchBusy] = useState<string | null>(null);
+  const validateSheet = async (s: { key: string; ids: string[]; count: number }) => {
+    if (batchBusy) return;
+    setBatchBusy(s.key);
+    const res = await decideSheet(s.ids, async id => {
+      if (decidingRef.current.has(id)) return { ok: false, error: 'déjà en cours' };
+      decidingRef.current.add(id);
+      const now = db.decidePostNow(id, true);
+      if (!now.ok) { decidingRef.current.delete(id); return { ok: false, error: now.error || 'Erreur' }; }
+      const r = await now.settled;
+      decidingRef.current.delete(id);
+      return r;
+    });
+    setBatchBusy(null); setBatchConfirm(null);
+    if (res.failed.length === 0) showToast(`${res.done} lignes validées.`, 'success');
+    else showToast(`${res.done} validées, ${res.failed.length} non validées : ${res.failed[0].error}`, 'error');
+  };
   const isSecurity = activeSubTab === 'security';
   const isSessions = activeSubTab === 'sessions';
   const pend = countPending();
@@ -1523,6 +1544,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         <div className="p-6">
+          {pendingSheets.length > 0 && (isValidations ? valFilter !== 'starts' : submissionFilter !== 'pending_start') && (
+            <div data-sheet-batch className="mb-4 space-y-2">
+              <div className="text-xs font-mono text-slate-400">Feuilles du jour à valider (saisies par un chef d'équipe)</div>
+              {pendingSheets.map(s => (
+                <div key={s.key} data-sheet-batch-item className="rounded-lg border border-emerald-800/60 bg-emerald-950/20 p-3 flex flex-wrap items-center gap-2">
+                  <div className="min-w-0 flex-1 text-sm text-slate-200">
+                    <span className="font-semibold text-white">{s.date}</span> · {s.byName ? `saisie par ${s.byName}` : 'saisie par un chef'} · {s.count} lignes ({s.present} présents){s.estimatedAr > 0 ? ` · ≈ ${s.estimatedAr.toLocaleString('fr-FR')} Ar` : ''}
+                  </div>
+                  {batchConfirm === s.key ? (
+                    <>
+                      <button type="button" data-sheet-batch-confirm disabled={batchBusy !== null} onClick={() => void validateSheet(s)} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold">{batchBusy === s.key ? 'Validation…' : `Confirmer : valider ${s.count} lignes`}</button>
+                      <button type="button" disabled={batchBusy !== null} onClick={() => setBatchConfirm(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-200 text-sm">Annuler</button>
+                    </>
+                  ) : (
+                    <button type="button" data-sheet-batch-start disabled={batchBusy !== null} onClick={() => setBatchConfirm(s.key)} className="min-h-[44px] px-4 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-bold">Tout valider ({s.count})</button>
+                  )}
+                </div>
+              ))}
+              <div className="text-[11px] text-slate-500">Pour refuser une ligne ou ajouter un motif, utilise les cartes ci-dessous : le refus reste ligne par ligne.</div>
+            </div>
+          )}
           {filteredSubmissions.length === 0 ? (
             <div className="text-center py-10 text-slate-500 text-xs font-mono border border-dashed border-slate-800 rounded-lg">
               Aucune soumission en attente de révision pour le moment.

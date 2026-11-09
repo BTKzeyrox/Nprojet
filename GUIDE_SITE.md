@@ -77,6 +77,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Un refus demande un motif si le réglage « motif de refus obligatoire » est activé.
   - Le prix de la mission est figé au moment de la validation.
   - La Santé du site signale une mission en attente depuis plus de 24 h (réglable).
+  - « Feuilles du jour à valider » : « Tout valider » valide en une fois les lignes d'un chef d'équipe (2 touches). Le refus reste ligne par ligne, avec un motif.
 - **Chiffres et formules** :
   - Pastille Validations : Débuts à valider + fins à valider + avances en attente + inscriptions + réinitialisations + connexions hors horaires + demandes de profil.
 - **Réglages liés** (Réglages > Conditions) : `missions.validation_hours`, `missions.refusal_reason_required`
@@ -456,6 +457,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Saisie du responsable : validée tout de suite. Saisie du Chef d'équipe : en attente du responsable ; personne ne valide sa propre saisie.
   - Le Chef d'équipe ne saisit que pour les opérateurs de son équipe.
   - Avant d'enregistrer, un résumé montre les lignes, présents, retards, absents et la paie à inscrire. Un jour d'une période de paie clôturée est refusé : rouvre la période.
+  - « Présence du mois » (sous la feuille) : P, R, ½, A par jour et par personne, un tiret pour un jour oublié, des tirets pour une ligne en attente ; « Jours » = jours payés.
 - **Dans le code** : `src/views/WorksheetView.tsx`, `src/utils/workEntry.ts`, `src/utils/paperSheet.ts`, `src/utils/workTypes.ts`, `src/utils/entryOnly.ts`, `src/utils/workChecks.ts`
 <!-- /AUTO:pages -->
 
@@ -685,6 +687,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `missionTemplates.ts` | Modèles de mission (module 6, M6.2). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:templates`. |
 | `modalGuard.ts` | Fermeture d'une fenêtre par un clic sur le fond sombre. Règles pures, sans écran. Contrôlé par `npm run check:reason-modal`. |
 | `moduleSwitch.ts` | Interrupteur de modules : le responsable peut CACHER des pages du menu (rien n'est supprimé, les données restent). |
+| `monthGrid.ts` | Grille de présence du mois (M27.10) : les personnes en lignes, les jours en colonnes, P / R / ½ / A et le total de jours. Règles pures, sans écran ni serveur. |
 | `monthLevel.ts` | Niveau de performance d'un opérateur = nombre de missions VALIDÉES dans le mois (du 1er au dernier jour, heure de Madagascar). Règle pure, calculée, jamais donnée à la main. |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
@@ -740,6 +743,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
 | `serverClock.ts` | Horloge du SERVEUR : les signes de vie (dernière activité, arrivée, départ) sont écrits avec l'heure du serveur. Comparés à l'heure de l'appareil, un PC ou un téléphone |
 | `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
+| `sheetBatch.ts` | Valider toute une feuille d'un coup (M27.5) : regroupe les lignes de la Feuille du jour SAISIES PAR UN CHEF D'ÉQUIPE et encore « en attente », par chef et par jour. Règles pures, sans écran ni serveur. |
 | `sheetDay.ts` | Feuille du jour : qui manque, total du jour, avancement du jour (M27.1, M27.2, M27.6, 2026-11-09). Règles pures, sans écran ni serveur. |
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
@@ -960,6 +964,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `PerformanceSettings.tsx` | Réglages de la performance : période du score, minimums de missions, poids du score et seuils des badges Bronze, Argent, Or. |
 | `PollBlock.tsx` | Sondage d'une publication des Actualités (étape C2) : un vote par personne (changer ou retirer son vote est possible), |
 | `PostsGrid20.tsx` | Grille des missions : liste filtrable et triable, et pour le responsable l'ajout d'une mission (client, modèle, échéance, tâches). |
+| `PresenceMonthGrid.tsx` | Grille de présence du mois (M27.10) sous la Feuille du jour : personnes × jours, avec P / R / ½ / A, les jours oubliés en tiret et le total de jours payés. Lecture seule. |
 | `ProfilePhotoGate.tsx` | Écran obligatoire : l'employé doit ajouter sa photo de profil (appareil photo ou galerie) avant d'utiliser le site. |
 | `PullToRefresh.tsx` | Tirer la page vers le bas en haut de page : une roue tourne puis les données sont actualisées. |
 | `QueueButton.tsx` | Bouton de l'opérateur « Je n'ai pas de mission » : entre dans la file d'attente vue par le responsable, ou la quitte. |
@@ -1221,6 +1226,8 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:graphs` | Page « Graphiques » (responsable) : tous les graphiques sur une seule page, 16 cartes, filtres clairs, une période pour toutes. |
 | `npm run check:work-types` | Types de travail, modes de paie et modèles d'entreprise (module 26, M26.2) : règles pures, sans réseau. Cas normaux ET cas piégés. |
 | `npm run check:payroll-modes` | Paie selon le mode (module 26, M26.4) : le serveur (bloc DECIDE de df-api) et le site (postPay.ts / postDecision.ts) donnent EXACTEMENT les mêmes montants sur des milliers de cas, |
+| `npm run check:sheet-batch` | M27.5 : « Tout valider » une feuille saisie par un chef d'équipe. |
+| `npm run check:month-grid` | M27.10 : grille de présence du mois. |
 | `npm run check:work-summary` | Résumé avant d'enregistrer la feuille du jour : mêmes chiffres que ceux que le serveur inscrira à la validation. |
 | `npm run check:work-closed` | Saisie sur une période de paie clôturée : refusée par le serveur (et l'annulation voit aussi les périodes « payées »). |
 | `npm run check:work-entry` | Feuille du jour (module 26, M26.5a) : le site (workEntry.ts) et le serveur (bloc WORKENTRY de df-api) donnent EXACTEMENT les mêmes résultats sur des milliers de feuilles ; |

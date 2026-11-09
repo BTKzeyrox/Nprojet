@@ -10,6 +10,7 @@ import { readCompany } from '../utils/companyRules';
 import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { summarizeSheet } from '../utils/sheetSummary';
+import { PresenceMonthGrid } from '../components/PresenceMonthGrid';
 import { workLineDetail } from '../utils/workLineText';
 import { missingPeople, dayTotals, copyFromDay } from '../utils/sheetDay';
 import { remAddDays } from '../utils/reminderRules';
@@ -217,6 +218,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
           )}
         </>
       )}
+      <PresenceMonthGrid people={people} today={today} L={L} en={en} />
     </div>
   );
 };
