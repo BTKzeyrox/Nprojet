@@ -628,6 +628,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `chatScrollGuard.ts` | Messagerie : un glissement du doigt au bout d'une liste (tout en haut ou tout en bas) ne doit JAMAIS faire bouger la page, |
+| `chatTemplates.ts` | Messagerie S4 (2026-11-09) : modèles de messages personnels (réponses rapides, gardés sur CET appareil) et règle du message programmé. |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
 | `clientPrice.ts` | Règles pures (sans écran, sans serveur) du prix client d'une mission : prix de la mission, du client, du type, puis prix par défaut. |
@@ -928,6 +929,8 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `LogoutTransition.tsx` | Écran sombre de transition « déconnexion en cours » avec animation, affiché pendant la déconnexion. |
 | `MenuPagesCard.tsx` | Réglages > Général > « Pages du menu » (ADMIN) : choisir les pages affichées, simplement. |
 | `MenuTabs.tsx` | Rangée d'onglets du menu simplifié (M22.6) : en haut de chaque entrée qui a plusieurs pages. Toujours au même endroit ; sur téléphone elle défile de côté. |
+| `MessageToItem.tsx` | Messagerie S3 (2026-11-09) : transformer un message en rappel, tâche ou événement (menu du message). Créé pour soi seul (shared=false), comme l'assistant. |
+| `MessageTools.tsx` | Messagerie S4 (2026-11-09) : « Programmer un message » et « Modèles » (fenêtres du menu « + » du chat). Règles : utils/chatTemplates.ts. Utilisé par : ChatView.tsx. |
 | `MissionGuide.tsx` | Guide d'une mission en quatre étapes avec le justificatif attendu : contenu (MissionGuideContent), bouton d'aide (MissionGuideButton) et liste de contrôle du responsable (AdminChecklist). |
 | `MissionTemplatesSection.tsx` | Section des Réglages pour gérer les modèles de mission : créer, modifier et supprimer, avec le type et le justificatif demandé. |
 | `MyPayroll.tsx` | Page de l'opérateur pour sa paie : période en cours, fiches de paie détaillées, impression, PDF et Excel, plus le plafond d'avance (useAdvanceRoom, AdvanceRoomInfo). |
@@ -1082,6 +1085,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:offline-ui` | Contrôle des ÉCRANS du mode hors ligne (module 13, M13.6), sans réseau réel ni vrai navigateur : |
 | `npm run check:offline-server` | Contrôle des actions numérotées du serveur (module 13, M13.7). Lancer : npm run check:offline-server |
 | `npm run check:chat-poll` | Messagerie : sondage, choix de date et « J'ai lu » dans les discussions et groupes (S1, 2026-11-09). Règles du stockage (vote, retrait, comptes sans noms) + câblage (menu « + », serveur). |
+| `npm run check:chat-tools` | Messagerie S3 + S4 (2026-11-09) : rappel/tâche/événement depuis un message, modèles de messages, message programmé. Règles pures + câblage (écran et serveur). |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

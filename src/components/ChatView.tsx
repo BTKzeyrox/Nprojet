@@ -7,7 +7,7 @@ import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerK
 import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
-  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Eye, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
+  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown,
 } from 'lucide-react';
 import { db } from '../db/store';
@@ -39,6 +39,9 @@ import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
 import { ChatPoll, PollComposer } from './ChatPoll';
+import { MessageToItem } from './MessageToItem';
+import { ScheduleDialog, TemplatesDialog } from './MessageTools';
+import { scheduleLabel } from '../utils/chatTemplates';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
@@ -355,6 +358,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const lastSent = useRef<{ key: string; at: number }>({ key: '', at: 0 });
   const [plusOpen, setPlusOpen] = useState(false);
   useEffect(() => { if (!plusOpen) return; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setPlusOpen(false); }; window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f); }, [plusOpen]);
+  const [itemMsg, setItemMsg] = useState<ChatMessage | null>(null); // message à transformer en rappel / tâche / événement
+  const [tool, setTool] = useState<'schedule' | 'templates' | null>(null);
   const [pollKind, setPollKind] = useState<'poll' | 'date' | 'ack' | null>(null);
   const sendPoll = (poll: { question: string; options: string[]; kind: 'poll' | 'date' | 'ack' }) => {
     if (current.readOnly) return;
@@ -612,6 +617,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         ...(menuMsg.sender_id === currentUser.id
           ? [{ k: 'pin', label: menuMsg.pinned ? 'Désépingler' : 'Épingler', icon: menuMsg.pinned ? PinOff : Pin, color: 'text-amber-500', run: () => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); } }]
           : []),
+        ...((menuMsg.message || menuMsg.poll) && !menuMsg.deleted_at ? [{ k: 'item', label: 'Rappel, tâche, événement', icon: CalendarDays, color: 'text-blue-500', run: () => { setItemMsg(menuMsg); setMenuMsg(null); } }] : []),
         { k: 'hide', label: 'Supprimer pour moi', icon: EyeOff, color: 'text-slate-500', run: () => deleteForMe(menuMsg) },
         ...(db.canDeleteForAll(menuMsg, currentUser.id) ? [{ k: 'del', label: 'Supprimer pour tous', icon: Trash2, color: 'text-red-500', run: () => confirmDelete(menuMsg) }] : []),
       ]
@@ -821,6 +827,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                               <span className="break-all">{msg.attachment_name || 'fichier'}</span>
                             </button>
                           )}
+                          {msg.send_at && msg.sender_id === currentUser.id && <div data-scheduled-badge className="text-xs font-semibold mb-1 opacity-90">⏰ Part le {scheduleLabel(msg.send_at)} (visible par toi seul)</div>}
                           {msg.poll && <ChatPoll msg={msg} meId={currentUser.id} isAdmin={currentUser.role === 'admin'} light={L} users={users} />}
                           {!isAlbum && !msg.poll && msg.message && <span className="whitespace-pre-line"><LinkedText text={msg.message} onOpen={link => { if (deepLinkAllowed(currentUser.role, link.go)) applyDeepLink(link, v => onNavigate?.(v)); }} /></span>}
                         </>
@@ -940,8 +947,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} aria-hidden />
                     <div role="menu" data-chat-plus-menu className={`absolute bottom-12 left-0 z-50 w-60 rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
-                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye]] as const).map(([k, label, Icon]) => (
-                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
+                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
+                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
                       ))}
                     </div>
                   </>
@@ -979,6 +986,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         )}
       </div>
 
+      {itemMsg && <MessageToItem msg={itemMsg} light={L} onClose={() => setItemMsg(null)} />}
+      {tool === 'schedule' && <ScheduleDialog light={L} initial={text} onClose={() => setTool(null)} onSend={(t, ms) => { if (current.readOnly) return; db.sendMessage({ senderId: currentUser.id, message: t, recipientId: current.id === 'all' ? 'all' : current.id, sendAt: ms }); setText(''); setTool(null); }} />}
+      {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
       {/* Menu des options de la conversation */}

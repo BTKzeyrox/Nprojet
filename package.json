@@ -45,6 +45,7 @@
     "check:offline-ui": "esbuild scripts/check-offline-ui.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-offline-ui.mjs && node node_modules/.cache/check-offline-ui.mjs",
     "check:offline-server": "npx --yes tsx scripts/check-offline-server.ts",
     "check:chat-poll": "esbuild scripts/check-chat-poll.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-poll.mjs && node node_modules/.cache/check-chat-poll.mjs",
+    "check:chat-tools": "esbuild scripts/check-chat-tools.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-tools.mjs && node node_modules/.cache/check-chat-tools.mjs",
     "check:no-autoseed": "esbuild scripts/check-no-autoseed.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-no-autoseed.mjs && node node_modules/.cache/check-no-autoseed.mjs",
     "check:sheet-auto": "npx --yes tsx scripts/check-sheet-auto.ts",
     "check:sheet-form": "esbuild scripts/check-sheet-form.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-form.mjs && node node_modules/.cache/check-sheet-form.mjs",

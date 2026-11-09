@@ -46,7 +46,7 @@ has(/\{ go: 'validations', filter: 'advances', nav: `val-adv-\$\{rec\.id\}` \}/,
 has(/existing\.status === 'pending' && \(toSave\.status === 'approved' \|\| toSave\.status === 'rejected'\)/, 'serveur : réponse à une avance → l\'employé (une seule fois)');
 has(/\{ go: 'advances', nav: `adv-\$\{rec\.id\}` \}, 'advances'/, 'serveur : l\'employé arrive sur son avance (catégorie « avances »)');
 has(/col === 'securityLogs' && !existing && toSave\) pushJobs\.push\(pushAdmins\('security'/, 'serveur : alerte de sécurité → les responsables');
-has(/col === 'messages' && !existing && toSave && toSave\.sender_id\) pushJobs\.push\(pushMessage\(toSave\)\)/, 'serveur : message reçu → ses destinataires (une seule fois)');
+has(/col === 'messages' && !existing && toSave && toSave\.sender_id && !toSave\.send_at\) pushJobs\.push\(pushMessage\(toSave\)\)/, 'serveur : message reçu → ses destinataires (une seule fois)');
 has(/\{ go: 'chat', thread: group \? 'all' : String\(m\.sender_id\) \}, 'messages'/, 'serveur : le clic ouvre la bonne discussion');
 has(/pushAdmins\('validations', notifyText\('signup'[\s\S]{0,200}filter: 'signups', nav: `val-sig-\$\{id\}`/, 'serveur : inscription → les responsables, lien exact');
 has(/pushAdmins\('validations', notifyText\('reset'[\s\S]{0,200}filter: 'resets', nav: `val-rst-\$\{id\}`/, 'serveur : mot de passe oublié → les responsables, lien exact');

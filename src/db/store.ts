@@ -3193,6 +3193,7 @@ export class AppStore {
     attachmentKind?: 'image' | 'file';
     replyTo?: ChatMessage; // message cité
     albumId?: string; // photos envoyées ensemble
+    sendAt?: number; // message programmé (ms)
     poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' }; // sondage (messagerie S1) : 2 à 6 choix, ou dates, ou « J'ai lu »
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
@@ -3212,7 +3213,8 @@ export class AppStore {
       recipient_id: params.recipientId || 'all',
       message: poll ? `${poll.kind === 'date' ? '📅' : poll.kind === 'ack' ? '👁' : '📊'} ${poll.question}` : params.message.trim(),
       timestamp: timeStr,
-      sent_ms: now.getTime(),
+      sent_ms: params.sendAt && params.sendAt > now.getTime() ? params.sendAt : now.getTime(),
+      ...(params.sendAt && params.sendAt > now.getTime() && !poll ? { send_at: params.sendAt } : {}),
       ...(poll ? { poll } : {}),
       ...(q && !q.deleted_at
         ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }

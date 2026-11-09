@@ -3611,7 +3611,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       if (existing.sender_id !== me.id && !admin) return { ok: false };
       if (existing.deleted_at) return { ok: true, save: existing };
       const save = { ...existing, message: '', deleted_at: now, deleted_by: existing.sender_id === me.id ? 'sender' : 'admin' };
-      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions']) delete save[k];
+      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions', 'send_at']) delete save[k];
       return { ok: true, save };
     }
     // Réaction emoji : tout participant à la conversation, mais seulement sa propre réaction
@@ -3691,6 +3691,12 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
     const pc = pollClean(rec.poll);
     if (!pc) return { ok: false };
     save.poll = pc; save.message = `${pc.kind === 'date' ? '📅' : pc.kind === 'ack' ? '👁' : '📊'} ${pc.question}`;
+  }
+  delete save.send_at;
+  if (rec.send_at !== undefined) { // message programmé (messagerie S4) : de 1 minute à 30 jours ; il part avec la tâche planifiée (chaque minute)
+    const at = Number(rec.send_at), nowMs = Date.now();
+    if (!Number.isFinite(at) || at < nowMs + 60000 || at > nowMs + 30 * 86400000 || rec.poll !== undefined) return { ok: false };
+    save.send_at = Math.round(at); save.sent_ms = save.send_at;
   }
   const rt = clipReply(rec.reply_to);
   if (rt) save.reply_to = rt; else delete save.reply_to;
@@ -3831,6 +3837,7 @@ async function state(req: any, res: any, me: any) {
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'news' && !admin) recs = recs.map((r: any) => viewNews(r, me)); // sondage : comptes et son vote seulement
+    if (col === 'messages') recs = recs.filter((r: any) => !r.send_at || r.sender_id === me.id); // message programmé : invisible des autres jusqu'à son heure
     if (col === 'messages') recs = recs.map((r: any) => (r.poll && r.sender_id !== me.id ? { ...r, poll: pollView(r.poll, String(me.id), false) } : r)); // sondage d'une discussion : seul l'auteur voit les noms
     if (col === 'reviews' && me.role !== 'admin') recs = recs.map((r: any) => { const { improvements: _hidden, ...mine } = r; return mine; }); // jamais les « points à améliorer » côté salarié (D9)
     if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me, teamMates));
@@ -4186,7 +4193,7 @@ async function sync(req: any, res: any, me: any) {
         else if (existing && existing.status === 'pending' && (toSave.status === 'approved' || toSave.status === 'rejected') && toSave.employee_id) pushJobs.push(pushTo([String(toSave.employee_id)], notifyText(toSave.status === 'approved' ? 'advance_ok' : 'advance_no', { reason: toSave.admin_notes }), `adv_${toSave.status}:${rec.id}`.slice(0, 60), { go: 'advances', nav: `adv-${rec.id}` }, 'advances'));
       }
       if (col === 'securityLogs' && !existing && toSave) pushJobs.push(pushAdmins('security', notifyText('security', { name: toSave.employee_name }), `sec:${rec.id}`.slice(0, 60), { go: 'security', nav: `sec-${rec.id}` }));
-      if (col === 'messages' && !existing && toSave && toSave.sender_id) pushJobs.push(pushMessage(toSave));
+      if (col === 'messages' && !existing && toSave && toSave.sender_id && !toSave.send_at) pushJobs.push(pushMessage(toSave)); // un message programmé est notifié à son heure (releaseScheduledMessages)
       if (col === 'news' && !existing && toSave && (toSave.status || 'published') === 'published') pushJobs.push(pushNewsNew(toSave)); // publication du responsable : tout le public concerné
       if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
@@ -6493,11 +6500,32 @@ async function remSendMail(text: { fr: { title: string; body: string } }): Promi
 }
 // Tâche planifiée « df-reminders-due » : toutes les minutes. Envoie les rappels dont l'heure vient de passer (fenêtre de 20 min si la tâche a pris du retard) ;
 // chaque envoi a une clé unique rangée dans df_push_log : jamais deux fois. Le téléphone hors ligne reçoit la notification au retour du réseau (gardée 24 h par le service de notification).
+// Messages programmés (messagerie S4) : à l'heure, le message devient normal (heure d'envoi = maintenant, notification). Un message supprimé ne part pas.
+async function releaseScheduledMessages(): Promise<number> {
+  try {
+    const { data: rows } = await sb.from(T.messages).select('id,data').not('data->>send_at', 'is', null);
+    const nowMs = Date.now();
+    let n = 0;
+    for (const r of rows || []) {
+      const d: any = r.data;
+      if (!d || Number(d.send_at) > nowMs) continue;
+      const { send_at: _s, ...rest } = d;
+      const ts = new Date(nowMs + 3 * 3600000).toISOString();
+      const out = { ...rest, sent_ms: nowMs, timestamp: `${ts.slice(0, 10)} ${ts.slice(11, 19)}` };
+      const { error } = await sb.from(T.messages).upsert({ id: r.id, data: out, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      if (error) continue;
+      n++;
+      if (!d.deleted_at) await pushMessage(out);
+    }
+    return n;
+  } catch { return 0; }
+}
 async function remindersDue(request: Request, res: any) {
   const given = request.headers.get('x-cron-secret') || '';
   const { data: want } = await sb.rpc('df_push_get_secret', { secret_name: 'push_cron_secret' });
   const a = Buffer.from(given), b = Buffer.from(String(want || ''));
   if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return res.status(401).json({ error: 'refusé' });
+  await releaseScheduledMessages();
   const nowMs = Date.now();
   const { data: rows } = await sb.from(REMINDERS).select('data').eq('data->>kind', 'item').in('data->>status', ['todo', 'doing']);
   const items = (rows || []).map((r: any) => r.data as RemItem);
