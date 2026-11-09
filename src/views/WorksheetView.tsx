@@ -11,7 +11,8 @@ import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } f
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { summarizeSheet } from '../utils/sheetSummary';
 import { workLineDetail } from '../utils/workLineText';
-import { missingPeople, dayTotals } from '../utils/sheetDay';
+import { missingPeople, dayTotals, copyFromDay } from '../utils/sheetDay';
+import { remAddDays } from '../utils/reminderRules';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
@@ -70,6 +71,13 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
     setMsg(r.ok ? { ok: true, text: t('Ligne annulée. Tu peux la saisir à nouveau.', 'Line cancelled. You can enter it again.') } : { ok: false, text: r.error || t('Annulation impossible.', 'Could not cancel.') });
   };
   const groupApply = (patch: { presence?: string; hours?: string; quantity?: string; rejected?: string }) => setRows(prev => { const next = applyGroup(prev, people.map(u => u.id), patch); if (key) saveDraft(key, next); return next; });
+  const copyYesterday = () => { // M27.7 : recopie la veille dans les cases vides
+    if (!type) return;
+    const r = copyFromDay(rows, people, db.getPosts() as any, remAddDays(date, -1), date, type.id);
+    if (r.copied === 0) { setMsg({ ok: false, text: t('Rien à copier : personne n\'a de ligne la veille pour ce type, ou les cases sont déjà remplies.', 'Nothing to copy: nobody has a line the day before for this type, or the boxes are already filled.') }); return; }
+    setRows(r.rows); if (key) saveDraft(key, r.rows);
+    setMsg({ ok: true, text: `${r.copied} ${r.copied > 1 ? t('personnes copiées de la veille', 'people copied from the day before') : t('personne copiée de la veille', 'person copied from the day before')}. ${t('Relis, puis enregistre.', 'Check, then save.')}` });
+  };
   const printPaper = () => { if (!type) return; const ok = printPaperSheet(paperSheetHtml(people.map(u => u.name), { name: en ? type.name.en : type.name.fr, measure: type.measure, unit: en ? type.unit?.en : type.unit?.fr }, date, 7, en ? 'en' : 'fr', String((db.getSettings() as any).company_name || ''))); if (!ok) setMsg({ ok: false, text: t("Le navigateur a bloqué la fenêtre d'impression : autorise-la puis réessaie.", 'The browser blocked the print window: allow it and try again.') }); };
 
   const save = async () => {
@@ -124,6 +132,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
                   <button type="button" data-group-hours-apply onClick={() => groupApply({ hours: grp.hours })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
                 {showQty && <><label className="block space-y-1"><span className={label}>{t('Quantité pour tous', 'Quantity for all')}</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
                   <button type="button" data-group-qty-apply onClick={() => groupApply({ quantity: grp.quantity })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
+                <button type="button" data-copy-yesterday onClick={copyYesterday} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Copier la veille', 'Copy the day before')}</button>
                 <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Imprimer la feuille papier', 'Print the paper sheet')}</button>
               </div>
             </div>

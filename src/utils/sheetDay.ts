@@ -32,3 +32,29 @@ export function dayProgress(people: DayPerson[], posts: DayPost[], today: string
   const done = active.filter(u => posts.some(p => counted(p) && idStr(p).startsWith(`we-${today}-${u.id}-`))).length;
   return { done, total: active.length };
 }
+
+export type CopyRow = { presence?: string; hours?: string; quantity?: string; rejected?: string };
+const PRESENCES = ['present', 'late', 'half', 'absent'];
+const numText = (v: unknown): string => { const n = Number(v); return Number.isFinite(n) && n > 0 ? String(Math.round(n * 100) / 100) : ''; };
+/** « Copier la veille » (M27.7) : recopie présence, heures, quantité, refusées de la veille, pour la même liste et le même type.
+ *  Cases vides seulement : jamais d'écrasement de ce qui est déjà tapé, ni d'une personne déjà saisie (enregistrée) ce jour-là. Renvoie une COPIE. */
+export function copyFromDay(rows: Record<string, CopyRow>, people: DayPerson[], posts: (DayPost & { hours?: unknown; quantity?: unknown; rejected?: unknown })[], prevDate: string, date: string, workType: string): { rows: Record<string, CopyRow>; copied: number } {
+  const out: Record<string, CopyRow> = { ...rows };
+  let copied = 0;
+  for (const u of people) {
+    if (u.status === 'blocked' || isRowFilled(rows[u.id])) continue;
+    if (posts.some(p => counted(p) && idStr(p) === `we-${date}-${u.id}-${workType}`)) continue;
+    const prev = posts.find(p => counted(p) && idStr(p) === `we-${prevDate}-${u.id}-${workType}`);
+    if (!prev) continue;
+    const row: CopyRow = {};
+    if (typeof prev.presence === 'string' && PRESENCES.includes(prev.presence)) row.presence = prev.presence;
+    const h = numText(prev.hours), q = numText(prev.quantity), r = numText(prev.rejected);
+    if (h) row.hours = h;
+    if (q) row.quantity = q;
+    if (q && r) row.rejected = r;
+    if (!isRowFilled(row)) continue;
+    out[u.id] = { ...(rows[u.id] || {}), ...row };
+    copied++;
+  }
+  return { rows: out, copied };
+}
