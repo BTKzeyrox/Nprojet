@@ -92,7 +92,7 @@ export const MissionsToLink: React.FC = () => {
         </ul>
       )}
       {rows.length > PAGE && (
-        <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[40px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm">
+        <button type="button" onClick={() => setShowAll(v => !v)} className="w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm">
           {showAll ? t('Voir moins', 'Show less') : t(`Tout voir (${rows.length})`, `Show all (${rows.length})`)}
         </button>
       )}

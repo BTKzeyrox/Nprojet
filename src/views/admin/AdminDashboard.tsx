@@ -480,7 +480,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <section className={panel}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-white">À valider</h3>
-              <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className="text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
+              <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className="min-h-[44px] inline-flex items-center text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
             </div>
             {waiting.length === 0 ? (
               <p className="text-sm text-slate-500 py-4 text-center">Rien à valider pour le moment.</p>
@@ -504,7 +504,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <section className={panel}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-white">Missions en cours</h3>
-              <button type="button" onClick={() => onNavigateTab && onNavigateTab('sessions')} className="text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
+              <button type="button" onClick={() => onNavigateTab && onNavigateTab('sessions')} className="min-h-[44px] inline-flex items-center text-xs font-semibold text-blue-500 cursor-pointer">Tout voir</button>
             </div>
             {running.length === 0 ? (
               <p className="text-sm text-slate-500 py-4 text-center">Aucune mission en cours.</p>
@@ -599,7 +599,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex items-center gap-2">
                   {activeSessionForModal && (
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase ${
                         activeSessionForModal.status === 'pending_start'
                           ? 'bg-amber-950 text-amber-300 border border-amber-500 animate-pulse'
                           : activeSessionForModal.status === 'pending_end'
@@ -656,35 +656,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             Demande envoyée par l'opérateur
                           </span>
                         </div>
-                        <span className="text-[10px] text-amber-400 font-bold bg-amber-950 px-2 py-0.5 rounded border border-amber-600/40">
+                        <span className="text-[11px] text-amber-400 font-bold bg-amber-950 px-2 py-0.5 rounded border border-amber-600/40">
                           {activeSessionForModal.status === 'pending_start' ? 'DÉBUT DE MISSION' : 'FIN DE MISSION'}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Opérateur</span>
+                          <span className="text-slate-400 text-[11px] block uppercase">Opérateur</span>
                           <strong className="text-white text-xs truncate block">{activeSessionForModal.employee_name}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Quantité de départ</span>
+                          <span className="text-slate-400 text-[11px] block uppercase">Quantité de départ</span>
                           <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Quantité actuelle / finale</span>
+                          <span className="text-slate-400 text-[11px] block uppercase">Quantité actuelle / finale</span>
                           <strong className="text-cyan-400 text-xs block">
                             {formatScoreM(activeSessionForModal.final_score ?? activeSessionForModal.current_score)}
                           </strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
-                          <span className="text-slate-400 text-[10px] block uppercase">Horaire</span>
+                          <span className="text-slate-400 text-[11px] block uppercase">Horaire</span>
                           <strong className="text-amber-300 text-xs block">{activeSessionForModal.start_time}</strong>
                         </div>
                       </div>
 
                       {/* Display All Submitted Photos (1 to 4 photos) */}
                       <div>
-                        <span className="text-[10px] text-amber-300 uppercase font-bold block mb-1.5 flex items-center gap-1">
+                        <span className="text-[11px] text-amber-300 uppercase font-bold block mb-1.5 flex items-center gap-1">
                           <Camera className="w-3.5 h-3.5" />
                           <span>
                             Justificatifs envoyés (
@@ -712,8 +712,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               }
                               className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/70 bg-black/60 group cursor-pointer shadow hover:border-amber-400 transition-colors"
                             >
-                              <img src={photoUrl} alt={`Photo ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-mono transition-opacity">
+                              <img src={photoUrl || undefined} alt={`Photo ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[11px] font-mono transition-opacity">
                                 <Eye className="w-4 h-4 text-amber-400" />
                               </div>
                               <div className="absolute bottom-0 right-0 bg-black/80 text-[8px] font-mono text-amber-400 px-1 font-bold">
@@ -755,7 +755,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Modifier la mission
                       </h4>
                     </div>
-                    <span className="text-[10px] text-cyan-400 font-mono">Réservé au responsable</span>
+                    <span className="text-[11px] text-cyan-400 font-mono">Réservé au responsable</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
@@ -797,7 +797,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                       <div>
                         <label className="block text-slate-300 mb-1">Justificatif demandé à la fin</label>
-                        <select value={editProofMode} onChange={e => setEditProofMode(e.target.value as typeof editProofMode)} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white">
+                        <select aria-label="Preuve demandée" value={editProofMode} onChange={e => setEditProofMode(e.target.value as typeof editProofMode)} className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white">
                           <option value="type">Selon le type de mission</option>
                           <option value="none">Aucun justificatif</option>
                           <option value="photo">Photo ou capture obligatoire</option>
@@ -819,7 +819,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={changeInitial}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-emerald-400 font-bold"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editInitialScore)}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">{formatScoreM(editInitialScore)}</span>
                     </div>
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Objectif (quantité à faire)</label>
@@ -828,7 +828,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={changeObjective}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-amber-400 font-bold"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editObjective)}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">{formatScoreM(editObjective)}</span>
                     </div>
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Cible (total visé)</label>
@@ -837,7 +837,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={setEditTargetScore}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-cyan-400 font-bold"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editTargetScore)}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">{formatScoreM(editTargetScore)}</span>
                     </div>
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Fait jusqu'ici</label>
@@ -846,7 +846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={setEditCurrentScore}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white font-bold"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editCurrentScore)}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">{formatScoreM(editCurrentScore)}</span>
                     </div>
                     <div className="sm:col-span-2">
                       <label className="block text-slate-300 uppercase mb-1">À faire (cible − actuel)</label>
@@ -855,7 +855,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={changeReste}
                         className={`w-full bg-[#0d1622] border rounded-lg p-2 font-bold ${editCurrentScore > editTargetScore ? 'border-red-500 text-red-400' : 'border-slate-600 text-orange-400'}`}
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">
                         {formatScoreM(editReste)} · liés automatiquement : Cible = Début + Objectif, Reste = Cible − Actuel
                       </span>
                     </div>
@@ -909,7 +909,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className="w-full h-full cursor-pointer"
                             title="Agrandir la photo"
                           >
-                            <img src={url} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
+                            <img src={url || undefined} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
                           </button>
                           <button
                             type="button"
@@ -929,7 +929,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </label>
                       )}
                     </div>
-                    <span className="text-[10px] text-slate-500 block">
+                    <span className="text-[11px] text-slate-500 block">
                       Les liens des photos sont publics : n'y mets aucune donnée personnelle ou secrète. Enregistre la mission pour valider les changements.
                     </span>
                   </div>
@@ -1406,13 +1406,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     <div className="w-full sm:flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-900/80 text-red-200 border border-red-700">
+                        <span className="text-[11px] sm:text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-red-900/80 text-red-200 border border-red-700">
                           {log.violation_type.replace('_', ' ').toUpperCase()}
                         </span>
                         <span className="text-xs font-bold text-white font-mono">
                           Opérateur: {log.employee_name}
                         </span>
-                        <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] sm:text-[11px] text-slate-400 font-mono">
                           ({log.timestamp})
                         </span>
                       </div>
@@ -1422,7 +1422,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </p>
 
                       {log.details && (
-                        <div className="mt-2 text-[10px] sm:text-[11px] font-mono text-slate-400 flex flex-wrap gap-2.5 sm:gap-3">
+                        <div className="mt-2 text-[11px] sm:text-[11px] font-mono text-slate-400 flex flex-wrap gap-2.5 sm:gap-3">
                           {log.details.initial_score !== undefined && (
                             <span>Quantité initiale: <strong className="text-white">{formatScoreM(log.details.initial_score)} unités</strong></span>
                           )}
@@ -1491,7 +1491,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex items-center gap-1 bg-[#141e2a] p-1 rounded-lg border border-slate-700 text-xs font-mono">
             <button
               onClick={() => setSubmissionFilter('all')}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-3 min-h-[44px] rounded transition-colors ${
                 submissionFilter === 'all'
                   ? 'bg-emerald-600 text-white font-bold'
                   : 'text-slate-400 hover:text-white'
@@ -1501,7 +1501,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
             <button
               onClick={() => setSubmissionFilter('pending_start')}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-3 min-h-[44px] rounded transition-colors ${
                 submissionFilter === 'pending_start'
                   ? 'bg-emerald-600 text-white font-bold'
                   : 'text-slate-400 hover:text-white'
@@ -1511,7 +1511,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
             <button
               onClick={() => setSubmissionFilter('pending_end')}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-3 min-h-[44px] rounded transition-colors ${
                 submissionFilter === 'pending_end'
                   ? 'bg-emerald-600 text-white font-bold'
                   : 'text-slate-400 hover:text-white'
@@ -1546,7 +1546,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                            className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase ${
                               isStart
                                 ? 'bg-cyan-950 text-cyan-300 border border-cyan-700'
                                 : 'bg-emerald-950 text-emerald-300 border border-emerald-700'
@@ -1569,7 +1569,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Quantité faite */}
                       {!isStart && !wl && (
                         <div className="bg-blue-950/50 border border-blue-500/40 p-3 rounded-lg text-right font-mono">
-                          <div className="text-[10px] uppercase text-blue-300">Quantité faite</div>
+                          <div className="text-[11px] uppercase text-blue-300">Quantité faite</div>
                           <div className="text-lg font-bold text-blue-200">
                             +{formatScoreM(scoreDiff)}
                           </div>
@@ -1589,19 +1589,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* Scores Comparison */}
                     <div className={wl ? 'hidden' : 'grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono'}>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Quantité de départ</span>
+                        <span className="text-slate-500 text-[11px] block uppercase">Quantité de départ</span>
                         <span className="text-white font-bold">{formatScoreM(post.initial_score)} unités</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Quantité envoyée</span>
+                        <span className="text-slate-500 text-[11px] block uppercase">Quantité envoyée</span>
                         <span className="text-cyan-400 font-bold">{formatScoreM(finalScore)} unités</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Objectif</span>
+                        <span className="text-slate-500 text-[11px] block uppercase">Objectif</span>
                         <span className="text-amber-400 font-bold">{formatScoreM(post.target_score - post.initial_score)}</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Progression</span>
+                        <span className="text-slate-500 text-[11px] block uppercase">Progression</span>
                         <span className="text-emerald-400 font-bold">
                           {Math.round(((finalScore - post.initial_score) / (post.target_score - post.initial_score || 1)) * 100)}%
                         </span>
@@ -1630,13 +1630,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           }
                           className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                         >
-                          <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
+                          <div className="text-[11px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
                             <span className="text-emerald-400 font-bold">PHOTO DÉPART</span>
                             <span className="text-slate-500">{post.start_time}</span>
                           </div>
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                             <img
-                              src={post.start_proof_url}
+                              src={post.start_proof_url || undefined}
                               alt="Justificatif de départ"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
@@ -1663,13 +1663,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             }
                             className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                           >
-                            <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
+                            <div className="text-[11px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
                               <span className="text-cyan-400 font-bold">PHOTO FIN</span>
                               <span className="text-slate-500">{post.end_time || 'Clôture'}</span>
                             </div>
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
                               <img
-                                src={post.end_proof_url}
+                                src={post.end_proof_url || undefined}
                                 alt="Justificatif Fin"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
@@ -1793,10 +1793,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="font-semibold text-white flex items-center gap-1.5">
                           <span>{emp.name}</span>
                           {emp.status === 'blocked' && (
-                            <span className="text-[9px] bg-red-950 text-red-400 px-1 rounded">Banni</span>
+                            <span className="text-[11px] bg-red-950 text-red-400 px-1 rounded">Banni</span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400">
+                        <div className="text-[11px] text-slate-400">
                           {isStaff ? `${emp.role === 'team_lead' ? "Chef d'équipe" : 'Comptable'} · ` : showShift(db.getSettings()) ? `Vacation ${emp.shift.toUpperCase()} · ` : ''}{active && !isStaff ? `En cours : ${active.client_name}` : liveText(live, appLang === 'en' ? 'en' : 'fr')}
                         </div>
                       </div>
@@ -1805,8 +1805,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {onOpenEmployeeCV && (
                       <button
                         onClick={() => onOpenEmployeeCV(emp)}
-                        className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                        title="Voir le profil"
+                        className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:bg-slate-700 rounded text-slate-400 hover:text-white cursor-pointer"
+                        title="Voir le profil" aria-label="Voir le profil"
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>

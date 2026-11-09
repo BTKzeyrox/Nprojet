@@ -594,7 +594,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             {pinnedThreads.includes(t.id) && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Épinglée" />}<span className={`flex-1 min-w-0 text-[13px] font-semibold ${P.title}`} style={ONE_LINE}>{t.title}</span>
-            {accent.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
+            {accent.label && <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${accent.labelCls}`}>{accent.label}</span>}
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
           <span className="flex items-center gap-2 mt-0.5">
@@ -658,7 +658,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             <button type="button" data-assistant-row onClick={() => { setThreadId('assistant'); setShowList(false); setReplyTo(null); cancelEdit(); }}
               className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border border-l-sky-500 cursor-pointer shadow-sm ${onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200' : 'bg-white/5 border-white/10')}`}>
               <span className="w-12 h-12 rounded-full bg-sky-600 flex items-center justify-center shrink-0"><Bot className="w-6 h-6 text-white" /></span>
-              <span className="min-w-0 flex-1"><span className={`block font-bold text-sm ${P.title}`}>Assistant <span className="ml-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700">IA</span></span><span className={`block text-xs truncate ${P.sub}`}>{lastAssistantPreview(currentUser.id, 'fr') || 'Résumé, quoi faire, « et si… »'}</span></span>
+              <span className="min-w-0 flex-1"><span className={`block font-bold text-sm ${P.title}`}>Assistant <span className="ml-1 text-[11px] font-semibold rounded-full px-1.5 py-0.5 bg-sky-100 text-sky-700">IA</span></span><span className={`block text-xs truncate ${P.sub}`}>{lastAssistantPreview(currentUser.id, 'fr') || 'Résumé, quoi faire, « et si… »'}</span></span>
             </button>
           )}
           {shownList.filter(matches).map(t => renderThread(t))}
@@ -685,7 +685,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             type="button"
             onClick={() => { if (current.kind === 'user' && current.user) openProfile(current.user.id); else if (current.kind === 'group') setGroupInfo(true); }}
             className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
-            title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
+            aria-label={current.kind === 'user' ? 'Voir le profil' : 'Infos du groupe'} title={current.kind === 'user' ? 'Voir le profil' : current.kind === 'group' ? 'Infos du groupe' : undefined}
           >
             {current.kind === 'user' ? (
               <span className="relative shrink-0 inline-flex">
@@ -784,7 +784,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       {!gone && !isMe && showNames && !sameSender && (
                         <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold mb-0.5 cursor-pointer" style={{ color: accentStyles(accentOf(users.find(u => u.id === msg.sender_id) || { name: msg.sender_name }), L).name }} title="Voir le profil">
                           {msg.sender_name}
-                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 rounded bg-amber-500/20 text-amber-600 text-[9px]">RESPONSABLE</span>}
+                          {msg.sender_role === 'admin' && <span className="ml-1 px-1 rounded bg-amber-500/20 text-amber-600 text-[11px]">RESPONSABLE</span>}
                         </button>
                       )}
                       {gone ? (
@@ -835,7 +835,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                     </div>
                     {/* Petits détails sous la bulle (pas dans la bulle) */}
                     {!gone && (
-                      <div className={`flex items-center gap-1 mt-0.5 px-1 text-[10px] ${P.sub}`}>
+                      <div className={`flex items-center gap-1 mt-0.5 px-1 text-[11px] ${P.sub}`}>
                         {msg.pinned && <Pin className="w-3 h-3 text-amber-500" />}
                         {msg.edited_at && <span className="italic">modifié ·</span>}
                         <span>{time}</span>

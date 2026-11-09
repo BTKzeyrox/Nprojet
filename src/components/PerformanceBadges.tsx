@@ -127,7 +127,7 @@ const TrendBoxes: React.FC<{ scores: (number | null)[]; windowDays: number; lang
       {ordered.map((s, i) => (
         <div key={i} className="rounded-lg bg-slate-900/60 border border-slate-700 py-1.5">
           <div className="text-base font-black text-white">{s === null ? '—' : s}</div>
-          <div className="text-[10px] font-mono text-slate-400">{labels[i]}</div>
+          <div className="text-[11px] font-mono text-slate-400">{labels[i]}</div>
         </div>
       ))}
     </div>

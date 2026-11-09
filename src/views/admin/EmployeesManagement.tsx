@@ -394,12 +394,12 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             [en ? 'Level' : 'Performance', 'level', [['all', en ? 'All' : 'Tous'], ['Top Booster', lvCfg.names[3]], ['Elite', lvCfg.names[2]], ['Standard', lvCfg.names[1]], ['Under Watch', lvCfg.names[0]]]],
           ] as [string, 'shift' | 'account' | 'level', [string, string][]][]).filter(([, k]) => k !== 'shift' || showShift(cfg)).map(([title, key, opts]) => (
             <div key={key} className="min-w-0">
-              <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">{title}</div>
+              <div className="text-[11px] font-mono uppercase text-slate-500 mb-1">{title}</div>
               <FilterBar label={title} active={filters[key] as string} onChange={val => setFilters(f => ({ ...f, [key]: val }))} testId={val => `op-filter-${key}-${val}`}
                 filters={(() => { const fc = facetCounts(items, filters, key, opts.map(o => o[0])); return opts.map(([val, label]) => ({ id: val, label, count: fc[val] })); })()} />
             </div>
           ))}
-          <label className="min-w-0 text-[10px] font-mono uppercase text-slate-500">{en ? 'Sort by' : 'Trier par'}
+          <label className="min-w-0 text-[11px] font-mono uppercase text-slate-500">{en ? 'Sort by' : 'Trier par'}
             <select value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value as OpSort }))} data-testid="op-sort"
               className="mt-1 block min-h-[36px] px-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-200 text-xs normal-case cursor-pointer">
               <option value="name">{en ? 'Name' : 'Nom'}</option>
@@ -433,15 +433,15 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="font-bold text-white break-words">{emp.name}</span>
-                    {blocked && <span className="px-1.5 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 text-[10px] font-bold uppercase">{en ? 'Blocked' : 'Bloqué'}</span>}
-                    {!blocked && emp.access_mode === 'block' && <span className="px-1.5 py-0.5 rounded bg-amber-950 border border-amber-700 text-amber-300 text-[10px] font-bold uppercase">{en ? 'Access off' : 'Accès coupé'}</span>}
+                    {blocked && <span className="px-1.5 py-0.5 rounded bg-red-950 border border-red-700 text-red-300 text-[11px] font-bold uppercase">{en ? 'Blocked' : 'Bloqué'}</span>}
+                    {!blocked && emp.access_mode === 'block' && <span className="px-1.5 py-0.5 rounded bg-amber-950 border border-amber-700 text-amber-300 text-[11px] font-bold uppercase">{en ? 'Access off' : 'Accès coupé'}</span>}
                   </div>
                   <div className="text-[11px] text-slate-400 break-words">@{emp.username} · {showShift(cfg) ? (emp.shift === 'day' ? (en ? 'Day' : 'Jour') : (en ? 'Night' : 'Nuit')) : (en ? 'Hours' : 'Horaires')} ({shiftHoursLabel(effShift(emp.shift, cfg.shift_mode), cfg)})</div>
                   <div className="text-[11px] mt-0.5 flex flex-wrap items-center gap-x-2"><LiveLine info={live} lang={en ? 'en' : 'fr'} />{mission && <span className="text-slate-400 break-words">· {mission.client_name}</span>}</div>
                   {pend.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
                       {pend.map(b => {
-                        const cls = 'px-1.5 py-0.5 text-[10px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 whitespace-nowrap';
+                        const cls = 'px-1.5 py-0.5 text-[11px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 whitespace-nowrap';
                         const text = `${b.label}${b.n > 1 ? ` (${b.n})` : ''}`;
                         return cfg.badges_clickable && onNavigate
                           ? <button key={b.key} type="button" onClick={() => { setValFilterIntent(b.filter); onNavigate('validations'); }} className={`${cls} cursor-pointer hover:bg-amber-900`} title="Ouvrir la page Validations">{text}</button>
@@ -539,7 +539,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   <p className="text-slate-300 mt-1 leading-relaxed">
                     Motif: {adv.reason}
                   </p>
-                  <span className="text-[10px] text-slate-500 block mt-1">
+                  <span className="text-[11px] text-slate-500 block mt-1">
                     Date demande: {adv.request_date}
                   </span>
                 </div>

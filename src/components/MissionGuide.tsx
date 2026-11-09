@@ -39,7 +39,7 @@ export const MissionGuideContent: React.FC<{ type?: string; currentStep?: number
               <div>
                 <p className="font-bold text-white">
                   {s.title}
-                  {current && <span className="ml-2 text-[10px] uppercase text-emerald-400">Tu es ici</span>}
+                  {current && <span className="ml-2 text-[11px] uppercase text-emerald-400">Tu es ici</span>}
                 </p>
                 <p className="text-slate-300 text-[13px] mt-0.5">{s.text}</p>
               </div>

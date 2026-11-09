@@ -69,7 +69,7 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
           <div className="text-xs font-mono text-slate-400 break-words">
             @{u.username} · {u.phone || 'pas de téléphone'}{showShift(db.getSettings()) ? ` · ${u.shift === 'night' ? 'Nuit' : 'Jour'}` : ''}
           </div>
-          <div className="flex flex-wrap gap-1.5 mt-1.5 text-[10px] font-mono">
+          <div className="flex flex-wrap gap-1.5 mt-1.5 text-[11px] font-mono">
             <span className={`px-1.5 py-0.5 border ${u.status === 'blocked' ? 'border-red-500/60 text-red-300' : 'border-emerald-500/50 text-emerald-300'}`}>{u.status === 'blocked' ? 'Bloqué' : 'Actif'}</span>
             <span className={`px-1.5 py-0.5 border ${live.status === 'offline' ? 'border-slate-600 text-slate-400' : live.status === 'pause' || live.waiting ? 'border-amber-500/60 text-amber-300' : 'border-cyan-500/50 text-cyan-300'}`}>{liveText(live, lang === 'en' ? 'en' : 'fr')}</span>
             {onlineSec > 0 && <span className="px-1.5 py-0.5 border border-slate-600 text-slate-300">Connecté aujourd'hui : {formatDuration(onlineSec)}</span>}

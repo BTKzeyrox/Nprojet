@@ -165,9 +165,9 @@ export const PayrollAdmin: React.FC = () => {
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
             {s.paid && <span className="rounded-full inline-flex items-center gap-1 px-2 py-1 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono"><BadgeCheck className="w-3.5 h-3.5" />Payé · {s.paid.method}</span>}
-            <button type="button" onClick={() => setOpen(s)} className="px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer">Fiche</button>
-            {!isClosed && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'bonus' })} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-emerald-500/40 text-xs text-emerald-300 cursor-pointer"><Plus className="w-3.5 h-3.5" />Prime</button>}
-            {!isClosed && cfg.penalties && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'penalty' })} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/40 text-xs text-red-300 cursor-pointer"><MinusCircle className="w-3.5 h-3.5" />Retenue</button>}
+            <button type="button" onClick={() => setOpen(s)} className="px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer">Fiche</button>
+            {!isClosed && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'bonus' })} className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-emerald-500/40 text-xs text-emerald-300 cursor-pointer"><Plus className="w-3.5 h-3.5" />Prime</button>}
+            {!isClosed && cfg.penalties && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'penalty' })} className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/40 text-xs text-red-300 cursor-pointer"><MinusCircle className="w-3.5 h-3.5" />Retenue</button>}
             {isClosed && !s.paid && s.net > 0 && <button type="button" onClick={() => setPayFor(s)} className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white cursor-pointer">Marquer payé</button>}
           </div>
         </div>
@@ -229,7 +229,7 @@ export const PayrollAdmin: React.FC = () => {
                 <button type="button" className="rounded-lg px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
               )}
             </div>
-            <p className="text-[10px] text-slate-500">Ce document n'est pas un bulletin de paie légal : les cotisations sociales ne sont pas calculées.</p>
+            <p className="text-[11px] text-slate-500">Ce document n'est pas un bulletin de paie légal : les cotisations sociales ne sont pas calculées.</p>
           </div>
         </div>
       )}

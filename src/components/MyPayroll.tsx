@@ -55,6 +55,7 @@ export const MyPayroll: React.FC = () => {
 
   if (err) return <div className="rounded-2xl p-3 bg-red-950 border border-red-500/60 text-red-200 text-xs">{err}</div>;
   if (!data) return <div className="p-3 text-xs font-mono text-slate-400">Chargement…</div>;
+  if (!data.current || !Array.isArray(data.slips)) return <div className="rounded-2xl p-3 bg-slate-900 border border-slate-700 text-slate-300 text-xs">Ta paie n'est pas encore disponible. Réessaie dans un instant.</div>;
   const c = data.current;
 
   return (
@@ -83,7 +84,7 @@ export const MyPayroll: React.FC = () => {
                 </div>
                 {s.paid ? <span className="rounded-full inline-flex items-center gap-1 px-2 py-1 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono"><BadgeCheck className="w-3.5 h-3.5" />Payé</span>
                   : <span className="rounded-full px-2 py-1 border border-amber-500/60 text-amber-300 text-[11px] font-mono">À payer</span>}
-                <div className="text-right"><div className="text-[10px] font-mono text-slate-400">Net</div><div className="text-emerald-200 font-bold text-sm">{formatCurrencyAr(s.net)}</div></div>
+                <div className="text-right"><div className="text-[11px] font-mono text-slate-400">Net</div><div className="text-emerald-200 font-bold text-sm">{formatCurrencyAr(s.net)}</div></div>
                 {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </button>
               {open && (

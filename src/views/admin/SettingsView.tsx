@@ -160,7 +160,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </label>
         <div className={sound.on ? '' : 'opacity-40 pointer-events-none'}>
           <label className={labelCls}>Volume</label>
-          <input type="range" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
+          <input type="range" aria-label="Volume des sons" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
         </div>
         <button
           type="button"
@@ -538,7 +538,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
         </label>
         <div className={sound.on ? '' : 'opacity-40 pointer-events-none'}>
           <label className={labelCls}>Volume</label>
-          <input type="range" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
+          <input type="range" aria-label="Volume des sons" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
         </div>
         <button
           type="button"

@@ -122,7 +122,7 @@ export const PlanningSection: React.FC<{ ver: number; isAdmin: boolean; myId: st
                           <button type="button" onClick={() => cycle(u.id, d)} aria-label={`${u.name}, ${dm(d)} : ${label}${leave ? ', ' + t('congé accepté', 'approved leave') : ''}${bad ? ', ' + t('conflit', 'conflict') : ''}`}
                             className={`relative w-full min-h-[44px] rounded-md border font-mono font-bold ${KIND_CLS[k || 'empty']} ${bad ? 'ring-2 ring-red-500' : ''}`}>
                             {k ? SHIFT_LABEL[k].short : '·'}
-                            {leave && <span className="absolute top-0.5 right-1 text-[9px] text-emerald-300">{t('C', 'L')}</span>}
+                            {leave && <span className="absolute top-0.5 right-1 text-[11px] text-emerald-300">{t('C', 'L')}</span>}
                           </button>
                         </td>
                       );
@@ -131,7 +131,7 @@ export const PlanningSection: React.FC<{ ver: number; isAdmin: boolean; myId: st
                 ))}
                 <tr>
                   <td className="text-slate-400 font-mono">{t('Présents', 'On duty')}</td>
-                  {cov.map(c => <td key={c.date} className="text-center text-[10px] font-mono text-slate-300">{t('J', 'D')}{c.day} · {t('N', 'N')}{c.night}</td>)}
+                  {cov.map(c => <td key={c.date} className="text-center text-[11px] font-mono text-slate-300">{t('J', 'D')}{c.day} · {t('N', 'N')}{c.night}</td>)}
                 </tr>
               </tbody>
             </table>

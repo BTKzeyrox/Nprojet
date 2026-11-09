@@ -67,7 +67,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showOperator = false
   const filtersOn = q || status !== 'all' || month !== 'all' || operator !== 'all' || min || max;
 
   const chip = (active: boolean) =>
-    `px-2.5 py-1 text-xs font-semibold border cursor-pointer ${
+    `px-3 min-h-[44px] text-xs font-semibold border cursor-pointer ${
       active ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'
     }`;
   const field = 'w-full rounded-xl bg-[#141e2a] border border-slate-700 px-2 py-2 text-sm text-white focus:border-emerald-500';
@@ -134,7 +134,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showOperator = false
       <div className="grid grid-cols-3 gap-2">
         {(['pending', 'approved', 'rejected'] as AdvanceStatus[]).map(s => (
           <div key={s} className="rounded-xl bg-[#0f1722] border border-slate-800 p-2 min-w-0">
-            <div className="text-[10px] uppercase text-slate-400 font-semibold leading-tight">{STATUS[s].label}</div>
+            <div className="text-[11px] uppercase text-slate-400 font-semibold leading-tight">{STATUS[s].label}</div>
             <div className="mt-0.5 font-bold text-xs sm:text-sm text-white break-words">{formatCurrencyAr(sum(s))}</div>
           </div>
         ))}
@@ -153,7 +153,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showOperator = false
                 <div className="flex flex-wrap items-center gap-2">
                   {showOperator && <span className="text-white font-semibold text-sm break-words">{a.employee_name}</span>}
                   <span className="text-base font-bold text-amber-400">{formatCurrencyAr(a.amount_ar)}</span>
-                  <span className={`rounded-full inline-flex items-center gap-1 px-2 py-0.5 border text-[10px] font-bold uppercase ${STATUS[a.status].cls}`}>
+                  <span className={`rounded-full inline-flex items-center gap-1 px-2 py-0.5 border text-[11px] font-bold uppercase ${STATUS[a.status].cls}`}>
                     <StatusIcon s={a.status} /> {STATUS[a.status].label}
                   </span>
                 </div>

@@ -117,7 +117,7 @@ export const HistoryPage: React.FC<{ initialOperatorId?: string }> = ({ initialO
                   {r.motif && <div className="text-red-300 break-words">Motif : {r.motif}</div>}
                   <div className="text-slate-500">{KIND[r.kind]} · {fmtDate(r.date)}</div>
                 </div>
-                <span className={`px-1.5 py-0.5 border text-[10px] font-mono shrink-0 ${ST_CLS[r.status]}`}>{ST_LABEL[r.status]}</span>
+                <span className={`px-1.5 py-0.5 border text-[11px] font-mono shrink-0 ${ST_CLS[r.status]}`}>{ST_LABEL[r.status]}</span>
               </div>
             );
           })}

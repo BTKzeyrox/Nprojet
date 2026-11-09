@@ -566,10 +566,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               <h2 className="text-white font-tactical font-bold text-base">
                 TERMINAL OPÉRATEUR: {currentUser.name.toUpperCase()}
               </h2>
-              <span className="text-[10px] font-mono uppercase bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
+              <span className="text-[11px] font-mono uppercase bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
                 {levelNow(db.getPosts(), currentUser.id, db.getSettings(), todayMada()).name}
               </span>
-              <span className="text-[10px] font-mono text-slate-400" data-level-line>{levelLine(levelNow(db.getPosts(), currentUser.id, db.getSettings(), todayMada()))}</span>
+              <span className="text-[11px] font-mono text-slate-400" data-level-line>{levelLine(levelNow(db.getPosts(), currentUser.id, db.getSettings(), todayMada()))}</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mt-0.5">
               <span>Mission Opérateur</span>
@@ -745,42 +745,42 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   {/* Score Readouts (Initial, Current, Target, Remaining) */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-6">
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité au départ</div>
+                      <div className="text-[11px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité au départ</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-white mt-1 truncate">
                         {formatScoreM(activePost.initial_score)}
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5">
+                      <div className="text-[11px] sm:text-[11px] text-slate-500 font-mono mt-0.5">
                         Départ ({formatScoreM(activePost.initial_score)} unités)
                       </div>
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité faite</div>
+                      <div className="text-[11px] sm:text-[11px] font-mono uppercase text-slate-400">Quantité faite</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-cyan-400 mt-1 truncate">
                         {formatScoreM(activePost.current_score)}
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
+                      <div className="text-[11px] sm:text-[11px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
                         <TrendingUp className="w-3 h-3" />
                         <span>+{formatScoreM(Math.max(0, activePost.current_score - activePost.initial_score))} unités</span>
                       </div>
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Objectif</div>
+                      <div className="text-[11px] sm:text-[11px] font-mono uppercase text-slate-400">Objectif</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-amber-400 mt-1 truncate">
                         {formatScoreM(Math.max(0, activePost.target_score - activePost.initial_score))}
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5">
+                      <div className="text-[11px] sm:text-[11px] text-slate-500 font-mono mt-0.5">
                         Points à gagner
                       </div>
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Reste à faire</div>
+                      <div className="text-[11px] sm:text-[11px] font-mono uppercase text-slate-400">Reste à faire</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-emerald-400 mt-1 truncate">
                         {formatScoreM(Math.max(0, activePost.target_score - activePost.current_score))}
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-slate-400 font-mono mt-0.5">
+                      <div className="text-[11px] sm:text-[11px] text-slate-400 font-mono mt-0.5">
                         Restant pour fin
                       </div>
                     </div>
@@ -815,7 +815,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   {/* Thumbnails (1 to 5 photos) & Simulation */}
                   <div className="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
                     <div className="space-y-1.5">
-                      <div className="text-[10px] text-slate-400 uppercase font-mono flex items-center gap-1.5">
+                      <div className="text-[11px] text-slate-400 uppercase font-mono flex items-center gap-1.5">
                         <Camera className="w-3.5 h-3.5 text-cyan-400" />
                         <span>
                           {activePost.start_proof_urls && activePost.start_proof_urls.length > 1
@@ -923,7 +923,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       <div>
                         <div className="font-semibold text-white flex items-center gap-2">
                           <span>{post.client_name}</span>
-                          <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">
+                          <span className="text-[11px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">
                             {post.account_tag}
                           </span>
                         </div>
@@ -934,12 +934,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 uppercase block">Quantité traitée</span>
+                          <span className="text-[11px] text-slate-500 uppercase block">Quantité traitée</span>
                           <span className="text-emerald-400 font-bold">+{formatScoreM(gained)} unités</span>
                         </div>
 
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 uppercase block">Statut Mission</span>
+                          <span className="text-[11px] text-slate-500 uppercase block">Statut Mission</span>
                           <span className="text-emerald-400 font-bold font-mono">Validé</span>
                         </div>
 
@@ -1064,17 +1064,17 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   <h4 className="text-xs sm:text-sm font-tactical font-bold text-white uppercase tracking-wider">
                     Canal Direct · Superviseur Responsable
                   </h4>
-                  <span className="text-[9px] font-mono uppercase bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
+                  <span className="text-[11px] font-mono uppercase bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
                     Chat Illimité &amp; Local
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-mono">
+                <p className="text-[11px] text-slate-400 font-mono">
                   Messages illimités, persistance locale 100% autonome, zéro frais d'API externe.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-700/60 font-semibold">
+              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-700/60 font-semibold">
                 ● En ligne (Superviseur actif)
               </span>
             </div>
@@ -1082,7 +1082,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
           {/* Quick Reply Chips for Fast Opérateur Reporting */}
           <div className="rounded-xl px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
-            <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
+            <span className="text-slate-500 text-[11px] uppercase shrink-0">Réponses Rapides :</span>
             {[
               "Objectif de la mission atteint !",
               "Début de session sur la mission",
@@ -1109,7 +1109,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   key={msg.id}
                   className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                 >
-                  <div className="flex items-center gap-1.5 mb-1 text-[10px] font-mono text-slate-400">
+                  <div className="flex items-center gap-1.5 mb-1 text-[11px] font-mono text-slate-400">
                     <span className="font-semibold text-slate-300">{msg.sender_name}</span>
                     <span>·</span>
                     <span>{msg.timestamp}</span>
@@ -1294,24 +1294,24 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Titre</span>
+                    <span className="text-[11px] text-slate-500 uppercase block">Titre</span>
                     <span className="text-white font-bold truncate block">{clientName}</span>
                   </div>
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Objectif</span>
+                    <span className="text-[11px] text-slate-500 uppercase block">Objectif</span>
                     <span className="text-emerald-400 font-bold block">{formatScoreM(objective)}</span>
                   </div>
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Début</span>
+                    <span className="text-[11px] text-slate-500 uppercase block">Début</span>
                     <span className="text-slate-200 font-bold block">{formatScoreM(accountStart)}</span>
                   </div>
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Actuel</span>
+                    <span className="text-[11px] text-slate-500 uppercase block">Actuel</span>
                     <span className="text-cyan-300 font-bold block">{formatScoreM(accountCurrent)}</span>
                   </div>
                   {selectedContract?.description && (
                     <div className="col-span-2 bg-[#0b1118] p-2 rounded-lg border border-amber-700/40">
-                      <span className="text-[10px] text-amber-400 uppercase block">Description</span>
+                      <span className="text-[11px] text-amber-400 uppercase block">Description</span>
                       <span className="text-slate-200 block whitespace-pre-line break-words text-xs leading-snug">
                         {selectedContract.description}
                       </span>
@@ -1436,12 +1436,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                               operatorName: currentUser.name,
                             })
                           }
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-mono cursor-pointer transition-opacity"
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[11px] font-mono cursor-pointer transition-opacity"
                         >
                           <Eye className="w-4 h-4 text-emerald-400" />
                         </div>
                         {/* Photo Number Badge */}
-                        <div className="absolute top-1 left-1 bg-black/80 text-emerald-400 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold border border-emerald-500/40">
+                        <div className="absolute top-1 left-1 bg-black/80 text-emerald-400 px-1.5 py-0.2 rounded text-[11px] font-mono font-bold border border-emerald-500/40">
                           #{idx + 1}/4
                         </div>
                         {/* Delete Button */}
@@ -1460,7 +1460,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     {startProofPhotos.length < 5 && (
                       <label className="border-2 border-dashed border-slate-700 hover:border-emerald-500/70 rounded-lg aspect-video flex flex-col items-center justify-center text-center p-2 cursor-pointer bg-[#0c1420] hover:bg-[#101b2a] transition-all">
                         <Upload className="w-4 h-4 text-slate-400 mb-1" />
-                        <span className="text-[10px] text-slate-400 font-mono">+ Photo #{startProofPhotos.length + 1}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">+ Photo #{startProofPhotos.length + 1}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1697,13 +1697,13 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             <form onSubmit={handleSubmitEndForm} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
               <div className="bg-[#121922] p-3 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">Quantité de départ</span>
+                  <span className="text-[11px] text-slate-500 uppercase block">Quantité de départ</span>
                   <span className="text-white font-bold text-xs sm:text-sm">
                     {formatScoreM(activePost.initial_score)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-500 uppercase block">Objectif</span>
+                  <span className="text-[11px] text-slate-500 uppercase block">Objectif</span>
                   <span className="text-cyan-400 font-bold text-xs sm:text-sm">
                     {formatScoreM(Math.max(0, activePost.target_score - activePost.initial_score))}
                   </span>
@@ -1720,7 +1720,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   required
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-emerald-400 font-bold text-base focus:border-emerald-500 focus:outline-none"
                 />
-                <span className="text-[10px] text-slate-500 mt-1 block">
+                <span className="text-[11px] text-slate-500 mt-1 block">
                   Le volume final doit être impérativement supérieur ou égal au volume de départ ({formatScoreM(activePost.initial_score)} unités).
                 </span>
               </div>
@@ -1732,7 +1732,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <Camera className="w-4 h-4" />
                     <span>Justificatif de fin ({proofNeeds(activePost.client_name, getGuide(typeOf(activePost.client_name))).photo ? 'obligatoire' : 'facultatif'})</span>
                   </span>
-                  <span className="text-[10px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
+                  <span className="text-[11px] text-slate-400">Justificatif pour calcul & validation Responsable</span>
                 </label>
 
                 {!endProofPreview ? (
@@ -1782,7 +1782,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <Eye className="w-4 h-4 text-cyan-400" />
                         <span>Inspecter en Plein Écran</span>
                       </div>
-                      <div className="absolute bottom-2 right-2 bg-black/80 border border-cyan-500/50 px-2 py-0.5 rounded text-[10px] text-cyan-400 font-mono font-bold">
+                      <div className="absolute bottom-2 right-2 bg-black/80 border border-cyan-500/50 px-2 py-0.5 rounded text-[11px] text-cyan-400 font-mono font-bold">
                         <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Photo de fin prête (Cliquer pour zoomer)
                       </div>
                     </div>

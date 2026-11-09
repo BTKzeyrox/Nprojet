@@ -76,7 +76,7 @@ export const RecurringMissionsSection: React.FC = () => {
           return (
             <li key={r.id} className={`flex items-start gap-2 rounded-xl border p-2.5 ${r.active ? 'border-slate-700' : 'border-slate-700 opacity-60'}`}>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-white break-words">{r.name}{!r.active && <span className="ml-2 text-[10px] font-mono text-amber-400 uppercase">{t('arrêtée', 'paused')}</span>}</div>
+                <div className="text-sm font-bold text-white break-words">{r.name}{!r.active && <span className="ml-2 text-[11px] font-mono text-amber-400 uppercase">{t('arrêtée', 'paused')}</span>}</div>
                 <div className="text-[11px] text-slate-400 break-words">{[r.title, describeRule(r, lang === 'en' ? 'en' : 'fr')].filter(Boolean).join(' · ')}</div>
                 <div className="text-[11px] text-slate-500">{nx ? t(`Prochaine mission : ${fmt(nx)}`, `Next mission: ${fmt(nx)}`) : r.active ? t('Terminée (date de fin passée).', 'Finished (end date passed).') : t('Arrêtée : rien ne sera créé.', 'Paused: nothing will be created.')}</div>
               </div>

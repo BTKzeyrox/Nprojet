@@ -72,7 +72,7 @@ export const DiagPanel: React.FC = () => {
   };
 
   return (
-    <div className="fixed left-2 bottom-2 z-[99990] max-w-[min(96vw,44rem)] rounded-lg border border-amber-400 bg-black/90 text-[10px] leading-snug text-amber-100 shadow-2xl" style={{ fontFamily: 'ui-monospace, monospace' }}>
+    <div className="fixed left-2 bottom-2 z-[99990] max-w-[min(96vw,44rem)] rounded-lg border border-amber-400 bg-black/90 text-[11px] leading-snug text-amber-100 shadow-2xl" style={{ fontFamily: 'ui-monospace, monospace' }}>
       <div className="flex items-center gap-2 px-2 py-1 border-b border-amber-400/50">
         <b className="flex-1">Diagnostic du défilement</b>
         <button type="button" onClick={copy} className="px-2 py-0.5 rounded bg-amber-500 text-black font-bold cursor-pointer">{copied ? 'Copié' : 'Copier'}</button>

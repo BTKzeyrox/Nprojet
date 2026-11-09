@@ -39,7 +39,7 @@ export const LevelsHistory: React.FC = () => {
                   return (
                     <td key={m} className={`${cell} text-right`} data-level-cell>
                       <div className="font-bold">{info.count}</div>
-                      <div className={`${TONE[info.index]} text-[10px]`}>{info.name}{info.veryLow && info.count > 0 ? ' · très faible' : ''}</div>
+                      <div className={`${TONE[info.index]} text-[11px]`}>{info.name}{info.veryLow && info.count > 0 ? ' · très faible' : ''}</div>
                     </td>
                   );
                 })}

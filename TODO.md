@@ -904,11 +904,11 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
 
 ## 2026-11-09 — Audit complet du site (parcours automatique des 31 pages, admin + employé, téléphone + ordinateur, mode démo ; rien modifié)
 Limites : démo seulement, pas de vrai téléphone, chef d'équipe non testé (le démo ne l'affiche pas), pages réservées au responsable non montrées à l'employé.
-- [ ] **A1 Bug** : page « Paie » (advances) : plante en démo pour l'employé (`MyPayroll`, `Cannot read 'pid'` : la réponse `payroll-mine` n'a pas de `current`). À rendre robuste (message au lieu du plantage).
-- [ ] **A2 Bug** : page Validations : l'avertissement navigateur « chaîne vide dans src/href » (une image ou un lien avec adresse vide) ; à retrouver et corriger.
-- [ ] **A3 Boutons trop petits au doigt (< 32 px)** : « Hors ligne » (24), filtres « Tous / En attente / Départs / Fins » (24), « 7 jours / 30 jours / Tout » (30), « Voir le profil » (21-26), « Tout voir » (16), « Fiche / Prime » (30), lignes du graphique (28).
-- [ ] **A4 Champs sans étiquette** (lecteur d'écran) : Tableau des missions (16 listes), RH (3), Calendrier (1), Réglages (curseur).
-- [ ] **A5 Textes trop petits (< 11 px)** : Historique (59), Validations (32), Santé du site (29), Opérateurs (15), Grille (17).
+- [x] **A1 Bug (CORRIGÉ 2026-11-09, site seulement)** : page « Paie » (advances) : plante en démo pour l'employé (`MyPayroll`, `Cannot read 'pid'` : la réponse `payroll-mine` n'a pas de `current`). À rendre robuste (message au lieu du plantage).
+- [x] **A2 Bug** : page Validations : l'avertissement navigateur « chaîne vide dans src/href » (une image ou un lien avec adresse vide) ; à retrouver et corriger.
+- [x] **A3 Boutons trop petits au doigt (< 32 px)** : « Hors ligne » (24), filtres « Tous / En attente / Départs / Fins » (24), « 7 jours / 30 jours / Tout » (30), « Voir le profil » (21-26), « Tout voir » (16), « Fiche / Prime » (30), lignes du graphique (28).
+- [x] **A4 Champs sans étiquette** (lecteur d'écran) : Tableau des missions (16 listes), RH (3), Calendrier (1), Réglages (curseur).
+- [x] **A5 Textes trop petits (CORRIGÉ : 9 et 10 px passés à 11 px, 30 fichiers ; à regarder à l'écran, des étiquettes peuvent déborder)** : Historique (59), Validations (32), Santé du site (29), Opérateurs (15), Grille (17).
 - [ ] **A6 Page « Paie » et « Avances »** toujours dans le code mais hors du menu : décider supprimer ou garder (déjà dans TODO depuis des semaines).
 - [ ] **A7 Poids** : `store.ts` 3 735 lignes, `df-api` 6 847 lignes, AdminDashboard 1 960, EmployeeDashboard 1 848 : à découper un jour (risque de régression à chaque changement).
 - [ ] **A8 Déploiement df-api** repose sur GitHub brut (fragile) : le remplacer par un fichier complet envoyé directement.

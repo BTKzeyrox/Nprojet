@@ -89,7 +89,7 @@ const CHIP_CLS: Record<string, string> = {
   test: 'bg-purple-500/20 text-purple-600', absent: 'bg-red-500/20 text-red-600', leave: 'bg-sky-500/20 text-sky-600',
 };
 const StatusChip: React.FC<{ status: DayStatus; n: number }> = ({ status, n }) => (
-  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${CHIP_CLS[status] || ''}`} title={STATUS_META[status].label} aria-label={`${STATUS_META[status].label} : ${n}`}>
+  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold ${CHIP_CLS[status] || ''}`} title={STATUS_META[status].label} aria-label={`${STATUS_META[status].label} : ${n}`}>
     <StatusIcon status={status} className="w-3 h-3" />{n}
   </span>
 );
@@ -98,7 +98,7 @@ const StatusChip: React.FC<{ status: DayStatus; n: number }> = ({ status, n }) =
 const CellChip: React.FC<{ kind: 'present' | 'done'; n: number }> = ({ kind, n }) => {
   const label = kind === 'present' ? 'Présent' : 'Missions faites';
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${kind === 'present' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-indigo-500/20 text-indigo-600'}`} title={label} aria-label={`${label} : ${n}`}>
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold ${kind === 'present' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-indigo-500/20 text-indigo-600'}`} title={label} aria-label={`${label} : ${n}`}>
       {kind === 'present' ? <UserCheck className="w-3 h-3 shrink-0" /> : <ClipboardCheck className="w-3 h-3 shrink-0" />}{n}
     </span>
   );
@@ -612,7 +612,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               </div>
               <div>
                 <div className={`text-[11px] font-semibold mb-1.5 ${sub}`}>Mission</div>
-                <select value={clientFilter} onChange={e => setClientFilter(e.target.value)} className={field}>
+                <select aria-label="Filtrer par client" value={clientFilter} onChange={e => setClientFilter(e.target.value)} className={field}>
                   <option value="all">Toutes les missions</option>
                   {clientNames.map(c => (<option key={c} value={c}>{c}</option>))}
                 </select>

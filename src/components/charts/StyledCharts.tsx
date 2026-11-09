@@ -266,7 +266,7 @@ export const ActivityGrid: React.FC<ActivityGridProps> = ({ labels, fullLabels, 
         aria-label={`${full(i)} : ${v === null ? '—' : `${v} ${noun(v)}`}`}
         className={`relative aspect-square min-h-[40px] rounded-lg flex flex-col items-center justify-center overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${v === null ? 'border border-dashed border-slate-700' : v === 0 ? 'bg-slate-800/70 border border-slate-700' : 'border border-emerald-500/40'} ${selected ? 'ring-2 ring-white' : ''}`}
         style={v !== null && v > 0 ? { background: `rgba(16,185,129,${a})`, color: a > 0.55 ? '#ffffff' : undefined } : undefined}>
-        <span className={`absolute top-0.5 left-1 text-[9px] leading-none ${v !== null && v > 0 && a > 0.55 ? 'text-white/80' : 'text-slate-400'}`}>{labels[i]}</span>
+        <span className={`absolute top-0.5 left-1 text-[11px] leading-none ${v !== null && v > 0 && a > 0.55 ? 'text-white/80' : 'text-slate-400'}`}>{labels[i]}</span>
         <span className={`text-base font-bold font-mono ${v !== null && v > 0 ? (a > 0.55 ? 'text-white' : 'text-slate-100') : 'text-slate-500'}`}>{v === null ? '' : v}</span>
       </button>
     );

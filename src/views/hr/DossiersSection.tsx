@@ -144,7 +144,7 @@ export const DossiersSection: React.FC<{ ver: number }> = ({ ver }) => {
             <div className="grid grid-cols-2 gap-2">
               <div><label className={lbl}>{t("Date d'embauche", 'Hire date')}</label><input type="date" className={field} value={editor.hire_date} onChange={e => set({ hire_date: e.target.value })} /></div>
               <div><label className={lbl}>{t('Contrat', 'Contract')}</label>
-                <select className={field} value={editor.contract_type} onChange={e => set({ contract_type: e.target.value })}>
+                <select aria-label="Type de contrat" className={field} value={editor.contract_type} onChange={e => set({ contract_type: e.target.value })}>
                   <option value="">—</option>
                   {(Object.keys(HR_CONTRACT_LABELS) as HrContract[]).map(k => <option key={k} value={k}>{HR_CONTRACT_LABELS[k][lang === 'en' ? 1 : 0]}</option>)}
                 </select></div>

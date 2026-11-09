@@ -159,7 +159,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean;
         return (
           <section key={sec.id} className={boxCls}>
             <button type="button" aria-expanded={isOpen} onClick={() => setOpen(p => ({ ...p, [sec.id]: !p[sec.id] }))} className="w-full min-h-[48px] px-4 flex items-center justify-between gap-2 text-left cursor-pointer">
-              <span className="font-tactical font-bold text-white">{t(sec.fr, sec.en)}{sec.shared && <span className="ml-2 text-[10px] font-mono font-normal text-emerald-400">{t('visible par les opérateurs', 'visible to operators')}</span>}</span>
+              <span className="font-tactical font-bold text-white">{t(sec.fr, sec.en)}{sec.shared && <span className="ml-2 text-[11px] font-mono font-normal text-emerald-400">{t('visible par les opérateurs', 'visible to operators')}</span>}</span>
               {isOpen ? <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" /> : <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />}
             </button>
             {isOpen && (

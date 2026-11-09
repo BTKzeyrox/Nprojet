@@ -68,13 +68,13 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
         <p data-tour="leave-request" className="text-sm font-bold text-white">{isAdmin ? t('Enregistrer un congé', 'Record a leave') : t('Demander un congé', 'Request leave')}</p>
         {isAdmin && (
           <div><label className={lbl}>{t('Salarié', 'Employee')}</label>
-            <select className={field} value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>
+            <select aria-label="Employé" className={field} value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>
               <option value="">—</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select></div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div><label className={lbl}>{t('Type', 'Type')}</label>
-            <select className={field} value={form.type} onChange={e => setForm({ ...form, type: e.target.value as LeaveType })}>
+            <select aria-label="Type de congé" className={field} value={form.type} onChange={e => setForm({ ...form, type: e.target.value as LeaveType })}>
               {LEAVE_TYPES.map(k => <option key={k} value={k}>{LEAVE_TYPE_LABELS[k][l]}</option>)}
             </select></div>
           <div><label className={lbl}>{t('Du', 'From')}</label><input type="date" className={field} value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value, end_date: form.end_date < e.target.value ? e.target.value : form.end_date })} /></div>

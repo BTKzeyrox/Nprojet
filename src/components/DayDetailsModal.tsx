@@ -138,7 +138,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           {presenceRows.length > 0 && (
             <div className="bg-slate-900/60 border border-slate-700/80 rounded-lg p-3 space-y-1.5">
               <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">{tt('Présence du jour', 'Presence of the day')}</div>
-              <div className="text-[10px] text-slate-500 leading-snug">{tt('1re connexion : premier contact de l\'appli avec le serveur ce jour-là (elle peut être plus tôt que le travail). 1re mission : début de la première mission, c\'est elle qui sert au retard.', 'First connection: first time the app contacted the server that day (it can be earlier than the work). First mission: start of the first mission, the one used for lateness.')}</div>
+              <div className="text-[11px] text-slate-500 leading-snug">{tt('1re connexion : premier contact de l\'appli avec le serveur ce jour-là (elle peut être plus tôt que le travail). 1re mission : début de la première mission, c\'est elle qui sert au retard.', 'First connection: first time the app contacted the server that day (it can be earlier than the work). First mission: start of the first mission, the one used for lateness.')}</div>
               {presenceRows.map(r => (
                 <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-mono text-slate-300">
                   {isAdmin && <span className="font-bold text-white">{r.name}</span>}
@@ -218,25 +218,25 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     {/* Scores & Objectives Grid with formatScoreM (1M abbreviations) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Quantité de départ</span>
+                        <span className="text-slate-500 text-[11px] uppercase block">Quantité de départ</span>
                         <span className="text-slate-200 font-bold text-sm font-mono-numbers">
                           {formatScoreM(shift.initial_score)}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Quantité finale</span>
+                        <span className="text-slate-500 text-[11px] uppercase block">Quantité finale</span>
                         <span className="text-emerald-400 font-bold text-sm font-mono-numbers">
                           {formatScoreM(finalScore)}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Objectif</span>
+                        <span className="text-slate-500 text-[11px] uppercase block">Objectif</span>
                         <span className="text-cyan-300 font-bold text-sm font-mono-numbers">
                           {formatScoreM(Math.max(0, shift.target_score - shift.initial_score))}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">
+                        <span className="text-slate-500 text-[11px] uppercase block">
                           Progression
                         </span>
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -269,7 +269,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                           }
                           className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                         >
-                          <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
+                          <div className="text-[11px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
                             <span className="text-emerald-400 font-bold">1. PHOTO DÉPART</span>
                             <span className="text-slate-500">{shift.start_time}</span>
                           </div>
@@ -302,7 +302,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             }
                             className="group relative cursor-pointer bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden p-1.5 hover:border-emerald-500 transition-all hover:shadow-lg"
                           >
-                            <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
+                            <div className="text-[11px] font-mono text-slate-400 mb-1 flex items-center justify-between px-1">
                               <span className="text-cyan-400 font-bold">2. PHOTO FIN</span>
                               <span className="text-slate-500">{shift.end_time || 'Terminé'}</span>
                             </div>
@@ -323,7 +323,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             <span className="text-xs font-mono text-slate-500">
                               Justificatif de fin en attente d'envoi
                             </span>
-                            <span className="text-[10px] text-slate-600 mt-1">
+                            <span className="text-[11px] text-slate-600 mt-1">
                               Session en cours ou en attente d'achèvement
                             </span>
                           </div>

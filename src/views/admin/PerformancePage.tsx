@@ -75,7 +75,7 @@ export const PerformancePage: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
           {PERIODS.map(([k, label]) => (
-            <button key={k} type="button" onClick={() => setPeriod(k)} className={`px-3 py-1.5 border cursor-pointer ${period === k ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'}`}>{label}</button>
+            <button key={k} type="button" onClick={() => setPeriod(k)} className={`px-3 min-h-[44px] border cursor-pointer ${period === k ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'}`}>{label}</button>
           ))}
           <span className="flex-1" />
           <button type="button" disabled={busy || rows.length === 0} onClick={onExcel} className="px-3 py-1.5 border bg-[#141e2a] border-slate-700 text-slate-200 hover:border-emerald-500 cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-40">

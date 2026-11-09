@@ -267,7 +267,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                         <span className={`block text-sm font-semibold ${L ? 'text-slate-800' : 'text-slate-100'} truncate`}>{h.title}</span>
                         <span className={`block text-xs ${L ? 'text-slate-500' : 'text-slate-400'} truncate`}>{h.sub}</span>
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400 uppercase shrink-0">{KIND_LABEL[h.kind]}</span>
+                      <span className="text-[11px] font-mono text-slate-400 uppercase shrink-0">{KIND_LABEL[h.kind]}</span>
                     </button>
                   );
                 })
@@ -290,7 +290,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               className={`relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${activeView === view ? (L ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-500 bg-emerald-950/50 text-emerald-300') : L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
               <Icon className="w-5 h-5" />
-              {n > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">{n > 99 ? '99+' : n}</span>}
+              {n > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">{n > 99 ? '99+' : n}</span>}
             </button>
           ))}
         </div>
@@ -308,7 +308,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           >
             <Bell className="w-5 h-5" />
             {count > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
                 {count > 99 ? '99+' : count}
               </span>
             )}
@@ -357,7 +357,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                           </span>
                           {n.sub && <span className={`block text-xs mt-0.5 ${L ? 'text-slate-600' : 'text-slate-300'} break-words`}>{n.sub}</span>}
                         </span>
-                        {fresh ? <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" data-notif-unread /> : <span className={`mt-0.5 text-[10px] shrink-0 ${L ? 'text-slate-400' : 'text-slate-400'}`} data-notif-read>Lue</span>}
+                        {fresh ? <span className="mt-1 w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" data-notif-unread /> : <span className={`mt-0.5 text-[11px] shrink-0 ${L ? 'text-slate-400' : 'text-slate-400'}`} data-notif-read>Lue</span>}
                       </button>
                     );
                   })

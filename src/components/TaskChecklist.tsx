@@ -13,7 +13,7 @@ export const TaskBar: React.FC<{ tasks?: MissionTask[]; done?: string[] }> = ({ 
   const p = taskProgress(tasks, done);
   return (
     <div data-notranslate="">
-      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+      <div className="flex justify-between text-[11px] text-slate-400 mb-1">
         <span>{lang === 'en' ? 'Tasks' : 'Tâches'} {p.done}/{p.total}</span><span>{p.pct}%</span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden bg-slate-800" role="progressbar" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100}>

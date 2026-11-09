@@ -354,7 +354,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             : <button type="button" onClick={() => openProfile(post.author_id)} className="block max-w-full text-left font-bold text-sm truncate cursor-pointer" title="Voir le profil">{post.author_name || 'Responsable'}</button>}
           <div className={`text-xs ${muted}`}>{timeAgo(post.created_at)}{post.edited_at ? ' · modifiée' : ''}{restricted && (isAdmin || mine) ? <span data-audience-badge className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 font-semibold"><Eye className="w-3 h-3" />{audienceLabel(post.audience, 'fr', post.audience_users, id => db.getUsers().find(u => u.id === id)?.name)}</span> : null}</div>
         </div>
-        {post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[9px] leading-none font-bold">Épinglée</span></span>}
+        {post.pinned && <span className="flex flex-col items-center text-amber-500 px-1"><Pin className="w-4 h-4" fill="currentColor" /><span className="text-[11px] leading-none font-bold">Épinglée</span></span>}
         <PostMenu light={light} busy={busy} items={[
           ...(canEdit && !editing ? [{ key: 'edit', label: 'Modifier', icon: <Pencil className="w-4 h-4" />, onClick: () => setEditing(true) }] : []),
           ...(isAdmin && published && post.poll ? [{ key: 'poll', label: post.poll.closed ? 'Rouvrir le sondage' : 'Clore le sondage', icon: <Ban className="w-4 h-4" />, onClick: () => { void run(() => db.closePollNews(post.id, !post.poll?.closed)); } }] : []),

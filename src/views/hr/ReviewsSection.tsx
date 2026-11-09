@@ -62,7 +62,7 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
         <p className="text-sm font-bold text-white">{form.id ? t('Modifier la fiche', 'Edit the review') : t('Nouvelle fiche d\'évaluation', 'New review')}</p>
         {!form.id && (
           <div><label className={lbl}>{t('Salarié', 'Employee')}</label>
-            <select className={field} value={form.employee_id} onChange={e => set({ employee_id: e.target.value })}><option value="">—</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+            <select aria-label="Employé" className={field} value={form.employee_id} onChange={e => set({ employee_id: e.target.value })}><option value="">—</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
         )}
         {!shared && (
           <div className="grid grid-cols-2 gap-2">
@@ -98,7 +98,7 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
         <div><label className={lbl}>{t('Commentaires (vus par le salarié)', 'Comments (seen by the employee)')}</label><textarea className={`${field} py-2 min-h-[80px]`} maxLength={2000} value={form.comments} onChange={e => set({ comments: e.target.value })} /></div>
         <div><label className={lbl}>{t('Points à améliorer — note PRIVÉE, jamais montrée au salarié', 'Points to improve — PRIVATE note, never shown to the employee')}</label><textarea className={`${field} py-2 min-h-[80px]`} maxLength={1000} value={form.improvements} onChange={e => set({ improvements: e.target.value })} /></div>
         <div><label className={lbl}>{t('Note globale (facultatif)', 'Overall rating (optional)')}</label>
-          <select className={field} value={form.rating} onChange={e => set({ rating: e.target.value })}><option value="">—</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} / 5</option>)}</select></div>
+          <select aria-label="Note" className={field} value={form.rating} onChange={e => set({ rating: e.target.value })}><option value="">—</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} / 5</option>)}</select></div>
         {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2">
           {!shared && <button type="button" className={`${btn} flex-1 justify-center`} onClick={() => save('draft')}>{t('Enregistrer le brouillon', 'Save the draft')}</button>}

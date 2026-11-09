@@ -283,11 +283,11 @@ export const GroupInfoModal: React.FC<{
             u={u}
             right={
               u.id === group.owner_id ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600/15 text-blue-600 border border-blue-500/30">Responsable</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600/15 text-blue-600 border border-blue-500/30">Responsable</span>
               ) : (
                 <span className="flex items-center gap-1">
                   {(group.admins || []).includes(u.id) && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">Admin</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">Admin</span>
                   )}
                   {isOwnerLike && u.id !== currentUser.id && (
                     <button type="button" onClick={() => toggleAdmin(u.id)} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>

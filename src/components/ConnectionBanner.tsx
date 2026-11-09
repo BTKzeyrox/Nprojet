@@ -104,7 +104,7 @@ export const ConnectionChip: React.FC = () => {
       {n > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white/15 text-[11px] leading-[18px] text-center font-bold">{n}</span>}
     </>
   );
-  const box = `shrink-0 h-9 px-2.5 rounded-full border flex items-center gap-1.5 text-xs font-bold ${look.cls}`;
+  const box = `shrink-0 h-9 px-2.5 relative after:absolute after:-inset-1.5 after:content-[''] rounded-full border flex items-center gap-1.5 text-xs font-bold ${look.cls}`;
   const title = `${m.text}${m.hint ? ' : ' + m.hint : ''}`;
   if (m.kind === 'done') return <span role="status" aria-live="polite" title={title} className={box} data-testid="chip-done">{body}</span>;
   return <button type="button" onClick={openIt} title={title} aria-label={title} className={`${box} cursor-pointer`} data-testid={`chip-${m.kind}`}>{body}</button>;

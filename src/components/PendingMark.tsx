@@ -15,7 +15,7 @@ export const PendingMark: React.FC<{ col: string; id: string; className?: string
   if (!db.isUnsent(col, id)) return null;
   const label = lang === 'en' ? 'Waiting to be sent' : 'En attente d\'envoi';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-950/60 text-amber-200 px-1.5 py-0.5 text-[10px] font-semibold leading-none ${className}`} title={label} data-testid="pending-mark">
+    <span className={`inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-950/60 text-amber-200 px-1.5 py-0.5 text-[11px] font-semibold leading-none ${className}`} title={label} data-testid="pending-mark">
       <Clock className="w-3 h-3 shrink-0" aria-hidden="true" />{lang === 'en' ? 'Waiting' : 'En attente'}
     </span>
   );

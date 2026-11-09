@@ -57,7 +57,7 @@ export const MenuPagesCard: React.FC = () => {
               const shown = !hidden.includes(r.hide);
               return (
                 <label key={r.hide} className="flex items-center justify-between gap-3 min-h-[48px] text-sm text-slate-200 cursor-pointer">
-                  <span>{t(r.fr, r.en)}{!shown && <span className="ml-2 text-[10px] font-mono text-amber-300">{t('cachée', 'hidden')}</span>}</span>
+                  <span>{t(r.fr, r.en)}{!shown && <span className="ml-2 text-[11px] font-mono text-amber-300">{t('cachée', 'hidden')}</span>}</span>
                   <input type="checkbox" role="switch" aria-checked={shown} checked={shown} data-menu-page={r.hide} onChange={e => toggle(r.hide, e.target.checked)} className="w-6 h-6 accent-emerald-500 shrink-0" />
                 </label>
               );

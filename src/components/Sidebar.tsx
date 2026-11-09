@@ -262,7 +262,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   {item.badge && (
                     <span
-                      className={`df-sb-badge text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${item.tone === 'alert' ? 'df-sb-alert' : ''}`}
+                      className={`df-sb-badge text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${item.tone === 'alert' ? 'df-sb-alert' : ''}`}
                     >
                       {item.badge}
                     </span>
