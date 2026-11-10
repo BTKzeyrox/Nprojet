@@ -7,7 +7,7 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import type { User } from '../types';
 import { readCompany } from '../utils/companyRules';
-import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, type WorkType } from '../utils/workTypes';
+import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, ABSENCE_REASONS, ABSENCE_LABEL, type WorkType } from '../utils/workTypes';
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { summarizeSheet } from '../utils/sheetSummary';
 import { PresenceMonthGrid } from '../components/PresenceMonthGrid';
@@ -16,12 +16,12 @@ import { missingPeople, dayTotals, copyFromDay } from '../utils/sheetDay';
 import { remAddDays } from '../utils/reminderRules';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
 
-type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string };
+type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string; late_minutes?: string; absence_reason?: string };
 const REASON_FR: Record<string, string> = {
-  employee: "Cet opérateur n'est pas dans ta liste", type: 'Type de travail inconnu', presence: 'Présence inconnue', hours: 'Heures : 0 à 24', quantity: 'Quantité impossible (0 à 100 000)',
+  employee: "Cet opérateur n'est pas dans ta liste", type: 'Type de travail inconnu', presence: 'Présence inconnue', hours: 'Heures : 0 à 24', late_minutes: 'Minutes de retard : un nombre entier de 0 à 600', absence_reason: "Motif d'absence inconnu", quantity: 'Quantité impossible (0 à 100 000)',
   rejected: 'Refusées : pas plus que les faites', empty: 'Rien à enregistrer', duplicate: 'Déjà saisi pour ce jour et ce type', bad: 'Ligne illisible',
 };
-const REASON_EN: Record<string, string> = { employee: 'This operator is not in your list', type: 'Unknown work type', presence: 'Unknown presence', hours: 'Hours: 0 to 24', quantity: 'Impossible quantity (0 to 100,000)', rejected: 'Rejected: no more than made', empty: 'Nothing to save', duplicate: 'Already entered for this day and type', bad: 'Unreadable line' };
+const REASON_EN: Record<string, string> = { employee: 'This operator is not in your list', type: 'Unknown work type', presence: 'Unknown presence', hours: 'Hours: 0 to 24', late_minutes: 'Minutes late: a whole number from 0 to 600', absence_reason: 'Unknown reason for absence', quantity: 'Impossible quantity (0 to 100,000)', rejected: 'Rejected: no more than made', empty: 'Nothing to save', duplicate: 'Already entered for this day and type', bad: 'Unreadable line' };
 const SHEET_ERR_EN: Record<string, string> = { date: 'Impossible date: today or the last 31 days.', empty: 'The sheet is empty.', too_many: 'Too many lines (100 at most).' };
 const SHEET_ERR: Record<string, string> = { date: "Date impossible : aujourd'hui ou les 31 derniers jours.", empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' };
 const madaToday = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
@@ -86,7 +86,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
     const entries = people.filter(u => filled(rows[u.id]));
     if (entries.length === 0) { setMsg({ ok: false, text: t('Remplis au moins une ligne.', 'Fill in at least one line.') }); return; }
     setBusy(true); setMsg(null);
-    const r = await db.addWorkEntries({ date, type_label: type.name.fr, lines: entries.map(u => ({ employee_id: u.id, work_type: type.id, presence: rows[u.id].presence, hours: rows[u.id].hours, quantity: rows[u.id].quantity, rejected: rows[u.id].rejected })) });
+    const r = await db.addWorkEntries({ date, type_label: type.name.fr, lines: entries.map(u => ({ employee_id: u.id, work_type: type.id, presence: rows[u.id].presence, hours: rows[u.id].hours, quantity: rows[u.id].quantity, rejected: rows[u.id].rejected, late_minutes: rows[u.id].presence === 'late' ? rows[u.id].late_minutes : undefined, absence_reason: rows[u.id].presence === 'absent' ? rows[u.id].absence_reason : undefined })) });
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: r.error === 'Erreur.' || !r.error ? t('Pas de réseau ou erreur : ta saisie est gardée sur cet appareil, réessaie plus tard.', 'No network or error: your entry is kept on this device, try again later.') : ((en ? SHEET_ERR_EN : SHEET_ERR)[r.error] || r.error) }); return; }
     const failed = r.failed || [];
@@ -155,6 +155,17 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
                             className={`min-h-[44px] px-1 rounded-xl border text-xs font-semibold cursor-pointer ${r.presence === p ? 'bg-emerald-600 border-emerald-600 text-white' : L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{en ? PRESENCE_LABEL[p].en : PRESENCE_LABEL[p].fr}</button>
                         ))}
                       </div>
+                    )}
+                    {showPresence && r.presence === 'late' && (
+                      <label className="block space-y-1"><span className={label}>{t('Minutes de retard (facultatif)', 'Minutes late (optional)')}</span><input inputMode="numeric" data-field="late_minutes" value={r.late_minutes || ''} onChange={e => set(u.id, { late_minutes: e.target.value.replace(/\D/g, '').slice(0, 3) })} className={input} placeholder="15" /></label>
+                    )}
+                    {showPresence && r.presence === 'absent' && (
+                      <label className="block space-y-1"><span className={label}>{t("Motif d'absence (facultatif)", 'Reason for absence (optional)')}</span>
+                        <select data-field="absence_reason" aria-label={t("Motif d'absence", 'Reason for absence')} value={r.absence_reason || ''} onChange={e => set(u.id, { absence_reason: e.target.value || undefined })} className={input}>
+                          <option value="">{t('Aucun motif', 'No reason given')}</option>
+                          {ABSENCE_REASONS.map(k => <option key={k} value={k}>{en ? ABSENCE_LABEL[k].en : ABSENCE_LABEL[k].fr}</option>)}
+                        </select>
+                      </label>
                     )}
                     {(showHours || showQty) && (
                       <div className="grid grid-cols-2 gap-2">

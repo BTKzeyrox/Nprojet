@@ -3,7 +3,7 @@
 // RÈGLE D'OR : une mission NORMALE (sans `work_type`) est payée exactement comme avant : le prix fixe par mission (Réglages > Missions), quels que soient le mode de paie, les tarifs ou l'employé.
 // Seule une LIGNE DE TRAVAIL (production, présence : `work_type` présent, saisie par le chef d'équipe ou le responsable) est payée selon le mode : celui de l'employé s'il en a un, sinon celui de l'entreprise, sinon « par mission ».
 // Le montant est calculé UNE FOIS, à la validation, puis figé dans `calculated_ar` : les bulletins, avances et la performance ne changent pas.
-import { MAX_HOURS_PER_DAY, MAX_QTY, MAX_RATE_AR, acceptedPieces, dayFraction, isPayMode, payAmount, type PayMode } from './workTypes';
+import { MAX_HOURS_PER_DAY, MAX_QTY, MAX_RATE_AR, MAX_LATE_MIN, PAID_ABSENCE_HOURS, acceptedPieces, dayFraction, isAbsenceReason, isPayMode, payAmount, type PayMode } from './workTypes';
 
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const rateOf = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= MAX_RATE_AR ? v : 0);
@@ -31,7 +31,17 @@ export function postPayAr(post: any, employee: any, settings: any): number {
   const own = rateOf(employee && employee.pay_rate_ar); // le tarif propre de l'employé remplace celui de l'entreprise (0 ou absent = celui de l'entreprise)
   const rate = own > 0 ? own : rateOf(work[`rate_${mode}_ar`]);
   const pieces = unitsOf(post.quantity, MAX_QTY), rejected = unitsOf(post.rejected, MAX_QTY);
-  return payAmount(mode, rate, { days: dayFraction(post.presence), hours: unitsOf(post.hours, MAX_HOURS_PER_DAY), pieces, rejected: Math.min(rejected, pieces) });
+  const base = payAmount(mode, rate, { days: dayFraction(post.presence), hours: unitsOf(post.hours, MAX_HOURS_PER_DAY), pieces, rejected: Math.min(rejected, pieces) });
+  // M27.8 : absence payée (selon le motif) et retard retiré (selon le réglage). Seulement pour la paie « par jour » ou « par heure » ; jamais en dessous de 0.
+  if (mode === 'day' || mode === 'hour') {
+    if (post.presence === 'absent' && isAbsenceReason(post.absence_reason) && (work[`absence_paid_${post.absence_reason}`] === undefined ? post.absence_reason === 'leave' : work[`absence_paid_${post.absence_reason}`] === true)) return rate > 0 ? Math.round(mode === 'day' ? rate : rate * PAID_ABSENCE_HOURS) : 0;
+    const rule = work.late_rule, m = unitsOf(post.late_minutes, MAX_LATE_MIN);
+    if (mode === 'day' && post.presence === 'late' && m > 0 && (rule === 'per_minute' || rule === 'per_15')) {
+      const minutes = rule === 'per_15' ? Math.ceil(m / 15) * 15 : m;
+      return Math.max(0, base - Math.round((rate / PAID_ABSENCE_HOURS) * (minutes / 60)));
+    }
+  }
+  return base;
 }
 /** Le prix client d'une ligne de travail est toujours 0 : elle n'est facturée à aucun client (la production n'a pas de client). */
 export const workLineClientPrice = 0;

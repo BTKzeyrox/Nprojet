@@ -79,6 +79,20 @@ export const PRESENCE_FRACTION: Record<Presence, number> = { present: 1, late: 1
 export const dayFraction = (p: unknown): number => (typeof p === 'string' && (PRESENCE_VALUES as string[]).includes(p) ? PRESENCE_FRACTION[p as Presence] : 0);
 export const PRESENCE_LABEL: Record<Presence, Bi> = { present: b('Présent', 'Present'), late: b('En retard', 'Late'), half: b('Demi-journée', 'Half day'), absent: b('Absent', 'Absent') };
 
+// ---------- Retard et motif d'absence (M27.8, 2026-11-10) ----------
+/** Retard retiré de la paie (paie « par jour » seulement) : jamais (défaut), à la minute, ou par tranche de 15 minutes entamée. */
+export const LATE_RULES = ['never', 'per_minute', 'per_15'] as const;
+export type LateRule = typeof LATE_RULES[number];
+export const LATE_RULE_LABEL: Record<LateRule, Bi> = { never: b('Jamais', 'Never'), per_minute: b('À la minute', 'Per minute'), per_15: b('Par tranche de 15 minutes', 'Per 15-minute block') };
+/** Motifs d'absence proposés ; chacun est payé ou non selon un réglage. */
+export const ABSENCE_REASONS = ['sick', 'leave', 'none', 'other'] as const;
+export type AbsenceReason = typeof ABSENCE_REASONS[number];
+export const ABSENCE_LABEL: Record<AbsenceReason, Bi> = { sick: b('Maladie', 'Sick'), leave: b('Congé', 'Leave'), none: b('Sans motif', 'No reason'), other: b('Autre', 'Other') };
+export const isAbsenceReason = (v: unknown): v is AbsenceReason => typeof v === 'string' && (ABSENCE_REASONS as readonly string[]).includes(v);
+export const MAX_LATE_MIN = 600;
+/** Une journée payée pendant une absence payée, en heures (paie « par heure »). */
+export const PAID_ABSENCE_HOURS = 8;
+
 // ---------- Calcul du montant ----------
 export interface PayData {
   missions?: number; // missions validées (par mission)
