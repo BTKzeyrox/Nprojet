@@ -2705,7 +2705,7 @@ const COMPANY_SPEC = {
   texts: { internal_rules: { t: "text", max: 5e3, multi: true }, customer_terms: { t: "text", max: 5e3, multi: true } },
   modules: { hidden: { t: "text", max: 400 } },
   watch: { validate_hours: { t: "int", min: 0, max: 720 }, active_no_end_hours: { t: "int", min: 0, max: 720 }, late_count: { t: "int", min: 0, max: 100 }, late_window_days: { t: "int", min: 0, max: 365 }, absent_streak_days: { t: "int", min: 0, max: 60 }, refusal_rate_pct: { t: "int", min: 0, max: 100 }, refusal_min_missions: { t: "int", min: 0, max: 1000 }, min_periods: { t: "int", min: 0, max: 60 }, ignore_days: { t: "int", min: 0, max: 365 }, min_duration_minutes: { t: "int", min: 0, max: 600 }, advance_pending_days: { t: "int", min: 0, max: 90 }, inactive_days: { t: "int", min: 0, max: 365 }, strategic_silent_days: { t: "int", min: 0, max: 365 }, dormant_days: { t: "int", min: 0, max: 730 }, others_pct: { t: "int", min: 0, max: 100 }, backup_max_hours: { t: "int", min: 0, max: 720 }, error_hours: { t: "int", min: 0, max: 720 } },
-  work: { business_model: { t: "enum", vals: ["", "shop", "workshop", "security", "cleaning", "restaurant", "delivery", "building", "office", "other"] }, pay_default: { t: "enum", vals: ["mission", "day", "hour", "piece", "fixed"] }, rate_day_ar: { t: "num", min: 0, max: 1e8 }, rate_hour_ar: { t: "num", min: 0, max: 1e8 }, rate_piece_ar: { t: "num", min: 0, max: 1e8 }, rate_fixed_ar: { t: "num", min: 0, max: 1e8 }, stock_gap_pct: { t: "int", min: 0, max: 100 } },
+  work: { business_model: { t: "enum", vals: ["", "shop", "workshop", "security", "cleaning", "restaurant", "delivery", "building", "office", "other"] }, pay_default: { t: "enum", vals: ["mission", "day", "hour", "piece", "fixed"] }, rate_day_ar: { t: "num", min: 0, max: 1e8 }, rate_hour_ar: { t: "num", min: 0, max: 1e8 }, rate_piece_ar: { t: "num", min: 0, max: 1e8 }, rate_fixed_ar: { t: "num", min: 0, max: 1e8 }, stock_gap_pct: { t: "int", min: 0, max: 100 }, stats_lines: { t: "enum", vals: ["money", "all", "none"] } },
 };
 const COMPANY_DEFAULTS = {
   identity: { name: "", address: "", phone: "", email: "", logo_url: "", currency: "Ar" },
@@ -2720,7 +2720,7 @@ const COMPANY_DEFAULTS = {
   texts: { internal_rules: "", customer_terms: "" },
   modules: { hidden: "" },
   watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 },
-  work: { business_model: "", pay_default: "mission", rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10 },
+  work: { business_model: "", pay_default: "mission", rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10, stats_lines: "money" },
 };
 const COMPANY_EMPLOYEE_SECTIONS = ["leave"];
 const noTags = (s) => s.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");

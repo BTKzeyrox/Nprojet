@@ -30,7 +30,7 @@ export const COMPANY_SPEC: Record<string, Record<string, Spec>> = {
   modules: { hidden: { t: 'text', max: 400 } },
   watch: { validate_hours: { t: 'int', min: 0, max: 720 }, active_no_end_hours: { t: 'int', min: 0, max: 720 }, late_count: { t: 'int', min: 0, max: 100 }, late_window_days: { t: 'int', min: 0, max: 365 }, absent_streak_days: { t: 'int', min: 0, max: 60 }, refusal_rate_pct: { t: 'int', min: 0, max: 100 }, refusal_min_missions: { t: 'int', min: 0, max: 1000 }, min_periods: { t: 'int', min: 0, max: 60 }, ignore_days: { t: 'int', min: 0, max: 365 }, min_duration_minutes: { t: 'int', min: 0, max: 600 }, advance_pending_days: { t: 'int', min: 0, max: 90 }, inactive_days: { t: 'int', min: 0, max: 365 }, strategic_silent_days: { t: 'int', min: 0, max: 365 }, dormant_days: { t: 'int', min: 0, max: 730 }, others_pct: { t: 'int', min: 0, max: 100 }, backup_max_hours: { t: 'int', min: 0, max: 720 }, error_hours: { t: 'int', min: 0, max: 720 } },
   // Types de travail et paie (module 26) : modèle d'entreprise, mode de paie par défaut, tarifs (Ar), écart toléré avec le stock (%). Le mode par défaut « mission » = comme avant. Un employé ne reçoit JAMAIS cette section (voir COMPANY_EMPLOYEE_SECTIONS).
-  work: { business_model: { t: 'enum', vals: ['', ...BUSINESS_MODELS.map(m => m.id)] }, pay_default: { t: 'enum', vals: [...PAY_MODES] }, rate_day_ar: { t: 'num', min: 0, max: 1e8 }, rate_hour_ar: { t: 'num', min: 0, max: 1e8 }, rate_piece_ar: { t: 'num', min: 0, max: 1e8 }, rate_fixed_ar: { t: 'num', min: 0, max: 1e8 }, stock_gap_pct: { t: 'int', min: 0, max: 100 } },
+  work: { business_model: { t: 'enum', vals: ['', ...BUSINESS_MODELS.map(m => m.id)] }, pay_default: { t: 'enum', vals: [...PAY_MODES] }, rate_day_ar: { t: 'num', min: 0, max: 1e8 }, rate_hour_ar: { t: 'num', min: 0, max: 1e8 }, rate_piece_ar: { t: 'num', min: 0, max: 1e8 }, rate_fixed_ar: { t: 'num', min: 0, max: 1e8 }, stock_gap_pct: { t: 'int', min: 0, max: 100 }, stats_lines: { t: 'enum', vals: ['money', 'all', 'none'] } },
 };
 
 /** Valeurs de départ prudentes : rien d'inventé (légal vide), TVA non, 30 jours, FA- / RC-. 0 = « non réglé ». */
@@ -47,7 +47,7 @@ export const COMPANY_DEFAULTS: CompanySettings = {
   texts: { internal_rules: '', customer_terms: '' },
   modules: { hidden: '' },
   watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 },
-  work: { business_model: '', pay_default: 'mission', rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10 },
+  work: { business_model: '', pay_default: 'mission', rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10, stats_lines: 'money' },
 };
 
 /** Ce qu'un employé a le droit de recevoir : le règlement intérieur et les règles de congés/présence. Rien d'argent. */

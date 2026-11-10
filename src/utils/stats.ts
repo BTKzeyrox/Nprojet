@@ -1,6 +1,7 @@
 // Règles pures (sans écran, sans serveur) des périodes jour, semaine, mois, année et des chiffres de la page Statistiques.
 // Utilisé par : DeadlineFields.tsx, GoalsPanel.tsx, MySheets.tsx, OperatorSheet.tsx, StatCard.tsx, store.ts, alerts.ts, alertsDb.ts et 48 autres. Contrôlé par : npm run check:accounting-entries, check:badges, check:budget-plan-page et 26 autres.
 // Pour modifier : dates en texte AAAA-MM-JJ (jour de Madagascar), calculs en UTC ; la semaine commence le lundi ; beaucoup d'écrans en dépendent, relance les contrôles check:*.
+import { isWorkLine } from './postPay';
 import type { ClientContract, PostSession, SalaryAdvanceRequest, User } from '../types';
 
 // Calcul des périodes (jour, semaine, mois, année) et des chiffres de la page Statistiques.
@@ -132,6 +133,7 @@ export interface StatsInput {
   users: User[];
   advances: SalaryAdvanceRequest[];
   pricePerMission: number; // repli si une mission validée n'a pas de montant calculé
+  workLines?: 'money' | 'all' | 'none'; // lignes de la Feuille du jour : « money » (défaut) = leur argent compte, pas comme missions ; « all » = comme des missions ; « none » = ignorées
 }
 
 const minutesOf = (p: PostSession): number | null => {
@@ -186,7 +188,21 @@ const typeOf = (p: PostSession, contracts: ClientContract[]): string => {
   return (c?.post_type || '').trim() || 'Autre';
 };
 
+/** Statistiques. Réglage « Lignes de la Feuille du jour » (Réglages > Conditions) : voir StatsInput.workLines. */
 export function computeStats(input: StatsInput, g: StatsGranularity, anchor: string, today: string, lang: 'fr' | 'en' = 'fr'): StatsResult {
+  const mode = input.workLines || 'money';
+  if (mode === 'all') return statsCore(input, g, anchor, today, lang);
+  const base = statsCore({ ...input, posts: input.posts.filter(p => !isWorkLine(p)) }, g, anchor, today, lang);
+  if (mode === 'none') return base;
+  const lines = statsCore({ ...input, posts: input.posts.filter(p => isWorkLine(p)) }, g, anchor, today, lang);
+  base.cur.earned += lines.cur.earned; base.prev.earned += lines.prev.earned;
+  base.series.earned = base.series.earned.map((v, i) => v + (lines.series.earned[i] || 0));
+  base.team.ranking = base.team.ranking.map(r => ({ ...r, earned: r.earned + (lines.team.ranking.find(x => x.id === r.id)?.earned || 0) }));
+  base.salary.perHead = base.cur.workers > 0 ? Math.round(base.cur.earned / base.cur.workers) : null;
+  return base;
+}
+
+function statsCore(input: StatsInput, g: StatsGranularity, anchor: string, today: string, lang: 'fr' | 'en'): StatsResult {
   const ranges = comparableRanges(g, anchor, today);
   const cur = ranges.isFuture ? { done: 0, rejected: 0, rate: null, earned: 0, advances: 0, avgMin: null, workers: 0 } as Totals : totalsFor(input, ranges.curEff);
   const prev = totalsFor(input, ranges.prev);

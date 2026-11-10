@@ -114,7 +114,7 @@ export interface CompanySettings {
   texts: { internal_rules: string; customer_terms: string };
   modules: { hidden: string }; // pages cachées du menu (liste d'identifiants séparés par des virgules) ; les opérateurs la reçoivent aussi
   watch: { validate_hours: number; active_no_end_hours: number; late_count: number; late_window_days: number; absent_streak_days: number; refusal_rate_pct: number; refusal_min_missions: number; min_periods: number; ignore_days: number; min_duration_minutes: number; advance_pending_days: number; inactive_days: number; strategic_silent_days: number; dormant_days: number; others_pct: number; backup_max_hours: number; error_hours: number }; // seuils de la Santé du site partagés par toute l'équipe d'admins ; 0 = valeur de départ
-  work: { business_model: string; pay_default: 'mission' | 'day' | 'hour' | 'piece' | 'fixed'; rate_day_ar: number; rate_hour_ar: number; rate_piece_ar: number; rate_fixed_ar: number; stock_gap_pct: number }; // module 26 : types de travail et paie (jamais envoyé à un employé)
+  work: { business_model: string; pay_default: 'mission' | 'day' | 'hour' | 'piece' | 'fixed'; rate_day_ar: number; rate_hour_ar: number; rate_piece_ar: number; rate_fixed_ar: number; stock_gap_pct: number; stats_lines: 'money' | 'all' | 'none' }; // module 26 : types de travail et paie (jamais envoyé à un employé)
 }
 
 export interface CompanyLogEntry {

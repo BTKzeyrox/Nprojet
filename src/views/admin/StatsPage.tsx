@@ -86,7 +86,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
   const posts = db.getPosts();
   const sig = posts.map(p => `${p.id}${p.status}${p.date}${p.calculated_ar ?? ''}`).join() + db.getUsers().length + db.getAdvanceRequests().length + db.getContracts().length;
   const stats = useMemo(() => computeStats({
-    posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(), pricePerMission: db.getSettings().price_per_mission || 0,
+    posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(), pricePerMission: db.getSettings().price_per_mission || 0, workLines: db.getSettings().company?.work?.stats_lines,
   }, g, anchor, today, l), [g, anchor, today, l, sig]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (db.getCurrentUser()?.role !== 'admin') return null; // page réservée à l'admin

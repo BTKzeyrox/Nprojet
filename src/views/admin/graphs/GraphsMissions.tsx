@@ -21,7 +21,7 @@ export const GraphsMissions: React.FC<Props> = ({ g, anchor, today, lang: l, sho
   const [showAll, setShowAll] = useState(false);
   const posts = db.getPosts();
   const sig = posts.map(p => `${p.id}${p.status}${p.date}${p.calculated_ar ?? ''}`).join() + db.getUsers().length + db.getAdvanceRequests().length + db.getContracts().length;
-  const stats = useMemo(() => computeStats({ posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(), pricePerMission: db.getSettings().price_per_mission || 0 }, g, anchor, today, l),
+  const stats = useMemo(() => computeStats({ posts, contracts: db.getContracts(), users: db.getUsers(), advances: db.getAdvanceRequests(), pricePerMission: db.getSettings().price_per_mission || 0, workLines: db.getSettings().company?.work?.stats_lines }, g, anchor, today, l),
     [g, anchor, today, l, sig]); // eslint-disable-line react-hooks/exhaustive-deps
   const money = (n: number) => formatCurrencyAr(n);
   const prevTotal = stats.series.prevDone.reduce((x: number, v) => x + (Number(v) || 0), 0), delta = variationPct(stats.cur.done, prevTotal);
