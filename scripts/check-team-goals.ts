@@ -55,6 +55,8 @@ const team = { scope: 'team', metric: 'done' }, teamRate = { scope: 'team', metr
 eq(teamGoalActual(team, posts, '2026-10'), { actual: 4, done: 4, rejected: 1, decided: 5 }, 'équipe, octobre : 4 validées (le 30 sept. et le 1er nov. ne comptent pas)');
 eq(teamGoalActual(u1, posts, '2026-10'), { actual: 2, done: 2, rejected: 1, decided: 3 }, 'salarié u1, octobre : ses 2 missions validées seulement');
 eq(teamGoalActual(teamRate, posts, '2026-10').actual, 80, 'taux d\'équipe : 4 sur 5 jugées = 80 %');
+const withLines = [...posts, { employee_id: 'u1', status: 'completed', date: '2026-10-10', work_type: 'presence' }, { employee_id: 'u1', status: 'rejected', date: '2026-10-11', work_type: 'carton' }] as any;
+eq(teamGoalActual(team, withLines, '2026-10'), { actual: 4, done: 4, rejected: 1, decided: 5 }, 'une ligne de la Feuille du jour (work_type) ne compte jamais comme mission d\'un objectif');
 eq(teamGoalActual(u1Rate, posts, '2026-10').actual, 67, 'taux de u1 : 2 sur 3 = 67 % (arrondi)');
 eq(teamGoalActual(teamRate, posts, '2026-08'), { actual: null, done: 0, rejected: 0, decided: 0 }, 'taux sans mission jugée : null, pas 0 ni NaN');
 eq(teamGoalActual(team, posts, '2026-08').actual, 0, 'missions validées sans mission : 0');

@@ -93,6 +93,7 @@ export function teamGoalActual(goal: { scope: string; employee_id?: string; metr
   let done = 0, rejected = 0;
   for (const p of posts) {
     if (typeof p.date !== 'string' || p.date.slice(0, 7) !== month) continue;
+    if (typeof (p as any).work_type === 'string' && (p as any).work_type.length > 0) continue; // une ligne de la Feuille du jour n'est pas une mission
     if (goal.scope === 'employee' && p.employee_id !== goal.employee_id) continue;
     if (p.status === 'completed') done++; else if (p.status === 'rejected') rejected++;
   }
