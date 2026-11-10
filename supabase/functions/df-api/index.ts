@@ -273,11 +273,12 @@ function planWorkEntries(me: any, users: any[], existing: any[], sheet: any, set
   });
   return { ok: true, saved, failed, users: [...touched].map(id => byId.get(id)), validated: admin };
 }
-/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable seulement. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
+/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable ; le chef d'équipe seulement pour SA ligne encore en attente. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
 function planWorkCancel(me: any, post: any, employee: any, closed: boolean): { ok: true; id: string; user: any } | { ok: false; error: "role" | "notline" | "closed" } {
-  if (!me || me.role !== "admin") return { ok: false, error: "role" };
+  if (!me || (me.role !== "admin" && me.role !== "team_lead")) return { ok: false, error: "role" };
   if (!post || typeof post !== "object" || typeof post.id !== "string" || !post.id.startsWith("we-") || typeof post.work_type !== "string" || !post.work_type) return { ok: false, error: "notline" };
   if (post.status !== "completed" && post.status !== "pending_end") return { ok: false, error: "notline" };
+  if (me.role === "team_lead" && (post.status !== "pending_end" || post.entered_by !== me.id)) return { ok: false, error: "role" }; // le chef : seulement SA ligne encore en attente
   if (closed) return { ok: false, error: "closed" };
   let user: any = null;
   if (post.status === "completed" && employee && typeof employee === "object") {
@@ -4504,7 +4505,7 @@ async function workEntryRoute(req: any, res: any, me: any) {
 }
 
 async function workCancelRoute(req: any, res: any, me: any) {
-  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé au responsable.' });
+  if (me.role !== 'admin' && me.role !== 'team_lead') return res.status(403).json({ error: 'Réservé au responsable et au chef d\'équipe.' });
   const id = String((req.body || {}).id || '');
   if (!id.startsWith('we-')) return res.status(400).json({ error: 'Ligne illisible.' });
   const { data: prow } = await sb.from(T.posts).select('id, data').eq('id', id).maybeSingle();
@@ -4515,7 +4516,7 @@ async function workCancelRoute(req: any, res: any, me: any) {
   const closed = dayInClosedPeriod(prs || [], String(post.date)); // clôturée OU payée
   const plan = planWorkCancel(me, post, urow?.data || null, closed);
   if (!plan.ok) {
-    const msg: Record<string, string> = { role: 'Réservé au responsable.', notline: "Ce n'est pas une ligne de la feuille du jour.", closed: 'La période de paie de ce jour est clôturée : impossible de l\'annuler.' };
+    const msg: Record<string, string> = { role: 'Le chef d\'équipe ne peut annuler que sa propre ligne encore en attente.', notline: "Ce n'est pas une ligne de la feuille du jour.", closed: 'La période de paie de ce jour est clôturée : impossible de l\'annuler.' };
     return res.status(plan.error === 'role' ? 403 : plan.error === 'closed' ? 409 : 400).json({ error: msg[plan.error] || 'Annulation refusée.' });
   }
   await sb.from(T.posts).delete().eq('id', plan.id);

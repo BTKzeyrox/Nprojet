@@ -866,7 +866,7 @@ Une étape testée avant la suivante ; **le mode par défaut reste « par missio
   - Se recalcule tout seul (`useNow(15000)` + abonnement au store). Masqué si le module « Feuille du jour » est coupé ou s'il n'y a personne.
   - Tests : règle pure (`dayProgress`) + rendu ; cas minuit Madagascar (le jour change à 21:00 UTC : voir l'échec de `check:demo-stats` du 2026-11-08).
   - Dépend de : M27.1 (même règle « qui est saisi »).
-- [ ] **M27.3 — Le chef d'équipe annule ses propres lignes « en attente »** (M, **serveur** : `df-api` + bloc WORKENTRY). *Pourquoi :* sinon un chef qui se trompe doit demander au responsable.
+- [x] **M27.3 — (fait, df-api À DÉPLOYER) Le chef d'équipe annule ses propres lignes « en attente »** (M, **serveur** : `df-api` + bloc WORKENTRY). *Pourquoi :* sinon un chef qui se trompe doit demander au responsable.
   - Quoi : `planWorkCancel` accepte le chef d'équipe pour une ligne qu'il a saisie (`entered_by === me.id`) ET encore `pending_end` (jamais une ligne déjà validée, jamais celle d'un autre). Pas de paie à retirer (elle n'a pas été ajoutée). Journalisé (`work_cancel`). Période clôturée : refusé (comme aujourd'hui).
   - Toucher en même temps : `src/utils/workEntry.ts` + sa copie dans `df-api` (bloc BEGIN/END WORKENTRY, comparé par `check:work-entry`), route `work-line-cancel` (aujourd'hui « responsable seulement »), liste « Déjà saisi ce jour-là » de `WorksheetView.tsx` (aujourd'hui visible du responsable seulement), `check:work-cancel`.
   - Risque : ne jamais permettre d'annuler une ligne validée par le responsable ni la ligne d'un autre chef.

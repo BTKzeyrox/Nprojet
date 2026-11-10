@@ -92,11 +92,12 @@ export function planWorkEntries(me: any, users: any[], existing: any[], sheet: a
   });
   return { ok: true, saved, failed, users: [...touched].map(id => byId.get(id)), validated: admin };
 }
-/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable seulement. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
+/** Annuler une ligne de la feuille du jour (point faible T2) : le responsable ; le chef d'équipe seulement pour SA ligne encore en attente. La paie ajoutée à la validation est retirée ; la ligne disparaît et peut être saisie à nouveau. Période de paie déjà clôturée (`closed`) : refusé. */
 export function planWorkCancel(me: any, post: any, employee: any, closed: boolean): { ok: true; id: string; user: any } | { ok: false; error: "role" | "notline" | "closed" } {
-  if (!me || me.role !== "admin") return { ok: false, error: "role" };
+  if (!me || (me.role !== "admin" && me.role !== "team_lead")) return { ok: false, error: "role" };
   if (!post || typeof post !== "object" || typeof post.id !== "string" || !post.id.startsWith("we-") || typeof post.work_type !== "string" || !post.work_type) return { ok: false, error: "notline" };
   if (post.status !== "completed" && post.status !== "pending_end") return { ok: false, error: "notline" };
+  if (me.role === "team_lead" && (post.status !== "pending_end" || post.entered_by !== me.id)) return { ok: false, error: "role" }; // le chef : seulement SA ligne encore en attente
   if (closed) return { ok: false, error: "closed" };
   let user: any = null;
   if (post.status === "completed" && employee && typeof employee === "object") {

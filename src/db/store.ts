@@ -2974,7 +2974,7 @@ export class AppStore {
       const post = this.posts.find(p => p.id === postId);
       const emp = post ? this.users.find(u => u.id === post.employee_id) : undefined;
       const plan = planWorkCancel(this.currentUser, post, emp, false);
-      if (!plan.ok) return { ok: false, error: plan.error === 'role' ? 'Réservé au responsable.' : "Ce n'est pas une ligne de la feuille du jour." };
+      if (!plan.ok) return { ok: false, error: plan.error === 'role' ? 'Seulement le responsable, ou le chef pour sa propre ligne en attente.' : "Ce n'est pas une ligne de la feuille du jour." };
       this.posts = this.posts.filter(p => p.id !== plan.id);
       if (plan.user && emp) emp.total_earnings_ar = plan.user.total_earnings_ar;
       this.notify();

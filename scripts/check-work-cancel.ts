@@ -17,7 +17,12 @@ ok(emp.total_earnings_ar === 50000, 'l\'employé de départ n\'est pas modifié 
 r = planWorkCancel(admin, line({ status: 'pending_end' }), emp, false);
 ok(r.ok && r.user === null, 'ligne en attente : aucune paie à retirer');
 ok((planWorkCancel(admin, line({ calculated_ar: 999999 }), emp, false) as any).user.total_earnings_ar === 0, 'jamais de total négatif');
-ok((planWorkCancel(lead, line(), emp, false) as any).error === 'role' && (planWorkCancel({ id: 'x', role: 'employee' }, line(), emp, false) as any).error === 'role' && (planWorkCancel(null, line(), emp, false) as any).error === 'role', 'responsable seulement (chef d\'équipe, opérateur, personne : refusé)');
+ok((planWorkCancel(lead, line(), emp, false) as any).error === 'role' && (planWorkCancel({ id: 'x', role: 'employee' }, line(), emp, false) as any).error === 'role' && (planWorkCancel(null, line(), emp, false) as any).error === 'role', 'opérateur, personne : refusé ; chef : refusé sur une ligne validée');
+const mine = line({ status: 'pending_end', entered_by: 'l' });
+ok((planWorkCancel(lead, mine, emp, false) as any).ok === true && (planWorkCancel(lead, mine, emp, false) as any).user === null, 'chef : annule SA ligne en attente (aucune paie à retirer)');
+ok((planWorkCancel(lead, { ...mine, entered_by: 'autre' }, emp, false) as any).error === 'role', 'chef : jamais la ligne d\'un autre');
+ok((planWorkCancel(lead, { ...mine, status: 'completed' }, emp, false) as any).error === 'role', 'chef : jamais une ligne déjà validée');
+ok((planWorkCancel(lead, mine, emp, true) as any).error === 'closed', 'chef : période clôturée refusée');
 ok((planWorkCancel(admin, { id: 'post-1', employee_id: 'e', status: 'completed', calculated_ar: 10 }, emp, false) as any).error === 'notline', 'une mission normale ne s\'annule pas ici');
 ok((planWorkCancel(admin, line({ id: 'we-x', work_type: '' }), emp, false) as any).error === 'notline' && (planWorkCancel(admin, null, emp, false) as any).error === 'notline' && (planWorkCancel(admin, line({ status: 'rejected' }), emp, false) as any).error === 'notline', 'ligne sans type, absente ou refusée : refusé');
 ok((planWorkCancel(admin, line(), emp, true) as any).error === 'closed', 'période de paie clôturée : refusé');
@@ -37,6 +42,6 @@ const st = readFileSync('src/db/store.ts', 'utf8'), ws = readFileSync('src/views
 ok(/async workCancelRoute|async function workCancelRoute/.test(src) && /action === "work-line-cancel" && req\.method === "POST"/.test(src) && /planWorkCancel\(me, post, urow\?\.data \|\| null, closed\)/.test(src), 'serveur : route branchée, période clôturée vérifiée');
 ok(/const closed = dayInClosedPeriod\(prs \|\| \[\], String\(post\.date\)\)/.test(src) && /'work_cancel'/.test(src), 'serveur : période clôturée (ou payée) et journal d\'audit');
 ok(/async cancelWorkLine/.test(st) && /'work-line-cancel'/.test(st), 'magasin : démo et serveur');
-ok(/data-worksheet-existing/.test(ws) && /me\.role === 'admin' && dayLines\.length > 0/.test(ws) && /window\.confirm/.test(ws), 'écran : liste des lignes du jour avec « Annuler » (responsable, avec confirmation)');
+ok(/data-worksheet-existing/.test(ws) && /myCancelable\.length > 0/.test(ws) && /window\.confirm/.test(ws), 'écran : liste des lignes du jour avec « Annuler » (responsable ou chef pour ses lignes, avec confirmation)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
