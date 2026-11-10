@@ -1746,7 +1746,7 @@ async function vapidHeader(endpoint: string, subject: string, publicKey: string,
 }
 // ===== END PUSH =====
 // ===== BEGIN NOTIFY (notifications externes, partie 2a : textes, catégories ; ce bloc est contrôlé par scripts/check-push-events.ts) =====
-type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message" | "access" | "news_new" | "news_pending" | "news_ok" | "news_no" | "news_comment" | "news_reply";
+type NotifyKind = "val_start" | "val_end" | "advance_new" | "advance_ok" | "advance_no" | "signup" | "reset" | "profile" | "security" | "message" | "access" | "news_new" | "news_pending" | "news_ok" | "news_no" | "news_comment" | "sheet_missing" | "news_reply";
 const PUSH_CATS = ["missions", "validations", "advances", "security", "messages", "stock", "invoices", "news"] as const;
 type PushCat = typeof PUSH_CATS[number];
 const ncut = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
@@ -1758,7 +1758,7 @@ function notifyCat(kind: NotifyKind): PushCat {
   return "validations"; // « news_pending » (publication à valider) reste avec les validations du responsable
 }
 /** Texte d'un push (les deux langues). Jamais de montant ni de contenu de message : un push s'affiche sur l'écran verrouillé. */
-function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean }): PushText {
+function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean; count?: number }): PushText {
   const name = ncut(m.name, 60) || "—";
   const client = ncut(m.client, 60);
   const who = client ? `${name} · ${client}` : name;
@@ -1780,6 +1780,7 @@ function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reaso
     case "news_ok": return { fr: { title: "Publication validée", body: "Ta publication est en ligne." }, en: { title: "Post approved", body: "Your post is now live." } };
     case "news_no": { const r = ncut(m.reason, 100); return { fr: { title: "Publication refusée", body: r ? `Motif : ${r}` : "Ta publication a été refusée." }, en: { title: "Post refused", body: r ? `Reason: ${r}` : "Your post was refused." } }; }
     case "news_comment": return { fr: { title: "Nouveau commentaire", body: `${name} a commenté ta publication` }, en: { title: "New comment", body: `${name} commented on your post` } };
+    case "sheet_missing": { const n = Math.max(0, Math.min(999, Math.round(Number(m.count) || 0))); return { fr: { title: "Feuille du jour", body: `${n} sans ligne` }, en: { title: "Daily sheet", body: `${n} without a line` } }; }
     case "news_reply": return { fr: { title: "Nouvelle réponse", body: `${name} a répondu à ton commentaire` }, en: { title: "New reply", body: `${name} replied to your comment` } };
   }
 }
@@ -2723,7 +2724,7 @@ const COMPANY_SPEC = {
   texts: { internal_rules: { t: "text", max: 5e3, multi: true }, customer_terms: { t: "text", max: 5e3, multi: true } },
   modules: { hidden: { t: "text", max: 400 } },
   watch: { validate_hours: { t: "int", min: 0, max: 720 }, active_no_end_hours: { t: "int", min: 0, max: 720 }, late_count: { t: "int", min: 0, max: 100 }, late_window_days: { t: "int", min: 0, max: 365 }, absent_streak_days: { t: "int", min: 0, max: 60 }, refusal_rate_pct: { t: "int", min: 0, max: 100 }, refusal_min_missions: { t: "int", min: 0, max: 1000 }, min_periods: { t: "int", min: 0, max: 60 }, ignore_days: { t: "int", min: 0, max: 365 }, min_duration_minutes: { t: "int", min: 0, max: 600 }, advance_pending_days: { t: "int", min: 0, max: 90 }, inactive_days: { t: "int", min: 0, max: 365 }, strategic_silent_days: { t: "int", min: 0, max: 365 }, dormant_days: { t: "int", min: 0, max: 730 }, others_pct: { t: "int", min: 0, max: 100 }, backup_max_hours: { t: "int", min: 0, max: 720 }, error_hours: { t: "int", min: 0, max: 720 } },
-  work: { business_model: { t: "enum", vals: ["", "shop", "workshop", "security", "cleaning", "restaurant", "delivery", "building", "office", "other"] }, pay_default: { t: "enum", vals: ["mission", "day", "hour", "piece", "fixed"] }, rate_day_ar: { t: "num", min: 0, max: 1e8 }, rate_hour_ar: { t: "num", min: 0, max: 1e8 }, rate_piece_ar: { t: "num", min: 0, max: 1e8 }, rate_fixed_ar: { t: "num", min: 0, max: 1e8 }, stock_gap_pct: { t: "int", min: 0, max: 100 }, stats_lines: { t: "enum", vals: ["money", "all", "none"] }, late_rule: { t: "enum", vals: ["never", "per_minute", "per_15"] }, absence_paid_sick: { t: "bool" }, absence_paid_leave: { t: "bool" }, absence_paid_none: { t: "bool" }, absence_paid_other: { t: "bool" } },
+  work: { business_model: { t: "enum", vals: ["", "shop", "workshop", "security", "cleaning", "restaurant", "delivery", "building", "office", "other"] }, pay_default: { t: "enum", vals: ["mission", "day", "hour", "piece", "fixed"] }, rate_day_ar: { t: "num", min: 0, max: 1e8 }, rate_hour_ar: { t: "num", min: 0, max: 1e8 }, rate_piece_ar: { t: "num", min: 0, max: 1e8 }, rate_fixed_ar: { t: "num", min: 0, max: 1e8 }, stock_gap_pct: { t: "int", min: 0, max: 100 }, stats_lines: { t: "enum", vals: ["money", "all", "none"] }, late_rule: { t: "enum", vals: ["never", "per_minute", "per_15"] }, absence_paid_sick: { t: "bool" }, absence_paid_leave: { t: "bool" }, absence_paid_none: { t: "bool" }, absence_paid_other: { t: "bool" }, sheet_reminder: { t: "enum", vals: ["on", "off"] }, sheet_reminder_hour: { t: "enum", vals: ["12", "13", "14", "15", "16", "17", "18", "19", "20", "21"] } },
 };
 const COMPANY_DEFAULTS = {
   identity: { name: "", address: "", phone: "", email: "", logo_url: "", currency: "Ar" },
@@ -2738,7 +2739,7 @@ const COMPANY_DEFAULTS = {
   texts: { internal_rules: "", customer_terms: "" },
   modules: { hidden: "" },
   watch: { validate_hours: 0, active_no_end_hours: 0, late_count: 0, late_window_days: 0, absent_streak_days: 0, refusal_rate_pct: 0, refusal_min_missions: 0, min_periods: 0, ignore_days: 0, min_duration_minutes: 0, advance_pending_days: 0, inactive_days: 0, strategic_silent_days: 0, dormant_days: 0, others_pct: 0, backup_max_hours: 0, error_hours: 0 },
-  work: { business_model: "", pay_default: "mission", rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10, stats_lines: "money", late_rule: "never", absence_paid_sick: false, absence_paid_leave: true, absence_paid_none: false, absence_paid_other: false },
+  work: { business_model: "", pay_default: "mission", rate_day_ar: 0, rate_hour_ar: 0, rate_piece_ar: 0, rate_fixed_ar: 0, stock_gap_pct: 10, stats_lines: "money", late_rule: "never", absence_paid_sick: false, absence_paid_leave: true, absence_paid_none: false, absence_paid_other: false, sheet_reminder: "on", sheet_reminder_hour: "18" },
 };
 const COMPANY_EMPLOYEE_SECTIONS = ["leave"];
 const noTags = (s) => s.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");
@@ -6566,6 +6567,36 @@ async function releaseScheduledMessages(): Promise<number> {
     return n;
   } catch { return 0; }
 }
+// M27.4 : rappel « feuille du jour pas saisie » (responsable : tous ; chef d'équipe : son équipe). Jamais deux fois le même jour pour la même personne ; jamais le contenu des lignes.
+async function sheetReminderRun(nowMs: number): Promise<number> {
+  try {
+    const { data: srow } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+    const settings = (srow as any)?.data || {};
+    const loc = srLocal(nowMs);
+    const w = (settings.company && settings.company.work) || {};
+    if (w.sheet_reminder === 'off') return 0;
+    const wh = Number(w.sheet_reminder_hour);
+    if (loc.hour < (Number.isInteger(wh) && wh >= 12 && wh <= 21 ? wh : 18)) return 0; // trop tôt : on ne lit rien
+    const { data: urows } = await sb.from(T.users).select('id,data');
+    const users: SrUser[] = (urows || []).map((r: any) => ({ id: String(r.id), role: r.data?.role, status: r.data?.status, team: r.data?.team }));
+    const { data: prows } = await sb.from(T.posts).select('id,data->>status').or(srDates(loc.date).map(d => `id.like.we-${d}-*`).join(','));
+    const lines: SrLine[] = (prows || []).map((r: any) => ({ id: r.id, status: r.status }));
+    const plan = sheetReminderPlan(users, lines, settings, nowMs);
+    if (plan.notices.length === 0) return 0;
+    const keys = plan.notices.map(n => `sheet-${plan.date}-${n.to}`);
+    const { data: seen } = await sb.from(PUSH_LOG).select('id').in('id', keys);
+    const seenSet = new Set((seen || []).map((r: any) => r.id));
+    let sent = 0;
+    for (const n of plan.notices) {
+      const key = `sheet-${plan.date}-${n.to}`;
+      if (seenSet.has(key)) continue;
+      const k = await pushTo([n.to], notifyText('sheet_missing', { count: n.count }), `sheet-${plan.date}`, { go: 'worksheet' }, 'validations');
+      await sb.from(PUSH_LOG).upsert({ id: key, data: { at: new Date(nowMs).toISOString(), kind: 'sheet', sent: k }, updated_at: new Date(nowMs).toISOString() }); // même sans appareil : pas de nouvel essai toute la soirée
+      sent += k;
+    }
+    return sent;
+  } catch (e) { console.error('sheetReminderRun error:', String((e as any)?.message || e).slice(0, 120)); return 0; }
+}
 async function remindersDue(request: Request, res: any) {
   const given = request.headers.get('x-cron-secret') || '';
   const { data: want } = await sb.rpc('df_push_get_secret', { secret_name: 'push_cron_secret' });
@@ -6573,6 +6604,7 @@ async function remindersDue(request: Request, res: any) {
   if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return res.status(401).json({ error: 'refusé' });
   await releaseScheduledMessages();
   const nowMs = Date.now();
+  const sheetSent = await sheetReminderRun(nowMs);
   const { data: rows } = await sb.from(REMINDERS).select('data').eq('data->>kind', 'item').in('data->>status', ['todo', 'doing']);
   const items = (rows || []).map((r: any) => r.data as RemItem);
   const cfgCache = new Map<string, Awaited<ReturnType<typeof remLoadCfg>>>();
@@ -6605,8 +6637,46 @@ async function remindersDue(request: Request, res: any) {
       }
     }
   }
-  return res.json({ ok: true, due: queue.length, notified: done, sent });
+  return res.json({ ok: true, due: queue.length, notified: done, sent, sheet: sheetSent });
 }
+
+// ===== BEGIN SHEETREMINDER (M27.4 : copie exacte de src/utils/sheetReminder.ts ; contrôlée par scripts/check-sheet-reminder.ts) =====
+const SR_MADA_OFFSET_MS = 3 * 3600 * 1000; // Madagascar : UTC+3, sans heure d'été
+const SR_WINDOW_H = 3; // le rappel peut partir jusqu'à 3 heures après l'heure réglée (si la tâche planifiée a manqué un passage)
+const SR_USE_DAYS = 14; // la feuille est « utilisée » si une ligne existe dans les 14 derniers jours
+const srHour = (v: unknown): number => { const n = Number(v); return Number.isInteger(n) && n >= 12 && n <= 21 ? n : 18; };
+const srDayOffset = (date: string, delta: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + delta * 86400000).toISOString().slice(0, 10);
+const srLocal = (nowMs: number): { date: string; hour: number; weekday: number } => { const d = new Date(nowMs + SR_MADA_OFFSET_MS); return { date: d.toISOString().slice(0, 10), hour: d.getUTCHours(), weekday: d.getUTCDay() }; };
+/** Les identifiants à lire côté serveur : les lignes des 14 derniers jours. */
+const srDates = (today: string): string[] => Array.from({ length: SR_USE_DAYS }, (_, i) => srDayOffset(today, -i));
+interface SrUser { id: string; role?: string; status?: string; team?: string }
+interface SrLine { id?: unknown; status?: string }
+/** `users` : tous les comptes ; `lines` : les lignes « we-… » des 14 derniers jours ; `settings` : réglages du site. Rend la liste des personnes à prévenir (vide : rien à envoyer). */
+function sheetReminderPlan(users: SrUser[], lines: SrLine[], settings: any, nowMs: number): { date: string; notices: { to: string; count: number }[] } {
+  const loc = srLocal(nowMs);
+  const none = { date: loc.date, notices: [] as { to: string; count: number }[] };
+  const work = (settings && settings.company && settings.company.work) || {};
+  if (work.sheet_reminder === "off") return none;
+  const h = srHour(work.sheet_reminder_hour);
+  if (loc.hour < h || loc.hour >= h + SR_WINDOW_H) return none;
+  const wd = Array.isArray(settings && settings.work_days) ? [...new Set((settings.work_days as unknown[]).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))] : [];
+  if (!(wd.length ? wd : [1, 2, 3, 4, 5, 6]).includes(loc.weekday)) return none; // jour de repos
+  const counted = (p: SrLine) => (p.status === "completed" || p.status === "pending_end") && typeof p.id === "string" && p.id.startsWith("we-");
+  const since = srDayOffset(loc.date, -(SR_USE_DAYS - 1));
+  const inUse = lines.some(p => counted(p) && (p.id as string).slice(3, 13) >= since && (p.id as string).slice(3, 13) <= loc.date);
+  if (!inUse) return none; // la feuille du jour n'est pas utilisée : jamais de rappel
+  const cleanTeam = (v: unknown) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40).toLowerCase();
+  const missing = users.filter(u => u && u.role === "employee" && u.status !== "blocked" && !lines.some(p => counted(p) && (p.id as string).startsWith(`we-${loc.date}-${u.id}-`)));
+  if (missing.length === 0) return none;
+  const notices: { to: string; count: number }[] = [];
+  for (const u of users) {
+    if (!u || u.status === "blocked") continue;
+    if (u.role === "admin") notices.push({ to: u.id, count: missing.length });
+    else if (u.role === "team_lead") { const t = cleanTeam(u.team); const n = t ? missing.filter(m => cleanTeam(m.team) === t).length : 0; if (n > 0) notices.push({ to: u.id, count: n }); }
+  }
+  return { date: loc.date, notices };
+}
+// ===== END SHEETREMINDER =====
 
 // ----- M13.7 : actions numérotées (une seule exécution par numéro) -----
 // ===== BEGIN OFFLINE_ACTIONS (M13.7 : copie exacte de src/utils/offlineServer.ts ; ce bloc est contrôlé par scripts/check-offline-server.ts) =====

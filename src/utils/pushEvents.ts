@@ -3,7 +3,7 @@
 // Confidentialité : un push s'affiche sur l'écran verrouillé. On n'y écrit jamais un montant, un motif de refus de paie ni le texte d'un message.
 import type { PushText } from './pushRules';
 
-export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message' | 'news_new' | 'news_pending' | 'news_ok' | 'news_no' | 'news_comment' | 'news_reply';
+export type NotifyKind = 'val_start' | 'val_end' | 'advance_new' | 'advance_ok' | 'advance_no' | 'signup' | 'reset' | 'access' | 'profile' | 'security' | 'message' | 'news_new' | 'news_pending' | 'news_ok' | 'news_no' | 'news_comment' | 'news_reply' | 'sheet_missing';
 /** Les catégories qu'on peut couper (appareil par appareil). */
 export const PUSH_CATS = ['missions', 'validations', 'advances', 'security', 'messages', 'stock', 'invoices', 'news'] as const;
 export type PushCat = typeof PUSH_CATS[number];
@@ -19,7 +19,7 @@ export function notifyCat(kind: NotifyKind): PushCat {
 }
 
 /** Texte d'un push (les deux langues). `m.name` = la personne concernée, `m.client` = le client de la mission. Jamais de montant ni de contenu de message. */
-export function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean }): PushText {
+export function notifyText(kind: NotifyKind, m: { name?: string; client?: string; reason?: string; group?: boolean; count?: number }): PushText {
   const name = ncut(m.name, 60) || '—';
   const client = ncut(m.client, 60);
   const who = client ? `${name} · ${client}` : name;
@@ -41,6 +41,7 @@ export function notifyText(kind: NotifyKind, m: { name?: string; client?: string
     case 'news_ok': return { fr: { title: 'Publication validée', body: 'Ta publication est en ligne.' }, en: { title: 'Post approved', body: 'Your post is now live.' } };
     case 'news_no': { const r = ncut(m.reason, 100); return { fr: { title: 'Publication refusée', body: r ? `Motif : ${r}` : 'Ta publication a été refusée.' }, en: { title: 'Post refused', body: r ? `Reason: ${r}` : 'Your post was refused.' } }; }
     case 'news_comment': return { fr: { title: 'Nouveau commentaire', body: `${name} a commenté ta publication` }, en: { title: 'New comment', body: `${name} commented on your post` } };
+    case 'sheet_missing': { const n = Math.max(0, Math.min(999, Math.round(Number(m.count) || 0))); return { fr: { title: 'Feuille du jour', body: `${n} sans ligne` }, en: { title: 'Daily sheet', body: `${n} without a line` } }; }
     case 'news_reply': return { fr: { title: 'Nouvelle réponse', body: `${name} a répondu à ton commentaire` }, en: { title: 'New reply', body: `${name} replied to your comment` } };
   }
 }

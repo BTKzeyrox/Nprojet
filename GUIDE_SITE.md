@@ -748,6 +748,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `sheetExport.ts` | « Mes tableaux » : exports Excel (.xlsx), Word (.doc) et PDF (impression). Les formules sont exportées en VALEURS (ce que l'écran montre). |
 | `sheetFormula.ts` | « Mes tableaux » (module 12) : lecteur de formules SÛR, type Excel. Aucun `eval`, aucun accès au réseau ni au navigateur : texte → arbre → valeur. |
 | `sheetMerge.ts` | Remettre un fichier Excel rempli hors du site dans le tableau d'une mission (module 19, M19.5) : fonction PURE. |
+| `sheetReminder.ts` | Rappel « feuille du jour pas saisie » (M27.4, 2026-11-10). Règle pure : qui est prévenu, de combien de personnes sans ligne. |
 | `sheetRetype.ts` | Changer le type d'une colonne SANS casser ce qu'elle contient, et DEVINER le bon type (module 19, suite). |
 | `sheetSummary.ts` | Résumé d'une feuille du jour AVANT de l'enregistrer : combien de lignes, de présents, de retards, d'absents, d'heures, de quantité, et le total à payer. Règle pure, sans écran ni serveur. |
 | `sheetXlsx.ts` | Un tableau → un fichier Excel « comme Excel » (module 19, M19.5) : de VRAIS types de cellules (dates, heures, nombres avec milliers, codes et téléphones en texte |
@@ -1100,6 +1101,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
+| `npm run check:sheet-reminder` | Rappel « feuille du jour pas saisie » (M27.4). Lancer : npm run check:sheet-reminder |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

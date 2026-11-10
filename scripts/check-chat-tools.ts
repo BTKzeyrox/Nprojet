@@ -39,7 +39,7 @@ ok(/at < nowMs \+ 60000 \|\| at > nowMs \+ 30 \* 86400000/.test(srv), 'serveur :
 ok(/recs\.filter\(\(r: any\) => !r\.send_at \|\| r\.sender_id === me\.id\)/.test(srv), 'serveur : les autres ne reçoivent pas un message programmé');
 ok(/!toSave\.send_at\) pushJobs\.push\(pushMessage/.test(srv), 'serveur : pas de notification avant l\'heure');
 ok(/async function releaseScheduledMessages[\s\S]{0,900}if \(!d\.deleted_at\) await pushMessage\(out\)/.test(srv), 'serveur : à l\'heure le message part, notifié, sauf s\'il est supprimé');
-ok(/await releaseScheduledMessages\(\);\s*const nowMs = Date\.now\(\);\s*const \{ data: rows \} = await sb\.from\(REMINDERS\)/.test(srv), 'serveur : la tâche planifiée des rappels (chaque minute) libère les messages');
+ok(/await releaseScheduledMessages\(\);\s*const nowMs = Date\.now\(\);\s*(?:const sheetSent = await sheetReminderRun\(nowMs\);\s*)?const \{ data: rows \} = await sb\.from\(REMINDERS\)/.test(srv), 'serveur : la tâche planifiée des rappels (chaque minute) libère les messages');
 ok(/'reactions', 'send_at'\]\) delete save\[k\]/.test(srv), 'serveur : un message supprimé ne part pas');
 // ---- câblage écran ----
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8');

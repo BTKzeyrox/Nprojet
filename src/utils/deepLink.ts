@@ -35,7 +35,7 @@ export function parseDeepLink(search: string): DeepLink | null {
 
 // Pages que tout le monde peut ouvrir ; le responsable peut ouvrir toutes les pages du menu. Le serveur contrôle de toute façon chaque accès.
 const BASIC_VIEWS = ['feed', 'grid', 'active-post', 'advances', 'chat', 'calendar'];
-export const deepLinkAllowed = (role: string, go: string): boolean => BASIC_VIEWS.includes(go) || (role === 'admin' && isKnownView(go));
+export const deepLinkAllowed = (role: string, go: string): boolean => BASIC_VIEWS.includes(go) || (role === 'team_lead' && go === 'worksheet') || (role === 'admin' && isKnownView(go));
 
 let pending: DeepLink | null = null;
 /** À l'ouverture de l'appli : lit le lien exact de l'adresse, le garde pour après la connexion, puis le retire de l'adresse (un rechargement ne le rejoue pas). */
