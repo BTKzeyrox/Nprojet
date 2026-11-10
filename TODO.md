@@ -44,7 +44,7 @@
 - [x] Lot 2 : barre du haut arrondie et barre du bas (téléphone : Actualités, Messages, Calendrier, Validations ou Mon poste, Menu) — fait le 2026-10-11, non testé à l'écran. La barre du bas est masquée dans la messagerie (champ de saisie).
 - [x] Messagerie (8f133db) ; Réglages en onglets (b6b3739)
 - [ ] Pages de menu restantes : Historique, Validation, Équipe, Calendrier, Erreurs, Profil, Connexion
-- [ ] « Avances et paie » : retiré du menu (85d8e16), à décider : supprimer du code ou garder
+- [x] « Avances et paie » : retiré du menu (85d8e16), à décider : supprimer du code ou garder — **DÉCIDÉ 2026-11-10 par BTK : GARDER** (dans le code, hors du menu)
 
 ## 2 bis. Nettoyage Delta (fait le 2026-10-11, non testé à l'écran)
 - [x] Missions : tableau Kanban À faire / En cours / À valider à la place de la grille P01-P50 (1a42c72)
@@ -68,7 +68,7 @@
 - [ ] Changer le mot de passe `admin123`
 - [ ] Régénérer les clés Cloudinary et Resend
 - [ ] Supprimer le token GitHub donné dans le chat : https://github.com/settings/tokens
-- [ ] Décider : supprimer ou garder les pages Avances et Paie (dans le code, pas dans le menu)
+- [x] Décider : supprimer ou garder les pages Avances et Paie (dans le code, pas dans le menu) — **DÉCIDÉ 2026-11-10 par BTK : GARDER** (dans le code, hors du menu)
 - [x] Mettre à jour README, AI_STUDIO, PROJET (2026-10-17)
 
 ### 2. Vérifier
@@ -173,7 +173,7 @@ Légende : **[BTK]** = à faire par BTK. **[Claude]** = Claude après « GO ». 
 - [ ] Révoquer **tous** les tokens GitHub donnés dans le chat (il y en a eu plusieurs) : https://github.com/settings/tokens ; en créer un nouveau seulement au besoin, avec accès au seul dépôt `Nprojet`, durée courte.
 - [ ] Changer le mot de passe `admin123` ; régénérer les clés Cloudinary et Resend.
 - [ ] Activer la protection des pages sensibles côté serveur pour le compte de démonstration (voir P5-1, option A).
-- [ ] Décider : supprimer ou garder les pages Avances (la paie à tarif fixe existe maintenant).
+- [x] Décider : supprimer ou garder les pages Avances (la paie à tarif fixe existe maintenant). — **DÉCIDÉ 2026-11-10 par BTK : GARDER** (dans le code, hors du menu)
 
 ### Ordre conseillé
 1. P6 (BTK, 15 min) → 2. P1-2 (quota, protège le site) → 3. P1-1 (notifications) → 4. P5-1 (démo) → 5. P1-3 (PDF) → 6. P2-1 (échéances) → 7. P4-1 (absences) → 8. le reste.
@@ -909,7 +909,7 @@ Limites : démo seulement, pas de vrai téléphone, chef d'équipe non testé (l
 - [x] **A3 Boutons trop petits au doigt (< 32 px)** : « Hors ligne » (24), filtres « Tous / En attente / Départs / Fins » (24), « 7 jours / 30 jours / Tout » (30), « Voir le profil » (21-26), « Tout voir » (16), « Fiche / Prime » (30), lignes du graphique (28).
 - [x] **A4 Champs sans étiquette** (lecteur d'écran) : Tableau des missions (16 listes), RH (3), Calendrier (1), Réglages (curseur).
 - [x] **A5 Textes trop petits (CORRIGÉ : 9 et 10 px passés à 11 px, 30 fichiers ; à regarder à l'écran, des étiquettes peuvent déborder)** : Historique (59), Validations (32), Santé du site (29), Opérateurs (15), Grille (17).
-- [ ] **A6 Page « Paie » et « Avances »** toujours dans le code mais hors du menu : décider supprimer ou garder (déjà dans TODO depuis des semaines).
+- [x] **A6 Page « Paie » et « Avances »** — **DÉCIDÉ 2026-11-10 par BTK : GARDER** (dans le code, hors du menu) toujours dans le code mais hors du menu : décider supprimer ou garder (déjà dans TODO depuis des semaines).
 - [ ] **A7 Poids** : `store.ts` 3 735 lignes, `df-api` 6 847 lignes, AdminDashboard 1 960, EmployeeDashboard 1 848 : à découper un jour (risque de régression à chaque changement).
 - [ ] **A8 Déploiement df-api** repose sur GitHub brut (fragile) : le remplacer par un fichier complet envoyé directement.
 - 2026-11-09 (suite 14) : **sondage dans le chat : carte SANS bulle, avec contour et ombre, de taille fixe** (demande de BTK). `ChatView` : un message-sondage n'a plus de couleur ni de marge de bulle (comme une photo seule) ; `ChatPoll` : carte 18 rem (jamais plus large que l'écran), contour + ombre clair / sombre ; `PollBlock` mode `fixed` : plus de second cadre, plus de texte d'aide qui change, pied sur une ligne de hauteur réservée, textes courts (« Tu as lu », « ★ »), « Voir qui a voté » garde sa place à 0 vote. Mesuré en navigateur (démo) : la carte fait 288 × 228 px avant et après chaque clic, en ordinateur (1440) et en téléphone (390). `check:chat-poll-card`. Pas testé : thème sombre en navigateur, vrai téléphone, 'Choix de date' et « J'ai lu » mesurés (même mode, non mesurés un par un). Côté site seulement, pas de serveur.
