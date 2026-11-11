@@ -6,7 +6,9 @@ import { pollClean, pollCounts, pollApplyVote, pollPicks, pollMulti } from '../u
 import { canEditNews, canSeeNews, pickAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
 import { checkDraft, type CashDraft } from '../utils/finance';
 import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
-import type { Role as OfflineRole } from '../utils/offline';
+import type { Role as OfflineRole, Queue as OfflineQueue } from '../utils/offline';
+import { newOpId } from '../utils/offline';
+import { SHEET_ROUTE, queueSheet, applyAnswer, nextSheet, expireSheets, parseStored, sheetLabel, sheetReviewReason, sheetCounts, requeueSheet, discardSheet, type WorkSheet } from '../utils/sheetOutbox';
 import type { KV } from '../utils/offlineVault';
 import type { Arrays, Changes, SyncedJson } from '../utils/offlineSync';
 import { findInlineFiles, replaceInlineFile } from '../utils/dataUrls';
@@ -383,6 +385,7 @@ export class AppStore {
   public retryNow() {
     // D'ABORD envoyer, ENSUITE recharger : les deux en même temps pouvaient retirer du téléphone un élément pas encore envoyé, puis l'envoyer comme une suppression.
     void this.flush().finally(() => { void this.pull(true); });
+    void this.sendSheets(true); // feuilles du jour gardées sans réseau (M27.9)
   }
 
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
@@ -396,6 +399,7 @@ export class AppStore {
         headers: {
           'Content-Type': 'application/json',
           ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+          ...((init?.headers as Record<string, string> | undefined) || {}), // numéro d'action et heure du téléphone (feuille envoyée après une coupure, M27.9)
         },
       });
       const data = await res.json().catch(() => ({}));
@@ -529,6 +533,7 @@ export class AppStore {
     const r = await this.api(`state?since=${encodeURIComponent(this.since)}`);
     this.lastPullStatus = r.status;
     if (!r.ok) return false;
+    if (this.sheetLoad() && this.sheetQ.some(o => o.state === 'pending')) void this.sendSheets(); // le réseau répond : les feuilles gardées partent (M27.9)
     // Déconnecté (ou reconnecté autrement) pendant la requête : on ignore la réponse
     if (this.token !== tokenAtStart) return false;
     if (!force && (this.dirty || this.syncing)) return true; // changements locaux en attente : on ignore ce tour
@@ -2023,7 +2028,7 @@ export class AppStore {
       const base = this.emptySynced();
       for (const c of COLS) for (const rec of this.arr(c)) if (rec && typeof rec.id === 'string') base[c].set(rec.id, JSON.stringify(rec));
       this.demoBase = base; this.demoCut = true; this.setConn(true);
-    } else { this.demoCut = false; this.demoBase = null; this.setConn(false); }
+    } else { this.demoCut = false; this.demoBase = null; this.setConn(false); void this.sendSheets(true); }
     this.emit();
   }
   public offlineRequeue(id: string): boolean { return this.offline.requeue(id); }
@@ -2944,28 +2949,98 @@ export class AppStore {
     return { success: false, error: 'Statut de la mission non éligible pour validation' };
   }
 
-  /** Feuille du jour (M26.5a) : présence, heures, quantité et refus saisis par le responsable ou le Chef d'équipe. Réponse : nombre de lignes enregistrées et lignes refusées (numéro + raison). */
-  public async addWorkEntries(sheet: { date: string; type_label?: string; lines: any[] }): Promise<{ ok: boolean; error?: string; saved?: number; failed?: { line: number; error: string }[]; validated?: boolean }> {
+  // ---------- Feuille du jour SANS réseau (M27.9) : boîte d'envoi gardée sur l'appareil (règles : utils/sheetOutbox.ts) ----------
+  private sheetQ: OfflineQueue = [];
+  private sheetQFor = '';
+  private sheetSending = false;
+  private sheetTimer: ReturnType<typeof setTimeout> | null = null;
+  private sheetKey = (uid: string) => `df_sheet_outbox_${uid}`;
+  private sheetLoad(): boolean {
+    const uid = this.currentUser?.id || '';
+    if (!uid) return false;
+    if (this.sheetQFor !== uid) { let raw: string | null = null; try { raw = localStorage.getItem(this.sheetKey(uid)); } catch { /* sans stockage : file vide */ } this.sheetQ = parseStored(raw); this.sheetQFor = uid; }
+    return true;
+  }
+  private sheetSave(): boolean {
+    const uid = this.sheetQFor;
+    if (!uid) return false;
+    try { if (this.sheetQ.length) localStorage.setItem(this.sheetKey(uid), JSON.stringify(this.sheetQ)); else localStorage.removeItem(this.sheetKey(uid)); return true; } catch { return false; }
+  }
+  /** Ce qui attend sur cet appareil : feuilles en attente d'envoi et feuilles refusées à revoir (avec la raison écrite). */
+  public getSheetOutbox(lang = 'fr'): { pending: number; review: number; lines: number; items: { id: string; state: 'pending' | 'review'; date: string; type: string; lines: number; reason: string; created_at: string }[] } {
+    if (!this.sheetLoad()) return { pending: 0, review: 0, lines: 0, items: [] };
+    const c = sheetCounts(this.sheetQ);
+    return { ...c, items: this.sheetQ.map(o => { const l = sheetLabel(o); return { id: o.id, state: o.state, date: l.date, type: l.type, lines: l.lines, reason: o.state === 'review' ? sheetReviewReason(o, lang) : '', created_at: o.created_at }; }) };
+  }
+  /** Un seul appel : vrai serveur (avec le numéro d'action, pour que le serveur ne fasse jamais deux fois la même feuille) ou faux serveur de la démo. */
+  private async sheetCall(sheet: WorkSheet, id: string, nowIso: string): Promise<{ status: number; data: any }> {
     const me = this.currentUser;
-    if (!me || (me.role !== 'admin' && me.role !== 'team_lead')) return { ok: false, error: 'Réservé au responsable et au chef d\'équipe.' };
     if (this.demo) {
+      if (!me || this.demoCut) return { status: 0, data: { error: 'Réseau indisponible.' } };
       const now = new Date();
       const today = new Date(now.getTime() + 3 * 3600000).toISOString().slice(0, 10);
       const plan = planWorkEntries(me, this.users, this.posts, sheet, this.getSettings(), now.toISOString(), today);
-      if (!plan.ok) return { ok: false, error: ({ role: 'Réservé au responsable et au chef d\'équipe.', bad: 'Feuille illisible.', date: 'Date impossible : aujourd\'hui ou les 31 derniers jours.', empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' } as Record<string, string>)[plan.error] || 'Feuille refusée.' };
+      if (!plan.ok) return { status: 400, data: { error: ({ role: 'Réservé au responsable et au chef d\'équipe.', bad: 'Feuille illisible.', date: 'Date impossible : aujourd\'hui ou les 31 derniers jours.', empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' } as Record<string, string>)[plan.error] || 'Feuille refusée.' } };
       for (const post of plan.saved) {
         const i = this.posts.findIndex(p => p.id === post.id);
         if (i >= 0) this.posts[i] = post; else this.posts.push(post);
       }
       for (const u of plan.users) { const t = this.users.find(x => x.id === u.id); if (t) t.total_earnings_ar = u.total_earnings_ar; }
       this.notify();
-      return { ok: true, saved: plan.saved.length, failed: plan.failed, validated: plan.validated };
+      return { status: 200, data: { saved: plan.saved.length, failed: plan.failed, validated: plan.validated } };
     }
-    const r = await this.api('work-entry', { method: 'POST', body: JSON.stringify(sheet) });
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
-    this.since = '';
-    void this.pull(true);
-    return { ok: true, saved: Number(r.data?.saved) || 0, failed: Array.isArray(r.data?.failed) ? r.data.failed : [], validated: !!r.data?.validated };
+    const r = await this.api(SHEET_ROUTE, { method: 'POST', body: JSON.stringify(sheet), headers: { 'x-df-action-id': id, 'x-df-device-time': nowIso } });
+    return { status: r.status, data: r.data };
+  }
+  /** Envoie les feuilles gardées, une à la fois, la plus ancienne d'abord. S'arrête à la première panne (elle reste en attente, nouvel essai plus tard). Sans danger si appelée plusieurs fois. */
+  public async sendSheets(force = false): Promise<void> {
+    if (this.sheetSending || !this.sheetLoad() || (!this.token && !this.demo)) return;
+    if (force) this.sheetQ = this.sheetQ.map(o => (o.state === 'pending' ? { ...o, next_try_at: undefined } : o)); // réseau de retour ou clic sur « Envoyer maintenant » : on n'attend pas le délai
+    const role = (this.currentUser?.role || 'employee') as OfflineRole;
+    this.sheetSending = true;
+    try {
+      this.sheetQ = expireSheets(this.sheetQ, new Date().toISOString(), role);
+      for (let i = 0; i < 50; i++) {
+        const nowIso = new Date().toISOString();
+        const op = nextSheet(this.sheetQ, nowIso, true);
+        if (!op) break;
+        const r = await this.sheetCall(op.payload as WorkSheet, op.id, nowIso);
+        const a = applyAnswer(this.sheetQ, op.id, { status: r.status, error: r.data?.error, code: r.data?.code }, new Date().toISOString());
+        this.sheetQ = a.queue;
+        this.sheetSave();
+        if (a.outcome === 'sent') { this.since = ''; if (!this.demo) void this.pull(true); }
+        if (a.outcome === 'waiting') { this.sheetSchedule(); break; }
+      }
+    } finally { this.sheetSending = false; this.sheetSave(); this.emit(); }
+  }
+  private sheetSchedule() {
+    if (this.sheetTimer) return;
+    this.sheetTimer = setTimeout(() => { this.sheetTimer = null; void this.sendSheets(); }, 30000);
+  }
+  /** La personne décide d'une feuille refusée : la renvoyer telle quelle, ou la retirer de la liste (seulement sur sa demande). */
+  public sheetRequeue(id: string): void { if (!this.sheetLoad()) return; this.sheetQ = requeueSheet(this.sheetQ, id); this.sheetSave(); this.emit(); void this.sendSheets(true); }
+  public sheetDiscard(id: string): void { if (!this.sheetLoad()) return; this.sheetQ = discardSheet(this.sheetQ, id); this.sheetSave(); this.emit(); }
+
+  /** Feuille du jour (M26.5a) : présence, heures, quantité et refus saisis par le responsable ou le Chef d'équipe. Réponse : nombre de lignes enregistrées et lignes refusées (numéro + raison). Sans réseau (M27.9) : gardée sur l'appareil (`queued`), envoyée au retour du réseau. */
+  public async addWorkEntries(sheet: { date: string; type_label?: string; lines: any[] }): Promise<{ ok: boolean; error?: string; saved?: number; failed?: { line: number; error: string }[]; validated?: boolean; queued?: boolean }> {
+    const me = this.currentUser;
+    if (!me || (me.role !== 'admin' && me.role !== 'team_lead')) return { ok: false, error: 'Réservé au responsable et au chef d\'équipe.' };
+    const id = newOpId(), nowIso = new Date().toISOString();
+    const r = await this.sheetCall(sheet, id, nowIso);
+    if (r.status >= 200 && r.status < 300) {
+      if (!this.demo) { this.since = ''; void this.pull(true); }
+      return { ok: true, saved: Number(r.data?.saved) || 0, failed: Array.isArray(r.data?.failed) ? r.data.failed : [], validated: !!r.data?.validated };
+    }
+    // Panne, coupure, connexion expirée : la feuille est gardée sur l'appareil avec CE numéro (le serveur a peut-être déjà fait la première demande : il ne la refera pas).
+    if (applyAnswer([], '', { status: r.status }, nowIso).outcome === 'waiting' && this.sheetLoad()) {
+      const q = queueSheet(this.sheetQ, sheet, me.role as OfflineRole, nowIso, undefined, id);
+      if (q.error) return { ok: false, error: q.error.fr };
+      const before = this.sheetQ; this.sheetQ = q.queue;
+      if (!this.sheetSave()) { this.sheetQ = before; return { ok: false, error: 'Impossible de garder la feuille sur cet appareil (mémoire pleine ou navigation privée). Réessaie avec le réseau.' }; }
+      this.sheetSchedule(); this.emit();
+      return { ok: true, queued: true, saved: 0, failed: [] };
+    }
+    return { ok: false, error: r.data?.error || 'Erreur.' };
   }
 
   /** Annule une ligne de la feuille du jour (responsable seulement) : retire sa paie, la supprime ; elle peut être saisie à nouveau. En ligne seulement. */

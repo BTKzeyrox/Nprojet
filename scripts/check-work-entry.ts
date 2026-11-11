@@ -123,7 +123,7 @@ ok(clean, 'jamais de montant négatif, infini ou décimal');
 
 // Magasin (démo)
 const guard = readFileSync('src/db/store.ts', 'utf8');
-ok(/weSelfEntered\(this\.currentUser, post\)/.test(guard) && /async addWorkEntries/.test(guard) && /'work-entry'/.test(guard), 'le magasin a la saisie, la route serveur et le refus de se valider soi-même');
+ok(/weSelfEntered\(this\.currentUser, post\)/.test(guard) && /async addWorkEntries/.test(guard) && /SHEET_ROUTE|'work-entry'/.test(guard) && /SHEET_ROUTE = 'work-entry'/.test(readFileSync('src/utils/sheetOutbox.ts', 'utf8')), 'le magasin a la saisie, la route serveur et le refus de se valider soi-même');
 ok(/weSelfEntered\(me, post\)\) return res\.status\(403\)/.test(src), 'le serveur refuse qu\'on valide sa propre saisie');
 ok(/action === "work-entry" && req\.method === "POST"/.test(src), 'la route work-entry est branchée aux deux endroits du serveur');
 

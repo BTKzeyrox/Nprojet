@@ -11,6 +11,8 @@ import { findModel, workWord, PRESENCE_LABEL, PRESENCE_VALUES, ABSENCE_REASONS, 
 import { weCanEnterFor, WE_DAYS_BACK } from '../utils/workEntry';
 import { summarizeSheet } from '../utils/sheetSummary';
 import { PresenceMonthGrid } from '../components/PresenceMonthGrid';
+import { SheetOutboxBanner } from '../components/SheetOutboxBanner';
+import { SHEET_QUEUED_TEXT } from '../utils/sheetOutbox';
 import { workLineDetail } from '../utils/workLineText';
 import { missingPeople, dayTotals, copyFromDay } from '../utils/sheetDay';
 import { remAddDays } from '../utils/reminderRules';
@@ -89,7 +91,8 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
     setBusy(true); setMsg(null);
     const r = await db.addWorkEntries({ date, type_label: type.name.fr, lines: entries.map(u => ({ employee_id: u.id, work_type: type.id, presence: rows[u.id].presence, hours: rows[u.id].hours, quantity: rows[u.id].quantity, rejected: rows[u.id].rejected, late_minutes: rows[u.id].presence === 'late' ? rows[u.id].late_minutes : undefined, absence_reason: rows[u.id].presence === 'absent' ? rows[u.id].absence_reason : undefined })) });
     setBusy(false);
-    if (!r.ok) { setMsg({ ok: false, text: r.error === 'Erreur.' || !r.error ? t('Pas de réseau ou erreur : ta saisie est gardée sur cet appareil, réessaie plus tard.', 'No network or error: your entry is kept on this device, try again later.') : ((en ? SHEET_ERR_EN : SHEET_ERR)[r.error] || r.error) }); return; }
+    if (!r.ok) { setMsg({ ok: false, text: r.error === 'Erreur.' || !r.error ? t('Erreur : ta saisie est gardée sur cet appareil, réessaie.', 'Error: your entry is kept on this device, try again.') : ((en ? SHEET_ERR_EN : SHEET_ERR)[r.error] || r.error) }); return; }
+    if (r.queued) { setRows({}); saveDraft(key, {}); setMsg({ ok: true, text: en ? SHEET_QUEUED_TEXT.en : SHEET_QUEUED_TEXT.fr }); return; } // M27.9 : sans réseau, la feuille est gardée sur l'appareil (le brouillon n'est plus nécessaire)
     const failed = r.failed || [];
     const failedIds = new Set(failed.map(f => entries[f.line - 1]?.id).filter(Boolean) as string[]);
     const kept: Record<string, Row> = {}; for (const id of failedIds) kept[id] = rows[id];
@@ -111,6 +114,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
   return (
     <div className="max-w-3xl mx-auto space-y-4" data-worksheet>
       <h1 className={`text-xl font-bold ${L ? 'text-slate-900' : 'text-white'}`}>{t('Feuille du jour', 'Daily sheet')}</h1>
+      <SheetOutboxBanner />
       {model && <p data-worksheet-word className={`text-xs ${L ? 'text-slate-500' : 'text-slate-400'}`}>{en ? model.name.en : model.name.fr} · {t('ici on dit', 'here we say')} « {workWord(model.id, en ? 'en' : 'fr')} »</p>}
       {types.length === 0 ? (
         <div className={`${card} text-sm ${L ? 'text-slate-600' : 'text-slate-300'}`} data-worksheet-notype>
