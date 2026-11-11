@@ -7,4 +7,7 @@ for (const f of files) ok(!emoji.test(readFileSync(f, 'utf8')), `${f} : aucun em
 const chat = readFileSync(files[1], 'utf8'), blk = readFileSync(files[0], 'utf8');
 ok(/CalendarDays/.test(chat) && /Eye/.test(chat) && /BarChart3/.test(chat) && /data-poll-kind-icon/.test(chat), 'chat : icône du type de sondage (date, J\'ai lu, sondage)');
 ok(/<Star /.test(blk) && /data-date-best/.test(blk), 'date la plus choisie : icône étoile');
+const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(/previewNode[^\n]*last\.poll[^\n]*PollKindIcon/.test(cv) && />\{previewNode\}</.test(cv), 'liste des discussions : icône du sondage dans l\'aperçu, plus l\'emoji du texte');
+ok(/pinShown\.poll \? <><PollKindIcon/.test(cv), 'message épinglé : même icône');
 console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

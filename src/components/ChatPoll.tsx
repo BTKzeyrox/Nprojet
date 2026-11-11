@@ -9,6 +9,12 @@ import { db } from '../db/store';
 import PollBlock from './PollBlock';
 import { POLL_MAX_OPTIONS, POLL_MAX_DATES, POLL_MAX_OPTION, POLL_MAX_QUESTION } from '../utils/pollRules';
 
+/** Icône du type de sondage (date, « J'ai lu », sondage) : titre de la carte, liste des discussions, message épinglé. */
+export const PollKindIcon: React.FC<{ kind?: string; size?: string }> = ({ kind, size = 'w-4 h-4' }) => {
+  const I = kind === 'date' ? CalendarDays : kind === 'ack' ? Eye : BarChart3;
+  return <I data-poll-kind-icon className={`inline-block ${size} mr-1.5 -mt-0.5 align-middle opacity-80`} aria-hidden="true" />;
+};
+
 export const ChatPoll: React.FC<{ msg: ChatMessage; meId: string; isAdmin: boolean; light: boolean; users: User[] }> = ({ msg, meId, isAdmin, light, users }) => {
   const [err, setErr] = useState<string | null>(null);
   if (!msg.poll || msg.deleted_at) return null;
@@ -16,7 +22,7 @@ export const ChatPoll: React.FC<{ msg: ChatMessage; meId: string; isAdmin: boole
   const post = { id: msg.id, status: 'published', poll: { ...msg.poll } } as unknown as NewsPost;
   return (
     <div data-chat-poll={msg.id} className={`space-y-1.5 w-72 max-w-full rounded-2xl border p-3 ${light ? 'bg-white text-slate-900 border-slate-300 shadow-[0_4px_16px_rgba(15,23,42,0.3)]' : 'bg-[#0f1722] text-slate-100 border-slate-600 shadow-[0_4px_18px_rgba(0,0,0,0.75)]'}`}>
-      <div className="font-semibold text-sm break-words">{(() => { const I = msg.poll.kind === 'date' ? CalendarDays : msg.poll.kind === 'ack' ? Eye : BarChart3; return <I data-poll-kind-icon className="inline-block w-4 h-4 mr-1.5 -mt-0.5 align-middle opacity-80" aria-hidden="true" />; })()}{msg.poll.question}</div>
+      <div className="font-semibold text-sm break-words"><PollKindIcon kind={msg.poll.kind} />{msg.poll.question}</div>
       <PollBlock post={post} meId={meId} isAdmin={msg.sender_id === meId} light={light} busy={false} fixed users={users} onVote={optionId => { const r = db.voteMessage(msg.id, meId, optionId); setErr(r.success ? null : r.error || 'Vote impossible.'); }} />
       {err && <div role="alert" className="text-xs text-red-500">{err}</div>}
       {canClose && <button type="button" data-chat-poll-close onClick={() => db.setMessagePollClosed(msg.id, meId, !msg.poll!.closed)} className="min-h-[36px] text-xs underline cursor-pointer">{msg.poll.closed ? 'Rouvrir' : 'Clore'}</button>}

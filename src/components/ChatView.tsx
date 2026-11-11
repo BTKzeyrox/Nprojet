@@ -38,7 +38,7 @@ import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
-import { ChatPoll, PollComposer } from './ChatPoll';
+import { ChatPoll, PollComposer, PollKindIcon } from './ChatPoll';
 import { MessageToItem } from './MessageToItem';
 import { ScheduleDialog, TemplatesDialog } from './MessageTools';
 import { scheduleLabel } from '../utils/chatTemplates';
@@ -558,6 +558,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const last = lastOf(t);
     const who = last && !last.deleted_at && t.kind !== 'user' && t.kind !== 'pair' ? `${last.sender_id === currentUser.id ? 'Moi' : last.sender_name.split(' ')[0]} : ` : last && last.sender_id === currentUser.id && !last.deleted_at && t.kind === 'user' ? 'Moi : ' : '';
     const preview = last ? (last.deleted_at ? 'Message supprimé' : who + (previewText(last.message || '', window.location.origin) || (last.attachment_kind === 'image' ? (last.album_id ? 'Photos' : 'Photo') : last.attachment_name ? `Fichier : ${last.attachment_name}` : ''))) : t.subtitle;
+    const previewNode: React.ReactNode = last && !last.deleted_at && last.poll ? <>{who}<PollKindIcon kind={last.poll.kind} size="w-3.5 h-3.5" />{last.poll.question}</> : preview; // sondage : icône au lieu de l'emoji du texte enregistré
     const unread = t.id === current.id && convVisible ? 0 : unreadOf(t);
     const palette = ['border-l-rose-500', 'border-l-amber-500', 'border-l-emerald-500', 'border-l-sky-500', 'border-l-violet-500', 'border-l-pink-500', 'border-l-teal-500', 'border-l-orange-500'];
     const hash = Array.from(t.id).reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -598,7 +599,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             {last && <span className={`text-[11px] shrink-0 ${unread > 0 ? 'text-red-600 font-bold' : P.sub}`}>{shortTime(sentMs(last))}</span>}
           </span>
           <span className="flex items-center gap-2 mt-0.5">
-            <span className={`flex-1 min-w-0 text-[12px] ${P.sub}`} style={ONE_LINE}>{preview}</span>
+            <span className={`flex-1 min-w-0 text-[12px] ${P.sub}`} style={ONE_LINE}>{previewNode}</span>
             {unread > 0 && <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white shadow text-[11px] font-bold flex items-center justify-center shrink-0">{unread > 99 ? '99+' : unread}</span>}
           </span>
         </span>
@@ -722,7 +723,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           >
             <Pin className="w-3 h-3 text-blue-600 shrink-0" />
             <span className={`flex-1 min-w-0 text-[11px] ${P.sub}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}<b className="text-blue-600">{pinShown.sender_name.split(' ')[0]}</b> : {previewText(pinShown.message || '', window.location.origin) || pinShown.attachment_name || 'Pièce jointe'}
+              {pinned.length > 1 ? `${(pinIdx % pinned.length) + 1}/${pinned.length} · ` : ''}<b className="text-blue-600">{pinShown.sender_name.split(' ')[0]}</b> : {pinShown.poll ? <><PollKindIcon kind={pinShown.poll.kind} size="w-3.5 h-3.5" />{pinShown.poll.question}</> : previewText(pinShown.message || '', window.location.origin) || pinShown.attachment_name || 'Pièce jointe'}
             </span>
           </button>
         )}
