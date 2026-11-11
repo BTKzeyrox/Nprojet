@@ -22,5 +22,7 @@ ok(/extra && isAdmin && <ExtraForm/.test(feed) && /extraToPoll\(extra, text\)/.t
 ok(/audience_users: aud\.users/.test(feed) && /data-audience-user/.test(feed) && /data-audience-people-toggle/.test(feed) && /tout le groupe est choisi/.test(feed), 'sélecteur de public : rôles entiers ET personnes (« tout le groupe est choisi » grise les noms du groupe)');
 ok(/audience_users: p\.audience_users \|\| \[\]/.test(store) && /pickAudience\(body\.audience, body\.audience_users\)/.test(store), 'site : le public par personne est envoyé (propose, modifie) et gardé en démo');
 ok(/pickAudience\(b\.audience, b\.audience_users\)/.test(api) && /newsAudience\(post\)/.test(api), 'serveur : même public, gardé à la création et à la modification');
+const side = readFileSync('src/components/Sidebar.tsx', 'utf8');
+ok(/newsPending = isAdmin \? db\.getNews\(\)\.filter\(p => p\.status === 'pending'\)\.length : 0/.test(side) && /id: 'feed'[^\n]*badge: newsPending > 0/.test(side) && /g\.id === 'feed' \? newsPending/.test(side), 'pastille rouge « publications à valider » sur Actualités (menu complet et menu simplifié), responsable seulement');
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);

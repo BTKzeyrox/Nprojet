@@ -110,10 +110,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const pending = countPending().total;
   const chatUnread = useChatUnread(currentUser);
   const health = isAdmin ? getMenuBadges() : { byItem: {} as Record<string, { count: number; urgent: boolean }>, total: 0, urgent: 0 }; // pastilles « Santé du site » (admin seulement)
+  const newsPending = isAdmin ? db.getNews().filter(p => p.status === 'pending').length : 0; // pastille rouge : publications des employés à valider (admin seulement)
   const alertCount = isAdmin ? getAdminAlerts().length : 0; // pastille rouge : alertes de l'accueil (argent, stock, avances)
 
   const navItems: { id: string; label: string; icon: React.ElementType; badge?: string; tone?: 'alert' | 'info' }[] = [
-    { id: 'feed', label: 'Actualités', icon: Newspaper },
+    { id: 'feed', label: 'Actualités', icon: Newspaper, badge: newsPending > 0 ? String(newsPending) : undefined, tone: 'alert' as const },
     ...(isAdmin || isAccountant || isTeamLead
       ? [
           { id: 'dashboard', label: 'Tableau de bord', icon: Home },
@@ -157,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sumHealth = (views: string[]) => views.reduce((n, v) => n + (health.byItem[v]?.count || 0), 0);
   const mergedItems = merged ? menuFor(currentUser.role, hiddenCsv).map(g => {
     const views = g.tabs.map(x => (x.statsTab ? 'stats' : x.view));
-    const n = g.id === 'missions' ? (isTeamLead ? teamPending : pending) : g.id === 'messages' ? chatUnread : g.id === 'home' ? alertCount : g.id === 'control' ? (isAdmin ? health.total : 0) : isAdmin ? sumHealth(g.id === 'money' ? ['stats'] : views.filter(v => v !== 'stats')) : 0;
+    const n = g.id === 'missions' ? (isTeamLead ? teamPending : pending) : g.id === 'messages' ? chatUnread : g.id === 'feed' ? newsPending : g.id === 'home' ? alertCount : g.id === 'control' ? (isAdmin ? health.total : 0) : isAdmin ? sumHealth(g.id === 'money' ? ['stats'] : views.filter(v => v !== 'stats')) : 0;
     return { id: g.id, label: lang === 'en' ? g.en : g.fr, icon: GROUP_ICON[g.id] || Settings, badge: n > 0 ? String(n) : undefined, tone: 'alert' as const };
   }) : null;
   const activeGroup = merged ? locate(currentUser.role, activeView, hiddenCsv, getStatsTab())?.group : undefined;

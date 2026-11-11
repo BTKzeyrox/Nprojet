@@ -19,7 +19,7 @@
 - [x] File « À valider » en haut du fil, avec aperçu complet
 - [x] Valider ou Refuser, motif visible par l'employé
 - [x] Pastille « En attente de validation » côté employé (existait déjà)
-- [ ] Pas fait : pastille rouge dans la barre latérale pour les publications en attente (non demandé)
+- [x] Pas fait : pastille rouge dans la barre latérale pour les publications en attente (non demandé) — FAIT 2026-11-11 : pastille rouge sur « Actualités » (nombre de publications à valider, responsable seulement ; menu complet et simplifié), `check:news-plus`.
 
 ### D. Commentaires et visionneuse (fait le 2026-10-11, non testé à l'écran)
 - [x] Commentaires avec image ou fichier (trombone, compression, liste avant envoi, affichage sous le texte)
@@ -37,7 +37,7 @@
 - [x] Redéploiement de `df-api` sur Supabase (projet `nprojet`) : v3 = commit `d888eb4e17facee6bdfbbc6e9d0ca84abe8206dc` (2026-10-11, accord de BTK). Retour en arrière : redéployer le petit fichier avec le commit `2b0dcb7d57992ac05ec8a91c96d45b4d802ed220` (v2)
 - [x] Recherche automatique dans le code (A à E) : aucun `console.log`, aucun token GitHub, aucun fichier `.env`. Le diff n'a pas été relu ligne par ligne.
 - [ ] **Non testé à l'écran (à tester par BTK)** : publier avec photo (admin puis employé), valider / refuser, commenter avec photo et PDF, Télécharger, pastille « nouvelles publications », J'adore immédiat, barre d'actions sur petit téléphone
-- [ ] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente
+- [x] Pas fait (non demandé) : pastille rouge dans la barre latérale pour les publications en attente — FAIT 2026-11-11 : pastille rouge sur « Actualités » (nombre de publications à valider, responsable seulement ; menu complet et simplifié), `check:news-plus`.
 
 ## 2. Après la page d'accueil (pas commencé)
 - [x] Nouveau design : formes arrondies, fond clair, bleu marine (lot 1 : commits a73ca7f, 5a41913, 2b0dcb7) — non testé à l'écran
@@ -84,7 +84,7 @@
 - [x] Supprimer un employé efface toute son activité (2026-10-17, commit a7df26d, `df-api` v6) — pas encore testé de bout en bout
 - [ ] Rôle supplémentaire (chef d'équipe)
 - [ ] Recherche et filtres dans l'historique
-- [ ] Pastille rouge dans le menu pour les publications en attente
+- [x] Pastille rouge dans le menu pour les publications en attente — FAIT 2026-11-11 : pastille rouge sur « Actualités » (nombre de publications à valider, responsable seulement ; menu complet et simplifié), `check:news-plus`.
 
 ### 4. Pour le CV
 - [ ] Accueil public ou compte de démonstration
