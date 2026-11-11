@@ -1,7 +1,7 @@
 // Sondage d'une publication des Actualités (étape C2) : un vote par personne (changer ou retirer son vote est possible),
 // comptes visibles par tous, « qui a voté quoi » seulement pour le responsable.
 import { useState } from 'react';
-import { Check, Lock } from 'lucide-react';
+import { Check, Lock, Star } from 'lucide-react';
 import type { NewsPost, User } from '../types';
 import { pollCounts, pollPicks, pollMulti } from '../utils/pollRules';
 
@@ -64,7 +64,7 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
                 <span className="relative flex items-center gap-2 px-3 py-2">
                   {mineChoice && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
                   <span className="flex-1 min-w-0 break-words">{o.text}</span>
-                  {best && <span data-date-best className="shrink-0 text-[11px] font-bold text-emerald-600">{fixed ? '★' : '★ la plus choisie'}</span>}
+                  {best && <span data-date-best className="shrink-0 text-[11px] font-bold text-emerald-600"><Star className="inline-block w-3 h-3 fill-current align-[-1px]" aria-hidden="true" />{fixed ? <span className="sr-only">la plus choisie</span> : ' la plus choisie'}</span>}
                   <span className={`shrink-0 text-xs tabular-nums ${muted}`}>{multi ? `${n} dispo${n > 1 ? 's' : ''}` : `${n} · ${pct} %`}</span>
                 </span>
               </button>

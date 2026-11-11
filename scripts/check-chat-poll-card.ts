@@ -8,7 +8,7 @@ ok(/data-chat-poll=\{msg\.id\} className=\{`[^`]*w-72 max-w-full rounded-2xl bor
 ok(/busy=\{false\} fixed users=/.test(card), 'carte : mode « taille fixe » du sondage');
 ok(/fixed\?: boolean/.test(blk) && /fixed \? 'space-y-2'/.test(blk), 'mode fixe : pas de second cadre dans la carte');
 ok(/canVote && !fixed && <span>/.test(blk) && /flex-nowrap[^`]*min-h-\[32px\]/.test(blk), 'mode fixe : pas de texte d\'aide qui change, pied sur une seule ligne de hauteur réservée');
-ok(/\(fixed \? 'Tu as lu' :/.test(blk) && /fixed \? '★' :/.test(blk) && /invisible/.test(blk) && /fixed && !\(multi/.test(blk), 'mode fixe : textes courts, « Voir qui a voté » garde sa place même à 0 vote (rien ne saute)');
+ok(/\(fixed \? 'Tu as lu' :/.test(blk) && /fixed \? <span className="sr-only">la plus choisie<\/span> :/.test(blk) && /invisible/.test(blk) && /fixed && !\(multi/.test(blk), 'mode fixe : textes courts, « Voir qui a voté » garde sa place même à 0 vote (rien ne saute)');
 ok(/isAdmin && \(fixed \|\| \(multi \? readers > 0 : total > 0\)\)/.test(blk), 'mode fixe : le lien est toujours là pour l\'auteur');
 console.log(`\n${bad ? bad + ' ÉCHEC(S)' : 'tout est bon'}`);
 process.exit(bad ? 1 : 0);
