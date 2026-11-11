@@ -95,3 +95,10 @@ export function startUpdateWatcher(): void {
   window.addEventListener('online', () => { void check(); });
   setTimeout(check, 15000); // première vérification peu après l'ouverture
 }
+
+/** Vérification à la demande (tirer pour actualiser) : vrai si une nouvelle version du site est annoncée ; elle s'applique alors comme d'habitude (quand la personne a fini d'écrire). */
+export async function checkUpdateNow(): Promise<boolean> {
+  if (APP_VERSION === 'dev' || APP_VERSION.startsWith('local-')) return false;
+  await check();
+  return !!pending;
+}

@@ -1,0 +1,21 @@
+// Tirer pour actualiser : résumé visible. Lancer : npm run check:refresh-summary
+import { readFileSync } from 'node:fs';
+import { summarizeRefresh } from '../src/utils/refreshSummary';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+let r = summarizeRefresh(['news-1-a', 'msg-1'], ['news-1-a', 'msg-1'], true, false);
+ok(r.kind === 'uptodate' && r.text === 'À jour', 'rien de nouveau : « À jour »');
+r = summarizeRefresh(['news-1-a'], ['news-1-a', 'news-2-b', 'news-3-c', 'msg-9', 'adv-4'], true, false);
+ok(r.kind === 'new' && r.text === '2 nouvelles publications · 1 nouveau message · 1 notification', 'compte publications, messages et autres notifications');
+r = summarizeRefresh([], ['news-1-a'], true, false);
+ok(r.text === '1 nouvelle publication', 'singulier : « 1 nouvelle publication »');
+r = summarizeRefresh(['x'], ['x'], false, false);
+ok(r.kind === 'offline' && /Pas de réseau/.test(r.text), 'sans réseau : message clair, jamais « À jour »');
+r = summarizeRefresh(['x'], ['x'], true, true);
+ok(r.kind === 'update' && /nouvelle version du site/.test(r.text), 'nouvelle version du site annoncée');
+r = summarizeRefresh(['a'], ['a', 'a', 'newsp-1-z', 'newsp-1-z'], true, false);
+ok(r.news === 1, 'un même identifiant n\'est compté qu\'une fois');
+ok(summarizeRefresh([], ['news-1', 'msg-1', 'x'], true, false, true).text === '1 new post · 1 new message · 1 notification', 'anglais');
+const v = readFileSync('src/components/PullToRefresh.tsx', 'utf8'), w = readFileSync('src/utils/updateWatcher.ts', 'utf8');
+ok(/summarizeRefresh\(before, ids\(\), ok, fresh, en\)/.test(v) && /data-refresh-note/.test(v) && /checkUpdateNow\(\)/.test(v), 'le geste affiche le résumé et vérifie la version');
+ok(/export async function checkUpdateNow/.test(w) && /sessionStorage/.test(w), 'vérification de version à la demande, avec la protection anti-boucle existante');
+console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

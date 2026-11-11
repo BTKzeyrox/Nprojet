@@ -50,6 +50,7 @@
     "check:sheet-outbox": "esbuild scripts/check-sheet-outbox.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-outbox.mjs && node node_modules/.cache/check-sheet-outbox.mjs",
     "check:no-zoom": "npx --yes tsx scripts/check-no-zoom.ts",
     "check:poll-icons": "npx --yes tsx scripts/check-poll-icons.ts",
+    "check:refresh-summary": "npx --yes tsx scripts/check-refresh-summary.ts",
     "check:sheet-day": "esbuild scripts/check-sheet-day.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-day.mjs && node node_modules/.cache/check-sheet-day.mjs",
     "check:stats-work-lines": "esbuild scripts/check-stats-work-lines.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-stats-work-lines.mjs && node node_modules/.cache/check-stats-work-lines.mjs",
     "check:late-absence": "esbuild scripts/check-late-absence.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-late-absence.mjs && node node_modules/.cache/check-late-absence.mjs",

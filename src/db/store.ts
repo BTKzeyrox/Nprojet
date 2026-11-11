@@ -510,6 +510,7 @@ export class AppStore {
   private pulling = false;
   // Actualisation demandée à la main (tirer la page vers le bas)
   public async refreshNow(): Promise<boolean> {
+    if (this.demo) return true; // démo : rien à aller chercher, « À jour »
     return this.pull(true);
   }
 

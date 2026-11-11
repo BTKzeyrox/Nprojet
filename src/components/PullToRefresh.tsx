@@ -4,6 +4,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { db } from '../db/store';
+import { buildNotifications } from '../utils/notifications';
+import { summarizeRefresh } from '../utils/refreshSummary';
+import { checkUpdateNow } from '../utils/updateWatcher';
+import { useApp } from '../context/AppContext';
 
 // Tirer la page vers le bas (en haut de page) : roue qui tourne, puis actualisation, comme sur Facebook.
 const THRESHOLD = 70;
@@ -25,6 +29,9 @@ const scrolledInside = (el: EventTarget | null): boolean => {
 export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
   const [pull, setPull] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState<{ text: string; bad: boolean } | null>(null); // résultat affiché quelques secondes après l'actualisation
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const app = useApp(); const en = app.lang === 'en';
   const startY = useRef<number | null>(null);
   const pullRef = useRef(0);
   const busy = useRef(false);
@@ -51,7 +58,14 @@ export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = fal
       busy.current = true;
       setLoading(true);
       set(56);
-      try { await Promise.all([db.refreshNow(), new Promise(r => setTimeout(r, 700))]); } catch { /* ignore */ }
+      const ids = () => { const u = db.getCurrentUser(); try { return u ? buildNotifications(u).map(x => x.id) : []; } catch { return []; } };
+      const before = ids();
+      let ok = false, fresh = false;
+      try { [ok, fresh] = (await Promise.all([db.refreshNow(), checkUpdateNow(), new Promise(r => setTimeout(r, 700))])).slice(0, 2) as [boolean, boolean]; } catch { ok = false; }
+      const r = summarizeRefresh(before, ids(), ok, fresh, en);
+      setNote({ text: r.text, bad: r.kind === 'offline' });
+      if (noteTimer.current) clearTimeout(noteTimer.current);
+      noteTimer.current = setTimeout(() => setNote(null), 3500);
       busy.current = false;
       setLoading(false);
       set(0);
@@ -69,7 +83,12 @@ export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = fal
     };
   }, [disabled]);
 
-  if (disabled || (pull === 0 && !loading)) return null;
+  const noteEl = note ? (
+    <div role="status" aria-live="polite" data-refresh-note className="fixed left-0 right-0 z-[60] flex justify-center pointer-events-none px-4" style={{ top: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
+      <div className={`max-w-full rounded-full px-4 py-2 text-sm font-semibold shadow-lg border ${note.bad ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-white text-slate-800 border-slate-200'}`}>{note.text}</div>
+    </div>
+  ) : null;
+  if (disabled || (pull === 0 && !loading)) return noteEl;
   const ratio = Math.min(1, pull / THRESHOLD);
   return (
     <div
