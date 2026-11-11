@@ -981,3 +981,6 @@ header.df-topbar [data-header-shortcut]:active, header.df-topbar [data-header-be
   box-shadow: inset 0 2px 3px rgba(15,30,58,0.22) !important;
 }
 header.df-topbar [data-header-dashboard] { box-shadow: 0 1px 3px rgba(15,30,58,0.28), 0 3px 7px -2px rgba(15,30,58,0.22); }
+
+/* Pas de zoom de la page au pincement (BTK, 2026-11-11) : seule la visionneuse d'images (LightboxModal, touch-action: none) zoome. Le défilement reste possible. */
+html, body { touch-action: pan-x pan-y; }

@@ -1101,6 +1101,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:chat-poll` | Messagerie : sondage, choix de date et « J'ai lu » dans les discussions et groupes (S1, 2026-11-09). Règles du stockage (vote, retrait, comptes sans noms) + câblage (menu « + », serveur). |
 | `npm run check:chat-tools` | Messagerie S3 + S4 (2026-11-09) : rappel/tâche/événement depuis un message, modèles de messages, message programmé. Règles pures + câblage (écran et serveur). |
 | `npm run check:sheet-outbox` | Feuille du jour SANS réseau (M27.9) : règles pures de la boîte d'envoi + rejeu unique avec un « serveur » en mémoire + câblage. Lancer : npm run check:sheet-outbox |
+| `npm run check:no-zoom` | Pas de zoom de la page au pincement ; la visionneuse d'images garde le sien. Lancer : npm run check:no-zoom |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
