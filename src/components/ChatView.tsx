@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
 import { useKeepBottom } from '../utils/useKeepBottom';
+import { ChatSearch } from './ChatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { Bot } from 'lucide-react';
@@ -128,6 +129,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const rowLong = useRef(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
+  const [search, setSearch] = useState<{ day: string | null } | null>(null); // recherche de messages (loupe, ou clic sur une date du fil)
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const [menuHtml, setMenuHtml] = useState('');
   const [seenFor, setSeenFor] = useState<ChatMessage | null>(null);
@@ -288,7 +290,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       atBottomRef.current = true;
       setNewBelow(0);
     } else if (visible.length > prevLenRef.current) {
-      if (atBottomRef.current || last?.sender_id === currentUser.id) {
+      if (last?.sender_id === currentUser.id) {
+        // Mon message : descente immédiate (pas animée), répétée : la zone de saisie, la bulle qui apparaît et les photos changent la hauteur juste après (sinon la liste restait en haut)
+        atBottomRef.current = true;
+        const down = () => { const e = scrollRef.current; if (e) e.scrollTop = e.scrollHeight; };
+        down(); requestAnimationFrame(down);
+        [60, 150, 300, 600].forEach(ms => setTimeout(() => { if (atBottomRef.current) down(); }, ms));
+        setNewBelow(0);
+      } else if (atBottomRef.current) {
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
         setNewBelow(0);
       } else {
@@ -526,7 +535,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const pinned = visible.filter(m => m.pinned && !m.deleted_at).sort((a, b) => String(b.pinned_at || '').localeCompare(String(a.pinned_at || '')));
   const pinShown = pinned.length > 0 ? pinned[pinIdx % pinned.length] : null;
   const jumpTo = (id: string) => {
-    document.querySelector(`[data-msg-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = document.querySelector(`[data-msg-id="${id}"]`) as HTMLElement | null;
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (el) { el.classList.add('df-msg-found'); setTimeout(() => el.classList.remove('df-msg-found'), 1800); }
   };
   const gallery = visible.filter(m => m.attachment_url && m.attachment_kind === 'image' && !m.deleted_at);
   const showNames = current.kind !== 'user';
@@ -710,6 +721,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </span>
             </span>
           </button>
+          <button type="button" data-chat-search-open onClick={() => setSearch({ day: null })} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Rechercher dans la conversation" aria-label="Rechercher dans la conversation">
+            <Search className="w-5 h-5" />
+          </button>
           <button type="button" onClick={() => setThreadMenu(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Options de la conversation">
             <MoreVertical className="w-5 h-5" />
           </button>
@@ -752,7 +766,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               <React.Fragment key={msg.id}>
                 {newDay && (
                   <div className="flex justify-center py-2">
-                    <span className={`px-3 py-1 text-[11px] rounded-full ${P.pill}`}>{dayLabel(day)}</span>
+                    <button type="button" data-day-pill={day} onClick={() => setSearch({ day })} title="Voir les messages de ce jour" aria-label={`Messages du ${dayLabel(day)}`} className={`px-3 py-1 text-[11px] rounded-lg cursor-pointer ${P.pill}`}>{dayLabel(day)}</button>
                   </div>
                 )}
                 <div data-msg-id={msg.id} className={`flex items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'} ${sameSender ? '' : 'pt-1'} ${!knownRef.current.ids.has(msg.id) ? (isMe ? 'df-msg-in-right' : 'df-msg-in-left') : ''}`}>
@@ -993,6 +1007,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
+      {search && <ChatSearch msgs={visible} initialDay={search.day} light={L} onPick={jumpTo} onClose={() => setSearch(null)} />}
       {/* Menu des options de la conversation */}
       {threadMenu && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>
