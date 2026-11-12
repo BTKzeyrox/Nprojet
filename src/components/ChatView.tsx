@@ -43,6 +43,7 @@ import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
 import { tap } from '../utils/haptic';
+import { noteResume, takeBootChat } from '../utils/resumeState';
 import { ChatPoll, PollComposer, PollKindIcon } from './ChatPoll';
 import { MessageToItem } from './MessageToItem';
 import { ScheduleDialog, TemplatesDialog } from './MessageTools';
@@ -115,11 +116,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [groups, setGroups] = useState<ChatGroup[]>(db.getGroups());
   const [reads, setReads] = useState(db.getChatReads());
-  const [threadId, setThreadId] = useState<string>(initialThreadId || 'all');
+  const [bootChat] = useState(() => takeBootChat()); // reprise après rechargement : la discussion qui était ouverte
+  const [threadId, setThreadId] = useState<string>(initialThreadId || bootChat || 'all');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showList, setShowList] = useState(true); // mobile : liste ou conversation
+  const [showList, setShowList] = useState(() => !(bootChat && !initialThreadId && window.innerWidth < 768)); // mobile : liste ou conversation (rouverte après un rechargement si elle était ouverte)
+  useEffect(() => { noteResume(currentUser.id, { chat: window.innerWidth < 768 && showList ? '' : threadId }); }, [threadId, showList, currentUser.id]); // reprise : discussion ouverte ('' = la liste)
   const [hidden, setHidden] = useState<Set<string>>(() => getHiddenMessages(currentUser.id)); // « supprimés pour moi »
   const [archived, setArchived] = useState<Record<string, number>>(() => getArchivedThreads(currentUser.id));
   const [showArchived, setShowArchived] = useState(false);

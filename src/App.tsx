@@ -1,6 +1,9 @@
 // Coque de l'application : choisit l'écran à afficher selon le rôle (responsable, comptable, chef d'équipe, employé) et la page active.
 // Utilisé par : main.tsx.
 // Pour modifier : les pages sont chargées à la demande (lazy) en haut du fichier ; ajouter une page = un lazy() puis une branche dans le bloc de pages de son rôle.
+import { readResume, noteResume, clearResume, setBootChat } from './utils/resumeState';
+import { saveFeedScroll } from './utils/feedScroll';
+import { isKnownView } from './utils/health/menu';
 import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
 import { bindPushDevice, unbindPushDevice } from './utils/push';
@@ -109,7 +112,8 @@ export default function App() {
     return () => { off = true; };
   }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
-  const [activeView, setActiveView] = useState<string>('feed');
+  const resumeRef = useRef(readResume(db.getCurrentUser()?.id)); // reprise après rechargement (moins de 30 min) : même page, même position
+  const [activeView, setActiveView] = useState<string>(() => { const r = resumeRef.current; setBootChat(r && r.view === 'chat' ? r.chat : ''); return r && (isKnownView(r.view) || r.view === 'feed' || r.view === 'grid' || r.view === 'chat') ? r.view : 'feed'; });
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
   const menuMode = useMenuMode(); // menu simplifié (12 entrées + onglets) ou ancien menu, réglage de cet appareil
   const [, setStatsTick] = useState(0);
@@ -132,6 +136,30 @@ export default function App() {
     return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
   }, [currentUser?.id, currentUser?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Chaque page s'ouvre en haut, juste sous la barre du haut (sauf si on arrive d'une recherche vers un élément précis)
+  // Reprise : on note la page et la position ; au rechargement on revient au même endroit (rétablissement du défilement : quelques essais, le temps que le contenu arrive)
+  useEffect(() => {
+    const uid = currentUser?.id; if (!uid) return;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const save = () => { t = null; noteResume(uid, { scroll: window.scrollY }); };
+    const onScroll = () => { if (!t) t = setTimeout(save, 600); };
+    const onHide = () => { if (document.visibilityState === 'hidden') save(); };
+    window.addEventListener('scroll', onScroll, { passive: true }); document.addEventListener('visibilitychange', onHide); window.addEventListener('pagehide', save);
+    return () => { window.removeEventListener('scroll', onScroll); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', save); if (t) clearTimeout(t); };
+  }, [currentUser?.id]);
+  useEffect(() => {
+    const uid = currentUser?.id; if (!uid) return;
+    const r = resumeRef.current;
+    if (r && r.view === activeView) { // première page après un rechargement : on garde la position retrouvée
+      resumeRef.current = null;
+      if (r.scroll > 0 && activeView !== 'chat') {
+        if (activeView === 'feed') saveFeedScroll(uid, r.scroll); // le fil rétablit lui-même sa position
+        let n = 0; const go = () => { window.scrollTo(0, r.scroll); if (++n < 14 && Math.abs(window.scrollY - r.scroll) > 4) setTimeout(go, 150); }; setTimeout(go, 60);
+      }
+      return;
+    }
+    resumeRef.current = null;
+    noteResume(uid, { view: activeView, scroll: 0 });
+  }, [activeView, currentUser?.id]);
   useEffect(() => { releaseOrphanBodyLock(); if (activeView !== 'chat' && activeView !== 'feed' && !peekNavTarget()) window.scrollTo(0, 0); }, [activeView]); // Actualités : le fil rétablit lui-même sa position (utils/feedScroll.ts)
   // Appli ouverte et visible : les notifications externes en attente sont retirées (la cloche les montre)
   useEffect(() => {
@@ -337,6 +365,7 @@ export default function App() {
   const handleLogout = async () => {
     setViewAs('admin');
     try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
+    clearResume();
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);

@@ -1,0 +1,30 @@
+// Reprise après rechargement : règles + câblage. Lancer : npm run check:resume
+import { readFileSync } from 'node:fs';
+import { parseResume, RESUME_MAX_MS, RESUME_KEY, noteResume, readResume, clearResume, setBootChat, takeBootChat } from '../src/utils/resumeState';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const T = 1_800_000_000_000; const mk = (o: object) => JSON.stringify({ uid: 'u1', view: 'history', scroll: 640, chat: '', at: T, ...o });
+ok(parseResume(mk({}), 'u1', T + 60_000)?.view === 'history' && parseResume(mk({}), 'u1', T + 60_000)?.scroll === 640, 'moins de 30 min : on reprend page et position');
+ok(parseResume(mk({}), 'u1', T + RESUME_MAX_MS + 1) === null && parseResume(mk({}), 'u1', T + RESUME_MAX_MS - 1) !== null, 'plus de 30 min : on repart de zéro');
+ok(parseResume(mk({}), 'u2', T) === null, 'autre personne connectée : rien repris');
+ok(parseResume(mk({ at: T + 3_600_000 }), 'u1', T) === null, 'heure du futur (horloge fausse) : ignorée');
+ok(['', 'pas du json', '{"a":1}', 'null', '[]'].every(r => parseResume(r, 'u1', T) === null) && parseResume(null, 'u1', T) === null, 'valeur abîmée ou absente : ignorée sans erreur');
+ok(parseResume(mk({ view: '../etc/passwd' }), 'u1', T) === null && parseResume(mk({ view: '<script>' }), 'u1', T) === null, 'nom de page suspect : refusé');
+ok(parseResume(mk({ scroll: -5 }), 'u1', T)?.scroll === 0 && parseResume(mk({ scroll: 9e9 }), 'u1', T)!.scroll <= 200000 && parseResume(mk({ scroll: 'x' }), 'u1', T)?.scroll === 0, 'défilement borné');
+ok(parseResume(mk({ chat: 'a b<>' }), 'u1', T)?.chat === '' && parseResume(mk({ chat: 'dm:u7' }), 'u1', T)?.chat === 'dm:u7', 'discussion : seulement un identifiant simple');
+// stockage simulé
+const st: Record<string, string> = {}; (globalThis as any).localStorage = { getItem: (k: string) => (k in st ? st[k] : null), setItem: (k: string, v: string) => { st[k] = v; }, removeItem: (k: string) => { delete st[k]; } };
+noteResume('u1', { view: 'clients', scroll: 0 }, T); noteResume('u1', { scroll: 1200 }, T + 1000); noteResume('u1', { chat: 'all' }, T + 2000);
+const r = readResume('u1', T + 5000);
+ok(r?.view === 'clients' && r.scroll === 1200 && r.chat === 'all' && r.at === T + 2000, 'les notes se complètent (page + défilement + discussion), l\'heure suit la dernière');
+ok(readResume('u2', T + 5000) === null && readResume(undefined, T) === null, 'jamais pour une autre personne ni sans personne');
+ok(!/texte|message|draft/.test(Object.keys(JSON.parse(st[RESUME_KEY])).join(',')), 'aucun texte écrit n\'est gardé (seulement page, défilement, discussion)');
+clearResume(); ok(readResume('u1', T + 5000) === null && !(RESUME_KEY in st), 'déconnexion : effacé');
+setBootChat('dm:u7'); ok(takeBootChat() === 'dm:u7' && takeBootChat() === '', 'discussion rouverte UNE seule fois');
+(globalThis as any).localStorage = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); }, removeItem() { throw new Error('x'); } };
+let threw = false; try { noteResume('u1', { view: 'a' }); readResume('u1'); clearResume(); } catch { threw = true; } ok(!threw, 'stockage bloqué : jamais d\'erreur');
+const app = readFileSync('src/App.tsx', 'utf8'), chat = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(/useState<string>\(\(\) => \{ const r = resumeRef\.current;/.test(app) && /isKnownView\(r\.view\)/.test(app), 'App : la page de départ vient de la reprise (pages connues seulement)');
+ok(/addEventListener\('scroll', onScroll/.test(app) && /visibilitychange', onHide/.test(app) && /pagehide', save/.test(app), 'App : position notée en défilant, en quittant l\'application et en fermant');
+ok(/clearResume\(\);\s*db\.logout\(\)/.test(app), 'App : déconnexion efface la reprise');
+ok(/takeBootChat\(\)/.test(chat) && /window\.innerWidth < 768 && showList \? '' : threadId/.test(chat), 'Messagerie : même discussion (ou la liste) après rechargement');
+console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

@@ -742,6 +742,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `reminderRules.ts` | Rappels et tâches (module 25, BTK 2026-11-05) : règles PURES (sans écran, sans réseau, sans importation). |
 | `remindersState.ts` | Rappels et tâches (M25) : copie locale des éléments de la personne, rechargée du serveur, avec abonnement pour les écrans. |
 | `report.ts` | Rapport du mois (S4.5) et données d'export Excel / PDF (S4.4). Sans écran, sans serveur : contrôlé par `npm run check:phase4`. |
+| `resumeState.ts` | Reprise après rechargement (BTK, 2026-11-12) : quand le téléphone retire le site de la mémoire (changement d'application, 1 à 10 minutes) puis le recharge, |
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
@@ -1111,6 +1112,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:poll-icons` | Sondages : de vraies icônes, plus d'emoji. Lancer : npm run check:poll-icons |
 | `npm run check:refresh-summary` | Tirer pour actualiser : résumé visible. Lancer : npm run check:refresh-summary |
 | `npm run check:haptic` | Retour tactile : règles + câblage. Lancer : npm run check:haptic |
+| `npm run check:resume` | Reprise après rechargement : règles + câblage. Lancer : npm run check:resume |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
