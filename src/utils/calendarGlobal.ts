@@ -10,7 +10,7 @@ import { isWorkLine } from './postPay';
 
 export type LeaveFilter = 'all' | 'approved' | 'pending';
 export interface CalCtx { posts: PostSession[]; leaves: Leave[]; today: string; cfg: AppSettings; clientFilter?: string }
-export interface EmpDay { dateStr: string; day: number; status: DayStatus; missions: number; validated: number; pay: number; leave: LeaveType | null; pendingLeave: boolean }
+export interface EmpDay { dateStr: string; day: number; status: DayStatus; missions: number; validated: number; pay: number; workLines: number; leave: LeaveType | null; pendingLeave: boolean }
 
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 export const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -43,8 +43,9 @@ export function empMonth(year: number, month: number, empId: string, ctx: CalCtx
     return {
       dateStr, day: i + 1,
       status: dayStatus(all, dateStr, first[empId] || null, ctx.today, ctx.cfg, leave !== null),
-      missions: shown.length,
-      validated: shown.filter(p => p.status === 'completed').length,
+      missions: shown.filter(p => !isWorkLine(p)).length, // les lignes de la feuille du jour (présence, heures, quantité) ne sont pas des missions
+      validated: shown.filter(p => !isWorkLine(p) && p.status === 'completed').length,
+      workLines: shown.filter(isWorkLine).length,
       pay: shown.filter(p => p.status === 'completed').reduce((a, p) => a + (p.calculated_ar || 0), 0),
       leave, pendingLeave: leaveKind(ctx.leaves, empId, dateStr, 'pending', (ctx.cfg as any).work_days) !== null,
     };
@@ -56,7 +57,7 @@ export interface GlobalDay {
   counts: Record<DayStatus, number>;
   present: number; // ont travaillé (objectif, retard, en cours, test)
   late: number; absent: number; onLeave: number; pendingLeave: number;
-  missions: number; validated: number; pay: number;
+  missions: number; validated: number; pay: number; workLines: number;
   leaveNames: string[]; // en congé accepté ce jour-là
   pendingNames: string[]; // demande de congé en attente ce jour-là
 }
@@ -68,22 +69,22 @@ export function globalMonth(year: number, month: number, emps: User[], ctx: CalC
   const per = emps.map(e => ({ e, days: empMonth(year, month, e.id, ctx, first) }));
   return Array.from({ length: n }, (_, i) => {
     const counts = zeroCounts(), leaveNames: string[] = [], pendingNames: string[] = [];
-    let missions = 0, validated = 0, pay = 0;
+    let missions = 0, validated = 0, pay = 0, workLines = 0;
     for (const { e, days } of per) {
       const d = days[i];
-      counts[d.status]++; missions += d.missions; validated += d.validated; pay += d.pay;
+      counts[d.status]++; missions += d.missions; validated += d.validated; pay += d.pay; workLines += d.workLines;
       if (d.leave) leaveNames.push(e.name);
       if (d.pendingLeave) pendingNames.push(e.name);
     }
     const present = WORKED_STATUS.reduce((a, s) => a + counts[s], 0);
-    return { dateStr: ymd(year, month, i + 1), day: i + 1, counts, present, late: counts.late, absent: counts.absent, onLeave: counts.leave, pendingLeave: pendingNames.length, missions, validated, pay, leaveNames, pendingNames };
+    return { dateStr: ymd(year, month, i + 1), day: i + 1, counts, present, late: counts.late, absent: counts.absent, onLeave: counts.leave, pendingLeave: pendingNames.length, missions, validated, pay, workLines, leaveNames, pendingNames };
   });
 }
 
-export interface EmpSummary { id: string; name: string; workedDays: number; absences: number; lateDays: number; leaveDays: number; missions: number; validated: number; refused: number; pay: number }
+export interface EmpSummary { id: string; name: string; workedDays: number; absences: number; lateDays: number; leaveDays: number; missions: number; validated: number; refused: number; pay: number; workLines: number }
 export interface GlobalSummary {
   employees: number; workedDays: number; absences: number; lateDays: number; leaveDays: number; pendingLeaveDays: number;
-  missions: number; validated: number; refused: number; inProgress: number; pay: number; advApproved: number; advPending: number; net: number;
+  missions: number; validated: number; refused: number; inProgress: number; pay: number; workLines: number; advApproved: number; advPending: number; net: number;
   rows: EmpSummary[];
 }
 
@@ -99,9 +100,10 @@ export function globalSummary(year: number, month: number, emps: User[], ctx: Ca
       absences: days.filter(d => d.status === 'absent').length,
       lateDays: days.filter(d => d.status === 'late').length,
       leaveDays: days.filter(d => d.status === 'leave' && !isRestDay(d.dateStr, (ctx.cfg as any).work_days)).length,
-      missions: mine.length,
-      validated: mine.filter(p => p.status === 'completed').length,
-      refused: mine.filter(p => p.status === 'rejected').length,
+      missions: mine.filter(p => !isWorkLine(p)).length,
+      validated: mine.filter(p => !isWorkLine(p) && p.status === 'completed').length,
+      refused: mine.filter(p => !isWorkLine(p) && p.status === 'rejected').length,
+      workLines: mine.filter(isWorkLine).length,
       pay: mine.filter(p => p.status === 'completed').reduce((a, p) => a + (p.calculated_ar || 0), 0),
     };
   });
@@ -111,11 +113,11 @@ export function globalSummary(year: number, month: number, emps: User[], ctx: Ca
   const advApproved = myAdv.filter(a => a.status === 'approved').reduce((a, x) => a + x.amount_ar, 0);
   const advPending = myAdv.filter(a => a.status === 'pending').reduce((a, x) => a + x.amount_ar, 0);
   const pendingLeaveDays = emps.reduce((a, e) => a + empMonth(year, month, e.id, ctx, first).filter(d => d.pendingLeave && !isRestDay(d.dateStr, (ctx.cfg as any).work_days)).length, 0);
-  const inProgress = ctx.posts.filter(p => ids.has(p.employee_id) && p.date.startsWith(prefix) && OPEN.includes(p.status) && (!ctx.clientFilter || ctx.clientFilter === 'all' || p.client_name === ctx.clientFilter)).length;
+  const inProgress = ctx.posts.filter(p => ids.has(p.employee_id) && p.date.startsWith(prefix) && !isWorkLine(p) && OPEN.includes(p.status) && (!ctx.clientFilter || ctx.clientFilter === 'all' || p.client_name === ctx.clientFilter)).length;
   const pay = sum(r => r.pay);
   return {
     employees: emps.length, workedDays: sum(r => r.workedDays), absences: sum(r => r.absences), lateDays: sum(r => r.lateDays), leaveDays: sum(r => r.leaveDays), pendingLeaveDays,
-    missions: sum(r => r.missions), validated: sum(r => r.validated), refused: sum(r => r.refused), inProgress, pay, advApproved, advPending, net: pay - advApproved, rows,
+    missions: sum(r => r.missions), validated: sum(r => r.validated), refused: sum(r => r.refused), inProgress, pay, workLines: sum(r => r.workLines), advApproved, advPending, net: pay - advApproved, rows,
   };
 }
 

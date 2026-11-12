@@ -329,6 +329,7 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
             <Stat label="Retards" value={`${summary.lateDays}`} tone={summary.lateDays > 0 ? 'text-amber-500' : undefined} />
             <Stat label="Jours de congé" value={`${summary.leaveDays}${summary.pendingLeaveDays ? ` (+${summary.pendingLeaveDays} en attente)` : ''}`} />
             <Stat label="Missions" value={`${summary.missions} · ${summary.validated} validées`} />
+            <Stat label="Feuille du jour" value={`${summary.workLines} ligne${summary.workLines > 1 ? 's' : ''}`} />
             <Stat label="Refusées" value={`${summary.refused}`} tone={summary.refused > 0 ? 'text-amber-500' : undefined} />
             <Stat label="En cours" value={`${summary.inProgress}`} />
           </div>
@@ -351,7 +352,7 @@ const GlobalCalendar: React.FC<GlobalCalProps> = ({ year, month, today, list, po
                     <td className={`p-2 ${r.absences ? 'text-red-500 font-bold' : ''}`}>{r.absences}</td>
                     <td className={`p-2 ${r.lateDays ? 'text-amber-500 font-bold' : ''}`}>{r.lateDays}</td>
                     <td className="p-2">{r.leaveDays}</td>
-                    <td className="p-2">{r.missions} <span className={sub}>({r.validated} validées{r.refused ? `, ${r.refused} refusées` : ''})</span></td>
+                    <td className="p-2">{r.missions} <span className={sub}>({r.validated} validées{r.refused ? `, ${r.refused} refusées` : ''}{r.workLines ? `, + ${r.workLines} ligne${r.workLines > 1 ? 's' : ''} de feuille` : ''})</span></td>
                     <td className="p-2 whitespace-nowrap">{ar(r.pay)}</td>
                   </tr>
                 ))}

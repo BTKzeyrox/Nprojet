@@ -2,7 +2,7 @@
 // Règles de texte = celles de workLineText (Validations, Historique). Contrôle : npm run check:calendar-worktypes
 import { readFileSync } from 'node:fs';
 import { dayDetail, queuedLineRows } from '../src/utils/dayDetail';
-import { dayView } from '../src/utils/calendarGlobal';
+import { dayView, empMonth, globalMonth, globalSummary } from '../src/utils/calendarGlobal';
 import { workLineDetail, workLineBy } from '../src/utils/workLineText';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -33,7 +33,14 @@ const rows = dayView(D, [{ id: 'a', name: 'A', shift: 'day' } as any], { posts, 
 ok(rows[0].missions === 1 && rows[0].validated === 1 && rows[0].workLines === 2, 'vue du jour : 1 mission, 2 lignes de feuille comptées à part');
 const rp = dayView(D, [{ id: 'a', name: 'A', shift: 'day' } as any], { posts: [pres], leaves: [], today: '2026-10-29', cfg }, { a: D });
 ok(rp[0].missions === 0 && rp[0].firstStart === null && rp[0].workLines === 1, 'présence seule : 0 mission, pas de « 1re mission » inventée');
+const ctx2: any = { posts: [mission, pres, qty], leaves: [], today: '2026-10-29', cfg };
+const em = empMonth(2026, 9, 'a', ctx2, { a: D })[27];
+ok(em.missions === 1 && em.validated === 1 && em.workLines === 2, 'mois d\'une personne : 1 mission, 2 lignes de feuille à part');
+const gm = globalMonth(2026, 9, [{ id: 'a', name: 'A', shift: 'day' } as any], ctx2, { a: D })[27];
+ok(gm.missions === 1 && gm.workLines === 2, 'mois global : même séparation');
+const gs = globalSummary(2026, 9, [{ id: 'a', name: 'A', shift: 'day' } as any], ctx2, { a: D });
+ok(gs.missions === 1 && gs.validated === 1 && gs.refused === 0 && gs.workLines === 2 && gs.inProgress === 0 && gs.rows[0].workLines === 2, 'résumé du mois : missions sans les lignes de feuille, « en cours » aussi');
 const ui = readFileSync('src/views/CalendarView.tsx', 'utf8');
-ok(/Travail saisi/.test(ui) && /day-worklines-/.test(ui) && /getQueuedSheets\(\)/.test(ui) && /présence[^`]*seule/.test(ui), 'écran : bloc « Travail saisi », feuilles gardées, compteur « présence seule »');
+ok(/Travail saisi/.test(ui) && /day-worklines-/.test(ui) && /getQueuedSheets\(\)/.test(ui) && /présence[^`]*seule/.test(ui) && /Feuille du jour/.test(ui), 'écran : bloc « Travail saisi », feuilles gardées, compteur « présence seule »');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

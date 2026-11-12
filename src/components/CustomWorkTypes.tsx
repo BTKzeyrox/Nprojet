@@ -5,6 +5,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { db } from '../db/store';
 import { MEASURES, PAY_MODES, ENTRY_BY, MEASURE_LABEL, PAY_LABEL, ENTRY_LABEL, compatible, describeWorkType, type Measure, type PayMode, type EntryBy } from '../utils/workTypes';
 import { CW_MAX_TYPES } from '../utils/customWorkTypes';
+import { workRuleLines } from '../utils/workRulesText';
+import { findModel } from '../utils/workTypes';
 
 const input = 'w-full bg-[#141e2a] border border-slate-700 rounded-lg px-3 py-2 min-h-[44px] text-sm text-white focus:outline-none focus:border-emerald-500';
 
@@ -12,6 +14,8 @@ export const CustomWorkTypes: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const [, force] = useState(0);
   const list = db.getCustomWorkTypes();
+  const work = (db.getSettings() as any).company?.work || {};
+  const active = [...(findModel(work.business_model)?.types || []), ...list]; // les types que la Feuille du jour propose vraiment
   const [open, setOpen] = useState(false);
   const [fr, setFr] = useState(''); const [en, setEn] = useState('');
   const [measure, setMeasure] = useState<Measure>('quantity');
@@ -34,6 +38,18 @@ export const CustomWorkTypes: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
     <div data-custom-work-types className="space-y-3 pt-2 border-t border-slate-700">
       <div className="text-slate-200 text-xs font-mono">{t('Mes types de travail', 'My work types')} ({list.length}/{CW_MAX_TYPES})</div>
       {list.length === 0 && <p className="text-[11px] text-slate-400">{t('Aucun pour l\'instant. Crée ton type si ceux du modèle ne conviennent pas.', 'None yet. Create your own if the ones from the model do not fit.')}</p>}
+      {active.length > 0 && (
+        <div data-work-rules className="rounded-lg border border-slate-700 p-3 space-y-3">
+          <div className="text-slate-200 text-xs font-mono">{t('Règles que le site applique, type par type', 'Rules the site applies, type by type')}</div>
+          <p className="text-[11px] text-slate-400">{t('Lu depuis tes réglages enregistrés : change le type, le tarif, le retard ou les absences plus bas, enregistre, et le site suit (feuille du jour, calendrier, paie).', 'Read from your saved settings: change the type, rate, lateness or absences below, save, and the site follows (sheet, calendar, pay).')}</p>
+          {active.map(x => (
+            <div key={x.id} data-work-rule-type={x.id} className="space-y-1">
+              <div className="text-sm font-bold text-white">{t(x.name.fr, x.name.en)}</div>
+              <ul className="list-disc pl-5 space-y-0.5 text-[11px] text-slate-300">{workRuleLines(x, work).map(l => <li key={l.key}>{t(l.fr, l.en)}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      )}
       <ul className="space-y-2">
         {list.map(x => (
           <li key={x.id} className="rounded-lg border border-slate-700 p-3 flex items-start justify-between gap-2">
