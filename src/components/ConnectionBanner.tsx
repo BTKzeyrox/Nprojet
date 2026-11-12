@@ -1,6 +1,7 @@
 // État de la connexion : pastille du header (hors ligne, envoi, à revoir, copie verrouillée, tout est envoyé) et relance automatique des envois.
 // Utilisé par : App.tsx et TopBar.tsx. Contrôlé par : npm run check:header-status.
 // Pour modifier : le bandeau jaune du bas est retiré, ConnectionBanner ne rend rien mais relance les envois (useConnectionModel(true)). Les textes viennent de bannerModel (utils/offlineText.ts).
+import { syncLive } from '../utils/unsentCopy';
 import React, { useEffect, useRef, useState } from 'react';
 import { WifiOff, CheckCircle2, Send, AlertTriangle, Lock } from 'lucide-react';
 import { db } from '../db/store';
@@ -78,7 +79,10 @@ export function useConnectionModel(withCountdown: boolean) {
  *  parce que `useConnectionModel(true)` fait le travail invisible : la relance automatique des envois (toutes les `retry_seconds` secondes) et la relance au retour du réseau.
  *  L'état hors ligne reste visible dans la pastille du header (ConnectionChip), qui ouvre le centre hors ligne. */
 export const ConnectionBanner: React.FC = () => {
-  useConnectionModel(true);
+  const { un } = useConnectionModel(true);
+  // Filet de sécurité : le texte de ce qui est envoyé sans copie protégée est gardé à part pour être rendu si la page se recharge (utils/unsentCopy.ts, components/UnsentRecovery.tsx)
+  const sig = un.items.map(i => i.key + (i.kept ? '1' : '0') + (i.text || '').length).join('|');
+  useEffect(() => { syncLive(db.getCurrentUser()?.id, un.items); }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 };
 

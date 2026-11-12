@@ -1,0 +1,44 @@
+// Filet de sécurité des textes envoyés sans réseau et sans coffre. Lancer : npm run check:unsent-copy
+import { readFileSync } from 'node:fs';
+import { _newPage, syncLive, bootRecover, readLeft, dismissLeft, clearAllCopies, copyCandidates, COPY_MAX, COPY_MAX_AGE_MS, LIVE_PREFIX, LEFT_PREFIX } from '../src/utils/unsentCopy';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const st: Record<string, string> = {};
+(globalThis as any).localStorage = { getItem: (k: string) => (k in st ? st[k] : null), setItem: (k: string, v: string) => { st[k] = v; }, removeItem: (k: string) => { delete st[k]; }, key: (i: number) => Object.keys(st)[i], get length() { return Object.keys(st).length; } };
+const T = 1_800_000_000_000;
+const it = (id: string, o: object = {}) => ({ key: `messages|${id}`, col: 'messages', action: 'upsert', created: true, text: 'Bonjour ' + id, kept: false, ...o });
+ok(copyCandidates([it('a'), it('b', { kept: true }), it('c', { action: 'delete' }), it('d', { created: false }), it('e', { text: '  ' }), it('f', { text: undefined })]).length === 1, 'seuls les textes créés sans réseau et NON gardés par le coffre sont copiés');
+syncLive('u1', [it('m1'), it('m2')], T);
+ok(JSON.parse(st[LIVE_PREFIX + 'u1']).length === 2, 'copie en direct : 2 textes en attente');
+syncLive('u1', [it('m2')], T + 5000);
+const live = JSON.parse(st[LIVE_PREFIX + 'u1']);
+ok(live.length === 1 && live[0].key === 'messages|m2' && live[0].at === T, 'un texte parti (envoyé) disparaît de la copie ; l\'heure d\'origine est gardée');
+syncLive('u1', [], T + 9000);
+ok(!(LIVE_PREFIX + 'u1' in st), 'plus rien en attente : plus de copie');
+// page morte avec 2 textes en attente
+clearAllCopies(); syncLive('u5', [it('r1')], T); _newPage(); syncLive('u5', [], T + 1000);
+ok(readLeft('u5', T + 2000).length === 1 && !(LIVE_PREFIX + 'u5' in st), 'page rechargée : la première synchro (vide) ne détruit PAS les restes de la page précédente');
+clearAllCopies();
+syncLive('u1', [it('m1'), it('m2', { col: 'news' })], T + 10000); _newPage(); // la page meurt, puis se recharge
+const rec = bootRecover('u1', T + 60000);
+ok(rec.length === 2 && !(LIVE_PREFIX + 'u1' in st) && readLeft('u1', T + 60000).length === 2, 'au démarrage : les textes en attente deviennent « à récupérer »');
+_newPage(); ok(bootRecover('u1', T + 61000).length === 2, 'recharger encore ne les perd pas (restent jusqu\'à « Ignorer »)');
+ok(bootRecover('u2', T).length === 0 && readLeft('u2', T).length === 0 && bootRecover(undefined, T).length === 0, 'jamais pour une autre personne ni sans personne');
+_newPage(); syncLive('u1', [it('m1')], T + 62000); _newPage(); const again = bootRecover('u1', T + 63000);
+ok(again.length === 2, 'même texte vu deux fois : pas de doublon');
+const after = dismissLeft('u1', { key: rec[0].key, text: rec[0].text }, T + 64000);
+ok(after.length === 1 && readLeft('u1', T + 64000).length === 1, '« Ignorer » retire un seul texte');
+ok(dismissLeft('u1', 'all', T + 65000).length === 0 && !(LEFT_PREFIX + 'u1' in st), '« Tout ignorer »');
+syncLive('u1', [it('x')], T); _newPage(); bootRecover('u1', T + COPY_MAX_AGE_MS + 5);
+ok(readLeft('u1', T + COPY_MAX_AGE_MS + 5).length === 0, '7 jours maximum');
+const many = Array.from({ length: COPY_MAX + 15 }, (_, i) => it('n' + i)); syncLive('u1', many, T); ok(JSON.parse(st[LIVE_PREFIX + 'u1']).length === COPY_MAX, '30 textes au plus');
+syncLive('u1', [it('big', { text: 'z'.repeat(5000) })], T); ok(JSON.parse(st[LIVE_PREFIX + 'u1'])[0].text.length === 2000, '2000 caractères au plus par texte');
+st[LEFT_PREFIX + 'u7'] = 'pas du json'; ok(bootRecover('u7', T).length === 0, 'valeur abîmée : ignorée');
+syncLive('u1', [it('k')], T); _newPage(); bootRecover('u1', T); clearAllCopies(); ok(!Object.keys(st).some(k => k.startsWith('df_unsent_')), 'déconnexion : tout effacé');
+(globalThis as any).localStorage = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); }, removeItem() { throw new Error('x'); }, get length() { throw new Error('x'); } };
+let threw = false; try { syncLive('u1', [it('a')]); bootRecover('u1'); readLeft('u1'); dismissLeft('u1', 'all'); clearAllCopies(); } catch { threw = true; } ok(!threw, 'stockage bloqué : jamais d\'erreur');
+const f = (p: string) => readFileSync(p, 'utf8');
+ok(/syncLive\(db\.getCurrentUser\(\)\?\.id, un\.items\)/.test(f('src/components/ConnectionBanner.tsx')), 'copie en direct branchée sur la liste des envois en attente');
+const app = f('src/App.tsx'); ok(/<UnsentRecovery uid=\{currentUser\.id\} \/>/.test(app) && /clearAllCopies\(\)/.test(app), 'App : bandeau monté, copies effacées à la déconnexion');
+const ui = f('src/components/UnsentRecovery.tsx'); ok(/data-no-code-warning/.test(ui) && /st\.needs_code/.test(ui) && /Hors ligne pour les garder/.test(ui) && /openView\('settings'\)/.test(ui), 'avertissement clair « pas de code » avec le chemin vers les Réglages');
+ok(/data-recovered-dismiss/.test(ui) && /Copier/.test(ui) && !/db\.(sendMessage|publishNews|submitNews)/.test(ui), 'récupération : copier / ignorer, jamais de renvoi automatique');
+console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

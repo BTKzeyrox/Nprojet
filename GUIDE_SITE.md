@@ -781,6 +781,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `tour.ts` | Visite guidée (module 16, M16.2) : règles pures, sans écran, sans serveur. Les textes viennent de la carte du site (siteKnowledge.ts) : |
 | `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
 | `treasuryCharts.ts` | Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires. |
+| `unsentCopy.ts` | Filet de sécurité des textes envoyés SANS réseau et SANS copie protégée (BTK, 2026-11-12) : un responsable qui n'a pas créé son code de coffre n'a rien de gardé sur l'appareil ; |
 | `updateWatcher.ts` | Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau. |
 | `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
 | `useDraft.ts` | Branche un champ de texte sur les brouillons (utils/drafts.ts) : remet le texte gardé à l'ouverture (ou au changement de champ), le garde 1 s après la dernière frappe et en quittant l'application. |
@@ -1001,6 +1002,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `TourGuide.tsx` | Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène. |
 | `TwoStepCard.tsx` | Réglages, carte de sécurité en deux étapes : activer, désactiver et refaire les codes de secours. |
 | `TypeHintBanner.tsx` | Bandeau qui propose de transformer une colonne de tableau (code, date, heure, téléphone, nombre ou liste de choix), avec Oui ou Non merci. |
+| `UnsentRecovery.tsx` | « À récupérer » + avertissement « pas de code » (BTK, 2026-11-12). Deux bandeaux, en haut de l'écran : |
 | `WatchSettingsSection.tsx` | Réglages, section Surveillance : seuils de la Santé du site et notifications, réglés sur cet appareil. |
 | `WelcomeAnimation.tsx` | Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde. |
 | `WhyFigure.tsx` | Bouton « Pourquoi ce chiffre ? » qui ouvre une fenêtre avec la formule, la période, les composantes, les plus grosses lignes et les sources. |
@@ -1116,6 +1118,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:haptic` | Retour tactile : règles + câblage. Lancer : npm run check:haptic |
 | `npm run check:resume` | Reprise après rechargement : règles + câblage. Lancer : npm run check:resume |
 | `npm run check:drafts` | Brouillons de texte : règles + câblage. Lancer : npm run check:drafts |
+| `npm run check:unsent-copy` | Filet de sécurité des textes envoyés sans réseau et sans coffre. Lancer : npm run check:unsent-copy |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |

@@ -61,7 +61,7 @@ ok(/<ConnectionChip \/>/.test(top) && /import \{ ConnectionChip \} from '\.\/Con
 const app = read('src/App.tsx');
 const bannerPart = src.slice(src.indexOf('export const ConnectionBanner'), src.indexOf('export const ConnectionChip'));
 ok(/<ConnectionBanner \/>/.test(app), 'le composant du bas reste monté dans l\'application (c\'est lui qui relance les envois)');
-ok(/useConnectionModel\(true\);\s*return null;/.test(bannerPart), 'le composant du bas appelle la relance automatique (useConnectionModel(true)) et n\'affiche rien');
+ok(/useConnectionModel\(true\)/.test(bannerPart) && /return null;/.test(bannerPart) && !/return \(\s*</.test(bannerPart), 'le composant du bas appelle la relance automatique (useConnectionModel(true)) et n\'affiche rien');
 ok(!/banner-offline|Réessayer|Nouvelle tentative dans|<button/.test(bannerPart), 'le composant du bas ne contient plus ni texte, ni bouton « Réessayer », ni compte à rebours affiché');
 ok(/setInterval\(/.test(src) && /db\.retryNow\(\)/.test(src) && /addEventListener\('online'/.test(src), 'la relance automatique (toutes les N secondes et au retour du réseau) est gardée');
 ok(/useConnectionModel\(true\)/.test(src) && /useConnectionModel\(false\)/.test(src) && /if \(!down \|\| !withCountdown\) return;/.test(src) && /if \(withCountdown\) db\.retryNow\(\)/.test(src), 'une seule des deux vues relance l\'envoi (la pastille ne double pas les tentatives)');

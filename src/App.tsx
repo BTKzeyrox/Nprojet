@@ -20,6 +20,8 @@ import { TopBar } from './components/TopBar';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
+import { UnsentRecovery } from './components/UnsentRecovery';
+import { clearAllCopies } from './utils/unsentCopy';
 import { OperatorsTabs } from './components/OperatorsTabs';
 import { MenuTabs, MENU_TABS_H } from './components/MenuTabs';
 import { menuFor, locate } from './utils/menuGroups';
@@ -366,7 +368,7 @@ export default function App() {
   const handleLogout = async () => {
     setViewAs('admin');
     try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
-    clearResume(); clearAllDrafts();
+    clearResume(); clearAllDrafts(); clearAllCopies();
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
@@ -529,6 +531,7 @@ export default function App() {
         
         <LoadingBar />
         <ConnectionBanner />
+        {currentUser && <UnsentRecovery uid={currentUser.id} />}
         <OfflineCenter />
 
         <PullToRefresh disabled={activeView === 'chat'} />
