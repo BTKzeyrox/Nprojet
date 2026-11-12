@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X, CalendarDays } from 'lucide-react';
 import type { ChatMessage } from '../types';
-import { searchMessages } from '../utils/chatSearch';
+import { searchMessages, firstOfDay } from '../utils/chatSearch';
 
 const dayText = (d: string) => d.split('-').reverse().join('/');
 
@@ -14,6 +14,7 @@ export const ChatSearch: React.FC<{ msgs: ChatMessage[]; initialDay?: string | n
   useEffect(() => { if (!initialDay) inputRef.current?.focus(); }, [initialDay]);
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
   const res = useMemo(() => searchMessages(msgs, q, day, new Date().getFullYear()), [msgs, q, day]);
+  const first = useMemo(() => firstOfDay(msgs, res.day), [msgs, res.day]);
   const card = light ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-900 text-slate-100 border-slate-700';
   const sub = light ? 'text-slate-500' : 'text-slate-400';
   const field = light ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-100';
@@ -39,6 +40,7 @@ export const ChatSearch: React.FC<{ msgs: ChatMessage[]; initialDay?: string | n
             <p data-chat-search-empty className={`p-4 text-sm text-center ${sub}`}>{!q.trim() && !day ? 'Écris un mot, une date (12/11) ou choisis un jour.' : 'Aucun message trouvé.'}</p>
           ) : (
             <>
+              {first && <button type="button" data-chat-search-goday onClick={() => { onPick(first); onClose(); }} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-600 border-b border-emerald-600/20 cursor-pointer">Aller au début du {dayText(res.day!)}</button>}
               <p className={`px-4 pt-2 pb-1 text-[11px] ${sub}`}>{res.total} message{res.total > 1 ? 's' : ''}{res.day ? ` · ${dayText(res.day)}` : ''}{res.total > res.hits.length ? ` · les ${res.hits.length} plus récents` : ''}</p>
               {res.hits.map(h => (
                 <button key={h.id} type="button" data-chat-search-hit={h.id} onClick={() => { onPick(h.id); onClose(); }} className={`w-full text-left px-4 py-2.5 border-b cursor-pointer ${row}`}>

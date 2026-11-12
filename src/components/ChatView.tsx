@@ -535,9 +535,17 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const pinned = visible.filter(m => m.pinned && !m.deleted_at).sort((a, b) => String(b.pinned_at || '').localeCompare(String(a.pinned_at || '')));
   const pinShown = pinned.length > 0 ? pinned[pinIdx % pinned.length] : null;
   const jumpTo = (id: string) => {
-    const el = document.querySelector(`[data-msg-id="${id}"]`) as HTMLElement | null;
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    if (el) { el.classList.add('df-msg-found'); setTimeout(() => el.classList.remove('df-msg-found'), 1800); }
+    // Amène EXACTEMENT au message (au milieu de l'écran), sans animation : une animation s'arrête trop tôt quand la hauteur change (photos, bulles qui apparaissent). On réapplique tant que la personne ne touche pas l'écran, sans que « rester en bas » ne reprenne la main.
+    atBottomRef.current = false;
+    let touched = false;
+    const mark = () => { touched = true; };
+    window.addEventListener('wheel', mark, { passive: true }); window.addEventListener('touchstart', mark, { passive: true });
+    const go = () => { const el = document.querySelector(`[data-msg-id="${id}"]`) as HTMLElement | null; if (el && !touched) el.scrollIntoView({ block: 'center', behavior: 'auto' }); return el; };
+    const el0 = go();
+    if (el0) { el0.classList.add('df-msg-found'); setTimeout(() => el0.classList.remove('df-msg-found'), 1800); }
+    requestAnimationFrame(go);
+    [80, 250, 600].forEach(ms => setTimeout(go, ms));
+    setTimeout(() => { window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); }, 700);
   };
   const gallery = visible.filter(m => m.attachment_url && m.attachment_kind === 'image' && !m.deleted_at);
   const showNames = current.kind !== 'user';

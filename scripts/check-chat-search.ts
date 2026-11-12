@@ -1,6 +1,6 @@
 // Recherche de messages dans une conversation (date cliquable + loupe). Lancer : npm run check:chat-search
 import { readFileSync } from 'node:fs';
-import { parseDayQuery, searchMessages, SEARCH_MAX } from '../src/utils/chatSearch';
+import { parseDayQuery, searchMessages, firstOfDay, SEARCH_MAX } from '../src/utils/chatSearch';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const M = (id: string, ts: string, message: string, extra: any = {}): any => ({ id, sender_id: 's', sender_name: 'Rado', sender_role: 'employee', message, timestamp: ts, ...extra });
@@ -25,8 +25,10 @@ r = searchMessages(many, 'coucou', null, 2026);
 ok(r.hits.length === SEARCH_MAX && r.total === 250, `au plus ${SEARCH_MAX} résultats affichés, total compté`);
 ok(searchMessages(null as any, 'a', null, 2026).total === 0 && searchMessages([null as any, M('x', '2026-11-12 10:00:00', 'a')], 'a', null, 2026).total === 1, 'données bizarres : sans plantage');
 ok(r.hits.every(h => h.text.length <= 140), 'texte des résultats coupé à 140 caractères');
+ok(firstOfDay(msgs, '2026-11-12') === '2' && firstOfDay(msgs, '2026-01-01') === null && firstOfDay(msgs, null) === null && firstOfDay(null as any, '2026-11-12') === null, 'début du jour : le plus ancien message non supprimé (« Aller au début du jour »)');
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/data-chat-search-open/.test(cv) && /data-day-pill/.test(cv) && /<ChatSearch/.test(cv), 'ChatView : loupe, date cliquable et panneau de recherche');
 ok(/last\?\.sender_id === currentUser\.id\) \{[\s\S]{0,200}atBottomRef\.current = true;[\s\S]{0,300}\[60, 150, 300, 600\]/.test(cv), 'mon message envoyé : descente immédiate puis répétée (la liste ne reste plus en haut)');
+ok(/behavior: 'auto'/.test(cv.slice(cv.indexOf('const jumpTo'), cv.indexOf('const gallery'))) && /\[80, 250, 600\]/.test(cv), 'aller au message : exact (sans animation), réappliqué tant que la personne ne touche pas l\'écran');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

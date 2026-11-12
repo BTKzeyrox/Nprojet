@@ -38,3 +38,14 @@ export function searchMessages(msgs: ChatMessage[], query: string, day: string |
   out.sort((a, b) => (a.day + a.time < b.day + b.time ? 1 : a.day + a.time > b.day + b.time ? -1 : 0));
   return { hits: out.slice(0, SEARCH_MAX), total: out.length, day: d };
 }
+
+/** Le premier message (non supprimé) d'un jour : là où « Aller au jour » amène. null s'il n'y en a pas. */
+export function firstOfDay(msgs: ChatMessage[], day: string | null): string | null {
+  if (!day) return null;
+  let best: ChatMessage | null = null;
+  for (const m of Array.isArray(msgs) ? msgs : []) {
+    if (!m || m.deleted_at || String(m.timestamp || '').slice(0, 10) !== day) continue;
+    if (!best || String(m.timestamp) < String(best.timestamp)) best = m;
+  }
+  return best ? best.id : null;
+}
