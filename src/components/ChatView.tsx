@@ -3,6 +3,7 @@
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { ChatSearch } from './ChatSearch';
+import { stepNav } from '../utils/chatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { Bot } from 'lucide-react';
@@ -129,6 +130,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const rowLong = useRef(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
+  const [nav, setNav] = useState<{ ids: string[]; i: number } | null>(null); // « précédent / suivant » parmi les résultats de la recherche (comme Telegram)
   const [search, setSearch] = useState<{ day: string | null } | null>(null); // recherche de messages (loupe, ou clic sur une date du fil)
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const [menuHtml, setMenuHtml] = useState('');
@@ -534,6 +536,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const pinned = visible.filter(m => m.pinned && !m.deleted_at).sort((a, b) => String(b.pinned_at || '').localeCompare(String(a.pinned_at || '')));
   const pinShown = pinned.length > 0 ? pinned[pinIdx % pinned.length] : null;
+  useEffect(() => { setNav(null); }, [current.id]);
   const jumpTo = (id: string) => {
     // Amène EXACTEMENT au message (au milieu de l'écran), sans animation : une animation s'arrête trop tôt quand la hauteur change (photos, bulles qui apparaissent). On réapplique tant que la personne ne touche pas l'écran, sans que « rester en bas » ne reprenne la main.
     atBottomRef.current = false;
@@ -736,6 +739,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
+
+        {nav && (
+          <div data-chat-search-nav className={`shrink-0 flex items-center gap-1 px-2 py-1 border-b ${P.div} ${L ? 'bg-white' : 'bg-slate-900'}`}>
+            <button type="button" onClick={() => setSearch({ day: null })} data-chat-search-nav-open className={`flex-1 min-w-0 text-left text-xs px-2 py-1.5 cursor-pointer ${P.sub}`}><b className="text-emerald-600">{nav.i + 1}</b> sur {nav.ids.length} · liste</button>
+            <button type="button" data-chat-search-prev disabled={stepNav(nav.i, nav.ids.length, -1) === null} onClick={() => { const n = stepNav(nav.i, nav.ids.length, -1); if (n !== null) { setNav({ ...nav, i: n }); jumpTo(nav.ids[n]); } }} title="Précédent (plus ancien)" aria-label="Résultat précédent" className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30 ${L ? 'hover:bg-slate-100' : 'hover:bg-slate-800'}`}><ChevronDown className="w-5 h-5 rotate-180" /></button>
+            <button type="button" data-chat-search-next disabled={stepNav(nav.i, nav.ids.length, 1) === null} onClick={() => { const n = stepNav(nav.i, nav.ids.length, 1); if (n !== null) { setNav({ ...nav, i: n }); jumpTo(nav.ids[n]); } }} title="Suivant (plus récent)" aria-label="Résultat suivant" className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-30 ${L ? 'hover:bg-slate-100' : 'hover:bg-slate-800'}`}><ChevronDown className="w-5 h-5" /></button>
+            <button type="button" data-chat-search-nav-close onClick={() => setNav(null)} title="Fermer" aria-label="Fermer la recherche" className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${L ? 'hover:bg-slate-100' : 'hover:bg-slate-800'}`}><X className="w-4 h-4" /></button>
+          </div>
+        )}
 
         {pinShown && (
           <button
@@ -1015,7 +1027,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
-      {search && <ChatSearch msgs={visible} initialDay={search.day} light={L} onPick={jumpTo} onClose={() => setSearch(null)} />}
+      {search && <ChatSearch msgs={visible} initialDay={search.day} light={L} onPick={(id, all) => { jumpTo(id); const i = all.indexOf(id); setNav(all.length > 1 && i >= 0 ? { ids: all, i } : null); }} onClose={() => setSearch(null)} />}
       {/* Menu des options de la conversation */}
       {threadMenu && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>

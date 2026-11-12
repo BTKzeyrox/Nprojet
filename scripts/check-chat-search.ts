@@ -1,6 +1,6 @@
 // Recherche de messages dans une conversation (date cliquable + loupe). Lancer : npm run check:chat-search
 import { readFileSync } from 'node:fs';
-import { parseDayQuery, searchMessages, firstOfDay, SEARCH_MAX } from '../src/utils/chatSearch';
+import { parseDayQuery, searchMessages, firstOfDay, stepNav, SEARCH_MAX } from '../src/utils/chatSearch';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const M = (id: string, ts: string, message: string, extra: any = {}): any => ({ id, sender_id: 's', sender_name: 'Rado', sender_role: 'employee', message, timestamp: ts, ...extra });
@@ -26,9 +26,11 @@ ok(r.hits.length === SEARCH_MAX && r.total === 250, `au plus ${SEARCH_MAX} résu
 ok(searchMessages(null as any, 'a', null, 2026).total === 0 && searchMessages([null as any, M('x', '2026-11-12 10:00:00', 'a')], 'a', null, 2026).total === 1, 'données bizarres : sans plantage');
 ok(r.hits.every(h => h.text.length <= 140), 'texte des résultats coupé à 140 caractères');
 ok(firstOfDay(msgs, '2026-11-12') === '2' && firstOfDay(msgs, '2026-01-01') === null && firstOfDay(msgs, null) === null && firstOfDay(null as any, '2026-11-12') === null, 'début du jour : le plus ancien message non supprimé (« Aller au début du jour »)');
+ok(stepNav(2, 5, -1) === 1 && stepNav(2, 5, 1) === 3 && stepNav(0, 5, -1) === null && stepNav(4, 5, 1) === null && stepNav(0, 1, 1) === null && stepNav(5, 5, 1) === null && stepNav(-1, 5, 1) === null && stepNav(0, 0, 1) === null && stepNav(NaN, 5, 1) === null, 'précédent / suivant : un cran, pas de retour au début ni à la fin, indices faux refusés');
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/data-chat-search-open/.test(cv) && /data-day-pill/.test(cv) && /<ChatSearch/.test(cv), 'ChatView : loupe, date cliquable et panneau de recherche');
 ok(/last\?\.sender_id === currentUser\.id\) \{[\s\S]{0,200}atBottomRef\.current = true;[\s\S]{0,300}\[60, 150, 300, 600\]/.test(cv), 'mon message envoyé : descente immédiate puis répétée (la liste ne reste plus en haut)');
 ok(/behavior: 'auto'/.test(cv.slice(cv.indexOf('const jumpTo'), cv.indexOf('const gallery'))) && /\[80, 250, 600\]/.test(cv), 'aller au message : exact (sans animation), réappliqué tant que la personne ne touche pas l\'écran');
+ok(/data-chat-search-prev/.test(cv) && /data-chat-search-next/.test(cv) && /all\.length > 1/.test(cv) && /setNav\(null\)/.test(cv), 'ChatView : barre « n sur N » avec précédent / suivant, seulement s\'il y a plusieurs résultats, fermée au changement de conversation');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

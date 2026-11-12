@@ -49,3 +49,10 @@ export function firstOfDay(msgs: ChatMessage[], day: string | null): string | nu
   }
   return best ? best.id : null;
 }
+
+/** Précédent (-1, plus ancien) / suivant (+1, plus récent) parmi `len` résultats rangés du plus ancien au plus récent : nouvel indice, ou null au bout de la liste (pas de retour au début). */
+export function stepNav(i: number, len: number, dir: -1 | 1): number | null {
+  if (!Number.isInteger(i) || !Number.isInteger(len) || len < 1 || i < 0 || i >= len) return null;
+  const n = i + dir;
+  return n >= 0 && n < len ? n : null;
+}
