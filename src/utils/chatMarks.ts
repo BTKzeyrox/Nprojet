@@ -4,11 +4,16 @@
 import type { ChatMessage } from '../types';
 
 export type Mark = 'important' | 'pinned' | 'forwarded';
-export const MARK_STYLE: Record<Mark, { bg: string; border: string; fr: string; en: string }> = {
-  important: { bg: '#e11d48', border: '#be123c', fr: 'Important', en: 'Important' },
-  pinned: { bg: '#d97706', border: '#b45309', fr: 'Épinglé', en: 'Pinned' },
-  forwarded: { bg: '#7c3aed', border: '#6d28d9', fr: 'Transféré', en: 'Forwarded' },
+// Dégradé léger (135°) du ton foncé au ton franc, bord plus sombre, texte blanc : les DEUX bouts gardent un contraste ≥ 4,5 avec le blanc (`check:chat-marks`). `bg` = ton franc, pour un repli sans dégradé.
+export const MARK_STYLE: Record<Mark, { bg: string; from: string; to: string; border: string; fr: string; en: string }> = {
+  important: { bg: '#e11d48', from: '#9f1239', to: '#e11d48', border: '#881337', fr: 'Important', en: 'Important' },
+  pinned: { bg: '#b45309', from: '#92400e', to: '#b45309', border: '#78350f', fr: 'Épinglé', en: 'Pinned' },
+  forwarded: { bg: '#7c3aed', from: '#4c1d95', to: '#7c3aed', border: '#4c1d95', fr: 'Transféré', en: 'Forwarded' },
 };
+/** Fond de la bulle : dégradé léger du ton foncé au ton franc. */
+export const markBackground = (k: Mark): string => `linear-gradient(135deg, ${MARK_STYLE[k].from} 0%, ${MARK_STYLE[k].to} 100%)`;
+/** Ombre douce + fin reflet en haut : donne du relief sans faire « criard ». */
+export const MARK_SHADOW = '0 1px 3px rgba(15, 23, 42, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.14)';
 export const IMPORTANT_MAX = 300;
 
 /** Le repère qui colore la bulle (un message supprimé n'en a aucun). */

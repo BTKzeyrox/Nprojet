@@ -4,8 +4,10 @@
 import { useDraft } from '../utils/useDraft';
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { ChatSearch } from './ChatSearch';
+import { ChatMarksList } from './ChatMarksList';
+import { markedCount } from '../utils/chatMarksList';
 import { ChatForward } from './ChatForward';
-import { MARK_STYLE, markOf, marksOf, toggleImportant, canForward, forwardFrom } from '../utils/chatMarks';
+import { MARK_STYLE, markBackground, MARK_SHADOW, markOf, marksOf, toggleImportant, canForward, forwardFrom } from '../utils/chatMarks';
 import { stepNav } from '../utils/chatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
@@ -137,6 +139,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
   const [importantIds, setImportantIds] = useState<string[]>(() => getImportantMessages(currentUser.id)); // messages « Important » (privé, sur cet appareil)
+  const [marksOpen, setMarksOpen] = useState<null | 'this' | 'all'>(null); // fenêtre « Importants et épinglés »
+  const [jumpAfter, setJumpAfter] = useState<{ thread: string; id: string } | null>(null); // message à rejoindre une fois la bonne discussion ouverte
   const [fwdMsg, setFwdMsg] = useState<ChatMessage | null>(null); // message en cours de transfert
   const [nav, setNav] = useState<{ ids: string[]; i: number } | null>(null); // « précédent / suivant » parmi les résultats de la recherche (comme Telegram)
   const [search, setSearch] = useState<{ day: string | null } | null>(null); // recherche de messages (loupe, ou clic sur une date du fil)
@@ -568,6 +572,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     [80, 250, 600].forEach(ms => setTimeout(go, ms));
     setTimeout(() => { window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); }, 700);
   };
+  useEffect(() => { // « Importants et épinglés » → « Toutes » : on ouvre d'abord la bonne discussion, puis on amène exactement au message
+    if (jumpAfter && current.id === jumpAfter.thread) { const id = jumpAfter.id; setJumpAfter(null); setTimeout(() => jumpTo(id), 150); }
+  }, [jumpAfter, current.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const marksHere = useMemo(() => markedCount(messages, importantIds, { hidden, inScope: (m: ChatMessage) => inThread(m, current) }), [messages, importantIds, hidden, current.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const gallery = visible.filter(m => m.attachment_url && m.attachment_kind === 'image' && !m.deleted_at);
   const showNames = current.kind !== 'user';
   const openProfile = (id: string) => {
@@ -687,6 +695,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-80 shrink-0 border-r ${P.side}`}>
         <div className={`px-3 py-2.5 border-b ${P.div} flex items-center gap-2`}>
           <span className={`flex-1 text-lg font-bold ${P.title}`}>Messagerie</span>
+          <button type="button" data-chat-marks-open-all onClick={() => setMarksOpen('all')} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Importants et épinglés" aria-label="Importants et épinglés"><Flag className="w-5 h-5" /></button>
           <button type="button" onClick={() => setNewChat(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-600 text-white cursor-pointer" title="Nouvelle discussion ou nouveau groupe">
             <Plus className="w-5 h-5" />
           </button>
@@ -751,6 +760,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   : (() => { const lv = current.kind === 'user' ? liveOf(current.user) : null; return lv ? <LiveLine info={lv} lang={chatLang} className="text-blue-100" /> : current.subtitle; })()}
               </span>
             </span>
+          </button>
+          <button type="button" data-chat-marks-open onClick={() => setMarksOpen('this')} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Importants et épinglés" aria-label="Importants et épinglés">
+            <Flag className="w-5 h-5" />
+            {marksHere > 0 && <span data-chat-marks-count className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-[11px] font-bold text-white flex items-center justify-center">{marksHere > 99 ? '99+' : marksHere}</span>}
           </button>
           <button type="button" data-chat-search-open onClick={() => setSearch({ day: null })} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Rechercher dans la conversation" aria-label="Rechercher dans la conversation">
             <Search className="w-5 h-5" />
@@ -828,7 +841,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={(() => {
-                        if (tinted && mk) return { WebkitTouchCallout: 'none', backgroundColor: MARK_STYLE[mk].bg, borderColor: MARK_STYLE[mk].border } as React.CSSProperties;
+                        if (tinted && mk) return { WebkitTouchCallout: 'none', backgroundColor: MARK_STYLE[mk].bg, backgroundImage: markBackground(mk), borderColor: MARK_STYLE[mk].border, boxShadow: MARK_SHADOW } as React.CSSProperties;
                         if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
                         const sd = users.find(u => u.id === msg.sender_id);
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
@@ -901,15 +914,16 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                         <span>{time}</span>
                         {isMe && <PendingMark col="messages" id={msg.id} />}
                         {isMe && (current.kind === 'user' || current.kind === 'group') && (
+                          // « Vu » : seulement l'icône (les mots restent pour les lecteurs d'écran : aria-label et infobulle). ✓ gris = envoyé ; ✓✓ gris = vu par certains (groupe) ; ✓✓ bleu = vu (par tous)
                           current.kind === 'user' ? (
                             isRead(msg)
-                              ? <span className="flex items-center gap-0.5 text-sky-500 font-semibold"><CheckCheck className="w-3.5 h-3.5" />Vu</span>
-                              : <span className="flex items-center gap-0.5"><Check className="w-3.5 h-3.5" />Pas encore vu</span>
+                              ? <span data-seen="all" role="img" aria-label="Vu" title="Vu" className="flex items-center text-sky-500"><CheckCheck className="w-3.5 h-3.5" /></span>
+                              : <span data-seen="none" role="img" aria-label="Pas encore vu" title="Pas encore vu" className="flex items-center"><Check className="w-3.5 h-3.5" /></span>
                           ) : readers.length === 0 ? (
-                            <button type="button" onClick={() => setSeenFor(msg)} className="flex items-center gap-0.5 cursor-pointer"><Check className="w-3.5 h-3.5" />Pas encore vu</button>
+                            <button type="button" data-seen="none" aria-label="Pas encore vu" title="Pas encore vu" onClick={() => setSeenFor(msg)} className="flex items-center p-1 -m-1 cursor-pointer"><Check className="w-3.5 h-3.5" /></button>
                           ) : (
-                            <button type="button" onClick={() => setSeenFor(msg)} className={`flex items-center gap-0.5 font-semibold cursor-pointer ${readers.length === totalOthers ? 'text-sky-500' : ''}`}>
-                              <CheckCheck className="w-3.5 h-3.5" />{readers.length === totalOthers ? 'Vu par tous' : `Vu par ${readers.length}/${totalOthers}`}
+                            <button type="button" data-seen={readers.length === totalOthers ? 'all' : 'some'} aria-label={readers.length === totalOthers ? 'Vu par tous' : `Vu par ${readers.length} sur ${totalOthers}`} title={readers.length === totalOthers ? 'Vu par tous' : `Vu par ${readers.length} sur ${totalOthers}`} onClick={() => setSeenFor(msg)} className={`flex items-center p-1 -m-1 cursor-pointer ${readers.length === totalOthers ? 'text-sky-500' : ''}`}>
+                              <CheckCheck className="w-3.5 h-3.5" />
                             </button>
                           )
                         )}
@@ -1051,6 +1065,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
+      {marksOpen && <ChatMarksList msgs={messages} important={importantIds} hidden={hidden} light={L} startScope={marksOpen} inThisThread={m => inThread(m, current)} threadOf={m => { const t = threads.find(x => x.kind !== 'pair' && inThread(m, x)); return t ? { id: t.id, title: t.title } : null; }} onPick={(id, thread) => { if (thread && thread !== current.id) { setThreadId(thread); setShowList(false); setReplyTo(null); cancelEdit(); setJumpAfter({ thread, id }); } else { jumpTo(id); } }} onClose={() => setMarksOpen(null)} />}
       {fwdMsg && <ChatForward threads={threads.filter(t => !t.readOnly && t.kind !== 'pair').map(t => ({ id: t.id, title: t.title, subtitle: t.subtitle }))} light={L} onPick={forwardTo} onClose={() => setFwdMsg(null)} />}
       {search && <ChatSearch msgs={visible} initialDay={search.day} light={L} onPick={(id, all) => { jumpTo(id); const i = all.indexOf(id); setNav(all.length > 1 && i >= 0 ? { ids: all, i } : null); }} onClose={() => setSearch(null)} />}
       {/* Menu des options de la conversation */}

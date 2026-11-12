@@ -283,6 +283,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Une seule réaction par personne et par message.
   - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
   - Dans l'assistant, le bouton « / » ouvre 6 boutons sous le champ : 5 envoient un message prêt, « Rédiger un message » ouvre l'éditeur.
+  - Le drapeau en haut ouvre « Importants et épinglés » (cette discussion ou toutes) : toucher un message y mène. « Vu » est une icône : ✓ envoyé, ✓✓ gris vu par certains, ✓✓ bleu vu.
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
@@ -630,6 +631,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
 | `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
 | `chatMarks.ts` | Repères sur les messages du chat (2026-11-12) : Important (privé, gardé sur l'appareil), Épinglé (existant), Transféré (nouveau). |
+| `chatMarksList.ts` | Liste « Importants et épinglés » du chat (étape 1 de la demande de BTK, 2026-11-12) : règles pures, sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `chatScrollGuard.ts` | Messagerie : un glissement du doigt au bout d'une liste (tout en haut ou tout en bas) ne doit JAMAIS faire bouger la page, |
 | `chatSearch.ts` | Recherche dans une conversation (2026-11-12) : par texte, par jour, ou les deux. Règle pure, utilisée par components/ChatSearch.tsx. |
@@ -923,6 +925,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
 | `ChatForward.tsx` | Transférer un message : choisir la conversation de destination (le message y est envoyé, avec « Transféré de … »). |
+| `ChatMarksList.tsx` | Fenêtre « Importants et épinglés » du chat : deux onglets (Importants, Épinglés), « Cette discussion » ou « Toutes », toucher un message y mène directement. Règles : utils/chatMarksList.ts. |
 | `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : carte SANS bulle autour, avec contour et ombre (BTK 2026-11-09), de taille fixe : elle ne bouge pas quand on vote. + fenêtre de création. |
 | `ChatSearch.tsx` | Recherche de messages dans la conversation ouverte : par texte, par jour (date cliquable dans le fil ou sélecteur de date). Règle : utils/chatSearch.ts. |
 | `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
@@ -1124,6 +1127,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
 | `npm run check:sheet-reminder` | Rappel « feuille du jour pas saisie » (M27.4). Lancer : npm run check:sheet-reminder |
 | `npm run check:chat-search` | Recherche de messages dans une conversation (date cliquable + loupe). Lancer : npm run check:chat-search |
+| `npm run check:chat-marks-list` | Chat : liste « Importants et épinglés », couleurs de bulle en dégradé, « Vu » en icônes seules. |
 | `npm run check:chat-marks` | Important, Épinglé, Transféré : repères et couleurs de bulle du chat. Lancer : npm run check:chat-marks |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
