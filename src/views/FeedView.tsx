@@ -1,6 +1,7 @@
 // Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications.
 // Utilisé par : App.tsx.
 // Pour modifier : les publications viennent de db.getNews() ; qui peut voir, modifier ou publier est décidé par utils/newsAccess.ts ; le responsable publie en direct, les autres peuvent passer par une validation.
+import { useDraft } from '../utils/useDraft';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { saveFeedScroll, feedScrollFor, pinnedFeedScroll, FEED_TOP_EVENT } from '../utils/feedScroll';
 import { flushSync } from 'react-dom';
@@ -223,6 +224,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const [editing, setEditing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [text, setText] = useState('');
+  useDraft(me.id, `comment:${post.id}`, text, setText); // commentaire en cours, gardé par publication
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [lb, setLb] = useState<{ url: string; gallery: string[]; names: string[] } | null>(null);
@@ -516,6 +518,8 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
   const [aud, setAud] = useState<Aud>({ roles: [], users: [] }); // rien de choisi = visible par tous
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
+  const draftUid = db.getCurrentUser()?.id;
+  useDraft(draftUid, 'news-title', title, setTitle); useDraft(draftUid, 'news-text', text, setText); // publication en cours
   const [pinned, setPinned] = useState(false);
   const [items, setItems] = useState<DraftAttachment[]>([]);
   const [err, setErr] = useState('');

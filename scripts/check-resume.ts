@@ -25,6 +25,6 @@ let threw = false; try { noteResume('u1', { view: 'a' }); readResume('u1'); clea
 const app = readFileSync('src/App.tsx', 'utf8'), chat = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/useState<string>\(\(\) => \{ const r = resumeRef\.current;/.test(app) && /isKnownView\(r\.view\)/.test(app), 'App : la page de départ vient de la reprise (pages connues seulement)');
 ok(/addEventListener\('scroll', onScroll/.test(app) && /visibilitychange', onHide/.test(app) && /pagehide', save/.test(app), 'App : position notée en défilant, en quittant l\'application et en fermant');
-ok(/clearResume\(\);\s*db\.logout\(\)/.test(app), 'App : déconnexion efface la reprise');
+ok(/clearResume\(\);[^\n]*\s*db\.logout\(\)/.test(app), 'App : déconnexion efface la reprise');
 ok(/takeBootChat\(\)/.test(chat) && /window\.innerWidth < 768 && showList \? '' : threadId/.test(chat), 'Messagerie : même discussion (ou la liste) après rechargement');
 console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

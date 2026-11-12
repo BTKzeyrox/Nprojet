@@ -647,6 +647,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `deadlines.ts` | Date limite et priorité d'une mission (module 6, M6.1). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:deadlines`. |
 | `deepLink.ts` | Lien exact d'une notification externe (push) : le clic ouvre la bonne page, au bon élément, avec le même clignotement de 1,5 s que la cloche. |
 | `direction.ts` | Page « Direction » (module 8, M8.1) : UNE page de synthèse pour le responsable. Règle pure, sans écran ni serveur. |
+| `drafts.ts` | Brouillons de texte (BTK, 2026-11-12) : ce qu'on tape sans l'avoir envoyé est gardé sur l'appareil et remis au retour (changement d'application, rechargement, réseau coupé). |
 | `enTranslate.ts` | Traduit l'interface française en anglais en remplaçant les textes de la page (dictionnaire enDict.json) ; agit sur la page du navigateur. |
 | `entryOnly.ts` | Employé « suivi par saisie seulement » (module 26, M26.7) : règles pures, sans écran, sans serveur. |
 | `errorReport.ts` | Rapports d'erreur : construction, mémoire locale (20 derniers), envoi limité au journal, texte à copier. |
@@ -782,6 +783,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `treasuryCharts.ts` | Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires. |
 | `updateWatcher.ts` | Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau. |
 | `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
+| `useDraft.ts` | Branche un champ de texte sur les brouillons (utils/drafts.ts) : remet le texte gardé à l'ouverture (ou au changement de champ), le garde 1 s après la dernière frappe et en quittant l'application. |
 | `useKeepBottom.ts` | Garde le dernier message visible quand le clavier s'ouvre (BTK 2026-11-05 : « quand je tape, le clavier s'ouvre et le message remonte, il est coupé »). |
 | `useLockBodyScroll.ts` | Bloque le défilement de la page derrière une fenêtre ouverte ; agit sur le style de la page dans le navigateur, aucun serveur. |
 | `useNow.ts` | Horloge (à l'heure du SERVEUR, voir serverClock.ts) : fait redessiner l'écran toutes les `ms` pour que les statuts « en direct » changent d'eux-mêmes (En ligne → En pause → Hors ligne) |
@@ -1113,6 +1115,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:refresh-summary` | Tirer pour actualiser : résumé visible. Lancer : npm run check:refresh-summary |
 | `npm run check:haptic` | Retour tactile : règles + câblage. Lancer : npm run check:haptic |
 | `npm run check:resume` | Reprise après rechargement : règles + câblage. Lancer : npm run check:resume |
+| `npm run check:drafts` | Brouillons de texte : règles + câblage. Lancer : npm run check:drafts |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |

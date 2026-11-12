@@ -53,6 +53,7 @@
     "check:refresh-summary": "npx --yes tsx scripts/check-refresh-summary.ts",
     "check:haptic": "npx --yes tsx scripts/check-haptic.ts",
     "check:resume": "npx --yes tsx scripts/check-resume.ts",
+    "check:drafts": "npx --yes tsx scripts/check-drafts.ts",
     "check:sheet-day": "esbuild scripts/check-sheet-day.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-day.mjs && node node_modules/.cache/check-sheet-day.mjs",
     "check:stats-work-lines": "esbuild scripts/check-stats-work-lines.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-stats-work-lines.mjs && node node_modules/.cache/check-stats-work-lines.mjs",
     "check:late-absence": "esbuild scripts/check-late-absence.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-late-absence.mjs && node node_modules/.cache/check-late-absence.mjs",

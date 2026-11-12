@@ -1,6 +1,7 @@
 // Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
+import { useDraft } from '../utils/useDraft';
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { ChatSearch } from './ChatSearch';
 import { ChatForward } from './ChatForward';
@@ -163,6 +164,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   useAutoGrow(composerRef, `${threadId}|${text}`, 40);
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  useDraft(currentUser.id, `chat:${threadId}`, text, setText, !!editingId); // brouillon par discussion (pas pendant la modification d'un message envoyé)
   const [viewer, setViewer] = useState<{ url: string; msg: ChatMessage } | null>(null);
   const [fileViewer, setFileViewer] = useState<ChatMessage | null>(null);
   const [pinIdx, setPinIdx] = useState(0);

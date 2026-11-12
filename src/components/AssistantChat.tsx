@@ -1,5 +1,6 @@
 // Assistant « Admin IA Pro » (niveau A) DANS la messagerie : conversation épinglée, ADMIN SEULEMENT.
 // Les règles répondent (src/utils/assistant.ts) ; aucune donnée ne part vers un serveur ; l'historique reste sur cet appareil.
+import { useDraft } from '../utils/useDraft';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Bot, ChevronRight, Send } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -45,6 +46,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
   const L = theme === 'light';
   const [msgs, setMsgs] = useState<Msg[]>(() => loadAssistantHistory(userId));
   const [text, setText] = useState('');
+  useDraft(userId, 'assistant', text, setText);
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);

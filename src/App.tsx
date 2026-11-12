@@ -1,6 +1,7 @@
 // Coque de l'application : choisit l'écran à afficher selon le rôle (responsable, comptable, chef d'équipe, employé) et la page active.
 // Utilisé par : main.tsx.
 // Pour modifier : les pages sont chargées à la demande (lazy) en haut du fichier ; ajouter une page = un lazy() puis une branche dans le bloc de pages de son rôle.
+import { clearAllDrafts } from './utils/drafts';
 import { readResume, noteResume, clearResume, setBootChat } from './utils/resumeState';
 import { saveFeedScroll } from './utils/feedScroll';
 import { isKnownView } from './utils/health/menu';
@@ -365,7 +366,7 @@ export default function App() {
   const handleLogout = async () => {
     setViewAs('admin');
     try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
-    clearResume();
+    clearResume(); clearAllDrafts();
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
