@@ -169,13 +169,14 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
   const leaveLabel = (t: string | null) => (t ? (LEAVE_TYPE_LABELS as Record<string, [string, string]>)[t]?.[lang === 'en' ? 1 : 0] || t : '');
   const due = db.getContracts().filter(c => c.due_date === day && !(c.target_score > c.initial_score && (c.current_score ?? c.initial_score) >= c.target_score)).length; // missions à rendre ce jour (pas dans la case : trop de contenu)
   const nbPresent = rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status)).length;
+  const nbPresenceOnly = rows.filter(r => ['objective_reached', 'late', 'in_progress', 'test'].includes(r.status) && r.workLines > 0 && r.missions === 0).length; // présents grâce à la feuille du jour seulement (pas de mission)
   return (
     <div className="space-y-2" data-testid="gcal-dayview">
       <div className={`${card} p-3 flex items-center justify-between gap-2`}>
         <button type="button" onClick={() => setDay(addDay(day, -1))} className={st.roundBtn} aria-label="Jour précédent"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center min-w-0">
           <div className={`font-bold ${txt}`}>{day.split('-').reverse().join('/')}{day === today ? ' · aujourd\'hui' : ''}</div>
-          <div className={`text-[11px] ${sub}`}>{GDOW[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7]} · {nbPresent} présents · {rows.filter(r => r.status === 'absent').length} absents · {rows.filter(r => r.status === 'leave').length} en congé</div>
+          <div className={`text-[11px] ${sub}`}>{GDOW[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7]} · {nbPresent} présents{nbPresenceOnly > 0 ? ` (dont ${nbPresenceOnly} présence${nbPresenceOnly > 1 ? 's' : ''} seule${nbPresenceOnly > 1 ? 's' : ''})` : ''} · {rows.filter(r => r.status === 'absent').length} absents · {rows.filter(r => r.status === 'leave').length} en congé</div>
         </div>
         <button type="button" onClick={() => setDay(addDay(day, 1))} className={st.roundBtn} aria-label="Jour suivant"><ChevronRight className="w-5 h-5" /></button>
       </div>
@@ -213,12 +214,13 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
               {r.firstStart && <span>Dernière fin : <strong className={txt}>{r.open ? 'en cours' : r.lastEnd || '—'}</strong></span>}
               {a && <span data-testid="arrival-line"><strong className={txt}>{arrivalLine(dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter), lang)}</strong> · connecté {formatDuration(a.online_sec)}</span>}
               {r.missions > 0 && <span>{r.missions} mission{r.missions > 1 ? 's' : ''} · {r.validated} validée{r.validated > 1 ? 's' : ''}{r.refused ? ` · ${r.refused} refusée${r.refused > 1 ? 's' : ''}` : ''}</span>}
+              {r.workLines > 0 && <span data-testid={`day-worklines-count-${r.id}`}>{r.workLines} ligne{r.workLines > 1 ? 's' : ''} de la feuille du jour</span>}
               {r.pay > 0 && <span className="text-emerald-600 font-bold">{ar(r.pay)}</span>}
               {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
             </div>
             {(() => {
-              const d = dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter);
-              if (!d.firstSeen && d.missions.length === 0) return null;
+              const d = dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter, id => db.isUnsent('posts', id), db.getQueuedSheets());
+              if (!d.firstSeen && d.missions.length === 0 && d.workLines.length === 0) return null;
               const box = `rounded-xl p-2.5 text-xs space-y-1 ${st.L ? 'bg-slate-50' : 'bg-white/5'}`;
               const h = `text-[11px] font-bold uppercase ${sub}`;
               const stateTxt = { validated: 'validée', refused: 'refusée', running: 'en cours', waiting: 'en attente de validation', released: 'libérée' } as const;
@@ -236,6 +238,14 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                       </>
                     ) : <div className={sub}>Aucune connexion enregistrée ce jour-là.</div>}
                   </div>
+                  {d.workLines.length > 0 && (
+                    <div className={box} data-testid={`day-worklines-${r.id}`}>
+                      <div className={h}>Travail saisi (feuille du jour)</div>
+                      {d.workLines.map(w => (
+                        <div key={w.id} className={sub} data-testid={`day-workline-${w.id}`}><strong className={txt}>{w.type}</strong> · {w.text || 'Ligne vide'}{w.by ? ` · ${w.by}` : ''} · {w.unsent ? <span className="text-amber-500 font-semibold">pas encore envoyée (sur le téléphone)</span> : w.state === 'validated' ? 'validée' : w.state === 'refused' ? 'refusée' : <span className="text-sky-500">en attente de validation</span>}</div>
+                      ))}
+                    </div>
+                  )}
                   <div className={box}>
                     <div className={h}>Missions du jour</div>
                     {d.missions.length === 0 ? <div className={sub}>Aucune mission.</div> : d.missions.map(m => (

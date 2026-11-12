@@ -2,6 +2,8 @@
 // Utilisé par : attendanceView.ts et CalendarView.tsx. Contrôlé par : npm run check:attendance-view, check:day-detail et check:post-stamps.
 // Pour modifier : les heures sont en heure de Madagascar (UTC+3, hmMada) ; SESSION_GAP_MS (150 s) est la même valeur que le serveur, à garder identique.
 import type { AttendanceRow, PostSession } from '../types';
+import { isWorkLine } from './postPay';
+import { workLineBy, workLineDetail } from './workLineText';
 
 // Détail complet d'un employé pour un jour : connexions (heures de connexion et de déconnexion) et missions. Pur : sans écran ni serveur.
 const SESSION_GAP_MS = 150_000; // même valeur que le serveur : au-delà, la connexion est considérée finie
@@ -20,11 +22,13 @@ export interface MissionLine {
   /** Heures des étapes (HH:MM, heure de Madagascar) : demande de début envoyée, début validé, fin envoyée, fin validée. null = pas enregistrée (anciennes missions : la validation n'a pas d'heure). */
   startSent: string | null; startValidated: string | null; endSent: string | null; endValidated: string | null;
 }
+/** Une ligne de la feuille du jour (présence, heures, quantité) : jamais montrée comme une mission. `unsent` = encore sur le téléphone (pas partie). */
+export interface WorkLineRow { id: string; type: string; text: string; by: string; state: 'validated' | 'waiting' | 'refused'; unsent: boolean }
 export interface DayDetail {
   firstSeen: string | null; lastSeen: string | null; onlineSec: number;
   /** Arrivée = première connexion du jour. Départ = fin de la dernière connexion (déconnexion ou dernier signe de vie) ; null si encore en ligne. */
   arrival: string | null; departure: string | null; departureKind: 'out' | 'lost' | 'live' | 'none';
-  connections: ConnectionLine[]; hasConnectionLog: boolean; missions: MissionLine[];
+  connections: ConnectionLine[]; hasConnectionLog: boolean; missions: MissionLine[]; workLines: WorkLineRow[];
   totals: { missions: number; validated: number; refused: number; running: number; pay: number; gain: number };
 }
 
@@ -49,7 +53,7 @@ export function connectionLines(att: AttendanceRow | undefined, nowMs: number, i
 
 export function missionLines(posts: PostSession[], empId: string, date: string, clientFilter = 'all'): MissionLine[] {
   return posts
-    .filter(p => p.employee_id === empId && p.date === date && (clientFilter === 'all' || p.client_name === clientFilter))
+    .filter(p => !isWorkLine(p) && p.employee_id === empId && p.date === date && (clientFilter === 'all' || p.client_name === clientFilter))
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
     .map(p => {
       let minutes: number | null = null;
@@ -68,7 +72,29 @@ export function missionLines(posts: PostSession[], empId: string, date: string, 
     });
 }
 
-export function dayDetail(posts: PostSession[], att: AttendanceRow | undefined, empId: string, date: string, nowMs: number, today: string, clientFilter = 'all'): DayDetail {
+/** Les lignes de la feuille du jour d'une personne pour un jour : même texte que les Validations et l'Historique (workLineText). */
+export function workLineRows(posts: PostSession[], empId: string, date: string, isUnsent: (id: string) => boolean = () => false): WorkLineRow[] {
+  return posts
+    .filter(p => isWorkLine(p) && p.employee_id === empId && p.date === date)
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+    .map(p => ({ id: p.id, type: String(p.client_name || (p as any).work_type || ''), text: workLineDetail(p), by: workLineBy(p), state: p.status === 'completed' ? 'validated' as const : p.status === 'rejected' ? 'refused' as const : 'waiting' as const, unsent: isUnsent(p.id) }));
+}
+
+/** Lignes d'une feuille encore GARDÉE sur le téléphone (pas partie) pour une personne et un jour : elles n'existent pas encore côté serveur, mais la personne les a bien saisies. */
+export function queuedLineRows(queue: { id: string; state: string; payload?: any }[], empId: string, date: string): WorkLineRow[] {
+  const out: WorkLineRow[] = [];
+  for (const o of Array.isArray(queue) ? queue : []) {
+    const pl = o && o.payload && typeof o.payload === 'object' ? o.payload : null;
+    if (!pl || pl.date !== date || !Array.isArray(pl.lines)) continue;
+    pl.lines.forEach((l: any, i: number) => {
+      if (!l || l.employee_id !== empId) return;
+      out.push({ id: `queued-${o.id}-${i}`, type: String(pl.type_label || l.work_type || ''), text: workLineDetail(l), by: '', state: 'waiting', unsent: true });
+    });
+  }
+  return out;
+}
+
+export function dayDetail(posts: PostSession[], att: AttendanceRow | undefined, empId: string, date: string, nowMs: number, today: string, clientFilter = 'all', isUnsent?: (id: string) => boolean, queued: { id: string; state: string; payload?: any }[] = []): DayDetail {
   const missions = missionLines(posts, empId, date, clientFilter);
   const conns = connectionLines(att, nowMs, date === today);
   const lastConn = conns[conns.length - 1];
@@ -77,7 +103,7 @@ export function dayDetail(posts: PostSession[], att: AttendanceRow | undefined, 
     departure: lastConn ? lastConn.to : att ? hmMada(att.last_seen) : null,
     departureKind: lastConn ? lastConn.state : att ? 'lost' : 'none',
     firstSeen: att ? hmMada(att.first_seen) : null, lastSeen: att ? hmMada(att.last_seen) : null, onlineSec: att?.online_sec || 0,
-    connections: conns, hasConnectionLog: !!att?.sessions?.length, missions,
+    connections: conns, hasConnectionLog: !!att?.sessions?.length, missions, workLines: [...workLineRows(posts, empId, date, isUnsent), ...queuedLineRows(queued, empId, date)],
     totals: {
       missions: missions.length, validated: missions.filter(m => m.status === 'validated').length, refused: missions.filter(m => m.status === 'refused').length,
       running: missions.filter(m => m.status === 'running' || m.status === 'waiting').length, pay: missions.reduce((a, m) => a + m.pay, 0),

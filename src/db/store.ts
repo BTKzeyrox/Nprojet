@@ -2973,6 +2973,8 @@ export class AppStore {
     const c = sheetCounts(this.sheetQ);
     return { ...c, items: this.sheetQ.map(o => { const l = sheetLabel(o); return { id: o.id, state: o.state, date: l.date, type: l.type, lines: l.lines, reason: o.state === 'review' ? sheetReviewReason(o, lang) : '', created_at: o.created_at }; }) };
   }
+  /** Feuilles gardées sur l'appareil (pas encore parties) : pour montrer leurs lignes « pas encore envoyées » dans le calendrier. */
+  public getQueuedSheets(): { id: string; state: string; payload?: any }[] { return this.sheetLoad() ? this.sheetQ.map(o => ({ id: o.id, state: o.state, payload: o.payload })) : []; }
   /** Un seul appel : vrai serveur (avec le numéro d'action, pour que le serveur ne fasse jamais deux fois la même feuille) ou faux serveur de la démo. */
   private async sheetCall(sheet: WorkSheet, id: string, nowIso: string): Promise<{ status: number; data: any }> {
     const me = this.currentUser;

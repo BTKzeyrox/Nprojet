@@ -6,6 +6,7 @@ import { dayStatus } from './dayStatus';
 import { isWorkDay } from './workDays';
 import { toMin } from './attendance';
 import { effShift } from './shiftMode';
+import { isWorkLine } from './postPay';
 
 export type LeaveFilter = 'all' | 'approved' | 'pending';
 export interface CalCtx { posts: PostSession[]; leaves: Leave[]; today: string; cfg: AppSettings; clientFilter?: string }
@@ -122,6 +123,8 @@ export interface DayRow {
   id: string; name: string; shift: 'day' | 'night'; status: DayStatus; leave: LeaveType | null; pendingLeave: boolean;
   firstStart: string | null; lastEnd: string | null; open: boolean; lateMin: number;
   missions: number; validated: number; refused: number; pay: number;
+  /** Lignes de la feuille du jour (présence, heures, quantité) : comptées à part, jamais dans `missions`. */
+  workLines: number;
 }
 const ORDER: DayStatus[] = ['in_progress', 'late', 'objective_reached', 'test', 'absent', 'leave', 'no_post'];
 
@@ -129,7 +132,7 @@ const ORDER: DayStatus[] = ['in_progress', 'late', 'objective_reached', 'test', 
 export function dayView(dateStr: string, emps: User[], ctx: CalCtx, first: Record<string, string>): DayRow[] {
   const rows: DayRow[] = emps.map(e => {
     const all = ctx.posts.filter(p => p.employee_id === e.id && p.date === dateStr);
-    const worked = all.filter(p => p.status !== 'rejected' && p.status !== 'force_released').sort((a, b) => a.start_time.localeCompare(b.start_time));
+    const worked = all.filter(p => !isWorkLine(p) && p.status !== 'rejected' && p.status !== 'force_released').sort((a, b) => a.start_time.localeCompare(b.start_time));
     const leave = leaveKind(ctx.leaves, e.id, dateStr, 'approved', (ctx.cfg as any).work_days);
     const status = dayStatus(all, dateStr, first[e.id] || null, ctx.today, ctx.cfg, leave !== null);
     const firstStart = worked.length ? worked[0].start_time.slice(0, 5) : null;
@@ -140,8 +143,8 @@ export function dayView(dateStr: string, emps: User[], ctx: CalCtx, first: Recor
       id: e.id, name: e.name, shift: e.shift === 'night' ? 'night' : 'day', status, leave, pendingLeave: leaveKind(ctx.leaves, e.id, dateStr, 'pending', (ctx.cfg as any).work_days) !== null,
       firstStart, lastEnd: ends.length ? ends[ends.length - 1] : null, open: all.some(p => OPEN.includes(p.status)),
       lateMin: status === 'late' && diff > 0 && diff < 12 * 60 ? diff : 0,
-      missions: all.length, validated: all.filter(p => p.status === 'completed').length, refused: all.filter(p => p.status === 'rejected').length,
-      pay: all.filter(p => p.status === 'completed').reduce((a, p) => a + (p.calculated_ar || 0), 0),
+      missions: all.filter(p => !isWorkLine(p)).length, validated: all.filter(p => !isWorkLine(p) && p.status === 'completed').length, refused: all.filter(p => !isWorkLine(p) && p.status === 'rejected').length,
+      pay: all.filter(p => p.status === 'completed').reduce((a, p) => a + (p.calculated_ar || 0), 0), workLines: all.filter(isWorkLine).length,
     };
   });
   return rows.sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
