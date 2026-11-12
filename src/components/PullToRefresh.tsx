@@ -1,6 +1,7 @@
 // Tirer la page vers le bas en haut de page : une roue tourne puis les données sont actualisées.
 // Utilisé par : App.tsx.
 // Pour modifier : prop disabled ; seuil de tirage THRESHOLD et limite MAX en tête de fichier ; l'actualisation appelle db.refreshNow(). Rien ne se déclenche si la page est défilée ou bloquée.
+import { tap } from '../utils/haptic';
 import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { db } from '../db/store';
@@ -38,7 +39,7 @@ export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = fal
 
   useEffect(() => {
     if (disabled) return;
-    const set = (v: number) => { pullRef.current = v; setPull(v); };
+    const set = (v: number) => { if (v >= THRESHOLD && pullRef.current < THRESHOLD) tap('light'); pullRef.current = v; setPull(v); }; // petit tic quand le seuil est atteint
 
     const onStart = (e: TouchEvent) => {
       const blocked = busy.current || window.scrollY > 0 || document.body.style.position === 'fixed' || scrolledInside(e.target);
@@ -64,6 +65,7 @@ export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = fal
       try { [ok, fresh] = (await Promise.all([db.refreshNow(), checkUpdateNow(), new Promise(r => setTimeout(r, 700))])).slice(0, 2) as [boolean, boolean]; } catch { ok = false; }
       const r = summarizeRefresh(before, ids(), ok, fresh, en);
       setNote({ text: r.text, bad: r.kind === 'offline' });
+      tap(r.kind === 'offline' ? 'warn' : r.kind === 'uptodate' ? 'light' : 'success');
       if (noteTimer.current) clearTimeout(noteTimer.current);
       noteTimer.current = setTimeout(() => setNote(null), 3500);
       busy.current = false;

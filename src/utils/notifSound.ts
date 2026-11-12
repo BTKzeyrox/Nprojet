@@ -2,6 +2,7 @@
 // Utilisé par : TopBar.tsx et SettingsView.tsx.
 // Pour modifier : le réglage est dans localStorage (df_notif_sound), propre à chaque téléphone ; avant le premier toucher le navigateur bloque le son et playBeep renvoie false.
 import { useEffect, useState } from 'react';
+import { tap } from './haptic';
 
 // Préférence du son, gardée sur CET appareil (pas sur le serveur) : chaque téléphone règle le sien
 export interface SoundPrefs { on: boolean; volume: number } // volume 0.1 à 1
@@ -99,6 +100,7 @@ export const UI_SOUNDS: Record<UiSound, { notes: [number, number][]; gap: number
   published: { notes: [[784, 0], [988, 0], [1318.5, 0]], gap: 0.09, dur: 0.22, amp: 0.18 }, // 3 notes montantes, un peu plus longues
 };
 export const playUiSound = (kind: UiSound): boolean => {
+  tap(kind === 'published' ? 'success' : 'light'); // retour tactile, indépendant du réglage du son
   if (!getSoundPrefs().on) return false;
   const c = getCtx();
   if (!c || c.state !== 'running') return false;

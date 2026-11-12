@@ -38,6 +38,7 @@ import { LiveDot, LiveLine } from './LiveStatus';
 import { useViewportWidth } from '../utils/viewportWidth';
 import { onlineBadge, isTracked } from '../utils/attendanceView';
 import { guardScroller } from '../utils/chatScrollGuard';
+import { tap } from '../utils/haptic';
 import { ChatPoll, PollComposer, PollKindIcon } from './ChatPoll';
 import { MessageToItem } from './MessageToItem';
 import { ScheduleDialog, TemplatesDialog } from './MessageTools';
@@ -460,7 +461,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   };
   const startPress = (m: ChatMessage, el: HTMLElement) => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => openMenu(m, el), 450);
+    pressTimer.current = setTimeout(() => { tap('light'); openMenu(m, el); }, 450);
   };
   const stopPress = () => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -469,7 +470,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const startRowPress = (id: string) => {
     if (rowPress.current) clearTimeout(rowPress.current);
     rowLong.current = false;
-    rowPress.current = setTimeout(() => { rowLong.current = true; window.getSelection()?.removeAllRanges(); setAboutOf({ id, menuOnly: true }); }, 450);
+    rowPress.current = setTimeout(() => { rowLong.current = true; tap('light'); window.getSelection()?.removeAllRanges(); setAboutOf({ id, menuOnly: true }); }, 450);
   };
   const stopRowPress = () => { if (rowPress.current) clearTimeout(rowPress.current); rowPress.current = null; };
   const startEdit = (m: ChatMessage) => {

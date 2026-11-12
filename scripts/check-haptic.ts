@@ -1,0 +1,30 @@
+// Retour tactile : règles + câblage. Lancer : npm run check:haptic
+import { readFileSync } from 'node:fs';
+import { tap, hapticOn, setHaptic, PATTERNS, HAPTIC_KEY } from '../src/utils/haptic';
+let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
+const store: Record<string, string> = {}; const calls: number[][] = [];
+(globalThis as any).localStorage = { getItem: (k: string) => (k in store ? store[k] : null), setItem: (k: string, v: string) => { store[k] = v; }, removeItem: (k: string) => { delete store[k]; } };
+Object.defineProperty(globalThis, "navigator", { value: { vibrate: (p: number[]) => { calls.push(p); return true; } }, configurable: true, writable: true });
+(globalThis as any).matchMedia = (q: string) => ({ matches: false, media: q });
+tap('light'); tap('success'); tap('warn');
+ok(calls.length === 3 && JSON.stringify(calls[0]) === JSON.stringify(PATTERNS.light) && calls[1].length === 3 && calls[2][0] > calls[0][0], 'Android : léger / double (succès) / un peu plus long (refus)');
+ok(Math.max(...Object.values(PATTERNS).flat()) <= 60, 'jamais plus de 60 ms d\'un coup (un tic, pas une alarme)');
+setHaptic(false); calls.length = 0; tap('light');
+ok(!hapticOn() && store[HAPTIC_KEY] === 'off' && calls.length === 0, 'réglage coupé : aucune vibration');
+setHaptic(true);
+ok(hapticOn() && !(HAPTIC_KEY in store), 'réglage rallumé : par défaut allumé');
+(globalThis as any).matchMedia = (q: string) => ({ matches: /reduce/.test(q), media: q }); calls.length = 0; tap('light');
+ok(!hapticOn() && calls.length === 0, '« réduire les animations » du téléphone : coupé');
+(globalThis as any).matchMedia = undefined; (globalThis as any).localStorage = { getItem() { throw new Error('bloqué'); }, setItem() { throw new Error('bloqué'); }, removeItem() { throw new Error('bloqué'); } };
+let threw = false; try { tap('success'); setHaptic(false); } catch { threw = true; }
+ok(!threw, 'stockage bloqué ou vibration refusée : jamais d\'erreur');
+Object.defineProperty(globalThis, 'navigator', { value: { vibrate() { throw new Error('refusé'); } }, configurable: true, writable: true }); threw = false; try { tap('light'); } catch { threw = true; } ok(!threw, 'vibrate qui lève une erreur : ignorée');
+const f = (p: string) => readFileSync(p, 'utf8');
+ok(/tap\(kind === 'published' \? 'success' : 'light'\)/.test(f('src/utils/notifSound.ts')), 'envoi, « J\'adore », publication : vibrent');
+ok(/tap\('light'\); onVote\(o\.id\)/.test(f('src/components/PollBlock.tsx')) && /tap\('light'\); onVote\(first\.id\)/.test(f('src/components/PollBlock.tsx')), 'vote : vibre');
+ok(/tap\('light'\); openMenu\(m, el\)/.test(f('src/components/ChatView.tsx')) && /rowLong\.current = true; tap\('light'\)/.test(f('src/components/ChatView.tsx')), 'appui long (message, ligne) : vibre');
+ok(/tap\(approve \? 'success' : 'warn'\)/.test(f('src/views/TeamValidations.tsx')), 'validation : succès / refus');
+const pr = f('src/components/PullToRefresh.tsx');
+ok(/v >= THRESHOLD && pullRef\.current < THRESHOLD\) tap\('light'\)/.test(pr) && /tap\(r\.kind === 'offline'/.test(pr), 'tirer pour actualiser : tic au seuil et à la fin');
+ok(/data-haptic-switch/.test(f('src/components/ThemeLangControls.tsx')) && /setHaptic\(v\)/.test(f('src/components/ThemeLangControls.tsx')), 'Réglages : interrupteur « Retour tactile »');
+console.log(bad ? `${bad} ÉCHEC(S)` : 'tout est bon'); process.exit(bad ? 1 : 0);

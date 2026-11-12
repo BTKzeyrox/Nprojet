@@ -1,6 +1,7 @@
 // Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché.
 // Utilisé par : App.tsx.
 // Pour modifier : la liste vient de teamPendingPosts (utils/teamLead.ts) selon l'équipe du chef ; décider passe par db.decidePostNow et une session refusée revient en attente si le serveur échoue.
+import { tap } from '../utils/haptic';
 import { WorksheetShortcut } from '../components/WorksheetShortcut';
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
@@ -31,7 +32,8 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
     setBusy(p.id);
     // La ligne disparaît tout de suite ; le vrai résultat du serveur arrive ensuite (si refus ou réseau tombé : la ligne revient avec un message).
     const now = db.decidePostNow(p.id, approve, approve ? undefined : reason);
-    if (!now.ok) { setBusy(''); setError(now.error || 'Erreur.'); return; }
+    if (!now.ok) { setBusy(''); setError(now.error || 'Erreur.'); tap('warn'); return; }
+    tap(approve ? 'success' : 'warn'); // retour tactile : validé / refusé
     setRefusing(null);
     setReason('');
     const r = await now.settled;

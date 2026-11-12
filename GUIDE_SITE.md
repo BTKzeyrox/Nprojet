@@ -663,6 +663,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `graphsPage.ts` | Page « Graphiques » du responsable : tous les graphiques du site sur une seule page (16 cartes), classés Missions / Argent / Stock, |
 | `guideEngine.ts` | Guide interactif (visite guidée, module 16 revu le 2026-10-29) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:guide-tour`. |
 | `guideScripts.ts` | Les 4 guides interactifs (un par rôle, 2026-10-29). Chaque étape ouvre la vraie page et fait clignoter un élément réel ; certaines proposent une petite simulation. |
+| `haptic.ts` | Retour tactile (très courte vibration) aux gestes clés : tirer pour actualiser, envoyer, voter, appui long, valider (BTK, 2026-11-12). Touche le téléphone, pas le serveur. |
 | `healthDb.ts` | « Santé du site » : relie le moteur d'alertes (src/utils/health/) aux données du site. ADMIN SEULEMENT (liste vide pour un employé : il n'a ni argent ni stock). |
 | `healthNotif.ts` | Notifications de la cloche pour l'admin (M11.7 / M9.4) : règles PURES (aucun écran, aucun serveur). |
 | `hrFile.ts` | Dossier du salarié (module 5, M5.1) : règles pures, sans écran ni serveur. |
@@ -1105,6 +1106,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:no-zoom` | Pas de zoom de la page au pincement ; la visionneuse d'images garde le sien. Lancer : npm run check:no-zoom |
 | `npm run check:poll-icons` | Sondages : de vraies icônes, plus d'emoji. Lancer : npm run check:poll-icons |
 | `npm run check:refresh-summary` | Tirer pour actualiser : résumé visible. Lancer : npm run check:refresh-summary |
+| `npm run check:haptic` | Retour tactile : règles + câblage. Lancer : npm run check:haptic |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |

@@ -1,5 +1,6 @@
 // Sondage d'une publication des Actualités (étape C2) : un vote par personne (changer ou retirer son vote est possible),
 // comptes visibles par tous, « qui a voté quoi » seulement pour le responsable.
+import { tap } from '../utils/haptic';
 import { useState } from 'react';
 import { Check, Lock, Star } from 'lucide-react';
 import type { NewsPost, User } from '../types';
@@ -29,7 +30,7 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
     const nonReaders = isAdmin ? users.filter(u => u.role !== 'admin' && u.status === 'active' && !(poll.votes && u.id in poll.votes)).map(u => u.name) : [];
     return (
       <div data-poll data-ack className={fixed ? 'space-y-2' : `rounded-xl border p-2.5 space-y-2 ${light ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-[#0b1118]'}`}>
-        <button type="button" data-ack-button disabled={!canVote || busy} onClick={() => onVote(first.id)} aria-pressed={my}
+        <button type="button" data-ack-button disabled={!canVote || busy} onClick={() => { tap('light'); onVote(first.id); }} aria-pressed={my}
           className={`w-full min-h-[44px] rounded-lg border px-3 text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ${my ? 'border-emerald-500 bg-emerald-500/20 text-emerald-600' : light ? 'border-slate-300 bg-white' : 'border-slate-600 bg-[#0f1722]'}`}>
           {my && <Check className="w-4 h-4" />}{my ? (fixed ? 'Tu as lu' : 'Tu as lu (toucher pour retirer)') : 'J’ai lu'}
         </button>
@@ -58,7 +59,7 @@ export default function PollBlock({ post, meId, isAdmin, light, busy, users, onV
           const best = kind === 'date' && max > 0 && n === max;
           return (
             <li key={o.id}>
-              <button type="button" data-poll-option={o.id} disabled={!canVote || busy} onClick={() => onVote(o.id)} aria-pressed={mineChoice}
+              <button type="button" data-poll-option={o.id} disabled={!canVote || busy} onClick={() => { tap('light'); onVote(o.id); }} aria-pressed={mineChoice}
                 className={`relative w-full min-h-[44px] overflow-hidden rounded-lg border text-left text-sm cursor-pointer disabled:cursor-default ${mineChoice ? 'border-emerald-500' : light ? 'border-slate-300' : 'border-slate-600'} ${light ? 'bg-white' : 'bg-[#0f1722]'}`}>
                 <span aria-hidden className={`absolute inset-y-0 left-0 ${mineChoice ? 'bg-emerald-500/30' : light ? 'bg-slate-200' : 'bg-slate-700/60'}`} style={{ width: `${pct}%` }} />
                 <span className="relative flex items-center gap-2 px-3 py-2">
