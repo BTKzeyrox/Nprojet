@@ -671,7 +671,8 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
   }, [currentUser.id]);
   // La position du fil est gardée quand on change de page et rétablie au retour (pas de retour tout en haut).
   // Le défilement est celui de la page entière (fenêtre) ou d'un conteneur : les deux sont gérés.
-  useEffect(() => {
+  // useLayoutEffect : la position est rétablie AVANT l'affichage (sinon la première publication apparaît une fraction de seconde, puis le fil saute) ; si le fil n'est pas encore assez haut, il reste caché jusqu'à ce qu'il le soit.
+  useLayoutEffect(() => {
     let sc: HTMLElement | null = rootRef.current?.parentElement || null;
     while (sc) { const o = getComputedStyle(sc).overflowY; if ((o === 'auto' || o === 'scroll') && sc !== document.documentElement && sc !== document.body) break; sc = sc.parentElement; }
     const getPos = () => (sc ? sc.scrollTop : window.scrollY);
@@ -679,10 +680,13 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     const setPos = (y: number, smooth = false) => { if (sc) sc.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); };
     const want = feedScrollFor(currentUser.id);
     let raf = 0, tries = 0;
+    const rootEl = rootRef.current;
+    const show = () => { if (rootEl) rootEl.style.visibility = ''; };
     const restore = () => {
-      if (maxPos() >= want - 1 || tries++ >= 20) { setPos(want); return; }
+      if (maxPos() >= want - 1 || tries++ >= 20) { setPos(want); show(); return; }
       raf = requestAnimationFrame(restore); // le contenu n'est pas encore assez haut : on réessaie quelques images
     };
+    if (want > 0 && maxPos() < want - 1 && rootEl) rootEl.style.visibility = 'hidden'; // pas de première publication en haut pendant la recherche de la position
     restore();
     // D'autres écrans (ex. Messages : page figée sur téléphone) remettent la page à leur position juste après : on réapplique si la personne n'a pas encore touché au défilement
     let touched = false;
@@ -691,7 +695,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     const again = [80, 250, 600].map(ms => setTimeout(() => { if (!touched && want > 0 && Math.abs(getPos() - want) > 2 && maxPos() >= want - 1) setPos(want); }, ms));
     const goTop = () => setPos(0, true);
     window.addEventListener(FEED_TOP_EVENT, goTop);
-    return () => { cancelAnimationFrame(raf); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
+    return () => { cancelAnimationFrame(raf); show(); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
   }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualités ouvertes : les notifications « nouvelle publication » de la cloche sont lues (à l'ouverture, et quand une publication arrive)

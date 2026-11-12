@@ -43,5 +43,8 @@ ok(/setTimeout\(\(\) => \{ if \(!touched/.test(feed), 'fil : position réappliqu
 
 ok(/ae\.blur\(\);\s*closeLater\.current = setTimeout\(\(\) => \{ closeLater\.current = null; setOpen\(false\); setMSearch\(false\); \}, 220\)/.test(bar), 'recherche : toucher à l\'extérieur = le clavier se ferme d\'abord, la recherche se ferme 0,2 s après (comme la croix)');
 ok(/if \(closeLater\.current\) \{/.test(bar), 'recherche : les 3 événements du même toucher ne court-circuitent pas le délai');
+{ const feed = readFileSync('src/views/FeedView.tsx', 'utf8');
+  ok(/useLayoutEffect\(\(\) => \{\s*let sc[\s\S]{0,900}const want = feedScrollFor\(currentUser\.id\);/.test(feed), 'retour sur Actualités : la position est rétablie AVANT l\'affichage (plus de première publication en haut une fraction de seconde)');
+  ok(/rootEl\.style\.visibility = 'hidden'/.test(feed) && /const show = \(\) => \{ if \(rootEl\) rootEl\.style\.visibility = ''; \};/.test(feed) && /cancelAnimationFrame\(raf\); show\(\);/.test(feed), 'fil trop court au retour : caché jusqu\'à la bonne position, toujours réaffiché au départ'); }
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 process.exit(fails ? 1 : 0);
