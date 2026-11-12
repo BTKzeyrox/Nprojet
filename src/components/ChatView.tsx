@@ -3,6 +3,8 @@
 // Pour modifier : props currentUser, initialThreadId, onOpenProfile et onNavigate. Fichier très long. Pour une ligne avec « … », utiliser le style ONE_LINE, car la classe truncate est neutralisée.
 import { useKeepBottom } from '../utils/useKeepBottom';
 import { ChatSearch } from './ChatSearch';
+import { ChatForward } from './ChatForward';
+import { MARK_STYLE, markOf, marksOf, toggleImportant, canForward, forwardFrom } from '../utils/chatMarks';
 import { stepNav } from '../utils/chatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
@@ -10,7 +12,7 @@ import { Bot } from 'lucide-react';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
   Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
-  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown,
+  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward,
 } from 'lucide-react';
 import { db } from '../db/store';
 import { ChatGroup, ChatMessage, User } from '../types';
@@ -24,7 +26,7 @@ import { createPortal } from 'react-dom';
 import { askConfirm } from './ConfirmModal';
 import { NewChatModal, GroupInfoModal } from './ChatDialogs';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
-import { getPinnedThreads, togglePinnedThread, pinFirst } from '../utils/chatPrefs';
+import { getPinnedThreads, getImportantMessages, setImportantMessages, togglePinnedThread, pinFirst } from '../utils/chatPrefs';
 import { ChatAbout } from './ChatAbout';
 import { aboutThread, type AboutAction } from '../utils/chatAbout';
 import { getArchivedThreads, getHiddenMessages, hideMessageForMe, setThreadArchived, getThreadSeen, setThreadSeen, hasThreadSeen, initThreadSeen } from '../utils/chatPrefs';
@@ -130,6 +132,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const rowLong = useRef(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [q, setQ] = useState('');
+  const [importantIds, setImportantIds] = useState<string[]>(() => getImportantMessages(currentUser.id)); // messages « Important » (privé, sur cet appareil)
+  const [fwdMsg, setFwdMsg] = useState<ChatMessage | null>(null); // message en cours de transfert
   const [nav, setNav] = useState<{ ids: string[]; i: number } | null>(null); // « précédent / suivant » parmi les résultats de la recherche (comme Telegram)
   const [search, setSearch] = useState<{ day: string | null } | null>(null); // recherche de messages (loupe, ou clic sur une date du fil)
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
@@ -536,6 +540,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const pinned = visible.filter(m => m.pinned && !m.deleted_at).sort((a, b) => String(b.pinned_at || '').localeCompare(String(a.pinned_at || '')));
   const pinShown = pinned.length > 0 ? pinned[pinIdx % pinned.length] : null;
+  const forwardTo = (threadId: string) => {
+    const m = fwdMsg; if (!m) return;
+    const t = threads.find(x => x.id === threadId);
+    if (!t || t.readOnly || !canForward(m)) { setFwdMsg(null); return; }
+    playUiSound('send');
+    db.sendMessage({ senderId: currentUser.id, message: m.message || '', recipientId: t.id === 'all' ? 'all' : t.id, forwardedFrom: forwardFrom(m), ...(m.attachment_url ? { attachmentUrl: m.attachment_url, attachmentName: m.attachment_name, attachmentKind: m.attachment_kind } : {}) });
+    setFwdMsg(null);
+    if (t.id !== current.id) { setThreadId(t.id); setShowList(false); }
+  };
   useEffect(() => { setNav(null); }, [current.id]);
   const jumpTo = (id: string) => {
     // Amène EXACTEMENT au message (au milieu de l'écran), sans animation : une animation s'arrête trop tôt quand la hauteur change (photos, bulles qui apparaissent). On réapplique tant que la personne ne touche pas l'écran, sans que « rester en bas » ne reprenne la main.
@@ -641,6 +654,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         ...(menuMsg.sender_id === currentUser.id
           ? [{ k: 'pin', label: menuMsg.pinned ? 'Désépingler' : 'Épingler', icon: menuMsg.pinned ? PinOff : Pin, color: 'text-amber-500', run: () => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); } }]
           : []),
+        ...(!menuMsg.deleted_at ? [{ k: 'important', label: importantIds.includes(menuMsg.id) ? 'Retirer des importants' : 'Important', icon: Flag, color: 'text-rose-500', run: () => { const next = toggleImportant(importantIds, menuMsg.id); setImportantIds(next); setImportantMessages(currentUser.id, next); setMenuMsg(null); } }] : []),
+        ...(canForward(menuMsg) ? [{ k: 'forward', label: 'Transférer', icon: Forward, color: 'text-violet-500', run: () => { setFwdMsg(menuMsg); setMenuMsg(null); } }] : []),
         ...((menuMsg.message || menuMsg.poll) && !menuMsg.deleted_at ? [{ k: 'item', label: 'Rappel, tâche, événement', icon: CalendarDays, color: 'text-blue-500', run: () => { setItemMsg(menuMsg); setMenuMsg(null); } }] : []),
         { k: 'hide', label: 'Supprimer pour moi', icon: EyeOff, color: 'text-slate-500', run: () => deleteForMe(menuMsg) },
         ...(db.canDeleteForAll(menuMsg, currentUser.id) ? [{ k: 'del', label: 'Supprimer pour tous', icon: Trash2, color: 'text-red-500', run: () => confirmDelete(menuMsg) }] : []),
@@ -772,6 +787,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             const newDay = i === 0 || String(visible[i - 1].timestamp).slice(0, 10) !== day;
             const time = String(msg.timestamp).slice(11, 16);
             const gone = !!msg.deleted_at;
+            const mk = markOf(msg, importantIds); // repère qui colore la bulle (Important > Épinglé > Transféré)
+            const tinted = !!mk && !gone && !((!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to));
             const sameSender = i > 0 && !newDay && visible[i - 1].sender_id === msg.sender_id && !visible[i - 1].deleted_at;
             const readers = isMe && !gone ? readersOf(msg) : [];
             const prevM = i > 0 ? visible[i - 1] : null;
@@ -806,6 +823,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       onMouseLeave={stopPress}
                       onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={(() => {
+                        if (tinted && mk) return { WebkitTouchCallout: 'none', backgroundColor: MARK_STYLE[mk].bg, borderColor: MARK_STYLE[mk].border } as React.CSSProperties;
                         if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
                         const sd = users.find(u => u.id === msg.sender_id);
                         const ac = accentStyles(accentOf(sd || { name: msg.sender_name }), L);
@@ -814,9 +832,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       className={`${msg.reply_to ? 'w-full min-w-[13.5rem]' : 'min-w-0'} text-[0.9375rem] leading-relaxed break-words select-none md:select-text rounded-2xl ${
                         !gone && ((!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to))
                           ? `${L ? 'text-slate-800' : 'text-slate-100'}`
-                          : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}`
+                          : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}${tinted ? ' !text-white border' : ''}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
+                      {!gone && msg.forwarded && <div data-forwarded-from className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Forward className="w-3 h-3" />Transféré de {msg.forwarded.from}</div>}
                       {!gone && !isMe && showNames && !sameSender && (
                         <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold mb-0.5 cursor-pointer" style={{ color: accentStyles(accentOf(users.find(u => u.id === msg.sender_id) || { name: msg.sender_name }), L).name }} title="Voir le profil">
                           {msg.sender_name}
@@ -872,7 +891,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                     {/* Petits détails sous la bulle (pas dans la bulle) */}
                     {!gone && (
                       <div className={`flex items-center gap-1 mt-0.5 px-1 text-[11px] ${P.sub}`}>
-                        {msg.pinned && <Pin className="w-3 h-3 text-amber-500" />}
+                        {marksOf(msg, importantIds).map(k => k === 'important' ? <Flag key={k} data-mark="important" className="w-3 h-3 text-rose-500" aria-label="Important" /> : k === 'pinned' ? <Pin key={k} data-mark="pinned" className="w-3 h-3 text-amber-500" aria-label="Épinglé" /> : <Forward key={k} data-mark="forwarded" className="w-3 h-3 text-violet-500" aria-label="Transféré" />)}
                         {msg.edited_at && <span className="italic">modifié ·</span>}
                         <span>{time}</span>
                         {isMe && <PendingMark col="messages" id={msg.id} />}
@@ -1027,6 +1046,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}
 
+      {fwdMsg && <ChatForward threads={threads.filter(t => !t.readOnly && t.kind !== 'pair').map(t => ({ id: t.id, title: t.title, subtitle: t.subtitle }))} light={L} onPick={forwardTo} onClose={() => setFwdMsg(null)} />}
       {search && <ChatSearch msgs={visible} initialDay={search.day} light={L} onPick={(id, all) => { jumpTo(id); const i = all.indexOf(id); setNav(all.length > 1 && i >= 0 ? { ids: all, i } : null); }} onClose={() => setSearch(null)} />}
       {/* Menu des options de la conversation */}
       {threadMenu && createPortal(

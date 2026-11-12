@@ -3647,6 +3647,14 @@ const clipReply = (r: any) =>
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+// ===== BEGIN FORWARD (copie exacte de cleanForwarded de src/utils/chatMarks.ts ; contrôlée par scripts/check-chat-marks.ts) =====
+function cleanForwarded(v: any): { from: string } | null {
+  if (!v || typeof v !== "object" || typeof v.from !== "string") return null;
+  const from = v.from.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+  return from ? { from } : null;
+}
+// ===== END FORWARD =====
+
 async function checkMessage(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any; reason?: string }> {
   if (existing) {
     // Supprimer pour tous : l'auteur, ou l'admin (modération). Une trace reste dans la conversation.
@@ -3654,7 +3662,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       if (existing.sender_id !== me.id && !admin) return { ok: false };
       if (existing.deleted_at) return { ok: true, save: existing };
       const save = { ...existing, message: '', deleted_at: now, deleted_by: existing.sender_id === me.id ? 'sender' : 'admin' };
-      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions', 'send_at']) delete save[k];
+      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions', 'send_at', 'forwarded']) delete save[k];
       return { ok: true, save };
     }
     // Réaction emoji : tout participant à la conversation, mais seulement sa propre réaction
@@ -3729,7 +3737,8 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
-  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'reactions']) delete save[k];
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'reactions', 'forwarded']) delete save[k];
+  const fw = cleanForwarded(rec.forwarded); if (fw && rec.poll === undefined) save.forwarded = fw; // message transféré : seulement le nom d'origine, nettoyé
   if (rec.poll !== undefined) { // sondage : jamais de votes reçus d'un navigateur, la question et les choix sont nettoyés
     const pc = pollClean(rec.poll);
     if (!pc) return { ok: false };

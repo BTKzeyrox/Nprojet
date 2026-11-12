@@ -58,3 +58,7 @@ export function pinFirst<T extends { id: string }>(list: T[], pinned: string[], 
   const rank = (t: T) => (t.id === general ? 0 : pinned.includes(t.id) ? 1 : 2);
   return list.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map(x => x.t);
 }
+
+// Messages « Important » (drapeau) : privés, gardés sur cet appareil, par personne (jamais envoyés aux autres).
+export const getImportantMessages = (uid: string): string[] => readJson<string[]>(key('important', uid), []);
+export const setImportantMessages = (uid: string, ids: string[]): void => writeJson(key('important', uid), ids);

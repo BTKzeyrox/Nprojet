@@ -629,6 +629,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
 | `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
+| `chatMarks.ts` | Repères sur les messages du chat (2026-11-12) : Important (privé, gardé sur l'appareil), Épinglé (existant), Transféré (nouveau). |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `chatScrollGuard.ts` | Messagerie : un glissement du doigt au bout d'une liste (tout en haut ou tout en bas) ne doit JAMAIS faire bouger la page, |
 | `chatSearch.ts` | Recherche dans une conversation (2026-11-12) : par texte, par jour, ou les deux. Règle pure, utilisée par components/ChatSearch.tsx. |
@@ -917,6 +918,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
+| `ChatForward.tsx` | Transférer un message : choisir la conversation de destination (le message y est envoyé, avec « Transféré de … »). |
 | `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : carte SANS bulle autour, avec contour et ombre (BTK 2026-11-09), de taille fixe : elle ne bouge pas quand on vote. + fenêtre de création. |
 | `ChatSearch.tsx` | Recherche de messages dans la conversation ouverte : par texte, par jour (date cliquable dans le fil ou sélecteur de date). Règle : utils/chatSearch.ts. |
 | `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
@@ -1114,6 +1116,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
 | `npm run check:sheet-reminder` | Rappel « feuille du jour pas saisie » (M27.4). Lancer : npm run check:sheet-reminder |
 | `npm run check:chat-search` | Recherche de messages dans une conversation (date cliquable + loupe). Lancer : npm run check:chat-search |
+| `npm run check:chat-marks` | Important, Épinglé, Transféré : repères et couleurs de bulle du chat. Lancer : npm run check:chat-marks |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

@@ -3270,6 +3270,7 @@ export class AppStore {
     replyTo?: ChatMessage; // message cité
     albumId?: string; // photos envoyées ensemble
     sendAt?: number; // message programmé (ms)
+    forwardedFrom?: string; // message transféré : auteur d'origine
     poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' }; // sondage (messagerie S1) : 2 à 6 choix, ou dates, ou « J'ai lu »
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
@@ -3299,6 +3300,7 @@ export class AppStore {
         ? { attachment_url: params.attachmentUrl, attachment_name: params.attachmentName || 'fichier', attachment_kind: params.attachmentKind || 'file' }
         : {}),
       ...(params.albumId && params.attachmentUrl ? { album_id: String(params.albumId).slice(0, 40) } : {}),
+      ...(params.forwardedFrom ? { forwarded: { from: String(params.forwardedFrom).slice(0, 40) } } : {}),
     };
 
     this.messages.push(newMsg);
