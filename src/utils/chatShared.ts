@@ -75,8 +75,8 @@ function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean
 }
 // ===== END CHATSHARED =====
 /** « Visible seulement par X » : le serveur déployé doit connaître M28.3, sinon l'ancien serveur livrerait le message à tous. Passe à true APRÈS le déploiement de df-api (démo : toujours ouvert). */
-export const VISIBLE_TO_SERVER_LIVE = false;
+export const VISIBLE_TO_SERVER_LIVE = true; // df-api v87 déployé (2026-11-13)
 /** Messages éphémères : le serveur déployé doit connaître M28.4 (route chat-ephemeral). Passe à true APRÈS le déploiement de df-api (démo : toujours ouvert). */
-export const EPHEMERAL_SERVER_LIVE = false;
+export const EPHEMERAL_SERVER_LIVE = true; // df-api v87 déployé (2026-11-13)
 export { EPHEMERAL_CHOICES, planEphemeral, isExpired };
 export { canUseSharedTools, canSeeChatMessage, planSharedMark, isHiddenFrom, planVisibleTo };
