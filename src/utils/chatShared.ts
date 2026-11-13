@@ -36,6 +36,19 @@ function planVisibleTo(me: any, group: any, thread: string, list: any, eligible:
   if (out.length < 1 || out.length > 20) return { ok: false, error: "count" };
   return { ok: true, list: out };
 }
+const EPHEMERAL_CHOICES = [3600000, 86400000, 604800000];
+function planEphemeral(me: any, group: any, thread: string, ms: any): any {
+  // Messages éphémères (M28.4) : mode par discussion (générale ou groupe), 1 h / 24 h / 7 jours, 0 = désactivé ; responsable, chef d'équipe, créateur du groupe (membre de son groupe)
+  if (!me || typeof me.id !== "string" || typeof ms !== "number" || !Number.isFinite(ms)) return { ok: false, error: "args" };
+  if (thread !== "all" && !group) return { ok: false, error: "direct" };
+  if (!canUseSharedTools(me, thread === "all" ? null : group)) return { ok: false, error: "role" };
+  if (group && me.role !== "admin" && !(Array.isArray(group.members) && group.members.includes(me.id))) return { ok: false, error: "role" };
+  if (ms !== 0 && !EPHEMERAL_CHOICES.includes(ms)) return { ok: false, error: "ms" };
+  return { ok: true, ms };
+}
+function isExpired(msg: any, nowMs: number): boolean {
+  return !!msg && Number(msg.expires_ms) > 0 && Number(msg.expires_ms) <= nowMs;
+}
 function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean, nowIso: string): any {
   if (!me || typeof me.id !== "string" || !msg || typeof msg.id !== "string" || (mark !== "important" && mark !== "pinned")) return { ok: false, error: "args" };
   if (msg.deleted_at) return { ok: false, error: "deleted" };
@@ -63,4 +76,7 @@ function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean
 // ===== END CHATSHARED =====
 /** « Visible seulement par X » : le serveur déployé doit connaître M28.3, sinon l'ancien serveur livrerait le message à tous. Passe à true APRÈS le déploiement de df-api (démo : toujours ouvert). */
 export const VISIBLE_TO_SERVER_LIVE = false;
+/** Messages éphémères : le serveur déployé doit connaître M28.4 (route chat-ephemeral). Passe à true APRÈS le déploiement de df-api (démo : toujours ouvert). */
+export const EPHEMERAL_SERVER_LIVE = false;
+export { EPHEMERAL_CHOICES, planEphemeral, isExpired };
 export { canUseSharedTools, canSeeChatMessage, planSharedMark, isHiddenFrom, planVisibleTo };

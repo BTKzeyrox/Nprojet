@@ -30,7 +30,7 @@ ok(planVisibleTo(lead, null, 'all', 'e1' as any, all).error === 'args' && planVi
 ok(!canForward({ message: 'x', visible_to: ['e1'] } as any) && canForward({ message: 'x' } as any) && !canForward({ message: 'x', poll: {} } as any), 'un message restreint ne se transfère jamais (et les autres règles de transfert restent)');
 // serveur
 const srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
-ok(/'visible_to', 'visible_names'\]\) delete save\[k\]/.test(srv), 'serveur : visible_to / visible_names jamais pris tels quels d\'un navigateur');
+ok(/'visible_to', 'visible_names', 'expires_ms', 'ephemeral_ms'\]\) delete save\[k\]/.test(srv), 'serveur : visible_to / visible_names jamais pris tels quels d\'un navigateur');
 ok(/planVisibleTo\(me, grp, rid, rec\.visible_to, eligible\)/.test(srv) && /visibleNames\(pv\.list\)/.test(srv), 'serveur : droits vérifiés à l\'envoi, noms écrits par le serveur');
 ok(/recs\.filter\(\(r: any\) => !isHiddenFrom\(me, r\)\)/.test(srv), 'serveur : le message n\'est pas envoyé aux autres (synchronisation)');
 ok((srv.match(/!isHiddenFrom\(me, existing\)/g) || []).length === 2, 'serveur : pas de réaction ni de vote sur un message qu\'on ne voit pas');

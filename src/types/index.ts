@@ -33,6 +33,7 @@ export interface PasswordResetRequest {
 }
 
 export interface AppSettings {
+  chat_ephemeral_all_ms?: number; // messages éphémères de la discussion générale (M28.4) ; écrit par la route chat-ephemeral seulement
   id: 'general';
   news_publish?: { employee: 'off' | 'review' | 'direct'; team_lead: 'off' | 'review' | 'direct'; accountant: 'off' | 'review' | 'direct'; allow_edit: boolean }; // « Publications des équipes » : qui peut publier dans les Actualités (absent = seul le responsable)
   price_per_million: number; // Ar pour 1M de score (sert encore aux pénalités automatiques)
@@ -292,6 +293,8 @@ export interface ChatMessage {
   sent_ms?: number; // heure d'envoi côté serveur (fenêtre de modification, coches « lu »)
   reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
   forwarded?: { from: string }; // message transféré : nom de l'auteur d'origine
+  expires_ms?: number; // éphémère : heure de disparition calculée par le serveur à l'envoi (M28.4)
+  ephemeral_ms?: number; // durée du mode éphémère au moment de l'envoi
   visible_to?: string[]; // « visible seulement par X » (M28.3) : le serveur ne l'envoie qu'à l'auteur, au responsable et à ces personnes
   visible_names?: string[]; // leurs noms (écrits par le serveur)
   send_at?: number; // message programmé : heure d'envoi (ms) ; le serveur le cache aux autres jusque-là
@@ -308,6 +311,7 @@ export interface ChatGroup {
   avatar_url?: string; // photo du groupe
   description?: string; // description (200 caractères max)
   created_at?: string;
+  ephemeral_ms?: number; // messages éphémères du groupe (M28.4) : 1 h / 24 h / 7 jours ; écrit par le serveur seulement
 }
 
 // Jusqu'où une personne a lu une conversation (thread = id de l'autre personne, ou id du groupe)

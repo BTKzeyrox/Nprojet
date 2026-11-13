@@ -27,7 +27,7 @@ const S: any = new Function(transformSync(blk + '\nreturn cleanForwarded;', { lo
 const cases: any[] = [{ from: 'Rado' }, { from: '  Rado\n\tJean  ' }, { from: 'x'.repeat(100) }, { from: '' }, { from: '   ' }, { from: 5 }, null, undefined, 'x', [], { from: 'A', extra: 'zzz' }, { from: '\u0000\u0007' }];
 ok(cases.every(v => J(S(v)) === J(cleanForwarded(v))), 'serveur = site sur 12 cas (texte trop long, vide, nombre, objet en trop…)');
 ok(J(S({ from: 'A', extra: 'zzz' })) === J({ from: 'A' }) && S({ from: 'x'.repeat(100) }).from.length === 40, 'serveur : seul le nom est gardé, 40 caractères au plus');
-ok(/const fw = cleanForwarded\(rec\.forwarded\); if \(fw && rec\.poll === undefined\) save\.forwarded = fw;/.test(src) && /'reactions', 'forwarded', 'visible_to', 'visible_names'\]\) delete save\[k\]/.test(src), 'serveur : un transfert reçu est nettoyé, jamais gardé tel quel');
+ok(/const fw = cleanForwarded\(rec\.forwarded\); if \(fw && rec\.poll === undefined\) save\.forwarded = fw;/.test(src) && /'reactions', 'forwarded', 'visible_to', 'visible_names', 'expires_ms', 'ephemeral_ms'\]\) delete save\[k\]/.test(src), 'serveur : un transfert reçu est nettoyé, jamais gardé tel quel');
 ok(/'send_at', 'forwarded'\]\) delete save\[k\]/.test(src), 'serveur : un message supprimé pour tous perd son « transféré »');
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8'), st = readFileSync('src/db/store.ts', 'utf8');
 ok(/k: 'important'[\s\S]{0,200}icon: Flag/.test(cv) && /k: 'forward'[\s\S]{0,200}icon: Forward/.test(cv) && /canForward\(menuMsg\)/.test(cv), 'menu du message : Important (drapeau) et Transférer (flèche)');

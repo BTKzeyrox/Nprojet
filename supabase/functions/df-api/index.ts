@@ -2848,7 +2848,7 @@ const cleanSettingsRecord = (rec, existing, me, now) => {
 // ===== END COMPANY =====
 
 // ===== BEGIN AUDIT (journal d'audit : qui a fait quoi et quand ; lecture réservée à l'administrateur ; ce bloc est contrôlé par scripts/check-audit.ts) =====
-const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "cash_change", "invoice_void_payment", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout"];
+const AUDIT_ACTIONS = ["invoice_issue", "invoice_cancel", "invoice_pay", "delete", "tariff_change", "settings_change", "company_change", "cash_change", "invoice_void_payment", "user_create", "user_password", "signup_decision", "profile_decision", "reset_decision", "payroll_close", "payroll_reopen", "payroll_pay", "backup_now", "backup_restore", "mission_decision", "login_locked", "totp_on", "totp_off", "totp_reset", "backup_import", "accounting_sync", "accounting_post", "accounting_reverse", "accounting_close", "accounting_reopen", "access_request", "access_approved", "access_refused", "access_changed", "force_logout", "chat_mark", "chat_ephemeral"];
 const AUDIT_KEEP_DAYS = 365;
 const AUDIT_TARIFF_KEYS = ["price_per_million", "client_price_default_ar", "client_prices_by_type"];
 const AUDIT_SETTINGS_SKIP = ["company", "company_log", "budgets", "mission_templates", "health_acks", "stock_categories", "stock_spaces"];
@@ -3690,6 +3690,19 @@ function planVisibleTo(me: any, group: any, thread: string, list: any, eligible:
   if (out.length < 1 || out.length > 20) return { ok: false, error: "count" };
   return { ok: true, list: out };
 }
+const EPHEMERAL_CHOICES = [3600000, 86400000, 604800000];
+function planEphemeral(me: any, group: any, thread: string, ms: any): any {
+  // Messages éphémères (M28.4) : mode par discussion (générale ou groupe), 1 h / 24 h / 7 jours, 0 = désactivé ; responsable, chef d'équipe, créateur du groupe (membre de son groupe)
+  if (!me || typeof me.id !== "string" || typeof ms !== "number" || !Number.isFinite(ms)) return { ok: false, error: "args" };
+  if (thread !== "all" && !group) return { ok: false, error: "direct" };
+  if (!canUseSharedTools(me, thread === "all" ? null : group)) return { ok: false, error: "role" };
+  if (group && me.role !== "admin" && !(Array.isArray(group.members) && group.members.includes(me.id))) return { ok: false, error: "role" };
+  if (ms !== 0 && !EPHEMERAL_CHOICES.includes(ms)) return { ok: false, error: "ms" };
+  return { ok: true, ms };
+}
+function isExpired(msg: any, nowMs: number): boolean {
+  return !!msg && Number(msg.expires_ms) > 0 && Number(msg.expires_ms) <= nowMs;
+}
 function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean, nowIso: string): any {
   if (!me || typeof me.id !== "string" || !msg || typeof msg.id !== "string" || (mark !== "important" && mark !== "pinned")) return { ok: false, error: "args" };
   if (msg.deleted_at) return { ok: false, error: "deleted" };
@@ -3807,7 +3820,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
-  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reactions', 'forwarded', 'visible_to', 'visible_names']) delete save[k]; // jamais reçus d'un navigateur : « pour tous » passe par la route chat-mark
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reactions', 'forwarded', 'visible_to', 'visible_names', 'expires_ms', 'ephemeral_ms']) delete save[k]; // jamais reçus d'un navigateur : « pour tous » passe par la route chat-mark
   const fw = cleanForwarded(rec.forwarded); if (fw && rec.poll === undefined) save.forwarded = fw; // message transféré : seulement le nom d'origine, nettoyé
   if (rec.poll !== undefined) { // sondage : jamais de votes reçus d'un navigateur, la question et les choix sont nettoyés
     const pc = pollClean(rec.poll);
@@ -3823,6 +3836,10 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
     if (!pv.ok) return { ok: false, reason: 'visible_to' };
     save.visible_to = pv.list; save.visible_names = await visibleNames(pv.list);
   }
+  let eph = 0; // messages éphémères (M28.4) : le mode de la discussion est lu ICI, l'heure de disparition est calculée ICI (jamais par le téléphone)
+  if (rid === 'all') { const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle(); eph = Number((st as any)?.data?.chat_ephemeral_all_ms) || 0; }
+  else if (grp) eph = Number(grp.ephemeral_ms) || 0;
+  if (EPHEMERAL_CHOICES.includes(eph) && rec.poll === undefined) save.ephemeral_ms = eph;
   delete save.send_at;
   if (rec.send_at !== undefined) { // message programmé (messagerie S4) : de 1 minute à 30 jours ; il part avec la tâche planifiée (chaque minute)
     const at = Number(rec.send_at), nowMs = Date.now();
@@ -3830,6 +3847,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
     save.send_at = Math.round(at); save.sent_ms = save.send_at;
   }
   const rt = clipReply(rec.reply_to);
+  if (save.ephemeral_ms && !save.send_at) save.expires_ms = Date.now() + save.ephemeral_ms; // un message programmé commence son compte à rebours à sa sortie (releaseScheduledMessages)
   if (rt) save.reply_to = rt; else delete save.reply_to;
   if (rt) { // répondre à un message « visible seulement par X » : la réponse reste visible des mêmes personnes (sinon la citation fuirait dans la discussion)
     const { data: orow } = await sb.from(T.messages).select('data').eq('id', rt.id).maybeSingle();
@@ -3862,6 +3880,59 @@ async function chatMarkRoute(req: any, res: any, me: any) {
     await auditLog(me, 'chat_mark', { type: 'message', id }, { mark: b.mark, on: b.on });
   }
   return res.json({ ok: true, message: plan.save });
+}
+
+// Messages éphémères (M28.4) : mode d'une discussion (générale ou groupe). Droits dans le bloc CHATSHARED, appliqués ICI ; le mode est écrit par le serveur seulement (jamais par la synchronisation).
+async function chatEphemeralRoute(req: any, res: any, me: any) {
+  const b = req.body || {};
+  const thread = typeof b.thread === 'string' ? b.thread.slice(0, 80) : '';
+  const ms = Number(b.ms);
+  if (!thread || !Number.isFinite(ms)) return res.status(400).json({ error: 'Demande incorrecte.' });
+  let group: any = null;
+  if (thread !== 'all') {
+    if (!thread.startsWith(GROUP_PREFIX)) return res.status(403).json({ error: 'Les messages éphémères existent dans la discussion générale et dans les groupes.' });
+    group = await getGroup(thread);
+    if (!group) return res.status(404).json({ error: 'Groupe introuvable.' });
+  }
+  const plan = planEphemeral(me, group, thread, ms);
+  if (!plan.ok) {
+    const text: Record<string, string> = { role: 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent régler les messages éphémères.', ms: 'Durée non permise (1 h, 24 h ou 7 jours).', direct: 'Les messages éphémères existent dans la discussion générale et dans les groupes.' };
+    return res.status(plan.error === 'args' || plan.error === 'ms' ? 400 : 403).json({ error: text[plan.error] || 'Refusé.' });
+  }
+  const now = new Date().toISOString();
+  if (group) {
+    const save: any = { ...group };
+    if (plan.ms) save.ephemeral_ms = plan.ms; else delete save.ephemeral_ms;
+    await sb.from(T.groups).upsert({ id: group.id, data: save, updated_at: now });
+  } else {
+    const { data: srow } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+    const d: any = { ...((srow as any)?.data || { id: 'general' }) };
+    if (plan.ms) d.chat_ephemeral_all_ms = plan.ms; else delete d.chat_ephemeral_all_ms;
+    await sb.from(T.settings).upsert({ id: 'general', data: d, updated_at: now });
+  }
+  await auditLog(me, 'chat_ephemeral', { type: 'chat', id: thread }, { ms: plan.ms });
+  return res.json({ ok: true, ms: plan.ms });
+}
+
+// Balayage des messages éphémères expirés (chaque minute, avec la tâche planifiée) : la ligne est supprimée, ses fichiers aussi (stockage + Cloudinary). Les sauvegardes gardent une copie jusqu'à leur renouvellement.
+async function sweepExpiredMessages(): Promise<number> {
+  try {
+    const { data: rows } = await sb.from(T.messages).select('id,data').not('data->>expires_ms', 'is', null).limit(300);
+    const nowMs = Date.now();
+    let n = 0;
+    for (const r of rows || []) {
+      const d: any = (r as any).data;
+      if (!isExpired(d, nowMs)) continue;
+      const url = typeof d.attachment_url === 'string' ? d.attachment_url : '';
+      if (url) {
+        const path = pathOf(url); if (path) await sb.storage.from(BUCKET).remove([path]);
+        const cid = cldIdOf(url); if (cid) await cldDestroy(cid);
+      }
+      const { error } = await sb.from(T.messages).delete().eq('id', (r as any).id);
+      if (!error) n++;
+    }
+    return n;
+  } catch (e) { console.error('sweepExpiredMessages error:', String((e as any)?.message || e).slice(0, 120)); return 0; }
 }
 
 async function checkGroup(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any }> {
@@ -3998,6 +4069,7 @@ async function state(req: any, res: any, me: any) {
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'news' && !admin) recs = recs.map((r: any) => viewNews(r, me)); // sondage : comptes et son vote seulement
+    if (col === 'messages') recs = recs.filter((r: any) => !isExpired(r, Date.now())); // éphémère : plus jamais envoyé une fois expiré (le balayage l'efface ensuite)
     if (col === 'messages') recs = recs.filter((r: any) => !isHiddenFrom(me, r)); // « visible seulement par X » : jamais envoyé aux autres
     if (col === 'messages') recs = recs.filter((r: any) => !r.send_at || r.sender_id === me.id); // message programmé : invisible des autres jusqu'à son heure
     if (col === 'messages') recs = recs.map((r: any) => (r.poll && r.sender_id !== me.id ? { ...r, poll: pollView(r.poll, String(me.id), false) } : r)); // sondage d'une discussion : seul l'auteur voit les noms
@@ -4172,7 +4244,7 @@ async function sync(req: any, res: any, me: any) {
         }
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
-      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = { ...toSave, news_publish: cleanNewsPolicy(rec.news_publish === undefined ? existing?.news_publish : rec.news_publish) }; toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); } // seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
+      if (col === 'settings') { toSave = cleanSettingsRecord(rec, existing, me, now); toSave = { ...toSave, news_publish: cleanNewsPolicy(rec.news_publish === undefined ? existing?.news_publish : rec.news_publish) }; toSave = applyBudgets(toSave, rec, existing); toSave = applyPerformance(toSave, rec, existing); toSave = applyHealthAcks(toSave, rec, existing); toSave = applyStockCategories(toSave, rec, existing); toSave = applyStockSpaces(toSave, rec, existing); if (existing?.chat_ephemeral_all_ms) toSave.chat_ephemeral_all_ms = existing.chat_ephemeral_all_ms; else delete toSave.chat_ephemeral_all_ms; } // le mode « éphémère » de la discussion générale n'est écrit que par la route chat-ephemeral ; seul l'admin arrive ici ; `company` et `budgets` sont revérifiés
       if (col === 'settings') {
         // Modèles de mission (M6.2) : revérifiés ; un vieux site qui ne les envoie pas ne les efface pas
         const sentTpl = (rec as any).mission_templates === undefined ? (existing as any)?.mission_templates : (rec as any).mission_templates;
@@ -6678,7 +6750,8 @@ async function releaseScheduledMessages(): Promise<number> {
       if (!d || Number(d.send_at) > nowMs) continue;
       const { send_at: _s, ...rest } = d;
       const ts = new Date(nowMs + 3 * 3600000).toISOString();
-      const out = { ...rest, sent_ms: nowMs, timestamp: `${ts.slice(0, 10)} ${ts.slice(11, 19)}` };
+      const out: any = { ...rest, sent_ms: nowMs, timestamp: `${ts.slice(0, 10)} ${ts.slice(11, 19)}` };
+      if (EPHEMERAL_CHOICES.includes(Number(out.ephemeral_ms))) out.expires_ms = nowMs + Number(out.ephemeral_ms);
       const { error } = await sb.from(T.messages).upsert({ id: r.id, data: out, updated_at: new Date().toISOString() }, { onConflict: 'id' });
       if (error) continue;
       n++;
@@ -6723,6 +6796,7 @@ async function remindersDue(request: Request, res: any) {
   const a = Buffer.from(given), b = Buffer.from(String(want || ''));
   if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return res.status(401).json({ error: 'refusé' });
   await releaseScheduledMessages();
+  await sweepExpiredMessages();
   const nowMs = Date.now();
   const sheetSent = await sheetReminderRun(nowMs);
   const { data: rows } = await sb.from(REMINDERS).select('data').eq('data->>kind', 'item').in('data->>status', ['todo', 'doing']);
@@ -6984,6 +7058,7 @@ Deno.serve(async (request: Request) => {
     if (action === "work-entry" && req.method === "POST") return await workEntryRoute(req, res, me);
     if (action === "work-line-cancel" && req.method === "POST") return await workCancelRoute(req, res, me);
     if (action === "chat-mark" && req.method === "POST") return await chatMarkRoute(req, res, me);
+    if (action === "chat-ephemeral" && req.method === "POST") return await chatEphemeralRoute(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "prefs" && req.method === "GET") return await prefsGetRoute(req, res, me);
     if (action === "prefs-set" && req.method === "POST") return await prefsSetRoute(req, res, me);

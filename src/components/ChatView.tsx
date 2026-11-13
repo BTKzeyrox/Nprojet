@@ -14,10 +14,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { Bot } from 'lucide-react';
 import { ChatVisibleTo } from './ChatVisibleTo';
-import { isHiddenFrom, VISIBLE_TO_SERVER_LIVE } from '../utils/chatShared';
+import { ChatEphemeral, ephemeralText } from './ChatEphemeral';
+import { isComposerSwipe } from '../utils/chatSwipe';
+import { isHiddenFrom, isExpired, planEphemeral, VISIBLE_TO_SERVER_LIVE, EPHEMERAL_SERVER_LIVE } from '../utils/chatShared';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
-  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
+  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, Timer, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward,
 } from 'lucide-react';
 import { db } from '../db/store';
@@ -118,7 +120,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     div: L ? 'border-slate-200' : 'border-slate-800',
     pill: L ? 'bg-white/90 text-slate-600 shadow-sm' : 'bg-slate-800/80 text-slate-300',
   };
-  const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages().filter(m => !isHiddenFrom(currentUser, m)));
+  const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages().filter(m => !isHiddenFrom(currentUser, m) && !isExpired(m, Date.now())));
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [groups, setGroups] = useState<ChatGroup[]>(db.getGroups());
   const [reads, setReads] = useState(db.getChatReads());
@@ -185,7 +187,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
-      setMessages(db.getMessages().filter(m => !isHiddenFrom(currentUser, m)));
+      setMessages(db.getMessages().filter(m => !isHiddenFrom(currentUser, m) && !isExpired(m, Date.now())));
       setUsers(db.getUsers());
       setGroups(db.getGroups());
       setReads(db.getChatReads());
@@ -284,6 +286,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const current = threads.find(t => t.id === threadId) || threads[0];
   // « Visible seulement par… » : responsable, chef d'équipe, créateur du groupe (dans son groupe) ; jamais dans une discussion à deux (le serveur applique la même règle)
   const canOnly = (VISIBLE_TO_SERVER_LIVE || db.isDemo()) && !!current && !current.readOnly && current.kind !== 'pair' && canUseSharedTools(currentUser, current.kind === 'group' ? current.group : null);
+  const ephMs = current ? db.getEphemeralMs(current.id) : 0;
+  const canEph = (EPHEMERAL_SERVER_LIVE || db.isDemo()) && !!current && !current.readOnly && (current.kind === 'all' || current.kind === 'group') && planEphemeral(currentUser, current.kind === 'group' ? current.group : null, current.id, 0).ok;
+  const pickEph = async (ms: number) => { if (!current) return; setEphBusy(true); setEphErr(''); const r = await db.setChatEphemeral(current.id, ms); setEphBusy(false); if (r.success) setEphOpen(false); else setEphErr(r.error || 'Refusé.'); };
   const onlyPeople = current ? (current.kind === 'group' && current.group ? current.group.members.map(id => ({ id, name: db.getUsers().find(u => u.id === id)?.name || '?' })) : db.getUsers().filter(u => u.status !== 'blocked').map(u => ({ id: u.id, name: u.name }))).filter(p => p.id !== currentUser.id) : [];
   useEffect(() => { const el = scrollRef.current; return el ? guardScroller(el) : undefined; }, [current?.id]); // fin de liste : la page ne bouge pas
   const listRef = useRef<HTMLDivElement>(null);
@@ -393,6 +398,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [tool, setTool] = useState<'schedule' | 'templates' | null>(null);
   const [onlyTo, setOnlyTo] = useState<string[]>([]); // « visible seulement par… » pour le prochain message
   const [onlyOpen, setOnlyOpen] = useState(false);
+  const [ephOpen, setEphOpen] = useState(false);
+  const [ephBusy, setEphBusy] = useState(false);
+  const [ephErr, setEphErr] = useState('');
+  const swipe0 = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => { setMessages(db.getMessages().filter(m => !isHiddenFrom(currentUser, m) && !isExpired(m, nowMs))); }, [nowMs, currentUser]); // un message éphémère disparaît à l'écran à son heure (horloge du serveur, toutes les 15 s ; le serveur l'efface ensuite pour de bon)
   const [pollKind, setPollKind] = useState<'poll' | 'date' | 'ack' | null>(null);
   const sendPoll = (poll: { question: string; options: string[]; kind: 'poll' | 'date' | 'ack' }) => {
     if (current.readOnly) return;
@@ -776,6 +786,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </span>
             </span>
           </button>
+          {canEph && <button type="button" data-ephemeral-open onClick={() => { setEphErr(''); setEphOpen(true); }} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Messages éphémères" aria-label="Messages éphémères"><Timer className="w-5 h-5" />{ephMs > 0 && <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400" aria-hidden />}</button>}
           <button type="button" data-chat-marks-open onClick={() => setMarksOpen('this')} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Importants et épinglés" aria-label="Importants et épinglés">
             <Flag className="w-5 h-5" />
             {marksHere > 0 && <span data-chat-marks-count className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-[11px] font-bold text-white flex items-center justify-center">{marksHere > 99 ? '99+' : marksHere}</span>}
@@ -797,6 +808,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           </div>
         )}
 
+        {ephMs > 0 && <div data-ephemeral-banner className={`shrink-0 flex items-center gap-2 px-3 py-1.5 text-xs font-semibold border-b ${L ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-amber-900/30 text-amber-100 border-amber-700/40'}`}><Timer className="w-4 h-4 shrink-0" aria-hidden />Messages éphémères : ils disparaissent après {ephemeralText(ephMs)}.</div>}
         {pinShown && (
           <button
             type="button"
@@ -868,6 +880,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}${tinted ? ' !text-white border' : ''}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
+                      {!gone && msg.expires_ms && msg.expires_ms > 0 && <div data-ephemeral-msg className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Timer className="w-3 h-3 shrink-0" aria-hidden />Disparaît {new Date(msg.expires_ms).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>}
                       {!gone && msg.visible_to && msg.visible_to.length > 0 && <div data-visible-only className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Lock className="w-3 h-3 shrink-0" aria-hidden />Visible seulement par {(msg.visible_names && msg.visible_names.length ? msg.visible_names : msg.visible_to).join(', ')}</div>}
                       {!gone && msg.forwarded && <div data-forwarded-from className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Forward className="w-3 h-3" />Transféré de {msg.forwarded.from}</div>}
                       {!gone && !isMe && showNames && !sameSender && (
@@ -1037,7 +1050,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </div>
             </div>
           )}
-          <form onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
+          <form data-composer-bar onTouchStart={e => { const t = e.touches[0]; swipe0.current = t ? { x: t.clientX, y: t.clientY } : null; }} onTouchEnd={e => { const t = e.changedTouches[0], a = swipe0.current; swipe0.current = null; if (canEph && a && t && isComposerSwipe(a, { x: t.clientX, y: t.clientY }, window.innerWidth, document.activeElement === composerRef.current)) { setEphErr(''); setEphOpen(true); } }} onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <div className="relative shrink-0">
@@ -1086,6 +1099,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       </div>
 
       {itemMsg && <MessageToItem msg={itemMsg} light={L} onClose={() => setItemMsg(null)} />}
+      {ephOpen && current && <ChatEphemeral light={L} title={current.title} current={ephMs} busy={ephBusy} error={ephErr} onClose={() => setEphOpen(false)} onPick={pickEph} />}
       {onlyOpen && <ChatVisibleTo light={L} people={onlyPeople} initial={onlyTo} onClose={() => setOnlyOpen(false)} onPick={ids => { setOnlyTo(ids); setOnlyOpen(false); }} />}
       {tool === 'schedule' && <ScheduleDialog light={L} initial={text} onClose={() => setTool(null)} onSend={(t, ms) => { if (current.readOnly) return; db.sendMessage({ senderId: currentUser.id, message: t, recipientId: current.id === 'all' ? 'all' : current.id, sendAt: ms }); setText(''); setTool(null); }} />}
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}

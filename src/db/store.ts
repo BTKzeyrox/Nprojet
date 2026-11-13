@@ -78,7 +78,7 @@ import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 import { setServerClock } from '../utils/serverClock';
-import { planSharedMark, planVisibleTo } from '../utils/chatShared';
+import { planSharedMark, planVisibleTo, planEphemeral, EPHEMERAL_CHOICES } from '../utils/chatShared';
 import { fixedSalaryAr } from '../utils/fixedSalary';
 import { planWorkCancel } from '../utils/workEntry';
 
@@ -3295,6 +3295,7 @@ export class AppStore {
       visibleTo = pv.list;
     }
     if (q && Array.isArray(q.visible_to) && q.visible_to.length) visibleTo = [...new Set([...q.visible_to, q.sender_id])].filter(x => x !== sender.id); // répondre à un message restreint : même public
+    const eph = this.getEphemeralMs(params.recipientId || 'all'); // mode éphémère de la discussion (le serveur le calcule de son côté)
     const nameOf = (id: string) => this.users.find(u => u.id === id)?.name || '?';
 
     const newMsg: ChatMessage = {
@@ -3308,6 +3309,7 @@ export class AppStore {
       sent_ms: params.sendAt && params.sendAt > now.getTime() ? params.sendAt : now.getTime(),
       ...(params.sendAt && params.sendAt > now.getTime() && !poll ? { send_at: params.sendAt } : {}),
       ...(poll ? { poll } : {}),
+      ...(eph && !poll ? { ephemeral_ms: eph, ...(params.sendAt && params.sendAt > now.getTime() ? {} : { expires_ms: now.getTime() + eph }) } : {}),
       ...(visibleTo && visibleTo.length ? { visible_to: visibleTo, visible_names: visibleTo.map(nameOf) } : {}),
       ...(q && !q.deleted_at
         ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }
@@ -3665,6 +3667,29 @@ export class AppStore {
       saved = (r.data?.message || null) as ChatMessage | null;
     }
     if (saved) { const i = this.messages.findIndex(m => m.id === id); if (i >= 0) this.messages[i] = saved; this.notify(); }
+    return { success: true };
+  }
+
+  /** Messages éphémères (M28.4) : durée réglée pour une discussion (0 = désactivé). Discussion générale : réglages ; groupe : sa fiche. */
+  public getEphemeralMs(threadId: string): number {
+    const v = threadId === 'all' ? Number((this.getSettings() as any).chat_ephemeral_all_ms) : Number(this.groups.find(g => g.id === threadId)?.ephemeral_ms);
+    return EPHEMERAL_CHOICES.includes(v) ? v : 0;
+  }
+  /** Règle les messages éphémères d'une discussion. Le serveur applique les droits (route `chat-ephemeral`) ; la démo applique les mêmes règles ici. */
+  public async setChatEphemeral(threadId: string, ms: number): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    if (!me) return { success: false, error: 'Non connecté.' };
+    const group = threadId === 'all' ? null : this.groups.find(g => g.id === threadId) || null;
+    if (this.demo) {
+      const plan = planEphemeral(me, group, threadId, ms);
+      if (!plan.ok) return { success: false, error: plan.error === 'role' ? 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent régler les messages éphémères.' : plan.error === 'direct' ? 'Les messages éphémères existent dans la discussion générale et dans les groupes.' : 'Durée non permise.' };
+    } else {
+      const r = await this.api('chat-ephemeral', { method: 'POST', body: JSON.stringify({ thread: threadId, ms }) });
+      if (!r.ok) return { success: false, error: r.data?.error || (r.status === 0 ? 'Pas de réseau : réessaie quand la connexion revient.' : 'Erreur.') };
+    }
+    if (group) { const i = this.groups.findIndex(g => g.id === threadId); if (i >= 0) { const g: ChatGroup = { ...this.groups[i] }; if (ms) g.ephemeral_ms = ms; else delete g.ephemeral_ms; this.groups[i] = g; } }
+    else { const cur: any = { ...(this.settings[0] || { id: 'general' }) }; if (ms) cur.chat_ephemeral_all_ms = ms; else delete cur.chat_ephemeral_all_ms; this.settings[0] = cur; }
+    this.notify();
     return { success: true };
   }
 
