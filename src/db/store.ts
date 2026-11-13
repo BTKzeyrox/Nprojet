@@ -78,7 +78,7 @@ import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 import { setServerClock } from '../utils/serverClock';
-import { planSharedMark } from '../utils/chatShared';
+import { planSharedMark, planVisibleTo } from '../utils/chatShared';
 import { fixedSalaryAr } from '../utils/fixedSalary';
 import { planWorkCancel } from '../utils/workEntry';
 
@@ -3275,7 +3275,8 @@ export class AppStore {
     sendAt?: number; // message programmé (ms)
     forwardedFrom?: string; // message transféré : auteur d'origine
     poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' }; // sondage (messagerie S1) : 2 à 6 choix, ou dates, ou « J'ai lu »
-  }): { success: boolean } {
+    visibleTo?: string[]; // « visible seulement par X » (M28.3) : mêmes règles que le serveur (chatShared)
+  }): { success: boolean; error?: string } {
     const sender = this.users.find(u => u.id === params.senderId);
     const poll = params.poll ? pollClean(params.poll) : null;
     if (params.poll && !poll) return { success: false };
@@ -3284,6 +3285,17 @@ export class AppStore {
     const now = new Date();
     const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
     const q = params.replyTo;
+    let visibleTo: string[] | undefined;
+    if (params.visibleTo && params.visibleTo.length) {
+      if (poll) return { success: false, error: 'visible_to' };
+      const grp = (params.recipientId || 'all') === 'all' ? null : this.groups.find(g => g.id === params.recipientId) || null;
+      const eligible = grp ? grp.members : this.users.filter(u => u.status !== 'blocked').map(u => u.id);
+      const pv = planVisibleTo(sender, grp, params.recipientId || 'all', params.visibleTo, eligible);
+      if (!pv.ok) return { success: false, error: pv.error };
+      visibleTo = pv.list;
+    }
+    if (q && Array.isArray(q.visible_to) && q.visible_to.length) visibleTo = [...new Set([...q.visible_to, q.sender_id])].filter(x => x !== sender.id); // répondre à un message restreint : même public
+    const nameOf = (id: string) => this.users.find(u => u.id === id)?.name || '?';
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -3296,6 +3308,7 @@ export class AppStore {
       sent_ms: params.sendAt && params.sendAt > now.getTime() ? params.sendAt : now.getTime(),
       ...(params.sendAt && params.sendAt > now.getTime() && !poll ? { send_at: params.sendAt } : {}),
       ...(poll ? { poll } : {}),
+      ...(visibleTo && visibleTo.length ? { visible_to: visibleTo, visible_names: visibleTo.map(nameOf) } : {}),
       ...(q && !q.deleted_at
         ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }
         : {}),

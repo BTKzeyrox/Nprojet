@@ -40,8 +40,9 @@ export function toggleImportant(list: readonly string[], id: string): string[] {
   return l.includes(id) ? l.filter(x => x !== id) : [...l, id].slice(-IMPORTANT_MAX);
 }
 /** Peut-on transférer ce message ? Pas un message supprimé, programmé ou un sondage. */
-export function canForward(m: Pick<ChatMessage, 'deleted_at' | 'send_at' | 'poll' | 'message' | 'attachment_url'>): boolean {
-  return !!m && !m.deleted_at && !m.send_at && !m.poll && !!(String(m.message || '').trim() || m.attachment_url);
+export function canForward(m: Pick<ChatMessage, 'deleted_at' | 'send_at' | 'poll' | 'message' | 'attachment_url'> & { visible_to?: string[] }): boolean {
+  // un message « visible seulement par X » ne se transfère jamais
+  return !!m && !m.deleted_at && !m.send_at && !(Array.isArray(m.visible_to) && m.visible_to.length) && !m.poll && !!(String(m.message || '').trim() || m.attachment_url);
 }
 /** D'où vient le message transféré : l'auteur d'origine (un message déjà transféré garde son auteur d'origine). */
 export function forwardFrom(m: Pick<ChatMessage, 'sender_name' | 'forwarded'>): string {

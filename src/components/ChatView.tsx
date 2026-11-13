@@ -13,9 +13,11 @@ import { stepNav } from '../utils/chatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerKeys';
 import { Bot } from 'lucide-react';
+import { ChatVisibleTo } from './ChatVisibleTo';
+import { isHiddenFrom, VISIBLE_TO_SERVER_LIVE } from '../utils/chatShared';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
-  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
+  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward,
 } from 'lucide-react';
 import { db } from '../db/store';
@@ -116,7 +118,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     div: L ? 'border-slate-200' : 'border-slate-800',
     pill: L ? 'bg-white/90 text-slate-600 shadow-sm' : 'bg-slate-800/80 text-slate-300',
   };
-  const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages());
+  const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages().filter(m => !isHiddenFrom(currentUser, m)));
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [groups, setGroups] = useState<ChatGroup[]>(db.getGroups());
   const [reads, setReads] = useState(db.getChatReads());
@@ -183,7 +185,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
-      setMessages(db.getMessages());
+      setMessages(db.getMessages().filter(m => !isHiddenFrom(currentUser, m)));
       setUsers(db.getUsers());
       setGroups(db.getGroups());
       setReads(db.getChatReads());
@@ -280,6 +282,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const onAssistant = isAdmin && threadId === 'assistant';
   const current = threads.find(t => t.id === threadId) || threads[0];
+  // « Visible seulement par… » : responsable, chef d'équipe, créateur du groupe (dans son groupe) ; jamais dans une discussion à deux (le serveur applique la même règle)
+  const canOnly = (VISIBLE_TO_SERVER_LIVE || db.isDemo()) && !!current && !current.readOnly && current.kind !== 'pair' && canUseSharedTools(currentUser, current.kind === 'group' ? current.group : null);
+  const onlyPeople = current ? (current.kind === 'group' && current.group ? current.group.members.map(id => ({ id, name: db.getUsers().find(u => u.id === id)?.name || '?' })) : db.getUsers().filter(u => u.status !== 'blocked').map(u => ({ id: u.id, name: u.name }))).filter(p => p.id !== currentUser.id) : [];
   useEffect(() => { const el = scrollRef.current; return el ? guardScroller(el) : undefined; }, [current?.id]); // fin de liste : la page ne bouge pas
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = listRef.current; return el ? guardScroller(el) : undefined; }, []);
@@ -386,6 +391,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   useEffect(() => { if (!plusOpen) return; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setPlusOpen(false); }; window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f); }, [plusOpen]);
   const [itemMsg, setItemMsg] = useState<ChatMessage | null>(null); // message à transformer en rappel / tâche / événement
   const [tool, setTool] = useState<'schedule' | 'templates' | null>(null);
+  const [onlyTo, setOnlyTo] = useState<string[]>([]); // « visible seulement par… » pour le prochain message
+  const [onlyOpen, setOnlyOpen] = useState(false);
   const [pollKind, setPollKind] = useState<'poll' | 'date' | 'ack' | null>(null);
   const sendPoll = (poll: { question: string; options: string[]; kind: 'poll' | 'date' | 'ack' }) => {
     if (current.readOnly) return;
@@ -418,8 +425,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       attachmentKind: extra?.kind,
       replyTo: extra?.noReply ? undefined : (replyTo || undefined),
       albumId: extra?.albumId,
+      ...(onlyTo.length && !extra?.noText ? { visibleTo: onlyTo } : {}),
     });
-    if (!extra?.noText) setText('');
+    if (!extra?.noText) { setText(''); setOnlyTo([]); }
     setReplyTo(null);
     setSendPulse(true);
     window.setTimeout(() => setSendPulse(false), 320);
@@ -860,6 +868,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                           : `px-3 py-1.5 shadow-sm ${isMe ? 'rounded-br-md' : 'rounded-bl-md'} ${gone ? `${L ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-[#101822] text-slate-500 border border-slate-800'}` : isMe ? P.outBub : P.inBub}${tinted ? ' !text-white border' : ''}`
                       } ${menuMsg?.id === msg.id ? 'ring-2 ring-emerald-400' : ''} ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
                     >
+                      {!gone && msg.visible_to && msg.visible_to.length > 0 && <div data-visible-only className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Lock className="w-3 h-3 shrink-0" aria-hidden />Visible seulement par {(msg.visible_names && msg.visible_names.length ? msg.visible_names : msg.visible_to).join(', ')}</div>}
                       {!gone && msg.forwarded && <div data-forwarded-from className="flex items-center gap-1 text-[11px] font-semibold mb-0.5 opacity-90"><Forward className="w-3 h-3" />Transféré de {msg.forwarded.from}</div>}
                       {!gone && !isMe && showNames && !sameSender && (
                         <button type="button" onClick={() => openProfile(msg.sender_id)} className="block text-left text-[12px] font-bold mb-0.5 cursor-pointer" style={{ color: accentStyles(accentOf(users.find(u => u.id === msg.sender_id) || { name: msg.sender_name }), L).name }} title="Voir le profil">
@@ -975,6 +984,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             </button>
           </div>
         )}
+        {onlyTo.length > 0 && !editingId && (
+          <div data-only-chip className={`mx-2 mb-1 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold ${L ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-amber-900/30 text-amber-100 border border-amber-700/50'}`}>
+            <Lock className="w-4 h-4 shrink-0" aria-hidden />
+            <span className="flex-1 min-w-0 truncate">Visible seulement par {onlyTo.map(id => onlyPeople.find(p => p.id === id)?.name || '?').join(', ')}</span>
+            <button type="button" aria-label="Retirer la restriction" onClick={() => setOnlyTo([])} className="w-8 h-8 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
+          </div>
+        )}
         {replyTo && !editingId && (
           <div className={`px-3 pt-2 border-t ${P.div} ${P.head}`}>
             <div className="relative flex items-center gap-2 rounded-xl overflow-hidden pl-3 pr-1 py-1" style={{ backgroundColor: accentStyles(accentOf(users.find(u => u.id === replyTo.sender_id) || { name: replyTo.sender_name }), L).quoteBg }}>
@@ -1030,8 +1046,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} aria-hidden />
                     <div role="menu" data-chat-plus-menu className={`absolute bottom-12 left-0 z-50 w-60 rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
-                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
-                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
+                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ...(canOnly ? [['only', 'Visible seulement par…', Lock] as const] : []), ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
+                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'only') setOnlyOpen(true); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
                       ))}
                     </div>
                   </>
@@ -1070,6 +1086,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       </div>
 
       {itemMsg && <MessageToItem msg={itemMsg} light={L} onClose={() => setItemMsg(null)} />}
+      {onlyOpen && <ChatVisibleTo light={L} people={onlyPeople} initial={onlyTo} onClose={() => setOnlyOpen(false)} onPick={ids => { setOnlyTo(ids); setOnlyOpen(false); }} />}
       {tool === 'schedule' && <ScheduleDialog light={L} initial={text} onClose={() => setTool(null)} onSend={(t, ms) => { if (current.readOnly) return; db.sendMessage({ senderId: currentUser.id, message: t, recipientId: current.id === 'all' ? 'all' : current.id, sendAt: ms }); setText(''); setTool(null); }} />}
       {tool === 'templates' && <TemplatesDialog light={L} uid={currentUser.id} draft={text} onClose={() => setTool(null)} onPick={t => { setText(t); setTool(null); }} />}
       {pollKind && <PollComposer kind={pollKind} light={L} onClose={() => setPollKind(null)} onSend={sendPoll} />}

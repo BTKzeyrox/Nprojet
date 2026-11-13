@@ -10,10 +10,31 @@ function canUseSharedTools(me: any, group: any): boolean {
 }
 function canSeeChatMessage(me: any, msg: any, group: any): boolean {
   if (!me || typeof me.id !== "string" || !msg) return false;
+  if (isHiddenFrom(me, msg)) return false;
   if (me.role === "admin") return true;
   const to = typeof msg.recipient_id === "string" && msg.recipient_id ? msg.recipient_id : "all";
   if (to === "all" || msg.sender_id === me.id || to === me.id) return true;
   return !!group && Array.isArray(group.members) && group.members.includes(me.id);
+}
+function isHiddenFrom(me: any, msg: any): boolean {
+  // Message « visible seulement par X » (M28.3) : caché à toute personne qui n'est ni l'auteur, ni le responsable, ni dans la liste. Le serveur ne l'envoie même pas.
+  if (!me || typeof me.id !== "string" || !msg) return true;
+  if (me.role === "admin" || msg.sender_id === me.id) return false;
+  return Array.isArray(msg.visible_to) && msg.visible_to.length > 0 && !msg.visible_to.includes(me.id);
+}
+function planVisibleTo(me: any, group: any, thread: string, list: any, eligible: string[]): any {
+  // Qui peut restreindre un message et à qui : responsable, chef d'équipe, créateur du groupe (dans son groupe) ; jamais dans une discussion à deux ; 1 à 20 personnes de la discussion
+  if (!me || typeof me.id !== "string" || !Array.isArray(list) || !Array.isArray(eligible)) return { ok: false, error: "args" };
+  if (thread !== "all" && !group) return { ok: false, error: "direct" };
+  if (!canUseSharedTools(me, thread === "all" ? null : group)) return { ok: false, error: "role" };
+  const out: string[] = [];
+  for (const x of list) {
+    if (typeof x !== "string" || x === me.id || out.includes(x)) continue;
+    if (!eligible.includes(x)) return { ok: false, error: "member" };
+    out.push(x);
+  }
+  if (out.length < 1 || out.length > 20) return { ok: false, error: "count" };
+  return { ok: true, list: out };
 }
 function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean, nowIso: string): any {
   if (!me || typeof me.id !== "string" || !msg || typeof msg.id !== "string" || (mark !== "important" && mark !== "pinned")) return { ok: false, error: "args" };
@@ -40,4 +61,6 @@ function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean
   return { ok: true, save };
 }
 // ===== END CHATSHARED =====
-export { canUseSharedTools, canSeeChatMessage, planSharedMark };
+/** « Visible seulement par X » : le serveur déployé doit connaître M28.3, sinon l'ancien serveur livrerait le message à tous. Passe à true APRÈS le déploiement de df-api (démo : toujours ouvert). */
+export const VISIBLE_TO_SERVER_LIVE = false;
+export { canUseSharedTools, canSeeChatMessage, planSharedMark, isHiddenFrom, planVisibleTo };

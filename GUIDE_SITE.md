@@ -932,6 +932,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `ChatPoll.tsx` | Sondage dans une discussion ou un groupe (messagerie S1, 2026-11-09) : carte SANS bulle autour, avec contour et ombre (BTK 2026-11-09), de taille fixe : elle ne bouge pas quand on vote. + fenêtre de création. |
 | `ChatSearch.tsx` | Recherche de messages dans la conversation ouverte : par texte, par jour (date cliquable dans le fil ou sélecteur de date). Règle : utils/chatSearch.ts. |
 | `ChatView.tsx` | Messagerie complète : liste des discussions (général, privées, groupes), conversation, pièces jointes, réponses, épinglage, archivage et assistant. |
+| `ChatVisibleTo.tsx` | « Visible seulement par… » (M28.3) : choix des personnes qui verront le prochain message. Le serveur cache ensuite le message à tous les autres (règles : utils/chatShared.ts). |
 | `ClientBadges.tsx` | Pastilles de badges des clients (bon payeur, payeur lent, à surveiller, gros volume) et fiche de relation avec le score et le détail du paiement. |
 | `ClientPicker.tsx` | Champ de choix du client d'une mission : liste des clients actifs, recherche si plus de 8 clients, et création rapide d'un nouveau client. |
 | `CompanyConditions.tsx` | Page des Conditions de l'entreprise : identité, taxes, facturation, paie, congés, missions, pages du menu à cacher, règlement et seuils de surveillance. |
@@ -1127,6 +1128,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:unsent-copy` | Filet de sécurité des textes envoyés sans réseau et sans coffre. Lancer : npm run check:unsent-copy |
 | `npm run check:calendar-worktypes` | Calendrier : le détail d'un jour suit les types de travail (feuille du jour). Une ligne de présence/heures/quantité n'est JAMAIS une mission. |
 | `npm run check:work-rules-text` | Règles écrites par type de travail (Réglages) : relues depuis les règles existantes, jamais inventées. Contrôle : npm run check:work-rules-text |
+| `npm run check:chat-visible-to` | Chat : message « visible seulement par X » (M28.3). Règles pures (chatShared, copie exacte côté serveur), serveur, démo, écran. Contrôle : npm run check:chat-visible-to |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |

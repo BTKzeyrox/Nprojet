@@ -3664,10 +3664,31 @@ function canUseSharedTools(me: any, group: any): boolean {
 }
 function canSeeChatMessage(me: any, msg: any, group: any): boolean {
   if (!me || typeof me.id !== "string" || !msg) return false;
+  if (isHiddenFrom(me, msg)) return false;
   if (me.role === "admin") return true;
   const to = typeof msg.recipient_id === "string" && msg.recipient_id ? msg.recipient_id : "all";
   if (to === "all" || msg.sender_id === me.id || to === me.id) return true;
   return !!group && Array.isArray(group.members) && group.members.includes(me.id);
+}
+function isHiddenFrom(me: any, msg: any): boolean {
+  // Message « visible seulement par X » (M28.3) : caché à toute personne qui n'est ni l'auteur, ni le responsable, ni dans la liste. Le serveur ne l'envoie même pas.
+  if (!me || typeof me.id !== "string" || !msg) return true;
+  if (me.role === "admin" || msg.sender_id === me.id) return false;
+  return Array.isArray(msg.visible_to) && msg.visible_to.length > 0 && !msg.visible_to.includes(me.id);
+}
+function planVisibleTo(me: any, group: any, thread: string, list: any, eligible: string[]): any {
+  // Qui peut restreindre un message et à qui : responsable, chef d'équipe, créateur du groupe (dans son groupe) ; jamais dans une discussion à deux ; 1 à 20 personnes de la discussion
+  if (!me || typeof me.id !== "string" || !Array.isArray(list) || !Array.isArray(eligible)) return { ok: false, error: "args" };
+  if (thread !== "all" && !group) return { ok: false, error: "direct" };
+  if (!canUseSharedTools(me, thread === "all" ? null : group)) return { ok: false, error: "role" };
+  const out: string[] = [];
+  for (const x of list) {
+    if (typeof x !== "string" || x === me.id || out.includes(x)) continue;
+    if (!eligible.includes(x)) return { ok: false, error: "member" };
+    out.push(x);
+  }
+  if (out.length < 1 || out.length > 20) return { ok: false, error: "count" };
+  return { ok: true, list: out };
 }
 function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean, nowIso: string): any {
   if (!me || typeof me.id !== "string" || !msg || typeof msg.id !== "string" || (mark !== "important" && mark !== "pinned")) return { ok: false, error: "args" };
@@ -3695,6 +3716,13 @@ function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean
 }
 // ===== END CHATSHARED =====
 
+// Noms (nettoyés) des personnes d'une liste « visible seulement par X » : le serveur les écrit, jamais le navigateur
+async function visibleNames(ids: string[]): Promise<string[]> {
+  const { data: us } = await sb.from(T.users).select('id,data').in('id', ids);
+  const by: any = {}; for (const r of us || []) by[String((r as any).id)] = String((r as any).data?.name || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  return ids.map(i => by[i] || '?');
+}
+
 async function checkMessage(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any; reason?: string }> {
   if (existing) {
     // Supprimer pour tous : l'auteur, ou l'admin (modération). Une trace reste dans la conversation.
@@ -3708,7 +3736,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
     // Réaction emoji : tout participant à la conversation, mais seulement sa propre réaction
     if (rec.reactions && typeof rec.reactions === 'object' && !existing.deleted_at && rec.message === existing.message && !!rec.pinned === !!existing.pinned) {
       const to = existing.recipient_id || 'all';
-      let visible = admin || to === 'all' || existing.sender_id === me.id || to === me.id;
+      let visible = !isHiddenFrom(me, existing) && (admin || to === 'all' || existing.sender_id === me.id || to === me.id);
       if (!visible && to.startsWith(GROUP_PREFIX)) { const g = await getGroup(to); visible = !!g && (g.members || []).includes(me.id); }
       if (!visible) return { ok: false };
       const next: any = {};
@@ -3728,7 +3756,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
     // Sondage de la discussion (messagerie S1) : tout participant vote (sa propre voix seulement) ; l'auteur ou le responsable clôt. La question et les choix ne changent jamais.
     if (existing.poll && rec.poll && typeof rec.poll === 'object' && !existing.deleted_at && rec.message === existing.message && !!rec.pinned === !!existing.pinned) {
       const to = existing.recipient_id || 'all';
-      let visible = admin || to === 'all' || existing.sender_id === me.id || to === me.id;
+      let visible = !isHiddenFrom(me, existing) && (admin || to === 'all' || existing.sender_id === me.id || to === me.id);
       if (!visible && to.startsWith(GROUP_PREFIX)) { const g = await getGroup(to); visible = !!g && (g.members || []).includes(me.id); }
       if (!visible) return { ok: false };
       const cur: any = existing.poll;
@@ -3765,9 +3793,11 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   // Nouveau message
   if (rec.sender_id !== me.id || typeof rec.message !== 'string' || rec.message.length > 4000) return { ok: false };
   const rid = typeof rec.recipient_id === 'string' && rec.recipient_id ? rec.recipient_id : 'all';
+  let grp: any = null;
   if (rid !== 'all') {
     if (rid.startsWith(GROUP_PREFIX)) {
       const g = await getGroup(rid);
+      grp = g;
       if (!g || (!admin && !(g.members || []).includes(me.id))) return { ok: false };
     } else {
       if (rid === me.id) return { ok: false };
@@ -3777,12 +3807,21 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
-  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reactions', 'forwarded']) delete save[k]; // jamais reçus d'un navigateur : « pour tous » passe par la route chat-mark
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reactions', 'forwarded', 'visible_to', 'visible_names']) delete save[k]; // jamais reçus d'un navigateur : « pour tous » passe par la route chat-mark
   const fw = cleanForwarded(rec.forwarded); if (fw && rec.poll === undefined) save.forwarded = fw; // message transféré : seulement le nom d'origine, nettoyé
   if (rec.poll !== undefined) { // sondage : jamais de votes reçus d'un navigateur, la question et les choix sont nettoyés
     const pc = pollClean(rec.poll);
     if (!pc) return { ok: false };
     save.poll = pc; save.message = `${pc.kind === 'date' ? '📅' : pc.kind === 'ack' ? '👁' : '📊'} ${pc.question}`;
+  }
+  if (rec.visible_to !== undefined) { // « visible seulement par X » (M28.3) : droits et liste vérifiés ICI (bloc CHATSHARED), jamais seulement à l'écran
+    if (rec.poll !== undefined) return { ok: false };
+    let eligible: string[] = [];
+    if (rid === 'all') { const { data: us } = await sb.from(T.users).select('id,data'); eligible = (us || []).filter((r: any) => r.data?.status !== 'blocked').map((r: any) => String(r.id)); }
+    else eligible = ((grp && grp.members) || []).map(String);
+    const pv = planVisibleTo(me, grp, rid, rec.visible_to, eligible);
+    if (!pv.ok) return { ok: false, reason: 'visible_to' };
+    save.visible_to = pv.list; save.visible_names = await visibleNames(pv.list);
   }
   delete save.send_at;
   if (rec.send_at !== undefined) { // message programmé (messagerie S4) : de 1 minute à 30 jours ; il part avec la tâche planifiée (chaque minute)
@@ -3792,6 +3831,14 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   const rt = clipReply(rec.reply_to);
   if (rt) save.reply_to = rt; else delete save.reply_to;
+  if (rt) { // répondre à un message « visible seulement par X » : la réponse reste visible des mêmes personnes (sinon la citation fuirait dans la discussion)
+    const { data: orow } = await sb.from(T.messages).select('data').eq('id', rt.id).maybeSingle();
+    const od: any = (orow as any)?.data;
+    if (od && Array.isArray(od.visible_to) && od.visible_to.length) {
+      const aud = [...new Set([...od.visible_to, od.sender_id].map(String))].filter(x => x !== me.id).slice(0, 21);
+      if (aud.length) { save.visible_to = aud; save.visible_names = await visibleNames(aud); }
+    }
+  }
   return { ok: true, save };
 }
 
@@ -3951,6 +3998,7 @@ async function state(req: any, res: any, me: any) {
     let recs = (changed || []).map((r: any) => r.data);
     if (col === 'users') recs = recs.map((u: any) => stripUser(u, me));
     if (col === 'news' && !admin) recs = recs.map((r: any) => viewNews(r, me)); // sondage : comptes et son vote seulement
+    if (col === 'messages') recs = recs.filter((r: any) => !isHiddenFrom(me, r)); // « visible seulement par X » : jamais envoyé aux autres
     if (col === 'messages') recs = recs.filter((r: any) => !r.send_at || r.sender_id === me.id); // message programmé : invisible des autres jusqu'à son heure
     if (col === 'messages') recs = recs.map((r: any) => (r.poll && r.sender_id !== me.id ? { ...r, poll: pollView(r.poll, String(me.id), false) } : r)); // sondage d'une discussion : seul l'auteur voit les noms
     if (col === 'reviews' && me.role !== 'admin') recs = recs.map((r: any) => { const { improvements: _hidden, ...mine } = r; return mine; }); // jamais les « points à améliorer » côté salarié (D9)
@@ -6010,7 +6058,8 @@ async function pushAdmins(cat: PushCat, text: PushText, tag: string, link: DeepL
 async function pushMessage(m: any): Promise<number> {
   const group = !m.recipient_id || m.recipient_id === 'all';
   let ids: string[] = [];
-  if (group) { const { data: us } = await sb.from(T.users).select('id,data'); ids = (us || []).filter((r: any) => String(r.id) !== String(m.sender_id) && r.data?.status !== 'blocked').map((r: any) => String(r.id)); }
+  if (Array.isArray(m.visible_to) && m.visible_to.length) ids = m.visible_to.map(String).filter((x: string) => x !== String(m.sender_id)); // « visible seulement par X » : seuls ceux-là sont notifiés
+  else if (group) { const { data: us } = await sb.from(T.users).select('id,data'); ids = (us || []).filter((r: any) => String(r.id) !== String(m.sender_id) && r.data?.status !== 'blocked').map((r: any) => String(r.id)); }
   else if (String(m.recipient_id) !== String(m.sender_id)) ids = [String(m.recipient_id)];
   return await pushTo(ids, notifyText('message', { name: m.sender_name, group }), `msg:${m.id}`.slice(0, 60), { go: 'chat', thread: group ? 'all' : String(m.sender_id) }, 'messages');
 }

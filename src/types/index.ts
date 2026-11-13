@@ -292,6 +292,8 @@ export interface ChatMessage {
   sent_ms?: number; // heure d'envoi côté serveur (fenêtre de modification, coches « lu »)
   reactions?: Record<string, string[]>; // réactions emoji : emoji → ids des personnes
   forwarded?: { from: string }; // message transféré : nom de l'auteur d'origine
+  visible_to?: string[]; // « visible seulement par X » (M28.3) : le serveur ne l'envoie qu'à l'auteur, au responsable et à ces personnes
+  visible_names?: string[]; // leurs noms (écrits par le serveur)
   send_at?: number; // message programmé : heure d'envoi (ms) ; le serveur le cache aux autres jusque-là
   poll?: { question: string; kind?: 'poll' | 'date' | 'ack'; options: { id: string; text: string }[]; closed: boolean; votes?: Record<string, string | string[]>; counts?: Record<string, number>; my?: string | string[] }; // auteur : tous les votes ; autre participant : comptes + son vote (le serveur cache les noms) // sondage dans la discussion (messagerie S1) : les votes sont visibles de tous les participants
 }
