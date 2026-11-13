@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dayDetail, queuedLineRows } from '../src/utils/dayDetail';
 import { dayView, empMonth, globalMonth, globalSummary } from '../src/utils/calendarGlobal';
+import { dayStatus, presenceDayStatus } from '../src/utils/dayStatus';
 import { workLineDetail, workLineBy } from '../src/utils/workLineText';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -40,6 +41,22 @@ const gm = globalMonth(2026, 9, [{ id: 'a', name: 'A', shift: 'day' } as any], c
 ok(gm.missions === 1 && gm.workLines === 2, 'mois global : même séparation');
 const gs = globalSummary(2026, 9, [{ id: 'a', name: 'A', shift: 'day' } as any], ctx2, { a: D });
 ok(gs.missions === 1 && gs.validated === 1 && gs.refused === 0 && gs.workLines === 2 && gs.inProgress === 0 && gs.rows[0].workLines === 2, 'résumé du mois : missions sans les lignes de feuille, « en cours » aussi');
+// statut du jour = ce qui est saisi sur la feuille du jour (présence)
+const cfgS: any = { ...cfg, work_days: [1, 2, 3, 4, 5, 6] };
+const L = (over: any) => ({ ...pres, presence: undefined, ...over });
+const st = (shifts: any[], onLeave = false) => dayStatus(shifts, D, '2026-10-01', '2026-10-29', cfgS, onLeave);
+ok(st([L({ presence: 'present' })]) === 'objective_reached', 'feuille : présent → présent');
+ok(st([L({ presence: 'absent' })]) === 'absent', 'feuille : absent → absent (plus « objectif atteint »)');
+ok(st([L({ presence: 'late', late_minutes: 20 })]) === 'late', 'feuille : en retard → en retard');
+ok(st([L({ presence: 'half' })]) === 'objective_reached', 'feuille : demi-journée → présent');
+ok(st([L({ presence: 'present', status: 'pending_end' })]) === 'objective_reached', 'feuille en attente de validation : présent (pas « en cours »)');
+ok(st([L({ work_type: 'pack', presence: undefined, quantity: 200, status: 'pending_end' })]) === 'objective_reached', 'quantité saisie sans présence : la personne a travaillé');
+ok(st([L({ presence: 'present', status: 'rejected' })]) === 'absent', 'ligne refusée : comme sans saisie (jour passé travaillé = absent)');
+ok(st([L({ presence: 'absent' })], true) === 'leave', 'absent saisi pendant un congé accepté : congé');
+ok(st([L({ presence: 'present' }), L({ id: 'w9', presence: 'absent' })]) === 'objective_reached' && st([L({ presence: 'late' }), L({ id: 'w9', presence: 'present' })]) === 'objective_reached', 'plusieurs lignes : une présente suffit ; retard seulement si toutes en retard');
+ok(st([L({ presence: 'present' }), { ...mission, status: 'active' }]) === 'in_progress', 'mission en cours + présence : en cours');
+ok(st([L({ presence: 'present' }), { ...mission, status: 'rejected' }]) === 'objective_reached' && st([L({ presence: 'absent' }), mission]) === 'objective_reached', 'missions et feuille : la mission terminée ou la présence font le présent');
+ok(presenceDayStatus([]) === null, 'aucune ligne : rien');
 const ui = readFileSync('src/views/CalendarView.tsx', 'utf8');
 ok(/Travail saisi/.test(ui) && /day-worklines-/.test(ui) && /getQueuedSheets\(\)/.test(ui) && /présence[^`]*seule/.test(ui) && /Feuille du jour/.test(ui), 'écran : bloc « Travail saisi », feuilles gardées, compteur « présence seule »');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
