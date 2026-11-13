@@ -2,6 +2,7 @@
 
 À lire après `LIRE_EN_PREMIER.md` et `NOUVEAU_PROJET.md`.
 Dernière mise à jour : 2026-10-24 (voir § 11 pour l'état des modules et du serveur). Propriétaire : BTK (français, mots simples, réponses COURTES).
+**⚠️ À DÉPLOYER : df-api (`hasOpenMission`, commit 9c38aab sur `main`). Serveur en ligne = v87. Voir `AI_STUDIO.md`.**
 
 ## 0. Règles de travail avec BTK
 1. Récap court d'abord, puis attendre « GO ». Un document de texte demandé clairement est permis sans GO.
