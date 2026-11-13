@@ -3655,6 +3655,46 @@ function cleanForwarded(v: any): { from: string } | null {
 }
 // ===== END FORWARD =====
 
+// ===== BEGIN CHATSHARED (droits « pour tous » du chat : copie exacte dans supabase/functions/df-api/index.ts ; contrôlée par scripts/check-chat-shared.ts) =====
+function canUseSharedTools(me: any, group: any): boolean {
+  // Responsable, chef d'équipe, ou créateur du groupe (dans son groupe) : les seuls à poser « Important pour tous » ; l'auteur peut toujours épingler son message
+  if (!me || typeof me.id !== "string") return false;
+  if (me.role === "admin" || me.role === "team_lead") return true;
+  return !!group && typeof group.owner_id === "string" && group.owner_id === me.id;
+}
+function canSeeChatMessage(me: any, msg: any, group: any): boolean {
+  if (!me || typeof me.id !== "string" || !msg) return false;
+  if (me.role === "admin") return true;
+  const to = typeof msg.recipient_id === "string" && msg.recipient_id ? msg.recipient_id : "all";
+  if (to === "all" || msg.sender_id === me.id || to === me.id) return true;
+  return !!group && Array.isArray(group.members) && group.members.includes(me.id);
+}
+function planSharedMark(me: any, msg: any, group: any, mark: string, on: boolean, nowIso: string): any {
+  if (!me || typeof me.id !== "string" || !msg || typeof msg.id !== "string" || (mark !== "important" && mark !== "pinned")) return { ok: false, error: "args" };
+  if (msg.deleted_at) return { ok: false, error: "deleted" };
+  if (!canSeeChatMessage(me, msg, group)) return { ok: false, error: "gone" };
+  const tools = canUseSharedTools(me, group);
+  const by_name = String(me.name || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  const save: any = { ...msg };
+  if (mark === "important") {
+    if (on) {
+      if (!tools) return { ok: false, error: "role" };
+      if (!save.important_all) save.important_all = { by: me.id, by_name, at: nowIso };
+    } else {
+      const cur = save.important_all;
+      if (!cur) return { ok: true, save, same: true };
+      if (cur.by !== me.id && me.role !== "admin") return { ok: false, error: "remove" };
+      delete save.important_all;
+    }
+    return { ok: true, save };
+  }
+  if (!(msg.sender_id === me.id || tools)) return { ok: false, error: "role" };
+  if (on) { if (!save.pinned) { save.pinned = true; save.pinned_at = nowIso; save.pinned_by = me.id; save.pinned_by_name = by_name; } }
+  else { delete save.pinned; delete save.pinned_at; delete save.pinned_by; delete save.pinned_by_name; }
+  return { ok: true, save };
+}
+// ===== END CHATSHARED =====
+
 async function checkMessage(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any; reason?: string }> {
   if (existing) {
     // Supprimer pour tous : l'auteur, ou l'admin (modération). Une trace reste dans la conversation.
@@ -3662,7 +3702,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       if (existing.sender_id !== me.id && !admin) return { ok: false };
       if (existing.deleted_at) return { ok: true, save: existing };
       const save = { ...existing, message: '', deleted_at: now, deleted_by: existing.sender_id === me.id ? 'sender' : 'admin' };
-      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at', 'reactions', 'send_at', 'forwarded']) delete save[k];
+      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reply_to', 'edited_at', 'reactions', 'send_at', 'forwarded']) delete save[k];
       return { ok: true, save };
     }
     // Réaction emoji : tout participant à la conversation, mais seulement sa propre réaction
@@ -3719,7 +3759,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
       save.edited_at = now;
     }
     if (rec.pinned) { save.pinned = true; save.pinned_at = existing.pinned_at || now; }
-    else { delete save.pinned; delete save.pinned_at; }
+    else { delete save.pinned; delete save.pinned_at; delete save.pinned_by; delete save.pinned_by_name; }
     return { ok: true, save };
   }
   // Nouveau message
@@ -3737,7 +3777,7 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   }
   if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
   const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
-  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'reactions', 'forwarded']) delete save[k];
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at', 'pinned_by', 'pinned_by_name', 'important_all', 'reactions', 'forwarded']) delete save[k]; // jamais reçus d'un navigateur : « pour tous » passe par la route chat-mark
   const fw = cleanForwarded(rec.forwarded); if (fw && rec.poll === undefined) save.forwarded = fw; // message transféré : seulement le nom d'origine, nettoyé
   if (rec.poll !== undefined) { // sondage : jamais de votes reçus d'un navigateur, la question et les choix sont nettoyés
     const pc = pollClean(rec.poll);
@@ -3753,6 +3793,28 @@ async function checkMessage(rec: any, existing: any, me: any, admin: boolean, no
   const rt = clipReply(rec.reply_to);
   if (rt) save.reply_to = rt; else delete save.reply_to;
   return { ok: true, save };
+}
+
+// « Important pour tous » et épingler le message d'un autre (M28.2) : les droits sont dans le bloc CHATSHARED ci-dessus, appliqués ICI (jamais seulement à l'écran)
+async function chatMarkRoute(req: any, res: any, me: any) {
+  const b = req.body || {};
+  const id = typeof b.id === 'string' ? b.id.slice(0, 80) : '';
+  if (!id || (b.mark !== 'important' && b.mark !== 'pinned') || typeof b.on !== 'boolean') return res.status(400).json({ error: 'Demande incorrecte.' });
+  const { data: row } = await sb.from(T.messages).select('data').eq('id', id).maybeSingle();
+  const msg: any = row?.data;
+  if (!msg) return res.status(404).json({ error: 'Message introuvable.' });
+  const group = typeof msg.recipient_id === 'string' && msg.recipient_id.startsWith(GROUP_PREFIX) ? await getGroup(msg.recipient_id) : null;
+  const now = new Date().toISOString();
+  const plan = planSharedMark(me, msg, group, b.mark, b.on, now);
+  if (!plan.ok) {
+    const text: Record<string, string> = { role: b.mark === 'important' ? 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent poser « Important pour tous ».' : 'Seuls l\'auteur, le responsable, un chef d\'équipe ou le créateur du groupe peuvent épingler ce message.', gone: 'Message introuvable.', deleted: 'Ce message a été supprimé.', remove: 'Seul celui qui l\'a posé ou le responsable peut retirer « Important pour tous ».', args: 'Demande incorrecte.' };
+    return res.status(plan.error === 'gone' ? 404 : plan.error === 'deleted' ? 409 : plan.error === 'args' ? 400 : 403).json({ error: text[plan.error] || 'Refusé.' });
+  }
+  if (!plan.same) {
+    await sb.from(T.messages).upsert({ id, data: plan.save, updated_at: now });
+    await auditLog(me, 'chat_mark', { type: 'message', id }, { mark: b.mark, on: b.on });
+  }
+  return res.json({ ok: true, message: plan.save });
 }
 
 async function checkGroup(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any }> {
@@ -6872,6 +6934,7 @@ Deno.serve(async (request: Request) => {
     if (action === "post-decide" && req.method === "POST") return await postDecide(req, res, me);
     if (action === "work-entry" && req.method === "POST") return await workEntryRoute(req, res, me);
     if (action === "work-line-cancel" && req.method === "POST") return await workCancelRoute(req, res, me);
+    if (action === "chat-mark" && req.method === "POST") return await chatMarkRoute(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "prefs" && req.method === "GET") return await prefsGetRoute(req, res, me);
     if (action === "prefs-set" && req.method === "POST") return await prefsSetRoute(req, res, me);

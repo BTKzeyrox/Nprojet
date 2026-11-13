@@ -78,6 +78,7 @@ import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { cleanShiftMode } from '../utils/shiftMode';
 import { setServerClock } from '../utils/serverClock';
+import { planSharedMark } from '../utils/chatShared';
 import { fixedSalaryAr } from '../utils/fixedSalary';
 import { planWorkCancel } from '../utils/workEntry';
 
@@ -3634,6 +3635,26 @@ export class AppStore {
   }
 
   // --- Groupes de discussion ---
+  /** « Important pour tous » et épingler le message d'un autre (M28.2). Les droits sont ceux du bloc CHATSHARED : le serveur les applique (route `chat-mark`), la démo les applique ici. */
+  public async setChatMark(id: string, mark: 'important' | 'pinned', on: boolean): Promise<{ success: boolean; error?: string }> {
+    const me = this.currentUser;
+    const msg = this.messages.find(m => m.id === id);
+    if (!me || !msg) return { success: false, error: 'Message introuvable.' };
+    const group = typeof msg.recipient_id === 'string' && msg.recipient_id.startsWith('grp_') ? (this.groups.find(g => g.id === msg.recipient_id) || null) : null;
+    let saved: ChatMessage | null = null;
+    if (this.demo) {
+      const plan = planSharedMark(me, msg, group, mark, on, new Date().toISOString());
+      if (!plan.ok) return { success: false, error: plan.error === 'role' ? (mark === 'important' ? 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent poser « Important pour tous ».' : 'Seuls l\'auteur, le responsable, un chef d\'équipe ou le créateur du groupe peuvent épingler ce message.') : plan.error === 'remove' ? 'Seul celui qui l\'a posé ou le responsable peut le retirer.' : 'Action impossible.' };
+      saved = plan.save as ChatMessage;
+    } else {
+      const r = await this.api('chat-mark', { method: 'POST', body: JSON.stringify({ id, mark, on }) });
+      if (!r.ok) return { success: false, error: r.data?.error || (r.status === 0 ? 'Pas de réseau : réessaie quand la connexion revient.' : 'Erreur.') };
+      saved = (r.data?.message || null) as ChatMessage | null;
+    }
+    if (saved) { const i = this.messages.findIndex(m => m.id === id); if (i >= 0) this.messages[i] = saved; this.notify(); }
+    return { success: true };
+  }
+
   public getGroups(): ChatGroup[] { return [...this.groups]; }
   public getChatReads(): ChatRead[] { return [...this.reads]; }
 

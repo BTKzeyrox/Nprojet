@@ -284,6 +284,7 @@ Chaque fiche ci-dessous est la même que celle que l'assistant du site utilise (
   - Pour le responsable, chaque opérateur a un statut en direct : En cours, En ligne, En pause ou Hors ligne. Les autres rôles ne voient pas ce statut.
   - Dans l'assistant, le bouton « / » ouvre 6 boutons sous le champ : 5 envoient un message prêt, « Rédiger un message » ouvre l'éditeur.
   - Le drapeau en haut ouvre « Importants et épinglés » (cette discussion ou toutes) : toucher un message y mène. « Vu » est une icône : ✓ envoyé, ✓✓ gris vu par certains, ✓✓ bleu vu.
+  - « Important pour moi » est privé. « Important pour tous » et épingler le message d'un autre : responsable, chef d'équipe, créateur du groupe (le serveur vérifie).
 - **Dans le code** : `src/components/ChatView.tsx`, `src/components/AssistantChat.tsx`
 
 ### Calendrier  `calendar`
@@ -536,7 +537,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `work-line-cancel`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-vote`, `news-poll-close`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `give-account`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `work-line-cancel`, `chat-mark`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-vote`, `news-poll-close`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `give-account`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -635,6 +636,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
 | `chatScrollGuard.ts` | Messagerie : un glissement du doigt au bout d'une liste (tout en haut ou tout en bas) ne doit JAMAIS faire bouger la page, |
 | `chatSearch.ts` | Recherche dans une conversation (2026-11-12) : par texte, par jour, ou les deux. Règle pure, utilisée par components/ChatSearch.tsx. |
+| `chatShared.ts` | Droits « pour tous » du chat (M28.2) : qui peut poser « Important pour tous » ou épingler le message d'un autre. Règles pures, sans écran ni serveur. |
 | `chatTemplates.ts` | Messagerie S4 (2026-11-09) : modèles de messages personnels (réponses rapides, gardés sur CET appareil) et règle du message programmé. |
 | `clientBadges.ts` | Badges et score de relation des CLIENTS (module 3, M3.5) : règles pures, sans écran ni serveur. Contrôlé par `npm run check:client-badges`. |
 | `clientBadgesDb.ts` | Badges des clients calculés avec les données du site (module 3). Réservé au responsable : un salarié n'a ni clients ni factures. |
@@ -1130,6 +1132,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |
 | `npm run check:sheet-reminder` | Rappel « feuille du jour pas saisie » (M27.4). Lancer : npm run check:sheet-reminder |
 | `npm run check:chat-search` | Recherche de messages dans une conversation (date cliquable + loupe). Lancer : npm run check:chat-search |
+| `npm run check:chat-shared` | M28.2 : « Important pour tous » et épinglage élargi : mêmes règles sur le site et sur le serveur, droits exacts. |
 | `npm run check:chat-marks-list` | Chat : liste « Importants et épinglés », couleurs de bulle en dégradé, « Vu » en icônes seules. |
 | `npm run check:chat-marks` | Important, Épinglé, Transféré : repères et couleurs de bulle du chat. Lancer : npm run check:chat-marks |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |

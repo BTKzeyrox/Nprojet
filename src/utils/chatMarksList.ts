@@ -1,6 +1,6 @@
 // Liste « Importants et épinglés » du chat (étape 1 de la demande de BTK, 2026-11-12) : règles pures, sans écran ni serveur.
 // Utilisé par : ChatMarksList.tsx (fenêtre), ChatView.tsx (compteur du bouton). Contrôlé par `npm run check:chat-marks-list`.
-// Pour modifier : « Important » = les messages marqués sur CET appareil (privé) ; « Épinglé » = épinglé pour tout le monde. Un message supprimé, caché par la personne ou programmé pas encore parti n'apparaît jamais.
+// Pour modifier : « Important » = les messages marqués sur CET appareil (privé) + ceux posés « Important pour tous » ; « Épinglé » = épinglé pour tout le monde. Un message supprimé, caché par la personne ou programmé pas encore parti n'apparaît jamais.
 import type { ChatMessage } from '../types';
 
 export type MarkTab = 'important' | 'pinned';
@@ -27,7 +27,7 @@ export function markedMessages(msgs: readonly ChatMessage[], important: readonly
     if (opts.hidden && opts.hidden.has(m.id)) continue;
     if (m.send_at && m.send_at > now) continue; // programmé, pas encore parti
     if (opts.inScope && !opts.inScope(m)) continue;
-    if (tab === 'important' ? !imp.has(m.id) : !m.pinned) continue;
+    if (tab === 'important' ? !(imp.has(m.id) || m.important_all) : !m.pinned) continue; // « Importants » = ceux marqués pour moi + ceux posés « pour tous »
     seen.add(m.id); out.push(m);
   }
   const key = (m: ChatMessage) => (tab === 'pinned' ? ts(m.pinned_at) || ts(m.timestamp) : ts(m.timestamp));

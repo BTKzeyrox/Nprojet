@@ -17,18 +17,18 @@ export const MARK_SHADOW = '0 1px 3px rgba(15, 23, 42, 0.22), inset 0 1px 0 rgba
 export const IMPORTANT_MAX = 300;
 
 /** Le repère qui colore la bulle (un message supprimé n'en a aucun). */
-export function markOf(m: Pick<ChatMessage, 'pinned' | 'forwarded' | 'deleted_at' | 'id'>, important: readonly string[]): Mark | null {
+export function markOf(m: Pick<ChatMessage, 'pinned' | 'forwarded' | 'deleted_at' | 'id' | 'important_all'>, important: readonly string[]): Mark | null {
   if (!m || m.deleted_at) return null;
-  if (important.includes(m.id)) return 'important';
+  if (m.important_all || important.includes(m.id)) return 'important'; // « pour tous » (posé par le responsable, un chef ou le créateur du groupe) ou « pour moi » (privé)
   if (m.pinned) return 'pinned';
   if (m.forwarded) return 'forwarded';
   return null;
 }
 /** Tous les repères d'un message (pour les petites icônes sous la bulle). */
-export function marksOf(m: Pick<ChatMessage, 'pinned' | 'forwarded' | 'deleted_at' | 'id'>, important: readonly string[]): Mark[] {
+export function marksOf(m: Pick<ChatMessage, 'pinned' | 'forwarded' | 'deleted_at' | 'id' | 'important_all'>, important: readonly string[]): Mark[] {
   if (!m || m.deleted_at) return [];
   const r: Mark[] = [];
-  if (important.includes(m.id)) r.push('important');
+  if (m.important_all || important.includes(m.id)) r.push('important');
   if (m.pinned) r.push('pinned');
   if (m.forwarded) r.push('forwarded');
   return r;

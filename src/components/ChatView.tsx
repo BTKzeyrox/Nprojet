@@ -6,6 +6,7 @@ import { useKeepBottom } from '../utils/useKeepBottom';
 import { ChatSearch } from './ChatSearch';
 import { ChatMarksList } from './ChatMarksList';
 import { markedCount } from '../utils/chatMarksList';
+import { canUseSharedTools } from '../utils/chatShared';
 import { ChatForward } from './ChatForward';
 import { MARK_STYLE, markBackground, MARK_SHADOW, markOf, marksOf, toggleImportant, canForward, forwardFrom } from '../utils/chatMarks';
 import { stepNav } from '../utils/chatSearch';
@@ -659,15 +660,21 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const canWrite = !current.readOnly;
 
   // Actions du message (menu sous le message)
+  const sharedTools = canUseSharedTools(currentUser, current.kind === 'group' ? groups.find(g => g.id === current.id) || null : null); // responsable, chef d'équipe, créateur du groupe
   const menuActions = menuMsg
     ? [
         ...(canWrite ? [{ k: 'reply', label: 'Répondre', icon: Reply, color: 'text-emerald-600', run: () => startReply(menuMsg) }] : []),
         ...(menuMsg.message ? [{ k: 'copy', label: 'Copier', icon: Copy, color: 'text-slate-500', run: () => copyText(menuMsg) }] : []),
         ...(db.canEditMessage(menuMsg, currentUser.id) && menuMsg.message ? [{ k: 'edit', label: 'Modifier', icon: Pencil, color: 'text-emerald-600', run: () => startEdit(menuMsg) }] : []),
-        ...(menuMsg.sender_id === currentUser.id
-          ? [{ k: 'pin', label: menuMsg.pinned ? 'Désépingler' : 'Épingler', icon: menuMsg.pinned ? PinOff : Pin, color: 'text-amber-500', run: () => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); } }]
+        // Épingler : l'auteur (comme avant, aussi sans réseau) ; le responsable, un chef d'équipe ou le créateur du groupe peuvent aussi épingler le message d'un autre (le serveur vérifie)
+        ...(!menuMsg.deleted_at && (menuMsg.sender_id === currentUser.id || sharedTools)
+          ? [{ k: 'pin', label: menuMsg.pinned ? 'Désépingler' : 'Épingler', icon: menuMsg.pinned ? PinOff : Pin, color: 'text-amber-500', run: () => { setMenuMsg(null); if (menuMsg.sender_id === currentUser.id) db.togglePinMessage(menuMsg.id, currentUser.id); else void db.setChatMark(menuMsg.id, 'pinned', !menuMsg.pinned).then(r => { if (!r.success) setError(r.error || 'Action impossible.'); }); } }]
           : []),
-        ...(!menuMsg.deleted_at ? [{ k: 'important', label: importantIds.includes(menuMsg.id) ? 'Retirer des importants' : 'Important', icon: Flag, color: 'text-rose-500', run: () => { const next = toggleImportant(importantIds, menuMsg.id); setImportantIds(next); setImportantMessages(currentUser.id, next); setMenuMsg(null); } }] : []),
+        ...(!menuMsg.deleted_at ? [{ k: 'important', label: importantIds.includes(menuMsg.id) ? 'Retirer des importants (pour moi)' : 'Important pour moi', icon: Flag, color: 'text-rose-500', run: () => { const next = toggleImportant(importantIds, menuMsg.id); setImportantIds(next); setImportantMessages(currentUser.id, next); setMenuMsg(null); } }] : []),
+        // « Important pour tous » : posé par le responsable, un chef d'équipe ou le créateur du groupe ; retiré par celui qui l'a posé ou le responsable (le serveur vérifie)
+        ...(!menuMsg.deleted_at && (menuMsg.important_all ? (menuMsg.important_all.by === currentUser.id || currentUser.role === 'admin') : sharedTools)
+          ? [{ k: 'important_all', label: menuMsg.important_all ? 'Retirer « Important pour tous »' : 'Important pour tous', icon: Flag, color: 'text-rose-600', run: () => { const id = menuMsg.id, on = !menuMsg.important_all; setMenuMsg(null); void db.setChatMark(id, 'important', on).then(r => { if (!r.success) setError(r.error || 'Action impossible.'); }); } }]
+          : []),
         ...(canForward(menuMsg) ? [{ k: 'forward', label: 'Transférer', icon: Forward, color: 'text-violet-500', run: () => { setFwdMsg(menuMsg); setMenuMsg(null); } }] : []),
         ...((menuMsg.message || menuMsg.poll) && !menuMsg.deleted_at ? [{ k: 'item', label: 'Rappel, tâche, événement', icon: CalendarDays, color: 'text-blue-500', run: () => { setItemMsg(menuMsg); setMenuMsg(null); } }] : []),
         { k: 'hide', label: 'Supprimer pour moi', icon: EyeOff, color: 'text-slate-500', run: () => deleteForMe(menuMsg) },
@@ -910,6 +917,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                     {!gone && (
                       <div className={`flex items-center gap-1 mt-0.5 px-1 text-[11px] ${P.sub}`}>
                         {marksOf(msg, importantIds).map(k => k === 'important' ? <Flag key={k} data-mark="important" className="w-3 h-3 text-rose-500" aria-label="Important" /> : k === 'pinned' ? <Pin key={k} data-mark="pinned" className="w-3 h-3 text-amber-500" aria-label="Épinglé" /> : <Forward key={k} data-mark="forwarded" className="w-3 h-3 text-violet-500" aria-label="Transféré" />)}
+                        {msg.important_all && <span data-important-all className="font-semibold text-rose-500">Important pour tous{msg.important_all.by_name ? ` · ${String(msg.important_all.by_name).split(' ')[0]}` : ''} ·</span>}
+                        {msg.pinned && msg.pinned_by && msg.pinned_by !== msg.sender_id && msg.pinned_by_name && <span data-pinned-by className="text-amber-600">épinglé par {String(msg.pinned_by_name).split(' ')[0]} ·</span>}
                         {msg.edited_at && <span className="italic">modifié ·</span>}
                         <span>{time}</span>
                         {isMe && <PendingMark col="messages" id={msg.id} />}

@@ -284,6 +284,8 @@ export interface ChatMessage {
   edited_at?: string; // message modifié après envoi
   pinned?: boolean; // épinglé en haut de la conversation
   pinned_at?: string;
+  pinned_by?: string; pinned_by_name?: string; // qui a épinglé (responsable, chef d'équipe ou créateur du groupe peuvent épingler le message d'un autre : route chat-mark)
+  important_all?: { by: string; by_name: string; at: string }; // « Important pour tous » : posé par le responsable, un chef d'équipe ou le créateur du groupe (route chat-mark, jamais par la synchronisation)
   reply_to?: { id: string; sender_name: string; text: string; has_attachment?: boolean }; // message cité (réponse)
   deleted_at?: string; // supprimé pour tous : il ne reste qu'une trace
   deleted_by?: 'sender' | 'admin';
