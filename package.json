@@ -68,6 +68,7 @@
     "check:chat-shared": "npx --yes tsx scripts/check-chat-shared.ts",
     "check:chat-marks-list": "npx --yes tsx scripts/check-chat-marks-list.ts",
     "check:chat-marks": "esbuild scripts/check-chat-marks.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-chat-marks.mjs && node node_modules/.cache/check-chat-marks.mjs",
+    "check:long-press": "esbuild scripts/check-long-press.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-long-press.mjs && node node_modules/.cache/check-long-press.mjs",
     "check:no-autoseed": "esbuild scripts/check-no-autoseed.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-no-autoseed.mjs && node node_modules/.cache/check-no-autoseed.mjs",
     "check:sheet-auto": "npx --yes tsx scripts/check-sheet-auto.ts",
     "check:sheet-form": "esbuild scripts/check-sheet-form.tsx --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-form.mjs && node node_modules/.cache/check-sheet-form.mjs",

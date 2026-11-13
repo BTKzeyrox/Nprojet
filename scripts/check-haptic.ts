@@ -22,7 +22,7 @@ Object.defineProperty(globalThis, 'navigator', { value: { vibrate() { throw new 
 const f = (p: string) => readFileSync(p, 'utf8');
 ok(/tap\(kind === 'published' \? 'success' : 'light'\)/.test(f('src/utils/notifSound.ts')), 'envoi, « J\'adore », publication : vibrent');
 ok(/tap\('light'\); onVote\(o\.id\)/.test(f('src/components/PollBlock.tsx')) && /tap\('light'\); onVote\(first\.id\)/.test(f('src/components/PollBlock.tsx')), 'vote : vibre');
-ok(/tap\('light'\); openMenu\(m, el\)/.test(f('src/components/ChatView.tsx')) && /rowLong\.current = true; tap\('light'\)/.test(f('src/components/ChatView.tsx')), 'appui long (message, ligne) : vibre');
+ok(/tap\('select'\); openMenu\(m, el\)/.test(f('src/components/ChatView.tsx')) && /rowLong\.current = true; tap\('select'\)/.test(f('src/components/ChatView.tsx')), 'appui long (message, ligne) : vibre');
 ok(/tap\(approve \? 'success' : 'warn'\)/.test(f('src/views/TeamValidations.tsx')), 'validation : succès / refus');
 const pr = f('src/components/PullToRefresh.tsx');
 ok(/v >= THRESHOLD && pullRef\.current < THRESHOLD\) tap\('light'\)/.test(pr) && /tap\(r\.kind === 'offline'/.test(pr), 'tirer pour actualiser : tic au seuil et à la fin');

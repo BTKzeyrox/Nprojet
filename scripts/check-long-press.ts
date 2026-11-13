@@ -1,0 +1,22 @@
+// Appui long dans le chat : doigt qui bouge d'un rien, menu refermé en levant le doigt, vibration. Lancer : npm run check:long-press
+import { readFileSync } from 'node:fs';
+import { movedTooFar, isGhostClick, stripIds, LONG_PRESS_MS, MOVE_LIMIT_PX, GHOST_CLICK_MS } from '../src/utils/longPress';
+import { PATTERNS } from '../src/utils/haptic';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+ok(!movedTooFar(100, 100, 103, 104) && !movedTooFar(100, 100, 100, 100) && !movedTooFar(100, 100, 107, 107), 'petit tremblement du doigt (≤ 10 px) : l\'appui long continue');
+ok(movedTooFar(100, 100, 100, 112) && movedTooFar(100, 100, 120, 100) && movedTooFar(100, 100, 108, 108), 'vrai défilement (> 10 px) : appui long annulé');
+ok(movedTooFar(NaN, 0, 1, 1) && movedTooFar(0, 0, undefined as any, 1), 'coordonnées illisibles : annulé par prudence');
+ok(isGhostClick(1000, 1100) && isGhostClick(1000, 1000) && !isGhostClick(1000, 1000 + GHOST_CLICK_MS) && !isGhostClick(0, 5000), 'clic juste après l\'ouverture : ignoré ; plus tard : normal');
+ok(!isGhostClick(NaN, 1) && !isGhostClick(1000, 900), 'valeurs bizarres ou horloge reculée : jamais bloqué');
+ok(stripIds('<div data-msg-id="m1" id="x" class="a"><img src="u"></div>') === '<div class="a"><img src="u"></div>', 'copie du menu : sans identifiants');
+ok(LONG_PRESS_MS === 450 && MOVE_LIMIT_PX === 10, 'délai 450 ms, tolérance 10 px');
+ok(PATTERNS.select[0] >= 20 && PATTERNS.select[0] > PATTERNS.light[0], 'vibration de sélection plus forte que le tapotement léger (≥ 20 ms)');
+const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(/tap\('select'\); openMenu\(m, el\)/.test(cv) && /tap\('select'\); window\.getSelection\(\)/.test(cv), 'vibration « sélection » à l\'ouverture du menu (message et discussion)');
+ok(/onTouchMove=\{e => movePress\(/.test(cv) && /onTouchMove=\{e => moveRowPress\(/.test(cv) && !/onTouchMove=\{stopPress\}/.test(cv) && !/onTouchMove=\{stopRowPress\}/.test(cv), 'le doigt qui bouge n\'annule plus l\'appui long (message et discussion)');
+ok((cv.match(/isGhostClick\(menuOpenedAt\.current/g) || []).length >= 7, 'menus : le relâchement du doigt ne referme ni ne déclenche rien (fond, actions, fiche de discussion)');
+ok(/onDragStart=\{e => e\.preventDefault\(\)\}/.test(cv) && /stripIds\(el\.outerHTML\)/.test(cv), 'pas de glisser-déposer d\'image, copie du menu sans identifiants');
+ok((cv.match(/markRelease\(\);/g) || []).length >= 3 && /for \(const t of \['touchend', 'touchcancel', 'mouseup'\]\) window\.addEventListener\(t, off, true\)/.test(cv), 'le délai anti-clic fantôme repart du RELÂCHEMENT du doigt (appui long d\'une seconde ou plus)');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
+process.exit(fails ? 1 : 0);

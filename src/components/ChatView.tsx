@@ -8,6 +8,7 @@ import { ChatMarksList } from './ChatMarksList';
 import { markedCount } from '../utils/chatMarksList';
 import { canUseSharedTools } from '../utils/chatShared';
 import { ChatForward } from './ChatForward';
+import { LONG_PRESS_MS, movedTooFar, isGhostClick, stripIds } from '../utils/longPress';
 import { MARK_STYLE, markBackground, MARK_SHADOW, markOf, marksOf, toggleImportant, canForward, forwardFrom } from '../utils/chatMarks';
 import { stepNav } from '../utils/chatSearch';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -496,26 +497,46 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   };
   const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
 
+  const menuOpenedAt = useRef(0); // heure d'ouverture du menu : le relâchement du doigt ne doit pas le refermer
+  const pressXY = useRef<{ x: number; y: number } | null>(null);
+  const rowXY = useRef<{ x: number; y: number } | null>(null);
+  // Le clic « fantôme » arrive au RELÂCHEMENT du doigt, parfois bien après l'ouverture du menu (appui long de 1 s) : on repart donc de l'heure du relâchement.
+  const markRelease = () => {
+    const off = () => { menuOpenedAt.current = Date.now(); for (const t of ['touchend', 'touchcancel', 'mouseup']) window.removeEventListener(t, off, true); };
+    for (const t of ['touchend', 'touchcancel', 'mouseup']) window.addEventListener(t, off, true);
+  };
   const openMenu = (m: ChatMessage, el: HTMLElement) => {
+    if (menuOpenedAt.current && isGhostClick(menuOpenedAt.current, Date.now(), 150)) return; // appui long + clic droit synchronisés : un seul menu
     window.getSelection()?.removeAllRanges(); // l'appui long ouvre le menu : jamais de sélection de texte
+    menuOpenedAt.current = Date.now(); markRelease();
     setMenuRect(el.getBoundingClientRect());
-    setMenuHtml(el.outerHTML); // copie nette du message, posée AU-DESSUS du fond (jamais floue)
+    setMenuHtml(stripIds(el.outerHTML)); // copie nette du message, posée AU-DESSUS du fond (jamais floue), sans identifiants
     setMenuMsg(m);
   };
-  const startPress = (m: ChatMessage, el: HTMLElement) => {
+  const startPress = (m: ChatMessage, el: HTMLElement, x?: number, y?: number) => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => { tap('light'); openMenu(m, el); }, 450);
+    pressXY.current = x !== undefined && y !== undefined ? { x, y } : null;
+    pressTimer.current = setTimeout(() => { pressTimer.current = null; tap('select'); openMenu(m, el); }, LONG_PRESS_MS);
   };
   const stopPress = () => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = null;
   };
-  const startRowPress = (id: string) => {
+  const movePress = (x: number, y: number) => { // le doigt bouge : on n'annule que si c'est un vrai défilement
+    const s0 = pressXY.current;
+    if (!s0 || movedTooFar(s0.x, s0.y, x, y)) stopPress();
+  };
+  const startRowPress = (id: string, x?: number, y?: number) => {
     if (rowPress.current) clearTimeout(rowPress.current);
     rowLong.current = false;
-    rowPress.current = setTimeout(() => { rowLong.current = true; tap('light'); window.getSelection()?.removeAllRanges(); setAboutOf({ id, menuOnly: true }); }, 450);
+    rowXY.current = x !== undefined && y !== undefined ? { x, y } : null;
+    rowPress.current = setTimeout(() => { rowPress.current = null; rowLong.current = true; tap('select'); window.getSelection()?.removeAllRanges(); menuOpenedAt.current = Date.now(); markRelease(); setAboutOf({ id, menuOnly: true }); }, LONG_PRESS_MS);
   };
   const stopRowPress = () => { if (rowPress.current) clearTimeout(rowPress.current); rowPress.current = null; };
+  const moveRowPress = (x: number, y: number) => {
+    const s0 = rowXY.current;
+    if (!s0 || movedTooFar(s0.x, s0.y, x, y)) stopRowPress();
+  };
   const startEdit = (m: ChatMessage) => {
     setMenuMsg(null);
     setReplyTo(null);
@@ -640,9 +661,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         key={t.id}
         type="button"
         onClick={() => { if (rowLong.current) { rowLong.current = false; return; } setThreadId(t.id); setShowList(false); setReplyTo(null); cancelEdit(); }}
-        onTouchStart={() => startRowPress(t.id)} onTouchEnd={stopRowPress} onTouchMove={stopRowPress} onTouchCancel={stopRowPress}
-        onMouseDown={e => { if (e.button === 0) startRowPress(t.id); }} onMouseUp={stopRowPress} onMouseLeave={stopRowPress}
-        onContextMenu={e => { e.preventDefault(); stopRowPress(); rowLong.current = true; setAboutOf({ id: t.id, menuOnly: true }); }}
+        onTouchStart={e => startRowPress(t.id, e.touches[0]?.clientX, e.touches[0]?.clientY)} onTouchEnd={stopRowPress} onTouchMove={e => moveRowPress(e.touches[0]?.clientX, e.touches[0]?.clientY)} onTouchCancel={stopRowPress}
+        onMouseDown={e => { if (e.button === 0) startRowPress(t.id, e.clientX, e.clientY); }} onMouseUp={stopRowPress} onMouseLeave={stopRowPress}
+        onContextMenu={e => { e.preventDefault(); stopRowPress(); if (isGhostClick(menuOpenedAt.current, Date.now(), 150)) return; rowLong.current = true; menuOpenedAt.current = Date.now(); markRelease(); setAboutOf({ id: t.id, menuOnly: true }); }}
         data-thread-row={t.id}
         className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors select-none ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
@@ -859,14 +880,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   )}
                   <div className={`flex flex-col min-w-0 max-w-[82%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'}`}>
                     <div
-                      onTouchStart={e => !gone && startPress(msg, e.currentTarget)}
+                      onTouchStart={e => !gone && startPress(msg, e.currentTarget, e.touches[0]?.clientX, e.touches[0]?.clientY)}
                       onTouchEnd={stopPress}
-                      onTouchMove={stopPress}
+                      onTouchMove={e => movePress(e.touches[0]?.clientX, e.touches[0]?.clientY)}
                       onTouchCancel={stopPress}
-                      onMouseDown={e => { if (!gone && e.button === 0) startPress(msg, e.currentTarget); }}
+                      onDragStart={e => e.preventDefault()}
+                      onMouseDown={e => { if (!gone && e.button === 0) startPress(msg, e.currentTarget, e.clientX, e.clientY); }}
                       onMouseUp={stopPress}
                       onMouseLeave={stopPress}
-                      onContextMenu={e => { e.preventDefault(); if (!gone) openMenu(msg, e.currentTarget); }}
+                      onContextMenu={e => { e.preventDefault(); stopPress(); if (!gone) openMenu(msg, e.currentTarget); }}
                       style={(() => {
                         if (tinted && mk) return { WebkitTouchCallout: 'none', backgroundColor: MARK_STYLE[mk].bg, backgroundImage: markBackground(mk), borderColor: MARK_STYLE[mk].border, boxShadow: MARK_SHADOW } as React.CSSProperties;
                         if (gone || isMe || (!msg.message && !msg.reply_to && msg.attachment_url) || (msg.poll && !msg.reply_to)) return { WebkitTouchCallout: 'none' } as React.CSSProperties;
@@ -1151,7 +1173,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           else if (a === 'full_profile' && t.user) openProfile(t.user.id);
           else if (a === 'group_info') { setThreadId(t.id); setShowList(false); setGroupInfo(true); }
         };
-        return <ChatAbout thread={t} about={view} onAction={run} onClose={() => setAboutOf(null)} />;
+        return <ChatAbout thread={t} about={view} onAction={a => { if (!isGhostClick(menuOpenedAt.current, Date.now())) run(a); }} onClose={() => { if (!isGhostClick(menuOpenedAt.current, Date.now())) setAboutOf(null); }} />; // le relâchement du doigt après l'appui long ne referme pas le menu
       })()}
 
       {newChat && (
@@ -1168,7 +1190,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
       {/* Menu d'actions : petit menu juste sous le message (appui long ou clic droit) */}
       {menuMsg && createPortal(
-        <div className="fixed inset-0 z-[80] bg-black/25" onClick={() => setMenuMsg(null)} onContextMenu={e => { e.preventDefault(); setMenuMsg(null); }}>
+        <div className="fixed inset-0 z-[80] bg-black/25" onClick={() => { if (!isGhostClick(menuOpenedAt.current, Date.now())) setMenuMsg(null); }} onContextMenu={e => { e.preventDefault(); if (!isGhostClick(menuOpenedAt.current, Date.now())) setMenuMsg(null); }}>
           {menuRect && menuHtml && (
             <div
               data-press-clone
@@ -1182,7 +1204,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             {menuActions.map(a => {
               const I = a.icon;
               return (
-                <button key={a.k} type="button" onClick={a.run} className={`w-full h-11 px-4 flex items-center gap-3 text-sm cursor-pointer ${P.popHover} ${a.k === 'del' ? 'text-red-500' : ''}`}>
+                <button key={a.k} type="button" onClick={() => { if (!isGhostClick(menuOpenedAt.current, Date.now())) a.run(); }} className={`w-full h-11 px-4 flex items-center gap-3 text-sm cursor-pointer ${P.popHover} ${a.k === 'del' ? 'text-red-500' : ''}`}>
                   <I className={`w-4 h-4 shrink-0 ${a.color}`} />{a.label}
                 </button>
               );

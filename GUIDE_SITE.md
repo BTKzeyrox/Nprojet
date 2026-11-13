@@ -685,6 +685,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `keyboard.ts` | Clavier virtuel ouvert ? (iPhone : la vue visible rétrécit et la page est poussée vers le haut) |
 | `leaves.ts` | Congés et absences (module 5, M5.2) : règles pures, sans écran ni serveur. |
 | `loginGuard.ts` | Blocage après trop d'essais de connexion (module 16, M16.3) : règles pures, sans écran, sans serveur, sans réseau. |
+| `longPress.ts` | Appui long (messages et discussions du chat) — règles pures (2026-11-13). Utilisé par ChatView.tsx. |
 | `menuGroups.ts` | Menu fusionné (module 22, M22.5) : règles PURES, sans écran ni serveur. 25 entrées d'avant → 12 entrées (Calendrier et Réglages ont leur propre entrée) avec onglets. |
 | `menuMode.ts` | Menu fusionné (module 22, M22.6) : réglage de CET appareil (« Menu simplifié » ou « Ancien menu ») + dernier onglet retenu par entrée. |
 | `menuNav.ts` | Menu simplifié : aller à une entrée ou à un onglet, et quelles entrées sont dans la barre du bas (téléphone). Pur, sauf le réglage de l'onglet de Statistiques. |
@@ -1141,6 +1142,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:chat-shared` | M28.2 : « Important pour tous » et épinglage élargi : mêmes règles sur le site et sur le serveur, droits exacts. |
 | `npm run check:chat-marks-list` | Chat : liste « Importants et épinglés », couleurs de bulle en dégradé, « Vu » en icônes seules. |
 | `npm run check:chat-marks` | Important, Épinglé, Transféré : repères et couleurs de bulle du chat. Lancer : npm run check:chat-marks |
+| `npm run check:long-press` | Appui long dans le chat : doigt qui bouge d'un rien, menu refermé en levant le doigt, vibration. Lancer : npm run check:long-press |
 | `npm run check:no-autoseed` | Contrôle : une liste de missions VIDE reste vide (M18.2). Avant, le site recréait les 10 missions d'exemple à chaque connexion de l'admin. |
 | `npm run check:sheet-auto` | Contrôle des règles de saisie automatique des tableaux (module 19, M19.2). Lancer : npm run check:sheet-auto |
 | `npm run check:sheet-form` | Contrôle de la vue Formulaire et des champs intelligents (module 19, M19.3 et M19.4), rendus en français et en anglais. Lancer : npm run check:sheet-form |

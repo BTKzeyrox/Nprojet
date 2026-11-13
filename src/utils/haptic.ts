@@ -2,9 +2,9 @@
 // Utilisé par : notifSound.ts (envoi, « J'adore », publication), PullToRefresh.tsx, PollBlock.tsx, ChatView.tsx (appui long), TeamValidations.tsx, ThemeLangControls.tsx (interrupteur).
 // Android : navigator.vibrate. iPhone (iOS 17.4 et plus) : Safari n'a pas cette fonction ; l'astuce est un interrupteur HTML caché (`<input type=checkbox switch>`) que l'on « touche » : non officiel, peut cesser de marcher, et sans effet sur un iPhone plus ancien.
 // Réglage de la personne : cet appareil, clé df_haptic ('off' = coupé, par défaut allumé) ; respecte aussi « réduire les animations » du téléphone. Ne lève jamais d'erreur.
-export type Tap = 'light' | 'success' | 'warn';
+export type Tap = 'light' | 'success' | 'warn' | 'select';
 export const HAPTIC_KEY = 'df_haptic';
-export const PATTERNS: Record<Tap, number[]> = { light: [10], success: [12, 45, 12], warn: [30] };
+export const PATTERNS: Record<Tap, number[]> = { light: [10], success: [12, 45, 12], warn: [30], select: [28] };
 
 export function hapticOn(): boolean {
   try { if (localStorage.getItem(HAPTIC_KEY) === 'off') return false; } catch { /* stockage bloqué : allumé */ }
