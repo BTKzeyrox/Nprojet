@@ -1,6 +1,7 @@
 // Page Calendrier : le responsable voit tous les employés (mois, résumé, détail d'un jour) ; un employé voit son propre calendrier.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : les données viennent de db (posts, users, avances, congés) ; la vue globale s'ouvre avec selectedId 'all' et le détail d'un jour est partagé par l'onglet et la fenêtre du mois.
+import { isOpenMission, isWorkLine } from '../utils/postPay';
 import React, { useState, useEffect, useMemo } from 'react';
 import { dayStatus } from '../utils/dayStatus';
 import {
@@ -493,9 +494,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   // Résumé du mois
   const summary = useMemo(() => {
     if (!activeId) return null;
-    const monthPosts = posts.filter(p => p.employee_id === activeId && p.date.startsWith(monthPrefix) && (clientFilter === 'all' || p.client_name === clientFilter));
+    const monthPosts = posts.filter(p => !isWorkLine(p) && p.employee_id === activeId && p.date.startsWith(monthPrefix) && (clientFilter === 'all' || p.client_name === clientFilter)); // missions seulement : la feuille du jour a ses propres compteurs
     const completed = monthPosts.filter(p => p.status === 'completed');
-    const inProgress = monthPosts.filter(p => p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end');
+    const inProgress = monthPosts.filter(isOpenMission);
     const reached = completed.filter(p => (p.final_score ?? p.current_score) >= p.target_score).length;
     const gained = completed.reduce((a, p) => a + Math.max(0, (p.final_score ?? p.current_score) - p.initial_score), 0);
     const pay = completed.reduce((a, p) => a + (p.calculated_ar || 0), 0);

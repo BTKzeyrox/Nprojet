@@ -7,13 +7,14 @@ import { ClientContract, PostSession, PresenceRow, User } from '../types';
 import { ONLINE_MS } from './presenceCount';
 import { liveStatus } from './presenceStatus';
 import { serverNowMs } from './serverClock';
+import { isOpenMission } from './postPay';
 
 // Un opérateur est « en ligne » s'il a donné signe de vie il y a moins de 120 s
 export { ONLINE_MS };
 const OPEN = ['pending_start', 'active', 'pending_end'];
 
 export const hasOpenPost = (userId: string, posts: PostSession[]) =>
-  posts.some(p => p.employee_id === userId && OPEN.includes(p.status));
+  posts.some(p => p.employee_id === userId && isOpenMission(p)); // une ligne de la feuille du jour en attente n'est pas une mission en cours
 
 /** Secondes de connexion AUJOURD'HUI (jour de Madagascar) d'une personne ; 0 sans ligne de présence ou si la ligne date d'un autre jour. */
 export const onlineSecToday = (userId: string, presence: PresenceRow[], now = serverNowMs()): number => {
@@ -34,7 +35,7 @@ export const getQueue = (users: User[], posts: PostSession[], presence: Presence
 
 // Missions libres : avec compte, et aucune session en cours dessus
 export const getFreePosts = (contracts: ClientContract[], posts: PostSession[]) =>
-  contracts.filter(c => !c.no_account && !posts.some(p => p.client_name === c.client_name && OPEN.includes(p.status)));
+  contracts.filter(c => !c.no_account && !posts.some(p => p.client_name === c.client_name && isOpenMission(p)));
 
 export const formatDuration = (sec: number) => {
   const m = Math.floor(sec / 60);

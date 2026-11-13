@@ -13,6 +13,7 @@ import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
 import { levelNow } from '../../utils/monthLevel';
 import { todayMada } from '../../utils/stats';
+import { isOpenMission, isWorkLine } from '../../utils/postPay';
 
 interface Props {
   userId: string;
@@ -48,11 +49,11 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
   }
 
   const posts = db.getPosts().filter(p => p.employee_id === u.id).sort((a, b) => (b.updated_at || b.date).localeCompare(a.updated_at || a.date));
-  const current = posts.filter(p => p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end');
+  const current = posts.filter(isOpenMission);
   const advances = db.getAdvanceRequests().filter(a => a.employee_id === u.id).sort((a, b) => b.request_date.localeCompare(a.request_date));
   const alerts = db.getSecurityLogs().filter(l => l.employee_id === u.id && !l.resolved);
   const pendingAdv = advances.filter(a => a.status === 'pending');
-  const doneCount = posts.filter(p => p.status === 'completed').length;
+  const doneCount = posts.filter(p => p.status === 'completed' && !isWorkLine(p)).length; // « sessions finies » = missions ; les lignes de la feuille du jour sont comptées ailleurs
   const live = liveStatus(u, db.getPosts(), db.getPresence());
   const onlineSec = onlineSecToday(u.id, db.getPresence());
 

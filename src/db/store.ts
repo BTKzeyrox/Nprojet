@@ -72,7 +72,7 @@ import {
   NewsAttachment,
 } from '../types';
 import { clientPriceForContract } from '../utils/clientPrice';
-import { isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
+import { isOpenMission, isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
 import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
 import { entryOnlyRecord } from '../utils/entryOnly';
 import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
@@ -2669,7 +2669,7 @@ export class AppStore {
   // --- ANTI-CHEAT & POST WORKFLOW ---
   public getActiveOrPendingPost(employeeId: string): PostSession | undefined {
     return this.posts.find(
-      p => p.employee_id === employeeId && (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
+      p => p.employee_id === employeeId && isOpenMission(p)
     );
   }
 

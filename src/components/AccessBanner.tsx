@@ -6,6 +6,7 @@ import { Clock } from 'lucide-react';
 import { db } from '../db/store';
 import type { User } from '../types';
 import { madaClock, accessEndMs } from '../utils/accessRequest';
+import { isOpenMission } from '../utils/postPay';
 
 const WARN_MIN = 15;
 const mmss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
@@ -18,7 +19,7 @@ export const AccessBanner: React.FC<{ user: User }> = ({ user }) => {
   const forcedLeft = forced - now;
   const end = forced > now ? null : accessEndMs(user, db.getSettings(), now);
   const left = end === null ? Infinity : end - now;
-  const open = db.getPosts().some(p => p.employee_id === user.id && ['pending_start', 'active', 'pending_end'].includes(p.status));
+  const open = db.getPosts().some(p => p.employee_id === user.id && isOpenMission(p));
   if (forcedLeft > 0) {
     return <div role="status" data-access-banner="forced" style={{ top: "calc(62px + var(--vvt, 0px))" }} className="fixed left-2 right-2 z-[60] shadow-lg px-3 py-2 rounded-xl border border-red-500/70 bg-red-950/80 text-red-100 text-xs font-bold flex items-center gap-2"><Clock className="w-4 h-4 shrink-0" />Le responsable va te déconnecter dans {mmss(forcedLeft)}.{open ? ' Ta mission en cours est gardée.' : ''}</div>;
   }

@@ -2906,6 +2906,11 @@ const CLD_CLOUD = "dirnrsy5v";
 const CLD_PREFIX = `https://res.cloudinary.com/${CLD_CLOUD}/image/upload/`;
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
+// Une MISSION ouverte : une ligne de la feuille du jour en attente de validation (saisie du chef, champ work_type) n'est PAS une mission en cours (copie de la règle `isOpenMission` du site)
+async function hasOpenMission(userId: string): Promise<boolean> {
+  const { data } = await sb.from(T.posts).select('id,work_type:data->>work_type').eq('data->>employee_id', userId).in('data->>status', OPEN_STATUS).limit(200);
+  return (data || []).some((r: any) => !r.work_type);
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -3047,12 +3052,10 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string; 
   const now = new Date();
   if (inShiftWindow(shift, st, now)) {
     if (isWorkDay(workDateOf(shift, now), st.work_days)) return { ok: true };
-    const { data: openRest } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
-    if (openRest && openRest.length) return { ok: true };
+    if (await hasOpenMission(user.id)) return { ok: true };
     return { ok: false, message: "Aujourd'hui n'est pas un jour de travail. Si tu dois travailler, contacte l'administrateur." };
   }
-  const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
-  if (open && open.length) return { ok: true };
+  if (await hasOpenMission(user.id)) return { ok: true };
   const from = shift === 'night' ? st.night_shift_start || '20:00' : st.day_shift_start || '08:00';
   const to = shift === 'night' ? st.night_shift_end || '06:00' : st.day_shift_end || '18:00';
   const startMin = toMin(shift === 'night' ? st.night_shift_start : st.day_shift_start, shift === 'night' ? 20 * 60 : 8 * 60);
@@ -3153,8 +3156,7 @@ async function queueRoute(req: any, res: any, me: any) {
   if (me.role !== 'employee') return res.status(403).json({ error: 'Réservé aux opérateurs.' });
   const join = req.body?.join === true;
   if (join) {
-    const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', me.id).in('data->>status', OPEN_STATUS).limit(1);
-    if (open && open.length) return res.status(409).json({ error: 'Tu as déjà une mission en cours.' });
+    if (await hasOpenMission(me.id)) return res.status(409).json({ error: 'Tu as déjà une mission en cours.' });
   }
   await touchPresence(me);
   const { data: row } = await sb.from(PRESENCE).select('waiting_since').eq('user_id', me.id).maybeSingle();
@@ -3576,9 +3578,9 @@ async function forceLogout(req: any, res: any, me: any) {
   if (!Number.isInteger(m) || m < 0 || m > 120) return res.status(400).json({ error: 'Délai invalide (0 à 120 minutes).' });
   const at = new Date(Date.now() + m * 60000).toISOString();
   await sb.from(T.users).upsert({ id: user.id, data: { ...user, force_logout_at: at }, updated_at: now });
-  const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
+  const openMission = await hasOpenMission(user.id);
   await auditLog(me, 'force_logout', label, m === 0 ? 'Déconnexion immédiate' : `Déconnexion dans ${m} min`);
-  return res.json({ ok: true, at, open_mission: !!(open && open.length) });
+  return res.json({ ok: true, at, open_mission: openMission });
 }
 
 async function login(req: any, res: any) {

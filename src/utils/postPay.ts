@@ -10,6 +10,10 @@ const rateOf = (v: unknown): number => (typeof v === 'number' && Number.isFinite
 const unitsOf = (v: unknown, max: number): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= max ? v : 0);
 
 /** Une ligne de travail = une session qui porte un type de travail (production ou présence) ; une mission normale n'en a pas. */
+/** Statuts d'une session ouverte (mission commencée, pas finie). */
+export const OPEN_POST_STATUS = ['pending_start', 'active', 'pending_end'];
+/** Une MISSION ouverte. Une ligne de la feuille du jour en attente de validation (saisie du chef) n'est PAS une mission en cours : elle ne bloque personne, ne met personne « en cours ». */
+export const isOpenMission = (post: any): boolean => !!post && typeof post === 'object' && OPEN_POST_STATUS.includes(post.status) && !isWorkLine(post);
 export const isWorkLine = (post: any): boolean => !!post && typeof post === 'object' && typeof post.work_type === 'string' && post.work_type.length > 0;
 
 /** Le mode de paie qui s'applique : celui de l'employé (valide), sinon celui de l'entreprise (valide), sinon « par mission ». */

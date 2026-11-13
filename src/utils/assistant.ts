@@ -14,6 +14,7 @@ import { isKnownView } from './health/menu';
 import { FIGURE_GO } from './financeNav';
 import { getRemItems } from './remRegistry';
 import { remDateOf, remDayDiff, remOccurrences, REM_TYPE_LABEL, type RemItem } from './reminderRules';
+import { isOpenMission } from './postPay';
 
 export type Lang = 'fr' | 'en';
 export interface Bi { fr: string; en: string }
@@ -303,7 +304,7 @@ export function employeeRecap(i: SnapshotInput, userId: string): EmployeeRecap {
   return {
     found: true, name: u.name, status: u.status, badge: u.performance_badge || null,
     first_date: first, last_date: dates.length ? dates[dates.length - 1] : null, tenure_days: t, tenure_text: tenure(t),
-    validated: done.length, rejected: rej.length, open: mine.filter(p => ['pending_start', 'active', 'pending_end'].includes(p.status)).length,
+    validated: done.length, rejected: rej.length, open: mine.filter(isOpenMission).length,
     acceptance_pct: done.length + rej.length ? Math.round((done.length / (done.length + rej.length)) * 100) : null,
     late_days: lateDays, earned_ar: done.reduce((s, p) => s + Math.max(0, Math.round(typeof p.calculated_ar === 'number' ? p.calculated_ar : Number(i.settings?.price_per_mission) || 0)), 0),
     advances_approved_ar: adv.filter(a => a.status === 'approved').reduce((s, a) => s + a.amount_ar, 0), advances_pending_ar: adv.filter(a => a.status === 'pending').reduce((s, a) => s + a.amount_ar, 0), advances_pending: adv.filter(a => a.status === 'pending').length,

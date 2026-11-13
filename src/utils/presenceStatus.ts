@@ -7,6 +7,7 @@
 // Seul le responsable reçoit les signes de vie (`db.getPresence()`) : pour les autres rôles on n'affiche RIEN plutôt qu'un faux « Hors ligne ».
 import type { PostSession, PresenceRow, User } from '../types';
 import { serverNowMs } from './serverClock';
+import { isOpenMission } from './postPay';
 
 export const FRESH_MS = 120_000; // signe de vie récent
 export const PAUSE_MAX_MS = 30 * 60_000; // au-delà : hors ligne
@@ -22,7 +23,7 @@ export function liveStatus(user: Pick<User, 'id'> & Partial<Pick<User, 'is_onlin
   // Pas de ligne de présence = l'appli n'a jamais donné signe de vie : HORS LIGNE. On ne se fie PAS à l'ancien indicateur `is_online` : il reste bloqué sur « vrai » quand
   // quelqu'un ferme l'appli sans se déconnecter (cas réel : un compte « en ligne » depuis des jours).
   const fresh = silentMs !== null && silentMs < FRESH_MS;
-  const openMission = posts.some(p => p.employee_id === user.id && OPEN.includes(p.status));
+  const openMission = posts.some(p => p.employee_id === user.id && isOpenMission(p)); // une ligne de la feuille du jour en attente ne met pas la personne « en cours »
   const waiting = fresh && !!row?.waiting_since && !openMission;
   const silentMin = silentMs === null ? null : Math.floor(silentMs / 60000);
   if (openMission) {

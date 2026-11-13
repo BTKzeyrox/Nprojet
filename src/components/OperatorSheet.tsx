@@ -14,6 +14,7 @@ import { todayMada } from '../utils/stats';
 import { effShift, showShift } from '../utils/shiftMode';
 import { madaClock } from '../utils/accessRequest';
 import { levelNow, levelLine } from '../utils/monthLevel';
+import { isOpenMission } from '../utils/postPay';
 
 /** Libellé d'une mission ouverte. */
 const OPEN_LABEL: Record<string, { fr: string; en: string }> = {
@@ -47,12 +48,12 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
   const [fMsg, setFMsg] = useState<string | null>(null);
   const [fBusy, setFBusy] = useState(false);
   const forcedAt = user.force_logout_at && Date.parse(user.force_logout_at) > nowMs ? Date.parse(user.force_logout_at) : 0;
-  const openMission = posts.some(p => p.employee_id === user.id && ['pending_start', 'active', 'pending_end'].includes(p.status));
+  const openMission = posts.some(p => p.employee_id === user.id && isOpenMission(p));
   const t = (fr: string, en: string) => (lang === 'en' ? en : fr);
   const down = useRef(false); // l'appui a commencé sur le fond : seul cas où un clic sur le fond ferme la fiche (voir modalGuard.ts)
   const blocked = user.status === 'blocked';
   const mine = posts.filter(p => p.employee_id === user.id);
-  const open = mine.filter(p => ['pending_start', 'active', 'pending_end'].includes(p.status));
+  const open = mine.filter(isOpenMission);
   const day = todayMada();
   const today = mine.filter(p => p.date === day);
   const doneToday = today.filter(p => p.status === 'completed').length;

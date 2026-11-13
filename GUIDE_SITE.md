@@ -1132,6 +1132,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:work-rules-text` | Règles écrites par type de travail (Réglages) : relues depuis les règles existantes, jamais inventées. Contrôle : npm run check:work-rules-text |
 | `npm run check:chat-visible-to` | Chat : message « visible seulement par X » (M28.3). Règles pures (chatShared, copie exacte côté serveur), serveur, démo, écran. Contrôle : npm run check:chat-visible-to |
 | `npm run check:chat-ephemeral` | Chat : messages éphémères + balayage (M28.4). Règles pures (chatShared = copie exacte côté serveur), serveur, démo, écran. Contrôle : npm run check:chat-ephemeral |
+| `npm run check:open-mission` | Une ligne de la feuille du jour EN ATTENTE (saisie du chef) n'est pas une mission en cours : elle ne bloque personne, ne met personne « en cours », ne fausse aucun compteur. |
 | `npm run check:sheet-day` | Feuille du jour : « personne oubliée » (M27.1), « 8 sur 12 saisis » (M27.2), total du jour (M27.6). Règles pures + câblage. |
 | `npm run check:stats-work-lines` | Statistiques : réglage « Feuille du jour dans les Statistiques » (money par défaut / all / none), 2026-11-10. |
 | `npm run check:late-absence` | Retard en minutes et motif d'absence (M27.8, 2026-11-10) : la paie (site postPay.ts = serveur decPostPay) donne les mêmes montants sur des milliers de cas ; règles : retard retiré (jamais / minute / 15 min), absence payée selon le motif, jamais négatif. |

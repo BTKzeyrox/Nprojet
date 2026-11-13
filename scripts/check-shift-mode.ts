@@ -24,7 +24,7 @@ const fn = (name: string) => { const i = srv.indexOf(`async function ${name}(`);
 const f = fn('forceLogout');
 ok(/action === "force-logout" && req\.method === "POST"\) return await forceLogout\(req, res, me\)/.test(srv) && /me\.role !== 'admin'\) return res\.status\(403\)/.test(f), 'route force-logout : responsable seulement');
 ok(/m < 0 \|\| m > 120/.test(f) && /ACCESS_ROLES\.includes\(user\.role\)/.test(f) && /cancel === true/.test(f) && /'force_logout'/.test(f), 'délai 0 à 120 min, jamais le responsable, annulable, noté dans le journal');
-ok(/open_mission: !!\(open && open\.length\)/.test(f) && !/from\(T\.posts\)\.(update|delete|upsert)/.test(f), 'le responsable est prévenu d\'une mission ouverte, qui n\'est jamais touchée');
+ok(/const openMission = await hasOpenMission\(user.id\);[\s\S]{0,160}open_mission: openMission/.test(f) && !/from\(T\.posts\)\.(update|delete|upsert)/.test(f), 'le responsable est prévenu d\'une mission ouverte, qui n\'est jamais touchée');
 ok(/forcePassed\(me\)[\s\S]{0,500}code: 'forced'/.test(srv) && /delete user\.force_logout_at; delete user\.access_until/.test(srv), 'après l\'heure : session coupée, autorisation hors horaires effacée (nouvelle demande nécessaire)');
 ok(/data-force-logout/.test(readFileSync('src/components/OperatorSheet.tsx', 'utf8')) && /onForceLogout=\{minutes => db\.forceLogout/.test(readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8')) && /code === 'forced'/.test(store), 'fiche : bouton Déconnecter / Annuler, message gardé pour la page de connexion');
 // Compte à rebours automatique
