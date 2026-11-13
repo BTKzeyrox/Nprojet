@@ -47,7 +47,7 @@ ok(/rgba\(/.test(MARK_SHADOW) && /inset/.test(MARK_SHADOW), 'ombre douce avec fi
 // ---- branchements dans l'écran ----
 const cv = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), cm = fs.readFileSync('src/components/ChatMarksList.tsx', 'utf8');
 ok(/backgroundImage: markBackground\(mk\)/.test(cv) && /boxShadow: MARK_SHADOW/.test(cv) && /backgroundColor: MARK_STYLE\[mk\]\.bg/.test(cv), 'bulle : dégradé + ombre (avec un fond uni de repli)');
-ok(/data-chat-marks-open onClick=\{\(\) => setMarksOpen\('this'\)\}/.test(cv) && /data-chat-marks-open-all onClick=\{\(\) => setMarksOpen\('all'\)\}/.test(cv), 'boutons drapeau : dans la discussion (« Cette discussion ») et dans la liste des discussions (« Toutes »)');
+ok(/data-chat-marks-open onClick=\{\(\) => \{ setThreadMenu\(false\); setMarksOpen\('this'\); \}\}/.test(cv) && /data-chat-marks-open-all onClick=\{\(\) => setMarksOpen\('all'\)\}/.test(cv), 'drapeau : dans le menu ⋮ de la discussion (« Cette discussion ») et dans la liste des discussions (« Toutes »)');
 ok(/data-chat-marks-count/.test(cv) && /marksHere/.test(cv), 'pastille avec le nombre d\'importants et épinglés de la discussion');
 ok(/setThreadId\(thread\); setShowList\(false\);[^}]*setJumpAfter\(\{ thread, id \}\)/.test(cv) && /current\.id === jumpAfter\.thread\) \{[^}]*setTimeout\(\(\) => jumpTo\(id\), 150\)/.test(cv), 'toucher un message d\'une autre discussion : on l\'ouvre d\'abord, puis on amène exactement au message');
 ok(/data-marks-scope="this"/.test(cm) && /data-marks-scope="all"/.test(cm) && /data-marks-tab="important"/.test(cm) && /data-marks-tab="pinned"/.test(cm), 'fenêtre : « Cette discussion / Toutes » et onglets Importants / Épinglés');

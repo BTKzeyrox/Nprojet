@@ -32,5 +32,8 @@ ok(/data-chat-search-open/.test(cv) && /data-day-pill/.test(cv) && /<ChatSearch/
 ok(/last\?\.sender_id === currentUser\.id\) \{[\s\S]{0,200}atBottomRef\.current = true;[\s\S]{0,300}\[60, 150, 300, 600\]/.test(cv), 'mon message envoyé : descente immédiate puis répétée (la liste ne reste plus en haut)');
 ok(/behavior: 'auto'/.test(cv.slice(cv.indexOf('const jumpTo'), cv.indexOf('const gallery'))) && /\[80, 250, 600\]/.test(cv), 'aller au message : exact (sans animation), réappliqué tant que la personne ne touche pas l\'écran');
 ok(/data-chat-search-prev/.test(cv) && /data-chat-search-next/.test(cv) && /all\.length > 1/.test(cv) && /setNav\(null\)/.test(cv), 'ChatView : barre « n sur N » avec précédent / suivant, seulement s\'il y a plusieurs résultats, fermée au changement de conversation');
+{ const head = cv.slice(cv.indexOf('data-chat-menu-open') - 200, cv.indexOf('data-chat-menu-open') + 200); const menu = cv.slice(cv.indexOf('{threadMenu && createPortal('), cv.indexOf('{threadMenu && createPortal(') + 3500);
+  ok(!/data-chat-search-open[^>]*title="Rechercher/.test(cv.slice(0, cv.indexOf('{threadMenu && createPortal('))) && /data-chat-search-open/.test(menu) && /data-chat-marks-open/.test(menu) && /data-ephemeral-open/.test(menu), 'en-tête du chat : un seul bouton ⋮ ; Rechercher, Importants et épinglés, Messages éphémères sont dans son menu');
+  ok(/data-chat-menu-dot/.test(cv) && head.length > 0, 'point rouge sur ⋮ s\'il y a des importants ou un minuteur éphémère'); }
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

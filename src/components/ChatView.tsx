@@ -807,16 +807,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </span>
             </span>
           </button>
-          {canEph && <button type="button" data-ephemeral-open onClick={() => { setEphErr(''); setEphOpen(true); }} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Messages éphémères" aria-label="Messages éphémères"><Timer className="w-5 h-5" />{ephMs > 0 && <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400" aria-hidden />}</button>}
-          <button type="button" data-chat-marks-open onClick={() => setMarksOpen('this')} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Importants et épinglés" aria-label="Importants et épinglés">
-            <Flag className="w-5 h-5" />
-            {marksHere > 0 && <span data-chat-marks-count className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-[11px] font-bold text-white flex items-center justify-center">{marksHere > 99 ? '99+' : marksHere}</span>}
-          </button>
-          <button type="button" data-chat-search-open onClick={() => setSearch({ day: null })} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Rechercher dans la conversation" aria-label="Rechercher dans la conversation">
-            <Search className="w-5 h-5" />
-          </button>
-          <button type="button" onClick={() => setThreadMenu(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Options de la conversation">
+          <button type="button" data-chat-menu-open onClick={() => setThreadMenu(true)} className="relative w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white cursor-pointer" title="Options de la conversation" aria-label="Options de la conversation">
             <MoreVertical className="w-5 h-5" />
+            {(marksHere > 0 || (canEph && ephMs > 0)) && <span data-chat-menu-dot className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-rose-500" aria-hidden />}
           </button>
         </div>
 
@@ -1135,6 +1128,19 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={() => setThreadMenu(false)}>
           <div className={`w-full max-w-xs rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`} onClick={e => e.stopPropagation()}>
             <div className={`px-4 py-2.5 border-b ${P.div} text-xs ${P.sub}`} style={ONE_LINE}>{current.title}</div>
+            <button type="button" data-chat-search-open onClick={() => { setThreadMenu(false); setSearch({ day: null }); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+              <Search className="w-4 h-4 text-emerald-600" /> Rechercher dans la conversation
+            </button>
+            <button type="button" data-chat-marks-open onClick={() => { setThreadMenu(false); setMarksOpen('this'); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+              <Flag className="w-4 h-4 text-rose-500" /> Importants et épinglés
+              {marksHere > 0 && <span data-chat-marks-count className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-[11px] font-bold text-white flex items-center justify-center">{marksHere > 99 ? '99+' : marksHere}</span>}
+            </button>
+            {canEph && (
+              <button type="button" data-ephemeral-open onClick={() => { setThreadMenu(false); setEphErr(''); setEphOpen(true); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
+                <Timer className="w-4 h-4 text-amber-500" /> Messages éphémères
+                {ephMs > 0 && <span className="ml-auto w-2.5 h-2.5 rounded-full bg-amber-400" aria-hidden />}
+              </button>
+            )}
             {current.kind === 'user' && current.user && (
               <button type="button" onClick={() => { setThreadMenu(false); openProfile(current.user!.id); }} className={`w-full px-4 py-3 flex items-center gap-2.5 text-sm cursor-pointer ${P.popHover}`}>
                 <Info className="w-4 h-4 text-emerald-600" /> Voir le profil
