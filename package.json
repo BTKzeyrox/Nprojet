@@ -60,6 +60,7 @@
     "check:chat-visible-to": "npx --yes tsx scripts/check-chat-visible-to.ts",
     "check:chat-ephemeral": "npx --yes tsx scripts/check-chat-ephemeral.ts",
     "check:open-mission": "npx --yes tsx scripts/check-open-mission.ts",
+    "check:calendar-sheet-only": "npx --yes tsx scripts/check-calendar-sheet-only.ts",
     "check:sheet-day": "esbuild scripts/check-sheet-day.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-sheet-day.mjs && node node_modules/.cache/check-sheet-day.mjs",
     "check:stats-work-lines": "esbuild scripts/check-stats-work-lines.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-stats-work-lines.mjs && node node_modules/.cache/check-stats-work-lines.mjs",
     "check:late-absence": "esbuild scripts/check-late-absence.ts --bundle --platform=node --format=esm --packages=external --target=node20 --define:import.meta.env={} --log-level=error --outfile=node_modules/.cache/check-late-absence.mjs && node node_modules/.cache/check-late-absence.mjs",

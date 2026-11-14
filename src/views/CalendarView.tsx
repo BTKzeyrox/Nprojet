@@ -202,11 +202,13 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
       {rows.map(r => {
         const a = att.find(x => x.user_id === r.id);
         const u = list.find(x => x.id === r.id);
+        const d = dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter, id => db.isUnsent('posts', id), db.getQueuedSheets());
+        const sheetOnly = !d.firstSeen && d.missions.length === 0 && d.workLines.length > 0; // saisi par un chef ou l'admin : la personne n'a pas utilisé le site ce jour-là, donc ni connexion, ni missions, ni statut en ligne
         return (
-          <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`}>
+          <div key={r.id} className={`${card} p-3 border ${TINT[r.status]}`} data-testid={`gcal-row-${r.id}`} data-sheet-only={sheetOnly ? '1' : undefined}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <button type="button" onClick={() => onPickEmployee(r.id)} className={`font-bold text-sm cursor-pointer text-left ${txt}`}>{r.name}</button>
-              {day === today && <OnlinePill iso={presenceOf(r.id)} nowMs={nowMs} lang={lang} sub={sub} />}
+              {day === today && !sheetOnly && <OnlinePill iso={presenceOf(r.id)} nowMs={nowMs} lang={lang} sub={sub} />}
               {showShift(db.getSettings()) && <span className={`text-[11px] flex items-center gap-1 ${sub}`}>{r.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}{r.shift === 'day' ? 'Jour' : 'Nuit'}</span>}
               <span className={`ml-auto inline-flex items-center gap-1 text-xs font-bold ${STATUS_META[r.status].color}`}><StatusIcon status={r.status} className="w-4 h-4" /> {STATUS_META[r.status].label}{r.status === 'leave' && r.leave ? ` · ${leaveLabel(r.leave)}` : ''}</span>
             </div>
@@ -220,14 +222,13 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
               {r.pendingLeave && <span className="text-sky-500 font-semibold">Demande de congé en attente</span>}
             </div>
             {(() => {
-              const d = dayDetail(posts, a, r.id, day, nowMs, today, ctx.clientFilter, id => db.isUnsent('posts', id), db.getQueuedSheets());
               if (!d.firstSeen && d.missions.length === 0 && d.workLines.length === 0) return null;
               const box = `rounded-xl p-2.5 text-xs space-y-1 ${st.L ? 'bg-slate-50' : 'bg-white/5'}`;
               const h = `text-[11px] font-bold uppercase ${sub}`;
               const stateTxt = { validated: 'validée', refused: 'refusée', running: 'en cours', waiting: 'en attente de validation', released: 'libérée' } as const;
               return (
                 <div className="mt-2 grid gap-2 sm:grid-cols-2" data-testid={`day-detail-${r.id}`}>
-                  <div className={box}>
+                  {!sheetOnly && <div className={box}>
                     <div className={h}>Connexion</div>
                     {d.firstSeen ? (
                       <>
@@ -238,7 +239,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                         )) : <div className={sub}>Heures de déconnexion : pas enregistrées pour ce jour (avant la mise à jour).</div>}
                       </>
                     ) : <div className={sub}>Aucune connexion enregistrée ce jour-là.</div>}
-                  </div>
+                  </div>}
                   {d.workLines.length > 0 && (
                     <div className={box} data-testid={`day-worklines-${r.id}`}>
                       <div className={h}>Travail saisi (feuille du jour)</div>
@@ -247,17 +248,17 @@ const DayPanel: React.FC<DayPanelProps> = ({ day, setDay, list, ctx, first, toda
                       ))}
                     </div>
                   )}
-                  <div className={box}>
+                  {!sheetOnly && <div className={box}>
                     <div className={h}>Missions du jour</div>
                     {d.missions.length === 0 ? <div className={sub}>Aucune mission.</div> : d.missions.map(m => (
                       <div key={m.id} className={sub}><strong className={txt}>{m.client}</strong> · {m.start}{m.end ? ` → ${m.end}` : ''}{m.minutes !== null ? ` (${minutesText(m.minutes)})` : ''} · score {formatScoreM(m.scoreFrom)} → {formatScoreM(m.scoreTo)} / {formatScoreM(m.target)} · {stateTxt[m.status]}{m.pay > 0 ? ` · ${ar(m.pay)}` : ''}<div className="text-[11px] opacity-90" data-testid={`mission-times-${m.id}`}>{lang === 'en' ? 'Start' : 'Début'} : {lang === 'en' ? 'sent' : 'envoyé'} <strong className={txt}>{m.startSent || '—'}</strong> · {lang === 'en' ? 'approved' : 'validé'} <strong className={txt}>{m.startValidated || '—'}</strong>{m.status !== 'waiting' && <> · {lang === 'en' ? 'End' : 'Fin'} : {lang === 'en' ? 'sent' : 'envoyée'} <strong className={txt}>{m.endSent || '—'}</strong> · {lang === 'en' ? 'approved' : 'validée'} <strong className={txt}>{m.endValidated || '—'}</strong></>}</div></div>
                     ))}
                     {d.missions.length > 0 && <div className={`pt-1 border-t ${st.L ? 'border-slate-200' : 'border-white/10'} ${sub}`}>Total : <strong className={txt}>{d.totals.missions}</strong> mission{d.totals.missions > 1 ? 's' : ''} · {d.totals.validated} validée{d.totals.validated > 1 ? 's' : ''}{d.totals.refused ? ` · ${d.totals.refused} refusée${d.totals.refused > 1 ? 's' : ''}` : ''}{d.totals.running ? ` · ${d.totals.running} en cours` : ''} · gain {formatScoreM(d.totals.gain)}{d.totals.pay > 0 ? ` · paie ${ar(d.totals.pay)}` : ''}</div>}
-                  </div>
+                  </div>}
                 </div>
               );
             })()}
-            {day === today && u && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
+            {day === today && u && !sheetOnly && <div className="mt-1 text-xs"><LiveLine info={liveStatus(u, posts, db.getPresence(), nowMs)} lang={lang} /></div>}
           </div>
         );
       })}

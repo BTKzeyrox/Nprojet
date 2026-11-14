@@ -18,7 +18,8 @@ export interface LiveInfo { status: LiveStatus; waiting: boolean; openMission: b
 
 export function liveStatus(user: Pick<User, 'id'> & Partial<Pick<User, 'is_online'>>, posts: PostSession[], presence: PresenceRow[], now = serverNowMs()): LiveInfo {
   const row = presence.find(r => r.user_id === user.id);
-  const last = row ? new Date(row.last_seen).getTime() : NaN;
+  const lastRaw = row ? new Date(row.last_seen).getTime() : NaN;
+  const last = lastRaw > 946684800000 ? lastRaw : NaN; // avant l'an 2000 = pas de vraie date (sinon « vu il y a 20771 j »)
   const silentMs = row && Number.isFinite(last) ? Math.max(0, now - last) : null;
   // Pas de ligne de présence = l'appli n'a jamais donné signe de vie : HORS LIGNE. On ne se fie PAS à l'ancien indicateur `is_online` : il reste bloqué sur « vrai » quand
   // quelqu'un ferme l'appli sans se déconnecter (cas réel : un compte « en ligne » depuis des jours).
