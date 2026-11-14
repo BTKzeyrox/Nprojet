@@ -229,8 +229,8 @@ Ancienne note (écrite avant déploiement, numéro devenu v77) :
 - Les interrupteurs `VISIBLE_TO_SERVER_LIVE` et `EPHEMERAL_SERVER_LIVE` (`chatShared.ts`) passent à `true` dans le commit du site qui suit ce déploiement.
 - Retour arrière : redéployer v86 (SHA 626e125aaa5a46b6c68e49e27db5dd587d7d050e) ET remettre les deux interrupteurs à `false` (sinon l'ancien serveur livrerait à tous un message « visible seulement par X »). Les messages déjà envoyés avec `visible_to` ou `expires_ms` garderaient ces champs : l'ancien serveur les enverrait à tout le monde et ne balaierait plus les expirés.
 
-## ⚠️ À DÉPLOYER : df-api (changement `hasOpenMission`) — PAS ENCORE EN LIGNE
-- Le code est déjà sur `main` (commit 9c38aab). Le serveur en ligne est toujours v87 (SHA b2d4c8ea11608f5a3d9c698651affcd9349680ca).
-- Seul `supabase/functions/df-api/index.ts` change : `hasOpenMission(userId)` ignore les lignes de la feuille du jour (`work_type`) pour la fenêtre de pointage, la file d'attente et la déconnexion forcée.
-- Tant que ce n'est pas déployé : ces 3 contrôles comptent encore une ligne en attente comme « mission en cours » (le site, lui, est déjà corrigé).
-- Procédure : accord écrit de BTK (« Go déployer ») → sauvegarde `select public.df_take_backup();` → relire le diff depuis b2d4c8e → déployer avec le SHA complet du commit → vérifier (reminders-due 200) → noter ici version, SHA, sauvegarde, retour arrière v87.
+## df-api v88 (2026-11-14) — `hasOpenMission` — DÉPLOYÉ (SHA 1995676afba7413ebf1dc7e7814e25a027f70ed8)
+- Seul `supabase/functions/df-api/index.ts` change depuis v87 : `hasOpenMission(userId)` ignore les lignes de la feuille du jour (`work_type`) pour la fenêtre de pointage, la file d'attente et la déconnexion forcée.
+- Sauvegarde avant déploiement : n° 123 (`select public.df_take_backup();`).
+- Vérifié : version 88 active, le cron reminders-due répond 200 en v88. Non testé : les 3 contrôles avec un vrai compte.
+- Retour arrière : redéployer v87 (SHA b2d4c8ea11608f5a3d9c698651affcd9349680ca). Les interrupteurs du site restent à `true`.
