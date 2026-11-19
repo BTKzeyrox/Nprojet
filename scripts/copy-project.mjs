@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { transformSync } from 'esbuild';
+import { findTraces, ORIGIN } from './lib/oldAccount.mjs';
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 /** Dépôts à ne JAMAIS écraser (Nprojet lui-même, DF-boosting, nova-language-coach). */
@@ -69,6 +70,11 @@ const changed = git(out, 'diff', '--cached', '--name-only').split('\n').sort();
 const expected = ['site.config.json', 'supabase/functions/df-api/site-config.ts'];
 if (JSON.stringify(changed) !== JSON.stringify(expected)) die(`le 2e commit devait changer seulement ${expected.join(' et ')} (obtenu : ${changed.join(', ')}). Rien n'a été envoyé.`);
 git(out, ...id, 'commit', '-q', '-m', `Comptes de cette copie : Supabase ${ref}, Cloudinary ${cloud}, dépôt ${repo}`);
+// Zéro trace de l'ancien compte dans le code, les réglages et le SQL (les .md sont seulement listés)
+const traces = findTraces(out, { shareCloudinary: cloud === ORIGIN.cloudinaryCloud });
+if (cloud === ORIGIN.cloudinaryCloud) console.log('Cloudinary : la copie garde le même Cloudinary que Nprojet (photos au même endroit). Pour un autre, ajoute --cloud NOM.');
+if (traces.code.length) die(`la copie cite encore le compte d'origine : ${traces.code.join(' ; ')}. Rien n'a été envoyé.`);
+if (traces.docs.length) console.log(`À réécrire dans ta copie (textes .md qui citent encore ${cur.github.repo}) : ${traces.docs.map(x => x.split(' → ')[0]).join(', ')}`);
 console.log(`Copie prête dans ${out}\n  commit 1 : copie pure, identique à l'original (même arbre git ${srcTree.slice(0, 10)})\n  commit 2 : comptes seulement (${expected.join(', ')})`);
 
 // 4) Envoi (seulement si demandé)

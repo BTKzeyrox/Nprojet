@@ -4,6 +4,7 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { findTraces } from './lib/oldAccount.mjs';
 
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -34,6 +35,8 @@ try {
   ok(c.supabase.ref === NEW && c.cloudinary.cloudName === 'mon-cloud' && c.github.repo === 'moi/copie', 'comptes de la copie : nouveau Supabase, Cloudinary et dépôt');
   const srv = readFileSync(join(out, 'supabase/functions/df-api/site-config.ts'), 'utf8');
   ok(srv.includes(`"${NEW}"`) && srv.includes('"mon-cloud"') && !srv.includes(cur.supabase.ref), 'serveur de la copie : lit les nouveaux comptes');
+  const tr = findTraces(out); // (--cloud mon-cloud : aucune trace, Cloudinary compris)
+  ok(tr.code.length === 0, 'copie : aucune trace du compte d\'origine dans le code, les réglages ni le SQL' + (tr.code.length ? ' : ' + tr.code.join(' ; ') : ''));
   ok(!existsSync(join(out, 'node_modules')) && !existsSync(join(out, 'supabase/setup-complete.sql')), 'la copie ne contient ni node_modules ni fichiers générés');
 
   // Envoi vers un dépôt de test local (le vrai GitHub n'est jamais touché ici)

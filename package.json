@@ -185,6 +185,7 @@
     "deploy:server": "node scripts/deploy-server.mjs",
     "admin:sql": "node supabase/create_admin.mjs",
     "check:deploy-server": "node scripts/check-deploy-server.mjs",
+    "check:no-old-account": "node scripts/check-no-old-account.mjs",
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",

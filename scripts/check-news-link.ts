@@ -5,7 +5,7 @@ import { parseDeepLinkUrl, deepLinkAllowed } from '../src/utils/deepLink';
 let fails = 0, total = 0;
 const eq = (got: unknown, want: unknown, name: string) => { total++; if (JSON.stringify(got) !== JSON.stringify(want)) { fails++; console.log(`ECHEC ${name}\n   obtenu  ${JSON.stringify(got)}\n   attendu ${JSON.stringify(want)}`); } };
 const ok = (c: boolean, name: string) => eq(!!c, true, name);
-const O = 'https://nprojet-beta.vercel.app';
+const O = 'https://gestion-pro.example';
 
 for (const id of ['news-1793330059483', 'news-1793330059483-a1b2c3', 'sim-n1', 'demo_n170', 'n_1.2:3']) {
   const url = newsLink(O, id);
@@ -40,7 +40,7 @@ eq(splitLinks(lk, O).length, 1, 'message : un lien seul');
 eq(splitLinks('Bonjour', O), [{ kind: 'text', text: 'Bonjour' }], 'message : sans lien = texte');
 eq(splitLinks('', O), [{ kind: 'text', text: '' }], 'message vide');
 eq(splitLinks('https://autre-site.com/?go=feed&nav=news:x', O).every(x => x.kind === 'text'), true, 'autre site : jamais un lien interne');
-eq(splitLinks(`https://nprojet-beta.vercel.app.evil.com/?go=feed`, O).every(x => x.kind === 'text'), true, 'adresse qui ressemble au site : refusée');
+eq(splitLinks(`https://gestion-pro.example.evil.com/?go=feed`, O).every(x => x.kind === 'text'), true, 'adresse qui ressemble au site : refusée');
 eq(splitLinks(`${O}/page-sans-go`, O).every(x => x.kind === 'text'), true, 'adresse du site sans lien précis : texte');
 eq(splitLinks(`${O}/?go=Feed%20X`, O).every(x => x.kind === 'text'), true, 'page invalide : texte');
 const two = splitLinks(`${lk} et ${newsLink(O, 'news-10')}`, O);
@@ -76,7 +76,7 @@ const chats = appSrc.match(/<ChatView [^>]*>/g) || [];
 ok(chats.length >= 4 && chats.every(c => /onNavigate=/.test(c)), 'messagerie de CHAQUE rôle : le bouton « Voir la publication » peut changer de page (onNavigate)');
 
 {
-  const O = 'https://nprojet-beta.vercel.app';
+  const O = 'https://gestion-pro.example';
   const { previewText } = await import('../src/utils/newsLink');
   ok(previewText(`${O}/?go=feed&nav=news:abc`, O) === 'Voir la publication', 'aperçu : le lien seul devient « Voir la publication »');
   ok(previewText(`Regarde ça\n${O}/?go=feed&nav=news:abc`, O) === 'Regarde ça Voir la publication', 'aperçu : petit mot + nom du lien, sur une ligne');
