@@ -1083,3 +1083,15 @@ html, body { touch-action: pan-x pan-y; }
   header.df-topbar [data-header-help] button { width: 38px; height: 38px; border-radius: 9px; }
   header.df-topbar [data-header-shortcut] svg, header.df-topbar [data-header-bell] svg { width: 18px; height: 18px; }
 }
+
+/* ===== Équilibrage final du header desktop ===== */
+@media (min-width: 1024px) {
+  header.df-topbar > div:first-child { gap: 6px !important; }
+  header.df-topbar [data-header-shortcuts] {
+    margin-left: auto;
+    margin-right: 2px;
+    gap: 4px !important;
+  }
+  header.df-topbar [data-header-conn], header.df-topbar [data-header-help] { margin-left: 0; margin-right: 0; }
+  header.df-topbar [data-header-shortcut], header.df-topbar [data-header-bell], header.df-topbar [data-header-help] button { margin: 0; }
+}
