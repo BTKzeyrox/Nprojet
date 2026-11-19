@@ -15,5 +15,13 @@ export function isGhostClick(openedAt: number, now: number, ms: number = GHOST_C
 }
 /** Copie du message pour le menu : sans identifiants (la copie ne doit jamais être trouvée à la place du vrai message). */
 export function stripIds(html: string): string {
-  return String(html || '').replace(/\sdata-msg-id="[^"]*"/g, '').replace(/\sid="[^"]*"/g, '');
+  return String(html || '')
+    // Sécurité (2026-11-19) : cette copie est posée avec dangerouslySetInnerHTML. Elle vient du DOM déjà échappé par React,
+    // mais on retire quand même tout ce qui pourrait exécuter du code (balises actives, gestionnaires on…, adresses javascript:).
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|base|form)\b[\s\S]*?(<\s*\/\s*\1\s*>|$)/gi, '')
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|base|form)\b[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src|xlink:href|action|formaction)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, '')
+    .replace(/\sdata-msg-id="[^"]*"/g, '')
+    .replace(/\sid="[^"]*"/g, '');
 }

@@ -10,6 +10,8 @@ ok(movedTooFar(NaN, 0, 1, 1) && movedTooFar(0, 0, undefined as any, 1), 'coordon
 ok(isGhostClick(1000, 1100) && isGhostClick(1000, 1000) && !isGhostClick(1000, 1000 + GHOST_CLICK_MS) && !isGhostClick(0, 5000), 'clic juste après l\'ouverture : ignoré ; plus tard : normal');
 ok(!isGhostClick(NaN, 1) && !isGhostClick(1000, 900), 'valeurs bizarres ou horloge reculée : jamais bloqué');
 ok(stripIds('<div data-msg-id="m1" id="x" class="a"><img src="u"></div>') === '<div class="a"><img src="u"></div>', 'copie du menu : sans identifiants');
+ok(!/<script|onerror|onclick|javascript:|<iframe/i.test(stripIds('<div onclick="x()"><img src="u" onerror=alert(1)><script>alert(1)</script><a href="javascript:alert(1)">l</a><iframe src="//e"></iframe></div>')), 'copie du menu : ni balise active, ni on…, ni javascript:');
+ok(stripIds('<p class="a">Salut <b>toi</b></p><a href="https://x.mg/p">l</a>') === '<p class="a">Salut <b>toi</b></p><a href="https://x.mg/p">l</a>', 'copie du menu : un message normal reste intact');
 ok(LONG_PRESS_MS === 450 && MOVE_LIMIT_PX === 10, 'délai 450 ms, tolérance 10 px');
 ok(PATTERNS.select[0] >= 20 && PATTERNS.select[0] > PATTERNS.light[0], 'vibration de sélection plus forte que le tapotement léger (≥ 20 ms)');
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
