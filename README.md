@@ -1,5 +1,7 @@
 # Gestion Pro
 
+> ⚠️ **IMPORTANT : le plan en cours (copier le projet avec un autre Supabase) est dans [`PLAN_IMPORTANT.md`](PLAN_IMPORTANT.md)** : ce qui est fait, ce qui reste, comment reprendre si une IA s'arrête. Guide de copie : [`NOUVEAU_PROJET.md`](NOUVEAU_PROJET.md).
+
 Application web de **gestion du travail à la tâche** : le responsable (admin) crée des missions, les opérateurs les prennent, envoient leurs preuves (photos, fichiers), et le responsable valide ou refuse. Avec fil d'actualités, messagerie, calendrier de présence et équipe.
 
 Projet de démonstration (portfolio / CV de BTK).

@@ -5,6 +5,8 @@ Ne modifie rien et ne propose rien avant d'avoir lu ces quatre fichiers.
 
 > **Tu installes une nouvelle copie de ce site pour un autre projet (nouveau dépôt, nouveaux comptes) ?** Lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Sinon, tu n'en as pas besoin. Les liens de ce dépôt (`Nprojet`, appli « Gestion Pro ») sont ci-dessous.
 
+> **Le plan en cours de BTK (copier le projet, autre Supabase) : `PLAN_IMPORTANT.md`.** Ce qui est fait, ce qui reste, comment reprendre : lis-le avant de proposer quoi que ce soit.
+
 > **À quoi sert le site ? Pour qui ? D'autres usages ?** Réponses prêtes dans **`A_PROPOS.md`**.
 
 ## Les règles de BTK (à respecter tout le temps)
