@@ -27,6 +27,7 @@ Ne modifie rien et ne propose rien avant d'avoir lu ces quatre fichiers.
 ## Le token GitHub (classique) : comment l'avoir
 - **Lien pour créer le token** (la case `repo` est déjà cochée) :
   https://github.com/settings/tokens/new?scopes=repo&description=nprojet
+- Si tu dois modifier `.github/workflows/` (CI) ou copier le projet (la copie contient ce dossier) : utilise plutôt https://github.com/settings/tokens/new?scopes=repo,workflow&description=nprojet (la case `workflow` en plus ; sans elle GitHub refuse l'envoi).
 - Mets l'expiration à **7 jours**, clique « Generate token », copie le token (il commence par `ghp_`) et **colle-le dans le chat**. Jamais dans le dépôt, jamais dans un fichier.
 - **Supprimer les anciens tokens** (à faire après le travail) : https://github.com/settings/tokens
 - **Si le message de BTK ne contient pas de token**, donne-lui le lien ci-dessus et demande-le avant de pousser. Le dépôt est public : la lecture marche sans token.

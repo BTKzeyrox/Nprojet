@@ -1,146 +1,132 @@
-# NOUVEAU_PROJET.md — Copier ce site pour un autre projet (guide pour l'IA du nouveau compte)
-
-> Ce guide commence par **l'Étape 0 : copier le dépôt** (avec la règle de sécurité). Suis les étapes dans l'ordre : 0, 1, 2, 3, 4, 5, 6.
+# NOUVEAU_PROJET.md — Copier le site dans un autre dépôt avec un autre Supabase
 
 > Lis d'abord `LIRE_EN_PREMIER.md` (règles de BTK : récap, puis attendre « GO » ; réponses courtes, mots simples).
-> Ce guide sert à installer une **nouvelle copie** de Gestion Pro (accueil, messagerie, gestion des employés, missions, paie).
-> Tout ce qu'il faut pour monter le même site avec **ses propres** Supabase, Vercel, GitHub est ici. **Aucune donnée** de Nprojet n'est dans la copie : seulement la structure.
+> Ce guide sert à faire une **copie identique** de Gestion Pro : **même compte GitHub, même compte Vercel, autre projet Supabase** (autre base de données, autre serveur). La copie ne contient **aucune donnée** de Nprojet, seulement la structure.
+> Les commandes ci-dessous ont été vérifiées en local (`npm run check:copy-project`, `check:setup-sql`, `check:deploy-server`, `check:no-old-account`). **La première vraie copie sur un nouveau Supabase n'a pas encore été faite** : c'est elle qui valide tout le chemin. Note ce qui coince et corrige ce guide.
 
-## ⛔ Règle de sécurité (avant tout)
-Le dépôt **original** `https://github.com/BTKzeyrox/Nprojet` est en **LECTURE SEULE** pour toi. **Tu ne dois JAMAIS y pousser, ni le modifier**, même si le token le permet.
-Tu pousses **seulement** sur le **nouveau dépôt** que le propriétaire t'a donné. **Avant chaque envoi**, lance `git remote -v` et vérifie que l'adresse est celle du nouveau dépôt. En cas de doute : arrête-toi et demande.
+## En une minute
+1. **Un seul fichier décide des comptes : `site.config.json`** (ref Supabase, nom Cloudinary, dépôt GitHub). Le site et le serveur le lisent ; plus rien n'est écrit en dur. Sans réglage valide, `npm run build` s'arrête avec un message clair : une copie ne peut plus écrire par erreur dans la base de Nprojet.
+2. `npm run copy:project` crée le **nouveau dépôt** en 2 commits : (1) copie pure, identique (même arbre git, vérifié) ; (2) seulement les comptes.
+3. `npm run setup:sql` fabrique **tout le SQL** d'une base neuve (extensions, schéma, réglages, 26 migrations, tâches planifiées, sauvegardes).
+4. `npm run admin:sql` fabrique le SQL du compte administrateur.
+5. `npm run deploy:server` envoie les 3 fonctions du serveur sur le nouveau Supabase.
+6. Vercel : importer le nouveau dépôt. Aucune variable obligatoire.
 
-## Étape 0 — Copier le dépôt, sans faute (à faire en premier)
-Le propriétaire te donne : (1) le lien du dépôt original (lecture, sans token : il est public), (2) l'adresse du **nouveau dépôt vide** `https://github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>`, (3) un token limité à ce nouveau dépôt. Pas de ZIP.
+## ⛔ Règles de sécurité
+- Le dépôt **d'origine** `BTKzeyrox/Nprojet` n'est **jamais** modifié par une copie : `copy:project` ne fait que le lire, et refuse de l'écraser (comme `DF-boosting` et `nova-language-coach`). Avant chaque envoi : `git remote -v`.
+- Les tokens (GitHub `ghp_…`, Supabase `sbp_…`) se donnent dans le chat, se passent par variable d'environnement, ne s'écrivent **jamais** dans un fichier ni dans l'adresse du dépôt. À supprimer après le travail : https://github.com/settings/tokens et https://supabase.com/dashboard/account/tokens
+- Une base Supabase = une copie. Ne branche jamais deux sites sur la même base.
 
-```bash
-# 1. Lire l'original (lecture seule) et noter sa version
-git clone --depth 1 https://github.com/BTKzeyrox/Nprojet.git source-original
-SRC_SHA=$(git -C source-original rev-parse HEAD); echo "version copiée : $SRC_SHA"
-
-# 2. Copier les fichiers suivis par git, SANS l'historique ni le dossier .git
-mkdir nouveau-projet
-git -C source-original archive HEAD | tar -x -C nouveau-projet
-
-# 3. Vérifier que la copie est identique (la commande ne doit rien afficher)
-diff -r --exclude=.git source-original nouveau-projet
-
-# 4. Nouveau dépôt git, SANS lien avec l'original
-cd nouveau-projet
-git init -b main
-git config user.name "Claude"; git config user.email "noreply@anthropic.com"
-git add -A && git commit -m "Copie de Nprojet @$SRC_SHA (aucune modification)"
-
-# 5. Pousser SEULEMENT sur le nouveau dépôt (le token reste dans la commande, jamais dans la config git)
-git remote add origin https://github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>.git
-git remote -v        # ⛔ vérifier : jamais Nprojet
-git push "https://x-access-token:$GH_TOKEN@github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>.git" main
-```
-Si `git clone` est impossible dans ton environnement : liste les fichiers avec `https://api.github.com/repos/BTKzeyrox/Nprojet/git/trees/main?recursive=1`, puis télécharge chaque fichier depuis `https://raw.githubusercontent.com/BTKzeyrox/Nprojet/main/<chemin>` (octet pour octet, ne retape jamais un fichier à la main).
-
-**Contrôle « sans faute »** (dans `nouveau-projet`, avant toute modification) :
-```bash
-# Les fichiers indispensables sont là (rien ne doit être affiché ; sinon un fichier manque)
-for f in LIRE_EN_PREMIER.md NOUVEAU_PROJET.md AI_STUDIO.md HANDOVER.md PROJET.md package.json package-lock.json vite.config.ts index.html .gitignore .env.example \
-  supabase/schema.sql supabase/seed.sql supabase/create_admin.mjs supabase/functions/df-api/index.ts supabase/functions/df-restore/index.ts \
-  src/main.tsx src/db/store.ts; do [ -f "$f" ] || echo "MANQUE : $f"; done
-npm ci && npm run build        # doit finir par « built », sans erreur
-git remote -v                  # uniquement le NOUVEAU dépôt
-grep -rIl "ghp_[A-Za-z0-9]\{20,\}\|github_pat_[A-Za-z0-9_]\{20,\}" . --exclude-dir=node_modules --exclude-dir=.git   # aucun token (rien affiché)
-```
-Ce premier envoi est la **copie pure** : aucune adaptation dedans. Toutes les modifications du nouveau projet (noms, mots, réglages) viennent ensuite, **dans des commits séparés**, pour qu'on puisse toujours comparer avec l'original.
-
-## Danger n°1 : ne jamais mélanger avec le projet d'origine (Nprojet)
-Le code est configuré par défaut pour le Supabase de **Nprojet** (`fvkusbdhetxleimtdzqm`, voir `src/db/store.ts`, ligne ~54). Si tu déploies sans régler `VITE_SUPABASE_URL` (étape 4), le nouveau site écrirait dans la base de Nprojet. **Ne saute pas l'étape 4.**
-Valeurs de Nprojet à **ne pas réutiliser** : Supabase `fvkusbdhetxleimtdzqm`, site `nprojet-beta.vercel.app`, dépôt `BTKzeyrox/Nprojet`, tous ses tokens et clés.
-
-## 1. Ce que contient la copie
-| Fichier / dossier | Rôle |
+## 0. Ce qu'il faut avoir avant (demander au propriétaire, une fois)
+| Quoi | Détail |
 |---|---|
-| `src/` | Le site (React + Vite + Tailwind v4 + TypeScript) |
-| `supabase/schema.sql` | **Toute la structure de la base** (18 tables `df_*`, index, sécurité, 2 fonctions, dossier de photos). Sans données. Relançable sans danger. |
-| `supabase/seed.sql` | Réglages par défaut |
-| `supabase/create_admin.mjs` | Fabrique le SQL du compte administrateur (mot de passe haché, jamais écrit dans un fichier) |
-| `supabase/functions/df-api/index.ts` | Le serveur (connexion, synchro, messagerie, paie, photos) |
-| `supabase/functions/df-restore/index.ts` | La « Restauration du site » (remise à zéro avec code par mail) |
-| `.env.example` | La variable `VITE_SUPABASE_URL` à régler dans Vercel |
-| `AI_STUDIO.md`, `HANDOVER.md`, `PROJET.md` | Documentation du projet (architecture, règles, pièges). Les adresses et l'état qu'ils citent sont ceux de Nprojet : à réécrire pour la copie. |
+| **Nouveau projet Supabase** | Créé dans le bon compte. Noter son **ref** (20 lettres, dans `https://<ref>.supabase.co`). Activer **pg_cron** et **pg_net** : Database → Extensions. |
+| **Token GitHub classique** | Cases **`repo` ET `workflow`** (la copie contient `.github/workflows/ci.yml`, GitHub refuse sans `workflow`), 7 jours : https://github.com/settings/tokens/new?scopes=repo,workflow&description=copie-site |
+| **Token Supabase** | Account → Access Tokens (commence par `sbp_`). Sert seulement à envoyer le serveur. |
+| **Cloudinary** | Le **même** que Nprojet est permis (les photos restent au même endroit : c'est le défaut). Sinon un autre : *cloud name*, *API key*, *API secret*. |
+| **Resend** (mails du code de restauration) | *API key*. Sans domaine vérifié, Resend écrit **seulement** à l'adresse du compte Resend. |
+| **Compte admin** | Pseudo, nom affiché, mot de passe (6 caractères minimum). |
+| **Nom du nouveau dépôt** | `compte/nom`, dans le même GitHub. |
 
-Architecture : le navigateur parle **seulement** aux fonctions `df-api` / `df-restore` (Supabase Edge Functions). Elles utilisent la clé `service_role` (fournie automatiquement aux fonctions) pour lire et écrire les tables. Les tables sont fermées au public : pas de règles RLS à écrire, aucun accès direct depuis le navigateur.
-
-## 2. Ce qu'il faut demander au propriétaire (une fois)
-- **Supabase** : un **nouveau projet** (ne pas réutiliser un projet qui contient d'autres applications). Plan gratuit possible ; dis-lui si une option coûte de l'argent avant de la créer. Le connecteur Supabase doit être activé dans ton chat.
-- **GitHub** : un dépôt (public recommandé, voir étape 3) et un token classique (`repo`, 7 jours) : https://github.com/settings/tokens/new?scopes=repo&description=nouveau-projet
-- **Vercel** : importer le dépôt (le Vercel de ton chat peut être un autre compte : si tu ne vois pas le projet, le propriétaire l'importe lui-même, 1 minute).
-- **Cloudinary** (photos, plan gratuit) : *cloud name*, *API key*, *API secret*.
-- **Resend** (mails du code de restauration, gratuit) : une *API key*. Sans domaine vérifié, Resend envoie **seulement vers l'adresse du compte Resend** : le compte Resend doit donc être créé avec le Gmail de l'administrateur.
-- Le **nom du site**, les **mots** à utiliser (voir étape 5), le pseudo, le nom affiché et le mot de passe de l'admin.
-- Les clés (Cloudinary, Resend) sont des secrets : le propriétaire les colle dans le chat uniquement si tu n'as pas d'autre moyen, tu ne les écris **jamais** dans un fichier ni dans le dépôt, et tu lui conseilles de les régénérer après.
-
-## 3. Étapes (dans cet ordre, une par une, avec « GO » du propriétaire)
-
-### Étape 1 — La base (Supabase)
-1. Crée le projet Supabase (région proche des utilisateurs). Note son `ref` (ex. `abcdwxyz`) et l'adresse `https://<ref>.supabase.co`.
-2. Lance **`supabase/schema.sql`** en entier (connecteur : `apply_migration`, ou `execute_sql`). Vérifie : 18 tables `df_*` avec RLS activé :
-   `select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname like 'df\_%' and c.relkind='r' and c.relrowsecurity;` → **18**.
-3. Lance **`supabase/seed.sql`**.
-4. Range les clés dans le coffre-fort (Vault), avec ces **noms exacts** :
-   ```sql
-   select vault.create_secret('<API key Cloudinary>',    'cloudinary_api_key');
-   select vault.create_secret('<API secret Cloudinary>', 'cloudinary_api_secret');
-   select vault.create_secret('<API key Resend>',        'resend_api_key');
-   ```
-   Seuls ces noms sont lisibles par la fonction `df_get_secret` (voir `schema.sql`).
-
-### Étape 2 — Le compte administrateur
+## 1. Copier le dépôt (2 commits)
 ```bash
-ADMIN_USERNAME=admin ADMIN_NAME="Nom affiché" ADMIN_PASSWORD="mot-de-passe-6-caractères-minimum" node supabase/create_admin.mjs
+git clone https://github.com/BTKzeyrox/Nprojet.git source && cd source && npm ci
+# Essai à blanc : rien n'est envoyé, la copie est écrite dans un dossier temporaire
+npm run copy:project -- --repo BTKzeyrox/NOUVEAU --supabase-ref <REF_NEUF>
+# Si c'est bon : envoi réel (--create crée le dépôt privé ; sans lui, crée d'abord un dépôt VIDE sur GitHub, sans README)
+GH_TOKEN=ghp_... npm run copy:project -- --repo BTKzeyrox/NOUVEAU --supabase-ref <REF_NEUF> --push --create
 ```
-Lance le SQL affiché dans Supabase. **L'identifiant `user-admin-1` est attendu par le site : ne pas le changer.** Ne garde ni le mot de passe ni le SQL dans un fichier.
+Options : `--cloud NOM` (autre Cloudinary), `--out DOSSIER`, `--help`. Le script **refuse** : le dépôt d'origine, un dépôt protégé, le ref Supabase d'origine, un ref invalide, un dossier déjà utilisé. Il **s'arrête sans rien envoyer** si la copie cite encore un compte de Nprojet dans le code. Il liste les textes `.md` à réécrire (étape 6).
+Vérifie ensuite : `git log --oneline` du nouveau dépôt = 2 commits (« Copie pure… », « Comptes de cette copie… »), et `git diff HEAD~1 --stat` = seulement `site.config.json` et `supabase/functions/df-api/site-config.ts`.
 
-### Étape 3 — Les fonctions du serveur
-1. **Cloudinary** : dans `supabase/functions/df-api/index.ts`, change la ligne `const CLD_CLOUD = "dirnrsy5v";` par le *cloud name* du propriétaire (ligne ~32). Elle sert à vérifier que les photos viennent bien de son Cloudinary. Pousse sur GitHub.
-2. **Fuseau horaire** : le serveur compte en **UTC+3** (Madagascar : fonctions `dayOf`, `inShiftWindow`, `attendanceDay` dans `df-api/index.ts`). Si le pays est différent, change `3 * 3600 * 1000` et `+ 180` en conséquence.
-3. Déploie **`df-api`** et **`df-restore`** avec **`verify_jwt = false`** (le serveur gère lui-même les sessions). Deux méthodes :
-   - **Dépôt public (simple)** : déploie un petit fichier `index.ts` par fonction qui charge le code depuis ton dépôt, à un commit précis :
-     ```ts
-     import "https://raw.githubusercontent.com/<PROPRIÉTAIRE>/<DÉPÔT>/<COMMIT_SHA_COMPLET>/supabase/functions/df-api/index.ts";
-     ```
-     (idem avec `df-restore`). Pour mettre à jour : pousser, puis redéployer le petit fichier avec le nouveau commit. Retour en arrière : redéployer avec l'ancien commit. Vérifie avant que `curl https://raw.githubusercontent.com/.../index.ts | sha256sum` est identique au fichier local.
-   - **Dépôt privé** : déploie le contenu complet des deux fichiers.
-4. **Test sans navigateur** :
-   - `POST https://<ref>.supabase.co/functions/v1/df-api/login` avec `{"username":"zz","password":"x"}` → **401** `{"error":"Pseudo ou mot de passe incorrect."}` (le serveur tourne et lit la base).
-   - Même appel avec l'admin créé à l'étape 2 → **200** avec un `token`.
+Si `git` ou `npm` ne marchent pas dans ton environnement : copie à la main (`git archive HEAD | tar -x -C nouveau`), puis change les 3 valeurs de `site.config.json` et lance `npm run config:sync`. Fais-le en **deux commits séparés**, comme ci-dessus.
 
-### Étape 4 — Le site (Vercel)
-1. Nouveau projet Vercel → importer le dépôt. Framework **Vite**, commande `npm run build`, dossier de sortie `dist`.
-2. Variable d'environnement **obligatoire** : `VITE_SUPABASE_URL = https://<ref>.supabase.co` (voir `.env.example`). Puis redéployer.
-3. Ouvre le site, connecte-toi avec l'admin.
-4. **Avertissement** : à la première connexion de l'admin, si la base n'a aucun poste, le site crée **50 postes d'exemple** (clients inventés, dans `src/db/initialData.ts`). Soit tu remplaces ce fichier par la vraie liste (ou une liste vide : voir `store.ts`, recherche `AVAILABLE_CLIENT_CONTRACTS`), soit l'admin les supprime avant le lancement.
+## 2. La base de données (Supabase neuf)
+```bash
+git clone https://github.com/BTKzeyrox/NOUVEAU.git && cd NOUVEAU && npm ci
+npm run setup:sql        # écrit supabase/setup-complete.sql (jamais gardé dans git)
+```
+Lance **tout** `supabase/setup-complete.sql` **une seule fois**, dans le SQL Editor du projet **neuf** (ou `execute_sql` du connecteur, en vérifiant le bon projet). Il contient, dans l'ordre : les extensions, l'adresse du projet rangée dans le coffre-fort (`df_project_url`, lue par les tâches planifiées), `schema.sql`, `seed.sql`, puis toutes les migrations.
+**Vérifications** (dans le SQL Editor) :
+```sql
+-- 44 tables df_* avec la sécurité de ligne activée
+select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname like 'df\_%' and c.relkind='r' and c.relrowsecurity;
+-- 5 tâches planifiées : df-nightly-backup, df-push-due, df-recurring-due, df-reminders-due, df-report-due
+select jobname from cron.job order by 1;
+-- l'adresse du projet NEUF (jamais celle de Nprojet)
+select decrypted_secret from vault.decrypted_secrets where name = 'df_project_url';
+```
+Range ensuite les clés dans le coffre-fort, avec ces **noms exacts** (les valeurs viennent du propriétaire, jamais dans un fichier) :
+```sql
+select vault.create_secret('<API key Cloudinary>',    'cloudinary_api_key');
+select vault.create_secret('<API secret Cloudinary>', 'cloudinary_api_secret');
+select vault.create_secret('<API key Resend>',        'resend_api_key');
+```
+Les clés d'envoi de notifications (VAPID) et le secret des tâches planifiées sont créés automatiquement.
 
-### Étape 5 — Adapter le site au nouveau projet
-Remplace le nom « Gestion Pro » et les mots propres à Nprojet par ceux du nouveau projet (`grep -rn "Gestion Pro" src index.html public/manifest.webmanifest`). Vérifie aussi :
-- `index.html` (titre), `public/manifest.webmanifest` (nom de l'app), les icônes dans `public/`, les fonds `public/bg-*.svg` ;
-- devise « Ar », moyens de paiement (MVola, Orange Money…) : réglables dans **Réglages** du site, sans code ;
-Garde la structure et les identifiants internes (`df_`, `employee`, `admin`) : seuls les **textes affichés** changent.
+## 3. Le compte administrateur
+```bash
+ADMIN_USERNAME=admin ADMIN_NAME="Nom affiché" ADMIN_PASSWORD="mot-de-passe" npm run admin:sql
+```
+Lance le SQL affiché dans le Supabase **neuf**. L'identifiant `user-admin-1` est attendu par le site : ne pas le changer. Ne garde ni le mot de passe ni le SQL dans un fichier.
 
-### Étape 6 — Contrôle final (à cocher avec le propriétaire)
-- [ ] Connexion admin OK ; Nprojet n'est pas touché (rien ne s'écrit dans sa base).
+## 4. Le serveur (3 fonctions)
+```bash
+npm run deploy:server -- --dry-run --confirm-ref <REF_NEUF>      # voir sans rien envoyer
+SUPABASE_ACCESS_TOKEN=sbp_... npm run deploy:server -- --confirm-ref <REF_NEUF>
+```
+Envoie `df-api` (**avec ses 3 fichiers** : `index.ts`, `totp.ts`, `site-config.ts`), `df-restore` et `df-assistant` sur le projet de `site.config.json`, puis teste la route publique `signup-info`. Le `--confirm-ref` doit être égal au ref du fichier : impossible de viser un autre projet par erreur. `verify_jwt = false` vient de `supabase/config.toml`.
+Si tu déploies autrement (connecteur, tableau de bord) : **envoie tous les fichiers du dossier de la fonction**, sinon `df-api` ne démarre pas (`totp.ts` et `site-config.ts` sont importés par `index.ts`).
+**Réglages facultatifs** (secrets de fonctions, Supabase → Edge Functions → Secrets) : `GEMINI_API_KEY` (assistant IA), `RESEND_API_KEY`, `REMINDER_MAIL_TO`, `REMINDER_MAIL_FROM` (mail de rappels). La clé de service et l'adresse du projet sont fournies automatiquement ; les sessions sont signées avec la clé de **ce** projet.
+**Test sans navigateur** :
+- `POST https://<ref>.supabase.co/functions/v1/df-api/login` avec `{"username":"zz","password":"x"}` → **401** « Pseudo ou mot de passe incorrect. » (le serveur tourne et lit la base).
+- Même appel avec l'admin de l'étape 3 → **200** avec un `token`.
+
+## 5. Le site (Vercel, même compte)
+1. Nouveau projet Vercel → importer le **nouveau** dépôt. Framework **Vite**, commande `npm run build`, dossier `dist`. Donne-lui un autre nom que celui de Nprojet.
+2. **Aucune variable obligatoire** : l'adresse du serveur vient de `site.config.json`. (`VITE_SUPABASE_URL` reste possible pour forcer une autre adresse ; si tu la mets, mets celle du projet **neuf**.)
+3. Ouvre le site, connecte-toi avec l'admin. **Attention** : à la première connexion, si la base n'a aucun poste, le site crée des **postes d'exemple** (`src/db/initialData.ts`). Garde-les pour une démo, ou vide-les avant d'inviter du monde.
+
+## 6. Après la copie
+- **Réécris les textes `.md`** que `copy:project` a listés (`LIRE_EN_PREMIER.md`, `HANDOVER.md`, `PROJET.md`, `AI_STUDIO.md`, `TODO*.md`) : adresses, état et liens sont ceux de Nprojet. Au minimum : liens du dépôt, de Supabase et de Vercel dans `LIRE_EN_PREMIER.md`, et un `HANDOVER.md` à toi (celui de Nprojet est un bon modèle).
+- **Nom du site** : remplace « Gestion Pro » où tu veux (`index.html`, `public/manifest.webmanifest`, icônes). Seuls les **textes affichés** changent ; garde les identifiants internes (`df_`, `employee`, `admin`).
+- **Fuseau horaire** : le serveur et le site comptent en **UTC+3 (Madagascar)**, écrit à plusieurs endroits. Pour le même pays, rien à faire ; pour un autre pays, c'est un vrai chantier (cherche `3 * 3600 * 1000` et `+ 180`), à faire à part.
+- Lance `npm run check:no-old-account` (aucune trace du compte d'origine) puis `npm run check:all` (tout doit être vert) avant d'inviter du monde.
+- La CI (`.github/workflows/ci.yml`) tourne seule à chaque envoi : regarde l'onglet **Actions**.
+
+## 7. Contrôle final (à cocher avec le propriétaire)
+- [ ] Connexion admin OK sur le **nouveau** site ; rien ne s'écrit dans la base de Nprojet (compare une table avant/après).
 - [ ] Création d'un employé de test, connexion avec lui.
 - [ ] Messagerie : message, réponse, groupe, suppression.
-- [ ] Envoi d'une photo (Cloudinary) : l'image s'affiche.
-- [ ] Réglages → « Restauration du site » : enregistrer le Gmail de l'admin, recevoir le code par mail (ne **pas** lancer la remise à zéro).
-- [ ] `npm run build` sans erreur ; HANDOVER de la copie réécrit pour le **nouveau** projet.
+- [ ] Envoi d'une photo : l'image s'affiche.
+- [ ] Une sauvegarde : `select public.df_take_backup();` renvoie un numéro, et `select count(*) from public.df_backups;` ≥ 1.
+- [ ] Réglages → « Restauration du site » : enregistrer le Gmail de l'admin, recevoir le code (ne **pas** lancer la remise à zéro).
+- [ ] `npm run check:all` vert ; CI verte dans GitHub Actions.
 
-## 4. Après la mise en place
-- Remplace dans `LIRE_EN_PREMIER.md` les liens de Nprojet (dépôt, site, Supabase, Vercel) par ceux du nouveau.
-- Écris un `HANDOVER.md` pour le nouveau projet (celui de Nprojet est un bon modèle : état, travail restant, pièges).
-- Rappelle au propriétaire de **supprimer les tokens** après le travail : https://github.com/settings/tokens
+## 8. Erreurs fréquentes
+| Symptôme | Cause et solution |
+|---|---|
+| `npm run build` s'arrête : « site.config.json : supabase.ref… » | Réglage faux ou absent. Corrige `site.config.json`, lance `npm run config:sync`. |
+| `copy:project` : « le ref Supabase est celui d'ici » | Tu as donné le ref de Nprojet. Donne celui du projet **neuf**. |
+| `push` refusé : « workflow scope » | Le token n'a pas la case `workflow`. Recrée-le avec le lien de l'étape 0. |
+| `setup-complete.sql` : « extension pg_cron / pg_net not available » | Active-les dans Database → Extensions, relance sur une base **vide** (ou supprime les tables créées à moitié). |
+| Le SQL complet relancé donne des erreurs | Il est fait pour **une seule** exécution sur une base neuve. |
+| Les rappels, notifications ou rapports automatiques ne partent pas | `select * from cron.job_run_details order by start_time desc limit 5;` puis vérifie le secret `df_project_url` et que `df-api` est déployée. |
+| Connexion : erreur 500 « Serveur mal configuré » ou « Function not found » | `df-api` pas déployée, ou déployée sans `totp.ts` / `site-config.ts`. Relance `npm run deploy:server`. |
+| Photos : l'envoi échoue | Secrets Cloudinary absents du coffre-fort, ou `cloudinary.cloudName` de `site.config.json` ≠ celui du compte (puis `config:sync` et redéployer). |
+| Mails de restauration : rien reçu | Secret `resend_api_key` absent, ou Resend sans domaine : seule l'adresse du compte Resend reçoit. |
 
-## 5. Pièges connus (hérités de Nprojet)
+## 9. Retour en arrière
+Une copie rate : **supprime** le nouveau dépôt et le nouveau projet Supabase, et recommence. Nprojet n'a jamais été touché. Un serveur mal déployé : relance `npm run deploy:server` depuis un commit connu bon.
+
+## 10. Ce que ce guide ne couvre pas
+- **Les données** : rien n'est copié (pas de missions, pas d'employés). Une copie de données est un autre sujet, à décider à part.
+- **Changer de plateforme** (Netlify, Firebase…) : décidé hors sujet. Vercel → Netlify serait simple (site Vite statique) ; une autre base que Supabase demanderait de réécrire `df-api`.
+- **Les migrations futures** : toute nouvelle migration doit être ajoutée dans `supabase/migrations/` ; `npm run check:setup-sql` vérifie qu'elle s'installe sur une base neuve.
+
+## Pièges connus (hérités de Nprojet)
 - Ne jamais changer l'id `user-admin-1`.
-- Les tables sont fermées au public : toute lecture/écriture passe par `df-api`. Pour déboguer, utilise le connecteur Supabase (`execute_sql`), pas le navigateur.
-- Les mots de passe sont stockés avec `scrypt` (format `scrypt$sel$hash`) : ne les écris jamais en clair dans la base.
-- Resend sans domaine : mails seulement vers l'adresse du compte Resend.
+- Les tables sont fermées au public : toute lecture/écriture passe par `df-api`. Pour déboguer, utilise le SQL Editor ou le connecteur Supabase, pas le navigateur.
+- Les mots de passe sont stockés avec `scrypt` (format `scrypt$sel$hash`) : jamais en clair.
 - Photos : seules les images vont sur Cloudinary ; les PDF et textes vont dans le dossier `df-files` de Supabase.
 - Après chaque mise en ligne, le site ouvert se recharge seul (`/version.json`, voir `HANDOVER.md`).

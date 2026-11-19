@@ -1,7 +1,7 @@
 # HANDOVER.md : Gestion Pro (nouveau projet)
 
 À lire après `LIRE_EN_PREMIER.md` et `NOUVEAU_PROJET.md`.
-Dernière mise à jour : 2026-10-24 (voir § 11 pour l'état des modules et du serveur). Propriétaire : BTK (français, mots simples, réponses COURTES).
+Dernière mise à jour : 2026-11-19 (voir § 11 pour l'état des modules et du serveur). Propriétaire : BTK (français, mots simples, réponses COURTES).
 
 ## 0. Règles de travail avec BTK
 1. Récap court d'abord, puis attendre « GO ». Un document de texte demandé clairement est permis sans GO.
@@ -11,6 +11,15 @@ Dernière mise à jour : 2026-10-24 (voir § 11 pour l'état des modules et du s
 5. Aucun mot de passe, clé ou token dans le dépôt. BTK les donne dans le chat.
 6. Avant d'effacer des données : demander une confirmation précise.
 7. Dire honnêtement ce qui est fait, testé, ou non testé. Ne jamais écrire « c'est fait » sans vérifier.
+
+## 0 bis. Passation et copie du projet (2026-11-19)
+**Pour reprendre ce projet** (autre personne ou autre IA), dans cet ordre : `LIRE_EN_PREMIER.md` → `GUIDE_SITE.md` → ce fichier → `PROJET.md`. Pour **faire une copie** (même GitHub, même Vercel, autre Supabase) : `NOUVEAU_PROJET.md`, qui s'appuie sur 4 commandes testées : `npm run copy:project`, `npm run setup:sql`, `npm run admin:sql`, `npm run deploy:server`.
+- **Où sont les comptes** : un seul fichier, `site.config.json` (ref Supabase, nom Cloudinary, dépôt GitHub), plus sa copie pour le serveur `supabase/functions/df-api/site-config.ts` (générée : `npm run config:sync`). Ne cite jamais un compte ailleurs : `npm run check:site-config` et `npm run check:no-old-account` le vérifient.
+- **À transmettre à la personne qui reprend** : accès au dépôt GitHub, au projet Vercel, au projet Supabase (et son token personnel `sbp_…` pour déployer le serveur), au Cloudinary et au Resend ; le pseudo de l'administrateur (le mot de passe se change dans le site, jamais par écrit). Les secrets sont dans le coffre-fort Supabase (`cloudinary_api_key`, `cloudinary_api_secret`, `resend_api_key`) et dans les secrets des fonctions (facultatifs : `GEMINI_API_KEY`, `RESEND_API_KEY`, `REMINDER_MAIL_TO`, `REMINDER_MAIL_FROM`) : **régénère-les** à la passation, ne les envoie pas.
+- **Contrôles** : `npm run check:all` (tous les `check:*`, aussi lancé par GitHub à chaque envoi : `.github/workflows/ci.yml`). Tout doit être vert avant et après chaque travail.
+- **Base de données** : toute nouvelle table ou fonction va dans `supabase/migrations/` (jamais seulement dans le tableau de bord Supabase) : c'est ce qui permet de refaire une base neuve (`npm run check:setup-sql`). Le trou des sauvegardes (`df_backups`, `df_take_backup`, tâche de nuit), qui n'était que dans la base de Nprojet, a été comblé le 2026-11-19 (migration `20261023_create_df_backups.sql`).
+- **Serveur** : `df-api` est en plusieurs fichiers (`index.ts`, `totp.ts`, `site-config.ts`) ; toute mise en ligne envoie **tout le dossier** (`npm run deploy:server`). Le découpage de `index.ts` continue tranche par tranche (voir `PROJET.md`).
+- **Dans une copie** : remplace ce § 0 bis et les liens de Nprojet par ceux de ta copie (liste des `.md` à réécrire donnée par `copy:project`).
 
 ## 1. Le but du projet
 BTK cherche un premier poste informatique ou administratif, sans expérience (CV : Bac 2023, 2 ans de développement web non terminés, bureautique, saisie, maintenance de base). Ce site sert de **vitrine pour son CV** : il montre qu'il sait utiliser un outil de gestion de saisie et de tâches, avec contrôle qualité.
