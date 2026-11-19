@@ -1101,3 +1101,57 @@ html, body { touch-action: pan-x pan-y; }
   header.df-topbar [data-header-conn], header.df-topbar [data-header-help] { margin-left: 0; margin-right: 0; }
   header.df-topbar [data-header-shortcut], header.df-topbar [data-header-bell], header.df-topbar [data-header-help] button { margin: 0; }
 }
+
+
+/* ===== Charte « BTK » (thème sombre) : les couleurs de l'écran de démarrage (index.html) =====
+   Fond marine profond en dégradé radial ; cartes marine un peu plus claires, fine bordure bleue ; titres et logo en dégradé bleu.
+   Pour changer l'allure : modifier les variables --btk-* ci-dessous (rien d'autre à toucher). */
+:root {
+  --btk-bg-1: #0c2233;
+  --btk-bg-2: #071322;
+  --btk-bg-3: #050b16;
+  --btk-blue-1: #60a5fa;
+  --btk-blue-2: #3b82f6;
+  --btk-blue-3: #1e3a8a;
+  --btk-card: #0f2438;
+  --btk-card-line: rgba(59, 130, 246, 0.24);
+}
+
+/* 1. Fond : même dégradé que l'écran de démarrage, fixe quand on défile (pas de flou, pas de filtre : léger) */
+html.theme-dark { background: var(--btk-bg-3); }
+html.theme-dark body { background: transparent; }
+html.theme-dark body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 42%, var(--btk-bg-1) 0%, var(--btk-bg-2) 45%, var(--btk-bg-3) 100%);
+}
+html.theme-dark .df-bg-app, html.theme-dark .df-bg-login { background-color: transparent; background-image: none; }
+
+/* 2. Cartes : marine un peu plus clair que le fond, fine bordure bleue (les petites fenêtres déroulantes gardent leur fond plein) */
+html.theme-dark [class*="bg-[#"]:not(.df-popover) {
+  background-color: var(--btk-card) !important;
+  border-color: var(--btk-card-line);
+}
+html.theme-dark [class*="border-slate-"] { border-color: var(--btk-card-line); }
+html.theme-dark [class*="rounded-2xl"][class*="border"], html.theme-dark [class*="rounded-xl"][class*="border"] {
+  box-shadow: 0 10px 26px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* 3. Titres des pages et nom du menu : dégradé de l'écran de démarrage (bleu clair → bleu), assez clair pour rester lisible */
+html.theme-dark h1,
+html.theme-dark aside.df-sb .df-sb-title {
+  background-image: linear-gradient(90deg, #bfdbfe 0%, var(--btk-blue-1) 45%, var(--btk-blue-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+html.theme-dark h1:not([class*="flex-1"]), html.theme-dark aside.df-sb .df-sb-title { width: fit-content; max-width: 100%; }
+/* Logo du menu : pastille en dégradé bleu avec une lueur, comme le halo de l'écran de démarrage */
+html.theme-dark aside.df-sb .df-sb-logo {
+  background: linear-gradient(135deg, var(--btk-blue-1) 0%, var(--btk-blue-2) 45%, var(--btk-blue-3) 100%) !important;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.45);
+}

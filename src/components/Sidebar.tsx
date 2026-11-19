@@ -203,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="shrink-0 p-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-black shadow-sm"
+              className="df-sb-logo w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-black shadow-sm"
               style={{ background: navy, color: '#ffffff' }}
               aria-hidden="true"
             >
