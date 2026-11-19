@@ -1,3 +1,5 @@
+// Centre de notifications : liste filtrable (non lues, archivées), recherche, « tout marquer comme lu » et ouverture de l'écran concerné.
+// Utilisé par : App.tsx (vue « notifications »). Les règles viennent de utils/notifications.ts et utils/notifView.ts ; pour modifier le contenu des notifications, voir ces deux fichiers.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, Bell, CheckCheck, ChevronRight, Inbox, Search, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
