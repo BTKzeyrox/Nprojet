@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-const names = Object.keys(pkg.scripts).filter((k) => k.startsWith('check:'));
+const names = Object.keys(pkg.scripts).filter((k) => k.startsWith('check:') && k !== 'check:all');
 const parallel = Number(process.env.CHECK_PARALLEL || 6);
 const failed = [];
 let next = 0;

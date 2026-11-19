@@ -1247,6 +1247,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:chart-scale` | Contrôle des calculs des graphiques (sans écran). Lancer : npm run check:chart-scale |
 | `npm run check:charts` | Contrôle des graphiques : aucun ne doit casser (ni « NaN ») avec 0, 1 ou 365 données. |
 | `npm run check:stats` | Contrôle des calculs de la page Statistiques (sans écran, sans serveur). |
+| `npm run check:all` | (plusieurs contrôles) |
 | `npm run check:demo-stats` | Contrôle : les chiffres et graphiques des statistiques sont pleins avec les données de démonstration. |
 | `npm run check:client-price` | Contrôle du prix client (sans écran, sans serveur). |
 | `npm run check:deadlines` | Contrôle de la date limite et de la priorité (M6.1). Lancer : npm run check:deadlines |
