@@ -986,3 +986,75 @@ header.df-topbar [data-header-dashboard] { box-shadow: 0 1px 3px rgba(15,30,58,0
 
 /* Pas de zoom de la page au pincement (BTK, 2026-11-11) : seule la visionneuse d'images (LightboxModal, touch-action: none) zoome. Le défilement reste possible. */
 html, body { touch-action: pan-x pan-y; }
+
+/* ===== Thème bureau uniquement (>= 1024px) =====
+   Le mobile et la tablette gardent exactement le thème existant. */
+@media (min-width: 1024px) {
+  html.theme-dark .df-bg-app, html.theme-dark .df-bg-login {
+    background-color: #071426;
+    background-image: linear-gradient(135deg, #071426 0%, #0b1c31 56%, #102942 100%);
+    background-attachment: fixed;
+  }
+  html.theme-light .df-bg-app, html.theme-light .df-bg-login {
+    background-color: #eef3f8;
+    background-image: linear-gradient(135deg, #eef3f8 0%, #e7eef6 58%, #dce8f3 100%);
+    background-attachment: fixed;
+  }
+  html.theme-dark aside {
+    background-color: #081728 !important;
+    background-image: linear-gradient(180deg, #0b2037 0%, #081728 100%) !important;
+    border-right: 1px solid #203b56;
+  }
+  html.theme-light aside {
+    background-color: #e8eff6 !important;
+    background-image: linear-gradient(180deg, #f4f7fb 0%, #e4edf6 100%) !important;
+    border-right: 1px solid #c8d5e2;
+  }
+  html.theme-dark header.df-topbar {
+    background: #0d2138 !important;
+    background-image: none !important;
+    border-color: #284b68 !important;
+    box-shadow: 0 4px 14px rgba(2, 12, 26, .28) !important;
+  }
+  html.theme-light header.df-topbar {
+    background: #f4f7fb !important;
+    background-image: none !important;
+    border-color: #c6d4e2 !important;
+    box-shadow: 0 4px 14px rgba(34, 64, 94, .16) !important;
+  }
+  /* Bureau : surfaces plus droites, moins décoratives et mieux séparées. */
+  .rounded, .rounded-md { border-radius: 6px; }
+  .rounded-lg { border-radius: 8px; }
+  .rounded-xl { border-radius: 10px; }
+  .rounded-2xl { border-radius: 12px; }
+  .rounded-3xl { border-radius: 16px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea { border-radius: 8px; }
+  html.theme-dark [class*="rounded-xl"][class*="border"], html.theme-dark [class*="rounded-2xl"][class*="border"] {
+    background-color: #0e2035 !important;
+    border-color: #27445f;
+    box-shadow: 0 5px 16px rgba(1, 10, 22, .24);
+  }
+  html.theme-light [class*="rounded-xl"][class*="border"], html.theme-light [class*="rounded-2xl"][class*="border"] {
+    background-color: #f8fafc !important;
+    border-color: #cbd8e5;
+    box-shadow: 0 5px 16px rgba(38, 72, 106, .12);
+  }
+  /* Moins de gras sur les textes ordinaires ; les titres gardent leur hiérarchie. */
+  main .font-black, main .font-extrabold { font-weight: 700 !important; }
+  main .font-bold { font-weight: 650 !important; }
+  main .font-semibold { font-weight: 550 !important; }
+  html.theme-dark main, html.theme-dark main .text-slate-100, html.theme-dark main .text-slate-200 { color: #dbe8f4; }
+  html.theme-dark main .text-slate-300 { color: #b9cce0; }
+  html.theme-dark main .text-slate-400 { color: #91a9bf; }
+  html.theme-light main .text-slate-900 { color: #12253a; }
+  html.theme-light main .text-slate-800 { color: #1c344d; }
+  html.theme-light main .text-slate-700 { color: #2b4965; }
+  html.theme-light main .text-slate-500 { color: #516b83; }
+  /* Les accents restent les mêmes que sur mobile, mais sont plus lisibles sur la grande surface. */
+  html.theme-dark main .text-emerald-400, html.theme-dark main .text-emerald-300 { color: #62b9f2; }
+  html.theme-dark main .text-sky-400, html.theme-dark main .text-cyan-400 { color: #5cc7dc; }
+  html.theme-light main .text-emerald-400, html.theme-light main .text-emerald-300 { color: #1766b1; }
+  html.theme-light main .text-sky-400, html.theme-light main .text-cyan-400 { color: #087f9b; }
+  /* Les boutons d'action restent bleus, mais sans l'effet bonbon généralisé. */
+  main button[class*="bg-emerald-600"], main button[class*="bg-blue-600"] { box-shadow: 0 3px 8px rgba(23, 78, 166, .20); }
+}
