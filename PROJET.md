@@ -58,6 +58,7 @@ Mis à jour : 2026-11-19. « Non testé à l'écran » = le code compile, mais B
 - Secrets (Cloudinary, etc.) dans le coffre Supabase (Vault), jamais dans le repo.
 - Alertes de sécurité visibles par l'admin.
 - **Blocage après trop d'essais de connexion** : en place depuis M16.3 (table `df_login_attempts`, règles dans `src/utils/loginGuard.ts`, copie dans `df-api`). Double étape (TOTP) pour le Responsable et le Comptable (M16.4).
+- **Contrôle automatique (2026-11-19)** : GitHub lance à chaque envoi `npm run lint`, `npm run build` et `npm run check:all` (= `scripts/run-checks.mjs`, tous les `check:*`) : fichier `.github/workflows/ci.yml`. En local : `npm run check:all`.
 - **Copie de la messagerie** : le menu d'appui long recopie le message avec `stripIds` (`src/utils/longPress.ts`), qui retire aussi toute balise active, tout `on…=` et tout `javascript:` avant `dangerouslySetInnerHTML`.
 - **Découpage de `df-api` (en cours)** : le bloc « double étape » vit maintenant dans `supabase/functions/df-api/totp.ts` (importé par `index.ts` avec l'extension `.ts`). Le reste du serveur est encore dans `index.ts` (plus de 7 000 lignes). Chaque tranche suivante : sortir un bloc `BEGIN…END`, adapter son `check:*`, lancer `npm run check:all`, puis redéployer la fonction avec TOUS ses fichiers.
 

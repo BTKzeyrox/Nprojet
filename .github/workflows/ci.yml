@@ -1,0 +1,34 @@
+# Contrôle automatique à chaque envoi et chaque pull request (2026-11-19).
+# Si quelque chose casse, GitHub le dit avant que Vercel ne publie une mauvaise version.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Installer
+        run: npm ci --no-audit --no-fund
+      - name: Types (tsc)
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Toutes les vérifications check:*
+        run: npm run check:all # = node scripts/run-checks.mjs (en parallèle, 2e essai pour les tests de vitesse)
