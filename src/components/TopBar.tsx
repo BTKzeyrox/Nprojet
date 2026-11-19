@@ -237,7 +237,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
           <Search className="w-5 h-5" />
         </button>
-        <div ref={box} className="hidden md:block relative flex-1 min-w-0">
+        <div ref={box} data-header-searchbox className="hidden md:block relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={q}
