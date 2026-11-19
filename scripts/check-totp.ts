@@ -48,7 +48,9 @@ const enc = (s: string) => T.base32Encode(new TextEncoder().encode(s));
 
   // ---- Copie serveur ----
   const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
-  const m = src.match(/\/\/ ===== BEGIN TOTP[^\n]*\n([\s\S]*?)\/\/ ===== END TOTP =====/);
+  const totpSrc = readFileSync('supabase/functions/df-api/totp.ts', 'utf8'); // le bloc vit dans son propre fichier depuis le 2026-11-19
+  const m = totpSrc.match(/\/\/ ===== BEGIN TOTP[^\n]*\n([\s\S]*?)\/\/ ===== END TOTP =====/);
+  t('index.ts importe ./totp.ts et ne garde plus de copie', /from "\.\/totp\.ts"/.test(src) && !src.includes('===== BEGIN TOTP'));
   t('bloc serveur trouvé', !!m);
   const norm = (x: string) => x.replace(/\s+/g, ' ').trim();
   const mine = readFileSync('src/utils/totp.ts', 'utf8');
