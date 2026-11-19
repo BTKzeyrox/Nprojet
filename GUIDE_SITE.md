@@ -770,6 +770,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `shiftMode.ts` | Mode des horaires (Réglages) : « normal » = un seul horaire pour tous, « day » / « night » = une seule vacation, « both » = jour et nuit. |
 | `shortcutEvents.ts` | Message interne « va dans la recherche » (raccourci / ou Ctrl+K) : envoyé par App.tsx, reçu par TopBar.tsx. |
 | `shortcuts.ts` | Raccourcis clavier de l'ordinateur (BTK, 2026-11-08) : logique pure, sans écran. Utilisé par App.tsx (écoute), ShortcutsHelp.tsx (liste affichée) et check:shortcuts. |
+| `siteConfig.ts` | Réglages des comptes du site (Supabase, Cloudinary, GitHub) : règles pures, sans écran, sans réseau (2026-11-19). |
 | `siteKnowledge.ts` | Carte du site (module 11, M11.8) : pour CHAQUE page du menu, à quoi elle sert, comment l'utiliser, ses règles et ses chiffres avec leur formule. FR et EN. |
 | `siteSnapshot.ts` | Instantané du site et « Pourquoi ce chiffre ? » (module 11, M11.9). Pur : pas d'écran, pas de serveur. ADMIN SEULEMENT (chiffres d'argent). |
 | `snapshotDb.ts` | Relie l'instantané et « Pourquoi ce chiffre ? » aux données du site. ADMIN SEULEMENT : sans admin, aucune donnée n'est lue. |
@@ -1248,6 +1249,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:charts` | Contrôle des graphiques : aucun ne doit casser (ni « NaN ») avec 0, 1 ou 365 données. |
 | `npm run check:stats` | Contrôle des calculs de la page Statistiques (sans écran, sans serveur). |
 | `npm run check:all` | (plusieurs contrôles) |
+| `npm run check:site-config` | Contrôle « comptes du site à un seul endroit » (2026-11-19) : site.config.json est valide, le fichier du serveur en est la copie exacte, |
 | `npm run check:demo-stats` | Contrôle : les chiffres et graphiques des statistiques sont pleins avec les données de démonstration. |
 | `npm run check:client-price` | Contrôle du prix client (sans écran, sans serveur). |
 | `npm run check:deadlines` | Contrôle de la date limite et de la priorité (M6.1). Lancer : npm run check:deadlines |
@@ -1335,6 +1337,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 
 | Problème | Solution retenue |
 |---|---|
+| Les comptes (Supabase, Cloudinary, GitHub) étaient écrits en dur à plusieurs endroits : une copie du site écrivait dans la base de Nprojet. | `site.config.json` est le seul endroit des comptes. Le site le lit (`src/db/storeShared.ts`), le serveur lit `supabase/functions/df-api/site-config.ts` (généré par `npm run config:sync`), et la construction s'arrête avec un message clair si les réglages sont faux (`vite.config.ts`). `npm run check:site-config` le vérifie (2026-11-19). |
 | Aucun contrôle automatique à l'envoi : une erreur pouvait partir sur Vercel sans que personne ne la voie. | `.github/workflows/ci.yml` lance `npm run lint`, `npm run build` et `npm run check:all` (= `scripts/run-checks.mjs`, tous les `check:*`) à chaque envoi sur `main` et chaque pull request (2026-11-19). |
 | `df-api/index.ts` dépasse 7 000 lignes. | Découpage par tranches : le bloc double étape est dans `supabase/functions/df-api/totp.ts` (import avec l'extension `.ts`). Pour chaque tranche : adapter le `check:*` du bloc, lancer `npm run check:all`, redéployer la fonction avec tous ses fichiers (2026-11-19). |
 | Le menu d'appui long de la messagerie recopie un message avec `dangerouslySetInnerHTML`. | `stripIds` (`src/utils/longPress.ts`) retire aussi les balises actives, les `on…=` et les `javascript:` ; `npm run check:long-press` le vérifie (2026-11-19). |

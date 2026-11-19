@@ -2,10 +2,12 @@
 // Utilisé par : db/store.ts et db/parts/*.ts. Pour modifier : changer ici, rien d'autre à toucher.
 import type { TasksError } from '../utils/taskList';
 import { AppSettings } from '../types';
+import siteConfig from '../../site.config.json';
+import { supabaseUrl, type SiteConfig } from '../utils/siteConfig';
 
 export const TOKEN_KEY = 'df_session_token_v2';
-// Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
-export const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://fvkusbdhetxleimtdzqm.supabase.co').replace(/\/+$/, '');
+// Adresse du projet Supabase : lue dans site.config.json (les comptes du site, à un seul endroit). Le réglage Vercel `VITE_SUPABASE_URL` est facultatif et passe avant.
+export const SUPABASE_URL = supabaseUrl(siteConfig as SiteConfig, import.meta.env.VITE_SUPABASE_URL);
 export const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
 export const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 export const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;

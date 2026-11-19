@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { randomBytes, scryptSync, timingSafeEqual, createHmac, createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { TOTP, canUseTotp, secretFromBytes, verifyTotp, otpauthUri, backupCodeFromBytes, cleanBackupCode, backupHash } from "./totp.ts"; // règles de la double étape (copie de src/utils/totp.ts)
+import { SITE } from "./site-config.ts"; // comptes du site (généré depuis site.config.json : npm run config:sync)
 
 const T = {
   users: "df_users",
@@ -2903,7 +2904,7 @@ const CHAT_READS = "df_chat_reads";
 const GROUP_PREFIX = "grp_";
 const EDIT_WINDOW_MS = 15 * 60 * 1000; // comme WhatsApp : on peut modifier son message pendant 15 minutes
 // Cloudinary : le nom du cloud n'est pas secret ; la clé API et le secret sont lus dans le coffre-fort (Vault)
-const CLD_CLOUD = "dirnrsy5v";
+const CLD_CLOUD = SITE.cloudinaryCloud; // lu dans site-config.ts (généré depuis site.config.json)
 const CLD_PREFIX = `https://res.cloudinary.com/${CLD_CLOUD}/image/upload/`;
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
@@ -5962,7 +5963,7 @@ async function newsWithdraw(req: any, res: any, me: any) {
 // ---------- notifications push (M6.4) ----------
 const PUSH_SUBS = "df_push_subs";
 const PUSH_LOG = "df_push_log";
-const PUSH_SUBJECT = "https://github.com/BTKzeyrox/Nprojet"; // adresse de contact exigée par le standard VAPID (pas d'email personnel)
+const PUSH_SUBJECT = `https://github.com/${SITE.githubRepo}`; // adresse de contact exigée par le standard VAPID (pas d'email personnel)
 const PUSH_MAX_SUBS = 5;
 let pushKeysCache: { pub: string; priv: string } | null = null;
 const okKey = (pub: unknown, priv: unknown) => typeof pub === 'string' && typeof priv === 'string' && b64uDec(pub).length === 65 && b64uDec(priv).length === 32;

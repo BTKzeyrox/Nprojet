@@ -1,0 +1,6 @@
+{
+  "_aide": "Les comptes de CE site, au même endroit. Pour une copie : changer ces 3 valeurs, puis `npm run config:sync` (voir NOUVEAU_PROJET.md). Le site et le serveur les lisent ; rien d'autre ne doit citer un compte.",
+  "supabase": { "ref": "fvkusbdhetxleimtdzqm" },
+  "cloudinary": { "cloudName": "dirnrsy5v" },
+  "github": { "repo": "BTKzeyrox/Nprojet" }
+}

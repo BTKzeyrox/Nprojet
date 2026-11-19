@@ -3,12 +3,17 @@ import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'path';
 import { buildPrecache, type BundleItem } from './src/utils/swRules';
+import { configProblems } from './src/utils/siteConfig';
+import siteConfig from './site.config.json';
 import {defineConfig} from 'vite';
 
 // Même numéro de version pour le site (__APP_VERSION__) et pour le fichier version.json (rechargement automatique)
 const APP_VERSION = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || `local-${Date.now().toString(36)}`;
 
 export default defineConfig(() => {
+  // Réglages des comptes faux ou absents : la construction s'arrête ici, avec un message clair (jamais de repli silencieux vers un autre projet)
+  const siteProblems = configProblems(siteConfig);
+  if (siteProblems.length) throw new Error('\n' + siteProblems.join('\n') + '\nVoir NOUVEAU_PROJET.md.');
   return {
     plugins: [
       react(),
