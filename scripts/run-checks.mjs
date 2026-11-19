@@ -1,7 +1,10 @@
 // Lance toutes les commandes `npm run check:*` et dit lesquelles échouent.
 // Utilisé par : .github/workflows/ci.yml. Pour lancer à la main : node scripts/run-checks.mjs
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+
+// Le guide cite supabase/setup-complete.sql (fichier fabriqué, absent d'une copie neuve) : on le fabrique d'abord.
+spawnSync('node', ['scripts/build-setup-sql.mjs'], { stdio: 'ignore' });
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const names = Object.keys(pkg.scripts).filter((k) => k.startsWith('check:') && k !== 'check:all');
