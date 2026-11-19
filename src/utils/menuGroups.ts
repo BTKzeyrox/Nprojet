@@ -37,8 +37,8 @@ const EMPLOYEE_LABELS: Record<string, [string, string]> = {
 
 /** Anciennes vues qui n'étaient pas dans le menu mais qui existent (sous-page, fiche) → l'onglet où elles vivent maintenant. */
 export const VIEW_ALIASES: Record<string, string> = { sessions: 'active-post', operator: 'employees' };
-/** Pages qui ne sont pas des entrées du menu (fenêtre du profil). */
-export const NON_MENU_VIEWS = ['profile', 'login'];
+/** Pages qui ne sont pas des entrées du menu (fenêtre du profil ; la page Notifications s'ouvre par la cloche). */
+export const NON_MENU_VIEWS = ['profile', 'login', 'notifications'];
 
 const clone = (g: MenuGroup, tabs: MenuTab[]): MenuGroup => ({ ...g, tabs });
 

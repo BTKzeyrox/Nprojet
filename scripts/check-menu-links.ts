@@ -1,7 +1,7 @@
 // Contrôle des liens du menu simplifié (M22.8) : toute page visée par une alerte, la cloche, l'assistant, la Santé du site, un lien de notification ou le guide
 // existe dans le nouveau menu (pour le bon rôle), et la place affichée est la bonne. Lancer : npm run check:menu-links
 import { readFileSync, readdirSync } from 'node:fs';
-import { locate, menuFor, placeOfView, placeOf, OLD_ADMIN_VIEWS, EMPLOYEE_VIEWS } from '../src/utils/menuGroups';
+import { locate, menuFor, placeOfView, placeOf, OLD_ADMIN_VIEWS, EMPLOYEE_VIEWS, NON_MENU_VIEWS } from '../src/utils/menuGroups';
 let f = 0, t = 0;
 const ok = (c: boolean, n: string) => { t++; if (!c) { f++; console.log('ECHEC ' + n); } };
 const eq = (g: unknown, w: unknown, n: string) => ok(JSON.stringify(g) === JSON.stringify(w), `${n} (obtenu ${JSON.stringify(g)}, attendu ${JSON.stringify(w)})`);
@@ -15,7 +15,7 @@ const known = new Set<string>([...OLD_ADMIN_VIEWS, ...EMPLOYEE_VIEWS, 'feed', 'p
 const unknown = [...views].filter(v => !known.has(v));
 ok(views.size >= 15, `${views.size} pages citées trouvées dans le code`);
 eq(unknown, [], 'aucun lien ne vise une page inconnue');
-const lost = [...views].filter(v => !['profile', 'login'].includes(v) && !EMPLOYEE_VIEWS.includes(v as any) && locate('admin', v) === null);
+const lost = [...views].filter(v => !NON_MENU_VIEWS.includes(v) && !EMPLOYEE_VIEWS.includes(v as any) && locate('admin', v) === null);
 eq(lost, [], 'chaque page citée a une place dans le menu du responsable');
 // 2. Les liens de l'opérateur vont à des pages de SON menu
 for (const v of ['grid', 'active-post', 'advances', 'chat', 'calendar', 'hr', 'sheets', 'my-performance', 'settings', 'feed']) ok(locate('employee', v) !== null, `opérateur : « ${v} » existe`);

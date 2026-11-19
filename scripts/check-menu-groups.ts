@@ -17,8 +17,8 @@ ok(admin.find(g => g.id === 'feed')!.tabs.length === 1, 'Actualités reste une e
 ok(admin.find(g => g.id === 'charts')!.tabs.length === 1, 'Graphiques est une entrée à part');
 const allTabIds = admin.flatMap(g => g.tabs.map(x => x.id));
 eq(new Set(allTabIds).size, allTabIds.length, 'identifiants d\'onglets uniques');
-for (const v of OLD_ADMIN_VIEWS) ok(locate('admin', v) !== null, `ancienne vue « ${v} » a une place pour le responsable`);
-eq(sorted(OLD_ADMIN_VIEWS.filter(v => !VIEW_ALIASES[v])).filter(v => !reachableViews('admin').includes(v)), [], 'responsable : aucune ancienne page perdue');
+for (const v of OLD_ADMIN_VIEWS.filter(x => !NON_MENU_VIEWS.includes(x))) ok(locate('admin', v) !== null, `ancienne vue « ${v} » a une place pour le responsable`);
+eq(sorted(OLD_ADMIN_VIEWS.filter(v => !VIEW_ALIASES[v] && !NON_MENU_VIEWS.includes(v))).filter(v => !reachableViews('admin').includes(v)), [], 'responsable : aucune ancienne page perdue');
 // chaque onglet ouvre une vue qui existe vraiment
 const known = new Set<string>([...OLD_ADMIN_VIEWS, 'feed']);
 ok(admin.flatMap(g => g.tabs).every(x => known.has(x.view)), 'aucun onglet ne mène à une page qui n\'existe pas');
@@ -39,14 +39,14 @@ eq(locate('admin', '__proto__'), null, '__proto__ → null');
 eq(locate('admin', 'constructor'), null, 'constructor → null');
 
 // ---- Comptable : exactement ses pages d'avant ----
-eq(sorted(reachableViews('accountant')), sorted([...ACCOUNTANT_VIEWS]), 'Comptable : mêmes pages qu\'avant (ni plus, ni moins)');
+eq(sorted(reachableViews('accountant')), sorted([...ACCOUNTANT_VIEWS].filter(v => !NON_MENU_VIEWS.includes(v))), 'Comptable : mêmes pages qu\'avant (ni plus, ni moins)');
 eq(menuFor('accountant').map(g => g.id), ['feed', 'clients', 'money', 'stock', 'messages', 'settings'], 'Comptable : Actualités, Clients, Argent, Stock, Messages, Réglages');
 eq(menuFor('accountant').find(g => g.id === 'money')!.tabs.map(x => x.id), ['treasury', 'accounting'], 'Comptable : pas « Finances » (elles montrent la paie)');
 eq(menuFor('accountant').find(g => g.id === 'settings')!.tabs.map(x => x.id), ['settings'], 'Comptable : seulement ses réglages');
 eq(menuFor('accountant').find(g => g.id === 'settings')!.fr, 'Réglages', 'Comptable : l\'entrée s\'appelle Réglages');
 for (const v of ['dashboard', 'stats', 'advances', 'storage', 'employees', 'charts', 'health', 'errors', 'calendar', 'hr', 'direction', 'security']) eq(locate('accountant', v), null, `Comptable : « ${v} » refusé`);
 // ---- Chef d'équipe ----
-eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS].filter(v => WORK_SETTINGS_LIVE || v !== 'worksheet')), 'Chef d\'équipe : mêmes pages qu\'avant (la Feuille du jour est cachée tant que le module n\'est pas ouvert)');
+eq(sorted(reachableViews('team_lead')), sorted([...TEAM_LEAD_VIEWS].filter(v => !NON_MENU_VIEWS.includes(v) && (WORK_SETTINGS_LIVE || v !== 'worksheet'))), 'Chef d\'équipe : mêmes pages qu\'avant (la Feuille du jour est cachée tant que le module n\'est pas ouvert)');
 eq(menuFor('team_lead').map(g => g.id), ['feed', 'missions', 'messages', 'settings'], 'Chef d\'équipe : Actualités, Missions, Messages, Réglages');
 eq(menuFor('team_lead').find(g => g.id === 'missions')!.tabs.map(x => x.id), WORK_SETTINGS_LIVE ? ['validations', 'worksheet'] : ['validations'], 'Chef d\'équipe : À valider (et la Feuille du jour quand le module est ouvert)');
 for (const v of ['clients', 'invoices', 'treasury', 'advances', 'employees', 'history', 'grid', 'charts']) eq(locate('team_lead', v), null, `Chef d'équipe : « ${v} » refusé`);
