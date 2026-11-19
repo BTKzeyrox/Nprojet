@@ -1159,33 +1159,43 @@ html.theme-dark aside.df-sb .df-sb-logo {
 
 /* ===== Charte BTK, suite : menu, header, boutons et thème clair (même palette que l'écran de démarrage) ===== */
 
-/* 4a. Menu de gauche : marine profond dans les DEUX thèmes (le clair n'est plus pastel) */
-html.theme-light aside.df-sb {
-  --sb-bg: #0b2a4a; --sb-line: #1e3a6e; --sb-text: #f8fafc; --sb-sub: #93b4e6; --sb-item: #dbe7fb;
-  --sb-hover: rgba(255,255,255,.09); --sb-active: #2563eb; --sb-prof: rgba(255,255,255,.06); --sb-btn: rgba(255,255,255,.08); --sb-btn-h: rgba(255,255,255,.16); --sb-btn-t: #e2e8f0;
-  --sb-badge: rgba(255,255,255,.14); --sb-badge-t: #e2e8f0; --sb-tile: rgba(255,255,255,.08);
-}
-html.theme-light aside.df-sb, html.theme-dark aside.df-sb {
+/* 4a. Menu de gauche : marine profond en thème SOMBRE ; en thème CLAIR il reste clair (blanc, texte marine, accents BTK) */
+html.theme-dark aside.df-sb {
   background-image: linear-gradient(180deg, var(--btk-bg-1) 0%, var(--btk-bg-2) 100%) !important;
   background-color: var(--btk-bg-2) !important;
   border-color: rgba(59, 130, 246, 0.28) !important;
 }
+html.theme-light aside.df-sb {
+  --sb-bg: #ffffff; --sb-line: #c5d0df; --sb-text: #0b2a4a; --sb-sub: #4a6283; --sb-item: #1e3a5f;
+  --sb-hover: rgba(37,99,235,.08); --sb-active: #1d4ed8; --sb-prof: #f1f5fb; --sb-btn: #eef2f8; --sb-btn-h: #e2e8f0; --sb-btn-t: #1e3a5f;
+  --sb-badge: #eef2f8; --sb-badge-t: #1e3a5f; --sb-tile: #eef2f8;
+  background-image: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%) !important;
+  border-color: #c5d0df !important;
+  box-shadow: 0 10px 30px -18px rgba(11, 42, 74, 0.35);
+}
+/* Nom du menu en dégradé bleu : clair sur le menu sombre, foncé sur le menu clair (pour rester lisible) */
 html.theme-light aside.df-sb .df-sb-title {
-  background-image: linear-gradient(90deg, #bfdbfe 0%, var(--btk-blue-1) 45%, var(--btk-blue-2) 100%);
+  background-image: linear-gradient(90deg, var(--btk-blue-3) 0%, #2563eb 100%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
   width: fit-content; max-width: 100%;
 }
 html.theme-light aside.df-sb .df-sb-logo {
   background: linear-gradient(135deg, var(--btk-blue-1) 0%, var(--btk-blue-2) 45%, var(--btk-blue-3) 100%) !important;
-  box-shadow: 0 0 18px rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.40);
 }
 
-/* 4b. Header : marine de l'écran de démarrage, fine ligne bleue lumineuse (les deux thèmes) */
-html.theme-light header.df-topbar, html.theme-dark header.df-topbar {
+/* 4b. Header : marine en thème sombre, fine ligne bleue lumineuse ; clair en thème clair avec la même ligne bleue */
+html.theme-dark header.df-topbar {
   background-image: linear-gradient(90deg, var(--btk-bg-1) 0%, #0b2a4a 100%) !important;
   background-color: var(--btk-bg-1) !important;
   border-color: rgba(59, 130, 246, 0.35) !important;
   box-shadow: 0 8px 24px -14px rgba(59, 130, 246, 0.45), inset 0 1px 0 rgba(147, 197, 253, 0.08) !important;
+}
+html.theme-light header.df-topbar {
+  background-image: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%) !important;
+  background-color: #ffffff !important;
+  border-color: #c5d0df !important;
+  box-shadow: 0 8px 22px -14px rgba(30, 58, 138, 0.45), inset 0 -2px 0 rgba(37, 99, 235, 0.35) !important;
 }
 
 /* 4c. Boutons principaux : dégradé bleu → marine (comme « Se connecter ») avec une légère lueur */
