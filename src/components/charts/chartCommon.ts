@@ -1,7 +1,7 @@
 // Éléments partagés par les graphiques (couleurs, textes FR/EN, nombres courts).
-export const CHART_COLORS = ['#2f80d5', '#22b8cf', '#f0a43c', '#8874d8', '#e26d87', '#8092a8'];
-export const GOOD = '#28a879';
-export const BAD = '#df657b';
+export const CHART_COLORS = ['#10b981', '#38bdf8', '#f59e0b', '#a78bfa', '#fb7185', '#94a3b8'];
+export const GOOD = '#10b981';
+export const BAD = '#fb7185';
 
 /** 1 234 → « 1,2 k » · 1 500 000 → « 1,5 M » (court, pour les axes et les petites cartes). */
 export const compactNumber = (n: number): string => {
