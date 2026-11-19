@@ -1,7 +1,7 @@
 # TODO.md : liste à faire (Nprojet)
 
 
-> Les étapes entièrement finies sont dans `TODO_ARCHIVE.md` (déplacées le 2026-11-19). Ici : seulement ce qui reste ou est en cours.
+> Les étapes entièrement finies sont dans `docs/archive/TODO_ARCHIVE.md` (déplacées le 2026-11-19). Ici : seulement ce qui reste ou est en cours.
 À mettre à jour à la fin de chaque étape (cocher, ajouter la date et le commit). Règles de travail : voir `LIRE_EN_PREMIER.md` (récap, puis « GO » de BTK avant de coder).
 
 ## 1. Page d'accueil (Actualités)

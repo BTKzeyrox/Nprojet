@@ -1,7 +1,7 @@
 # TODO — Modules de gestion complète (Gestion Pro)
 
 
-> Les étapes entièrement finies sont dans `TODO_ARCHIVE.md` (déplacées le 2026-11-19). Ici : seulement ce qui reste ou est en cours.
+> Les étapes entièrement finies sont dans `docs/archive/TODO_ARCHIVE.md` (déplacées le 2026-11-19). Ici : seulement ce qui reste ou est en cours.
 Créé le 2026-10-20 à la demande de BTK. **Rien n'est codé : c'est un plan.** À lire avec `LIRE_EN_PREMIER.md`, `AI_STUDIO.md`, `HANDOVER.md`, `TODO_STATISTIQUES.md` (phases 1 à 5 déjà faites) et `TODO.md`.
 Taille : S = petite, M = moyenne, L = grosse. « Accord » = demander le « GO » de BTK avant d'agir.
 

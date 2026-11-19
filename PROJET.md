@@ -2,7 +2,7 @@
 
 But : savoir vite **ce qui existe, ce qui marche, comment c'est protégé et que faire en cas de panne**.
 Pour comprendre le site sans lire le code : **`GUIDE_SITE.md`**. Pour travailler sur le code : `LIRE_EN_PREMIER.md`, puis `GUIDE_SITE.md`, `AI_STUDIO.md`, `HANDOVER.md`. Liste à faire : `TODO.md`.
-Mis à jour : 2026-10-24. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
+Mis à jour : 2026-11-19. « Non testé à l'écran » = le code compile, mais BTK ne l'a pas encore vu marcher.
 
 ## 1. À propos
 - **Gestion Pro** : gestion du travail à la tâche. Le responsable crée des missions, les opérateurs les font et envoient des preuves, le responsable valide. Projet de démonstration pour le CV de BTK.
@@ -57,7 +57,9 @@ Mis à jour : 2026-10-24. « Non testé à l'écran » = le code compile, mais B
 - Anti-spam : limites sur les inscriptions (par adresse, sur 24 h) et sur les rapports d'erreur.
 - Secrets (Cloudinary, etc.) dans le coffre Supabase (Vault), jamais dans le repo.
 - Alertes de sécurité visibles par l'admin.
-- **Manque connu** : pas de blocage après trop d'essais de mot de passe (seulement 0,5 s d'attente).
+- **Blocage après trop d'essais de connexion** : en place depuis M16.3 (table `df_login_attempts`, règles dans `src/utils/loginGuard.ts`, copie dans `df-api`). Double étape (TOTP) pour le Responsable et le Comptable (M16.4).
+- **Copie de la messagerie** : le menu d'appui long recopie le message avec `stripIds` (`src/utils/longPress.ts`), qui retire aussi toute balise active, tout `on…=` et tout `javascript:` avant `dangerouslySetInnerHTML`.
+- **Découpage de `df-api` (en cours)** : le bloc « double étape » vit maintenant dans `supabase/functions/df-api/totp.ts` (importé par `index.ts` avec l'extension `.ts`). Le reste du serveur est encore dans `index.ts` (plus de 7 000 lignes). Chaque tranche suivante : sortir un bloc `BEGIN…END`, adapter son `check:*`, lancer `npm run check:all`, puis redéployer la fonction avec TOUS ses fichiers.
 
 ## 7. Secours et pannes
 - **Écran de secours** : plus de page blanche ; numéro d'incident, Réessayer, Vider le cache, Copier le rapport, Se déconnecter.
