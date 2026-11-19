@@ -552,7 +552,7 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         {showTabs && activeView === 'chat' && tabsRow}
-        <main style={activeView === 'chat' ? { top: `calc(${57 + (showTabs ? MENU_TABS_H : 0)}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - ${57 + (showTabs ? MENU_TABS_H : 0)}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
+        <main style={activeView === 'chat' ? { top: `calc(var(--hdr, 57px) + ${showTabs ? MENU_TABS_H : 0}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - var(--hdr, 57px) - ${showTabs ? MENU_TABS_H : 0}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
           {showTabs && activeView !== 'chat' && tabsRow}
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView + (activeView === 'stats' ? getStatsTab() : '')}>

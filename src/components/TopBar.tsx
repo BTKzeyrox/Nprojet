@@ -228,8 +228,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   return (
     <>
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
-    <div className="h-[57px] shrink-0" aria-hidden="true" />
-    <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b rounded-b-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-[0_2px_12px_rgba(15,30,58,0.10)]`}>
+    <div className="h-[var(--hdr,57px)] shrink-0" aria-hidden="true" />
+    <header style={{ top: 'calc(var(--vvt, 0px) + var(--hdr-gap, 0px))', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 md:right-3 z-30 df-topbar border-b md:border rounded-b-2xl md:rounded-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-[0_2px_12px_rgba(15,30,58,0.10)]`}>
       <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-3">
         <button type="button" data-header-dashboard data-app-logo onClick={() => onNavigate(home)} title="Tableau de bord" aria-label="Tableau de bord" className={`md:hidden shrink-0 w-10 h-10 rounded-xl overflow-hidden border cursor-pointer ${L ? 'border-slate-200' : 'border-slate-700'}`}>
           <img src="/icon-192.png" alt="" width={40} height={40} className="w-full h-full object-cover" draggable={false} />
@@ -294,8 +294,6 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             </button>
           ))}
         </div>
-
-        <div className="hidden md:block" data-header-conn><ConnectionChip /></div>
 
         <div className="hidden md:block shrink-0" data-header-help><PageHelp pageId={activeView || ""} role={currentUser?.role} /></div>
 
@@ -369,6 +367,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             </div>
           )}
         </div>
+
+        <div className="hidden md:block shrink-0" data-header-conn><ConnectionChip /></div>
 
         <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />

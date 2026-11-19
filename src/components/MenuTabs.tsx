@@ -15,7 +15,7 @@ export const MenuTabs: React.FC<{ group: MenuGroup; activeTab: string; badges?: 
   }, [activeTab, group.id]);
   return (
     <div ref={rowRef} data-menu-tabs={group.id} role="tablist" aria-label={lang === 'en' ? group.en : group.fr}
-      style={fixed ? { height: MENU_TABS_H, top: 'calc(57px + var(--vvt, 0px))', left: 'var(--sbw, 0px)' } : { height: MENU_TABS_H }}
+      style={fixed ? { height: MENU_TABS_H, top: 'calc(var(--hdr, 57px) + var(--vvt, 0px))', left: 'var(--sbw, 0px)' } : { height: MENU_TABS_H }}
       className={`${fixed ? 'fixed right-0 z-20' : 'mb-3'} flex items-stretch gap-1.5 overflow-x-auto px-2 py-1.5 border-b ${L ? 'bg-white border-slate-200' : 'bg-[#0b1220] border-slate-700'}`}>
       {group.tabs.map(tb => {
         const on = tb.id === activeTab, n = badges[tb.id] || 0;

@@ -337,6 +337,12 @@ html.theme-light .df-popover {
   .nav-flash, .nav-flash-short { animation: none; box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95); }
 }
 
+/* Barre du haut posée comme le menu : sur ordinateur (≥ 768 px) elle commence 12 px plus bas (comme la sidebar) ; --hdr = place prise en haut par la barre */
+:root { --hdr-gap: 0px; --hdr: 57px; }
+@media (min-width: 768px) {
+  :root { --hdr-gap: 12px; --hdr: 69px; }
+}
+
 /* Barre du haut : couleur UNIE (pas de verre, pas de dégradé, pas de reflet, pas de flou) */
 header.df-topbar {
   background-image: none !important;
@@ -397,7 +403,7 @@ body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
   bottom: auto;
   height: var(--vvh, 100dvh);
   max-height: var(--vvh, 100dvh);
-  padding-top: calc(57px + 1rem);
+  padding-top: calc(var(--hdr, 57px) + 1rem);
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow-y: auto;
