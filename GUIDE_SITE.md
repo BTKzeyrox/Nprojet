@@ -904,6 +904,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `CalendarView.tsx` | Page Calendrier : le responsable voit tous les employés (mois, résumé, détail d'un jour) ; un employé voit son propre calendrier. |
 | `FeedView.tsx` | Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications. |
 | `LoginView.tsx` | Écran de connexion : identifiant et mot de passe, code de sécurité en double étape, demande de compte et mot de passe oublié. |
+| `NotificationsPage.tsx` | Centre de notifications : liste filtrable (non lues, archivées), recherche, « tout marquer comme lu » et ouverture de l'écran concerné. |
 | `TeamValidations.tsx` | Page du chef d'équipe : valider ou refuser le début et la fin de session des opérateurs de son équipe, sans aucun montant affiché. |
 | `WorksheetView.tsx` | Feuille du jour (module 26, M26.5b) : le responsable ou le Chef d'équipe saisit présence, heures, quantité et refus des opérateurs sans réseau. |
 
@@ -1250,6 +1251,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:stats` | Contrôle des calculs de la page Statistiques (sans écran, sans serveur). |
 | `npm run check:all` | (plusieurs contrôles) |
 | `npm run check:site-config` | Contrôle « comptes du site à un seul endroit » (2026-11-19) : site.config.json est valide, le fichier du serveur en est la copie exacte, |
+| `npm run check:setup-sql` | (plusieurs contrôles) |
 | `npm run check:demo-stats` | Contrôle : les chiffres et graphiques des statistiques sont pleins avec les données de démonstration. |
 | `npm run check:client-price` | Contrôle du prix client (sans écran, sans serveur). |
 | `npm run check:deadlines` | Contrôle de la date limite et de la priorité (M6.1). Lancer : npm run check:deadlines |
@@ -1337,6 +1339,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 
 | Problème | Solution retenue |
 |---|---|
+| Une copie du site n'avait pas de sauvegarde (`df_backups`, `df_take_backup`, tâche de nuit : présents dans la base de Nprojet mais dans aucun fichier SQL) et ses tâches planifiées appelaient le serveur de Nprojet (adresse écrite en dur dans 4 migrations). | Migration `20261023_create_df_backups.sql` ajoutée ; les 4 migrations de tâches lisent maintenant l'adresse dans le coffre-fort (secret `df_project_url`). `npm run setup:sql` écrit `supabase/setup-complete.sql` (extensions, adresse du projet, schéma, réglages, toutes les migrations) pour un projet Supabase NEUF ; `npm run check:setup-sql` l'applique sur un vrai Postgres local et vérifie tables, sécurité de ligne, 5 tâches planifiées et sauvegarde (2026-11-19). |
 | Les comptes (Supabase, Cloudinary, GitHub) étaient écrits en dur à plusieurs endroits : une copie du site écrivait dans la base de Nprojet. | `site.config.json` est le seul endroit des comptes. Le site le lit (`src/db/storeShared.ts`), le serveur lit `supabase/functions/df-api/site-config.ts` (généré par `npm run config:sync`), et la construction s'arrête avec un message clair si les réglages sont faux (`vite.config.ts`). `npm run check:site-config` le vérifie (2026-11-19). |
 | Aucun contrôle automatique à l'envoi : une erreur pouvait partir sur Vercel sans que personne ne la voie. | `.github/workflows/ci.yml` lance `npm run lint`, `npm run build` et `npm run check:all` (= `scripts/run-checks.mjs`, tous les `check:*`) à chaque envoi sur `main` et chaque pull request (2026-11-19). |
 | `df-api/index.ts` dépasse 7 000 lignes. | Découpage par tranches : le bloc double étape est dans `supabase/functions/df-api/totp.ts` (import avec l'extension `.ts`). Pour chaque tranche : adapter le `check:*` du bloc, lancer `npm run check:all`, redéployer la fonction avec tous ses fichiers (2026-11-19). |

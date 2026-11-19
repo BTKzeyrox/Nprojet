@@ -59,7 +59,7 @@ select cron.schedule(
   'df-push-due',
   '*/15 * * * *',
   $job$select net.http_post(
-    url := 'https://fvkusbdhetxleimtdzqm.supabase.co/functions/v1/df-api/push-due',
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'df_project_url') || '/functions/v1/df-api/push-due',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'push_cron_secret')),
     body := '{}'::jsonb,
     timeout_milliseconds := 20000
