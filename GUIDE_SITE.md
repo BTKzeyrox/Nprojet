@@ -1036,6 +1036,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 |---|---|
 | `db/offlineController.ts` | Contrôleur du mode hors ligne (module 13, M13.5) : branche la copie locale (offlineVault.ts) et la file d'actions (offlineSync.ts) sur le magasin de données. |
 | `db/store.ts` | Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions. |
+| `db/storeShared.ts` | Constantes et petits outils partagés par le magasin de données (store.ts) et ses parties (db/parts/*.ts). |
 | `types/index.ts` | Types TypeScript des données de l'appli : utilisateurs, missions, avances, messages, actualités, clients, finances, stock, factures et achats. |
 | `demo/demoData.ts` | Données de démonstration 100 % inventées (missions, finances, stock, factures, clients, congés...), identiques à chaque ouverture de la démo. |
 | `context/AppContext.tsx` | Contexte global de l'appli : thème clair ou sombre, langue FR ou EN, traduction t(clé) et animation de déconnexion. |

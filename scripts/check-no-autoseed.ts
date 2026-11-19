@@ -8,6 +8,7 @@ Object.defineProperty(g, 'navigator', { value: { onLine: true }, configurable: t
 const { AppStore } = await import('../src/db/store');
 const { memoryKV } = await import('../src/utils/offlineVault');
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, name: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${name}`); } else console.log(`OK    ${name}`); };
@@ -37,7 +38,7 @@ await tick(100);
 ok(s.getContracts().length === 0, 'même après un rafraîchissement : toujours vide');
 
 // le site ne contient plus le remplissage automatique ni le compteur fixe
-const store = readFileSync('src/db/store.ts', 'utf8');
+const store = readStoreSource();
 ok(!/AVAILABLE_CLIENT_CONTRACTS/.test(store) && !/l'admin remplit les 20 missions/.test(store), 'store.ts : plus de remplissage automatique');
 const emp = readFileSync('src/views/employee/EmployeeDashboard.tsx', 'utf8');
 ok(!/AVAILABLE_CLIENT_CONTRACTS/.test(emp) && /Missions disponibles \(\{db\.getContracts\(\)\.length\}\)/.test(emp), 'opérateur : « Missions disponibles » compte les vraies missions (plus un nombre fixe)');

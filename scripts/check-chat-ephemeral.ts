@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { EPHEMERAL_CHOICES, EPHEMERAL_SERVER_LIVE, isExpired, planEphemeral } from '../src/utils/chatShared';
 import { isComposerSwipe } from '../src/utils/chatSwipe';
 import { AUDIT_ACTIONS } from '../src/utils/auditRules';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const admin = { id: 'ad', role: 'admin' }, lead = { id: 'tl', role: 'team_lead' }, emp = { id: 'e1', role: 'employee' }, emp2 = { id: 'e2', role: 'employee' };
@@ -33,7 +34,7 @@ ok(/chatEphemeralRoute\(req, res, me\)/.test(srv) && /planEphemeral\(me, group, 
 ok(/if \(existing\?\.chat_ephemeral_all_ms\) toSave\.chat_ephemeral_all_ms = existing\.chat_ephemeral_all_ms; else delete toSave\.chat_ephemeral_all_ms;/.test(srv), 'serveur : le mode de la discussion générale ne se change pas par les réglages');
 ok(AUDIT_ACTIONS.includes('chat_mark' as any) && AUDIT_ACTIONS.includes('chat_ephemeral' as any) && /"chat_mark", "chat_ephemeral"\]/.test(srv), 'journal d\'audit : chat_mark et chat_ephemeral enregistrés (site = serveur)');
 // démo + écran
-const st = readFileSync('src/db/store.ts', 'utf8'), ui = readFileSync('src/components/ChatView.tsx', 'utf8');
+const st = readStoreSource(), ui = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/getEphemeralMs\(/.test(st) && /setChatEphemeral\(/.test(st) && /'chat-ephemeral'/.test(st) && /planEphemeral\(me, group, threadId, ms\)/.test(st) && /expires_ms: now\.getTime\(\) \+ eph/.test(st), 'démo : mêmes règles, même route');
 ok(/data-ephemeral-open/.test(ui) && /data-ephemeral-banner/.test(ui) && /data-ephemeral-msg/.test(ui) && /data-composer-bar/.test(ui) && /isComposerSwipe\(/.test(ui) && /isExpired\(m, nowMs\)/.test(ui), 'écran : bouton, bandeau, minuteur du message, balayage de la barre, masquage à l\'heure');
 ok(typeof EPHEMERAL_SERVER_LIVE === 'boolean', 'interrupteur « serveur prêt » présent (false tant que df-api n\'est pas déployé)');

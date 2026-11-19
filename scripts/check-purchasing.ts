@@ -6,6 +6,7 @@ import {
 } from '../src/utils/purchasing';
 import { readFileSync } from 'node:fs';
 import type { CashEntry, Product, PurchaseOrder, StockMove, Supplier } from '../src/types';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, name: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${name}`); } else console.log(`OK    ${name}`); };
@@ -67,7 +68,7 @@ const po = (over: Partial<PurchaseOrder> = {}): PurchaseOrder => ({ id: 'po-1', 
   ok(comma.ok && comma.lines[0].unit_cost_ar === 13, 'prix à virgule : arrondi à l\'Ar, comme le serveur');
   const priced = a.ok ? planReceipt({ status: 'ordered', lines: a.lines }, { p: '10' }) : null;
   ok(!!priced && priced.ok && priced.plan.amount === 1100 && priced.plan.moves[0].unit_cost_ar === 110, 'le calcul de réception (dépense et coût de stock) utilise le prix réel : 10 × 110 = 1 100 Ar');
-  const store = readFileSync(new URL('../src/db/store.ts', import.meta.url), 'utf8');
+  const store = readStoreSource();
   ok(/applyReceiptPrices\(po, received, opts\.prices\)/.test(store) && /planReceipt\(priced, received\)/.test(store), 'magasin de données : la réception passe par les prix réels avant le calcul');
 }
 

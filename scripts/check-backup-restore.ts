@@ -1,12 +1,13 @@
 // Contrôle M7.3 : restauration d'une sauvegarde (fonction SQL, route df-restore, écran). Lancer : npm run check:backup-restore
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 let bad = 0;
 const ok = (c: boolean, m: string) => { if (!c) { bad++; console.error('✗', m); } else console.log('✓', m); };
 const rd = (p: string) => readFileSync(p, 'utf8');
 const sql = rd('supabase/migrations/20261023_df_restore_backup.sql');
 const fn = rd('supabase/functions/df-restore/index.ts');
 const ui = rd('src/components/BackupsSection.tsx');
-const store = rd('src/db/store.ts');
+const store = readStoreSource();
 const rules = rd('src/utils/auditRules.ts');
 const api = rd('supabase/functions/df-api/index.ts');
 

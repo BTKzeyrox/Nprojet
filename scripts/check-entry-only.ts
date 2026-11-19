@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import { isEntryOnly, entryOnlyRecord } from '../src/utils/entryOnly';
 import { countOnline } from '../src/utils/presenceCount';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -37,7 +38,7 @@ ok(/entry_only === true\) \{[\s\S]{0,400}entryOnlyRecord\(user, Date\.now\(\)\)/
 ok(/Ce compte est suivi par saisie : il ne se connecte pas\./.test(src), 'serveur : la connexion est refusée');
 ok((src.match(/isEntryOnly\(/g) || []).length >= 3, 'serveur : le drapeau est vérifié (connexion, mot de passe, réécriture)');
 ok(/if \(isEntryOnly\(existing\)\) \(toSave as any\)\.entry_only = true; else delete/.test(src), 'serveur : le drapeau ne se change que par la création');
-const st = readFileSync('src/db/store.ts', 'utf8'), ui = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8'), ch = readFileSync('src/components/ChatView.tsx', 'utf8');
+const st = readStoreSource(), ui = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8'), ch = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/addEntryOnlyEmployee[\s\S]{0,200}role !== 'admin'/.test(st), 'magasin : création = responsable seulement');
 ok(/data-entry-only-toggle/.test(ui) && /WORK_SETTINGS_LIVE && \(\s*<label data-entry-only-toggle/.test(ui) && /WORK_SETTINGS_LIVE && newEntryOnly/.test(ui), 'fiche « Ajouter » : la case n\'existe que module ouvert');
 ok(/!u\.entry_only/.test(ch), 'discussions : pas de conversation avec un employé sans compte');

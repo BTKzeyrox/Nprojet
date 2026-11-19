@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import * as R from '../src/utils/roles';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0;
 const eq = (got: unknown, want: unknown, name: string) => { const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) { fails++; console.log(`ECHEC ${name}\n   obtenu  ${JSON.stringify(got)}\n   attendu ${JSON.stringify(want)}`); } else console.log(`OK    ${name}`); };
@@ -76,7 +77,7 @@ for (const r of ['admin', 'employee', undefined, null, 'zzz']) eq(R.viewAllowedF
 eq(R.viewAllowedFor('team_lead', 'advances'), false, 'Chef d\'équipe : limité à ses pages (voir check:team-lead)');
 eq([...R.ACCOUNTANT_VIEWS].some(v => ['advances', 'employees', 'stats', 'health', 'errors'].includes(v)), false, 'liste du Comptable : jamais paie, comptes, statistiques, santé, erreurs');
 const rd = (f: string) => readFileSync(f, 'utf8');
-const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = rd('src/db/store.ts'), types = rd('src/types/index.ts');
+const app = rd('src/App.tsx'), side = rd('src/components/Sidebar.tsx'), emp = rd('src/views/admin/EmployeesManagement.tsx'), store = readStoreSource(), types = rd('src/types/index.ts');
 eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>/.test(app), true, 'App : écran du Comptable branché (toute autre page mène à Facturation)');
 eq(/viewUser\.role === 'accountant' \?[\s\S]{0,900}<InvoicesView \/>\s*\) : viewUser\.role === 'admin'/.test(app) || /<InvoicesView \/>\s*\n?\s*\) : viewUser\.role === 'admin'/.test(app), true, 'App : le Comptable passe avant l\'écran admin');
 eq(/viewAllowedFor\(currentUser\.role, it\.id\)/.test(side), true, 'Menu : filtré par rôle');
@@ -86,8 +87,8 @@ eq(/const staff = users\.filter\(u => u\.role !== 'employee' && u\.role !== 'adm
 eq(/export type UserRole = 'admin' \| 'employee' \| 'accountant' \| 'team_lead'/.test(types), true, 'Type UserRole : 4 rôles');
 // côté site : l'argent est ouvert au Comptable, tout le reste reste réservé au responsable
 const money = ['addCash', 'updateCash', 'deleteCash', 'saveInvoiceDraft', 'deleteInvoiceDraft', 'addClient', 'updateClient', 'setClientActive', 'deleteClient', 'addSupplier', 'updateSupplier', 'setSupplierActive', 'deleteSupplier', 'addProduct', 'updateProduct', 'deleteProduct', 'addStockMove', 'deleteStockMove'];
-for (const f of money) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,260}?\\n    if \\(([^\\n]*)\\) return`).exec(store); eq(!!mm && mm[1].includes('isMoneyRole'), true, `store.${f} : admin ou Comptable`); }
-for (const f of ['publishNews', 'deleteNews', 'togglePinNews']) { const mm = new RegExp(`public ${f}\\([\\s\\S]{0,340}?role !== 'admin'`).exec(store); eq(!!mm, true, `store.${f} : reste réservé au responsable`); }
+for (const f of money) { const mm = new RegExp(`  (?:async )?${f}\\([\\s\\S]{0,260}?\\n    if \\(([^\\n]*)\\) return`).exec(store); eq(!!mm && mm[1].includes('isMoneyRole'), true, `store.${f} : admin ou Comptable`); }
+for (const f of ['publishNews', 'deleteNews', 'togglePinNews']) { const mm = new RegExp(`  (?:async )?${f}\\([\\s\\S]{0,340}?role !== 'admin'`).exec(store); eq(!!mm, true, `store.${f} : reste réservé au responsable`); }
 
 console.log(fails ? `\n${fails} contrôle(s) en échec` : '\nRôles : tout est bon.');
 process.exit(fails ? 1 : 0);

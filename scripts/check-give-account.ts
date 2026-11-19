@@ -1,8 +1,9 @@
 // Donner un compte à un employé « saisie seulement » (T3). Lancer : npm run check:give-account
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
-const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), st = readFileSync('src/db/store.ts', 'utf8'), ui = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8');
+const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), st = readStoreSource(), ui = readFileSync('src/views/admin/EmployeesManagement.tsx', 'utf8');
 const fn = src.slice(src.indexOf('async function giveAccount'), src.indexOf('async function setPassword'));
 ok(/if \(me\.role !== 'admin'\) return res\.status\(403\)/.test(fn), 'serveur : responsable seulement');
 ok(/!isEntryOnly\(target\)/.test(fn), 'serveur : seulement pour un employé « saisie seulement »');

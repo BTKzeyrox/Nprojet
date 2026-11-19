@@ -3,6 +3,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { cashEffective, voidPairs, voidedPaymentIds } from '../src/utils/cashVoid';
 import { cashSinceStart, treasuryCharts } from '../src/utils/treasuryCharts';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0, n = 0;
 const ok = (c: boolean, name: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${name}`); } else console.log(`OK    ${name}`); };
@@ -49,14 +50,14 @@ const without = treasuryCharts(plain.filter(c => c.id !== 'p1') as any, { start:
 ok(JSON.stringify(withPair.inflow) === JSON.stringify(without.inflow) && JSON.stringify(withPair.outflow) === JSON.stringify(without.outflow), 'trésorerie : reçu et dépenses du mois identiques avec ou sans la paire (la correction ne compte pas comme une dépense)');
 
 // ---------- garde-fou : qui lit la caisse complète, qui lit la caisse nette
-const RAW_OK = ['src/db/store.ts', 'src/views/admin/InvoicesView.tsx', 'src/views/admin/FinanceTab.tsx', 'src/utils/backupExcel.ts', 'src/utils/healthDb.ts'];
+const RAW_OK = ['src/db/store.ts', 'src/db/parts/finance.ts', 'src/views/admin/InvoicesView.tsx', 'src/views/admin/FinanceTab.tsx', 'src/utils/backupExcel.ts', 'src/utils/healthDb.ts'];
 const walk = (d: string): string[] => readdirSync(d).flatMap(f => { const p = `${d}/${f}`; return statSync(p).isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(p) ? [p] : []; });
 const files = walk('src');
 const raw = files.filter(f => /db\.getCash\(\)/.test(readFileSync(f, 'utf8').split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')));
-ok(raw.every(f => RAW_OK.includes(f)), `seuls ces fichiers lisent la caisse complète : ${RAW_OK.filter(f => f !== 'src/db/store.ts').join(', ')} (autres trouvés : ${raw.filter(f => !RAW_OK.includes(f)).join(', ') || 'aucun'})`);
+ok(raw.every(f => RAW_OK.includes(f)), `seuls ces fichiers lisent la caisse complète : ${RAW_OK.filter(f => !f.startsWith('src/db/')).join(', ')} (autres trouvés : ${raw.filter(f => !RAW_OK.includes(f)).join(', ') || 'aucun'})`);
 const net = files.filter(f => /db\.getCashNet\(\)/.test(readFileSync(f, 'utf8')));
 ok(['TreasuryPage', 'TreasuryCharts', 'DirectionPage', 'FinanceInsights', 'BudgetsCard', 'PlanVsActualCard', 'ReportTab', 'ClientsPage', 'GraphsMoney', 'AutoReportCard', 'GoalsPanel', 'alertsDb', 'clientBadgesDb', 'snapshotDb'].every(k => net.some(f => f.includes(k))), 'les 14 écrans et outils de chiffres lisent la caisse nette');
-const store = readFileSync('src/db/store.ts', 'utf8');
+const store = readStoreSource();
 ok(/getCashNet\(\): CashEntry\[\] \{ return cashEffective\(this\.cash\); \}/.test(store), 'la caisse nette passe par cashEffective');
 const iv = readFileSync('src/views/admin/InvoicesView.tsx', 'utf8');
 ok(/data-void-payment/.test(iv) && /db\.voidInvoicePayment\(voidPay\.id, voidPay\.paymentId, reason\)/.test(iv) && /reason\.length < 10/.test(iv), 'facture : bouton « Annuler ce paiement » avec motif de 10 caractères au moins');

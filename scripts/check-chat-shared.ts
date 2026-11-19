@@ -4,6 +4,7 @@ import { transformSync } from 'esbuild';
 import * as S from '../src/utils/chatShared';
 import { marksOf, markOf } from '../src/utils/chatMarks';
 import { markedMessages } from '../src/utils/chatMarksList';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('OK   ' + m); } else { fail++; console.log('ECHEC ' + m); } };
@@ -83,11 +84,11 @@ ok(/delete save\.pinned_by; delete save\.pinned_by_name;/.test(chk), 'serveur : 
 // ---- site : repères, listes, menu, store ----
 ok(markOf({ id: 'a', important_all: { by: 'x', by_name: 'x', at: 'a' } } as any, []) === 'important' && marksOf({ id: 'a', pinned: true, important_all: { by: 'x', by_name: 'x', at: 'a' } } as any, []).join() === 'important,pinned', 'repères : « pour tous » colore la bulle et compte comme important pour tout le monde');
 ok(markedMessages([{ id: 'a', timestamp: '2026-11-10T08:00:00Z', important_all: { by: 'x', by_name: 'x', at: 'a' } }, { id: 'b', timestamp: '2026-11-10T09:00:00Z' }] as any, [], 'important').map(x => x.id).join() === 'a', 'liste « Importants » : reprend aussi ceux posés « pour tous »');
-const cv = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), st = fs.readFileSync('src/db/store.ts', 'utf8');
+const cv = fs.readFileSync('src/components/ChatView.tsx', 'utf8'), st = readStoreSource();
 ok(/'Important pour moi'/.test(cv) && /label: menuMsg\.important_all \? 'Retirer « Important pour tous »' : 'Important pour tous'/.test(cv), 'menu : « Important pour moi » (privé) et « Important pour tous »');
 ok(/menuMsg\.important_all \? \(menuMsg\.important_all\.by === currentUser\.id \|\| currentUser\.role === 'admin'\) : sharedTools/.test(cv) && /const sharedTools = canUseSharedTools\(currentUser, current\.kind === 'group'/.test(cv), 'menu : « pour tous » seulement pour ceux qui en ont le droit ; retirer : celui qui l\'a posé ou le responsable');
 ok(/menuMsg\.sender_id === currentUser\.id \|\| sharedTools/.test(cv) && /db\.togglePinMessage\(menuMsg\.id, currentUser\.id\); else void db\.setChatMark\(menuMsg\.id, 'pinned'/.test(cv), 'menu : épingler = l\'auteur (comme avant, aussi sans réseau) ou les outils « pour tous » (par le serveur)');
 ok(/data-important-all/.test(cv) && /data-pinned-by/.test(cv), 'bulle : « Important pour tous · prénom » et « épinglé par prénom »');
-ok(/public async setChatMark\(/.test(st) && /this\.api\('chat-mark'/.test(st) && /planSharedMark\(me, msg, group, mark, on/.test(st), 'store : appel du serveur (démo : mêmes règles en local)');
+ok(/async setChatMark\(/.test(st) && /this\.api\('chat-mark'/.test(st) && /planSharedMark\(me, msg, group, mark, on/.test(st), 'store : appel du serveur (démo : mêmes règles en local)');
 console.log(`\n${pass}/${pass + fail} contrôles réussis`);
 if (fail) process.exit(1);

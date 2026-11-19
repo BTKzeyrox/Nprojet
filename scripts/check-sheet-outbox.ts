@@ -4,6 +4,7 @@ import { callPolicy, retryDelayMs } from '../src/utils/offline';
 import { runOnce, cleanActionId, actionKey, type ActionRecord, type ActionStore } from '../src/utils/offlineServer';
 import { queueSheet, applyAnswer, nextSheet, expireSheets, parseStored, sheetCounts, sheetLabel, sheetReviewReason, SHEET_QUEUED_TEXT } from '../src/utils/sheetOutbox';
 import { planWorkEntries } from '../src/utils/workEntry';
+import { readStoreSource } from './lib/storeSource.mjs';
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('OK   ' + m); } else { fail++; console.log('ECHEC ' + m); } };
 const T0 = '2026-11-10T08:00:00.000Z', at = (min: number) => new Date(Date.parse(T0) + min * 60000).toISOString();
@@ -75,7 +76,7 @@ const mem: ActionStore = { claim: async (k, rec) => { if (rows.has(k)) return fa
   ok(o2.kind === 'replay' && o2.status === 400, 'même numéro renvoyé : même refus, sans refaire');
 
   // ---- Câblage ----
-  const store = fs.readFileSync('src/db/store.ts', 'utf8'), view = fs.readFileSync('src/views/WorksheetView.tsx', 'utf8'), ban = fs.readFileSync('src/components/SheetOutboxBanner.tsx', 'utf8'), api = fs.readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+  const store = readStoreSource(), view = fs.readFileSync('src/views/WorksheetView.tsx', 'utf8'), ban = fs.readFileSync('src/components/SheetOutboxBanner.tsx', 'utf8'), api = fs.readFileSync('supabase/functions/df-api/index.ts', 'utf8');
   ok(/'x-df-action-id': id/.test(store) && /'x-df-device-time'/.test(store) && /init\?\.headers/.test(store), 'le site envoie le numéro d\'action et l\'heure du téléphone');
   ok(/const id = newOpId\(\)[\s\S]{0,1200}queueSheet\(this\.sheetQ, sheet, me\.role as OfflineRole, nowIso, undefined, id\)/.test(store), 'le MÊME numéro sert au premier envoi et à la file');
   ok(/retryNow\(\)[\s\S]{0,300}this\.sendSheets\(true\)/.test(store) && /lastPullStatus = r\.status;[\s\S]{0,300}sendSheets\(\)/.test(store) && /setDemoCut[\s\S]{0,500}sendSheets\(true\)/.test(store), 'envoi automatique : retour du réseau, réponse du serveur, fin de coupure simulée');

@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { isOpenMission, isWorkLine, OPEN_POST_STATUS } from '../src/utils/postPay';
 import { liveStatus } from '../src/utils/presenceStatus';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const mission = (status: string): any => ({ id: 'm-' + status, employee_id: 'e1', client_name: 'Client X', status, date: '2026-11-13' });
@@ -20,7 +21,7 @@ const lv = liveStatus(user, [line('pending_end')], presence, now), lm = liveStat
 ok(lv.openMission === false && lv.waiting === true && lm.openMission === true && lm.waiting === false, 'statut en direct : une ligne en attente laisse la personne « en attente de mission » ; une mission la met en cours');
 // site : les endroits qui comptaient les lignes comme missions
 const read = (f: string) => readFileSync(f, 'utf8');
-const st = read('src/db/store.ts');
+const st = readStoreSource();
 ok(/p\.employee_id === employeeId && isOpenMission\(p\)/.test(st), 'site : « mission en cours » de l\'employé = vraie mission (une ligne en attente ne le bloque plus)');
 ok(/isOpenMission\(p\)/.test(read('src/components/AccessBanner.tsx')) && /isOpenMission\(p\)/.test(read('src/components/OperatorSheet.tsx')) && /current = posts\.filter\(isOpenMission\)/.test(read('src/views/admin/OperatorPage.tsx')), 'site : bandeau d\'accès, fiche opérateur, page opérateur');
 ok(/p\.status === 'completed' && !isWorkLine\(p\)/.test(read('src/views/admin/OperatorPage.tsx')) && /!isWorkLine\(p\) && p\.employee_id === activeId/.test(read('src/views/CalendarView.tsx')), 'site : « sessions finies » et résumé du mois d\'une personne = missions seulement');

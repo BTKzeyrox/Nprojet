@@ -1,5 +1,6 @@
 // Trésorerie du Comptable : argent reçu et dépenses, JAMAIS de salaires ni de paie.
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const r = (f: string) => readFileSync(f, 'utf8');
@@ -12,6 +13,6 @@ ok(/!moneyOnly && <FinanceInsights/.test(fin) && /!moneyOnly && <BudgetsCard/.te
 ok(/ACCOUNTANT_VIEWS = \[[^\]]*'treasury'/.test(roles) && !/ACCOUNTANT_VIEWS = \[[^\]]*'(stats|advances|employees|hr)'/.test(roles), 'Comptable : « treasury » permis ; Statistiques, Paie, Employés, RH toujours interdits');
 ok(/isAccountant \|\| isAdmin \? \[\{ id: 'treasury'/.test(side) && /activeView === 'treasury' \? \(\s*<TreasuryPage/.test(app), 'menu : Trésorerie pour le Comptable et le responsable (jamais opérateur ni chef d\'équipe)');
 ok(/activeView === 'treasury' \? <TreasuryPage \/>/.test(app) , 'App : page branchée');
-ok(/isMoneyRole\(this\.currentUser\.role\)/.test(r('src/db/store.ts')), 'écriture de l\'argent : déjà permise au Comptable par le store');
+ok(/isMoneyRole\(this\.currentUser\.role\)/.test(readStoreSource()), 'écriture de l\'argent : déjà permise au Comptable par le store');
 console.log(`\n${n - fails}/${n} contrôles réussis`);
 if (fails) { console.log(`${fails} ÉCHEC(S)`); process.exit(1); }

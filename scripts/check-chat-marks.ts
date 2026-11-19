@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import { MARK_STYLE, markOf, marksOf, toggleImportant, canForward, forwardFrom, cleanForwarded, IMPORTANT_MAX } from '../src/utils/chatMarks';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const J = JSON.stringify;
@@ -29,7 +30,7 @@ ok(cases.every(v => J(S(v)) === J(cleanForwarded(v))), 'serveur = site sur 12 ca
 ok(J(S({ from: 'A', extra: 'zzz' })) === J({ from: 'A' }) && S({ from: 'x'.repeat(100) }).from.length === 40, 'serveur : seul le nom est gardé, 40 caractères au plus');
 ok(/const fw = cleanForwarded\(rec\.forwarded\); if \(fw && rec\.poll === undefined\) save\.forwarded = fw;/.test(src) && /'reactions', 'forwarded', 'visible_to', 'visible_names', 'expires_ms', 'ephemeral_ms'\]\) delete save\[k\]/.test(src), 'serveur : un transfert reçu est nettoyé, jamais gardé tel quel');
 ok(/'send_at', 'forwarded'\]\) delete save\[k\]/.test(src), 'serveur : un message supprimé pour tous perd son « transféré »');
-const cv = readFileSync('src/components/ChatView.tsx', 'utf8'), st = readFileSync('src/db/store.ts', 'utf8');
+const cv = readFileSync('src/components/ChatView.tsx', 'utf8'), st = readStoreSource();
 ok(/k: 'important'[\s\S]{0,200}icon: Flag/.test(cv) && /k: 'forward'[\s\S]{0,200}icon: Forward/.test(cv) && /canForward\(menuMsg\)/.test(cv), 'menu du message : Important (drapeau) et Transférer (flèche)');
 ok(/backgroundColor: MARK_STYLE\[mk\]\.bg/.test(cv) && /data-forwarded-from/.test(cv) && /data-mark="important"/.test(cv), 'bulle colorée selon le repère, « Transféré de … » dans la bulle, icônes sous la bulle');
 ok(/forwardedFrom: forwardFrom\(m\)/.test(cv) && /forwarded: \{ from: String\(params\.forwardedFrom\)\.slice\(0, 40\) \}/.test(st), 'transfert : envoyé dans la conversation choisie avec l\'auteur d\'origine');

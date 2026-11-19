@@ -16,6 +16,7 @@ import { directionSummary } from '../src/utils/direction';
 import { buildSnapshot } from '../src/utils/siteSnapshot';
 import { morningSummary, suggestionsReply, respond } from '../src/utils/assistant';
 import { planHealthNotifs } from '../src/utils/healthNotif';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let n = 0, fails = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -68,8 +69,8 @@ const t5 = performance.now(); for (let i = 0; i < 5; i++) runHealth({ ...base, n
 ok(ms5 < LIMIT_MS * 3, `5 recalculs de la Santé de suite : ${ms5} ms (pas de ralentissement qui s'accumule)`);
 
 // ---- quota : appels au serveur en boucle (code lu) ----
-const store = fs.readFileSync('src/db/store.ts', 'utf8');
-ok(/private pollMs = 20000/.test(store) && /setFastPoll[\s\S]{0,300}8000 : 20000/.test(store), 'rechargement : 20 s normalement, 8 s seulement quand la messagerie ou les actualités sont ouvertes');
+const store = readStoreSource();
+ok(/pollMs = 20000/.test(store) && /setFastPoll[\s\S]{0,300}8000 : 20000/.test(store), 'rechargement : 20 s normalement, 8 s seulement quand la messagerie ou les actualités sont ouvertes');
 ok(/idle > 2 \* 60 \* 1000\) return 2/.test(store), 'rechargement : sans action depuis 2 min le délai double (jamais plus : appli ouverte reste « en ligne »)');
 ok(/document\.hidden\)\) void this\.pull\(\)/.test(store), 'rechargement : onglet caché = aucun appel');
 ok(/this\.pulling/.test(store), 'rechargement : jamais deux appels en même temps');

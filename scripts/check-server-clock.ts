@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { setServerClock, serverNowMs, clockOffsetMs, resetServerClock, SERVER_TIME_MARGIN_MS } from '../src/utils/serverClock';
 import { liveStatus } from '../src/utils/presenceStatus';
 import { countOnline, countOnlineStaff } from '../src/utils/presenceCount';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('OK   ' + m); } else { fail++; console.log('ECHEC ' + m); } };
@@ -50,7 +51,7 @@ resetServerClock();
 
 // ---- branchements ----
 const rd = (p: string) => fs.readFileSync(p, 'utf8');
-ok(/setServerClock\(r\.data\.serverTime\)/.test(rd('src/db/store.ts')), 'store : l\'écart est mis à jour à chaque rechargement');
+ok(/setServerClock\(r\.data\.serverTime\)/.test(readStoreSource()), 'store : l\'écart est mis à jour à chaque rechargement');
 ok(/useState\(\(\) => serverNowMs\(\)\)/.test(rd('src/utils/useNow.ts')) && /setNow\(serverNowMs\(\)\)/.test(rd('src/utils/useNow.ts')), 'useNow : les écrans se redessinent à l\'heure du serveur');
 ok(/now = serverNowMs\(\)/.test(rd('src/utils/presenceStatus.ts')) && !/now = Date\.now\(\)/.test(rd('src/utils/presenceStatus.ts')), 'presenceStatus : heure par défaut = serveur');
 ok((rd('src/utils/presenceCount.ts').match(/now = serverNowMs\(\)/g) || []).length === 3 && !/now = Date\.now\(\)/.test(rd('src/utils/presenceCount.ts')), 'presenceCount : 3 fonctions à l\'heure du serveur');

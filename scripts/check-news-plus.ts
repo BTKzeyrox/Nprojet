@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { newExtra, extraToPoll, extraMax } from '../src/components/ComposerExtras';
 import { AUDIENCE_USERS_MAX, canSeeNews, newsAudience, pickAudience, isRestricted } from '../src/utils/newsAccess';
+import { readStoreSource } from './lib/storeSource.mjs';
 let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
 const x = newExtra('poll'); x.question = 'Faut-il ouvrir samedi ?'; x.options = ['Oui', 'Non', '', 'Oui'];
 const r1 = extraToPoll(x, '') as any;
@@ -14,7 +15,7 @@ ok('error' in (extraToPoll(newExtra('ack'), '  ') as any) && (extraToPoll(newExt
 const post = (extra: Record<string, unknown>) => ({ author_id: 'adm', status: 'published', ...extra });
 ok(canSeeNews(post({ audience_users: ['o1'] }), { id: 'o1', role: 'employee' }) && !canSeeNews(post({ audience_users: ['o1'] }), { id: 'o2', role: 'employee' }), 'public par personne : seulement la personne choisie');
 ok(JSON.stringify(pickAudience(['employee'], ['t1'])) === '{"audience":["employee"],"audience_users":["t1"]}' && isRestricted({ audience_users: ['t1'] }) && !isRestricted({}) && AUDIENCE_USERS_MAX === 200 && newsAudience({ audience: ['employee', 'team_lead', 'accountant'], audience_users: ['x'] }).open, 'rôle entier + personne ; « tous » reste tous');
-const feed = readFileSync('src/views/FeedView.tsx', 'utf8'), plus = readFileSync('src/components/ComposerExtras.tsx', 'utf8'), store = readFileSync('src/db/store.ts', 'utf8'), api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
+const feed = readFileSync('src/views/FeedView.tsx', 'utf8'), plus = readFileSync('src/components/ComposerExtras.tsx', 'utf8'), store = readStoreSource(), api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
 ok(/<PlusMenu isAdmin=\{isAdmin\}/.test(feed) && !/Photo \/ fichier'}\s*<\/button>/.test(feed.slice(feed.indexOf('const Composer'))) && /data-plus-file/.test(plus) && /Photo \/ fichier/.test(plus), 'le bouton « Photo / fichier » devient « + » ; la photo / le fichier restent dans le menu');
 ok(/\{isAdmin && <>[\s\S]*data-plus-poll[\s\S]*data-plus-date[\s\S]*data-plus-ack/.test(plus), 'sondage, choix de date, « J\'ai lu » : réservés au responsable (le serveur ne garde un sondage que de lui)');
 ok(/aria-haspopup="menu"/.test(plus) && /min-h-\[44px\]/.test(plus) && /key === 'Escape'/.test(plus) && /mousedown/.test(plus) && /touchstart/.test(plus), 'menu : 44 px, fermé par Échap ou un clic dehors (souris et doigt)');

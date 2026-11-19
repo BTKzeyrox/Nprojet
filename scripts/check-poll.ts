@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { pollClean, pollCounts, pollApplyVote, pollView, POLL_MAX_OPTIONS, POLL_MAX_VOTES } from '../src/utils/pollRules';
 import { parsePollIntent, pollPreview, decodePoll, pollDone, POLL_OK_PREFIX, POLL_NO } from '../src/utils/assistantPublish';
+import { readStoreSource } from './lib/storeSource.mjs';
 let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
 const block = (s: string) => { const a = s.indexOf('// ===== BEGIN POLL'), b = s.indexOf('// ===== END POLL ====='); return a < 0 || b < 0 ? '' : s.slice(s.indexOf('\n', a) + 1, b); };
 
@@ -46,10 +47,10 @@ ok(/\.\.\.\(existing \? \(existing\.poll \? \{ poll: existing\.poll \} : \{\}\) 
 ok(/const voted = !!\(d\.poll && d\.poll\.votes && uid in d\.poll\.votes\)/.test(srv) && /\.\.\.\(voted \? \{ poll: \{ \.\.\.d\.poll, votes: Object\.fromEntries/.test(srv), 'serveur : un compte supprimé emporte ses votes');
 
 // écran + magasin + assistant
-const feed = readFileSync('src/views/FeedView.tsx', 'utf8'), blk = readFileSync('src/components/PollBlock.tsx', 'utf8'), store = readFileSync('src/db/store.ts', 'utf8'), chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
+const feed = readFileSync('src/views/FeedView.tsx', 'utf8'), blk = readFileSync('src/components/PollBlock.tsx', 'utf8'), store = readStoreSource(), chat = readFileSync('src/components/AssistantChat.tsx', 'utf8');
 ok(/<PollBlock post=\{post\}/.test(feed) && /db\.voteNews\(post\.id, optionId\)/.test(feed) && /db\.closePollNews\(post\.id, !post\.poll\?\.closed\)/.test(feed) && /Clore le sondage/.test(feed) && /isAdmin && published && post\.poll/.test(feed), 'fil : le sondage s\'affiche, on vote, le responsable le clôt / rouvre');
 ok(/data-poll-who/.test(blk) && /isAdmin && \(fixed \|\| \(multi \? readers > 0 : total > 0\)\)/.test(blk) && /isAdmin && who/.test(blk) && /min-h-\[44px\]/.test(blk) && /Sondage clos/.test(blk) && /disabled=\{!canVote \|\| busy\}/.test(blk), 'écran : « qui a voté » réservé au responsable, choix de 44 px, clos = non cliquable');
-ok(/public voteNews\(id: string, option: string\) \{ return this\.newsCall\('news-vote'/.test(store) && /public closePollNews/.test(store) && /case 'news-vote'/.test(store) && /case 'news-poll-close'/.test(store) && /pollClean\(p\.poll\)/.test(store), 'magasin : publier un sondage, voter, clore, faux serveur de démo');
+ok(/voteNews\(id: string, option: string\) \{ return this\.newsCall\('news-vote'/.test(store) && /closePollNews/.test(store) && /case 'news-vote'/.test(store) && /case 'news-poll-close'/.test(store) && /pollClean\(p\.poll\)/.test(store), 'magasin : publier un sondage, voter, clore, faux serveur de démo');
 ok(/parsePollIntent\(q\)/.test(chat) && /pollPreview\(poll\)/.test(chat) && /pollIncomplete\(\)/.test(chat) && /decodePoll\(g\.view\)/.test(chat) && /text: dp\.question, poll: \{ question: dp\.question, options: dp\.options, \.\.\.\(dp\.kind === 'date'/.test(chat) && /g\.view === POLL_NO/.test(chat) && /g\.view === 'feed' \|\| g\.view === 'grid'\) onNavigate/.test(chat), 'assistant : sondage → aperçu ; Confirmer → publication avec sondage ; Annuler → rien');
 
 // assistant : phrases

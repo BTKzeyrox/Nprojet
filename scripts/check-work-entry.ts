@@ -2,6 +2,7 @@
 // droits, dates, nombres, doublons et « personne ne valide sa propre saisie » vérifiés. Lancer : npm run check:work-entry
 import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 const mem: Record<string, string> = {};
 const g = globalThis as any;
@@ -122,7 +123,7 @@ for (let i = 0; i < 3000; i++) {
 ok(clean, 'jamais de montant négatif, infini ou décimal');
 
 // Magasin (démo)
-const guard = readFileSync('src/db/store.ts', 'utf8');
+const guard = readStoreSource();
 ok(/weSelfEntered\(this\.currentUser, post\)/.test(guard) && /async addWorkEntries/.test(guard) && /SHEET_ROUTE|'work-entry'/.test(guard) && /SHEET_ROUTE = 'work-entry'/.test(readFileSync('src/utils/sheetOutbox.ts', 'utf8')), 'le magasin a la saisie, la route serveur et le refus de se valider soi-même');
 ok(/weSelfEntered\(me, post\)\) return res\.status\(403\)/.test(src), 'le serveur refuse qu\'on valide sa propre saisie');
 ok(/action === "work-entry" && req\.method === "POST"/.test(src), 'la route work-entry est branchée aux deux endroits du serveur');
@@ -136,7 +137,7 @@ ok(txt.workLineDetail({ quantity: 1, rejected: 0 }) === '1 faite' && txt.workLin
 ok(txt.workLineBy({ entered_by_name: 'Chef' }) === 'Saisi par Chef' && txt.workLineBy({}) === '', 'texte : « Saisi par … »');
 ok(tl.teamPendingPosts(lead as any, users as any, l.saved).length === 0, 'le Chef d\'équipe ne voit pas sa propre saisie à valider');
 ok(tl.teamPendingPosts(lead2 as any, users as any, l.saved).length === 1, 'un AUTRE Chef d\'équipe de la même équipe la voit');
-const ds = readFileSync('src/db/store.ts', 'utf8');
+const ds = readStoreSource();
 ok(/weSelfEntered\(me, this\.posts\.find\(p => p\.id === id\)\)/.test(ds), 'décider sur sa propre saisie est refusé avant tout envoi');
 void db;
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { nowMada, cleanGuide, cleanHistory, cleanQuestion, cleanSnapshot, buildPrompt, cleanAnswer, makeLimiter, dayMada, askGemini, Q_MAX, SNAP_MAX_CHARS, ANSWER_MAX, DAILY_MAX } from '../supabase/functions/df-assistant/guard';
 import { buildSnapshot } from '../src/utils/siteSnapshot';
 import { buildDemoData } from '../src/demo/demoData';
+import { readStoreSource } from './lib/storeSource.mjs';
 let n = 0, fails = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK', m); };
 
@@ -129,7 +130,7 @@ const reply = (status: number, body: any = {}) => async () => ({ status, json: a
     ok((await askGemini(seq([403]), 'K', ['a', 'b'], P, 1000, noSleep) as any).error === 'key' && calls.length >= 1, 'fiabilité : clé refusée = arrêt tout de suite, message « clé »');
   }
   // ---- côté site ----
-  const ai = fs.readFileSync('src/utils/aiAssist.ts', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), st = fs.readFileSync('src/db/store.ts', 'utf8'), ss = fs.readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
+  const ai = fs.readFileSync('src/utils/aiAssist.ts', 'utf8'), ac = fs.readFileSync('src/components/AssistantChat.tsx', 'utf8'), st = readStoreSource(), ss = fs.readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), sv = fs.readFileSync('src/views/admin/SettingsView.tsx', 'utf8');
   ok(/=== '1'; \} catch \{ return false; \}/.test(ai), 'site : IA désactivée par défaut (et si le stockage est refusé)');
   ok(/aiCall[\s\S]{0,260}this\.demo\) return \{ ok: false, error: 'demo' \}[\s\S]{0,160}role !== 'admin'\) return \{ ok: false, error: 'admin_only' \}/.test(st), 'site : rien ne part au serveur en démo ni sans être admin');
   ok(/!mi && !ann && !poll && !mis && !ext && !act && reply\.intent === 'unknown' && i\)[\s\S]{0,500}const useAi = aiOptIn\(userId\)[\s\S]{0,400}else if \(useAi\)/.test(ac), 'assistant : l\'IA n\'est appelée que pour une question non comprise ET si la case est cochée');

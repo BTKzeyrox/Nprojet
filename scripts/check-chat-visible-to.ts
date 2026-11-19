@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { canSeeChatMessage, isHiddenFrom, planVisibleTo, VISIBLE_TO_SERVER_LIVE } from '../src/utils/chatShared';
 import { canForward } from '../src/utils/chatMarks';
+import { readStoreSource } from './lib/storeSource.mjs';
 let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const admin = { id: 'ad', role: 'admin', name: 'Resp' }, lead = { id: 'tl', role: 'team_lead', name: 'Chef' }, emp = { id: 'e1', role: 'employee', name: 'A' }, emp2 = { id: 'e2', role: 'employee', name: 'B' }, emp3 = { id: 'e3', role: 'employee', name: 'C' };
@@ -39,7 +40,7 @@ ok(/répondre à un message « visible seulement par X »/.test(srv) && /od\.vis
 
 ok(typeof VISIBLE_TO_SERVER_LIVE === 'boolean', 'interrupteur « serveur prêt » présent (false tant que df-api n\'est pas déployé)');
 // démo + écran
-const st = readFileSync('src/db/store.ts', 'utf8'), ui = readFileSync('src/components/ChatView.tsx', 'utf8');
+const st = readStoreSource(), ui = readFileSync('src/components/ChatView.tsx', 'utf8');
 ok(/planVisibleTo\(sender, grp/.test(st) && /q\.visible_to/.test(st), 'démo : mêmes règles et même réponse restreinte');
 ok(/data-visible-only/.test(ui) && /Visible seulement par…/.test(ui) && /isHiddenFrom\(currentUser, m\)/.test(ui) && /data-only-chip/.test(ui), 'écran : menu, pastille, ligne « Visible seulement par … », filtre');
 console.log(`\n${n - fails}/${n} contrôles réussis`);

@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import { planWorkCancel } from '../src/utils/workEntry';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -38,7 +39,7 @@ for (let i = 0; i < N; i++) {
   if (JSON.stringify(planWorkCancel(me, p, e, c)) === JSON.stringify(S(me, p, e, c))) same++;
 }
 ok(same === N, `site = serveur sur ${N} cas au hasard (${same} identiques)`);
-const st = readFileSync('src/db/store.ts', 'utf8'), ws = readFileSync('src/views/WorksheetView.tsx', 'utf8');
+const st = readStoreSource(), ws = readFileSync('src/views/WorksheetView.tsx', 'utf8');
 ok(/async workCancelRoute|async function workCancelRoute/.test(src) && /action === "work-line-cancel" && req\.method === "POST"/.test(src) && /planWorkCancel\(me, post, urow\?\.data \|\| null, closed\)/.test(src), 'serveur : route branchée, période clôturée vérifiée');
 ok(/const closed = dayInClosedPeriod\(prs \|\| \[\], String\(post\.date\)\)/.test(src) && /'work_cancel'/.test(src), 'serveur : période clôturée (ou payée) et journal d\'audit');
 ok(/async cancelWorkLine/.test(st) && /'work-line-cancel'/.test(st), 'magasin : démo et serveur');

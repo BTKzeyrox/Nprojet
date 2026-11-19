@@ -1,6 +1,7 @@
 // Mémoire de l'assistant (BTK, 2026-11-08) : comprendre « mémorise », enregistrer tel quel, relire, oublier avec confirmation, jamais de faux « C'est noté ».
 import { readFileSync } from 'node:fs';
 import { parseMemoryIntent, runMemory, searchNotes, notesForAi, cleanNote, MEM_MAX_NOTES, MEM_MAX_CHARS, AI_NOTES_MAX, MEM_FORGET_PREFIX, type MemApi, type MemNote } from '../src/utils/assistantMemory';
+import { readStoreSource } from './lib/storeSource.mjs';
 let bad = 0; const ok = (c: boolean, m: string) => { if (!c) { bad++; console.log('ÉCHEC :', m); } else console.log('ok :', m); };
 const P = parseMemoryIntent;
 const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -73,7 +74,7 @@ const txt = (r: { title: { fr: string }; lines: { fr: string }[] }) => [r.title.
   ok(notesForAi(long, 'fr').length <= AI_NOTES_MAX && notesForAi([], 'fr') === '', `notes envoyées à l'IA : ${AI_NOTES_MAX} caractères au plus, vide si aucune`);
 
   // branchement
-  const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8'), store = readFileSync('src/db/store.ts', 'utf8'), srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), set = readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), ai = readFileSync('src/utils/aiAssist.ts', 'utf8');
+  const chat = readFileSync('src/components/AssistantChat.tsx', 'utf8'), store = readStoreSource(), srv = readFileSync('supabase/functions/df-api/index.ts', 'utf8'), set = readFileSync('src/components/AiSettingsSection.tsx', 'utf8'), ai = readFileSync('src/utils/aiAssist.ts', 'utf8');
   ok(/parseMemoryIntent\(q\)/.test(chat) && /pendingMem\.current/.test(chat) && /runMemory\(mi, memApi\)/.test(chat) && /!mi && !ann && !poll && !mis && !ext && !act && reply\.intent === 'unknown'/.test(chat), 'assistant : la mémoire passe avant les règles ; « mémorise » seul garde la phrase du message suivant');
   ok(/MEM_FORGET_PREFIX\)\) \{ void db\.memDelete/.test(chat) && /MEM_EDIT_PREFIX\)\)/.test(chat), 'assistant : boutons Oublier (après confirmation) et Modifier branchés');
   ok(/aiMemOptIn\(userId\)/.test(chat) && /aiMemOptIn/.test(set) && /df_ai_mem_optin_/.test(ai) && /data-ai-memory-optin/.test(set), 'notes envoyées à l\'IA : seulement si la case de Réglages est cochée (coupée par défaut)');

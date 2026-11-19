@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import { fixedSalaryAr } from '../src/utils/fixedSalary';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -34,7 +35,7 @@ for (let i = 0; i < N; i++) {
   if (fixedSalaryAr(e, s, pid) === S(e, s, pid)) same++;
 }
 ok(same === N, `site = serveur sur ${N} cas au hasard (${same} identiques)`);
-const dm = readFileSync('src/db/store.ts', 'utf8');
+const dm = readStoreSource();
 ok(/fixedSalaryAr\(u, this\.settings, pidStr\)/.test(dm), 'démo : la fiche de paie ajoute le salaire fixe');
 ok(/fixedSalaryAr\(u, stg, info\.pid\)/.test(src) && /client: 'Salaire fixe'/.test(src) && /if \(onlyUser && uid !== onlyUser\) continue/.test(src), 'serveur : une ligne « Salaire fixe » par fiche (et pour la bonne personne)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');

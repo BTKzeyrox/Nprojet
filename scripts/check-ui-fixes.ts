@@ -1,5 +1,6 @@
 // Contrôle des corrections du 2026-10-26 : commentaires visibles dans l'actualité, profil cliquable avec « Message », un seul œil sur les mots de passe, vacation à l'inscription, messagerie sans emoji.
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 let ok = 0, bad = 0;
 const t = (n: string, c: boolean) => { if (c) ok++; else { bad++; console.error('✗', n); } };
 const r = (p: string) => readFileSync(p, 'utf8');
@@ -15,7 +16,7 @@ t('login : le bouton « afficher » du navigateur est caché', /input::-ms-revea
 t('login / inscription / oubli : un seul œil par paire de champs', (login.match(/\{eyeBtn\(/g) || []).length === 3);
 t('inscription : choix de la vacation Jour / Nuit envoyé au serveur', /role="radiogroup"/.test(login) && /setSgShift\(v\)/.test(login) && /shift: effShift\(sgShift, sgMode\)/.test(login));
 // Réponses aux commentaires (comme Facebook, 2 niveaux)
-const api = r('supabase/functions/df-api/index.ts'), store = r('src/db/store.ts'), types = r('src/types/index.ts');
+const api = r('supabase/functions/df-api/index.ts'), store = readStoreSource(), types = r('src/types/index.ts');
 const na = api.slice(api.indexOf('async function newsAction'), api.indexOf('async function newsPolicy'));
 t('réponses : champs parent_id et reply_to_name', /parent_id\?: string/.test(types) && /reply_to_name\?: string/.test(types));
 t('réponses : le serveur range une réponse à une réponse sous le commentaire de premier niveau', /target\.parent_id \? d\.comments\.find\(\(x: any\) => x\.id === target\.parent_id\) \|\| target : target/.test(na));

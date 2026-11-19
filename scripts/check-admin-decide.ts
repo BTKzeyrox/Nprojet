@@ -1,9 +1,10 @@
 // Contrôle : le responsable valide ou refuse une session par le SERVEUR (post-decide), une décision à la fois ; le mot facultatif est accepté et nettoyé.
 import { readFileSync } from 'node:fs';
+import { readStoreSource } from './lib/storeSource.mjs';
 let ok = 0, bad = 0;
 const t = (n: string, c: boolean) => { if (c) ok++; else { bad++; console.error('✗', n); } };
 const page = readFileSync('src/views/admin/AdminDashboard.tsx', 'utf8');
-const store = readFileSync('src/db/store.ts', 'utf8');
+const store = readStoreSource();
 const api = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
 t('valider : par decidePostNow (affichage immédiat, serveur décide)', /db\.decidePostNow\(postId, true, undefined, note\)/.test(page));
 t('refuser : par decidePostNow (affichage immédiat, serveur décide)', /db\.decidePostNow\(id, false, rejectReason\)/.test(page));

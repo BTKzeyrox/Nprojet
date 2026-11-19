@@ -1,248 +1,101 @@
 // Magasin de données central (db) : garde les données en mémoire, les synchronise avec le serveur, gère la démo, le hors ligne et toutes les actions.
+// Les méthodes sont rangées par sujet dans db/parts/*.ts (stock, factures, messagerie…) et ajoutées à AppStore plus bas.
 // Utilisé par : App.tsx, AccessBanner.tsx, AccessRequestsCard.tsx, AiSettingsSection.tsx, AuditSection.tsx, BackupsSection.tsx, BadgeCongrats.tsx, 102 autres. Contrôlé par : npm run check:page et 40 autres commandes check.
 // Pour modifier : les collections synchronisées sont listées dans COLS (haut du fichier) ; une nouvelle collection s'ajoute là, puis dans la classe AppStore (champ, emptySynced, arr et setArr). Écrans : db.subscribe() pour se rafraîchir.
-import { remClean, remSnoozeUntil } from '../utils/reminderRules';
-import { pollClean, pollCounts, pollApplyVote, pollPicks, pollMulti } from '../utils/pollRules';
-import { canEditNews, canSeeNews, pickAudience, cleanNewsPolicy, publishModeFor, type NewsPolicy, type NewsRole } from '../utils/newsAccess';
-import { checkDraft, type CashDraft } from '../utils/finance';
-import { OfflineController, type OfflineHost, type OfflineStatus, type PinResult, type Unsent, type WriterLock } from './offlineController';
+import { OfflineController, type OfflineHost, type WriterLock } from './offlineController';
 import type { Role as OfflineRole, Queue as OfflineQueue } from '../utils/offline';
-import { newOpId } from '../utils/offline';
-import { SHEET_ROUTE, queueSheet, applyAnswer, nextSheet, expireSheets, parseStored, sheetLabel, sheetReviewReason, sheetCounts, requeueSheet, discardSheet, type WorkSheet } from '../utils/sheetOutbox';
 import type { KV } from '../utils/offlineVault';
 import type { Arrays, Changes, SyncedJson } from '../utils/offlineSync';
 import { findInlineFiles, replaceInlineFile } from '../utils/dataUrls';
-import { checkDeadline } from '../utils/deadlines';
-import { canSubmitTasks, checkTasks, cleanDone, cleanTasks, toggleTask, type TasksError } from '../utils/taskList';
-import { checkTemplate, cleanTemplates, newTemplateId, type MissionTemplate, type TemplateDraft } from '../utils/missionTemplates';
-import { checkReportRecord, cleanAutoReport, periodForRun, periodFromId, type AutoReportSetting, type ReportRecord } from '../utils/autoReport';
-import { checkRecurring, cleanRecurring, newRecurringId, RECURRING_MESSAGE, type RecurringDraft, type RecurringRule } from '../utils/recurring';
-import { checkTeamGoal, cleanTeamGoals, newTeamGoalId, TEAM_GOAL_ERROR_MESSAGE, type TeamGoal } from '../utils/teamGoals';
-import { checkMonthlyPlan, cleanMonthlyPlan, MONTHLY_PLAN_ERROR_MESSAGE, type MonthlyPlan } from '../utils/budgetPlan';
-import { checkClientDraft, checkMissionClient, matchContract, MISSION_CLIENT_MESSAGE, normalizeName, type ClientDraft } from '../utils/clients';
-import { categoryKey, categoryOptions, checkMoveDraft, checkProductDraft, cleanCategoryList, cleanCategoryName, cleanSpaceList, DEFAULT_STOCK_CATEGORIES, DEFAULT_STOCK_SPACES, newSpaceId, productStorage, purchaseAmount, quantities, STOCK_SPACE_MAX, type MoveDraft, type ProductDraft, type StockSpace } from '../utils/stock';
+import type { ReportRecord } from '../utils/autoReport';
 import { todayMada } from '../utils/stats';
-import { canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, nextQuoteRef, quoteToInvoiceDraft, type QuoteDraft } from '../utils/quotes';
-import { cashEffective } from '../utils/cashVoid';
-import { applyReceiptPrices, canCloseShort, canTransition, checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, checkSupplierDraft, nextPurchaseRef, planReceipt, type PurchaseDraft, type SupplierDraft } from '../utils/purchasing';
-import { checkInvoiceDraft, invoiceInfo, invoiceTotals, formatNumber, type InvoiceDraft } from '../utils/invoices';
-import { buildDemoData, DEMO_ADMIN_ID, DEMO_BUDGETS, DEMO_RECURRING, DEMO_CLIENT_PRICES, DEMO_COMPANY, DEMO_GOALS, DEMO_MONTHLY_PLAN, DEMO_TEAM_GOALS } from '../demo/demoData';
-import { companyForEmployee, readCompany } from '../utils/companyRules';
+import { canInvoiceQuote, quoteToInvoiceDraft } from '../utils/quotes';
+import { checkBudgets, checkPurchaseDraft, inventoryAdjustments, inventoryRows, type PurchaseDraft } from '../utils/purchasing';
+import { readCompany } from '../utils/companyRules';
 import { isMoneyRole } from '../utils/roles';
-import { checkLeave, type Leave, type LeaveType } from '../utils/leaves';
-import { checkShift, shiftId, type Shift, type ShiftKind } from '../utils/planning';
-import { demoSheets, type Sheet } from '../utils/sheets';
-import { buildMissionSheet, needsMissionSheet } from '../utils/missionSheet';
-import { getMissionMode } from '../utils/workMode';
-import { checkReview, forEmployeeReview, type Review } from '../utils/reviews';
-import { cleanEntry, assignNumbers, reverseEntry as reverseAccounting, planClose, planReopen, closingEntry, type Entry, type CloseState } from '../utils/accounting';
-import { buildEntries } from '../utils/accountingEntries';
-import { checkHrFile, type HrFile } from '../utils/hrFile';
+import type { Leave } from '../utils/leaves';
+import type { Shift } from '../utils/planning';
+import type { Sheet } from '../utils/sheets';
+import type { Review } from '../utils/reviews';
+import type { Entry } from '../utils/accounting';
 import { todayMada as madaToday } from '../utils/stats';
-import { buildAuditEntry, cleanAuditRows, type AuditEntry } from '../utils/auditRules';
-import {
-  User,
-  PostSession,
-  SecurityViolation,
-  SalaryAdvanceRequest,
-  ChatMessage,
-  ShiftType,
-  ClientContract,
-  PasswordResetRequest,
-  AccessRequest,
-  AccessRequestState,
-  SignupRequest,
-  AppSettings,
-  ProfileChangeRequest,
-  PresenceRow,
-  AttendanceRow,
-  QueueInfo,
-  ChatGroup,
-  ChatRead,
-  NewsPost,
-  CashEntry,
-  Product,
-  StockMove,
-  Quote,
-  QuoteStatus,
-  Supplier,
-  PurchaseOrder,
-  Client,
-  Invoice,
-  NewsAttachment,
-} from '../types';
-import { clientPriceForContract } from '../utils/clientPrice';
-import { isOpenMission, isWorkLine, postPayAr, workLineClientPrice } from '../utils/postPay';
-import { planWorkEntries, weSelfEntered } from '../utils/workEntry';
-import { entryOnlyRecord } from '../utils/entryOnly';
-import { cleanCustomTypes, cwValidate, CW_MAX_TYPES } from '../utils/customWorkTypes';
-import { cleanShiftMode } from '../utils/shiftMode';
+import { User, PostSession, SecurityViolation, SalaryAdvanceRequest, ChatMessage, ClientContract, PasswordResetRequest, AccessRequest, AccessRequestState, SignupRequest, AppSettings, ProfileChangeRequest, PresenceRow, QueueInfo, ChatGroup, ChatRead, NewsPost, CashEntry, Product, StockMove, Quote, Supplier, PurchaseOrder, Client, Invoice } from '../types';
 import { setServerClock } from '../utils/serverClock';
-import { planSharedMark, planVisibleTo, planEphemeral, EPHEMERAL_CHOICES } from '../utils/chatShared';
-import { fixedSalaryAr } from '../utils/fixedSalary';
-import { planWorkCancel } from '../utils/workEntry';
+import { TOKEN_KEY, API_BASE, COLS, Col, SORTERS } from './storeShared';
+import { accountsMethods, type AccountsMethods } from './parts/accounts';
+import { adminToolsMethods, type AdminToolsMethods } from './parts/adminTools';
+import { chatMethods, type ChatMethods } from './parts/chat';
+import { clientsMethods, type ClientsMethods } from './parts/clients';
+import { demoMethods, type DemoMethods } from './parts/demo';
+import { financeMethods, type FinanceMethods } from './parts/finance';
+import { hrMethods, type HrMethods } from './parts/hr';
+import { newsMethods, type NewsMethods } from './parts/news';
+import { offlineMethods, type OfflineMethods } from './parts/offline';
+import { postsMethods, type PostsMethods } from './parts/posts';
+import { purchasingMethods, type PurchasingMethods } from './parts/purchasing';
+import { settingsMethods, type SettingsMethods } from './parts/settings';
+import { sheetOutboxMethods, type SheetOutboxMethods } from './parts/sheetOutbox';
+import { sheetsMethods, type SheetsMethods } from './parts/sheets';
+import { stockMethods, type StockMethods } from './parts/stock';
 
-const TOKEN_KEY = 'df_session_token_v2';
-// Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://fvkusbdhetxleimtdzqm.supabase.co').replace(/\/+$/, '');
-const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
-const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
-const AI_BASE = `${SUPABASE_URL}/functions/v1/df-assistant`;
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings', 'news', 'cash', 'products', 'stock', 'clients', 'invoices', 'quotes', 'suppliers', 'purchases', 'leaves', 'shifts', 'reviews', 'sheets', 'entries'] as const;
-
-export const DEFAULT_SETTINGS: AppSettings = {
-  id: 'general',
-  price_per_million: 1000,
-  price_per_mission: 5000,
-  client_price_default_ar: 0, // à régler dans Réglages > Missions (0 = pas encore réglé)
-  client_prices_by_type: {},
-  work_days: [1, 2, 3, 4, 5, 6],
-  day_shift_start: '08:00',
-  day_shift_end: '17:00',
-  night_shift_start: '19:30',
-  night_shift_end: '04:30',
-  shift_mode: 'both',
-  late_tolerance_min: 15,
-  access_before_min: 60,
-  access_after_min: 60,
-  show_activity_column: true,
-  pay_period: 'month',
-  advance_cap_pct: 0,
-  advance_repay_pct: 100,
-  pay_methods: ['MVola', 'Orange Money', 'Airtel Money', 'Espèces'],
-  penalties_enabled: false,
-  auto_pen_enabled: true,
-  auto_pen_late1_min: 15,
-  auto_pen_late1_m: 1,
-  auto_pen_late2_min: 30,
-  auto_pen_late2_m: 2,
-  auto_pen_absent_m: 5,
-  badge_start: true,
-  badge_end: true,
-  badge_advance: true,
-  badge_profile: true,
-  badges_clickable: true,
-  alert_idle_1_min: 15,
-  alert_idle_2_min: 30,
-  err_report_enabled: true,
-  err_max_per_session: 3,
-  err_hide_details: true,
-  err_report_button: true,
-  retry_seconds: 15,
-  maintenance_on: false,
-  maintenance_message: 'Le site est en maintenance. Réessaie un peu plus tard.',
-  retention_days: 7,
-  grid_columns: 2,
-  rules: '',
-  post_types: ['Saisie de fiches', 'Contrôle qualité', 'Tâche administrative', 'Demande d’aide', 'Tâche web'],
-};
-type Col = (typeof COLS)[number];
-
-const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
-  users: (a, b) => (a.role === b.role ? String(a.id).localeCompare(String(b.id)) : a.role === 'admin' ? -1 : 1),
-  posts: (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')),
-  contracts: (a, b) => (a.post_number || 0) - (b.post_number || 0),
-  securityLogs: (a, b) => String(b.id).localeCompare(String(a.id)),
-  advances: (a, b) => String(b.id).localeCompare(String(a.id)),
-  news: (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
-  cash: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
-  products: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
-  stock: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')),
-  clients: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
-  invoices: (a, b) => String(b.issue_date || '').localeCompare(String(a.issue_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')) || String(b.id).localeCompare(String(a.id)),
-  suppliers: (a, b) => String(a.name || '').localeCompare(String(b.name || '')) || String(a.id).localeCompare(String(b.id)),
-  quotes: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
-  entries: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.number || b.id).localeCompare(String(a.number || a.id)),
-  reviews: (a, b) => String(b.period_end || '').localeCompare(String(a.period_end || '')) || String(a.id).localeCompare(String(b.id)),
-  sheets: (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')) || String(a.id).localeCompare(String(b.id)),
-  leaves: (a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')) || String(a.id).localeCompare(String(b.id)),
-  shifts: (a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.id).localeCompare(String(b.id)),
-  purchases: (a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.ref || '').localeCompare(String(a.ref || '')) || String(b.id).localeCompare(String(a.id)),
-  groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
-  messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
-};
-
-const TEMPLATE_MESSAGE: Record<'name' | 'duplicate' | 'limit' | 'proof' | 'format', string> = {
-  name: 'Donne un nom au modèle.',
-  duplicate: 'Un modèle porte déjà ce nom.',
-  limit: 'Maximum 30 modèles de mission.',
-  proof: 'Justificatif inconnu.',
-  format: 'Modèle illisible.',
-};
-
-const TASKS_MESSAGE: Record<TasksError, string> = {
-  format: 'Liste de tâches illisible.',
-  empty_text: 'Une tâche ne peut pas être vide.',
-  too_many: 'Maximum 20 tâches par mission.',
-  duplicate_id: 'Deux tâches portent le même identifiant.',
-  required_without_tasks: 'Ajoute au moins une tâche pour exiger qu\'elles soient toutes cochées.',
-};
-
-const DEADLINE_MESSAGE: Record<'date' | 'time' | 'time_without_date' | 'priority', string> = {
-  date: 'La date limite n\'est pas une vraie date.',
-  time: 'L\'heure limite doit être entre 00:00 et 23:59.',
-  time_without_date: 'Choisis une date pour pouvoir ajouter une heure.',
-  priority: 'Priorité inconnue.',
-};
+export { DEFAULT_SETTINGS } from './storeShared';
 
 export class AppStore {
-  private users: User[] = [];
-  private posts: PostSession[] = [];
-  private contracts: ClientContract[] = [];
-  private securityLogs: SecurityViolation[] = [];
-  private advanceRequests: SalaryAdvanceRequest[] = [];
-  private messages: ChatMessage[] = [];
-  private groups: ChatGroup[] = [];
-  private reads: ChatRead[] = [];
-  private settings: AppSettings[] = [];
-  private news: NewsPost[] = [];
-  private cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
-  private products: Product[] = []; // stock (admin seulement, comme les finances)
-  private stockMoves: StockMove[] = [];
-  private invoices: Invoice[] = []; // factures et avoirs (admin seulement)
-  private quotes: Quote[] = []; // devis (admin et Comptable)
-  private suppliers: Supplier[] = []; // fournisseurs (admin seulement)
-  private purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
-  private sheets: Sheet[] = []; // « Mes tableaux » (module 12) : un opérateur ne reçoit que les siens ; l'admin lit tous (lecture seule)
-  private entries: Entry[] = []; // écritures comptables (M14) : responsable et Comptable seulement ; JAMAIS écrites par la synchro (routes accounting-*)
-  private reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
-  private leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
-  private shifts: Shift[] = []; // planning des équipes (M15.2) : le responsable voit et écrit tout, un salarié ne reçoit que SON planning
-  private clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
-  private resets: PasswordResetRequest[] = [];
-  private accessRequests: AccessRequest[] = [];
-  private signups: SignupRequest[] = [];
-  private profileRequests: ProfileChangeRequest[] = [];
-  private presence: PresenceRow[] = []; // admin : tous les opérateurs
-  private myQueue: QueueInfo | null = null; // opérateur : sa place dans la file « sans mission »
-  private currentUser: User | null = null;
-  private demo = false; // mode démo : données inventées, aucun appel au serveur
-  private demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
-  private demoBackups: { id: number; taken_at: string; tables: number; bytes: number }[] = []; // mode démo : sauvegardes inventées
-  private demoReports: ReportRecord[] = []; // mode démo : rapports automatiques inventés (M15.5), jamais envoyés au serveur
-  private listeners: Set<() => void> = new Set();
-
-  // --- Synchronisation avec le serveur (Supabase via /api) ---
-  private token: string | null = null;
-  private since = '';
-  private synced: Record<Col, Map<string, string>> = this.emptySynced();
-  private dirty = false;
-  private syncing = false;
-  private mutationSeq = 0; // +1 à chaque modification locale : sert à ignorer une réponse serveur devenue périmée
+  users: User[] = [];
+  posts: PostSession[] = [];
+  contracts: ClientContract[] = [];
+  securityLogs: SecurityViolation[] = [];
+  advanceRequests: SalaryAdvanceRequest[] = [];
+  messages: ChatMessage[] = [];
+  groups: ChatGroup[] = [];
+  reads: ChatRead[] = [];
+  settings: AppSettings[] = [];
+  news: NewsPost[] = [];
+  cash: CashEntry[] = []; // finances (admin seulement : le serveur n'envoie rien aux employés)
+  products: Product[] = []; // stock (admin seulement, comme les finances)
+  stockMoves: StockMove[] = [];
+  invoices: Invoice[] = []; // factures et avoirs (admin seulement)
+  quotes: Quote[] = []; // devis (admin et Comptable)
+  suppliers: Supplier[] = []; // fournisseurs (admin seulement)
+  purchases: PurchaseOrder[] = []; // bons de commande (admin seulement)
+  sheets: Sheet[] = []; // « Mes tableaux » (module 12) : un opérateur ne reçoit que les siens ; l'admin lit tous (lecture seule)
+  entries: Entry[] = []; // écritures comptables (M14) : responsable et Comptable seulement ; JAMAIS écrites par la synchro (routes accounting-*)
+  reviews: Review[] = []; // fiches d'évaluation (M5.4) : le responsable voit tout ; un salarié ne voit que ses fiches partagées, sans les points à améliorer
+  leaves: Leave[] = []; // demandes de congé (M5.2) : l'admin voit tout, un salarié ne voit que les siennes
+  shifts: Shift[] = []; // planning des équipes (M15.2) : le responsable voit et écrit tout, un salarié ne reçoit que SON planning
+  clients: Client[] = []; // fiches clients (admin seulement : le serveur n'envoie rien aux employés)
+  resets: PasswordResetRequest[] = [];
+  accessRequests: AccessRequest[] = [];
+  signups: SignupRequest[] = [];
+  profileRequests: ProfileChangeRequest[] = [];
+  presence: PresenceRow[] = []; // admin : tous les opérateurs
+  myQueue: QueueInfo | null = null; // opérateur : sa place dans la file « sans mission »
+  currentUser: User | null = null;
+  demo = false; // mode démo : données inventées, aucun appel au serveur
+  demoErrors: any[] = []; // mode démo : journal d'erreurs inventé
+  demoBackups: { id: number; taken_at: string; tables: number; bytes: number }[] = []; // mode démo : sauvegardes inventées
+  demoReports: ReportRecord[] = []; // mode démo : rapports automatiques inventés (M15.5), jamais envoyés au serveur
+  listeners: Set<() => void> = new Set();
+  token: string | null = null;
+  since = '';
+  synced: Record<Col, Map<string, string>> = this.emptySynced();
+  dirty = false;
+  syncing = false;
+  mutationSeq = 0; // +1 à chaque modification locale : sert à ignorer une réponse serveur devenue périmée
   // Décisions (valider / refuser) envoyées au serveur mais pas encore confirmées par un rechargement : affichage immédiat SEULEMENT (jamais écrit dans `posts`, jamais renvoyé au serveur).
-  private pendingDecisions = new Map<string, { status: PostSession['status']; reason?: string; settled: boolean }>();
-  private onVisible: (() => void) | null = null;
-  private syncTimer: ReturnType<typeof setTimeout> | null = null;
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastActivity = Date.now(); // dernière action de la personne (clic, touche, toucher) : sert à ralentir la synchro
-  private onActivity: (() => void) | null = null;
-  private readyPromise: Promise<void>;
+  pendingDecisions = new Map<string, { status: PostSession['status']; reason?: string; settled: boolean }>();
+  onVisible: (() => void) | null = null;
+  syncTimer: ReturnType<typeof setTimeout> | null = null;
+  pollTimer: ReturnType<typeof setTimeout> | null = null;
+  lastActivity = Date.now(); // dernière action de la personne (clic, touche, toucher) : sert à ralentir la synchro
+  onActivity: (() => void) | null = null;
+  readyPromise: Promise<void>;
 
   // Mode hors ligne (module 13, M13.5) : copie locale et file d'actions durables. Le magasin reste le seul à envoyer au serveur.
-  private offline: OfflineController;
-  private lastPullStatus = 200;
-  private demoCut = false; // mode démo : coupure SIMULÉE (aucun vrai réseau n'est touché)
-  private demoBase: Record<Col, Map<string, string>> | null = null; // état des données au moment de la coupure simulée
+  offline: OfflineController;
+  lastPullStatus = 200;
+  demoCut = false; // mode démo : coupure SIMULÉE (aucun vrai réseau n'est touché)
+  demoBase: Record<Col, Map<string, string>> | null = null; // état des données au moment de la coupure simulée
 
   constructor(opts: { offlineKV?: KV; offlineDelayMs?: number; offlineLock?: WriterLock } = {}) {
     const host: OfflineHost = {
@@ -266,18 +119,18 @@ export class AppStore {
     this.readyPromise = this.token ? this.restore() : Promise.resolve();
   }
 
-  public whenReady(): Promise<void> {
+  whenReady(): Promise<void> {
     return this.readyPromise;
   }
 
-  private emptySynced(): Record<Col, Map<string, string>> {
+  emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
       securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(), news: new Map(), cash: new Map(), products: new Map(), stock: new Map(), clients: new Map(), invoices: new Map(), suppliers: new Map(), purchases: new Map(), quotes: new Map(), leaves: new Map(), reviews: new Map(), sheets: new Map(), shifts: new Map(), entries: new Map(),
     };
   }
 
-  private arr(col: Col): any[] {
+  arr(col: Col): any[] {
     switch (col) {
       case 'users': return this.users;
       case 'posts': return this.posts;
@@ -304,7 +157,7 @@ export class AppStore {
     }
   }
 
-  private setArr(col: Col, value: any[]) {
+  setArr(col: Col, value: any[]) {
     switch (col) {
       case 'users': this.users = value; break;
       case 'posts': this.posts = value; break;
@@ -331,7 +184,7 @@ export class AppStore {
     }
   }
 
-  private resetLocal() {
+  resetLocal() {
     COLS.forEach(c => this.setArr(c, []));
     this.synced = this.emptySynced();
     this.pendingDecisions.clear(); // déconnexion : plus aucun affichage immédiat d'une décision
@@ -348,18 +201,18 @@ export class AppStore {
   }
 
   // Activité réseau visible (barre de chargement) : les actions de l'utilisateur, pas la synchro automatique
-  private netBusy = 0;
-  private netListeners = new Set<(busy: number) => void>();
-  public onNetwork(fn: (busy: number) => void) {
+  netBusy = 0;
+  netListeners = new Set<(busy: number) => void>();
+  onNetwork(fn: (busy: number) => void) {
     this.netListeners.add(fn);
     return () => { this.netListeners.delete(fn); };
   }
-  private netTick(delta: number) {
+  netTick(delta: number) {
     this.netBusy = Math.max(0, this.netBusy + delta);
     this.netListeners.forEach(fn => fn(this.netBusy));
   }
 
-  private async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+  async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
     const visible = path.split('?')[0] !== 'state'; // la synchro automatique (state?since=…) ne montre pas de barre
     if (visible) this.netTick(1);
     try {
@@ -368,28 +221,26 @@ export class AppStore {
       if (visible) this.netTick(-1);
     }
   }
-
-  // --- État de la connexion (bandeau « Connexion perdue ») et erreurs serveur ---
-  private connDown = false;
-  private connListeners = new Set<(down: boolean) => void>();
-  public serverErrorHook: ((path: string, status: number) => void) | null = null;
-  public onConnection(fn: (down: boolean) => void): () => void {
+  connDown = false;
+  connListeners = new Set<(down: boolean) => void>();
+  serverErrorHook: ((path: string, status: number) => void) | null = null;
+  onConnection(fn: (down: boolean) => void): () => void {
     this.connListeners.add(fn);
     fn(this.connDown);
     return () => { this.connListeners.delete(fn); };
   }
-  private setConn(down: boolean) {
+  setConn(down: boolean) {
     if (down === this.connDown) return;
     this.connDown = down;
     this.connListeners.forEach(f => f(down));
   }
-  public retryNow() {
+  retryNow() {
     // D'ABORD envoyer, ENSUITE recharger : les deux en même temps pouvaient retirer du téléphone un élément pas encore envoyé, puis l'envoyer comme une suppression.
     void this.flush().finally(() => { void this.pull(true); });
     void this.sendSheets(true); // feuilles du jour gardées sans réseau (M27.9)
   }
 
-  private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+  async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
     if (this.demo) {
       if (this.demoCut) return { ok: false, status: 0, data: { error: 'Réseau indisponible.' } }; // coupure simulée : tout appel direct échoue, comme sans réseau
       return this.demoApi(path, init); // mode démo : un « faux serveur » local, rien ne part sur internet
@@ -424,7 +275,7 @@ export class AppStore {
     }
   }
 
-  private expireSession() {
+  expireSession() {
     void this.offline.onSessionExpired(); // fige les actions en attente AVANT de vider les données : elles sont gardées pour la prochaine connexion
     this.token = null;
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
@@ -433,7 +284,7 @@ export class AppStore {
     this.emit();
   }
 
-  private async restore() {
+  async restore() {
     const ok = await this.pull(true);
     if (ok) { this.startPolling(); return; }
     // Pas de réseau (ou serveur en panne) : on ouvre l'appli avec la dernière copie gardée sur l'appareil, au lieu de renvoyer à la connexion.
@@ -444,10 +295,10 @@ export class AppStore {
   }
 
   // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
-  private pollMs = 20000;
+  pollMs = 20000;
   // Plusieurs écrans peuvent demander le mode rapide (messagerie, actualités) : on compte, 8 s tant qu'un écran l'utilise
-  private fastCount = 0;
-  public setFastPoll(on: boolean) {
+  fastCount = 0;
+  setFastPoll(on: boolean) {
     this.fastCount = Math.max(0, this.fastCount + (on ? 1 : -1));
     const ms = this.fastCount > 0 ? 8000 : 20000;
     if (ms === this.pollMs) return;
@@ -460,15 +311,15 @@ export class AppStore {
   // dont 40 s de retard du téléphone + 40 s de retard de l'ordinateur ; avant, le ×3 à 60 s faisait passer un opérateur présent en « Hors ligne »).
   // Une seule action (clic, touche, toucher) remet la vitesse normale et recharge tout de suite.
   // Temps écoulé depuis la dernière action de la personne (pour ralentir aussi les autres rechargements)
-  public idleMs(): number { return Date.now() - this.lastActivity; }
+  idleMs(): number { return Date.now() - this.lastActivity; }
 
-  private idleFactor(): number {
+  idleFactor(): number {
     const idle = Date.now() - this.lastActivity;
     if (idle > 2 * 60 * 1000) return 2;
     return 1;
   }
 
-  private scheduleNextPull() {
+  scheduleNextPull() {
     if (this.pollTimer) clearTimeout(this.pollTimer);
     this.pollTimer = setTimeout(() => {
       if (!this.token) return;
@@ -478,7 +329,7 @@ export class AppStore {
     }, this.pollMs * this.idleFactor());
   }
 
-  private startPolling() {
+  startPolling() {
     this.stopPolling();
     this.lastActivity = Date.now();
     this.scheduleNextPull();
@@ -496,7 +347,7 @@ export class AppStore {
     }
   }
 
-  private stopPolling() {
+  stopPolling() {
     if (this.pollTimer) clearTimeout(this.pollTimer);
     this.pollTimer = null;
     if (typeof document !== 'undefined') {
@@ -508,14 +359,14 @@ export class AppStore {
   }
 
   // Récupère les changements du serveur. Retourne true si la session est valide.
-  private pulling = false;
+  pulling = false;
   // Actualisation demandée à la main (tirer la page vers le bas)
-  public async refreshNow(): Promise<boolean> {
+  async refreshNow(): Promise<boolean> {
     if (this.demo) return true; // démo : rien à aller chercher, « À jour »
     return this.pull(true);
   }
 
-  private async pull(force = false): Promise<boolean> {
+  async pull(force = false): Promise<boolean> {
     if (!this.token) return false;
     // Un seul rechargement à la fois (évite les requêtes qui s'empilent sur réseau lent)
     if (this.pulling && !force) return true;
@@ -528,7 +379,7 @@ export class AppStore {
     }
   }
 
-  private async pullInner(force = false): Promise<boolean> {
+  async pullInner(force = false): Promise<boolean> {
     if (!this.token) return false;
     const tokenAtStart = this.token;
     const seqAtStart = this.mutationSeq;
@@ -634,479 +485,22 @@ export class AppStore {
     if (!this.demo) { await this.offline.attach(this.currentUser); this.offline.onServerState(); } // copie locale et actions en attente (module 13)
     return true;
   }
-
-  // --- Fil d'actualité ---
-  /** Lignes d'argent (entrées et sorties). Toujours vide pour un employé : le serveur ne lui envoie rien. */
-  /** Toutes les lignes de caisse, y compris les paiements annulés et leurs corrections : listes, comptabilité, sauvegardes. */
-  public getCash(): CashEntry[] { return [...this.cash]; }
-  /** La caisse qui compte : sans les paires « paiement + correction » (M23.3a). Pour tous les chiffres, graphiques, budgets et rapports. */
-  public getCashNet(): CashEntry[] { return cashEffective(this.cash); }
-
-  // Finances (responsable seulement ; le serveur revérifie chaque ligne). Les lignes partent avec la synchro habituelle.
-  // En cas de refus, `error` est un code : 'admin' | 'kind' | 'amount' | 'date' | 'category' | 'missing'.
-  public addCash(d: CashDraft): { success: boolean; error?: string; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const v = checkDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
-    const now = new Date().toISOString();
-    const id = `cash-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.cash = [{ id, ...v.clean, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
-    this.notify();
-    return { success: true, id };
-  }
-
-  public updateCash(id: string, d: CashDraft): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const old = this.cash.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    const v = checkDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
-    const { supplier_id: _sid, ...oldCash } = old; // un fournisseur vidé par l'admin disparaît vraiment
-    this.cash = this.cash.map(x => x.id === id ? { ...oldCash, ...v.clean, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-
-  public deleteCash(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.cash.some(x => x.id === id)) return { success: false, error: 'missing' };
-    this.cash = this.cash.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  // --- Factures (module 2, responsable seulement). Brouillons : modifiables ici (le serveur revérifie les totaux). ---
-  // Émission, paiement et avoir passent par des routes dédiées : le numéro et le reçu sont attribués par le serveur, jamais ici.
-  // Codes d'erreur d'un brouillon : 'admin' | 'client' | 'issue_date' | 'due_date' | 'due_before' | 'lines' | 'too_many_lines' | 'description' | 'qty' | 'price' | 'total' | 'note' | 'missing' | 'not_draft' | 'no_client' | 'ref_used'.
-  public getInvoices(): Invoice[] { return [...this.invoices]; }
-
-  public saveInvoiceDraft(d: InvoiceDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const company = readCompany(this.getSettings().company);
-    const v = checkInvoiceDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
-    if (!v.ok) return { success: false, error: v.error, line: v.line };
-    const client = this.clients.find(c => c.id === v.clean.client_id);
-    if (!client) return { success: false, error: 'no_client' };
-    const used = new Set<string>();
-    for (const i of this.invoices) if (i.id !== d.id && i.type !== 'credit_note' && i.status !== 'cancelled') for (const l of i.lines) for (const r of l.refs || []) used.add(r);
-    if (v.clean.lines.some(l => (l.refs || []).some(r => used.has(r)))) return { success: false, error: 'ref_used' }; // une mission ne va que dans une facture
-    const now = new Date().toISOString();
-    if (d.id) {
-      const old = this.invoices.find(x => x.id === d.id);
-      if (!old) return { success: false, error: 'missing' };
-      if (old.status !== 'draft' || old.type === 'credit_note') return { success: false, error: 'not_draft' };
-      this.invoices = this.invoices.map(x => x.id === d.id ? { ...x, ...v.clean, client: { name: client.name }, updated_at: now } : x);
-      this.notify();
-      return { success: true, id: d.id };
-    }
-    const id = `inv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.invoices = [{ id, type: 'invoice', status: 'draft', ...v.clean, client: { name: client.name }, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.invoices];
-    this.notify();
-    return { success: true, id };
-  }
-
-  public deleteInvoiceDraft(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const inv = this.invoices.find(x => x.id === id);
-    if (!inv) return { success: false, error: 'missing' };
-    if (inv.status !== 'draft' || inv.type === 'credit_note') return { success: false, error: 'not_draft' }; // une facture émise ne se supprime jamais : on l'annule par un avoir
-    this.invoices = this.invoices.filter(x => x.id !== id);
-    // un devis accepté qui avait donné ce brouillon peut être transformé de nouveau
-    this.quotes = this.quotes.map(q => { if (q.invoice_id !== id) return q; const { invoice_id: _i, ...rest } = q; return { ...rest, updated_at: new Date().toISOString() }; });
-    this.notify();
-    return { success: true };
-  }
-
-  /** Envoie d'abord les changements en attente (le serveur lit le brouillon enregistré), puis appelle la route. */
-  private async invoiceCall(route: string, body: unknown): Promise<{ ok: boolean; error?: string; data?: any }> {
-    if (!isMoneyRole(this.currentUser?.role)) return { ok: false, error: 'Réservé au responsable et au comptable.' };
-    if (!this.demo) {
-      for (let i = 0; i < 50 && this.syncing; i++) await new Promise(r => setTimeout(r, 100));
-      await this.flush();
-    }
-    const r = await this.api(route, { method: 'POST', body: JSON.stringify(body) });
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
-    if (!this.demo) { this.since = ''; await this.pull(true); }
-    return { ok: true, data: r.data };
-  }
-  public issueInvoice(id: string) { return this.invoiceCall('invoice-issue', { id }); }
-  public cancelInvoice(id: string) { return this.invoiceCall('invoice-cancel', { id }); }
-  // Comptabilité (M14) : le site LIT les écritures ; elles ne s'écrivent que par ces trois routes (le serveur revérifie, attribue le numéro et note tout dans le journal d'audit).
-  public getEntries(): Entry[] { return [...this.entries]; }
-  public accountingSync() { return this.invoiceCall('accounting-sync', {}); }
-  public postEntry(d: { date: string; journal: string; label: string; ref?: string; lines: { account: string; debit: number; credit: number }[] }) { return this.invoiceCall('accounting-post', d); }
-  public reverseEntryById(id: string, date: string, reason: string) { return this.invoiceCall('accounting-reverse', { id, date, reason }); }
-  /** Clôture de la comptabilité : jusqu'à quel jour on ne peut plus écrire, et l'historique (clôtures et réouvertures). */
-  public getAcctClose(): CloseState { const c = (this.settings[0] as any)?.acct_close; return { through: typeof c?.through === 'string' ? c.through : '', log: Array.isArray(c?.log) ? c.log : [] }; }
-  public closeAccounting(through: string) { return this.invoiceCall('accounting-close', { action: 'close', through }); }
-  public reopenAccounting(through: string, reason: string) { return this.invoiceCall('accounting-close', { action: 'reopen', through, reason }); }
-  public payInvoice(id: string, p: { amount: number; date: string; method?: string; note?: string }) { return this.invoiceCall('invoice-pay', { id, ...p }); }
-  /** Annule un paiement saisi par erreur (ligne de correction, jamais de suppression). Motif de 10 caractères au moins. Pas de bouton à l'écran avant M23.3c. */
-  public voidInvoicePayment(id: string, paymentId: string, reason: string) { return this.invoiceCall('invoice-void-payment', { id, payment_id: paymentId, reason }); }
-
-  // --- Stock (responsable seulement ; le serveur revérifie chaque ligne). La quantité se calcule avec les mouvements, elle n'est jamais saisie. ---
-  public getClients(): Client[] { return [...this.clients]; } // admin seulement (l'opérateur n'en reçoit jamais)
-
-  // Clients (responsable seulement ; le serveur revérifie chaque fiche). Codes d'erreur : 'admin' | 'name' | 'email' | 'terms' | 'price' | 'price_by_type' | 'duplicate' | 'missing' | 'in_use'.
-  // Le statut d'un client n'est jamais enregistré : il se calcule (src/utils/clients.ts).
-  public addClient(d: ClientDraft): { success: boolean; error?: string; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const v = checkClientDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (this.clients.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
-    const now = new Date().toISOString();
-    const id = `cli-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.clients = [{ id, ...v.clean, active: true, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.clients];
-    this.notify();
-    return { success: true, id };
-  }
-
-  public updateClient(id: string, d: ClientDraft): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const old = this.clients.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    const v = checkClientDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (this.clients.some(x => x.id !== id && normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
-    // Les champs facultatifs vidés par l'admin disparaissent vraiment (on ne garde pas l'ancienne valeur).
-    const { payment_terms_days: _t, price_default_ar: _p, price_by_type: _b, ...base } = old;
-    this.clients = this.clients.map(x => x.id === id ? { ...base, ...v.clean, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-
-  /** Désactive (archive) ou réactive un client. Un client désactivé reste là avec ses missions et n'apparaît plus dans les listes de choix. */
-  public setClientActive(id: string, active: boolean): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
-    this.clients = this.clients.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-
-  /** Supprime une fiche seulement si aucune mission ni session ne la cite (le serveur refuse aussi) : sinon, on la désactive. */
-  public deleteClient(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.clients.some(x => x.id === id)) return { success: false, error: 'missing' };
-    if (this.contracts.some(c => c.client_id === id) || this.posts.some(p => p.client_id === id)) return { success: false, error: 'in_use' };
-    this.clients = this.clients.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  // Congés (M5.2). Mêmes règles que le serveur (`checkLeave`) : le site refuse avant d'envoyer, le serveur revérifie quand même.
-  // Codes d'erreur : ceux de `leaveReasonText` ('dates', 'overlap', 'balance'…) + 'login' | 'missing'.
-  public getLeaves(): Leave[] { return [...this.leaves]; }
-  private leaveCtx(employeeId: string) {
+  leaveCtx(employeeId: string) {
     const co = readCompany(this.getSettings().company);
     return { today: madaToday(), allowance: Number(co.leave.leave_days_per_year) || 0, perWeek: Number(co.leave.work_days_per_week) || 0, others: this.leaves.filter(l => l.employee_id === employeeId) };
   }
-  public requestLeave(d: { employee_id?: string; type: LeaveType; start_date: string; end_date: string; reason?: string; approved?: boolean }): { success: boolean; error?: string; id?: string } {
-    const me = this.currentUser;
-    if (!me) return { success: false, error: 'login' };
-    const admin = me.role === 'admin';
-    const empId = admin ? String(d.employee_id || '') : me.id;
-    const emp = this.users.find(u => u.id === empId);
-    if (!emp || emp.role === 'admin') return { success: false, error: 'employee' };
-    const now = new Date().toISOString();
-    const id = `lv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const rec = { id, employee_id: empId, employee_name: emp.name, type: d.type, start_date: d.start_date, end_date: d.end_date, reason: d.reason || '', status: admin && d.approved ? 'approved' : 'pending' };
-    const v = checkLeave(rec, undefined, { id: me.id, name: me.name, admin }, now, this.leaveCtx(empId));
-    if (!v.ok) return { success: false, error: v.reason };
-    this.leaves = [v.save as Leave, ...this.leaves];
-    this.notify();
-    return { success: true, id };
-  }
-  /** Accepter, refuser ou annuler. Refus et annulation par l'admin : motif de 3 caractères ou plus. Le salarié ne peut qu'annuler. */
-  public decideLeave(id: string, status: 'approved' | 'rejected' | 'cancelled', reason?: string): { success: boolean; error?: string } {
-    const me = this.currentUser;
-    if (!me) return { success: false, error: 'login' };
-    const old = this.leaves.find(l => l.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    const v = checkLeave({ ...old, status, decision_reason: reason || '' }, old, { id: me.id, name: me.name, admin: me.role === 'admin' }, new Date().toISOString(), this.leaveCtx(old.employee_id));
-    if (!v.ok) return { success: false, error: v.reason };
-    this.leaves = this.leaves.map(l => (l.id === id ? (v.save as Leave) : l));
-    this.notify();
-    return { success: true };
-  }
-  /** Supprime une demande (responsable seulement ; le salarié annule, il ne supprime pas). */
-  public deleteLeave(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
-    if (!this.leaves.some(l => l.id === id)) return { success: false, error: 'missing' };
-    this.leaves = this.leaves.filter(l => l.id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  // Planning des équipes (M15.2). Mêmes règles que le serveur (`checkShift`) : le site refuse avant d'envoyer, le serveur revérifie quand même.
-  // Responsable seulement en écriture ; un salarié ne reçoit que son planning (le serveur filtre).
-  public getShifts(): Shift[] { return [...this.shifts]; }
-  /** Limite de jours travaillés par semaine (Conditions de l'entreprise) ; 0 = pas de limite. */
-  public getPlanningMaxPerWeek(): number { return Number(readCompany(this.getSettings().company).leave.work_days_per_week) || 0; }
-  /**
-   * Applique plusieurs cases d'un coup (une seule synchronisation) : `set` = entrées à écrire, `clear` = cases à vider (entrée supprimée).
-   * Tout est vérifié avant : si une entrée est fausse, rien n'est changé.
-   */
-  public applyShifts(set: Array<{ employee_id: string; date: string; kind: ShiftKind; note?: string }>, clear: Array<{ employee_id: string; date: string }> = []): { success: boolean; error?: string } {
-    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
-    const now = new Date().toISOString(), me = this.currentUser.id;
-    const byId = new Map(this.shifts.map(s => [s.id, s] as const));
-    const next: Shift[] = [];
-    for (const d of set) {
-      const v = checkShift(d);
-      if (!v.ok) return { success: false, error: v.error };
-      if (!this.users.some(u => u.id === v.value.employee_id && u.role !== 'admin')) return { success: false, error: 'employee' };
-      const old = byId.get(v.value.id);
-      next.push({ id: v.value.id, employee_id: v.value.employee_id, date: v.value.date, kind: v.value.kind as ShiftKind, ...(v.value.note ? { note: v.value.note } : {}), created_at: old?.created_at || now, updated_at: now, updated_by: me });
-    }
-    const gone = new Set(clear.map(c => shiftId(c.employee_id, c.date)));
-    const put = new Map(next.map(s => [s.id, s] as const));
-    this.shifts = [...this.shifts.filter(s => !gone.has(s.id) && !put.has(s.id)), ...next];
-    this.notify();
-    return { success: true };
-  }
-
-  // Dossier du salarié (M5.1) : responsable seulement en écriture ; le salarié lit le sien. Le serveur revérifie (bloc HR).
-  public setUserHr(userId: string, hr: HrFile | null): { success: boolean; error?: string } {
-    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'admin' };
-    const u = this.users.find(x => x.id === userId);
-    if (!u || u.role === 'admin') return { success: false, error: 'missing' };
-    const v = checkHrFile(hr);
-    if (!v.ok) return { success: false, error: v.reason };
-    this.users = this.users.map(x => {
-      if (x.id !== userId) return x;
-      const { hr: _old, ...rest } = x;
-      return (v.hr ? { ...rest, hr: v.hr } : rest) as User;
-    });
-    this.notify();
-    return { success: true };
-  }
-
-  // « Mes tableaux » (module 12). Le serveur revérifie tout (bloc SHEETS) ; ici on range seulement les tableaux de la personne connectée.
-  public getSheets(): Sheet[] { return [...this.sheets]; }
-  /** M18.6 : prépare le tableau de la session (un seul : identifiant imposé). Seulement pour l'opérateur lui-même ; le serveur revérifie que la session est la sienne. */
-  private prepareMissionSheet(post: PostSession, force = false): Sheet | null {
-    const me = this.currentUser;
-    if (!me || !needsMissionSheet(post, me.id, me.role, this.sheets.map(x => x.id))) return null;
-    if (!force && getMissionMode(me.id, post.id) === 'excel') return null; // M19 : la personne travaille sur un Excel externe : le site ne prépare rien (elle peut changer d'avis)
-    let lang: 'fr' | 'en' = 'fr';
-    try { if (globalThis.localStorage?.getItem('delta_lang') === 'en') lang = 'en'; } catch { /* langue par défaut */ }
-    const contract = post.post_number != null ? this.contracts.find(c => c.post_number === post.post_number) : undefined;
-    const sheet = buildMissionSheet({ postId: post.id, postNumber: post.post_number, date: post.date, type: contract?.post_type, lang, now: post.created_at });
-    if (sheet) { this.putMySheets([sheet, ...this.sheets.filter(x => x.owner_id === me.id)]); return this.sheets.find(x => x.id === sheet.id) || null; }
-    return null;
-  }
-  /** M19 : prépare MAINTENANT le tableau d'une de mes sessions (« Travailler sur le site » ou « Remettre mon fichier »). Rien si elle a déjà son tableau ou n'est pas à moi. */
-  public prepareMissionSheetNow(postId: string): Sheet | null {
-    const post = this.posts.find(p => p.id === postId);
-    return post ? this.prepareMissionSheet(post, true) : null;
-  }
-  /** M19 : mes sessions qui n'ont PAS encore de tableau (parce que je travaille sur un Excel externe). */
-  public getMissionsWithoutSheet(): PostSession[] {
-    const me = this.currentUser;
-    if (!me || me.role !== 'employee') return [];
-    const ids = this.sheets.map(x => x.id);
-    return this.posts.filter(p => needsMissionSheet(p, me.id, me.role, ids));
-  }
-  /** Remplace les tableaux de la personne connectée par cette liste (les autres, vus par l'admin, ne bougent pas). Le lien avec le serveur se fait tout seul. */
-  public putMySheets(list: Sheet[]): void {
-    const me = this.currentUser;
-    if (!me || me.role !== 'employee') return;
-    const mine = list.map(x => ({ ...x, owner_id: me.id, owner_name: me.name }));
-    const ids = new Set(mine.map(x => x.id));
-    this.sheets = [...mine, ...this.sheets.filter(x => x.owner_id !== me.id && !ids.has(x.id))];
-    this.sheets.sort(SORTERS.sheets as any);
-    this.notify();
-  }
-  // Évaluations (M5.4). Mêmes règles que le serveur (`checkReview`). Le responsable écrit ; le salarié lit ses fiches partagées et accuse lecture.
-  public getReviews(): Review[] { return [...this.reviews]; }
-  public saveReview(d: { id?: string; employee_id?: string; period_start: string; period_end: string; status: 'draft' | 'shared'; objectives: { id: string; text: string; done?: boolean }[]; strengths?: string; comments?: string; improvements?: string; rating?: number | null; snapshot?: Review['snapshot'] }): { success: boolean; error?: string; id?: string } {
-    const me = this.currentUser;
-    if (!me || me.role !== 'admin') return { success: false, error: 'forbidden' };
-    const old = d.id ? this.reviews.find(r => r.id === d.id) : undefined;
-    if (d.id && !old) return { success: false, error: 'id' };
-    const empId = old ? old.employee_id : String(d.employee_id || '');
-    const emp = this.users.find(u => u.id === empId);
-    if (!emp || emp.role === 'admin') return { success: false, error: 'employee' };
-    const id = old ? old.id : `rv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const now = new Date().toISOString();
-    const rec = { ...(old || {}), ...d, id, employee_id: empId, employee_name: emp.name, rating: d.rating ?? undefined };
-    const v = checkReview(rec, old, { id: me.id, admin: true }, now);
-    if (!v.ok) return { success: false, error: v.reason };
-    this.reviews = old ? this.reviews.map(r => (r.id === id ? (v.save as Review) : r)) : [v.save as Review, ...this.reviews];
-    this.notify();
-    return { success: true, id };
-  }
-  /** Le salarié marque sa fiche partagée comme lue. */
-  public acknowledgeReview(id: string): { success: boolean; error?: string } {
-    const me = this.currentUser;
-    if (!me) return { success: false, error: 'forbidden' };
-    const old = this.reviews.find(r => r.id === id);
-    if (!old) return { success: false, error: 'id' };
-    const now = new Date().toISOString();
-    const v = checkReview({ ...old, acknowledged_at: now }, old, { id: me.id, admin: me.role === 'admin' }, now);
-    if (!v.ok) return { success: false, error: v.reason };
-    this.reviews = this.reviews.map(r => (r.id === id ? (v.save as Review) : r));
-    this.notify();
-    return { success: true };
-  }
-  public deleteReview(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || this.currentUser.role !== 'admin') return { success: false, error: 'forbidden' };
-    if (!this.reviews.some(r => r.id === id)) return { success: false, error: 'id' };
-    this.reviews = this.reviews.filter(r => r.id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  // Fournisseurs (responsable seulement ; le serveur revérifie chaque fiche). Codes d'erreur : 'admin' | 'name' | 'lead' | 'duplicate' | 'missing' | 'in_use'.
-  public getSuppliers(): Supplier[] { return [...this.suppliers]; }
-  private supplierUsed(id: string): boolean {
+  supplierUsed(id: string): boolean {
     return this.purchases.some(o => o.supplier_id === id) || this.stockMoves.some(m => m.supplier_id === id) || this.cash.some(c => c.supplier_id === id);
-  }
-  public addSupplier(d: SupplierDraft): { success: boolean; error?: string; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const v = checkSupplierDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (this.suppliers.some(x => normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
-    const now = new Date().toISOString();
-    const id = `sup-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.suppliers = [{ id, ...v.clean, active: true, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.suppliers];
-    this.notify();
-    return { success: true, id };
-  }
-  public updateSupplier(id: string, d: SupplierDraft): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const old = this.suppliers.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    const v = checkSupplierDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    if (this.suppliers.some(x => x.id !== id && normalizeName(x.name) === normalizeName(v.clean.name))) return { success: false, error: 'duplicate' };
-    const { lead_days: _l, ...base } = old; // un délai vidé disparaît vraiment
-    this.suppliers = this.suppliers.map(x => x.id === id ? { ...base, ...v.clean, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /** Archive ou réactive. Un fournisseur archivé reste là avec ses bons et n'apparaît plus dans les listes de choix. */
-  public setSupplierActive(id: string, active: boolean): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
-    this.suppliers = this.suppliers.map(x => x.id === id ? { ...x, active, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /** Supprime seulement un fournisseur qui n'a servi à rien (le serveur refuse aussi) : sinon, on l'archive. */
-  public deleteSupplier(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.suppliers.some(x => x.id === id)) return { success: false, error: 'missing' };
-    if (this.supplierUsed(id)) return { success: false, error: 'in_use' };
-    this.suppliers = this.suppliers.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
   }
 
   // Bons de commande (responsable seulement ; le serveur revérifie chaque bon). Codes d'erreur : 'admin' | 'supplier' | 'date' | 'expected' | 'lines' | 'product' | 'qty' | 'cost' | 'duplicate' | 'missing' | 'status' | 'none' | 'unsynced'.
   // Brouillon (modifiable) → Commandé (figé, seule la quantité reçue avance) → Reçu. Annulé et Reçu sont définitifs. Aucun total n'est enregistré : il se calcule.
-  private purchaseChecks(d: PurchaseDraft): { ok: true; clean: Extract<ReturnType<typeof checkPurchaseDraft>, { ok: true }>['clean'] } | { ok: false; error: string } {
+  purchaseChecks(d: PurchaseDraft): { ok: true; clean: Extract<ReturnType<typeof checkPurchaseDraft>, { ok: true }>['clean'] } | { ok: false; error: string } {
     const v = checkPurchaseDraft(d);
     if (!v.ok) return { ok: false, error: v.error };
     if (!this.suppliers.some(x => x.id === v.clean.supplier_id)) return { ok: false, error: 'supplier' };
     if (v.clean.lines.some(l => !this.products.some(p => p.id === l.product_id))) return { ok: false, error: 'product' };
     return { ok: true, clean: v.clean };
-  }
-  public addPurchase(d: PurchaseDraft, order = false): { success: boolean; error?: string; id?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const v = this.purchaseChecks(d);
-    if (!v.ok) return { success: false, error: v.error };
-    const now = new Date().toISOString();
-    const id = `po-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.purchases = [{ id, ref: nextPurchaseRef(this.purchases), ...v.clean, status: order ? 'ordered' : 'draft', created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.purchases];
-    this.notify();
-    return { success: true, id };
-  }
-  /** Modifie un BROUILLON seulement (un bon commandé est figé). */
-  public updatePurchase(id: string, d: PurchaseDraft): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const old = this.purchases.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    if (old.status !== 'draft') return { success: false, error: 'status' };
-    const v = this.purchaseChecks(d);
-    if (!v.ok) return { success: false, error: v.error };
-    const { expected_date: _e, ...base } = old; // une livraison prévue vidée disparaît vraiment
-    this.purchases = this.purchases.map(x => x.id === id ? { ...base, ...v.clean, status: 'draft' as const, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /** Brouillon → Commandé, ou Brouillon / Commandé sans réception → Annulé. */
-  public setPurchaseStatus(id: string, to: 'ordered' | 'cancelled'): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const old = this.purchases.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    if (!canTransition(old, to)) return { success: false, error: 'status' };
-    this.purchases = this.purchases.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /** Supprime un brouillon ou un bon annulé (le serveur refuse les autres : l'historique des achats reste). */
-  public deletePurchase(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const old = this.purchases.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    if (old.status !== 'draft' && old.status !== 'cancelled') return { success: false, error: 'status' };
-    this.purchases = this.purchases.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
-  }
-  /** Solde le reste d'un bon commandé reçu en partie : il devient « Reçu » (définitif). Aucune dépense ni aucun mouvement de stock n'est créé. */
-  public closePurchaseShort(id: string, date: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const old = this.purchases.find(x => x.id === id);
-    if (!old) return { success: false, error: 'missing' };
-    if (!canCloseShort(old)) return { success: false, error: 'status' };
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) || String(date) < old.date) return { success: false, error: 'date' };
-    this.purchases = this.purchases.map(x => x.id === id ? { ...x, status: 'received' as const, short_closed: String(date), updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /**
-   * Réception (totale ou partielle) d'un bon COMMANDÉ : `received` = quantité reçue maintenant, par produit.
-   * Crée une entrée de stock par ligne reçue (avec le bon et le fournisseur) et, si `withExpense`, UNE dépense « Achats » pour toute la réception.
-   * Le serveur doit déjà connaître le bon « commandé » : sinon 'unsynced' (réessayer dans quelques secondes).
-   */
-  public receivePurchase(id: string, received: Record<string, string | number>, opts: { date: string; withExpense?: boolean; prices?: Record<string, string | number> }): { success: boolean; error?: string; cashId?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
-    const po = this.purchases.find(x => x.id === id);
-    if (!po) return { success: false, error: 'missing' };
-    // Prix réel de la livraison (première réception d'une ligne seulement) : la ligne du bon prend ce prix avant le calcul
-    const pr = opts.prices ? applyReceiptPrices(po, received, opts.prices) : null;
-    if (pr && !pr.ok) return { success: false, error: pr.error };
-    const priced = pr && pr.ok ? { ...po, lines: pr.lines } : po;
-    const changes = pr && pr.ok ? pr.changes : [];
-    const r = planReceipt(priced, received);
-    if (!r.ok) return { success: false, error: r.error };
-    if (!this.demo) {
-      let seen: string | undefined;
-      try { seen = JSON.parse(this.synced.purchases.get(id) || '{}').status; } catch { seen = undefined; }
-      if (seen !== 'ordered') return { success: false, error: 'unsynced' };
-    }
-    const date = String(opts.date || '');
-    const dv = checkDraft({ kind: 'out', category: 'Achats', amount: Math.max(1, r.plan.amount), date, note: `Bon ${po.ref}`, supplier_id: po.supplier_id });
-    if (!dv.ok || date < po.date) return { success: false, error: 'date' };
-    const now = new Date().toISOString();
-    const rnd = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const wantCash = !!opts.withExpense && r.plan.amount >= 1;
-    const cashId = wantCash ? `cash-${rnd()}` : undefined;
-    if (cashId) this.cash = [{ id: cashId, ...dv.clean, amount_ar: r.plan.amount, note: `Bon ${po.ref} reçu`, po_id: po.id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.cash];
-    const newMoves: StockMove[] = r.plan.moves.map((m, i) => ({
-      id: `mv-${rnd()}${i}`, product_id: m.product_id, type: 'in' as const, qty: m.qty, date, note: `Bon ${po.ref}${changes.find(c => c.product_id === m.product_id) ? ` · prix ${changes.find(c => c.product_id === m.product_id)!.from} → ${changes.find(c => c.product_id === m.product_id)!.to} Ar` : ''}`,
-      ...(m.unit_cost_ar > 0 ? { unit_cost_ar: m.unit_cost_ar } : {}), ...(cashId ? { cash_id: cashId } : {}), supplier_id: po.supplier_id, po_id: po.id,
-      created_by: this.currentUser!.id, created_at: now, updated_at: now,
-    }));
-    this.stockMoves = [...newMoves, ...this.stockMoves];
-    this.purchases = this.purchases.map(x => x.id === id ? { ...x, lines: r.plan.lines, status: r.plan.status, updated_at: now } : x);
-    this.notify();
-    return { success: true, cashId };
   }
 
   /**
@@ -1114,7 +508,7 @@ export class AppStore {
    * crée UN mouvement « ajustement » (raison « inventaire », avec la quantité comptée et celle que le stock indiquait). Tout est refusé si une quantité est fausse.
    * Codes d'erreur : 'admin' | 'qty' (quantité illisible ou négative) | 'date' | 'none' (aucun écart à corriger) | 'product'.
    */
-  public applyInventory(counts: Record<string, string | number>, date: string): { success: boolean; error?: string; adjusted?: number } {
+  applyInventory(counts: Record<string, string | number>, date: string): { success: boolean; error?: string; adjusted?: number } {
     if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(`${date}T00:00:00Z`).getTime()) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return { success: false, error: 'date' };
     if (Object.keys(counts).some(k => !this.products.some(p => p.id === k))) return { success: false, error: 'product' };
@@ -1136,61 +530,15 @@ export class AppStore {
    * Plafond mensuel par catégorie de dépense (Ar). `input` : catégorie → montant ; vide ou 0 = pas de plafond. Le serveur revérifie.
    * Codes d'erreur : 'admin' | 'budget' (montant faux ou trop de catégories). Réponse avec `category` quand c'est une catégorie précise.
    */
-  public setBudgets(input: Record<string, string | number>): { success: boolean; error?: string; category?: string } {
+  setBudgets(input: Record<string, string | number>): { success: boolean; error?: string; category?: string } {
     if (this.currentUser?.role !== 'admin') return { success: false, error: 'admin' };
     const v = checkBudgets(input);
     if (!v.ok) return { success: false, error: v.error, category: v.category };
     this.updateSettings({ budgets: v.clean });
     return { success: true };
   }
-
-  // Devis (module 2, M2.9 ; admin et Comptable, comme les factures ; le serveur revérifie chaque devis). Codes d'erreur : 'admin' | 'no_client' | 'missing' | 'status' | 'invoiced' | + ceux de checkQuoteDraft.
-  // Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé. Un devis accepté se transforme en UNE facture brouillon (mêmes lignes) ; aucun total n'est saisi.
-  public getQuotes(): Quote[] { return [...this.quotes]; }
-  public saveQuote(d: QuoteDraft & { id?: string }): { success: boolean; error?: string; line?: number; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const company = readCompany(this.getSettings().company);
-    const v = checkQuoteDraft({ ...d, vat_enabled: company.tax.vat_enabled, vat_rate: company.tax.vat_rate });
-    if (!v.ok) return { success: false, error: v.error, line: v.line };
-    const client = this.clients.find(c => c.id === v.clean.client_id);
-    if (!client) return { success: false, error: 'no_client' };
-    const now = new Date().toISOString();
-    if (d.id) {
-      const old = this.quotes.find(x => x.id === d.id);
-      if (!old) return { success: false, error: 'missing' };
-      if (old.status !== 'draft') return { success: false, error: 'status' };
-      const { valid_until: _v, ...base } = old; // une fin de validité vidée disparaît vraiment
-      this.quotes = this.quotes.map(x => x.id === d.id ? { ...base, ...v.clean, client: { name: client.name }, updated_at: now } : x);
-      this.notify();
-      return { success: true, id: d.id };
-    }
-    const id = `qt-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.quotes = [{ id, ref: nextQuoteRef(this.quotes), status: 'draft', ...v.clean, client: { name: client.name }, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.quotes];
-    this.notify();
-    return { success: true, id };
-  }
-  /** Brouillon → Envoyé ; Envoyé → Accepté ou Refusé. */
-  public setQuoteStatus(id: string, to: QuoteStatus): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const q = this.quotes.find(x => x.id === id);
-    if (!q) return { success: false, error: 'missing' };
-    if (!canQuoteTransition(q, to)) return { success: false, error: 'status' };
-    this.quotes = this.quotes.map(x => x.id === id ? { ...x, status: to, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-  /** Supprime un brouillon ou un devis refusé (jamais facturé). */
-  public deleteQuote(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const q = this.quotes.find(x => x.id === id);
-    if (!q) return { success: false, error: 'missing' };
-    if (!canDeleteQuote(q)) return { success: false, error: 'status' };
-    this.quotes = this.quotes.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
-  }
   /** Devis accepté → facture BROUILLON avec les mêmes lignes (émission aujourd'hui, échéance selon les conditions de paiement). Le devis garde le lien. */
-  public quoteToInvoice(id: string): { success: boolean; error?: string; invoice_id?: string } {
+  quoteToInvoice(id: string): { success: boolean; error?: string; invoice_id?: string } {
     if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
     const q = this.quotes.find(x => x.id === id);
     if (!q) return { success: false, error: 'missing' };
@@ -1203,291 +551,26 @@ export class AppStore {
     return { success: true, invoice_id: r.id };
   }
 
-  public getPurchases(): PurchaseOrder[] { return [...this.purchases]; }
-  public getProducts(): Product[] { return [...this.products]; }
-
-  // ----- Stockages (Stockage 1, 2…) : la liste est dans les réglages (admin seulement) ; chaque produit est dans un seul stockage -----
-  public getStockSpaces(): StockSpace[] { return cleanSpaceList(this.getSettings().stock_spaces) ?? DEFAULT_STOCK_SPACES.map(s => ({ ...s })); }
-  public addStockSpace(name: string): { success: boolean; error?: string; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const list = this.getStockSpaces();
-    const clean = cleanCategoryName(name);
-    if (!clean) return { success: false, error: 'space_name' };
-    if (list.some(s => categoryKey(s.name) === categoryKey(clean))) return { success: false, error: 'space_exists' };
-    if (list.length >= STOCK_SPACE_MAX) return { success: false, error: 'space_max' };
-    const id = newSpaceId(list);
-    this.updateSettings({ stock_spaces: [...list, { id, name: clean }] });
-    return { success: true, id };
-  }
-  public renameStockSpace(id: string, name: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const list = this.getStockSpaces();
-    if (!list.some(s => s.id === id)) return { success: false, error: 'missing' };
-    const clean = cleanCategoryName(name);
-    if (!clean) return { success: false, error: 'space_name' };
-    if (list.some(s => s.id !== id && categoryKey(s.name) === categoryKey(clean))) return { success: false, error: 'space_exists' };
-    this.updateSettings({ stock_spaces: list.map(s => (s.id === id ? { ...s, name: clean } : s)) });
-    return { success: true };
-  }
-  /** Supprime un stockage VIDE seulement (il en reste toujours au moins un) : jamais de produit perdu ni déplacé en cachette. */
-  public deleteStockSpace(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const list = this.getStockSpaces();
-    if (!list.some(s => s.id === id)) return { success: false, error: 'missing' };
-    if (list.length <= 1) return { success: false, error: 'space_last' };
-    if (this.products.some(p => productStorage(p) === id)) return { success: false, error: 'space_not_empty' };
-    this.updateSettings({ stock_spaces: list.filter(s => s.id !== id) });
-    return { success: true };
-  }
-
-  // ----- Catégories des produits : liste par défaut, modifiable (enregistrée dans les réglages, admin seulement) -----
-  public getStockCategories(): string[] { return cleanCategoryList(this.getSettings().stock_categories) ?? [...DEFAULT_STOCK_CATEGORIES]; }
-  public setStockCategories(list: string[]): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const c = cleanCategoryList(list);
-    if (!c) return { success: false, error: 'category' };
-    this.updateSettings({ stock_categories: c });
-    return { success: true };
-  }
-  /** Renomme une catégorie : la liste ET tous les produits qui la portent. Refuse un nom déjà pris. */
-  public renameStockCategory(from: string, to: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const name = cleanCategoryName(to);
-    if (!name) return { success: false, error: 'category' };
-    const options = categoryOptions(this.getStockCategories(), this.products);
-    if (categoryKey(name) !== categoryKey(from) && options.some(c => categoryKey(c) === categoryKey(name))) return { success: false, error: 'category_exists' };
-    const list = this.getStockCategories();
-    const next = list.some(c => categoryKey(c) === categoryKey(from)) ? list.map(c => (categoryKey(c) === categoryKey(from) ? name : c)) : [...list, name];
-    const now = new Date().toISOString();
-    this.products = this.products.map(p => (categoryKey(p.category) === categoryKey(from) ? { ...p, category: name, updated_at: now } : p));
-    this.updateSettings({ stock_categories: cleanCategoryList(next) ?? [] });
-    return { success: true };
-  }
-  /** Supprime une catégorie de la liste ; les produits qui la portaient restent, sans catégorie. */
-  public deleteStockCategory(name: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const now = new Date().toISOString();
-    this.products = this.products.map(p => (categoryKey(p.category) === categoryKey(name) ? { ...p, category: '', updated_at: now } : p));
-    this.updateSettings({ stock_categories: this.getStockCategories().filter(c => categoryKey(c) !== categoryKey(name)) });
-    return { success: true };
-  }
-  public getStockMoves(): StockMove[] { return [...this.stockMoves]; }
-
-  public addProduct(d: ProductDraft): { success: boolean; error?: string; id?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const v = checkProductDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    const now = new Date().toISOString();
-    const id = `prod-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const spaces = this.getStockSpaces();
-    const storage_id = spaces.some(s => s.id === d.storage_id) ? (d.storage_id as string) : spaces[0].id; // un stockage inconnu = le premier
-    this.products = [{ id, ...v.clean, storage_id, created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.products];
-    this.notify();
-    return { success: true, id };
-  }
-
-  public updateProduct(id: string, d: ProductDraft): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
-    const v = checkProductDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    this.products = this.products.map(x => x.id === id ? { ...x, ...v.clean, updated_at: new Date().toISOString() } : x);
-    this.notify();
-    return { success: true };
-  }
-
-  /** Supprime le produit ET tous ses mouvements (le serveur fait pareil). */
-  public deleteProduct(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    if (!this.products.some(x => x.id === id)) return { success: false, error: 'missing' };
-    if (this.purchases.some(o => (o.status === 'draft' || o.status === 'ordered') && o.lines.some(l => l.product_id === id))) return { success: false, error: 'in_use' };
-    this.products = this.products.filter(x => x.id !== id);
-    this.stockMoves = this.stockMoves.filter(m => m.product_id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  /**
-   * Entrée, sortie ou ajustement. Une sortie qui dépasse le stock est refusée ('stock') ; un ajustement ne peut pas rendre le stock négatif.
-   * `withExpense` (entrée avec un prix payé) : crée aussi une dépense « Achats » du même montant, liée à l'entrée (S3.3).
-   */
-  public addStockMove(d: MoveDraft, opts: { withExpense?: boolean } = {}): { success: boolean; error?: string; id?: string; cashId?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const v = checkMoveDraft(d);
-    if (!v.ok) return { success: false, error: v.error };
-    const p = this.products.find(x => x.id === v.clean.product_id);
-    if (!p) return { success: false, error: 'product' };
-    if (v.clean.supplier_id && !this.suppliers.some(s => s.id === v.clean.supplier_id)) return { success: false, error: 'supplier' };
-    const have = quantities([p], this.stockMoves).get(p.id) || 0;
-    if (v.clean.type !== 'in' && have + (v.clean.type === 'out' ? -v.clean.qty : v.clean.qty) < 0) return { success: false, error: 'stock' };
-    const now = new Date().toISOString();
-    const id = `mv-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    let cashId: string | undefined;
-    if (opts.withExpense && v.clean.type === 'in') {
-      const amount = purchaseAmount(v.clean.qty, v.clean.unit_cost_ar);
-      if (amount < 1) return { success: false, error: 'cost' }; // pas de prix : pas de dépense à créer
-      const c = this.addCash({ kind: 'out', category: 'Achats', amount, date: v.clean.date, note: `Stock : ${p.name} (${v.clean.qty} ${p.unit})`, ...(v.clean.supplier_id ? { supplier_id: v.clean.supplier_id } : {}) });
-      if (!c.success) return { success: false, error: c.error };
-      cashId = c.id;
-    }
-    this.stockMoves = [{ id, ...v.clean, ...(cashId ? { cash_id: cashId } : {}), created_by: this.currentUser.id, created_at: now, updated_at: now }, ...this.stockMoves];
-    this.notify();
-    return { success: true, id, cashId };
-  }
-
-  /** Supprime un mouvement (la quantité se recalcule). Refusé si cela rendrait le stock négatif. La dépense liée, s'il y en a une, reste : elle se supprime dans Finances. */
-  public deleteStockMove(id: string): { success: boolean; error?: string } {
-    if (!this.currentUser || !isMoneyRole(this.currentUser.role)) return { success: false, error: 'admin' };
-    const m = this.stockMoves.find(x => x.id === id);
-    if (!m) return { success: false, error: 'missing' };
-    const rest = this.stockMoves.filter(x => x.id !== id);
-    const p = this.products.find(x => x.id === m.product_id);
-    if (p && (quantities([p], rest).get(p.id) || 0) < 0 && (quantities([p], this.stockMoves).get(p.id) || 0) >= 0) return { success: false, error: 'stock' };
-    this.stockMoves = rest;
-    this.notify();
-    return { success: true };
-  }
-
-  public getNews(): NewsPost[] {
-    return this.news.filter(n => canSeeNews(n, this.currentUser)); // même tri que le serveur : seulement les publications de son public
-  }
-
-  /** Réglage « Publications des équipes » (qui peut publier et modifier). */
-  public getNewsPolicy(): NewsPolicy { return cleanNewsPolicy(this.getSettings().news_publish); }
-
-  // Le responsable publie (envoyé au serveur avec la synchro habituelle)
-  public publishNews(p: { title: string; text: string; pinned?: boolean; files?: NewsAttachment[]; audience?: NewsRole[]; audience_users?: string[]; poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' } }): { success: boolean; error?: string } {
-    const me = this.currentUser;
-    if (!me || me.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const text = p.text.trim();
-    const files = p.files || [];
-    if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou joins un fichier.' };
-    const poll = p.poll ? pollClean(p.poll) : null; // sondage : question + 2 à 6 choix ; les votes partent de zéro
-    if (p.poll && !poll) return { success: false, error: p.poll.kind === 'ack' ? 'Une confirmation de lecture demande un texte.' : p.poll.kind === 'date' ? 'Un choix de date demande une question et 2 à 10 dates différentes.' : 'Un sondage demande une question et 2 à 6 choix différents.' };
-    const rec: NewsPost = {
-      id: `news-${Date.now()}`, author_id: me.id, author_name: 'Responsable', author_role: 'admin', title: p.title.trim().slice(0, 120),
-      text: text.slice(0, 2000), created_at: new Date().toISOString(), pinned: !!p.pinned, status: 'published', files,
-      loves: [], comments: [], shares: 0, ...pickAudience(p.audience, p.audience_users),
-      ...(poll ? { poll: { ...poll, counts: pollCounts(poll) } } : {}),
-    };
-    this.news = [rec, ...this.news].sort(SORTERS.news!);
-    this.notify();
-    return { success: true };
-  }
-
-  // L'employé propose une publication : le serveur la garde « en attente » jusqu'à la décision du responsable
-  public submitNews(p: { title: string; text: string; files?: NewsAttachment[]; audience?: NewsRole[]; audience_users?: string[] }) {
-    return this.newsCall('news-submit', { title: p.title, text: p.text, files: p.files || [], audience: p.audience || [], audience_users: p.audience_users || [] });
-  }
-
-  // Modifier une publication déjà publiée (texte, titre, public, fichiers) : le responsable ou son auteur si le responsable l'a autorisé. Tout passe par le serveur, qui vérifie le droit et supprime les fichiers retirés.
-  public async editNews(id: string, p: { title: string; text: string; audience?: NewsRole[]; audience_users?: string[]; files?: NewsAttachment[] }): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    const n = this.news.find(x => x.id === id);
-    if (!me || !n) return { success: false, error: 'Publication introuvable.' };
-    if (!canEditNews(n, me, this.getNewsPolicy())) return { success: false, error: 'Tu ne peux pas modifier cette publication.' };
-    const text = p.text.trim().slice(0, 2000), title = p.title.trim().slice(0, 120);
-    const files = p.files ?? (n.files || []);
-    if (!text && files.length === 0) return { success: false, error: 'Écris un texte ou garde un fichier.' };
-    return this.newsCall('news-edit', { id, title, text, audience: p.audience || [], audience_users: p.audience_users || [], files });
-  }
-
-  // Supprimer une publication déjà publiée : le responsable (synchro habituelle) ou son auteur si le responsable l'a autorisé (route du serveur)
-  public async deleteNewsPost(id: string): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    const n = this.news.find(x => x.id === id);
-    if (!me || !n) return { success: false, error: 'Publication introuvable.' };
-    if (me.role === 'admin') { this.deleteNews(id); return { success: true }; }
-    if (!canEditNews(n, me, this.getNewsPolicy())) return { success: false, error: 'Tu ne peux pas supprimer cette publication.' };
-    const r = await this.api('news-delete', { method: 'POST', body: JSON.stringify({ id }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
-    this.news = this.news.filter(x => x.id !== id);
-    this.synced.news.delete(id);
-    this.emit();
-    return { success: true };
-  }
-
-  // Le responsable valide ou refuse une publication en attente (motif obligatoire au refus)
-  public decideNews(id: string, decision: 'approve' | 'reject', reason?: string) {
-    return this.newsCall('news-decision', { id, decision, reason: reason || '' });
-  }
-
-  // L'auteur retire sa publication tant qu'elle n'est pas validée
-  public async withdrawNews(id: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('news-withdraw', { method: 'POST', body: JSON.stringify({ id }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
-    this.news = this.news.filter(x => x.id !== id);
-    this.synced.news.delete(id);
-    this.emit();
-    return { success: true };
-  }
-
-  public togglePinNews(id: string) {
-    const n = this.news.find(x => x.id === id);
-    if (!n || this.currentUser?.role !== 'admin') return;
-    this.news = this.news.map(x => (x.id === id ? { ...x, pinned: !x.pinned } : x)).sort(SORTERS.news!);
-    this.notify();
-  }
-
-  public deleteNews(id: string) {
-    if (this.currentUser?.role !== 'admin') return;
-    this.news = this.news.filter(x => x.id !== id);
-    this.notify();
-  }
-
-  // Actions des lecteurs : le serveur renvoie la publication à jour, on la remplace tout de suite
-  private applyNews(doc: NewsPost) {
-    const list = this.news.filter(x => x.id !== doc.id);
-    list.push(doc);
-    list.sort(SORTERS.news!);
-    this.news = list;
-    this.synced.news.set(doc.id, JSON.stringify(doc));
-    this.emit();
-  }
-
-  private async newsCall(path: string, body: object): Promise<{ success: boolean; error?: string }> {
+  async newsCall(path: string, body: object): Promise<{ success: boolean; error?: string }> {
     const r = await this.api(path, { method: 'POST', body: JSON.stringify(body) });
     if (!r.ok || !r.data?.news) return { success: false, error: r.data?.error || 'Action impossible. Réessaie.' };
     this.applyNews(r.data.news as NewsPost);
     return { success: true };
   }
 
-  // « J'adore » : l'écran change tout de suite, puis le serveur confirme. En cas d'erreur, on revient en arrière.
-  public async toggleLoveNews(id: string): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    const n = this.news.find(x => x.id === id);
-    if (!me || !n) return this.newsCall('news-react', { id });
-    const before = n.loves;
-    const after = before.includes(me.id) ? before.filter(x => x !== me.id) : [...before, me.id];
-    this.news = this.news.map(x => (x.id === id ? { ...x, loves: after } : x));
-    this.emit();
-    const r = await this.newsCall('news-react', { id });
-    if (!r.success) {
-      this.news = this.news.map(x => (x.id === id ? { ...x, loves: before } : x));
-      this.emit();
-    }
-    return r;
-  }
-  // Sondage : voter (un autre choix remplace, le même choix retire) et clore / rouvrir (responsable). Le serveur répond avec la vue de la personne.
-  public voteNews(id: string, option: string) { return this.newsCall('news-vote', { id, option }); }
-  public closePollNews(id: string, closed: boolean) { return this.newsCall('news-poll-close', { id, closed }); }
-  public commentNews(id: string, text: string, files?: NewsAttachment[], reply?: { parentId: string; replyToName: string }) { return this.newsCall('news-comment', { id, text, files: files || [], ...(reply ? { parentId: reply.parentId, replyToName: reply.replyToName } : {}) }); }
-  public deleteCommentNews(id: string, commentId: string) { return this.newsCall('news-comment-delete', { id, commentId }); }
-  public shareNews(id: string) { return this.newsCall('news-share', { id }); }
-
-  public subscribe(listener: () => void) {
+  subscribe(listener: () => void) {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
     };
   }
 
-  private emit() {
+  emit() {
     this.listeners.forEach(fn => fn());
   }
 
   // Appelé après chaque modification locale : envoie au serveur après un court délai
-  private notify() {
+  notify() {
     this.mutationSeq++;
     if (!this.demo) this.offline.onLocalChange();
     if (this.token) {
@@ -1499,9 +582,9 @@ export class AppStore {
   }
 
   /** Version de référence pour « qu'est-ce qui n'est pas encore envoyé ». Normalement la dernière version connue du serveur ; en démo pendant une coupure simulée, l'état au moment de la coupure. */
-  private syncedForDiff(): Record<Col, Map<string, string>> { return this.demo && this.demoBase ? this.demoBase : this.synced; }
+  syncedForDiff(): Record<Col, Map<string, string>> { return this.demo && this.demoBase ? this.demoBase : this.synced; }
 
-  private diff() {
+  diff() {
     const changes: Record<string, { upserts: any[]; deletes: string[] }> = {};
     const sent: Record<string, { sets: Map<string, string>; deletes: string[] }> = {};
     const base = this.syncedForDiff();
@@ -1523,13 +606,13 @@ export class AppStore {
     return { changes, sent };
   }
 
-  private flushFails = 0;
+  flushFails = 0;
   /**
    * Quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée « collée » dans la mission. Au retour du réseau, on l'envoie
    * vraiment (Supabase Storage) et on remplace l'image collée par son adresse : la base ne se remplit pas d'images entières. Si l'envoi échoue, la mission
    * part comme avant (avec l'image collée) : rien n'est jamais perdu. Une même image n'est envoyée qu'une fois.
    */
-  private async resolveInlineFiles(): Promise<void> {
+  async resolveInlineFiles(): Promise<void> {
     if (this.demo || !this.token) return;
     const first = this.diff().changes;
     const cache = new Map<string, string | null>();
@@ -1549,7 +632,7 @@ export class AppStore {
     }
   }
 
-  private async flush() {
+  async flush() {
     if (this.syncing || !this.token) return;
     this.syncing = true;
     let retry = false;
@@ -1586,9 +669,7 @@ export class AppStore {
       }
     }
   }
-
-  // --- AUTHENTICATION ---
-  public async login(username: string, password: string, code?: string): Promise<{ success: boolean; error?: string; user?: User; needsCode?: boolean; canRequestAccess?: boolean; accessRequest?: AccessRequestState | null }> {
+  async login(username: string, password: string, code?: string): Promise<{ success: boolean; error?: string; user?: User; needsCode?: boolean; canRequestAccess?: boolean; accessRequest?: AccessRequestState | null }> {
     const r = await this.api('login', { method: 'POST', body: JSON.stringify(code ? { username, password, code } : { username, password }) });
     if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.', needsCode: r.data?.code === 'totp_required', canRequestAccess: r.data?.code === 'shift' && r.data?.can_request === true, accessRequest: r.data?.request ?? null };
     this.stopPolling();
@@ -1603,370 +684,7 @@ export class AppStore {
     return { success: true, user: this.currentUser as User };
   }
 
-  // --- SÉCURITÉ EN DEUX ÉTAPES (M16.4) : le serveur garde le secret ; ici seulement des appels. Pas disponible en mode démo. ---
-  private async totpCall(path: string, body?: unknown): Promise<{ ok: boolean; error?: string; data: any }> {
-    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.', data: {} };
-    const r = await this.api(path, body === undefined ? undefined : { method: 'POST', body: JSON.stringify(body) });
-    return { ok: r.ok, error: r.ok ? undefined : (r.data?.error || 'Erreur, réessaie.'), data: r.data || {} };
-  }
-  public totpStatus() { return this.totpCall('totp-status'); }
-  public totpStart(password: string) { return this.totpCall('totp-start', { password }); }
-  public totpEnable(code: string) { return this.totpCall('totp-enable', { code }); }
-  public totpDisable(password: string, code: string) { return this.totpCall('totp-disable', { password, code }); }
-  public totpNewBackup(password: string, code: string) { return this.totpCall('totp-new-backup', { password, code }); }
-  public totpReset(userId: string) { return this.totpCall('totp-reset', { userId }); }
-
-  // Faux serveur du mode démo : répond comme le vrai, mais ne modifie que les données fictives en mémoire.
-  private demoApi(path: string, init?: RequestInit): { ok: boolean; status: number; data: any } {
-    const route = path.split('?')[0];
-    let body: any = {};
-    try { body = JSON.parse(String(init?.body || '{}')); } catch { body = {}; }
-    const me = this.currentUser;
-    const ok = (data: any = { ok: true }) => ({ ok: true, status: 200, data });
-    const fail = (error: string) => ({ ok: false, status: 400, data: { error } });
-    const nowIso = new Date().toISOString();
-    const post = (id: string) => this.news.find(n => n.id === id);
-    const keep = (n: NewsPost) => ok({ news: JSON.parse(JSON.stringify(n)) });
-    switch (route) {
-      case 'news-react': {
-        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
-        n.loves = n.loves.includes(me.id) ? n.loves.filter(x => x !== me.id) : [...n.loves, me.id];
-        return keep(n);
-      }
-      case 'news-vote': { // faux serveur du sondage : mêmes règles que le vrai (pollApplyVote), vue du responsable
-        const n = post(body.id); if (!n || !me || !n.poll) return fail('Publication introuvable.');
-        const r = pollApplyVote({ question: n.poll.question, kind: n.poll.kind, options: n.poll.options, closed: !!n.poll.closed, votes: n.poll.votes || {} }, me.id, String(body.option ?? ''));
-        if (!r.ok) return fail(r.error);
-        n.poll = { ...n.poll, votes: r.poll.votes, counts: pollCounts(r.poll) };
-        return keep(n);
-      }
-      case 'news-poll-close': {
-        const n = post(body.id); if (!n || !me || !n.poll) return fail('Publication introuvable.');
-        if (me.role !== 'admin') return fail('Réservé au responsable.');
-        n.poll = { ...n.poll, closed: body.closed === true };
-        return keep(n);
-      }
-      case 'news-comment': {
-        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
-        const text = String(body.text || '').trim().slice(0, 1000);
-        if (!text && !(body.files || []).length) return fail('Écris un commentaire.');
-        const par = body.parentId ? n.comments.find(x => x.id === body.parentId) : undefined;
-        n.comments = [...n.comments, { id: `demo_nc${Date.now()}`, user_id: me.id, user_name: me.name, role: me.role, text, files: body.files || [], ...(par ? { parent_id: par.parent_id || par.id, reply_to_name: String(body.replyToName || '').slice(0, 80) } : {}), created_at: nowIso }];
-        return keep(n);
-      }
-      case 'news-comment-delete': {
-        const n = post(body.id); if (!n) return fail('Publication introuvable.');
-        n.comments = n.comments.filter(c => c.id !== body.commentId && c.parent_id !== body.commentId); // les réponses partent avec leur commentaire
-        return keep(n);
-      }
-      case 'news-share': {
-        const n = post(body.id); if (!n) return fail('Publication introuvable.');
-        n.shares = (n.shares || 0) + 1;
-        return keep(n);
-      }
-      case 'news-submit': {
-        if (!me) return fail('Connexion perdue.');
-        const mode = publishModeFor(me.role, this.getSettings().news_publish);
-        if (mode === 'off') return fail('Le responsable n’a pas autorisé ton rôle à publier.');
-        const aud = pickAudience(body.audience, body.audience_users);
-        const n: NewsPost = {
-          id: `demo_n${Date.now()}`, author_id: me.id, author_name: me.name, author_role: me.role, title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 4000),
-          files: body.files || [], created_at: nowIso, pinned: false, loves: [], comments: [], shares: 0, status: mode === 'direct' ? 'published' : 'pending', ...aud,
-        };
-        this.news = [n, ...this.news];
-        return keep(n);
-      }
-      case 'news-decision': {
-        const n = post(body.id); if (!n) return fail('Publication introuvable.');
-        if (body.decision === 'approve') { n.status = 'published'; n.created_at = nowIso; } else { n.status = 'rejected'; n.reject_reason = String(body.reason || ''); }
-        return keep(n);
-      }
-      case 'news-edit': {
-        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
-        if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas modifier cette publication.');
-        const aud = pickAudience(body.audience, body.audience_users);
-        const { audience: _old, audience_users: _oldU, ...rest } = n;
-        Object.assign(n, rest, { title: String(body.title || '').slice(0, 120), text: String(body.text || '').slice(0, 2000), edited_at: nowIso, ...(Array.isArray(body.files) ? { files: body.files } : {}) });
-        delete n.audience; delete n.audience_users; Object.assign(n, aud);
-        return keep(n);
-      }
-      case 'news-delete': {
-        const n = post(body.id); if (!n || !me) return fail('Publication introuvable.');
-        if (!canEditNews(n, me, this.getSettings().news_publish)) return fail('Tu ne peux pas supprimer cette publication.');
-        this.news = this.news.filter(x => x.id !== body.id);
-        return ok({ deleted: body.id });
-      }
-      case 'news-withdraw': return ok();
-      case 'upload': return ok({ url: String(body.dataUrl || '') }); // le fichier reste dans la page (aucun envoi)
-      case 'create-user': {
-        const u = { ...(body.user || {}), id: body.user?.id || `demo_u${Date.now()}` } as User;
-        return ok({ user: u });
-      }
-      case 'payroll-period': {
-        // Mode démo : fiches de paie calculées dans le navigateur (lecture seule : clôturer, payer, primes ne changent rien)
-        const pidStr = String(body.pid || '');
-        const m = /^(\d{4})-(\d{2})(?:-([AB]))?$/.exec(pidStr);
-        if (!m) return fail('Période invalide.');
-        const y = Number(m[1]), mo = Number(m[2]);
-        const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
-        const from = m[3] === 'B' ? 16 : 1, to = m[3] === 'A' ? 15 : last;
-        const p2 = (n: number) => String(n).padStart(2, '0');
-        const start = `${y}-${p2(mo)}-${p2(from)}`, end = `${y}-${p2(mo)}-${p2(to)}`;
-        const isClosed = end < nowIso.slice(0, 10);
-        const emps = this.users.filter(u => u.role === 'employee');
-        const slips = emps.map((u, i) => {
-          const mine = this.posts.filter(x => x.employee_id === u.id && x.status === 'completed' && x.date >= start && x.date <= end);
-          const fixedPay = fixedSalaryAr(u, this.settings, pidStr); // salaire fixe (T1)
-          const gross = mine.reduce((tt, x) => tt + Math.max(0, Math.round(typeof x.calculated_ar === 'number' ? x.calculated_ar : 0)), 0) + fixedPay;
-          return { id: `slip-${pidStr}-${u.id}`, pid: pidStr, period_start: start, period_end: end, user_id: u.id, name: u.name, username: u.username, phone: u.phone || '', lines: [], gross, bonuses: [], penalties: [], penalty_applied: 0, advance_due_before: 0, advance_deducted: 0, advance_carry: 0, net: gross, paid: isClosed && i % 2 === 0 && gross > 0 ? { at: `${end}T10:00:00.000Z`, method: 'Mobile money', ref: '', by_name: 'Responsable' } : null };
-        }).filter(sl => sl.gross > 0);
-        const pending = this.posts.filter(x => ['pending_start', 'pending_end', 'active'].includes(x.status) && x.date >= start && x.date <= end).length;
-        return ok({ pid: pidStr, start, end, status: isClosed ? 'closed' : 'open', closed_at: isClosed ? `${end}T12:00:00.000Z` : null, closed_by_name: isClosed ? 'Responsable' : '', slips, pending_validation: pending, audit: [], index: [], cfg: { methods: ['Mobile money', 'Espèces'], penalties: false, cap_pct: 50, repay_pct: 30, mode: m[3] ? 'half' : 'month' } });
-      }
-      case 'attendance': {
-        const day = decodeURIComponent((path.split('day=')[1] || '').split('&')[0]) || nowIso.slice(0, 10);
-        const emps = this.users.filter(u => u.role === 'employee');
-        const mine = me?.role === 'admin' ? emps : emps.filter(u => u.id === me?.id);
-        return ok({ rows: mine.map((u, i) => ({ user_id: u.id, day, first_seen: `${day}T0${7 + (i % 3)}:${10 + i * 7}:00.000Z`, last_seen: `${day}T1${i % 4}:30:00.000Z`, online_sec: 3600 * (3 + (i % 4)) + i * 420 })) });
-      }
-      case 'audit-list': {
-        // Mode démo : lignes inventées, jamais d'appel réseau
-        const me0 = { id: DEMO_ADMIN_ID, name: 'Responsable' };
-        const ago = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
-        const mk = (h: number, a: string, ty: string, label: string, detail: string) => buildAuditEntry(me0, a, { type: ty, id: `demo-${a}-${h}`, label }, detail, ago(h), `d${h}`);
-        return ok({ rows: [mk(1, 'invoice_issue', 'invoices', 'F-2026-0012', 'Client : Alice'), mk(3, 'invoice_pay', 'invoices', 'F-2026-0011', '150000 Ar'), mk(26, 'tariff_change', 'settings', 'Réglages', 'client_price_default_ar : 1000 → 1200'), mk(50, 'delete', 'clients', 'Client test', ''), mk(72, 'settings_change', 'settings', 'Réglages', 'day_shift_start'), mk(120, 'backup_now', 'backups', 'Sauvegarde', '')].filter(Boolean) });
-      }
-      case 'report-list': case 'report-open': case 'report-freeze': {
-        if (me?.role !== 'admin') return { ok: false, status: 403, data: { error: "Réservé à l'administrateur." } };
-        if (!this.demoReports.length) { // deux fiches « en attente » : la semaine finie et le mois fini
-          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Indian/Antananarivo' });
-          for (const st of [{ frequency: 'weekly', weekday: 1, month_day: 1, time: '08:00' }, { frequency: 'monthly', weekday: 1, month_day: 1, time: '08:00' }] as AutoReportSetting[]) {
-            const p = periodForRun(st, today); const c = p ? checkReportRecord({ id: p.id, status: 'pending', created_at: nowIso }) : null;
-            if (c && c.ok) this.demoReports.push(c.value);
-          }
-        }
-        if (route === 'report-list') return ok({ rows: this.demoReports.map(({ html: _h, ...m }) => m) });
-        const cur = this.demoReports.find(x => x.id === body.id);
-        if (!cur) return { ok: false, status: 404, data: { error: 'Rapport introuvable.' } };
-        if (route === 'report-open') return ok({ record: cur });
-        if (cur.status === 'ready') return ok({ record: cur, already: true });
-        const html = typeof body.html === 'string' ? body.html : '';
-        if (!html.trim() || html.length > 400000) return fail('Texte du rapport non valide.');
-        const next: ReportRecord = { ...cur, status: 'ready', frozen_at: nowIso, html };
-        this.demoReports = this.demoReports.map(x => (x.id === cur.id ? next : x));
-        return ok({ record: next, already: false });
-      }
-      case 'backups': return ok({ rows: [...this.demoBackups].sort((a, b) => b.id - a.id) });
-      case 'backup-now': {
-        const id = Math.max(0, ...this.demoBackups.map(b => b.id)) + 1;
-        this.demoBackups = [...this.demoBackups, { id, taken_at: nowIso, tables: 20, bytes: 204800 + id * 512 }];
-        return ok({ ok: true, id });
-      }
-      case 'backup-get': {
-        const row = this.demoBackups.find(b => b.id === Number(new URLSearchParams(path.split('?')[1] || '').get('id')));
-        if (!row) return fail('Sauvegarde introuvable.');
-        return ok({ backup: { ...row, data: { _demo: true, users: this.users, contracts: this.contracts, posts: this.posts, advances: this.advanceRequests, messages: this.messages, groups: this.groups, news: this.news, cash: this.cash, products: this.products, stock: this.stockMoves, clients: this.clients, invoices: this.invoices, suppliers: this.suppliers, purchases: this.purchases, quotes: this.quotes } } });
-      }
-      case 'errors': {
-        const st = new URLSearchParams(path.split('?')[1] || '').get('status') || 'open';
-        return ok({ rows: this.demoErrors.filter(e => st === 'all' || e.status === st) });
-      }
-      case 'error-update': {
-        const e = this.demoErrors.find(x => x.id === body.id); if (!e) return fail('Introuvable.');
-        if (body.remove) this.demoErrors = this.demoErrors.filter(x => x.id !== body.id); else if (body.status) e.status = body.status;
-        return ok();
-      }
-      case 'profile-request': {
-        if (!me) return fail('Connexion perdue.');
-        this.profileRequests = [...this.profileRequests.filter(x => x.user_id !== me.id), {
-          id: `demo_p${Date.now()}`, user_id: me.id, status: 'pending', created_at: nowIso,
-          old: { name: me.name, username: me.username, phone: me.phone || '', avatar_url: me.avatar_url || '' },
-          name: String(body.name || me.name), username: String(body.username || me.username), phone: String(body.phone || ''), avatar_url: String(body.avatar_url || ''), note: String(body.note || ''),
-        }];
-        this.emit();
-        return ok();
-      }
-      case 'profile-decision': {
-        const pr = this.profileRequests.find(x => x.id === body.id); if (!pr) return fail('Demande introuvable.');
-        if (body.approve) {
-          this.users = this.users.map(u => (u.id === pr.user_id ? { ...u, name: pr.name, username: pr.username, phone: pr.phone, avatar_url: pr.avatar_url || u.avatar_url } : u));
-          if (me && me.id === pr.user_id) this.currentUser = this.users.find(u => u.id === me.id) || me;
-        }
-        return ok();
-      }
-      case 'signup-decision': {
-        const sg = this.signups.find(x => x.id === body.id); if (!sg) return fail('Demande introuvable.');
-        if (body.approve) {
-          const u: User = { id: `demo_u${Date.now()}`, username: sg.username, name: sg.name, role: 'employee', status: 'active', shift: sg.shift, is_online: false, avatar_url: '', phone: sg.phone, performance_badge: 'Standard', total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0 };
-          this.users = [...this.users, u];
-        }
-        return ok();
-      }
-      case 'queue': {
-        if (!me) return fail('Connexion perdue.');
-        const others = this.presence.filter(x => x.waiting_since && x.user_id !== me.id);
-        if (body.join) {
-          this.myQueue = { waiting_since: nowIso, position: others.length + 1, total: others.length + 1 };
-          this.presence = [...this.presence.filter(x => x.user_id !== me.id), { user_id: me.id, last_seen: nowIso, day: nowIso.slice(0, 10), online_sec: 600, waiting_since: nowIso }];
-        } else {
-          this.myQueue = null;
-          this.presence = this.presence.map(x => (x.user_id === me.id ? { ...x, waiting_since: null } : x));
-        }
-        this.emit();
-        return ok();
-      }
-      case 'accounting-sync': {
-        if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
-        const built = buildEntries({ invoices: this.invoices, cash: this.cash, slips: [], advances: this.advanceRequests });
-        const have = new Set(this.entries.map(e => e.id));
-        const closedTo = this.getAcctClose().through;
-        const fresh = built.entries.filter(e => !have.has(e.id) && (!closedTo || e.date > closedTo));
-        this.entries = [...assignNumbers(fresh, this.entries), ...this.entries];
-        this.emit();
-        return ok({ ok: true, created: fresh.length, existing: built.entries.length - fresh.length, total: built.entries.length, skipped: built.skipped });
-      }
-      case 'accounting-post': {
-        if (!isMoneyRole(me?.role)) return fail('Réservé au responsable et au comptable.');
-        const id = `je-manual-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-        const v = cleanEntry({ id, date: body.date, journal: body.journal, ref: body.ref, label: body.label, lines: body.lines, source: { type: 'manual', id } }, this.getAcctClose().through);
-        if (!v.ok) return fail(`Écriture refusée (${v.reason}).`);
-        this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries];
-        this.emit();
-        return ok({ ok: true, id, created: 1 });
-      }
-      case 'accounting-reverse': {
-        if (me?.role !== 'admin') return fail('Réservé à l\'administrateur.');
-        const orig = this.entries.find(e => e.id === body.id);
-        const reason = String(body.reason || '').replace(/[<>]/g, '').trim().slice(0, 150), date = String(body.date || '');
-        if (!orig) return fail('Cette écriture n\'existe pas.');
-        if (reason.length < 3) return fail('Écris un motif (3 caractères au moins).');
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < orig.date) return fail('Date incorrecte (pas avant l\'écriture annulée).');
-        if (orig.reversal_of) return fail('Une annulation ne s\'annule pas : saisis une nouvelle écriture.');
-        if (orig.reversed_by) return fail('Cette écriture est déjà annulée.');
-        const rev = reverseAccounting(orig, date, `${orig.id}-rev`);
-        rev.label = `${rev.label} (${reason})`.slice(0, 200);
-        const v = cleanEntry(rev, this.getAcctClose().through);
-        if (!v.ok) return fail(`Annulation refusée (${v.reason}).`);
-        this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries.map(e => (e.id === orig.id ? { ...e, reversed_by: rev.id } : e))];
-        this.emit();
-        return ok({ ok: true });
-      }
-      case 'accounting-close': {
-        if (me?.role !== 'admin') return fail('Réservé à l\'administrateur.');
-        const cur = this.getAcctClose();
-        const now = new Date().toISOString(), today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
-        const setClose = (through: string, e: any) => { this.settings = [{ ...(this.settings[0] as any), acct_close: { through, log: [...cur.log, { at: now, by: me.id, by_name: me.name || '', ...e }].slice(-100) } }]; };
-        if (body.action === 'close') {
-          const p = planClose(cur.through, body.through, today);
-          if (!p.ok) return fail(p.reason === 'date' ? 'La clôture se fait à une fin de mois (exemple : 2026-10-31).' : p.reason === 'future' ? 'On ne peut pas clôturer une période qui n\'est pas encore finie.' : 'Cette période est déjà close.');
-          let carried = 0;
-          if (p.yearEnd) {
-            const n = this.entries.filter(e => e.source?.type === 'closing' && e.source?.id === body.through && !e.reversal_of).length;
-            const ce = closingEntry(this.entries, `${String(body.through).slice(0, 4)}-01-01`, body.through, `je-closing-${body.through}-${n + 1}`);
-            const v = ce ? cleanEntry(ce, cur.through) : null;
-            if (v && v.ok) { this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries]; carried = 1; }
-          }
-          setClose(body.through, { action: 'close', through: body.through });
-          this.emit();
-          return ok({ ok: true, through: body.through, carried });
-        }
-        if (body.action === 'reopen') {
-          const through = body.through ? String(body.through) : '';
-          const reason = String(body.reason ?? '').replace(/[<>]/g, '').trim().slice(0, 150);
-          const p = planReopen(cur.through, through, reason);
-          if (!p.ok) return fail(p.reason === 'reason' ? 'Écris un motif (3 caractères au moins).' : p.reason === 'nothing' ? 'Aucune période n\'est close.' : p.reason === 'later' ? 'Pour rouvrir, choisis une date plus ancienne que la clôture actuelle.' : 'La clôture se fait à une fin de mois.');
-          let undone = 0;
-          for (const e of this.entries.filter(x => x.source?.type === 'closing' && !x.reversal_of && !x.reversed_by && x.date > through)) {
-            const rev = reverseAccounting(e, e.date, `${e.id}-rev`);
-            rev.label = `${rev.label} (réouverture : ${reason})`.slice(0, 200);
-            const v = cleanEntry(rev, through);
-            if (!v.ok) return fail(`Annulation du report à nouveau refusée (${v.reason}).`);
-            this.entries = [...assignNumbers([v.entry], this.entries), ...this.entries.map(x => (x.id === e.id ? { ...x, reversed_by: rev.id } : x))];
-            undone++;
-          }
-          setClose(through, { action: 'reopen', through, reason });
-          this.emit();
-          return ok({ ok: true, through, undone });
-        }
-        return fail('Action inconnue.');
-      }
-      case 'invoice-issue': {
-        const inv = this.invoices.find(x => x.id === body.id);
-        if (!inv || inv.status !== 'draft') return fail('Cette facture n\'est plus un brouillon.');
-        const co = readCompany(this.getSettings().company);
-        const client = this.clients.find(c => c.id === inv.client_id);
-        const year = Number(nowIso.slice(0, 4));
-        const n = this.invoices.filter(x => x.type !== 'credit_note' && x.number?.startsWith(`${co.billing.invoice_prefix}${year}-`)).length + 1;
-        const t = invoiceTotals(inv.lines, co.tax.vat_enabled, co.tax.vat_rate);
-        this.invoices = this.invoices.map(x => x.id === inv.id ? { ...x, ...t, status: 'issued', number: formatNumber(co.billing.invoice_prefix, year, n), issued_at: nowIso, client: { name: client?.name || inv.client.name, address: client?.address, email: client?.email, phone: client?.phone }, issuer: { name: co.identity.name, address: co.identity.address, email: co.identity.email, phone: co.identity.phone, tax_id: co.legal.tax_id, register_id: co.legal.register_id } } : x);
-        this.emit();
-        return ok({ ok: true });
-      }
-      case 'invoice-pay': {
-        const inv = this.invoices.find(x => x.id === body.id);
-        if (!inv || inv.status !== 'issued' || inv.type === 'credit_note') return fail('Cette facture n\'est pas émise.');
-        const info = invoiceInfo(inv, this.cash, nowIso.slice(0, 10));
-        const amount = Math.round(Number(body.amount));
-        if (!Number.isFinite(amount) || amount < 1) return fail('Montant invalide.');
-        if (amount > info.balance) return fail(`Le paiement dépasse le reste à payer (${info.balance} Ar).`);
-        const co = readCompany(this.getSettings().company);
-        const n = this.cash.filter(x => x.receipt_no?.startsWith(`${co.billing.receipt_prefix}${nowIso.slice(0, 4)}-`)).length + 1;
-        this.cash = [{ id: `cash-${Date.now().toString(36)}`, kind: 'in', category: 'Paiement client', amount_ar: amount, date: String(body.date || nowIso.slice(0, 10)), note: String(body.note || ''), client_name: inv.client.name, invoice_id: inv.id, receipt_no: formatNumber(co.billing.receipt_prefix, Number(nowIso.slice(0, 4)), n), payment_method: String(body.method || ''), created_at: nowIso, updated_at: nowIso }, ...this.cash];
-        this.emit();
-        return ok({ ok: true });
-      }
-      case 'invoice-cancel': {
-        const inv = this.invoices.find(x => x.id === body.id);
-        if (!inv || inv.status !== 'issued' || inv.type === 'credit_note') return fail('Cette facture ne peut pas être annulée.');
-        if (invoiceInfo(inv, this.cash, nowIso.slice(0, 10)).paid > 0) return fail('Cette facture a déjà reçu un paiement : supprime d\'abord le paiement.');
-        const n = this.invoices.filter(x => x.type === 'credit_note' && x.number?.startsWith(`AV-${nowIso.slice(0, 4)}-`)).length + 1;
-        const credit: Invoice = { ...inv, id: `cn-${Date.now().toString(36)}`, type: 'credit_note', number: formatNumber('AV-', Number(nowIso.slice(0, 4)), n), credit_of: inv.id, cancelled_by: undefined, issue_date: nowIso.slice(0, 10), issued_at: nowIso, created_at: nowIso, updated_at: nowIso };
-        delete credit.cancelled_by;
-        this.invoices = [credit, ...this.invoices.map(x => x.id === inv.id ? { ...x, status: 'cancelled' as const, cancelled_by: credit.id } : x)];
-        this.emit();
-        return ok({ ok: true });
-      }
-      case 'typing': return ok({ typing: [] });
-      default: return ok(); // chat-read, report-error, queue, set-password, décisions… : accepté, sans rien envoyer
-    }
-  }
-
-  // ----- Moteur de démo : RÉSERVÉ AUX TESTS (M18.3). Le site n'a plus de mode démo : aucun bouton, aucun lien ; en production cette méthode refuse. -----
-  public isDemo(): boolean { return this.demo; }
-  public enterDemo(role: 'admin' | 'employee'): User {
-    if ((import.meta as any).env?.PROD) throw new Error('Le mode démo n\'existe plus sur le site (réservé aux tests).');
-    this.stopPolling();
-    this.resetLocal();
-    this.token = null;
-    this.demo = true;
-    const d = buildDemoData();
-    // Les fiches clients ne sont pas visibles par un opérateur : ni les fiches, ni le lien client_id sur les missions (comme le vrai serveur)
-    const strip = <T extends object>(x: T): T => { const { client_id, ...rest } = x as any; return rest as T; };
-    this.users = role === 'admin' ? d.users : d.users.map(u => (u.id === 'demo_u1' ? u : { ...u, hr: undefined })); this.contracts = role === 'admin' ? d.contracts : d.contracts.map(strip); this.posts = role === 'admin' ? d.posts : d.posts.map(strip); this.advanceRequests = d.advances;
-    this.clients = role === 'admin' ? d.clients : [];
-    this.messages = d.messages; this.groups = d.groups; this.news = d.news;
-    this.signups = d.signups; this.resets = d.resets; this.profileRequests = d.profileRequests; this.presence = d.presence; this.myQueue = null;
-    this.demoErrors = d.errors;
-    this.settings = [{ ...DEFAULT_SETTINGS, ...DEMO_CLIENT_PRICES, ...DEMO_GOALS, ...(role === 'admin' ? { budgets: DEMO_BUDGETS, team_goals: DEMO_TEAM_GOALS, monthly_plan: DEMO_MONTHLY_PLAN, recurring_missions: DEMO_RECURRING } : {}), company: role === 'admin' ? readCompany(DEMO_COMPANY) : (companyForEmployee(DEMO_COMPANY as any) as any) }]; // prix client, objectifs et conditions inventés ; l'opérateur de la démo ne reçoit que le règlement et les congés, comme avec le vrai serveur
-    this.cash = role === 'admin' ? d.cash : []; // les finances ne sont visibles que par le responsable, même en démo
-    this.products = role === 'admin' ? d.products : []; // le stock aussi
-    this.stockMoves = role === 'admin' ? d.stock : [];
-    this.invoices = role === 'admin' ? d.invoices : [];
-    this.quotes = role === 'admin' ? d.quotes : [];
-    this.suppliers = role === 'admin' ? d.suppliers : [];
-    this.purchases = role === 'admin' ? d.purchases : [];
-    this.entries = role === 'admin' ? d.entries : [];
-    this.reviews = role === 'admin' ? d.reviews : d.reviews.filter(r => r.employee_id === 'demo_u1' && r.status === 'shared').map(r => forEmployeeReview(r) as Review);
-    this.sheets = role === 'admin' ? demoSheets(new Date().toISOString()).map(x => ({ ...x, owner_id: 'demo_u1', owner_name: 'Camille Durand' })) : []; // l'opérateur démo reçoit ses exemples à l'ouverture de la page
-    this.leaves = role === 'admin' ? d.leaves : d.leaves.filter(l => l.employee_id === 'demo_u1'); // un salarié ne voit que ses congés, même en démo
-    this.shifts = role === 'admin' ? d.shifts : d.shifts.filter(s => s.employee_id === 'demo_u1'); // idem pour le planning
-    this.demoBackups = [{ id: 1, taken_at: new Date(Date.now() - 20 * 3600 * 1000).toISOString(), tables: 20, bytes: 204800 }];
-    this.currentUser = d.users.find(u => (role === 'admin' ? u.id === DEMO_ADMIN_ID : u.id === 'demo_u1')) as User;
-    this.emit();
-    return this.currentUser;
-  }
-
-  public logout(): void {
+  logout(): void {
     this.demo = false;
     if (this.token) {
       fetch(`${API_BASE}/logout`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
@@ -1984,197 +702,14 @@ export class AppStore {
   }
 
   /** Arrêt brutal de CE magasin (essais : simule la fermeture d'un onglet). Rien n'est écrit. */
-  public __dispose(): void { this.stopPolling(); if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = null; this.token = null; this.offline.dispose(); }
+  __dispose(): void { this.stopPolling(); if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = null; this.token = null; this.offline.dispose(); }
 
-  /** État du mode hors ligne pour l'écran (module 13) : actions en attente, éléments « À revoir », copie locale. */
-  public getOfflineStatus(): OfflineStatus { return this.offline.status(); }
-  /** Ce qui est modifié sur cet appareil et pas encore reçu par le serveur (compté au plus toutes les 0,75 s). En démo : seulement pendant une coupure simulée. */
-  public getUnsent(force = false): Unsent {
-    if (this.demo && !this.demoBase) return { count: 0, items: [] };
-    return this.offline.unsent(force);
-  }
-  public isUnsent(col: string, id: string): boolean { return this.getUnsent().items.some(i => i.col === col && i.id === id); }
-  /** Annuler une modification pas encore envoyée : l'élément revient à la dernière version connue du serveur (créé hors ligne : il disparaît). */
-  public offlineCancelUnsent(col: string, id: string): boolean {
-    if (!(COLS as readonly string[]).includes(col)) return false;
-    const c = col as Col;
-    const base = this.syncedForDiff()[c].get(id);
-    const list = [...this.arr(c)];
-    const at = list.findIndex(x => x && x.id === id);
-    if (base === undefined) { if (at < 0) return false; list.splice(at, 1); }
-    else { let rec: any; try { rec = JSON.parse(base); } catch { return false; } if (at >= 0) list[at] = rec; else list.push(rec); }
-    this.setArr(c, list);
-    this.notify();
-    return true;
-  }
-  public offlineUnlock(pin: string): Promise<PinResult> { return this.offline.unlockWithPin(pin).then(r => { if (r.ok && this.token && !this.pollTimer) this.startPolling(); return r; }); }
-  public offlineSetPin(pin: string): Promise<PinResult> { return this.offline.setPin(pin); }
-  public offlineRemovePin(): Promise<PinResult> { return this.offline.removePin(); }
-  /** « Code oublié » : efface la copie de cet appareil (les données du serveur ne sont pas touchées). À n'appeler qu'après confirmation. */
-  public async offlineEraseLocal(): Promise<void> {
-    await this.offline.eraseLocal();
-    if (!this.currentUser) { this.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } this.emit(); } // appli restée fermée sur le code : retour à la connexion
-  }
-  /** Écran de code (appli ouverte sans réseau) : essaie de joindre le serveur ; si la connexion est revenue, la personne est reconnectée avec son jeton. */
-  public async retryOnline(): Promise<boolean> {
-    if (!this.token) return false;
-    const ok = await this.pull(true);
-    if (ok) { this.startPolling(); this.emit(); }
-    return ok;
-  }
-  /** Mode démo : simule une coupure du réseau pour essayer le mode hors ligne (marques « en attente », compteur, retour du réseau). */
-  public isDemoCut(): boolean { return this.demo && this.demoCut; }
-  public setDemoCut(on: boolean): void {
-    if (!this.demo || on === this.demoCut) return;
-    if (on) {
-      const base = this.emptySynced();
-      for (const c of COLS) for (const rec of this.arr(c)) if (rec && typeof rec.id === 'string') base[c].set(rec.id, JSON.stringify(rec));
-      this.demoBase = base; this.demoCut = true; this.setConn(true);
-    } else { this.demoCut = false; this.demoBase = null; this.setConn(false); void this.sendSheets(true); }
-    this.emit();
-  }
-  public offlineRequeue(id: string): boolean { return this.offline.requeue(id); }
-  public offlineDiscard(id: string): boolean { return this.offline.discard(id); }
-  public offlineCopyText(id: string, lang: string): string | null { return this.offline.copyText(id, lang); }
-
-  public async setPassword(userId: string, password: string, currentPassword?: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('set-password', { method: 'POST', body: JSON.stringify({ userId, password, currentPassword }) });
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
-  }
-
-  public getCurrentUser(): User | null {
+  getCurrentUser(): User | null {
     return this.currentUser;
   }
 
-  // Réglages généraux (valeurs par défaut si l'admin n'a rien changé)
-
-  // Paie : appel générique aux routes payroll-* du serveur
-  public async payrollCall(route: string, body: unknown = {}): Promise<{ success: boolean; data?: any; error?: string }> {
-    const r = await this.api(route, { method: 'POST', body: JSON.stringify(body) });
-    return r.ok ? { success: true, data: r.data } : { success: false, error: r.data?.error || 'Erreur. Réessaie.' };
-  }
-
-  public getSettings(): AppSettings {
-    return { ...DEFAULT_SETTINGS, ...(this.settings[0] || {}), id: 'general' };
-  }
-
-  /** Modèles de mission (M6.2) : gardés dans les réglages, sans nouvelle table. */
-  /** Types de travail créés à la main (M26.6b). Visibles par le responsable et le Chef d'équipe. */
-  public getCustomWorkTypes(): any[] { return cleanCustomTypes(this.getSettings().work_types); }
-
-  /** Crée un type de travail (sans `id`) : le nom français et anglais, la mesure, la paie, qui saisit, l'unité. Responsable seulement ; 12 types au plus. */
-  public saveCustomWorkType(d: any): { success: boolean; error?: string; type?: any } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getCustomWorkTypes();
-    if (list.length >= CW_MAX_TYPES) return { success: false, error: `${CW_MAX_TYPES} types au plus : supprime-en un d'abord.` };
-    const slug = String(d?.name?.fr || 'type').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 18) || 'type';
-    let id = `c-${slug.length < 2 ? slug + '-type' : slug}`; for (let i = 2; list.some(t => t.id === id); i++) id = `c-${slug}-${i}`;
-    const v = cwValidate({ ...d, id });
-    if (!v.ok) return { success: false, error: ({ id: 'Nom impossible.', name: 'Donne un nom en français ET en anglais.', measure: 'Mesure inconnue.', pay: 'Mode de paie inconnu.', entry: 'Choisis qui saisit.', incompatible: 'Cette mesure ne va pas avec ce mode de paie.', unit: 'Donne l\'unité en français ET en anglais (ex : boîte / box).' } as Record<string, string>)[v.error] || 'Type refusé.' };
-    this.updateSettings({ work_types: [...list, v.value] });
-    return { success: true, type: v.value };
-  }
-
-  public removeCustomWorkType(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getCustomWorkTypes();
-    if (!list.some(t => t.id === id)) return { success: false, error: 'Type introuvable.' };
-    this.updateSettings({ work_types: list.filter(t => t.id !== id) });
-    return { success: true };
-  }
-
-  public getMissionTemplates(): MissionTemplate[] { return cleanTemplates(this.getSettings().mission_templates); }
-
-  /** Crée (sans `id`) ou modifie (avec `id`) un modèle. Admin seulement. */
-  public saveMissionTemplate(d: TemplateDraft): { success: boolean; error?: string; template?: MissionTemplate } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getMissionTemplates();
-    const id = typeof d?.id === 'string' ? d.id : '';
-    if (id && !list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
-    const v = checkTemplate(d, list.filter(t => t.id !== id));
-    if (!v.ok) return { success: false, error: TEMPLATE_MESSAGE[v.error] };
-    const template = { ...v.value, id: id || newTemplateId(list) };
-    this.updateSettings({ mission_templates: id ? list.map(t => (t.id === id ? template : t)) : [...list, template] });
-    return { success: true, template };
-  }
-
-  public removeMissionTemplate(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getMissionTemplates();
-    if (!list.some(t => t.id === id)) return { success: false, error: 'Modèle introuvable.' };
-    this.updateSettings({ mission_templates: list.filter(t => t.id !== id) });
-    return { success: true };
-  }
-
-  /** Plan mensuel (M15.4) : revenus et paie prévus par mois, dans les réglages (admin seulement). Les dépenses prévues viennent des budgets par catégorie. */
-  public getMonthlyPlan(): MonthlyPlan { return cleanMonthlyPlan(this.getSettings().monthly_plan); }
-  public saveMonthlyPlan(d: { [k: string]: unknown }): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const v = checkMonthlyPlan(d);
-    if (!v.ok) return { success: false, error: MONTHLY_PLAN_ERROR_MESSAGE[v.error] };
-    this.updateSettings({ monthly_plan: v.value });
-    return { success: true };
-  }
-
-  /** Objectifs par salarié et par équipe (M15.3) : dans les réglages, sans nouvelle table. La valeur réelle est calculée, jamais saisie. Admin seulement. */
-  public getTeamGoals(): TeamGoal[] { return cleanTeamGoals(this.getSettings().team_goals) as TeamGoal[]; }
-  /** Crée (sans `id`) ou modifie (avec `id`) un objectif. */
-  public saveTeamGoal(d: { [k: string]: unknown }): { success: boolean; error?: string; goal?: TeamGoal } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getTeamGoals();
-    const id = typeof d?.id === 'string' ? d.id : '';
-    if (id && !list.some(g => g.id === id)) return { success: false, error: 'Objectif introuvable.' };
-    const v = checkTeamGoal(d, list.filter(g => g.id !== id));
-    if (!v.ok) return { success: false, error: TEAM_GOAL_ERROR_MESSAGE[v.error] };
-    if (v.value.scope === 'employee' && !this.users.some(u => u.id === v.value.employee_id && u.role !== 'admin')) return { success: false, error: TEAM_GOAL_ERROR_MESSAGE.employee };
-    const goal = { ...v.value, id: id || newTeamGoalId(list) } as TeamGoal;
-    this.updateSettings({ team_goals: id ? list.map(g => (g.id === id ? goal : g)) : [...list, goal] });
-    return { success: true, goal };
-  }
-  public removeTeamGoal(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getTeamGoals();
-    if (!list.some(g => g.id === id)) return { success: false, error: 'Objectif introuvable.' };
-    this.updateSettings({ team_goals: list.filter(g => g.id !== id) });
-    return { success: true };
-  }
-
-  /** Missions récurrentes (M15.1) : règles gardées dans les réglages, sans nouvelle table. Le serveur crée les missions à l'heure prévue. */
-  public getRecurringRules(): RecurringRule[] { return cleanRecurring(this.getSettings().recurring_missions); }
-
-  /** Crée (sans `id`) ou modifie (avec `id`) une règle. Admin seulement. */
-  public saveRecurringRule(d: RecurringDraft): { success: boolean; error?: string; rule?: RecurringRule } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getRecurringRules();
-    const id = typeof d?.id === 'string' ? d.id : '';
-    if (id && !list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
-    const v = checkRecurring(d, list.filter(r => r.id !== id));
-    if (!v.ok) return { success: false, error: RECURRING_MESSAGE[v.error] };
-    const rule = { ...v.value, id: id || newRecurringId(list) };
-    this.updateSettings({ recurring_missions: id ? list.map(r => (r.id === id ? rule : r)) : [...list, rule] });
-    return { success: true, rule };
-  }
-
-  /** Arrête ou relance une règle. Rien n'est rattrapé à la reprise : seule la prochaine occurrence est créée. */
-  public setRecurringActive(id: string, active: boolean): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getRecurringRules();
-    if (!list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
-    this.updateSettings({ recurring_missions: list.map(r => (r.id === id ? { ...r, active } : r)) });
-    return { success: true };
-  }
-
-  /** Supprime une règle. Les missions déjà créées ne changent pas. */
-  public removeRecurringRule(id: string): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const list = this.getRecurringRules();
-    if (!list.some(r => r.id === id)) return { success: false, error: 'Règle introuvable.' };
-    this.updateSettings({ recurring_missions: list.filter(r => r.id !== id) });
-    return { success: true };
-  }
-
   // Admin : enregistre les réglages (le serveur refuse tout autre utilisateur)
-  public updateSettings(patch: Partial<AppSettings>): void {
+  updateSettings(patch: Partial<AppSettings>): void {
     const next: AppSettings = { ...this.getSettings(), ...patch, id: 'general' };
     this.settings = [next];
     this.notify();
@@ -2182,9 +717,9 @@ export class AppStore {
 
   // Envoie un fichier (data URL) vers Supabase Storage. Retourne le lien public, ou null si échec.
   /** Raison du dernier échec d'envoi de fichier (pour la montrer à la personne). */
-  public lastUploadError = '';
+  lastUploadError = '';
   /** Envoie un fichier. Avec `tries` > 1 (publications), un échec de connexion ou de serveur (réseau coupé, 4G faible, erreur 5xx, trop de demandes) est réessayé ; une erreur claire (fichier trop gros, type refusé) ne l'est pas. */
-  public async uploadFile(dataUrl: string, tries = 1): Promise<string | null> {
+  async uploadFile(dataUrl: string, tries = 1): Promise<string | null> {
     this.lastUploadError = '';
     for (let attempt = 1; attempt <= tries; attempt++) {
       const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
@@ -2197,410 +732,10 @@ export class AppStore {
     return null;
   }
 
-  // --- Restauration du site (remise à zéro) : Gmail admin + code par mail ---
-  private async restoreCall(path: string, body: Record<string, unknown> = {}): Promise<{ ok: boolean; error?: string; data?: any }> {
-    if (this.demo) {
-      // Mode démo : la remise à zéro est simulée dans le navigateur (n'importe quel code est accepté), rien ne part au serveur
-      if (path === 'restore-status') return { ok: true, data: { email: 'demo@gmail.com', verified: true } };
-      if (path === 'restore-execute') this.enterDemo(this.currentUser?.role === 'admin' ? 'admin' : 'employee');
-      return { ok: true, data: { ok: true } };
-    }
-    this.netTick(1);
-    try {
-      const res = await fetch(`${RESTORE_BASE}/${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) return { ok: true, data };
-      return { ok: false, error: data?.error || 'Erreur. Réessayez.' };
-    } catch {
-      return { ok: false, error: 'Connexion impossible. Réessayez.' };
-    } finally {
-      this.netTick(-1);
-    }
-  }
-  /** Assistant IA externe (admin seulement, fonction séparée df-assistant). En démo : rien ne part au serveur. */
-  public async aiCall(path: 'status' | 'ask', body: Record<string, unknown> = {}): Promise<{ ok: boolean; error?: string; data?: any }> {
-    if (this.demo) return { ok: false, error: 'demo' };
-    if (this.currentUser?.role !== 'admin') return { ok: false, error: 'admin_only' };
-    try {
-      const res = await fetch(`${AI_BASE}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) }, body: JSON.stringify(body) });
-      const data = await res.json().catch(() => ({}));
-      return res.ok ? { ok: true, data } : { ok: false, error: String(data?.error || 'unavailable') };
-    } catch {
-      return { ok: false, error: 'network' };
-    }
-  }
-  public restoreStatus() { return this.restoreCall('restore-status'); }
-  public restoreSetEmail(email: string) { return this.restoreCall('restore-email', { email }); }
-  public restoreVerifyEmail(code: string) { return this.restoreCall('restore-email-verify', { code }); }
-  public restoreSendCode() { return this.restoreCall('restore-send-code'); }
-  public restoreBackupCode() { return this.restoreCall('restore-backup-code'); }
-  public restoreBackupExecute(id: number, code: string) { return this.restoreCall('restore-backup-execute', { id, code, confirm: 'RESTAURER' }); }
-  public restoreExecute(code: string) { return this.restoreCall('restore-execute', { code, confirm: 'RESTAURER' }); }
-
-  // --- Journal des erreurs et signalements ---
-  public async sendErrorReport(report: Record<string, unknown>): Promise<void> {
-    if (this.demo) {
-      // Mode démo : rien ne part au serveur ; un signalement apparaît seulement dans le journal fictif
-      if (report.kind === 'report') {
-        const now = new Date().toISOString();
-        this.demoErrors = [{ id: `demo_e${Date.now()}`, kind: 'report', message: String(report.message || 'Signalement').slice(0, 300), stack: '', page: String(report.page || ''), role: this.currentUser?.role || '', version: 'démo', count: 1, first_seen: now, last_seen: now, status: 'open' }, ...this.demoErrors];
-      }
-      return;
-    }
-    try {
-      await fetch(`${API_BASE}/report-error`, {
-        method: 'POST',
-        keepalive: true,
-        headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) },
-        body: JSON.stringify(report),
-      });
-    } catch { /* serveur injoignable : le rapport reste dans le navigateur (bouton « Copier le rapport ») */ }
-  }
-
-  public async submitProblemReport(p: { detail: string; screenshotDataUrl?: string; page: string; device: string; version: string }): Promise<{ success: boolean; error?: string }> {
-    let screenshot_url = '';
-    if (p.screenshotDataUrl) screenshot_url = (await this.uploadFile(p.screenshotDataUrl)) || '';
-    const r = await this.api('report-error', { method: 'POST', body: JSON.stringify({ kind: 'report', detail: p.detail, screenshot_url, page: p.page, device: p.device, version: p.version, message: 'Signalement' }) });
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || "Envoi impossible. Réessaie plus tard." };
-  }
-
-  public async fetchErrors(status: 'open' | 'resolved' | 'all'): Promise<any[]> {
-    const r = await this.api(`errors?status=${status}`);
-    return r.ok && Array.isArray(r.data?.rows) ? r.data.rows : [];
-  }
-
-  public async updateError(id: string, change: { status?: 'open' | 'resolved'; remove?: boolean }): Promise<boolean> {
-    const r = await this.api('error-update', { method: 'POST', body: JSON.stringify({ id, ...change }) });
-    return r.ok;
-  }
-
-  // Mot de passe oublié (sans être connecté) : la réponse est toujours la même
-  public async requestPasswordReset(username: string, password: string, note?: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('forgot', { method: 'POST', body: JSON.stringify({ username, password, note: note || '' }) });
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
-  }
-
-  public getProfileRequests(): ProfileChangeRequest[] {
-    return [...this.profileRequests];
-  }
-
-  // Opérateur : propose de nouvelles infos de profil (validation admin obligatoire)
-  public async submitProfileRequest(p: { name: string; username: string; phone: string; avatarUrl?: string; note?: string }): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('profile-request', {
-      method: 'POST',
-      body: JSON.stringify({ name: p.name, username: p.username, phone: p.phone, avatar_url: p.avatarUrl || '', note: p.note || '' }),
-    });
-    if (r.ok) await this.pull(true);
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible.' };
-  }
-
-  public async decideProfileRequest(id: string, approve: boolean, reason?: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('profile-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
-    if (r.ok) {
-      this.profileRequests = this.profileRequests.filter(x => x.id !== id);
-      this.since = '';
-      await this.pull(true);
-      this.emit();
-    }
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
-  }
-
-  // Demandes de nouveau mot de passe en attente (admin)
-  // Public : un futur opérateur demande un compte (validation par l'admin ensuite)
-  public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string; note?: string }): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('signup', { method: 'POST', body: JSON.stringify(p) });
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
-  }
-
-  /** Public (avant connexion) : le mode des horaires, pour que le formulaire d'inscription cache Jour / Nuit quand il ne sert à rien. Sans réponse : « both » (le formulaire reste comme avant). */
-  public async getSignupInfo(): Promise<{ shift_mode: 'both' | 'normal' | 'day' | 'night' }> {
-    if (this.demo) return { shift_mode: 'both' };
-    try {
-      const r = await this.apiRaw('signup-info');
-      return { shift_mode: r.ok ? cleanShiftMode(r.data?.shift_mode) : 'both' };
-    } catch { return { shift_mode: 'both' }; }
-  }
-
-  public getSignupRequests(): SignupRequest[] {
-    if (this.demo) return []; // démo : pas d'inscription ni de décision à prendre
-    return [...this.signups];
-  }
-
-  public async decideSignup(id: string, approve: boolean, reason?: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('signup-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
-    if (r.ok || r.status === 409 || r.status === 404) {
-      this.signups = this.signups.filter(x => x.id !== id);
-      this.since = '';
-      void this.pull(true);
-      this.emit();
-    }
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
-  }
-
-  // Arrivées du jour (admin : tous les opérateurs ; opérateur : la sienne)
-  public async fetchAttendance(day: string): Promise<AttendanceRow[]> {
-    const r = await this.api(`attendance?day=${encodeURIComponent(day)}`);
-    return r.ok && Array.isArray(r.data?.rows) ? r.data.rows : [];
-  }
-
-  public getPresence(): PresenceRow[] {
-    return [...this.presence];
-  }
-
-  public getMyQueue(): QueueInfo | null {
-    return this.myQueue;
-  }
-
-  // Opérateur : « je n'ai pas de mission » (join = true) ou quitter la file (join = false)
-  public async setWaiting(join: boolean): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('queue', { method: 'POST', body: JSON.stringify({ join }) });
-    if (r.ok) await this.pull(true);
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Action impossible.' };
-  }
-
-  public getPasswordResets(): PasswordResetRequest[] {
-    if (this.demo) return []; // démo : pas de mot de passe oublié
-    return [...this.resets];
-  }
-
-  /** Responsable : déconnecte la personne dans `minutes` minutes (0 = tout de suite), ou annule la déconnexion prévue. */
-  public async forceLogout(userId: string, p: { minutes?: number; cancel?: boolean }): Promise<{ success: boolean; error?: string; at?: string; openMission?: boolean }> {
-    const r = await this.api('force-logout', { method: 'POST', body: JSON.stringify({ userId, ...p }) });
-    if (r.ok) await this.pull(true);
-    return r.ok ? { success: true, at: r.data?.at, openMission: r.data?.open_mission === true } : { success: false, error: r.data?.error || 'Action impossible.' };
-  }
-
-  public getAccessRequests(): AccessRequest[] {
-    if (this.demo) return [];
-    return [...this.accessRequests];
-  }
-
-  /** Décision du responsable : autoriser (fin de vacation, durée ou heure précise), refuser (motif), ou changer l'heure de fin. */
-  public async decideAccess(id: string, p: { decision: 'approve' | 'refuse' | 'change'; mode?: 'shift_end' | 'hours' | 'until'; value?: number | string; reason?: string }): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('access-decide', { method: 'POST', body: JSON.stringify({ id, ...p }) });
-    if (r.ok) await this.pull(true);
-    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Action impossible.' };
-  }
-
-  /** Page de connexion : la personne (qui a prouvé son mot de passe) demande à se connecter hors de ses horaires, avec une raison. */
-  public async requestAccess(username: string, password: string, reason: string): Promise<{ success: boolean; error?: string; request?: AccessRequestState | null }> {
-    const r = await this.api('access-request', { method: 'POST', body: JSON.stringify({ username, password, reason }) });
-    return r.ok ? { success: true, request: r.data?.request ?? null } : { success: false, error: r.data?.error || 'Envoi impossible.', request: r.data?.request ?? null };
-  }
-
-  public async decidePasswordReset(id: string, approve: boolean, reason?: string): Promise<boolean> {
-    const r = await this.api('reset-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
-    if (r.ok) {
-      this.resets = this.resets.filter(x => x.id !== id);
-      this.emit();
-    }
-    return r.ok;
-  }
-
-  public getUsers(): User[] {
-    return [...this.users];
-  }
-
-  public getPosts(): PostSession[] {
-    if (this.pendingDecisions.size === 0) return [...this.posts];
-    // Décision en cours d'envoi (voir decidePostNow) : on MONTRE déjà le nouvel état, mais la vraie liste (this.posts) n'est pas touchée.
-    return this.posts.map(p => { const d = this.pendingDecisions.get(p.id); return d ? { ...p, status: d.status, ...(d.reason ? { rejection_reason: d.reason } : {}) } : p; });
-  }
-
-  public static readonly MAX_CONTRACTS = 100;
-
-  // Admin : ajoute une mission (sans nom de compte = mission « sans compte », grisée)
-  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string; proof_mode?: ClientContract['proof_mode']; client_price_ar?: number; client_id?: string; due_date?: string; due_time?: string; tasks?: { id: string; text: string }[]; tasks_required?: boolean; priority?: ClientContract['priority']; requireClient?: boolean }): { success: boolean; error?: string } {
-    if (this.contracts.length >= AppStore.MAX_CONTRACTS) {
-      return { success: false, error: `Maximum ${AppStore.MAX_CONTRACTS} missions.` };
-    }
-    const name = p.client_name.trim();
-    // Client de la mission (module 1) : `requireClient` vient du réglage « Une mission a toujours un client » (les formulaires le passent ; sans lui, rien n'est exigé)
-    let clientId: string | null = null;
-    if (p.client_id !== undefined || p.requireClient) {
-      const v = checkMissionClient({ required: !!p.requireClient, clientId: p.client_id, clients: this.clients });
-      if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
-      clientId = v.client_id;
-    }
-    const dl = checkDeadline({ due_date: p.due_date, due_time: p.due_time, priority: p.priority });
-    if (!dl.ok) return { success: false, error: DEADLINE_MESSAGE[dl.error] };
-    const tk = checkTasks(p.tasks, p.tasks_required);
-    if (!tk.ok) return { success: false, error: TASKS_MESSAGE[tk.error] };
-    const used = new Set(this.contracts.map(c => c.post_number));
-    let n = 1;
-    while (used.has(n)) n++;
-    const initial = Math.max(0, p.initial_score || 0);
-    const objective = Math.max(0, p.objective || 0);
-    this.contracts.push({
-      id: (() => { let id = `contract-${Date.now()}`; for (let k = 2; this.contracts.some(c => c.id === id); k++) id = `contract-${Date.now()}-${k}`; return id; })(), // jamais deux missions avec le même identifiant, même ajoutées dans la même milliseconde
-      post_number: n,
-      client_name: name,
-      account_tag: name ? `ACC-${n}` : '',
-      game_mode: '',
-      description: (p.description || '').trim(),
-      post_type: p.post_type || '',
-      proof_mode: p.proof_mode || 'type',
-      current_rank: '—',
-      target_rank: '—',
-      initial_score: name ? initial : 0,
-      target_score: name ? initial + objective : 0,
-      recommended_shift: 'any',
-      estimated_reward_ar: Math.round(this.getSettings().price_per_mission || 0),
-      // Prix client propre à la mission : seulement s'il est donné (sinon prix du type, puis prix par défaut)
-      ...(typeof p.client_price_ar === 'number' && isFinite(p.client_price_ar) && p.client_price_ar >= 0 ? { client_price_ar: Math.round(p.client_price_ar) } : {}),
-      ...(clientId ? { client_id: clientId } : {}),
-      priority: dl.priority,
-      ...(dl.due_date ? { due_date: dl.due_date } : {}),
-      ...(dl.due_time ? { due_time: dl.due_time } : {}),
-      ...(tk.tasks.length ? { tasks: tk.tasks } : {}),
-      ...(tk.required ? { tasks_required: true } : {}),
-      region_server: '—',
-      no_account: !name,
-    });
-    this.contracts.sort((a, b) => a.post_number - b.post_number);
-    this.notify();
-    return { success: true };
-  }
-
-  // Admin : retire une mission (refusé si une session est en cours dessus)
-  public removeContract(id: string): { success: boolean; error?: string } {
-    const c = this.contracts.find(x => x.id === id);
-    if (!c) return { success: false, error: 'Mission introuvable.' };
-    const busy = this.posts.some(
-      p =>
-        (p.post_number === c.post_number || (!!c.client_name && p.client_name === c.client_name)) &&
-        (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
-    );
-    if (busy) return { success: false, error: 'Cette mission a une session en cours : impossible de le retirer.' };
-    this.contracts = this.contracts.filter(x => x.id !== id);
-    this.notify();
-    return { success: true };
-  }
-
-  /**
-   * Lie une mission à une fiche client (ou enlève le lien avec `null`). Admin seulement ; le serveur revérifie que la fiche existe.
-   * L'histoire reste figée : les sessions de cette mission (trouvées par numéro de mission, sinon par titre) qui n'ont pas encore de client prennent le client d'AVANT le changement
-   * (ou le nouveau client si la mission n'en avait pas). Une session déjà liée ne change jamais.
-   */
-  private applyContractClient(c: ClientContract, next: string | null): number {
-    const old = c.client_id || null;
-    if (old === next) return 0;
-    const freezeId = old || next;
-    let stamped = 0;
-    if (freezeId) {
-      const now = new Date().toISOString();
-      for (const p of this.posts) {
-        if (!p.client_id && matchContract(p, this.contracts) === c) { p.client_id = freezeId; p.updated_at = now; stamped++; } // mêmes sessions que celles comptées pour le client de la mission
-      }
-    }
-    if (next) c.client_id = next; else delete c.client_id;
-    return stamped;
-  }
-
-  public setContractClient(contractId: string, clientId: string | null): { success: boolean; error?: string; stamped?: number } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const c = this.contracts.find(x => x.id === contractId);
-    if (!c) return { success: false, error: 'Mission introuvable.' };
-    const v = checkMissionClient({ required: false, clientId, clients: this.clients, current: c.client_id || null });
-    if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
-    const stamped = this.applyContractClient(c, v.client_id);
-    this.notify();
-    return { success: true, stamped };
-  }
-
-  /** Rattache d'un coup les anciennes missions qui portent ce nom (comparé sans accents ni majuscules) à un client. Une ligne confirmée = un appel. */
-  public attachMissionsByName(text: string, clientId: string): { success: boolean; error?: string; linked?: number } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const v = checkMissionClient({ required: true, clientId, clients: this.clients });
-    if (!v.ok) return { success: false, error: MISSION_CLIENT_MESSAGE[v.error].fr };
-    const key = normalizeName(text);
-    const list = key ? this.contracts.filter(c => !c.client_id && !c.no_account && normalizeName(c.client_name) === key) : [];
-    if (list.length === 0) return { success: false, error: 'Aucune mission à rattacher avec ce nom.' };
-    for (const c of list) this.applyContractClient(c, v.client_id);
-    this.notify();
-    return { success: true, linked: list.length };
-  }
-
-  public getContracts(): ClientContract[] {
-    return [...this.contracts];
-  }
-
-  public getContractByPostNumber(postNumber: number): ClientContract | undefined {
-    return this.contracts.find(c => c.post_number === postNumber);
-  }
-
-  // Admin exclusive: Update contract details (name, tag, scores, shift, etc.)
-  public updateContract(
-    contractId: string,
-    updates: Partial<ClientContract>
-  ): { success: boolean; error?: string; contract?: ClientContract } {
-    const contract = this.contracts.find(c => c.id === contractId);
-    if (!contract) return { success: false, error: 'Contrat introuvable' };
-
-    // Date limite et priorité (M6.1) : revérifiées ; un champ vidé disparaît vraiment
-    if ('due_date' in updates || 'due_time' in updates || 'priority' in updates) {
-      if ('due_date' in updates && !updates.due_date && !('due_time' in updates)) updates = { ...updates, due_time: '' }; // sans date, plus d'heure
-      const dl = checkDeadline({ due_date: 'due_date' in updates ? updates.due_date : contract.due_date, due_time: 'due_time' in updates ? updates.due_time : contract.due_time, priority: 'priority' in updates ? updates.priority : contract.priority });
-      if (!dl.ok) return { success: false, error: DEADLINE_MESSAGE[dl.error] };
-      updates = { ...updates, priority: dl.priority };
-      delete updates.due_date; delete updates.due_time;
-      if (dl.due_date) updates.due_date = dl.due_date; else delete contract.due_date;
-      if (dl.due_time) updates.due_time = dl.due_time; else delete contract.due_time;
-    }
-    // Liste de tâches (M6.3) : revérifiée ; vider la liste retire aussi l'exigence « tout cocher »
-    if ('tasks' in updates || 'tasks_required' in updates) {
-      const list = 'tasks' in updates ? updates.tasks : contract.tasks;
-      const tk = checkTasks(list, 'tasks_required' in updates ? updates.tasks_required : (Array.isArray(list) && list.length ? contract.tasks_required : false));
-      if (!tk.ok) return { success: false, error: TASKS_MESSAGE[tk.error] };
-      updates = { ...updates };
-      delete updates.tasks; delete updates.tasks_required;
-      if (tk.tasks.length) updates.tasks = tk.tasks; else delete contract.tasks;
-      if (tk.required) updates.tasks_required = true; else delete contract.tasks_required;
-    }
-    const oldClientName = contract.client_name;
-    Object.assign(contract, updates);
-
-    // Si le Début dépasse l'Actuel du compte, l'Actuel suit le Début
-    if (
-      updates.initial_score !== undefined &&
-      contract.current_score !== undefined &&
-      contract.current_score < contract.initial_score
-    ) {
-      contract.current_score = contract.initial_score;
-    }
-
-    // If target score or initial score changed, recalculate reward estimate
-    if (updates.target_score !== undefined || updates.initial_score !== undefined) {
-      contract.estimated_reward_ar = Math.round(this.getSettings().price_per_mission || 0);
-    }
-
-    // Sync any active or pending post on this contract
-    const relatedPosts = this.posts.filter(
-      p => p.client_name === oldClientName && (p.status === 'active' || p.status === 'pending_start')
-    );
-    relatedPosts.forEach(post => {
-      if (updates.client_name) post.client_name = updates.client_name;
-      if (updates.account_tag) post.account_tag = updates.account_tag;
-      if (updates.target_score) {
-        post.target_score = updates.target_score;
-        post.remaining_score = Math.max(0, updates.target_score - post.current_score);
-      }
-      if (updates.recommended_shift && updates.recommended_shift !== 'any') {
-        post.shift_type = updates.recommended_shift;
-      }
-      post.updated_at = new Date().toISOString();
-    });
-
-    this.notify();
-    return { success: true, contract };
-  }
+  static readonly MAX_CONTRACTS = 100;
 
   // Admin exclusive: Update any field of any post session (debut, target, name, tag, employee, shift, status, notes)
-  public updatePostAdmin(
+  updatePostAdmin(
     postId: string,
     updates: Partial<PostSession>
   ): { success: boolean; error?: string; post?: PostSession } {
@@ -2654,1221 +789,38 @@ export class AppStore {
     return { success: true, post };
   }
 
-  public getSecurityLogs(): SecurityViolation[] {
+  getSecurityLogs(): SecurityViolation[] {
     return [...this.securityLogs];
   }
 
-  public getAdvanceRequests(): SalaryAdvanceRequest[] {
+  getAdvanceRequests(): SalaryAdvanceRequest[] {
     return [...this.advanceRequests];
   }
-
-  public getMessages(): ChatMessage[] {
-    return [...this.messages];
-  }
-
-  // --- ANTI-CHEAT & POST WORKFLOW ---
-  public getActiveOrPendingPost(employeeId: string): PostSession | undefined {
-    return this.posts.find(
-      p => p.employee_id === employeeId && isOpenMission(p)
-    );
-  }
-
-  public startPost(params: {
-    employeeId: string;
-    clientName: string;
-    accountTag: string;
-    targetScore: number;
-    initialScore: number;
-    proofUrl?: string;
-    proofUrls?: string[]; // 1 to 4 photos
-    postNumber?: number;
-    shiftType: ShiftType;
-    notes?: string;
-    status?: 'active' | 'pending_start';
-    autoReplaceExisting?: boolean;
-  }): { success: boolean; error?: string; post?: PostSession } {
-    const employee = this.users.find(u => u.id === params.employeeId);
-    if (!employee) {
-      return { success: false, error: 'Employé introuvable' };
-    }
-
-    if (employee.status === 'blocked') {
-      return { success: false, error: 'Access denied. Account is blocked.' };
-    }
-
-    // 1. Anti-Multi-Mission Check or Auto-Replace:
-    const existingActive = this.getActiveOrPendingPost(params.employeeId);
-    if (existingActive) {
-      if (params.autoReplaceExisting) {
-        // Gracefully release the previous session to allow immediate switch
-        this.forceReleasePost(existingActive.id, `Remplacement par la mission ${params.clientName}`);
-      } else {
-        // Log security violation into "Petit Malin"
-        this.logViolation({
-          employee_id: employee.id,
-          employee_name: employee.name,
-          violation_type: 'multi_post_attempt',
-          description: `Anti-Multi-Mission Block: Tentative d'ouverture de nouveau vacation sur client "${params.clientName}" alors que la mission "${existingActive.client_name}" (${existingActive.status}) est déjà en cours.`,
-          details: {
-            client_name: params.clientName,
-            active_post_id: existingActive.id,
-          }
-        });
-
-        return {
-          success: false,
-          error: `Anti-Multi-Mission: Vous avez déjà une mission en cours (${existingActive.client_name} - ${existingActive.status}). Vous ne pouvez pas ouvrir un second mission.`
-        };
-      }
-    }
-
-    const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
-    const dateStr = now.toISOString().split('T')[0];
-
-    const proofList = (params.proofUrls && params.proofUrls.length > 0)
-      ? params.proofUrls
-      : (params.proofUrl ? [params.proofUrl] : []);
-
-    const newPost: PostSession = {
-      id: `post-${Date.now()}`,
-      employee_id: employee.id,
-      employee_name: employee.name,
-      client_name: params.clientName,
-      account_tag: params.accountTag || `ACC-${Math.floor(1000 + Math.random() * 9000)}`,
-      target_score: params.targetScore,
-      initial_score: params.initialScore,
-      current_score: params.initialScore,
-      remaining_score: Math.max(0, params.targetScore - params.initialScore),
-      status: params.status || 'pending_start',
-      shift_type: params.shiftType,
-      date: dateStr,
-      start_time: timeStr,
-      post_number: params.postNumber,
-      start_proof_url: proofList[0] || '',
-      start_proof_urls: proofList,
-      notes: params.notes,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    };
-
-    this.posts.unshift(newPost);
-    this.prepareMissionSheet(newPost);
-    this.notify();
-    return { success: true, post: newPost };
-  }
-
-  // Edit pending start post before admin validation
-  public updatePendingStartPost(
-    postId: string,
-    newInitialScore: number,
-    newProofUrl?: string,
-    newProofUrls?: string[]
-  ): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    if (post.status !== 'pending_start') {
-      return { success: false, error: 'Modification impossible: la mission a déjà été validé par un administrateur.' };
-    }
-
-    post.initial_score = newInitialScore;
-    post.current_score = newInitialScore;
-    post.remaining_score = Math.max(0, post.target_score - newInitialScore);
-    
-    if (newProofUrls && newProofUrls.length > 0) {
-      post.start_proof_urls = newProofUrls;
-      post.start_proof_url = newProofUrls[0];
-    } else if (newProofUrl) {
-      post.start_proof_url = newProofUrl;
-      post.start_proof_urls = [newProofUrl];
-    }
-    
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true };
-  }
-
-  // Cancel pending start post before admin validation
-  public cancelPendingStartPost(postId: string): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    if (post.status !== 'pending_start') {
-      return { success: false, error: 'Annulation impossible: la mission est déjà validé ou en cours.' };
-    }
-
-    this.posts = this.posts.filter(p => p.id !== postId);
-    this.notify();
-    return { success: true };
-  }
-
-  // Cancel the end request before admin validation: the session goes back to « en cours »
-  public cancelPendingEndPost(postId: string): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    if (post.status !== 'pending_end') {
-      return { success: false, error: 'Annulation impossible: la fin est déjà validée ou la session n\'est pas en attente de fin.' };
-    }
-    post.status = 'active';
-    post.final_score = undefined;
-    post.end_proof_url = '';
-    post.end_proof_urls = [];
-    post.end_time = undefined;
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true };
-  }
-
-  // Update current score during active post
-  public updateCurrentScore(postId: string, newScore: number): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-
-    post.current_score = newScore;
-    post.remaining_score = Math.max(0, post.target_score - newScore);
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true };
-  }
-
-  // Submit End Form with mandatory score consistency check
-  public submitEndPost(params: {
-    postId: string;
-    finalScore: number;
-    endProofUrl?: string;
-    endProofUrls?: string[];
-    notes?: string;
-  }): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === params.postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-
-    // Liste de tâches (M6.3) : si la mission exige que tout soit coché, on n'envoie pas avant
-    const ct = matchContract(post, this.contracts);
-    if (ct && !canSubmitTasks(cleanTasks(ct.tasks), post.tasks_done, ct.tasks_required)) return { success: false, error: 'Coche toutes les tâches avant d\'envoyer la mission.' };
-
-    // Built-in Score Consistency Constraint:
-    if (params.finalScore < post.initial_score) {
-      // Log security violation in Petit Malin
-      this.logViolation({
-        employee_id: post.employee_id,
-        employee_name: post.employee_name,
-        violation_type: 'score_inversion',
-        description: `Volume Consistency Failure: Le volume final soumis (${params.finalScore.toLocaleString()}) est inférieur au volume initial vérifié (${post.initial_score.toLocaleString()}) pour le client ${post.client_name}.`,
-        details: {
-          initial_score: post.initial_score,
-          attempted_score: params.finalScore,
-          client_name: post.client_name,
-          active_post_id: post.id
-        }
-      });
-
-      return {
-        success: false,
-        error: 'Final volume cannot be lower than initial volume.'
-      };
-    }
-
-    const now = new Date();
-    const endProofList = (params.endProofUrls && params.endProofUrls.length > 0)
-      ? params.endProofUrls
-      : (params.endProofUrl ? [params.endProofUrl] : []);
-
-    post.final_score = params.finalScore;
-    post.current_score = params.finalScore;
-    post.remaining_score = Math.max(0, post.target_score - params.finalScore);
-    post.end_proof_url = endProofList[0] || params.endProofUrl || '';
-    post.end_proof_urls = endProofList;
-    post.end_time = now.toTimeString().split(' ')[0];
-    post.status = 'pending_end';
-    if (params.notes) {
-      post.notes = post.notes ? `${post.notes} | ${params.notes}` : params.notes;
-    }
-    post.updated_at = now.toISOString();
-
-    this.notify();
-    return { success: true };
-  }
-
-  /** Coche ou décoche une tâche sur une session ouverte. L'opérateur : seulement la sienne. Rend les cases cochées. */
-  public toggleSessionTask(postId: string, taskId: string): { success: boolean; error?: string; done?: string[] } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    const me = this.currentUser;
-    if (!me) return { success: false, error: 'Connexion requise.' };
-    if (me.role !== 'admin' && post.employee_id !== me.id) return { success: false, error: 'Ce n\'est pas ta mission.' };
-    if (post.status !== 'active' && post.status !== 'pending_start') return { success: false, error: 'La mission n\'est plus ouverte.' };
-    const ct = matchContract(post, this.contracts);
-    const tasks = cleanTasks(ct?.tasks);
-    if (!tasks.some(t => t.id === taskId)) return { success: false, error: 'Tâche introuvable.' };
-    post.tasks_done = toggleTask(tasks, post.tasks_done, taskId);
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true, done: cleanDone(post.tasks_done, tasks) };
-  }
-
-  // --- ADMIN ACTIONS ---
-  public validatePost(postId: string, note?: string): { success: boolean; error?: string; payrollAr?: number } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    if (weSelfEntered(this.currentUser, post)) return { success: false, error: 'Tu ne peux pas valider ta propre saisie.' }; // M26.5a : personne ne valide sa propre saisie
-    if (note && note.trim()) post.admin_notes = note.trim();
-
-    const employee = this.users.find(u => u.id === post.employee_id);
-
-    if (post.status === 'pending_start') {
-      post.status = 'active';
-      post.updated_at = new Date().toISOString();
-      this.notify();
-      return { success: true };
-    }
-
-    if (post.status === 'pending_end') {
-      const finalScore = post.final_score ?? post.current_score;
-      const scoreGained = Math.max(0, finalScore - post.initial_score);
-      // Paie : une mission normale = le tarif fixe (Réglages → Missions), comme avant ; une ligne de travail (production, présence) = selon le mode de paie (module 26, src/utils/postPay.ts)
-      const calculatedAr = postPayAr(post, employee, this.getSettings());
-
-      post.status = 'completed';
-      post.calculated_ar = calculatedAr;
-
-      // L'Actuel du compte devient le score final (vu par l'employé suivant)
-      const linkedContract =
-        this.contracts.find(c => c.post_number === post.post_number) ||
-        this.contracts.find(c => c.client_name === post.client_name);
-      if (linkedContract && !isWorkLine(post)) linkedContract.current_score = finalScore;
-      // Prix client figé à la validation (comme la paie) : changer les prix ensuite ne modifie pas cette mission
-      post.client_price_ar = isWorkLine(post) ? workLineClientPrice : clientPriceForContract(linkedContract, this.getSettings()); // une ligne de travail n'est facturée à aucun client
-      post.updated_at = new Date().toISOString();
-
-      if (employee) {
-        employee.total_score_boosted = (employee.total_score_boosted || 0) + scoreGained;
-        employee.total_earnings_ar = (employee.total_earnings_ar || 0) + calculatedAr;
-      }
-
-      this.notify();
-      return { success: true, payrollAr: calculatedAr };
-    }
-
-    return { success: false, error: 'Statut de la mission non éligible pour validation' };
-  }
-
-  // ---------- Feuille du jour SANS réseau (M27.9) : boîte d'envoi gardée sur l'appareil (règles : utils/sheetOutbox.ts) ----------
-  private sheetQ: OfflineQueue = [];
-  private sheetQFor = '';
-  private sheetSending = false;
-  private sheetTimer: ReturnType<typeof setTimeout> | null = null;
-  private sheetKey = (uid: string) => `df_sheet_outbox_${uid}`;
-  private sheetLoad(): boolean {
-    const uid = this.currentUser?.id || '';
-    if (!uid) return false;
-    if (this.sheetQFor !== uid) { let raw: string | null = null; try { raw = localStorage.getItem(this.sheetKey(uid)); } catch { /* sans stockage : file vide */ } this.sheetQ = parseStored(raw); this.sheetQFor = uid; }
-    return true;
-  }
-  private sheetSave(): boolean {
-    const uid = this.sheetQFor;
-    if (!uid) return false;
-    try { if (this.sheetQ.length) localStorage.setItem(this.sheetKey(uid), JSON.stringify(this.sheetQ)); else localStorage.removeItem(this.sheetKey(uid)); return true; } catch { return false; }
-  }
-  /** Ce qui attend sur cet appareil : feuilles en attente d'envoi et feuilles refusées à revoir (avec la raison écrite). */
-  public getSheetOutbox(lang = 'fr'): { pending: number; review: number; lines: number; items: { id: string; state: 'pending' | 'review'; date: string; type: string; lines: number; reason: string; created_at: string }[] } {
-    if (!this.sheetLoad()) return { pending: 0, review: 0, lines: 0, items: [] };
-    const c = sheetCounts(this.sheetQ);
-    return { ...c, items: this.sheetQ.map(o => { const l = sheetLabel(o); return { id: o.id, state: o.state, date: l.date, type: l.type, lines: l.lines, reason: o.state === 'review' ? sheetReviewReason(o, lang) : '', created_at: o.created_at }; }) };
-  }
-  /** Feuilles gardées sur l'appareil (pas encore parties) : pour montrer leurs lignes « pas encore envoyées » dans le calendrier. */
-  public getQueuedSheets(): { id: string; state: string; payload?: any }[] { return this.sheetLoad() ? this.sheetQ.map(o => ({ id: o.id, state: o.state, payload: o.payload })) : []; }
-  /** Un seul appel : vrai serveur (avec le numéro d'action, pour que le serveur ne fasse jamais deux fois la même feuille) ou faux serveur de la démo. */
-  private async sheetCall(sheet: WorkSheet, id: string, nowIso: string): Promise<{ status: number; data: any }> {
-    const me = this.currentUser;
-    if (this.demo) {
-      if (!me || this.demoCut) return { status: 0, data: { error: 'Réseau indisponible.' } };
-      const now = new Date();
-      const today = new Date(now.getTime() + 3 * 3600000).toISOString().slice(0, 10);
-      const plan = planWorkEntries(me, this.users, this.posts, sheet, this.getSettings(), now.toISOString(), today);
-      if (!plan.ok) return { status: 400, data: { error: ({ role: 'Réservé au responsable et au chef d\'équipe.', bad: 'Feuille illisible.', date: 'Date impossible : aujourd\'hui ou les 31 derniers jours.', empty: 'La feuille est vide.', too_many: 'Trop de lignes (100 au plus).' } as Record<string, string>)[plan.error] || 'Feuille refusée.' } };
-      for (const post of plan.saved) {
-        const i = this.posts.findIndex(p => p.id === post.id);
-        if (i >= 0) this.posts[i] = post; else this.posts.push(post);
-      }
-      for (const u of plan.users) { const t = this.users.find(x => x.id === u.id); if (t) t.total_earnings_ar = u.total_earnings_ar; }
-      this.notify();
-      return { status: 200, data: { saved: plan.saved.length, failed: plan.failed, validated: plan.validated } };
-    }
-    const r = await this.api(SHEET_ROUTE, { method: 'POST', body: JSON.stringify(sheet), headers: { 'x-df-action-id': id, 'x-df-device-time': nowIso } });
-    return { status: r.status, data: r.data };
-  }
-  /** Envoie les feuilles gardées, une à la fois, la plus ancienne d'abord. S'arrête à la première panne (elle reste en attente, nouvel essai plus tard). Sans danger si appelée plusieurs fois. */
-  public async sendSheets(force = false): Promise<void> {
-    if (this.sheetSending || !this.sheetLoad() || (!this.token && !this.demo)) return;
-    if (force) this.sheetQ = this.sheetQ.map(o => (o.state === 'pending' ? { ...o, next_try_at: undefined } : o)); // réseau de retour ou clic sur « Envoyer maintenant » : on n'attend pas le délai
-    const role = (this.currentUser?.role || 'employee') as OfflineRole;
-    this.sheetSending = true;
-    try {
-      this.sheetQ = expireSheets(this.sheetQ, new Date().toISOString(), role);
-      for (let i = 0; i < 50; i++) {
-        const nowIso = new Date().toISOString();
-        const op = nextSheet(this.sheetQ, nowIso, true);
-        if (!op) break;
-        const r = await this.sheetCall(op.payload as WorkSheet, op.id, nowIso);
-        const a = applyAnswer(this.sheetQ, op.id, { status: r.status, error: r.data?.error, code: r.data?.code }, new Date().toISOString());
-        this.sheetQ = a.queue;
-        this.sheetSave();
-        if (a.outcome === 'sent') { this.since = ''; if (!this.demo) void this.pull(true); }
-        if (a.outcome === 'waiting') { this.sheetSchedule(); break; }
-      }
-    } finally { this.sheetSending = false; this.sheetSave(); this.emit(); }
-  }
-  private sheetSchedule() {
-    if (this.sheetTimer) return;
-    this.sheetTimer = setTimeout(() => { this.sheetTimer = null; void this.sendSheets(); }, 30000);
-  }
-  /** La personne décide d'une feuille refusée : la renvoyer telle quelle, ou la retirer de la liste (seulement sur sa demande). */
-  public sheetRequeue(id: string): void { if (!this.sheetLoad()) return; this.sheetQ = requeueSheet(this.sheetQ, id); this.sheetSave(); this.emit(); void this.sendSheets(true); }
-  public sheetDiscard(id: string): void { if (!this.sheetLoad()) return; this.sheetQ = discardSheet(this.sheetQ, id); this.sheetSave(); this.emit(); }
-
-  /** Feuille du jour (M26.5a) : présence, heures, quantité et refus saisis par le responsable ou le Chef d'équipe. Réponse : nombre de lignes enregistrées et lignes refusées (numéro + raison). Sans réseau (M27.9) : gardée sur l'appareil (`queued`), envoyée au retour du réseau. */
-  public async addWorkEntries(sheet: { date: string; type_label?: string; lines: any[] }): Promise<{ ok: boolean; error?: string; saved?: number; failed?: { line: number; error: string }[]; validated?: boolean; queued?: boolean }> {
-    const me = this.currentUser;
-    if (!me || (me.role !== 'admin' && me.role !== 'team_lead')) return { ok: false, error: 'Réservé au responsable et au chef d\'équipe.' };
-    const id = newOpId(), nowIso = new Date().toISOString();
-    const r = await this.sheetCall(sheet, id, nowIso);
-    if (r.status >= 200 && r.status < 300) {
-      if (!this.demo) { this.since = ''; void this.pull(true); }
-      return { ok: true, saved: Number(r.data?.saved) || 0, failed: Array.isArray(r.data?.failed) ? r.data.failed : [], validated: !!r.data?.validated };
-    }
-    // Panne, coupure, connexion expirée : la feuille est gardée sur l'appareil avec CE numéro (le serveur a peut-être déjà fait la première demande : il ne la refera pas).
-    if (applyAnswer([], '', { status: r.status }, nowIso).outcome === 'waiting' && this.sheetLoad()) {
-      const q = queueSheet(this.sheetQ, sheet, me.role as OfflineRole, nowIso, undefined, id);
-      if (q.error) return { ok: false, error: q.error.fr };
-      const before = this.sheetQ; this.sheetQ = q.queue;
-      if (!this.sheetSave()) { this.sheetQ = before; return { ok: false, error: 'Impossible de garder la feuille sur cet appareil (mémoire pleine ou navigation privée). Réessaie avec le réseau.' }; }
-      this.sheetSchedule(); this.emit();
-      return { ok: true, queued: true, saved: 0, failed: [] };
-    }
-    return { ok: false, error: r.data?.error || 'Erreur.' };
-  }
-
-  /** Annule une ligne de la feuille du jour (responsable seulement) : retire sa paie, la supprime ; elle peut être saisie à nouveau. En ligne seulement. */
-  public async cancelWorkLine(postId: string): Promise<{ ok: boolean; error?: string }> {
-    if (this.demo) {
-      const post = this.posts.find(p => p.id === postId);
-      const emp = post ? this.users.find(u => u.id === post.employee_id) : undefined;
-      const plan = planWorkCancel(this.currentUser, post, emp, false);
-      if (!plan.ok) return { ok: false, error: plan.error === 'role' ? 'Seulement le responsable, ou le chef pour sa propre ligne en attente.' : "Ce n'est pas une ligne de la feuille du jour." };
-      this.posts = this.posts.filter(p => p.id !== plan.id);
-      if (plan.user && emp) emp.total_earnings_ar = plan.user.total_earnings_ar;
-      this.notify();
-      return { ok: true };
-    }
-    const r = await this.api('work-line-cancel', { method: 'POST', body: JSON.stringify({ id: postId }) });
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
-    this.posts = this.posts.filter(p => p.id !== postId);
-    this.notify();
-    return { ok: true };
-  }
-
-  public rejectPost(postId: string, reason: string): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-    if (!reason.trim()) return { success: false, error: 'Un motif de rejet est obligatoire' };
-
-    post.status = 'rejected';
-    post.rejection_reason = reason.trim();
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true };
-  }
-
-  // Emergency Force Release Post to unstick bugged shifts
-  public forceReleasePost(postId: string, reason = 'Force release by administrator'): { success: boolean; error?: string } {
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return { success: false, error: 'Mission introuvable' };
-
-    post.status = 'force_released';
-    post.notes = post.notes ? `${post.notes} [FORCE RELEASED: ${reason}]` : `[FORCE RELEASED: ${reason}]`;
-    post.updated_at = new Date().toISOString();
-    this.notify();
-    return { success: true };
-  }
-
-  // --- USER PROFILE & SECURITY CONTROLS ---
-  // Admin : accès d'un opérateur selon son shift (auto / toute heure / bloqué)
-  public setAccessMode(userId: string, mode: 'auto' | 'allow' | 'block'): { success: boolean } {
-    const user = this.users.find(u => u.id === userId);
-    if (!user || user.role === 'admin') return { success: false }; // le responsable n'est jamais limité
-    if (mode === 'auto') delete user.access_mode;
-    else user.access_mode = mode;
-    this.notify();
-    return { success: true };
-  }
-
-  public toggleUserBlock(userId: string): { success: boolean; newStatus: 'active' | 'blocked' } {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) return { success: false, newStatus: 'active' };
-
-    user.status = user.status === 'blocked' ? 'active' : 'blocked';
-    if (user.status === 'blocked') {
-      user.is_online = false;
-    }
-    
-    // Update matching security logs if unblocking
-    if (user.status === 'active') {
-      this.securityLogs.forEach(log => {
-        if (log.employee_id === userId) {
-          log.resolved = true;
-        }
-      });
-    }
-
-    this.notify();
-    return { success: true, newStatus: user.status };
-  }
-
-  public deleteUser(userId: string): { success: boolean; error?: string } {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) return { success: false, error: 'Utilisateur introuvable' };
-    if (user.role === 'admin') return { success: false, error: 'Impossible de supprimer un compte administrateur.' };
-
-    this.users = this.users.filter(u => u.id !== userId);
-    // Ses données disparaissent aussi à l'écran tout de suite ; le serveur efface le reste (fichiers, publications…)
-    this.posts = this.posts.filter(p => p.employee_id !== userId);
-    this.advanceRequests = this.advanceRequests.filter(a => a.employee_id !== userId);
-    this.securityLogs = this.securityLogs.filter(v => v.employee_id !== userId);
-    const ownedGroups = new Set(this.groups.filter(g => g.owner_id === userId).map(g => g.id));
-    this.groups = this.groups.filter(g => g.owner_id !== userId);
-    this.messages = this.messages.filter(m => m.sender_id !== userId && m.recipient_id !== userId && !(m.recipient_id && ownedGroups.has(m.recipient_id)));
-    this.notify();
-    return { success: true };
-  }
-
-  public updateUser(userId: string, data: Partial<User>): { success: boolean } {
-    const user = this.users.find(u => u.id === userId);
-    if (!user) return { success: false };
-
-    Object.assign(user, data);
-    this.notify();
-    return { success: true };
-  }
-
-  /** T3 : donne un vrai compte (pseudo + mot de passe) à un employé « suivi par saisie seulement ». Responsable seulement. */
-  public async giveAccount(userId: string, username: string, password: string): Promise<{ success: boolean; error?: string }> {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    const uname = String(username || '').trim().toLowerCase();
-    if (!/^[a-z0-9_.-]{3,30}$/.test(uname)) return { success: false, error: 'Pseudo invalide (3 à 30 lettres/chiffres).' };
-    if (typeof password !== 'string' || password.length < 6) return { success: false, error: 'Mot de passe : 6 caractères minimum.' };
-    const u = this.users.find(x => x.id === userId);
-    if (!u || !(u as any).entry_only) return { success: false, error: "Cet employé n'est pas suivi par saisie seulement." };
-    if (this.users.some(x => x.id !== userId && String(x.username).toLowerCase() === uname)) return { success: false, error: 'Ce pseudo existe déjà.' };
-    if (!this.demo) {
-      const r = await this.api('give-account', { method: 'POST', body: JSON.stringify({ userId, username: uname, password }) });
-      if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
-    }
-    u.username = uname; delete (u as any).entry_only;
-    if (!this.demo) this.synced.users.set(u.id, JSON.stringify(u));
-    this.emit();
-    return { success: true };
-  }
-
-  /** Employé « suivi par saisie seulement » (M26.7) : sans compte, sans mot de passe, sans téléphone. Responsable seulement. */
-  public async addEntryOnlyEmployee(d: { name: string; team?: string; shift?: 'day' | 'night' }): Promise<{ success: boolean; user?: User; error?: string }> {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    if (this.demo) {
-      const e = entryOnlyRecord({ ...d, entry_only: true }, Date.now());
-      if (!e.ok) return { success: false, error: 'Nom complet manquant.' };
-      this.users.push(e.rec as User); this.notify();
-      return { success: true, user: e.rec as User };
-    }
-    const r = await this.api('create-user', { method: 'POST', body: JSON.stringify({ user: { ...d, entry_only: true } }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
-    const u = r.data.user as User;
-    this.users.push(u);
-    this.synced.users.set(u.id, JSON.stringify(u));
-    this.emit();
-    return { success: true, user: u };
-  }
-
-  public async addUser(
-    userData: Omit<User, 'id' | 'is_online' | 'total_score_boosted' | 'total_earnings_ar' | 'pending_advance_ar'>,
-    password: string
-  ): Promise<{ success: boolean; user?: User; error?: string }> {
-    const r = await this.api('create-user', { method: 'POST', body: JSON.stringify({ user: userData, password }) });
-    if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
-    const u = r.data.user as User;
-    this.users.push(u);
-    this.synced.users.set(u.id, JSON.stringify(u));
-    this.emit();
-    return { success: true, user: u };
-  }
-
-  // --- SECURITY LOGS ("Petit Malin") ---
-  public logViolation(data: Omit<SecurityViolation, 'id' | 'timestamp' | 'resolved'>): void {
-    const now = new Date();
-    const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
-    const newLog: SecurityViolation = {
-      ...data,
-      id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      timestamp: timeStr,
-      resolved: false,
-    };
-    this.securityLogs.unshift(newLog);
-    this.notify();
-  }
-
-  public dismissViolation(id: string): void {
-    const log = this.securityLogs.find(l => l.id === id);
-    if (log) {
-      log.resolved = true;
-      this.notify();
-    }
-  }
-
-  // --- SALARY ADVANCE (DMD d'avance) ---
-  public submitAdvanceRequest(params: {
-    employeeId: string;
-    amountAr: number;
-    reason: string;
-  }): { success: boolean; error?: string } {
-    const employee = this.users.find(u => u.id === params.employeeId);
-    if (!employee) return { success: false, error: 'Employé introuvable' };
-
-    const newReq: SalaryAdvanceRequest = {
-      id: `adv-${Date.now()}`,
-      employee_id: employee.id,
-      employee_name: employee.name,
-      amount_ar: params.amountAr,
-      reason: params.reason,
-      request_date: new Date().toISOString().split('T')[0],
-      status: 'pending',
-    };
-
-    this.advanceRequests.unshift(newReq);
-    employee.pending_advance_ar = (employee.pending_advance_ar || 0) + params.amountAr;
-    this.notify();
-    return { success: true };
-  }
-
-  public reviewAdvanceRequest(id: string, approve: boolean, notes?: string): { success: boolean } {
-    const req = this.advanceRequests.find(r => r.id === id);
-    if (!req) return { success: false };
-
-    const employee = this.users.find(u => u.id === req.employee_id);
-    req.status = approve ? 'approved' : 'rejected';
-    req.admin_notes = notes;
-
-    if (employee && !approve) {
-      employee.pending_advance_ar = Math.max(0, (employee.pending_advance_ar || 0) - req.amount_ar);
-    }
-
-    this.notify();
-    return { success: true };
-  }
-
-  // --- MESSAGES ---
-  public sendMessage(params: {
-    senderId: string;
-    message: string;
-    recipientId?: string;
-    attachmentUrl?: string;
-    attachmentName?: string;
-    attachmentKind?: 'image' | 'file';
-    replyTo?: ChatMessage; // message cité
-    albumId?: string; // photos envoyées ensemble
-    sendAt?: number; // message programmé (ms)
-    forwardedFrom?: string; // message transféré : auteur d'origine
-    poll?: { question: string; options: string[]; kind?: 'poll' | 'date' | 'ack' }; // sondage (messagerie S1) : 2 à 6 choix, ou dates, ou « J'ai lu »
-    visibleTo?: string[]; // « visible seulement par X » (M28.3) : mêmes règles que le serveur (chatShared)
-  }): { success: boolean; error?: string } {
-    const sender = this.users.find(u => u.id === params.senderId);
-    const poll = params.poll ? pollClean(params.poll) : null;
-    if (params.poll && !poll) return { success: false };
-    if (!sender || (!params.message.trim() && !params.attachmentUrl && !poll)) return { success: false };
-
-    const now = new Date();
-    const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
-    const q = params.replyTo;
-    let visibleTo: string[] | undefined;
-    if (params.visibleTo && params.visibleTo.length) {
-      if (poll) return { success: false, error: 'visible_to' };
-      const grp = (params.recipientId || 'all') === 'all' ? null : this.groups.find(g => g.id === params.recipientId) || null;
-      const eligible = grp ? grp.members : this.users.filter(u => u.status !== 'blocked').map(u => u.id);
-      const pv = planVisibleTo(sender, grp, params.recipientId || 'all', params.visibleTo, eligible);
-      if (!pv.ok) return { success: false, error: pv.error };
-      visibleTo = pv.list;
-    }
-    if (q && Array.isArray(q.visible_to) && q.visible_to.length) visibleTo = [...new Set([...q.visible_to, q.sender_id])].filter(x => x !== sender.id); // répondre à un message restreint : même public
-    const eph = this.getEphemeralMs(params.recipientId || 'all'); // mode éphémère de la discussion (le serveur le calcule de son côté)
-    const nameOf = (id: string) => this.users.find(u => u.id === id)?.name || '?';
-
-    const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      sender_id: sender.id,
-      sender_name: sender.name,
-      sender_role: sender.role,
-      recipient_id: params.recipientId || 'all',
-      message: poll ? `${poll.kind === 'date' ? '📅' : poll.kind === 'ack' ? '👁' : '📊'} ${poll.question}` : params.message.trim(),
-      timestamp: timeStr,
-      sent_ms: params.sendAt && params.sendAt > now.getTime() ? params.sendAt : now.getTime(),
-      ...(params.sendAt && params.sendAt > now.getTime() && !poll ? { send_at: params.sendAt } : {}),
-      ...(poll ? { poll } : {}),
-      ...(eph && !poll ? { ephemeral_ms: eph, ...(params.sendAt && params.sendAt > now.getTime() ? {} : { expires_ms: now.getTime() + eph }) } : {}),
-      ...(visibleTo && visibleTo.length ? { visible_to: visibleTo, visible_names: visibleTo.map(nameOf) } : {}),
-      ...(q && !q.deleted_at
-        ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }
-        : {}),
-      ...(params.attachmentUrl
-        ? { attachment_url: params.attachmentUrl, attachment_name: params.attachmentName || 'fichier', attachment_kind: params.attachmentKind || 'file' }
-        : {}),
-      ...(params.albumId && params.attachmentUrl ? { album_id: String(params.albumId).slice(0, 40) } : {}),
-      ...(params.forwardedFrom ? { forwarded: { from: String(params.forwardedFrom).slice(0, 40) } } : {}),
-    };
-
-    this.messages.push(newMsg);
-    this.notify();
-    return { success: true };
-  }
-
-  // Comme WhatsApp : on modifie et on épingle SEULEMENT ses propres messages (même l'admin)
-  private isOwnMessage(msg: ChatMessage, userId: string): boolean {
-    return msg.sender_id === userId && !msg.deleted_at;
-  }
+  sheetQ: OfflineQueue = [];
+  sheetQFor = '';
+  sheetSending = false;
+  sheetTimer: ReturnType<typeof setTimeout> | null = null;
+  sheetKey = (uid: string) => `df_sheet_outbox_${uid}`;
   // Supprimer pour tous : l'auteur, ou l'admin (modération)
-  public canDeleteForAll(msg: ChatMessage, userId: string): boolean {
+  canDeleteForAll(msg: ChatMessage, userId: string): boolean {
     const u = this.users.find(x => x.id === userId);
     return !!u && !msg.deleted_at && (msg.sender_id === userId || u.role === 'admin');
   }
-  public static EDIT_WINDOW_MS = 15 * 60 * 1000;
-  public canEditMessage(msg: ChatMessage, userId: string): boolean {
-    if (!this.isOwnMessage(msg, userId)) return false;
-    if (!msg.message && msg.attachment_url && msg.attachment_kind) return !!msg.message; // une photo sans texte : rien à modifier
-    return !msg.sent_ms || Date.now() - msg.sent_ms <= AppStore.EDIT_WINDOW_MS;
-  }
-
-  /** Voter dans un sondage de la discussion (même règle que les Actualités : sondage simple = un autre choix remplace, le même retire ; dates et « J'ai lu » = on ajoute ou retire chaque choix). Le serveur cache les noms : un participant garde seulement les comptes et SON vote ; l'auteur garde tout. */
-  public voteMessage(id: string, userId: string, optionId: string): { success: boolean; error?: string } {
-    const msg = this.messages.find(m => m.id === id);
-    const poll = msg?.poll;
-    if (!msg || msg.deleted_at || !poll) return { success: false, error: 'Sondage introuvable.' };
-    const before = pollPicks(poll.votes ? poll.votes[userId] : poll.my);
-    const r = pollApplyVote({ question: poll.question, kind: poll.kind, options: poll.options, closed: !!poll.closed, votes: before.length ? { [userId]: pollMulti(poll) ? before : before[0] } : {} }, userId, optionId);
-    if (!r.ok) return { success: false, error: r.error };
-    const after = pollPicks(r.poll.votes[userId]);
-    const next = { ...poll, votes: { ...(poll.votes || {}), [userId]: after } }; // « [] » = je retire mon vote (le serveur le sait ainsi)
-    if (poll.counts) {
-      const counts = { ...poll.counts };
-      for (const o of poll.options) counts[o.id] = Math.max(0, (counts[o.id] || 0) - (before.includes(o.id) ? 1 : 0) + (after.includes(o.id) ? 1 : 0));
-      next.counts = counts;
-      next.my = after.length ? (pollMulti(poll) ? after : after[0]) : undefined;
-      if (next.my === undefined) delete next.my;
-    }
-    msg.poll = next;
-    this.notify();
-    return { success: true };
-  }
-  /** Clore ou rouvrir un sondage : son auteur ou le responsable. */
-  public setMessagePollClosed(id: string, userId: string, closed: boolean): { success: boolean } {
-    const msg = this.messages.find(m => m.id === id);
-    const u = this.users.find(x => x.id === userId);
-    if (!msg || !msg.poll || msg.deleted_at || !u || (msg.sender_id !== userId && u.role !== 'admin')) return { success: false };
-    msg.poll = { ...msg.poll, closed };
-    this.notify();
-    return { success: true };
-  }
-
-  // Réaction emoji sur un message : une seule par personne ; le même emoji une 2e fois la retire
-  public reactMessage(id: string, userId: string, emoji: string) {
-    const msg = this.messages.find(m => m.id === id);
-    if (!msg || msg.deleted_at) return;
-    const had = (msg.reactions?.[emoji] || []).includes(userId);
-    const next: Record<string, string[]> = {};
-    for (const [e, list] of Object.entries(msg.reactions || {})) {
-      const rest = list.filter(x => x !== userId);
-      if (rest.length) next[e] = rest;
-    }
-    if (!had) next[emoji] = [...(next[emoji] || []), userId];
-    if (Object.keys(next).length) msg.reactions = next; else delete msg.reactions;
-    this.notify();
-  }
+  static EDIT_WINDOW_MS = 15 * 60 * 1000;
 
   // « est en train d'écrire… » : un signe au plus toutes les 2,5 s ; la liste est lue par la messagerie ouverte
-  private typingSentAt = 0;
-  public pingTyping(to: string) {
-    if (!this.token) return;
-    const now = Date.now();
-    if (now - this.typingSentAt < 2500) return;
-    this.typingSentAt = now;
-    void this.apiRaw('typing', { method: 'POST', body: JSON.stringify({ to }) }); // sans barre de chargement
-  }
-  // --- Sauvegardes de nuit (admin) ---
-  public async listBackups(): Promise<{ ok: boolean; error?: string; rows: { id: number; taken_at: string; tables: number; bytes: number }[] }> {
-    const r = await this.api('backups');
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
-    return { ok: true, rows: Array.isArray(r.data?.rows) ? r.data.rows : [] };
-  }
-  // --- Chef d'équipe (M7.1 d) : valider ou refuser la session d'un opérateur de son équipe. La paie et le prix client sont calculés par le serveur, jamais ici. ---
-  /**
-   * Valider ou refuser SANS faire attendre l'écran : le nouvel état s'affiche tout de suite (`ok: true`), la décision part au serveur
-   * en arrière-plan, et `settled` donne le résultat réel. Si le serveur refuse ou si le réseau tombe, l'affichage revient à l'état d'avant
-   * (`settled` = { ok: false, error }). La paie et le prix client restent calculés par le serveur seulement : aucun chiffre n'est inventé ici.
-   * Le rechargement complet qui suit ne bloque plus personne ; l'affichage immédiat part dès que l'état officiel est arrivé (ou après 20 s au plus).
-   */
-  public decidePostNow(id: string, approve: boolean, reason?: string, note?: string): { ok: boolean; error?: string; settled: Promise<{ ok: boolean; error?: string }> } {
-    const done = (r: { ok: boolean; error?: string }) => ({ ...r, settled: Promise.resolve(r) });
-    const me = this.currentUser;
-    if (!me || (me.role !== 'team_lead' && me.role !== 'admin')) return done({ ok: false, error: 'Réservé au chef d\'équipe.' });
-    if (weSelfEntered(me, this.posts.find(p => p.id === id))) return done({ ok: false, error: 'Tu ne peux pas valider ta propre saisie.' }); // M26.5c
-    if (this.demo) { const r = approve ? this.validatePost(id, note) : this.rejectPost(id, reason || ''); return done(r.success ? { ok: true } : { ok: false, error: r.error }); }
-    if (!approve && !(reason || '').trim()) return done({ ok: false, error: 'Un motif de rejet est obligatoire' });
-    if (this.pendingDecisions.has(id)) return done({ ok: false, error: 'Une décision est déjà en cours pour cette mission.' });
-    const post = this.posts.find(p => p.id === id);
-    const waiting = post?.status === 'pending_start' || post?.status === 'pending_end';
-    if (post && waiting) this.pendingDecisions.set(id, { status: !approve ? 'rejected' : post.status === 'pending_start' ? 'active' : 'completed', reason: approve ? undefined : (reason || '').trim(), settled: false });
-    if (this.pendingDecisions.has(id)) this.emit();
-    const settled = (async (): Promise<{ ok: boolean; error?: string }> => {
-      const r = await this.api('post-decide', { method: 'POST', body: JSON.stringify({ id, approve, reason: approve ? undefined : reason, note: approve ? note : undefined }) });
-      const entry = this.pendingDecisions.get(id);
-      if (!r.ok) { // refusé ou réseau tombé : on revient à l'état d'avant
-        if (entry) { this.pendingDecisions.delete(id); this.emit(); }
-        return { ok: false, error: r.data?.error || 'Erreur.' };
-      }
-      if (entry) {
-        entry.settled = true; // le prochain rechargement réussi enlève l'affichage immédiat
-        setTimeout(() => { if (this.pendingDecisions.get(id) === entry) { this.pendingDecisions.delete(id); this.emit(); } }, 20000); // filet : jamais bloqué
-      }
-      this.since = '';
-      void this.pull(true); // en arrière-plan : le vrai état (paie, prix client, totaux) arrive sans bloquer l'écran
-      return { ok: true };
-    })();
-    return { ok: true, settled };
-  }
-
-  /** Même chose, en attendant la réponse du serveur (gardée pour les appels qui veulent le résultat final). */
-  public async decidePost(id: string, approve: boolean, reason?: string, note?: string): Promise<{ ok: boolean; error?: string }> {
-    const r = this.decidePostNow(id, approve, reason, note);
-    return r.ok ? r.settled : { ok: false, error: r.error };
-  }
-
-  /** Enlève l'affichage immédiat des décisions déjà confirmées par le serveur. Renvoie vrai si quelque chose a changé. */
-  private dropSettledDecisions(): boolean {
-    let any = false;
-    for (const [id, d] of this.pendingDecisions) if (d.settled) { this.pendingDecisions.delete(id); any = true; }
-    return any;
-  }
-
-  // --- Journal d'audit (M7.2, admin) : lecture seule ; le serveur écrit les lignes ---
-  public async listAudit(): Promise<{ ok: boolean; error?: string; rows: AuditEntry[] }> {
-    const r = await this.api('audit-list?limit=1000');
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
-    return { ok: true, rows: cleanAuditRows(r.data?.rows) };
-  }
-  // --- Rapport automatique (M15.5, admin) : le réglage est dans les réglages ; les fiches sont dans la table df_reports (routes report-*) ---
-  public getAutoReport(): AutoReportSetting { return cleanAutoReport(this.getSettings().auto_report); }
-  public saveAutoReport(d: unknown): { success: boolean; error?: string } {
-    if (this.currentUser?.role !== 'admin') return { success: false, error: 'Réservé au responsable.' };
-    this.updateSettings({ auto_report: cleanAutoReport(d) });
-    return { success: true };
-  }
-  public async listReports(): Promise<{ ok: boolean; error?: string; rows: Omit<ReportRecord, 'html'>[] }> {
-    const r = await this.api('report-list', { method: 'POST', body: '{}' });
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.', rows: [] };
-    const rows: Omit<ReportRecord, 'html'>[] = [];
-    for (const x of Array.isArray(r.data?.rows) ? r.data.rows : []) {
-      const c = checkReportRecord(x?.status === 'ready' ? { ...x, html: '-' } : x); // la liste n'a pas le texte : on vérifie le reste
-      if (c.ok) { const { html: _h, ...meta } = c.value; rows.push(meta); }
-    }
-    return { ok: true, rows };
-  }
-  public async openReport(id: string): Promise<{ ok: boolean; error?: string; record?: ReportRecord }> {
-    if (!periodFromId(id)) return { ok: false, error: 'Rapport inconnu.' };
-    const r = await this.api('report-open', { method: 'POST', body: JSON.stringify({ id }) });
-    const c = r.ok ? checkReportRecord(r.data?.record) : null;
-    return c && c.ok ? { ok: true, record: c.value } : { ok: false, error: r.data?.error || 'Rapport illisible.' };
-  }
-  /** Fige la copie (texte du rapport) d'une fiche « en attente ». Une copie déjà figée n'est jamais changée : le serveur rend celle qui existe. */
-  public async freezeReportCopy(id: string, html: string): Promise<{ ok: boolean; error?: string; record?: ReportRecord; already?: boolean }> {
-    if (!periodFromId(id)) return { ok: false, error: 'Rapport inconnu.' };
-    const r = await this.api('report-freeze', { method: 'POST', body: JSON.stringify({ id, html }) });
-    const c = r.ok ? checkReportRecord(r.data?.record) : null;
-    return c && c.ok ? { ok: true, record: c.value, already: !!r.data?.already } : { ok: false, error: r.data?.error || 'Copie impossible.' };
-  }
-  public async getBackup(id: number): Promise<{ ok: boolean; error?: string; backup?: { id: number; taken_at: string; data: unknown } }> {
-    const r = await this.api(`backup-get?id=${encodeURIComponent(String(id))}`);
-    if (!r.ok) return { ok: false, error: r.data?.error || 'Erreur.' };
-    return { ok: true, backup: r.data?.backup };
-  }
-  // --- Notifications push (M6.4) : le mode démo n'en a pas (rien ne part sur internet) ---
-  public async pushKey(): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
-    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
-    const r = await this.api('push-key');
-    return r.ok && typeof r.data?.key === 'string' ? { ok: true, key: r.data.key } : { ok: false, error: r.data?.error || 'Notifications indisponibles.' };
-  }
-  public async pushSubscribe(subscription: unknown): Promise<{ ok: boolean; error?: string }> {
-    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
-    const r = await this.api('push-subscribe', { method: 'POST', body: JSON.stringify({ subscription }) });
-    return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };
-  }
-  public async pushUnsubscribe(endpoint: string): Promise<void> {
-    if (this.demo) return;
-    await this.api('push-unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) });
-  }
-  // --- Réglages par compte (thème, langue, taille du texte, son…) : partagés entre tous les appareils du compte ---
-  public async prefsGet(): Promise<Record<string, string> | null> {
-    if (this.demo || !this.token) return null;
-    const r = await this.api('prefs');
-    return r.ok && r.data && typeof r.data.prefs === 'object' && r.data.prefs ? r.data.prefs : null;
-  }
-  public async prefsSet(changes: Record<string, string | null>): Promise<boolean> {
-    if (this.demo || !this.token) return false;
-    const r = await this.api('prefs-set', { method: 'POST', body: JSON.stringify({ changes }) });
-    return r.ok;
-  }
-  // --- Rappels et tâches (module 25) : le serveur ne rend que MES éléments (et ceux partagés par mon équipe) ; en démo : mémoire locale, rien n'est envoyé ---
+  typingSentAt = 0;
   // Mémoire de l'assistant (admin) : notes enregistrées sur le serveur (ligne `mem:<compte>`), en démo seulement dans le navigateur.
-  private demoMem: { id: string; text: string; at: number }[] = [];
-  public async memFetch(): Promise<{ id: string; text: string; at: number }[] | null> {
-    if (this.demo) return [...this.demoMem].sort((a, b) => a.at - b.at);
-    if (!this.token) return null;
-    const r = await this.api('assistant-memory');
-    return r.ok && r.data && Array.isArray(r.data.notes) ? r.data.notes : null;
-  }
-  public async memSave(note: { id?: string; text: string }): Promise<{ ok: boolean; note?: { id: string; text: string; at: number }; error?: string }> {
-    if (this.demo) {
-      const text = String(note.text || '').trim().slice(0, 500);
-      if (!text) return { ok: false, error: 'Note vide.' };
-      const old = note.id ? this.demoMem.find(x => x.id === note.id) : undefined;
-      const n = { id: old?.id || `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, text, at: old?.at || Date.now() };
-      this.demoMem = [...this.demoMem.filter(x => x.id !== n.id), n];
-      return { ok: true, note: n };
-    }
-    const r = await this.api('assistant-memory-save', { method: 'POST', body: JSON.stringify({ note }) });
-    return r.ok ? { ok: true, note: r.data?.note } : { ok: false, error: r.data?.error || 'Enregistrement impossible (pas de réseau ?).' };
-  }
-  public async memDelete(id: string): Promise<boolean> {
-    if (this.demo) { this.demoMem = this.demoMem.filter(x => x.id !== id); return true; }
-    return (await this.api('assistant-memory-delete', { method: 'POST', body: JSON.stringify({ id }) })).ok;
-  }
-  private demoRem: { items: any[]; cfg: any } = { items: [], cfg: { templates: [], morning: '08:00', hide_title: false, quiet_from: '', quiet_to: '' } };
-  public async remFetch(): Promise<{ items: any[]; cfg: any; now: number } | null> {
-    if (this.demo) return { items: this.demoRem.items, cfg: this.demoRem.cfg, now: Date.now() };
-    if (!this.token) return null;
-    const r = await this.api('reminders');
-    return r.ok && r.data && Array.isArray(r.data.items) ? r.data : null;
-  }
-  public async remSave(item: any): Promise<{ ok: boolean; item?: any; error?: string }> {
-    if (this.demo) {
-      const me = this.getCurrentUser();
-      const it = remClean(item, String(me?.role || 'employee'), String(me?.id || 'demo'), Date.now());
-      if (!it) return { ok: false, error: 'Rappel non valable.' };
-      this.demoRem.items = [...this.demoRem.items.filter(x => x.id !== it.id), it];
-      return { ok: true, item: it };
-    }
-    const r = await this.api('reminder-save', { method: 'POST', body: JSON.stringify({ item }) });
-    return r.ok ? { ok: true, item: r.data?.item } : { ok: false, error: r.data?.error || 'Enregistrement impossible (pas de réseau ?).' };
-  }
-  public async remDelete(id: string): Promise<boolean> {
-    if (this.demo) { this.demoRem.items = this.demoRem.items.filter(x => x.id !== id); return true; }
-    return (await this.api('reminder-delete', { method: 'POST', body: JSON.stringify({ id }) })).ok;
-  }
-  public async remSnooze(id: string, choice: '10m' | '1h' | 'tomorrow'): Promise<number | null> {
-    if (this.demo) { const u = remSnoozeUntil(choice, Date.now(), this.demoRem.cfg.morning); this.demoRem.items = this.demoRem.items.map(x => (x.id === id ? { ...x, snooze_until: u } : x)); return u; }
-    const r = await this.api('reminder-snooze', { method: 'POST', body: JSON.stringify({ id, choice }) });
-    return r.ok ? Number(r.data?.snooze_until) || null : null;
-  }
-  public async remCfgSave(cfg: any): Promise<any | null> {
-    if (this.demo) { this.demoRem.cfg = { ...this.demoRem.cfg, ...cfg }; return this.demoRem.cfg; }
-    const r = await this.api('reminder-cfg', { method: 'POST', body: JSON.stringify({ cfg }) });
-    return r.ok ? r.data?.cfg || null : null;
-  }
-  /** Interrupteurs par catégorie de cet appareil : sans `off` on lit ; avec `off` on enregistre (catégories coupées). */
-  public async pushPrefs(endpoint: string, off?: string[]): Promise<{ ok: boolean; off: string[]; error?: string }> {
-    if (this.demo) return { ok: false, off: [], error: 'Indisponible en mode démo.' };
-    const r = await this.api('push-prefs', { method: 'POST', body: JSON.stringify(off === undefined ? { endpoint } : { endpoint, off }) });
-    return r.ok ? { ok: true, off: Array.isArray(r.data?.off) ? r.data.off : [] } : { ok: false, off: [], error: r.data?.error || 'Erreur.' };
-  }
-  public async pushTest(): Promise<{ ok: boolean; sent: number; error?: string }> {
-    if (this.demo) return { ok: false, sent: 0, error: 'Indisponible en mode démo.' };
-    const r = await this.api('push-test', { method: 'POST', body: '{}' });
-    return r.ok ? { ok: true, sent: Number(r.data?.sent) || 0 } : { ok: false, sent: 0, error: r.data?.error || 'Erreur.' };
-  }
-
-  /** M16.5 : ajoute un fichier d'export à la liste des sauvegardes (ne change aucune donnée ; l'utiliser passe par « Restaurer »). */
-  public async backupImport(data: unknown): Promise<{ ok: boolean; error?: string; code?: string; tables?: number; rows?: number }> {
-    if (this.demo) return { ok: false, error: 'Indisponible en mode démo.' };
-    const r = await this.api('backup-import', { method: 'POST', body: JSON.stringify({ data }) });
-    return r.ok ? { ok: true, tables: Number(r.data?.tables) || 0, rows: Number(r.data?.rows) || 0 } : { ok: false, error: r.data?.error || 'Erreur.', code: r.data?.code };
-  }
-
-  public async backupNow(): Promise<{ ok: boolean; error?: string }> {
-    const r = await this.api('backup-now', { method: 'POST', body: '{}' });
-    return r.ok ? { ok: true } : { ok: false, error: r.data?.error || 'Erreur.' };
-  }
-
-  public async fetchTyping(): Promise<{ user_id: string; to: string }[]> {
-    if (!this.token) return [];
-    const r = await this.apiRaw('typing');
-    return r.ok && Array.isArray(r.data?.typing) ? r.data.typing : [];
-  }
-
-  public editMessage(id: string, userId: string, text: string): { success: boolean; error?: string } {
-    const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.isOwnMessage(msg, userId)) return { success: false, error: 'Tu peux modifier seulement tes propres messages.' };
-    if (!this.canEditMessage(msg, userId)) return { success: false, error: 'Tu peux modifier un message pendant 15 minutes après son envoi.' };
-    const clean = text.trim();
-    if (!clean && !msg.attachment_url) return { success: false, error: 'Le message ne peut pas être vide.' };
-    if (clean === msg.message) return { success: true };
-    const now = new Date();
-    msg.message = clean;
-    msg.edited_at = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
-    this.notify();
-    return { success: true };
-  }
-
-  public togglePinMessage(id: string, userId: string): { success: boolean } {
-    const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.isOwnMessage(msg, userId)) return { success: false };
-    if (msg.pinned) {
-      msg.pinned = false;
-      delete msg.pinned_at;
-    } else {
-      const now = new Date();
-      msg.pinned = true;
-      msg.pinned_at = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
-    }
-    this.notify();
-    return { success: true };
-  }
-
-  // Supprimer pour tous : une trace « message supprimé » reste dans la conversation
-  public deleteMessage(id: string, userId: string): { success: boolean } {
-    const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.canDeleteForAll(msg, userId)) return { success: false };
-    msg.deleted_at = new Date().toISOString();
-    msg.deleted_by = msg.sender_id === userId ? 'sender' : 'admin';
-    msg.message = '';
-    delete msg.attachment_url; delete msg.attachment_name; delete msg.attachment_kind;
-    delete msg.pinned; delete msg.pinned_at; delete msg.reply_to; delete msg.edited_at;
-    this.notify();
-    return { success: true };
-  }
-
-  // --- Groupes de discussion ---
-  /** « Important pour tous » et épingler le message d'un autre (M28.2). Les droits sont ceux du bloc CHATSHARED : le serveur les applique (route `chat-mark`), la démo les applique ici. */
-  public async setChatMark(id: string, mark: 'important' | 'pinned', on: boolean): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    const msg = this.messages.find(m => m.id === id);
-    if (!me || !msg) return { success: false, error: 'Message introuvable.' };
-    const group = typeof msg.recipient_id === 'string' && msg.recipient_id.startsWith('grp_') ? (this.groups.find(g => g.id === msg.recipient_id) || null) : null;
-    let saved: ChatMessage | null = null;
-    if (this.demo) {
-      const plan = planSharedMark(me, msg, group, mark, on, new Date().toISOString());
-      if (!plan.ok) return { success: false, error: plan.error === 'role' ? (mark === 'important' ? 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent poser « Important pour tous ».' : 'Seuls l\'auteur, le responsable, un chef d\'équipe ou le créateur du groupe peuvent épingler ce message.') : plan.error === 'remove' ? 'Seul celui qui l\'a posé ou le responsable peut le retirer.' : 'Action impossible.' };
-      saved = plan.save as ChatMessage;
-    } else {
-      const r = await this.api('chat-mark', { method: 'POST', body: JSON.stringify({ id, mark, on }) });
-      if (!r.ok) return { success: false, error: r.data?.error || (r.status === 0 ? 'Pas de réseau : réessaie quand la connexion revient.' : 'Erreur.') };
-      saved = (r.data?.message || null) as ChatMessage | null;
-    }
-    if (saved) { const i = this.messages.findIndex(m => m.id === id); if (i >= 0) this.messages[i] = saved; this.notify(); }
-    return { success: true };
-  }
-
-  /** Messages éphémères (M28.4) : durée réglée pour une discussion (0 = désactivé). Discussion générale : réglages ; groupe : sa fiche. */
-  public getEphemeralMs(threadId: string): number {
-    const v = threadId === 'all' ? Number((this.getSettings() as any).chat_ephemeral_all_ms) : Number(this.groups.find(g => g.id === threadId)?.ephemeral_ms);
-    return EPHEMERAL_CHOICES.includes(v) ? v : 0;
-  }
-  /** Règle les messages éphémères d'une discussion. Le serveur applique les droits (route `chat-ephemeral`) ; la démo applique les mêmes règles ici. */
-  public async setChatEphemeral(threadId: string, ms: number): Promise<{ success: boolean; error?: string }> {
-    const me = this.currentUser;
-    if (!me) return { success: false, error: 'Non connecté.' };
-    const group = threadId === 'all' ? null : this.groups.find(g => g.id === threadId) || null;
-    if (this.demo) {
-      const plan = planEphemeral(me, group, threadId, ms);
-      if (!plan.ok) return { success: false, error: plan.error === 'role' ? 'Seuls le responsable, un chef d\'équipe ou le créateur du groupe peuvent régler les messages éphémères.' : plan.error === 'direct' ? 'Les messages éphémères existent dans la discussion générale et dans les groupes.' : 'Durée non permise.' };
-    } else {
-      const r = await this.api('chat-ephemeral', { method: 'POST', body: JSON.stringify({ thread: threadId, ms }) });
-      if (!r.ok) return { success: false, error: r.data?.error || (r.status === 0 ? 'Pas de réseau : réessaie quand la connexion revient.' : 'Erreur.') };
-    }
-    if (group) { const i = this.groups.findIndex(g => g.id === threadId); if (i >= 0) { const g: ChatGroup = { ...this.groups[i] }; if (ms) g.ephemeral_ms = ms; else delete g.ephemeral_ms; this.groups[i] = g; } }
-    else { const cur: any = { ...(this.settings[0] || { id: 'general' }) }; if (ms) cur.chat_ephemeral_all_ms = ms; else delete cur.chat_ephemeral_all_ms; this.settings[0] = cur; }
-    this.notify();
-    return { success: true };
-  }
-
-  public getGroups(): ChatGroup[] { return [...this.groups]; }
-  public getChatReads(): ChatRead[] { return [...this.reads]; }
-
-  public createGroup(ownerId: string, name: string, memberIds: string[]): { success: boolean; id?: string; error?: string } {
-    const clean = name.trim();
-    if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
-    const members = [...new Set([ownerId, ...memberIds])];
-    if (members.length < 2) return { success: false, error: 'Choisis au moins un autre membre.' };
-    const id = `grp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    this.groups.push({ id, name: clean, owner_id: ownerId, members, created_at: new Date().toISOString() });
-    this.notify();
-    return { success: true, id };
-  }
-  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[]; avatar_url?: string; description?: string; admins?: string[] }): { success: boolean; error?: string } {
-    const g = this.groups.find(x => x.id === id);
-    const u = this.users.find(x => x.id === userId);
-    const isOwner = !!g && !!u && (g.owner_id === userId || u.role === 'admin');
-    const isGroupAdmin = !!g && (g.admins || []).includes(userId);
-    if (!g || !u || (!isOwner && !isGroupAdmin)) return { success: false, error: 'Seul un administrateur du groupe peut le modifier.' };
-    if (patch.name !== undefined) {
-      const clean = patch.name.trim();
-      if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
-      g.name = clean;
-    }
-    if (patch.members) {
-      const members = [...new Set(patch.members)];
-      if (members.length < 1) return { success: false, error: 'Un groupe doit garder au moins un membre.' };
-      if (!isOwner && ![g.owner_id, ...(g.admins || [])].filter(x => x !== userId).every(x => members.includes(x))) {
-        return { success: false, error: 'Tu ne peux pas retirer le responsable ni un autre administrateur.' };
-      }
-      g.members = members;
-      if (!members.includes(g.owner_id)) g.owner_id = members[0];
-      if (g.admins) g.admins = g.admins.filter(x => members.includes(x));
-    }
-    if (patch.avatar_url !== undefined) g.avatar_url = patch.avatar_url || undefined;
-    if (patch.description !== undefined) g.description = patch.description.trim().slice(0, 200) || undefined;
-    if (patch.admins && isOwner) g.admins = [...new Set(patch.admins)].filter(x => g.members.includes(x) && x !== g.owner_id);
-    this.notify();
-    return { success: true };
-  }
-  public leaveGroup(id: string, userId: string): { success: boolean } {
-    const g = this.groups.find(x => x.id === id);
-    if (!g || !g.members.includes(userId)) return { success: false };
-    const rest = g.members.filter(m => m !== userId);
-    if (rest.length === 0) return this.deleteGroup(id, userId);
-    g.members = rest;
-    if (g.admins) g.admins = g.admins.filter(x => x !== userId);
-    if (g.owner_id === userId) g.owner_id = rest[0];
-    this.notify();
-    return { success: true };
-  }
-  public deleteGroup(id: string, userId: string): { success: boolean } {
-    const g = this.groups.find(x => x.id === id);
-    const u = this.users.find(x => x.id === userId);
-    if (!g || !u || (g.owner_id !== userId && u.role !== 'admin')) return { success: false };
-    this.groups = this.groups.filter(x => x.id !== id);
-    this.messages = this.messages.filter(m => m.recipient_id !== id);
-    this.notify();
-    return { success: true };
-  }
+  demoMem: { id: string; text: string; at: number }[] = [];
+  demoRem: { items: any[]; cfg: any } = { items: [], cfg: { templates: [], morning: '08:00', hide_title: false, quiet_from: '', quiet_to: '' } };
 
   // « Lu » : on dit au serveur jusqu'où on a lu la conversation (discret, sans barre de chargement)
-  private lastReadSent = new Map<string, number>();
-  public markThreadRead(thread: string, ms: number): void {
-    if (!this.token || !ms || (this.lastReadSent.get(thread) || 0) >= ms) return;
-    this.lastReadSent.set(thread, ms);
-    void this.apiRaw('chat-read', { method: 'POST', body: JSON.stringify({ thread, ms }) }).catch(() => {
-      this.lastReadSent.delete(thread);
-    });
-  }
-
-  // --- RESET / EXPORT SQL & JSON BACKUP ---
-  public resetToFactoryDefaults(): void {
-    // Ne supprime rien : recharge simplement l'état officiel depuis le serveur
-    this.since = '';
-    void this.pull(true);
-  }
-
-  public exportDatabaseSql(): string {
-    const sqlStatements = [
-      '-- GESTION PRO',
-      '-- STANDALONE PORTABLE SQLITE / MYSQL SCHEMA & DUMP',
-      '-- Generated: ' + new Date().toISOString(),
-      '',
-      'CREATE TABLE IF NOT EXISTS users (',
-      '    id VARCHAR(50) PRIMARY KEY,',
-      '    username VARCHAR(50) NOT NULL UNIQUE,',
-      '    name VARCHAR(100) NOT NULL,',
-      '    role VARCHAR(20) NOT NULL DEFAULT "employee",',
-      '    status VARCHAR(20) NOT NULL DEFAULT "active",',
-      '    vacation VARCHAR(20) NOT NULL DEFAULT "day",',
-      '    is_online INTEGER NOT NULL DEFAULT 0,',
-      '    phone VARCHAR(30),',
-      '    performance_badge VARCHAR(50) DEFAULT "Standard",',
-      '    total_score_boosted BIGINT DEFAULT 0,',
-      '    total_earnings_ar BIGINT DEFAULT 0,',
-      '    pending_advance_ar BIGINT DEFAULT 0',
-      ');',
-      '',
-      'CREATE TABLE IF NOT EXISTS posts (',
-      '    id VARCHAR(50) PRIMARY KEY,',
-      '    employee_id VARCHAR(50) NOT NULL,',
-      '    client_name VARCHAR(100) NOT NULL,',
-      '    account_tag VARCHAR(100),',
-      '    target_score BIGINT NOT NULL,',
-      '    initial_score BIGINT NOT NULL,',
-      '    current_score BIGINT NOT NULL,',
-      '    final_score BIGINT,',
-      '    remaining_score BIGINT NOT NULL,',
-      '    status VARCHAR(30) NOT NULL,',
-      '    shift_type VARCHAR(20) NOT NULL,',
-      '    date DATE NOT NULL,',
-      '    start_time TIME NOT NULL,',
-      '    end_time TIME,',
-      '    start_proof_url TEXT,',
-      '    end_proof_url TEXT,',
-      '    calculated_ar BIGINT DEFAULT 0,',
-      '    notes TEXT,',
-      '    created_at DATETIME NOT NULL',
-      ');',
-      '',
-      'CREATE TABLE IF NOT EXISTS security_violations (',
-      '    id VARCHAR(50) PRIMARY KEY,',
-      '    employee_id VARCHAR(50) NOT NULL,',
-      '    violation_type VARCHAR(50) NOT NULL,',
-      '    description TEXT NOT NULL,',
-      '    timestamp DATETIME NOT NULL,',
-      '    resolved INTEGER DEFAULT 0',
-      ');',
-      '',
-      'CREATE TABLE IF NOT EXISTS salary_advances (',
-      '    id VARCHAR(50) PRIMARY KEY,',
-      '    employee_id VARCHAR(50) NOT NULL,',
-      '    amount_ar BIGINT NOT NULL,',
-      '    reason TEXT NOT NULL,',
-      '    request_date DATE NOT NULL,',
-      '    status VARCHAR(20) DEFAULT "pending"',
-      ');',
-      '',
-      '-- INSERT INITIAL USERS'
-    ];
-
-    this.users.forEach(u => {
-      sqlStatements.push(
-        `INSERT INTO users VALUES ('${u.id}', '${u.username}', '${u.name.replace(/'/g, "''")}', '${u.role}', '${u.status}', '${u.shift}', ${u.is_online ? 1 : 0}, '${u.phone}', '${u.performance_badge}', ${u.total_score_boosted}, ${u.total_earnings_ar}, ${u.pending_advance_ar});`
-      );
-    });
-
-    sqlStatements.push('', '-- INSERT POST SESSIONS');
-    this.posts.forEach(p => {
-      sqlStatements.push(
-        `INSERT INTO posts VALUES ('${p.id}', '${p.employee_id}', '${p.client_name.replace(/'/g, "''")}', '${p.account_tag}', ${p.target_score}, ${p.initial_score}, ${p.current_score}, ${p.final_score ?? 'NULL'}, ${p.remaining_score}, '${p.status}', '${p.shift_type}', '${p.date}', '${p.start_time}', ${p.end_time ? `'${p.end_time}'` : 'NULL'}, '[PROOF_BLOB]', '[PROOF_BLOB]', ${p.calculated_ar || 0}, '${(p.notes || '').replace(/'/g, "''")}', '${p.created_at}');`
-      );
-    });
-
-    return sqlStatements.join('\n');
-  }
-
-  public exportDatabaseJson(): string {
-    return JSON.stringify(
-      {
-        meta: {
-          app: 'Gestion Pro Gestion Management System',
-          version: '1.0.0',
-          exported_at: new Date().toISOString(),
-        },
-        users: this.users,
-        posts: this.posts,
-        security_logs: this.securityLogs,
-        salary_advances: this.advanceRequests,
-        messages: this.messages,
-      },
-      null,
-      2
-    );
-  }
+  lastReadSent = new Map<string, number>();
 }
+
+// Ajoute les méthodes rangées dans db/parts/* à la classe (et à son type).
+export interface AppStore extends AccountsMethods, AdminToolsMethods, ChatMethods, ClientsMethods, DemoMethods, FinanceMethods, HrMethods, NewsMethods, OfflineMethods, PostsMethods, PurchasingMethods, SettingsMethods, SheetOutboxMethods, SheetsMethods, StockMethods {}
+Object.assign(AppStore.prototype, accountsMethods, adminToolsMethods, chatMethods, clientsMethods, demoMethods, financeMethods, hrMethods, newsMethods, offlineMethods, postsMethods, purchasingMethods, settingsMethods, sheetOutboxMethods, sheetsMethods, stockMethods);
+
 
 export const db = new AppStore();

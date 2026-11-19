@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { transformSync } from 'esbuild';
 import { cwValidate, cleanCustomTypes, CW_MAX_TYPES } from '../src/utils/customWorkTypes';
 import { BUSINESS_MODELS } from '../src/utils/workTypes';
+import { readStoreSource } from './lib/storeSource.mjs';
 
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -47,7 +48,7 @@ ok(/sentWt !== undefined\) toSave = \{ \.\.\.toSave, work_types: cleanCustomType
 ok(!/SETTINGS_ADMIN_KEYS: string\[\] = \[[^\]]*"work_types"/.test(src), 'serveur : les types ne sont pas cachés au Chef d\'équipe (pas d\'argent dedans)');
 ok(/me\.role === "team_lead"\) out\.company = \{ \.\.\.out\.company, work: \{ business_model:/.test(src), 'serveur : le Chef d\'équipe reçoit le modèle d\'entreprise et rien d\'autre de la section paie');
 // Site
-const st = readFileSync('src/db/store.ts', 'utf8'), ui = readFileSync('src/components/CustomWorkTypes.tsx', 'utf8'), cc = readFileSync('src/components/CompanyConditions.tsx', 'utf8'), ws = readFileSync('src/views/WorksheetView.tsx', 'utf8');
+const st = readStoreSource(), ui = readFileSync('src/components/CustomWorkTypes.tsx', 'utf8'), cc = readFileSync('src/components/CompanyConditions.tsx', 'utf8'), ws = readFileSync('src/views/WorksheetView.tsx', 'utf8');
 ok(/saveCustomWorkType[\s\S]*role !== 'admin'/.test(st) && /removeCustomWorkType[\s\S]*role !== 'admin'/.test(st), 'magasin : créer et supprimer un type = responsable seulement');
 ok(/sec\.id === 'work' && <CustomWorkTypes/.test(cc) && /data-cwt-save/.test(ui), 'Réglages : le formulaire est dans la section « Types de travail et paie » (donc caché module fermé)');
 ok(/getCustomWorkTypes\(\)/.test(ws), 'Feuille du jour : propose aussi les types créés à la main');
