@@ -95,6 +95,7 @@ const CalendarView = lazy(() => import('./views/CalendarView').then(m => ({ defa
 const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.ChatView })));
 const CVViewerModal = lazy(() => import('./components/CVViewerModal').then(m => ({ default: m.CVViewerModal })));
 const DayDetailsModal = lazy(() => import('./components/DayDetailsModal').then(m => ({ default: m.DayDetailsModal })));
+const NotificationsPage = lazy(() => import('./views/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 
 export default function App() {
   const { theme, t, startLogoutAnimation, lang } = useApp();
@@ -556,7 +557,9 @@ export default function App() {
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView + (activeView === 'stats' ? getStatsTab() : '')}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
-          {activeView === 'feed' ? (
+          {activeView === 'notifications' ? (
+            <NotificationsPage currentUser={viewUser} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} />
+          ) : activeView === 'feed' ? (
             <FeedView key={viewUser.role} currentUser={viewUser} onOpenProfile={handleOpenEmployeeCV} />
           ) : viewUser.role === 'team_lead' ? (
             /* ================= CHEF D'ÉQUIPE : validations de son équipe, messages, réglages personnels (toute autre page -> Validations) ================= */

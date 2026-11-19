@@ -15,6 +15,7 @@ import { FIGURE_GO } from './financeNav';
 import { getRemItems } from './remRegistry';
 import { remDateOf, remDayDiff, remOccurrences, REM_TYPE_LABEL, type RemItem } from './reminderRules';
 import { isOpenMission } from './postPay';
+import type { Notif } from './notifications';
 
 export type Lang = 'fr' | 'en';
 export interface Bi { fr: string; en: string }
@@ -161,6 +162,12 @@ export function remindersSummary(items: RemItem[], nowMs: number): { late: { it:
   const key = (x: { it: RemItem; d: string }) => x.d + (x.it.all_day ? '00:00' : x.it.time);
   late.sort((a, c) => key(a).localeCompare(key(c))); tod.sort((a, c) => key(a).localeCompare(key(c))); soon.sort((a, c) => key(a).localeCompare(key(c)));
   return { late, today: tod, soon };
+}
+export function notificationsReply(items: Notif[]): Reply {
+  const unread = items.filter((n, i, a) => a.findIndex(x => x.id === n.id) === i).slice(0, 8);
+  const urgent = unread.filter(n => n.tone === 'urgent').length;
+  const lines = unread.slice(0, 5).map(n => b(`${n.tone === 'urgent' ? '🔴' : n.tone === 'bad' ? '🟠' : '🔔'} ${n.title}${n.sub ? ` — ${n.sub}` : ''}`, `${n.tone === 'urgent' ? '🔴' : n.tone === 'bad' ? '🟠' : '🔔'} ${n.title}${n.sub ? ` — ${n.sub}` : ''}`));
+  return { intent: 'notifications', title: b(`Notifications : ${items.length}`, `Notifications: ${items.length}`), lines: lines.length ? lines : [b('Aucune notification active pour le moment.', 'No active notifications right now.')], actions: [{ label: b('Ouvrir le centre de notifications', 'Open notification center'), go: { view: 'notifications' } }], sources: b(`${urgent} urgente(s) parmi les notifications de la cloche`, `${urgent} urgent notification(s) from the bell`), empty: items.length === 0 };
 }
 export function remindersReply(items: RemItem[], nowMs: number): Reply {
   const r = remindersSummary(items, nowMs);
@@ -389,7 +396,7 @@ const FIGURE_WORDS: Record<FigureId, string[]> = {
   gainPerMission: ['gain par mission', 'gain per mission'], stockValue: ['valeur du stock', 'stock value'], missionsDone: ['missions validees', 'validated missions'],
 };
 export type Intent =
-  | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' } | { kind: 'reminders' }
+  | { kind: 'notifications' } | { kind: 'morning' } | { kind: 'todo' } | { kind: 'help' } | { kind: 'reminders' }
   | { kind: 'page'; id: string } | { kind: 'suggest' } | { kind: 'team' } | { kind: 'employee'; id: string } | { kind: 'figure'; id: FigureId } | { kind: 'whatif'; w: WhatIfInput } | { kind: 'unknown' };
 
 /** Cherche le pourcentage d'une phrase : « 5 % », « -10% », « de 5 pour cent ». Null si absent ou absurde (> 500). */
@@ -414,6 +421,7 @@ export function detectIntent(text: string, i?: SnapshotInput): Intent {
   }
   if (/\b(aide|help|que sais tu|que peux tu|what can you)\b/.test(t)) return { kind: 'help' };
   if (/\b(suggestion|suggestions|solution|solutions|conseil|conseils|conseille|conseilles|propose|proposes|idee|idees|suggest|advice|tips?|recommend)\b/.test(t) && !/\b(message|mail|rediger|ecris|write|draft)\b/.test(t)) return { kind: 'suggest' };
+  if (/\b(notifications?|alertes?|centre de notifications?|notification center)\b/.test(t)) return { kind: 'notifications' };
   if (/\b(rappels?|reminders?|agenda|mes taches|my tasks|a faire aujourd|to do today|rendez vous|rendezvous|appointments?)\b/.test(t)) return { kind: 'reminders' };
   if (/\b(quoi faire|que faire|what to do|todo|priorite|priority)\b/.test(t)) return { kind: 'todo' };
   if (/\b(resume|matin|morning|summary|recap du jour|point du jour)\b/.test(t)) return { kind: 'morning' };
@@ -459,9 +467,10 @@ export function unknownReply(): Reply {
 }
 
 /** Réponse complète à une phrase de l'admin. `alerts` = alertes visibles de la Santé du site. */
-export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[]): Reply {
+export function respond(text: string, i: SnapshotInput, alerts: HealthAlert[], notifications: Notif[] = []): Reply {
   const it = detectIntent(text, i);
   switch (it.kind) {
+    case 'notifications': return notificationsReply(notifications);
     case 'morning': return morningSummary(i, alerts);
     case 'todo': return todoReply(i, alerts);
     case 'reminders': return remindersReply(getRemItems(), i.nowMs ?? 0);

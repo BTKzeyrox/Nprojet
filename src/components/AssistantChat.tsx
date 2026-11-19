@@ -28,6 +28,7 @@ import { TEMPLATES, FIELDS, compose, type Field } from '../utils/messageTemplate
 import { setStatsTab, type StatsTab } from '../utils/statsNav';
 import { setStorageIntent, type StorageIntent } from '../utils/storageNav';
 import { setNavTarget } from '../utils/navTarget';
+import { buildNotifications } from '../utils/notifications';
 import { setValFilterIntent, type ValFilter } from '../utils/navIntent';
 import { isKnownView } from '../utils/health/menu';
 
@@ -97,7 +98,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
       const mis = mi || ann || ack || poll ? null : parseMissionIntent(q, Date.now(), db.getClients().map(c => ({ id: c.id, name: c.name })), missionRequiresClient(readCompany(db.getSettings().company))); // « mission : titre, pour Acme, demain, urgente » : aperçu d'abord
       const ext = mi || ann || ack || poll || mis ? null : parseExtraIntent(q); // « résume ma journée / ma semaine », « fichier de mes rappels », « modèle : relance »
       const act = mi || ann || ack || poll || mis || ext ? null : parseActionIntent(q, Date.now()); // « rappelle-moi… », « ajoute au calendrier… », « ajoute une tâche… » : aperçu d'abord
-      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : ack ? ackPreview(ack) : poll ? (poll === 'incomplete' ? (dat === 'incomplete' ? dateIncomplete() : pollIncomplete()) : pollPreview(poll)) : mis ? (mis === 'incomplete' ? missionIncomplete() : missionPreview(mis)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts)) : helpReply();
+      let reply: Reply = mi ? (mi === 'cancel' ? { intent: 'memory_cancel', title: b('D\'accord, je ne retiens rien', 'OK, I remember nothing'), lines: [], actions: [], sources: b('', '') } : await runMemory(mi, memApi)) : ann ? announcePreview(ann) : ack ? ackPreview(ack) : poll ? (poll === 'incomplete' ? (dat === 'incomplete' ? dateIncomplete() : pollIncomplete()) : pollPreview(poll)) : mis ? (mis === 'incomplete' ? missionIncomplete() : missionPreview(mis)) : ext ? (ext.kind === 'summary' ? summaryReply(getRemItems(), db.getContracts(), Date.now(), ext.span) : ext.kind === 'file' ? fileReply(ext.what) : templatesReply(ext.id)) : act ? actionPreview(act) : i ? (sid ? shortcutReply(sid, i, getHealth().alerts) : respond(q, i, getHealth().alerts, db.getCurrentUser() ? buildNotifications(db.getCurrentUser()!) : [])) : helpReply();
       if (!mi && !ann && !poll && !mis && !ext && !act && reply.intent === 'unknown' && i) {
         let hits: MemNote[] = [];
         try { const ns = await db.memFetch(); hits = ns ? searchNotes(q, ns) : []; } catch { hits = []; } // une note qui ressemble à la question : on la montre (sans réseau externe)
@@ -166,7 +167,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
     if (g.storage) setStorageIntent(g.storage);
     if (g.filter) setValFilterIntent(g.filter as ValFilter);
     if (g.nav) setNavTarget(g.nav);
-    if (isKnownView(g.view) || g.view === 'feed' || g.view === 'grid') onNavigate?.(g.view);
+    if (isKnownView(g.view) || g.view === 'feed' || g.view === 'grid' || g.view === 'notifications') onNavigate?.(g.view);
   };
   // Boutons du bas : les vrais chiffres du jour (un bouton sans rien à montrer se cache) ; recalculés après chaque message, pas à chaque lettre tapée
   const shortcuts = useMemo(() => { try { const si = getSnapshotInput(); return si ? shortcutList(si) : []; } catch { return []; } }, [msgs.length, busy]); // eslint-disable-line react-hooks/exhaustive-deps
