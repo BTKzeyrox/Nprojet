@@ -1252,6 +1252,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:all` | (plusieurs contrôles) |
 | `npm run check:site-config` | Contrôle « comptes du site à un seul endroit » (2026-11-19) : site.config.json est valide, le fichier du serveur en est la copie exacte, |
 | `npm run check:setup-sql` | (plusieurs contrôles) |
+| `npm run check:copy-project` | (plusieurs contrôles) |
 | `npm run check:demo-stats` | Contrôle : les chiffres et graphiques des statistiques sont pleins avec les données de démonstration. |
 | `npm run check:client-price` | Contrôle du prix client (sans écran, sans serveur). |
 | `npm run check:deadlines` | Contrôle de la date limite et de la priorité (M6.1). Lancer : npm run check:deadlines |
@@ -1339,6 +1340,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 
 | Problème | Solution retenue |
 |---|---|
+| Copier le site dans un autre dépôt à la main laissait des comptes de l'original (risque d'écrire dans la mauvaise base) et rien ne prouvait que la copie était fidèle. | `npm run copy:project -- --repo COMPTE/NOUVEAU --supabase-ref REF` (`scripts/copy-project.mjs`) crée le nouveau dépôt en 2 commits : copie pure (même arbre git que l'original, vérifié) puis comptes seulement (`site.config.json` et `site-config.ts`). Il refuse le dépôt d'origine, DF-boosting, nova-language-coach et le Supabase d'origine ; sans `--push` il n'envoie rien ; le token est lu dans `GH_TOKEN` et n'est jamais écrit. `npm run check:copy-project` le vérifie (2026-11-19). |
 | Une copie du site n'avait pas de sauvegarde (`df_backups`, `df_take_backup`, tâche de nuit : présents dans la base de Nprojet mais dans aucun fichier SQL) et ses tâches planifiées appelaient le serveur de Nprojet (adresse écrite en dur dans 4 migrations). | Migration `20261023_create_df_backups.sql` ajoutée ; les 4 migrations de tâches lisent maintenant l'adresse dans le coffre-fort (secret `df_project_url`). `npm run setup:sql` écrit `supabase/setup-complete.sql` (extensions, adresse du projet, schéma, réglages, toutes les migrations) pour un projet Supabase NEUF ; `npm run check:setup-sql` l'applique sur un vrai Postgres local et vérifie tables, sécurité de ligne, 5 tâches planifiées et sauvegarde (2026-11-19). |
 | Les comptes (Supabase, Cloudinary, GitHub) étaient écrits en dur à plusieurs endroits : une copie du site écrivait dans la base de Nprojet. | `site.config.json` est le seul endroit des comptes. Le site le lit (`src/db/storeShared.ts`), le serveur lit `supabase/functions/df-api/site-config.ts` (généré par `npm run config:sync`), et la construction s'arrête avec un message clair si les réglages sont faux (`vite.config.ts`). `npm run check:site-config` le vérifie (2026-11-19). |
 | Aucun contrôle automatique à l'envoi : une erreur pouvait partir sur Vercel sans que personne ne la voie. | `.github/workflows/ci.yml` lance `npm run lint`, `npm run build` et `npm run check:all` (= `scripts/run-checks.mjs`, tous les `check:*`) à chaque envoi sur `main` et chaque pull request (2026-11-19). |

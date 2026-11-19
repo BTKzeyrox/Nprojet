@@ -180,6 +180,8 @@
     "check:site-config": "npx --yes tsx scripts/check-site-config.ts",
     "setup:sql": "node scripts/build-setup-sql.mjs",
     "check:setup-sql": "node scripts/check-setup-sql.mjs",
+    "copy:project": "node scripts/copy-project.mjs",
+    "check:copy-project": "node scripts/check-copy-project.mjs",
     "check:demo-stats": "npx --yes tsx scripts/check-demo-stats.ts",
     "check:client-price": "npx --yes tsx scripts/check-client-price.ts",
     "check:deadlines": "npx --yes tsx scripts/check-deadlines.ts",
