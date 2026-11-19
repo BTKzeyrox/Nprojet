@@ -1155,3 +1155,53 @@ html.theme-dark aside.df-sb .df-sb-logo {
   background: linear-gradient(135deg, var(--btk-blue-1) 0%, var(--btk-blue-2) 45%, var(--btk-blue-3) 100%) !important;
   box-shadow: 0 0 18px rgba(59, 130, 246, 0.45);
 }
+
+
+/* ===== Charte BTK, suite : menu, header, boutons et thème clair (même palette que l'écran de démarrage) ===== */
+
+/* 4a. Menu de gauche : marine profond dans les DEUX thèmes (le clair n'est plus pastel) */
+html.theme-light aside.df-sb {
+  --sb-bg: #0b2a4a; --sb-line: #1e3a6e; --sb-text: #f8fafc; --sb-sub: #93b4e6; --sb-item: #dbe7fb;
+  --sb-hover: rgba(255,255,255,.09); --sb-active: #2563eb; --sb-prof: rgba(255,255,255,.06); --sb-btn: rgba(255,255,255,.08); --sb-btn-h: rgba(255,255,255,.16); --sb-btn-t: #e2e8f0;
+  --sb-badge: rgba(255,255,255,.14); --sb-badge-t: #e2e8f0; --sb-tile: rgba(255,255,255,.08);
+}
+html.theme-light aside.df-sb, html.theme-dark aside.df-sb {
+  background-image: linear-gradient(180deg, var(--btk-bg-1) 0%, var(--btk-bg-2) 100%) !important;
+  background-color: var(--btk-bg-2) !important;
+  border-color: rgba(59, 130, 246, 0.28) !important;
+}
+html.theme-light aside.df-sb .df-sb-title {
+  background-image: linear-gradient(90deg, #bfdbfe 0%, var(--btk-blue-1) 45%, var(--btk-blue-2) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  width: fit-content; max-width: 100%;
+}
+html.theme-light aside.df-sb .df-sb-logo {
+  background: linear-gradient(135deg, var(--btk-blue-1) 0%, var(--btk-blue-2) 45%, var(--btk-blue-3) 100%) !important;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.45);
+}
+
+/* 4b. Header : marine de l'écran de démarrage, fine ligne bleue lumineuse (les deux thèmes) */
+html.theme-light header.df-topbar, html.theme-dark header.df-topbar {
+  background-image: linear-gradient(90deg, var(--btk-bg-1) 0%, #0b2a4a 100%) !important;
+  background-color: var(--btk-bg-1) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  box-shadow: 0 8px 24px -14px rgba(59, 130, 246, 0.45), inset 0 1px 0 rgba(147, 197, 253, 0.08) !important;
+}
+
+/* 4c. Boutons principaux : dégradé bleu → marine (comme « Se connecter ») avec une légère lueur */
+.bg-emerald-600.text-white, .bg-blue-600.text-white {
+  background-image: linear-gradient(135deg, #2563eb 0%, var(--btk-blue-3) 100%);
+  box-shadow: 0 4px 14px -6px rgba(59, 130, 246, 0.55);
+}
+@media (hover: hover) {
+  button.bg-emerald-600.text-white:hover, a.bg-emerald-600.text-white:hover, button.bg-blue-600.text-white:hover, a.bg-blue-600.text-white:hover { filter: brightness(1.12); }
+}
+
+/* 5. Thème clair : fond gris-bleu net, cartes blanches, bordures et ombres plus marquées, texte marine */
+:root { --gp-page: #e9eef5; --gp-line: #c5d0df; --gp-card: #ffffff; }
+html.theme-light, html.theme-light body { background: var(--gp-page); color: #0b1b33; }
+html.theme-light .df-bg-app, html.theme-light .df-bg-login { background-color: var(--gp-page); background-image: none; }
+html.theme-light [class*="rounded-2xl"][class*="border"], html.theme-light [class*="rounded-xl"][class*="border"] {
+  border-color: var(--gp-line);
+  box-shadow: 0 1px 2px rgba(11, 42, 74, 0.10), 0 8px 20px -14px rgba(11, 42, 74, 0.30);
+}
