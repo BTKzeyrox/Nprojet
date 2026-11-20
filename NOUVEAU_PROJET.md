@@ -75,8 +75,8 @@ Lance le SQL affiché dans le Supabase **neuf**. L'identifiant `user-admin-1` es
 npm run deploy:server -- --dry-run --confirm-ref <REF_NEUF>      # voir sans rien envoyer
 SUPABASE_ACCESS_TOKEN=sbp_... npm run deploy:server -- --confirm-ref <REF_NEUF>
 ```
-Envoie `df-api` (**avec ses 3 fichiers** : `index.ts`, `totp.ts`, `site-config.ts`), `df-restore` et `df-assistant` sur le projet de `site.config.json`, puis teste la route publique `signup-info`. Le `--confirm-ref` doit être égal au ref du fichier : impossible de viser un autre projet par erreur. `verify_jwt = false` vient de `supabase/config.toml`.
-Si tu déploies autrement (connecteur, tableau de bord) : **envoie tous les fichiers du dossier de la fonction**, sinon `df-api` ne démarre pas (`totp.ts` et `site-config.ts` sont importés par `index.ts`).
+Envoie `df-api` (**avec ses 4 fichiers** : `index.ts`, `totp.ts`, `accounting.ts`, `site-config.ts`), `df-restore` et `df-assistant` sur le projet de `site.config.json`, puis teste la route publique `signup-info`. Le `--confirm-ref` doit être égal au ref du fichier : impossible de viser un autre projet par erreur. `verify_jwt = false` vient de `supabase/config.toml`.
+Si tu déploies autrement (connecteur, tableau de bord) : **envoie tous les fichiers du dossier de la fonction**, sinon `df-api` ne démarre pas (`totp.ts`, `accounting.ts` et `site-config.ts` sont importés par `index.ts`).
 **Réglages facultatifs** (secrets de fonctions, Supabase → Edge Functions → Secrets) : `GEMINI_API_KEY` (assistant IA), `RESEND_API_KEY`, `REMINDER_MAIL_TO`, `REMINDER_MAIL_FROM` (mail de rappels). La clé de service et l'adresse du projet sont fournies automatiquement ; les sessions sont signées avec la clé de **ce** projet.
 **Test sans navigateur** :
 - `POST https://<ref>.supabase.co/functions/v1/df-api/login` avec `{"username":"zz","password":"x"}` → **401** « Pseudo ou mot de passe incorrect. » (le serveur tourne et lit la base).
@@ -112,7 +112,7 @@ Si tu déploies autrement (connecteur, tableau de bord) : **envoie tous les fich
 | `setup-complete.sql` : « extension pg_cron / pg_net not available » | Active-les dans Database → Extensions, relance sur une base **vide** (ou supprime les tables créées à moitié). |
 | Le SQL complet relancé donne des erreurs | Il est fait pour **une seule** exécution sur une base neuve. |
 | Les rappels, notifications ou rapports automatiques ne partent pas | `select * from cron.job_run_details order by start_time desc limit 5;` puis vérifie le secret `df_project_url` et que `df-api` est déployée. |
-| Connexion : erreur 500 « Serveur mal configuré » ou « Function not found » | `df-api` pas déployée, ou déployée sans `totp.ts` / `site-config.ts`. Relance `npm run deploy:server`. |
+| Connexion : erreur 500 « Serveur mal configuré » ou « Function not found » | `df-api` pas déployée, ou déployée sans `totp.ts` / `accounting.ts` / `site-config.ts`. Relance `npm run deploy:server`. |
 | Photos : l'envoi échoue | Secrets Cloudinary absents du coffre-fort, ou `cloudinary.cloudName` de `site.config.json` ≠ celui du compte (puis `config:sync` et redéployer). |
 | Mails de restauration : rien reçu | Secret `resend_api_key` absent, ou Resend sans domaine : seule l'adresse du compte Resend reçoit. |
 

@@ -23,7 +23,7 @@
 | 6 | Script de déploiement du serveur (3 fonctions) avec confirmation du projet | `npm run deploy:server` |
 | 7 | Contrôle « zéro trace de l'ancien compte » | `npm run check:no-old-account` |
 | 8 | Guide complet de copie et de passation | `NOUVEAU_PROJET.md`, `HANDOVER.md` § 0 bis |
-| 9 | `df-api` : 1re tranche du découpage (bloc TOTP dans `totp.ts`) | `supabase/functions/df-api/totp.ts` |
+| 9 | `df-api` : découpage en cours. Tranche 1 : bloc TOTP dans `totp.ts`. Tranche 2 (2026-11-20) : règles pures de la comptabilité dans `accounting.ts` | `supabase/functions/df-api/totp.ts`, `accounting.ts` |
 
 ## 2 bis. Copie n° 1 : `BTKzeyrox/gestion` (2026-11-19)
 - **Fait** : dépôt `https://github.com/BTKzeyrox/gestion` créé par `npm run copy:project` (2 commits : copie pure de Nprojet @`d10ce73`, puis comptes). Nouveau Supabase : ref `blvuwirzmtmlehafnvew` (compte non visible du connecteur Supabase de l'IA : la base se fait dans son SQL Editor). Cloudinary : le même que Nprojet.

@@ -9,16 +9,17 @@ let fails = 0, n = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { fails++; console.log(`ECHEC ${m}`); } else console.log(`OK    ${m}`); };
 const read = (p: string) => fs.readFileSync(p, 'utf8');
 const server = read('supabase/functions/df-api/index.ts');
+const acctSrc = read('supabase/functions/df-api/accounting.ts'); // règles pures sorties de index.ts (découpage, tranche 2)
 const noExport = (t: string) => t.replace(/^export /gm, '');
 const region = (t: string, name: string) => (new RegExp(`// BEGIN ${name}\\n([\\s\\S]*?)// END ${name}\\n`).exec(t) || [])[1] || '';
 
 // ---- copie exacte (au mot « export » près)
-ok(region(read('src/utils/accounting.ts'), 'ACCOUNTINGCORE').length > 3000 && noExport(region(read('src/utils/accounting.ts'), 'ACCOUNTINGCORE')) === region(server, 'ACCOUNTINGCORE'), 'règles de base : la copie du serveur est identique à celle du site');
-ok(region(read('src/utils/accountingEntries.ts'), 'ACCOUNTINGBUILD').length > 3000 && noExport(region(read('src/utils/accountingEntries.ts'), 'ACCOUNTINGBUILD')) === region(server, 'ACCOUNTINGBUILD'), 'écritures automatiques : la copie du serveur est identique à celle du site');
+ok(region(read('src/utils/accounting.ts'), 'ACCOUNTINGCORE').length > 3000 && noExport(region(read('src/utils/accounting.ts'), 'ACCOUNTINGCORE')) === region(acctSrc, 'ACCOUNTINGCORE'), 'règles de base : la copie du serveur est identique à celle du site');
+ok(region(read('src/utils/accountingEntries.ts'), 'ACCOUNTINGBUILD').length > 3000 && noExport(region(read('src/utils/accountingEntries.ts'), 'ACCOUNTINGBUILD')) === region(acctSrc, 'ACCOUNTINGBUILD'), 'écritures automatiques : la copie du serveur est identique à celle du site');
 ok(!/^\s*import\s/m.test(region(read('src/utils/accounting.ts'), 'ACCOUNTINGCORE')) && !/^\s*import\s/m.test(region(read('src/utils/accountingEntries.ts'), 'ACCOUNTINGBUILD')), 'aucune importation dans les blocs copiés');
 
 // ---- exécution du bloc du serveur
-const m = /const ACCT = \(\(\) => \{[\s\S]*?\n\}\)\(\);/.exec(server);
+const m = /const ACCT = \(\(\) => \{[\s\S]*?\n\}\)\(\);/.exec(acctSrc);
 ok(!!m, 'bloc ACCT trouvé dans le serveur');
 const S: any = new Function(transformSync(m![0] + '\nreturn ACCT;', { loader: 'ts' }).code)();
 const inv = (p: any = {}) => ({ id: 'i1', type: 'invoice', number: 'FA-1', status: 'issued', client: { name: 'Acme' }, issue_date: '2026-10-05', subtotal_ar: 1000, tax_ar: 200, total_ar: 1200, ...p });

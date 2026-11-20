@@ -22,6 +22,6 @@ ok(/rien n'a été envoyé/.test(r.stdout), 'essai à blanc : rien n\'est envoy�
 ok(!/ghp_|sbp_/.test(r.stdout + r.stderr), 'aucun token dans les messages');
 // Les fichiers envoyés avec df-api sont bien dans son dossier (le déploiement envoie tout le dossier)
 const files = spawnSync('ls', ['supabase/functions/df-api'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean).sort().join();
-ok(files === 'index.ts,site-config.ts,totp.ts', 'dossier df-api : index.ts, site-config.ts et totp.ts (tout est envoyé ensemble)');
+ok(files === 'accounting.ts,index.ts,site-config.ts,totp.ts', 'dossier df-api : accounting.ts, index.ts, site-config.ts et totp.ts (tout est envoyé ensemble)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

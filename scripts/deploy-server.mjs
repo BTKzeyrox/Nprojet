@@ -1,4 +1,4 @@
-// Envoie les 3 fonctions serveur (df-api avec totp.ts et site-config.ts, df-restore, df-assistant) sur le projet Supabase de site.config.json (2026-11-19).
+// Envoie les 3 fonctions serveur (df-api avec tous les fichiers de son dossier : totp.ts, accounting.ts, site-config.ts, df-restore, df-assistant) sur le projet Supabase de site.config.json (2026-11-19).
 // Lancer : SUPABASE_ACCESS_TOKEN=sbp_... npm run deploy:server -- --confirm-ref <ref>      (ajouter --dry-run pour voir sans rien envoyer)
 // Le --confirm-ref doit être le ref de site.config.json : un oubli ou une erreur de dossier ne peut pas envoyer sur le mauvais projet.
 // Utilise la CLI Supabase officielle en mode « API » (sans Docker). Le token (Supabase > Account > Access Tokens) n'est lu que dans l'environnement.
