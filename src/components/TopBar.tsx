@@ -135,9 +135,17 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const mergedMenu = mergedFor(currentUser.role, useMenuMode());
   const home = isAdmin ? 'dashboard' : 'grid';
   const goHomeAndRefresh = () => {
-    requestFeedTop();
     onNavigate(home);
-    window.setTimeout(() => { void db.refreshNow(); }, 450);
+    const scrollHomeTop = () => {
+      requestFeedTop();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    // Si l’accueil est déjà ouvert, le scroll démarre tout de suite. S’il faut
+    // changer de page, on le rejoue après le montage de l’accueil.
+    scrollHomeTop();
+    window.setTimeout(scrollHomeTop, 180);
+    // La recherche ne doit jamais concurrencer l’animation de retour en haut.
+    window.setTimeout(() => { void db.refreshNow(); }, 650);
   };
   const pages = useMemo(
     () =>
