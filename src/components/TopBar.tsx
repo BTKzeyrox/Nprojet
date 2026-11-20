@@ -133,7 +133,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   }, []);
 
   const mergedMenu = mergedFor(currentUser.role, useMenuMode());
-  const home = isAdmin ? 'dashboard' : 'grid';
+  const home = 'feed';
   const goHomeAndRefresh = () => {
     if (activeView === 'feed') {
       // Ne pas démonter Actualités avant que son propre conteneur ait fini
@@ -154,10 +154,9 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       };
       window.requestAnimationFrame(frame);
     };
-    if (activeView !== home) onNavigate(home);
-    animateWindowTop();
-    // Après le montage de l’accueil, on relance l’animation si la page avait changé.
-    window.setTimeout(animateWindowTop, activeView === home ? 80 : 240);
+    onNavigate(home);
+    // Après le montage de l’accueil, on déclenche son vrai conteneur de scroll.
+    window.setTimeout(() => { requestFeedTop(); }, 240);
     window.setTimeout(() => { void db.refreshNow(); }, 700);
   };
   const pages = useMemo(

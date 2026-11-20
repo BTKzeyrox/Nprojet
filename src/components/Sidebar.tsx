@@ -117,7 +117,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'feed', label: 'Actualités', icon: Newspaper, badge: newsPending > 0 ? String(newsPending) : undefined, tone: 'alert' as const },
     ...(isAdmin || isAccountant || isTeamLead
       ? [
-          { id: 'dashboard', label: 'Tableau de bord', icon: Home },
           { id: 'validations', label: 'Validations', icon: ClipboardCheck, badge: (isTeamLead ? teamPending : pending) > 0 ? String(isTeamLead ? teamPending : pending) : undefined, tone: 'alert' as const },
           { id: 'history', label: 'Historique', icon: History },
           { id: 'clients', label: 'Clients', icon: Building2 },
