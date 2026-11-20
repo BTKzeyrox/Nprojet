@@ -21,7 +21,7 @@ import { isHiddenFrom, isExpired, planEphemeral, VISIBLE_TO_SERVER_LIVE, EPHEMER
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
   Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, Timer, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
-  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward,
+  Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward, ImageOff,
 } from 'lucide-react';
 import { db } from '../db/store';
 import { ChatGroup, ChatMessage, User } from '../types';
@@ -64,6 +64,23 @@ import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
 
 const MAX_BYTES = 10 * 1024 * 1024;
+
+const ChatImage: React.FC<{ src: string; alt: string; frameClassName: string; imageClassName?: string; onOpen: () => void; overlay?: React.ReactNode }> = ({ src, alt, frameClassName, imageClassName = '', onOpen, overlay }) => {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className={`${frameClassName} flex items-center justify-center border border-dashed border-slate-300 bg-slate-100 text-slate-500`} role="img" aria-label="Image indisponible hors ligne">
+        <span className="flex flex-col items-center gap-1.5 px-3 text-center text-[11px] font-semibold"><ImageOff className="h-5 w-5" aria-hidden />Image indisponible hors ligne</span>
+      </div>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} className={`${frameClassName} cursor-zoom-in`} title="Agrandir">
+      <img src={src} alt={alt} className={imageClassName} loading="lazy" onError={() => setFailed(true)} />
+      {overlay}
+    </button>
+  );
+};
 
 const readAsDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -732,6 +749,9 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     let top = menuRect.bottom + 6;
     if (top + H > vh - 8) top = menuRect.top - H - 6;
     top = Math.max(8, Math.min(top, vh - H - 8));
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      return { left: 8, right: 8, bottom: 'calc(100vh - var(--vvh, 100vh) + 8px)', top: 'auto', width: 'auto', maxHeight: 'calc(var(--vvh, 100vh) - 16px)' };
+    }
     return { top, left, width: W };
   };
 
@@ -925,18 +945,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                           {isAlbum && (
                             <div className={`grid gap-0.5 w-60 sm:w-64 ${msg.reply_to ? 'mt-1' : ''} ${album.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                               {album.slice(0, 4).map((m, k) => (
-                                <button key={m.id} type="button" onClick={() => setViewer({ url: m.attachment_url!, msg: m })} className={`relative block overflow-hidden cursor-zoom-in bg-slate-200 ${album.length === 3 && k === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${k === 0 ? 'rounded-tl-xl' : ''} ${k === 1 || (album.length === 3 && k === 0) ? 'rounded-tr-xl' : ''} ${k === 2 && album.length > 2 ? 'rounded-bl-xl' : ''} ${k === Math.min(album.length, 4) - 1 ? 'rounded-br-xl' : ''}`} title="Agrandir">
-                                  <img src={m.attachment_url} alt={m.attachment_name || 'photo'} className={`w-full h-full object-cover ${k === 3 && album.length > 4 ? 'blur-[3px] scale-110' : ''}`} loading="lazy" />
-                                  {k === 3 && album.length > 4 && <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white text-2xl font-bold">+{album.length - 4}</span>}
-                                </button>
+                                <ChatImage key={m.id} src={m.attachment_url!} alt={m.attachment_name || 'photo'} onOpen={() => setViewer({ url: m.attachment_url!, msg: m })} frameClassName={`relative block overflow-hidden bg-slate-200 ${album.length === 3 && k === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${k === 0 ? 'rounded-tl-xl' : ''} ${k === 1 || (album.length === 3 && k === 0) ? 'rounded-tr-xl' : ''} ${k === 2 && album.length > 2 ? 'rounded-bl-xl' : ''} ${k === Math.min(album.length, 4) - 1 ? 'rounded-br-xl' : ''}`} imageClassName={`w-full h-full object-cover ${k === 3 && album.length > 4 ? 'blur-[3px] scale-110' : ''}`} overlay={k === 3 && album.length > 4 ? <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white text-2xl font-bold">+{album.length - 4}</span> : undefined} />
                               ))}
                             </div>
                           )}
                           {isAlbum && albumCaption && <span className="block whitespace-pre-line mt-1 px-1">{albumCaption}</span>}
                           {!isAlbum && msg.attachment_url && msg.attachment_kind === 'image' && (
-                            <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className={`block cursor-zoom-in ${msg.message || msg.reply_to ? 'mb-1' : ''}`} title="Agrandir">
-                              <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full rounded-xl" loading="lazy" />
-                            </button>
+                            <ChatImage src={msg.attachment_url} alt={msg.attachment_name || 'photo'} onOpen={() => setViewer({ url: msg.attachment_url!, msg })} frameClassName={`block ${msg.message || msg.reply_to ? 'mb-1' : ''}`} imageClassName="max-h-56 w-auto max-w-full rounded-xl" />
                           )}
                           {!isAlbum && msg.attachment_url && msg.attachment_kind !== 'image' && (
                             <button type="button" onClick={() => setFileViewer(msg)} className={`flex items-center gap-1.5 min-h-[40px] font-semibold text-left cursor-pointer ${!msg.message && !msg.reply_to ? `px-3 py-2 rounded-2xl border ${L ? 'border-slate-300' : 'border-slate-600'}` : 'mb-1 underline'}`}>
@@ -1205,8 +1220,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               dangerouslySetInnerHTML={{ __html: menuHtml }}
             />
           )}
-          <div className="fixed" style={popStyle()} onClick={e => e.stopPropagation()}>
-          <div className={`rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`}>
+          <div data-message-actions className="fixed max-w-[calc(100vw-16px)] overflow-y-auto overscroll-contain" style={popStyle()} onClick={e => e.stopPropagation()}>
+          <div data-message-actions-panel className={`rounded-2xl overflow-hidden border shadow-2xl ${P.pop}`}>
             {menuActions.map(a => {
               const I = a.icon;
               return (
