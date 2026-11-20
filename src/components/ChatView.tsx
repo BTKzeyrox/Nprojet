@@ -531,12 +531,19 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       setMenuHtml(stripIds(el.outerHTML)); // copie nette du message, posée AU-DESSUS du fond (jamais floue), sans identifiants
       setMenuMsg(m);
     };
-    const keyboardOpen = window.matchMedia('(max-width: 767px)').matches && !!window.visualViewport && window.visualViewport.height < window.innerHeight - 80;
-    if (keyboardOpen) {
-      composerRef.current?.blur();
+    const mobile = window.matchMedia('(max-width: 767px)').matches;
+    if (mobile) {
+      const composer = composerRef.current;
+      // Certains navigateurs mobiles gardent le clavier ouvert si le textarea reste
+      // éditable pendant l’appui long : on le rend brièvement non éditable avant le blur.
+      if (composer) composer.readOnly = true;
+      composer?.blur();
       const active = document.activeElement;
       if (active instanceof HTMLElement) active.blur();
-      window.setTimeout(show, 220); // laisser l’animation de fermeture du clavier libérer la zone visible
+      window.setTimeout(() => {
+        show();
+        if (composer) composer.readOnly = false;
+      }, 320); // laisser l’animation de fermeture du clavier libérer la zone visible
     } else show();
   };
   const startPress = (m: ChatMessage, el: HTMLElement, x?: number, y?: number) => {
