@@ -137,7 +137,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const goHomeAndRefresh = () => {
     requestFeedTop();
     onNavigate(home);
-    void db.refreshNow();
+    window.setTimeout(() => { void db.refreshNow(); }, 450);
   };
   const pages = useMemo(
     () =>

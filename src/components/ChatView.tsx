@@ -526,9 +526,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     if (menuOpenedAt.current && isGhostClick(menuOpenedAt.current, Date.now(), 150)) return; // appui long + clic droit synchronisés : un seul menu
     window.getSelection()?.removeAllRanges(); // l'appui long ouvre le menu : jamais de sélection de texte
     menuOpenedAt.current = Date.now(); markRelease();
-    setMenuRect(el.getBoundingClientRect());
-    setMenuHtml(stripIds(el.outerHTML)); // copie nette du message, posée AU-DESSUS du fond (jamais floue), sans identifiants
-    setMenuMsg(m);
+    const show = () => {
+      setMenuRect(el.getBoundingClientRect());
+      setMenuHtml(stripIds(el.outerHTML)); // copie nette du message, posée AU-DESSUS du fond (jamais floue), sans identifiants
+      setMenuMsg(m);
+    };
+    const keyboardOpen = window.matchMedia('(max-width: 767px)').matches && !!window.visualViewport && window.visualViewport.height < window.innerHeight - 80;
+    if (keyboardOpen) {
+      composerRef.current?.blur();
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) active.blur();
+      window.setTimeout(show, 220); // laisser l’animation de fermeture du clavier libérer la zone visible
+    } else show();
   };
   const startPress = (m: ChatMessage, el: HTMLElement, x?: number, y?: number) => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
