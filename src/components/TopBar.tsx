@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { PageHelp } from './PageHelp';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, Newspaper, MessageSquare } from 'lucide-react';
+  import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -281,13 +281,13 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        {/* Actualités et Messages : toujours dans l'en-tête (plus de barre du bas, plus dans le menu latéral) */}
+        {/* Messages : l’accès Actualités est désormais regroupé avec l’icône du projet. */}
         <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
-          {([['feed', 'Actualités', Newspaper, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
+          {([['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}
               type="button"
-              onClick={() => { if (view === 'feed' && activeView === 'feed') requestFeedTop(); onNavigate(view); }}
+              onClick={() => onNavigate(view)}
               title={label}
               aria-label={label}
               data-header-shortcut={view}

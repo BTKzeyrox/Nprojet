@@ -77,6 +77,7 @@ import { setValFilterIntent } from '../../utils/navIntent';
 import { FilterBar } from '../../components/FilterBar';
 import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
+import { getHealth } from '../../utils/healthDb';
 
 // Ordre d'affichage dans la carte « Équipe connectée » : opérateurs, puis chefs d'équipe, puis comptables
 const ROLE_RANK: Record<string, number> = { employee: 0, team_lead: 1, accountant: 2 };
@@ -120,6 +121,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [advances, setAdvances] = useState(db.getAdvanceRequests());
   const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'access' | 'profiles'>('all');
+  const [summaryPeriod, setSummaryPeriod] = useState<'today' | '7d' | '30d' | 'all'>('today');
   // Statut de l'équipe en direct : rechargement rapide (8 s) tant que cet écran est ouvert, et tout de suite à l'ouverture (première connexion vue sans attendre)
   useEffect(() => { db.setFastPoll(true); return () => db.setFastPoll(false); }, []);
   useNow(15000); // la carte « Équipe connectée » se recalcule toute seule (En ligne → Hors ligne) même sans nouvelle donnée
@@ -453,6 +455,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const homeParts = (() => {
     const today = new Date().toISOString().split('T')[0];
+    const periodStart = summaryPeriod === 'all' ? '' : new Date(Date.now() - (summaryPeriod === 'today' ? 0 : summaryPeriod === '7d' ? 6 : 29) * 86400000).toISOString().slice(0, 10);
+    const inPeriod = (value?: string | null) => !periodStart || String(value || '').slice(0, 10) >= periodStart;
+    const periodPosts = posts.filter(p => inPeriod(p.date));
+    const periodMessages = db.getMessages().filter(m => inPeriod(m.timestamp));
+    const periodSecurity = securityLogs.filter(l => inPeriod(l.timestamp));
+    const periodInvoices = db.getInvoices().filter(i => inPeriod((i as any).created_at || (i as any).date || (i as any).issued_at));
+    const healthAlerts = getHealth().alerts.length;
     const doneToday = posts.filter(p => p.status === 'completed' && p.date === today && !isWorkLine(p)); // les lignes de la Feuille du jour ne sont pas des missions
     const scoreToday = doneToday.reduce(
       (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
@@ -471,8 +480,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </button>
     );
     const panel = 'bg-[#0f1722] border border-slate-800 rounded-2xl p-4';
+    const summaryTile = (label: string, value: React.ReactNode, hint: string, Icon: React.ElementType, tone: string, go: string) => (
+      <button type="button" onClick={() => onNavigateTab?.(go)} className="text-left rounded-2xl border border-slate-800 bg-[#0f1722] p-4 hover:border-blue-500/70 transition-colors cursor-pointer min-h-[126px]">
+        <div className="flex items-start justify-between gap-2"><span className={`w-9 h-9 rounded-xl flex items-center justify-center ${tone}`}><Icon className="w-5 h-5" /></span><span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ouvrir</span></div>
+        <div className="mt-3 text-2xl font-extrabold text-white leading-none">{value}</div><div className="mt-1 text-sm font-semibold text-slate-200">{label}</div><div className="text-xs text-slate-500 mt-0.5">{hint}</div>
+      </button>
+    );
+    const globalSummary = (
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-xl font-extrabold text-white">Centre de contrôle</h2><p className="text-sm text-slate-400">Résumé global de la gestion et de la santé du site</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-400">Période<select value={summaryPeriod} onChange={e => setSummaryPeriod(e.target.value as typeof summaryPeriod)} className="h-9 rounded-lg border border-slate-700 bg-[#0f1722] px-2 text-sm text-white outline-none"><option value="today">Aujourd’hui</option><option value="7d">7 derniers jours</option><option value="30d">30 derniers jours</option><option value="all">Tout l’historique</option></select></label></div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {summaryTile('Missions', periodPosts.length, `${periodPosts.filter(p => p.status === 'completed').length} terminées`, Layers, 'bg-blue-100 text-blue-700', 'grid')}
+          {summaryTile('À valider', pend.total, `${pend.starts} départs · ${pend.ends} fins`, Clock, 'bg-amber-100 text-amber-700', 'validations')}
+          {summaryTile('Équipe en ligne', `${onlineCount.online}/${onlineCount.total}`, 'opérateurs et responsables', Radio, 'bg-emerald-100 text-emerald-700', 'employees')}
+          {summaryTile('Clients', db.getClients().length, 'fiches clients', UserCheck, 'bg-violet-100 text-violet-700', 'clients')}
+          {summaryTile('Facturation', periodInvoices.length, 'documents sur la période', DollarSign, 'bg-indigo-100 text-indigo-700', 'invoices')}
+          {summaryTile('Messages', periodMessages.length, 'échanges sur la période', MessageSquare, 'bg-sky-100 text-sky-700', 'chat')}
+          {summaryTile('Sécurité', periodSecurity.filter(l => !l.resolved).length, `${periodSecurity.length} événements`, ShieldAlert, 'bg-rose-100 text-rose-700', 'security')}
+          {summaryTile('Santé du site', healthAlerts, healthAlerts ? 'alertes à examiner' : 'aucune alerte détectée', healthAlerts ? AlertTriangle : CheckCircle2, healthAlerts ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700', 'health')}
+        </div>
+      </section>
+    );
     const top = (
       <div className="space-y-4">
+        {globalSummary}
         <div>
           <h2 className="text-xl font-extrabold text-white">Tableau de bord</h2>
           <p className="text-sm text-slate-400">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
