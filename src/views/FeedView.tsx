@@ -683,7 +683,7 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     const maxPos = () => (sc ? sc.scrollHeight - sc.clientHeight : document.documentElement.scrollHeight - window.innerHeight);
     const setPos = (y: number, smooth = false) => { if (sc) sc.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' }); };
     const want = feedScrollFor(currentUser.id);
-    let raf = 0, tries = 0;
+    let raf = 0, topRaf = 0, tries = 0;
     const rootEl = rootRef.current;
     const show = () => { if (rootEl) rootEl.style.visibility = ''; };
     const restore = () => {
@@ -697,9 +697,21 @@ export const FeedView: React.FC<{ currentUser: User; onOpenProfile?: (u: User) =
     const mark = () => { touched = true; };
     window.addEventListener('wheel', mark, { passive: true }); window.addEventListener('touchstart', mark, { passive: true });
     const again = [80, 250, 600].map(ms => setTimeout(() => { if (!touched && want > 0 && Math.abs(getPos() - want) > 2 && maxPos() >= want - 1) setPos(want); }, ms));
-    const goTop = () => setPos(0, true);
+    const goTop = () => {
+      cancelAnimationFrame(topRaf);
+      const from = getPos();
+      if (from <= 1) { setPos(0); return; }
+      const started = performance.now();
+      const animate = (now: number) => {
+        const progress = Math.min(1, (now - started) / 520);
+        const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        setPos(Math.round(from * (1 - eased)));
+        if (progress < 1) topRaf = requestAnimationFrame(animate);
+      };
+      topRaf = requestAnimationFrame(animate);
+    };
     window.addEventListener(FEED_TOP_EVENT, goTop);
-    return () => { cancelAnimationFrame(raf); show(); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
+    return () => { cancelAnimationFrame(raf); cancelAnimationFrame(topRaf); show(); again.forEach(clearTimeout); window.removeEventListener('wheel', mark); window.removeEventListener('touchstart', mark); window.removeEventListener(FEED_TOP_EVENT, goTop); };
   }, [currentUser.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actualités ouvertes : les notifications « nouvelle publication » de la cloche sont lues (à l'ouverture, et quand une publication arrive)

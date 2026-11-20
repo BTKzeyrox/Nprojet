@@ -136,9 +136,17 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const home = isAdmin ? 'dashboard' : 'grid';
   const goHomeAndRefresh = () => {
     onNavigate(home);
+    const from = window.scrollY;
+    const started = performance.now();
+    const animateWindowTop = (now: number) => {
+      const progress = Math.min(1, (now - started) / 520);
+      const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      window.scrollTo(0, Math.round(from * (1 - eased)));
+      if (progress < 1) window.requestAnimationFrame(animateWindowTop);
+    };
     const scrollHomeTop = () => {
       requestFeedTop();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (from > 1) window.requestAnimationFrame(animateWindowTop);
     };
     // Si l’accueil est déjà ouvert, le scroll démarre tout de suite. S’il faut
     // changer de page, on le rejoue après le montage de l’accueil.
@@ -291,7 +299,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         {/* Messages : l’accès Actualités est désormais regroupé avec l’icône du projet. */}
         <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
-          {([[home, 'Tableau de bord', LayoutDashboard, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
+          {([['dashboard', 'Tableau de bord', LayoutDashboard, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}
               type="button"
