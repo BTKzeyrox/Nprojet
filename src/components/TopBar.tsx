@@ -135,25 +135,30 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const mergedMenu = mergedFor(currentUser.role, useMenuMode());
   const home = isAdmin ? 'dashboard' : 'grid';
   const goHomeAndRefresh = () => {
-    onNavigate(home);
-    const from = window.scrollY;
-    const started = performance.now();
-    const animateWindowTop = (now: number) => {
-      const progress = Math.min(1, (now - started) / 520);
-      const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      window.scrollTo(0, Math.round(from * (1 - eased)));
-      if (progress < 1) window.requestAnimationFrame(animateWindowTop);
-    };
-    const scrollHomeTop = () => {
+    if (activeView === 'feed') {
+      // Ne pas démonter Actualités avant que son propre conteneur ait fini
+      // l’animation : sinon son requestAnimationFrame est annulé au démontage.
       requestFeedTop();
-      if (from > 1) window.requestAnimationFrame(animateWindowTop);
+      window.setTimeout(() => { void db.refreshNow(); }, 650);
+      return;
+    }
+    const animateWindowTop = () => {
+      const from = window.scrollY;
+      if (from <= 1) return;
+      const started = performance.now();
+      const frame = (now: number) => {
+        const progress = Math.min(1, (now - started) / 520);
+        const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, Math.round(from * (1 - eased)));
+        if (progress < 1) window.requestAnimationFrame(frame);
+      };
+      window.requestAnimationFrame(frame);
     };
-    // Si l’accueil est déjà ouvert, le scroll démarre tout de suite. S’il faut
-    // changer de page, on le rejoue après le montage de l’accueil.
-    scrollHomeTop();
-    window.setTimeout(scrollHomeTop, 180);
-    // La recherche ne doit jamais concurrencer l’animation de retour en haut.
-    window.setTimeout(() => { void db.refreshNow(); }, 650);
+    if (activeView !== home) onNavigate(home);
+    animateWindowTop();
+    // Après le montage de l’accueil, on relance l’animation si la page avait changé.
+    window.setTimeout(animateWindowTop, activeView === home ? 80 : 240);
+    window.setTimeout(() => { void db.refreshNow(); }, 700);
   };
   const pages = useMemo(
     () =>
