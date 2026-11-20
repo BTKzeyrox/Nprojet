@@ -25,6 +25,11 @@
 | 8 | Guide complet de copie et de passation | `NOUVEAU_PROJET.md`, `HANDOVER.md` § 0 bis |
 | 9 | `df-api` : découpage en cours. Tranche 1 : bloc TOTP dans `totp.ts`. Tranche 2 (2026-11-20) : règles pures de la comptabilité dans `accounting.ts` | `supabase/functions/df-api/totp.ts`, `accounting.ts` |
 
+## 2 ter. Serveur en ligne de Nprojet (mis à jour le 2026-11-20)
+- `df-api` en ligne = version 89 : petit `index.ts` qui importe `Nprojet` au commit `a548060a82201c66a60a7d03d51fbd95a6f04c5c` (les 4 fichiers suivent tout seuls). Sauvegarde faite juste avant (`df_take_backup`). Test : `signup-info` répond 200.
+- **Retour arrière** : redéployer `df-api` avec `import "https://raw.githubusercontent.com/BTKzeyrox/Nprojet/1995676afba7413ebf1dc7e7814e25a027f70ed8/supabase/functions/df-api/index.ts";` (ancienne version 88).
+- **Décision de BTK (2026-11-20) : on ne découpe plus `df-api`.** Le déploiement de Nprojet se fait par l'IA (connecteur Supabase), jamais par BTK dans un terminal.
+
 ## 2 bis. Copie n° 1 : `BTKzeyrox/gestion` (2026-11-19)
 - **Fait** : dépôt `https://github.com/BTKzeyrox/gestion` créé par `npm run copy:project` (2 commits : copie pure de Nprojet @`d10ce73`, puis comptes). Nouveau Supabase : ref `blvuwirzmtmlehafnvew` (compte non visible du connecteur Supabase de l'IA : la base se fait dans son SQL Editor). Cloudinary : le même que Nprojet.
 - **Reste pour cette copie** : (a) activer pg_cron et pg_net dans le nouveau Supabase, lancer `supabase/setup-complete.sql` (se refait avec `npm run setup:sql` dans la copie) ; (b) vérifier 44 tables, 5 tâches planifiées, secret `df_project_url` (requêtes dans `NOUVEAU_PROJET.md` § 2) ; (c) secrets Cloudinary / Resend dans le coffre-fort ; (d) compte admin (`npm run admin:sql`) ; (e) `npm run deploy:server -- --confirm-ref blvuwirzmtmlehafnvew` avec un token `sbp_…` ; (f) projet Vercel relié à `BTKzeyrox/gestion` ; (g) réécrire les `.md` qui citent encore Nprojet ; (h) contrôle final (`NOUVEAU_PROJET.md` § 7). Cocher ici ce qui est fait.
