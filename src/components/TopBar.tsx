@@ -386,6 +386,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} bg-emerald-500`} />
         </button>
 
+        <div className="hidden md:block" data-header-conn><ConnectionChip /></div>
+
         {/* Téléphone : la recherche s'étire sur toute la largeur de l'en-tête (X = effacer, puis fermer) */}
         {mSearch && (
           <div ref={mbox} data-mobile-search className={`md:hidden absolute inset-0 z-40 flex items-center gap-2 px-2.5 rounded-b-2xl ${L ? 'bg-white' : 'bg-slate-900'}`}>
