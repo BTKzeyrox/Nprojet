@@ -72,8 +72,8 @@ ok(['offline', 'sending', 'review', 'locked', 'done'].every(k => new RegExp(`${k
 const css = read('src/index.css');
 const rule = css.slice(css.indexOf('body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {'));
 const block = rule.slice(0, rule.indexOf('}') + 1);
-ok(/top: var\(--vvt, 0px\);/.test(block) && !/(^|\n)\s*top: calc\(57px/.test(block), 'fenêtres : le fond commence tout en haut de l\'écran, header compris');
-ok(/height: var\(--vvh, 100dvh\);/.test(block) && /padding-top: calc\(var\(--hdr, 57px\) \+ 1rem\);/.test(block), 'fenêtres : le contenu reste sous le header (marge de la hauteur du header + 1 rem) et défile');
+ok(/top: var\(--vvt, 0px\);/.test(block) && !/(^|\n)\s*top: calc\(65px/.test(block), 'fenêtres : le fond commence tout en haut de l\'écran, header compris');
+ok(/height: var\(--vvh, 100dvh\);/.test(block) && /padding-top: calc\(var\(--hdr, 65px\) \+ 1rem\);/.test(block), 'fenêtres : le contenu reste sous le header (marge de la hauteur du header + 1 rem) et défile');
 ok(/backdrop-filter: blur\(14px\)/.test(block), 'fenêtres : le flou est appliqué à tout le fond (donc au header)');
 const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
 const overlays = walk('src').filter(f => f.endsWith('.tsx')).flatMap(f => read(f).split('\n').filter(l => /fixed inset-0/.test(l)).map(l => ({ f, l })));

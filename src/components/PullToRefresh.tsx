@@ -95,7 +95,7 @@ export const PullToRefresh: React.FC<{ disabled?: boolean }> = ({ disabled = fal
   return (
     <div
       className="fixed left-0 right-0 z-[60] flex justify-center pointer-events-none"
-      style={{ top: 'calc(57px + env(safe-area-inset-top, 0px))', transform: `translateY(${pull - 36}px)`, transition: startY.current === null ? 'transform .2s ease' : 'none' }}
+      style={{ top: 'calc(65px + env(safe-area-inset-top, 0px))', transform: `translateY(${pull - 36}px)`, transition: startY.current === null ? 'transform .2s ease' : 'none' }}
       aria-hidden="true"
     >
       <div className="w-10 h-10 rounded-full bg-white shadow-lg border border-slate-200 flex items-center justify-center">

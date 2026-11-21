@@ -1244,7 +1244,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
             <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button
@@ -1648,7 +1648,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
             <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button

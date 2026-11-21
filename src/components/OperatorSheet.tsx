@@ -65,7 +65,7 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/60" role="dialog" aria-modal="true" aria-label={user.name} data-testid="operator-sheet"
       onPointerDown={e => { down.current = backdropDown(e.target, e.currentTarget); }}
       onClick={e => { const close = backdropShouldClose(down.current, e.target, e.currentTarget); down.current = false; if (close) onClose(); }}>
-      <div className="w-full max-w-lg max-h-[calc(var(--vvh,100dvh)-57px-2rem)] overflow-y-auto overscroll-contain rounded-2xl bg-[#0f1722] border border-slate-700 shadow-2xl">
+      <div className="w-full max-w-lg max-h-[calc(var(--vvh,100dvh)-65px-2rem)] overflow-y-auto overscroll-contain rounded-2xl bg-[#0f1722] border border-slate-700 shadow-2xl">
         {/* En-tête */}
         <div className="sticky top-0 z-10 flex items-center gap-3 p-4 bg-[#0f1722] border-b border-slate-700">
           <Avatar src={user.avatar_url} name={user.name} className="w-14 h-14 rounded-full ring-2 ring-slate-600 shrink-0" />

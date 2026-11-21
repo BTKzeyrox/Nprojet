@@ -16,7 +16,7 @@ export const LoadingBar: React.FC = () => {
   }, [busy]);
   if (!show) return null;
   return (
-    <div role="progressbar" aria-label="Chargement" style={{ left: 'var(--sbw, 0px)' }} className="df-loadbar pointer-events-none fixed top-[56px] left-0 right-0 z-[25] h-[3px] overflow-hidden">
+    <div role="progressbar" aria-label="Chargement" style={{ left: 'var(--sbw, 0px)' }} className="df-loadbar pointer-events-none fixed top-[64px] left-0 right-0 z-[25] h-[3px] overflow-hidden">
       <div className="df-loadbar-run h-full w-1/3 bg-emerald-400" />
     </div>
   );

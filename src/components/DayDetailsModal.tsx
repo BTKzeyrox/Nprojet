@@ -84,7 +84,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-2.5 sm:p-4 overflow-y-auto overscroll-contain"
     >
-      <div className="bg-[#0e1622] border border-slate-700 w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-57px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#0e1622] border border-slate-700 w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95 duration-200">
         
         {/* Top Header */}
         <div className="bg-[#131d2b] px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-700/80 flex items-center justify-between shrink-0">
