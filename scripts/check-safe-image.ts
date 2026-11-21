@@ -30,6 +30,6 @@ ok(/role="img"/.test(si) && /addEventListener\('online', retry\)/.test(si) && /o
 const sw = readFileSync('public/sw.js', 'utf8');
 ok(/isPhotoRequest\(req\.method, url\.hostname, req\.destination\)/.test(sw) && /mode: 'cors', credentials: 'omit'/.test(sw) && /var PHOTOS = 'df-images'/.test(sw), 'service worker : photos Cloudinary gardées dans un cache à part, en mode cors');
 const app = readFileSync('src/App.tsx', 'utf8'), ctl = readFileSync('src/db/offlineController.ts', 'utf8'), ic = readFileSync('src/utils/imageCache.ts', 'utf8');
-ok(/void clearImageCache\(\);[^\n]*\n\s*db\.logout\(\)/.test(app) && /await clearImageCache\(\);[^\n]*\n\s*this\.writeWho\(null\)/.test(ctl) && /PHOTO_CACHE = 'df-images'/.test(ic) && /caches\.delete\(PHOTO_CACHE\)/.test(ic), 'photos gardées effacées à la déconnexion et avec la copie locale');
+ok(/const handleLogout = async \(\) => \{[\s\S]*?void clearImageCache\(\);[\s\S]*?db\.logout\(\)/.test(app) && /await clearImageCache\(\);[^\n]*\n\s*this\.writeWho\(null\)/.test(ctl) && /PHOTO_CACHE = 'df-images'/.test(ic) && /caches\.delete\(PHOTO_CACHE\)/.test(ic), 'photos gardées effacées à la déconnexion et avec la copie locale');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

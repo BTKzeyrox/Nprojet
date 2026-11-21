@@ -437,8 +437,8 @@ export default function App() {
   const handleLogout = async () => {
     setViewAs('admin');
     try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
-    clearResume(); clearAllDrafts(); clearAllCopies();
     void clearImageCache(); // les photos gardées pour le hors ligne ne restent pas sur l'appareil après la déconnexion
+    clearResume(); clearAllDrafts(); clearAllCopies();
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
