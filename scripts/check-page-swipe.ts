@@ -1,0 +1,26 @@
+// Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe
+import { readFileSync } from 'node:fs';
+import { backTarget, swipeAxis, dragOffset, isBackSwipe, SWIPE_MIN_PX, SWIPE_LOCK_PX, SWIPE_BLOCK_SELECTOR } from '../src/utils/pageSwipe';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+const tabs = ['a', 'b', 'c'];
+ok(JSON.stringify(backTarget(tabs, 'c', ['x'])) === '{"kind":"tab","tabId":"b"}' && JSON.stringify(backTarget(tabs, 'b', [])) === '{"kind":"tab","tabId":"a"}', 'onglet qui n\'est pas le premier : retour = onglet d\'avant');
+ok(JSON.stringify(backTarget(tabs, 'a', ['x', 'y'])) === '{"kind":"page","view":"y"}', 'premier onglet : retour = page d\'avant');
+ok(JSON.stringify(backTarget([], undefined, ['x'])) === '{"kind":"page","view":"x"}' && JSON.stringify(backTarget(['a'], 'a', ['x'])) === '{"kind":"page","view":"x"}', 'page sans onglets : retour = page d\'avant');
+ok(backTarget(tabs, 'a', []).kind === 'none' && backTarget([], undefined, []).kind === 'none', 'rien où revenir : nulle part');
+ok(backTarget(tabs, 'zzz', ['x']).kind === 'page', 'onglet inconnu : on ne plante pas, page d\'avant');
+ok(swipeAxis(3, 4) === null && swipeAxis(SWIPE_LOCK_PX, 0) === 'x' && swipeAxis(40, 5) === 'x', 'petit mouvement : on attend ; net horizontal : glissement');
+ok(swipeAxis(5, 40) === 'y' && swipeAxis(30, 30) === 'y' && swipeAxis(NaN, 3) === 'y', 'vertical, en diagonale ou illisible : défilement (jamais de glissement)');
+ok(dragOffset(-80, true, 400) === 0 && dragOffset(0, true, 400) === 0 && dragOffset(NaN, true, 400) === 0, 'vers la gauche : la page ne bouge jamais');
+ok(dragOffset(100, true, 400) === 100 && Math.abs(dragOffset(900, true, 400) - 220) < 1e-6, 'vers la droite : la page suit le doigt, jusqu\'à 55 % de la largeur');
+ok(dragOffset(300, false, 400) <= 36 && dragOffset(300, false, 400) > 0, 'rien où revenir : léger effet élastique seulement');
+ok(isBackSwipe(SWIPE_MIN_PX, true) && !isBackSwipe(SWIPE_MIN_PX - 1, true) && !isBackSwipe(500, false) && !isBackSwipe(-200, true), 'accepté à partir de 90 px vers la droite, et seulement s\'il y a un retour');
+ok(/input/.test(SWIPE_BLOCK_SELECTOR) && /textarea/.test(SWIPE_BLOCK_SELECTOR) && /data-lightbox/.test(SWIPE_BLOCK_SELECTOR) && /data-no-page-swipe/.test(SWIPE_BLOCK_SELECTOR) && !/button|\ba\b/.test(SWIPE_BLOCK_SELECTOR), 'bloqué sur les champs, l\'image ouverte et les zones marquées ; PAS sur les boutons ni les cartes');
+const app = readFileSync('src/App.tsx', 'utf8');
+ok(/swipeBackFn\.current = \(\) => backTarget\(/.test(app) && /swipeDo\.current = t =>/.test(app), 'App.tsx : le retour calcule sa cible avec backTarget à chaque affichage');
+ok(/transition: swipeAnim \?/.test(app) && /'none'/.test(app.slice(app.indexOf('transition: swipeAnim ?'), app.indexOf('transition: swipeAnim ?') + 160)), 'la page suit le doigt SANS animation (animation seulement à la fin)');
+ok(/if \(tb\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app) && /if \(t\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app), 'un retour n\'est jamais ajouté à la mémoire des pages');
+ok(/activeView === 'chat'/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)) && /window\.innerWidth >= 768/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)), 'pas dans la messagerie ni sur ordinateur');
+ok(!/viewHistory\.current\[viewHistory\.current\.length - 1\];\s*\n\s*const accepted/.test(app), 'l\'ancien glissement (page d\'avant dans les deux sens) n\'existe plus');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
+process.exit(fails ? 1 : 0);
