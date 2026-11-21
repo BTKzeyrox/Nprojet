@@ -120,7 +120,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>(() => { const r = resumeRef.current; setBootChat(r && r.view === 'chat' ? r.chat : ''); return r && (isKnownView(r.view) || r.view === 'feed' || r.view === 'grid' || r.view === 'chat') ? r.view : 'feed'; });
   const [mobileSwipeX, setMobileSwipeX] = useState(0);
   const mobileSwipeXRef = useRef(0);
-  const mobileSwipe = useRef<{ x: number; y: number; edge: 'left' | 'right' } | null>(null);
+  const mobileSwipe = useRef<{ x: number; y: number } | null>(null);
   const mobileSwipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewHistory = useRef<string[]>([]);
   const previousView = useRef(activeView);
@@ -134,17 +134,16 @@ export default function App() {
   }, [activeView]);
   useEffect(() => {
     const onStart = (e: TouchEvent) => {
-      if (window.innerWidth >= 768 || (e.target instanceof Element && e.target.closest('[data-lightbox]')) || activeView === 'chat' || e.touches.length !== 1) return;
+      if (window.innerWidth >= 768 || (e.target instanceof Element && e.target.closest('[data-lightbox],button,a,input,textarea,select,[data-no-page-swipe]')) || activeView === 'chat' || e.touches.length !== 1) return;
       const t = e.touches[0];
-      if (t.clientX <= 24) mobileSwipe.current = { x: t.clientX, y: t.clientY, edge: 'left' };
-      else if (t.clientX >= window.innerWidth - 24) mobileSwipe.current = { x: t.clientX, y: t.clientY, edge: 'right' };
+      mobileSwipe.current = { x: t.clientX, y: t.clientY };
     };
     const onMove = (e: TouchEvent) => {
       const s = mobileSwipe.current; if (!s || e.touches.length !== 1) return;
       const t = e.touches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
       if (Math.abs(dy) > Math.abs(dx) + 8) { mobileSwipe.current = null; mobileSwipeXRef.current = 0; setMobileSwipeX(0); return; }
-      const valid = s.edge === 'left' ? dx > 0 : dx < 0;
-      if (valid) { const x = Math.max(-window.innerWidth * 0.55, Math.min(window.innerWidth * 0.55, dx)); mobileSwipeXRef.current = x; setMobileSwipeX(x); }
+      const x = Math.max(-window.innerWidth * 0.55, Math.min(window.innerWidth * 0.55, dx));
+      mobileSwipeXRef.current = x; setMobileSwipeX(x);
     };
     const onEnd = () => {
       const s = mobileSwipe.current; mobileSwipe.current = null;
@@ -153,7 +152,7 @@ export default function App() {
       const accepted = Math.abs(mobileSwipeXRef.current) > 90 && !!target;
       if (!accepted) { mobileSwipeXRef.current = 0; setMobileSwipeX(0); return; }
       viewHistory.current.pop();
-      const out = s.edge === 'left' ? window.innerWidth : -window.innerWidth;
+      const out = mobileSwipeXRef.current > 0 ? window.innerWidth : -window.innerWidth;
       mobileSwipeXRef.current = out; setMobileSwipeX(out);
       mobileSwipeTimer.current = setTimeout(() => { skipViewHistory.current = true; setActiveView(target); mobileSwipeXRef.current = 0; setMobileSwipeX(0); }, 220);
     };

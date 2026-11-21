@@ -56,6 +56,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const lastTap = useRef(0);
   const gestureStart = useRef<{ x: number; y: number } | null>(null);
   const gestureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doubleTap = useRef(false);
 
   useLockBodyScroll(isOpen);
 
@@ -113,8 +114,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       if (now - lastTap.current < 300) {
         // double-tap : zoom 2.5x ou retour à 100 %
         setView(v => (v.s > 1 ? { s: 1, x: 0, y: 0 } : { s: 2.5, x: 0, y: 0 }));
+        doubleTap.current = true;
         lastTap.current = 0;
       } else {
+        doubleTap.current = false;
         lastTap.current = now;
       }
       setDragging(true);
@@ -147,6 +150,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     if (pts.current.size === 0) {
       setDragging(false);
       gestureStart.current = null;
+      if (doubleTap.current) { doubleTap.current = false; return; }
       if (wasSingle && start && view.s === 1) {
         const dx = end.x - start.x, dy = end.y - start.y;
         if (dy > 110 && dy > Math.abs(dx)) {
