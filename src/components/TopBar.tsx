@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { PageHelp } from './PageHelp';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, LayoutDashboard, Newspaper } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -256,8 +256,8 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     <div className="h-[var(--hdr,57px)] shrink-0" aria-hidden="true" />
     <header style={{ top: 'calc(var(--vvt, 0px) + var(--hdr-gap, 0px))', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 md:right-3 z-30 df-topbar border-b md:border rounded-b-2xl md:rounded-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-[0_2px_12px_rgba(15,30,58,0.10)]`}>
       <div className="relative h-14 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-3">
-        <button type="button" data-header-dashboard data-app-logo onClick={() => onNavigate('dashboard')} title="Centre de contrôle" aria-label="Centre de contrôle" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
-          <LayoutDashboard className="w-5 h-5" />
+        <button type="button" data-app-logo onClick={() => onNavigate('feed')} title="Actualités" aria-label="Actualités" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
+          <Newspaper className="w-5 h-5" />
         </button>
         <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
           <Search className="w-5 h-5" />
@@ -303,7 +303,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         {/* Messages : l’accès Actualités est désormais regroupé avec l’icône du projet. */}
         <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
-          {([['dashboard', 'Centre de contrôle', LayoutDashboard, 0, 'hidden md:flex'], ['chat', 'Messages', MessageSquare, chatUnread, 'flex']] as const).map(([view, label, Icon, n, visibility]) => (
+          {([['dashboard', 'Centre de contrôle', LayoutDashboard, 0, 'flex', true], ['chat', 'Messages', MessageSquare, chatUnread, 'flex', false]] as const).map(([view, label, Icon, n, visibility, isDashboard]) => (
             <button
               key={view}
               type="button"
@@ -311,6 +311,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               title={label}
               aria-label={label}
               data-header-shortcut={view}
+              {...(isDashboard ? { 'data-header-dashboard': true } : {})}
               aria-current={activeView === view ? 'page' : undefined}
               className={`${visibility} relative shrink-0 w-10 h-10 items-center justify-center rounded-full border cursor-pointer ${activeView === view ? (L ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-500 bg-emerald-950/50 text-emerald-300') : L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
