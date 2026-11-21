@@ -137,7 +137,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
       if (view.s > 1) setView(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
-      else if (gestureStart.current) setView(v => ({ ...v, x: e.clientX - gestureStart.current!.x, y: e.clientY - gestureStart.current!.y }));
+      else {
+        const start = gestureStart.current;
+        if (start) setView(v => ({ ...v, x: e.clientX - start.x, y: e.clientY - start.y }));
+      }
     }
   };
 
