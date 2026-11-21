@@ -173,7 +173,8 @@ export default function App() {
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   // Page cachée par le responsable (Réglages > Pages du menu) : on revient aux Actualités
   const hiddenPages = readCompany(db.getSettings().company).modules.hidden;
-  useEffect(() => { if (isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
+  // Le raccourci Dashboard du header reste toujours ouvrable, même si sa tuile a été masquée du menu latéral.
+  useEffect(() => { if (activeView !== 'dashboard' && isViewHidden(hiddenPages, activeView)) setActiveView('feed'); }, [hiddenPages, activeView]);
   useEffect(() => { const open = (e: Event) => { const v = (e as CustomEvent).detail; if (typeof v === 'string' && v) { setFocusOperatorId(null); setActiveView(v); } }; window.addEventListener(OPEN_VIEW_EVENT, open); return () => window.removeEventListener(OPEN_VIEW_EVENT, open); }, []); // raccourcis (Feuille du jour…)
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
   // Clic sur une notification externe : le bon endroit s'ouvre (au démarrage, ou tout de suite si l'appli est déjà ouverte)
