@@ -67,7 +67,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       return s === MIN ? { s, x: 0, y: 0 } : { ...v, s };
     });
   const go = (d: number) => {
-    setIdx(i => (i + d + imgs.length) % imgs.length);
+    setIdx(i => {
+      const next = i + d;
+      return next < 0 || next >= imgs.length ? i : next;
+    });
     resetView();
   };
 
@@ -139,7 +142,20 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       if (view.s > 1) setView(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
       else {
         const start = gestureStart.current;
-        if (start) setView(v => ({ ...v, x: e.clientX - start.x, y: e.clientY - start.y }));
+        if (start) {
+          const totalX = e.clientX - start.x;
+          const totalY = e.clientY - start.y;
+          if (Math.abs(totalY) > Math.abs(totalX)) {
+            const down = Math.max(0, totalY);
+            setView(v => ({ ...v, x: 0, y: 0 }));
+            setDismissY(down);
+            setDismissScale(1 - Math.min(0.42, down / 520));
+          } else {
+            setView(v => ({ ...v, x: totalX, y: 0 }));
+            setDismissY(0);
+            setDismissScale(1);
+          }
+        }
       }
     }
   };
@@ -161,7 +177,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           setDismissScale(0.72);
           if (gestureTimer.current) clearTimeout(gestureTimer.current);
           gestureTimer.current = setTimeout(onClose, 260);
-        } else if (imgs.length > 1 && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) {
+        } else if (imgs.length > 1 && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) && ((dx > 0 && idx > 0) || (dx < 0 && idx < imgs.length - 1))) {
           setView(v => ({ ...v, x: dx > 0 ? window.innerWidth : -window.innerWidth }));
           if (gestureTimer.current) clearTimeout(gestureTimer.current);
           gestureTimer.current = setTimeout(() => go(dx > 0 ? -1 : 1), 180);
@@ -204,8 +220,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         />
         {imgs.length > 1 && (
           <>
-            <button type="button" onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute left-3 top-1/2 -translate-y-1/2`} aria-label="Précédent"><ChevronLeft className="w-6 h-6" /></button>
-            <button type="button" onClick={e => { e.stopPropagation(); go(1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute right-3 top-1/2 -translate-y-1/2`} aria-label="Suivant"><ChevronRight className="w-6 h-6" /></button>
+            <button type="button" disabled={idx === 0} onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute left-3 top-1/2 -translate-y-1/2 disabled:opacity-25 disabled:cursor-not-allowed`} aria-label="Précédent"><ChevronLeft className="w-6 h-6" /></button>
+            <button type="button" disabled={idx === imgs.length - 1} onClick={e => { e.stopPropagation(); go(1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute right-3 top-1/2 -translate-y-1/2 disabled:opacity-25 disabled:cursor-not-allowed`} aria-label="Suivant"><ChevronRight className="w-6 h-6" /></button>
           </>
         )}
       </div>
