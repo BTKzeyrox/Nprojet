@@ -4,6 +4,7 @@
 import { clearAllDrafts } from './utils/drafts';
 import { readResume, noteResume, clearResume, setBootChat } from './utils/resumeState';
 import { saveFeedScroll } from './utils/feedScroll';
+import { clearImageCache } from './utils/imageCache';
 import { backTarget, swipeAxis, dragOffset, isBackSwipe, swipeBlocked, SWIPE_MS, type SwipeBack } from './utils/pageSwipe';
 import { isKnownView } from './utils/health/menu';
 import { useViewportWidth } from './utils/viewportWidth';
@@ -437,6 +438,7 @@ export default function App() {
     setViewAs('admin');
     try { await Promise.race([unbindPushDevice(), new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ } // l'appareil quitte ce compte AVANT de couper la connexion
     clearResume(); clearAllDrafts(); clearAllCopies();
+    void clearImageCache(); // les photos gardées pour le hors ligne ne restent pas sur l'appareil après la déconnexion
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);

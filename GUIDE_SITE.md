@@ -676,6 +676,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `healthNotif.ts` | Notifications de la cloche pour l'admin (M11.7 / M9.4) : règles PURES (aucun écran, aucun serveur). |
 | `hrFile.ts` | Dossier du salarié (module 5, M5.1) : règles pures, sans écran ni serveur. |
 | `i18n.ts` | Table des textes de l'interface par clé (menus, grille, connexion) et getTranslation ; pur, sans écran ni serveur. |
+| `imageCache.ts` | Photos gardées pour le hors ligne (cache « df-images » du service worker, voir public/sw.js). Elles ne sont PAS chiffrées comme les données : |
 | `imageUtils.ts` | Justificatif de remplacement (image SVG générée localement, sans service externe). |
 | `importFile.ts` | Import Excel et CSV (module 16, M16.1) : lire un fichier choisi par le responsable et le rendre en tableau de textes. |
 | `importRules.ts` | Import Excel et CSV (module 16, M16.1) : règles pures, sans écran, sans serveur, sans réseau, sans lecture de fichier. |
@@ -754,6 +755,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `resumeState.ts` | Reprise après rechargement (BTK, 2026-11-12) : quand le téléphone retire le site de la mémoire (changement d'application, 1 à 10 minutes) puis le recharge, |
 | `reviews.ts` | Évaluation périodique (module 5, M5.4) : règles pures, sans écran ni serveur. |
 | `roles.ts` | Rôles (M7.1) : règles pures, sans écran ni serveur. Le serveur (bloc ROLES de df-api) a la même copie ; `npm run check:roles` compare les deux. |
+| `safeImage.ts` | Règles pures de <SafeImage> (src/components/SafeImage.tsx) : petite image sans texte, libellé du cadre de remplacement. Contrôlé par scripts/check-safe-image.ts. |
 | `scrollRescue.ts` | Filet de sécurité du défilement (grand écran, tablette). |
 | `serverClock.ts` | Horloge du SERVEUR : les signes de vie (dernière activité, arrivée, départ) sont écrits avec l'heure du serveur. Comparés à l'heure de l'appareil, un PC ou un téléphone |
 | `sheetAuto.ts` | « Mes tableaux » plus intelligents (module 19, M19.2) : saisie automatique, règles PURES (aucun écran, aucun réseau, aucune date lue sur l'horloge : `today` est donné). |
@@ -1001,6 +1003,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `RemindersCard.tsx` | Carte « À faire » du Calendrier (module 25) : liste des tâches, rendez-vous, échéances et rappels de la personne, bouton « + Ajouter », formulaire complet. |
 | `ReportProblemModal.tsx` | Fenêtre « Signaler un problème » : texte libre et capture d'écran facultative, envoyés à l'administrateur avec les infos techniques. |
 | `RestoreSection.tsx` | Remise à zéro du site : Gmail vérifié, sauvegarde Excel, deux confirmations et code reçu par mail. |
+| `SafeImage.tsx` | Image qui ne montre JAMAIS l'icône « image cassée » du navigateur (hors ligne, lien mort) : à la place, un cadre neutre de la même taille, |
 | `ScoreInput.tsx` | Champ de saisie d'un score ou d'une quantité : espaces de milliers automatiques et abréviations comme 12k ou 20.467M. |
 | `ScrollButtons.tsx` | Boutons ronds « Haut » et « Bas » toujours disponibles quand la page est plus longue que l'écran, même si le défilement est bloqué. |
 | `SheetForm.tsx` | Vue Formulaire d'un tableau : une fiche par ligne avec champs étiquetés, recherche et navigation, lisible sur téléphone. |
@@ -1098,6 +1101,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:guide` | (plusieurs contrôles) |
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
+| `npm run check:safe-image` | Photos hors ligne : plus d'icône « image cassée », photos déjà vues gardées (200 max, Cloudinary seulement), cache vidé à la déconnexion. Lancer : npm run check:safe-image |
 | `npm run check:paste-images` | Coller une image (capture d'écran) avec Ctrl+V : prise comme un fichier choisi, sans gêner le collage de texte. Lancer : npm run check:paste-images |
 | `npm run check:page-swipe` | Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |

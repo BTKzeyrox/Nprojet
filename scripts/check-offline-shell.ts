@@ -89,7 +89,7 @@ function makeEnv(opts: { timeoutFires?: boolean } = {}) {
     registration: { showNotification: async (t: string, o: any) => { shown.push({ t, o }); }, getNotifications: async () => [] },
   };
   const fakeSetTimeout = (fn: () => void, ms: number) => (opts.timeoutFires && ms === 4000 ? setTimeout(fn, 0) : setTimeout(fn, ms));
-  const ctx: any = { self, caches, fetch: fetchFake, Response, Headers, URL, Promise, JSON, Array, Object, Error, TypeError, setTimeout: fakeSetTimeout, clearTimeout, console };
+  const ctx: any = { self, caches, fetch: fetchFake, Response, Request, Headers, URL, isFinite, Promise, JSON, Array, Object, Error, TypeError, setTimeout: fakeSetTimeout, clearTimeout, console };
   vm.runInNewContext(SW, ctx);
   const fire = async (type: string, evt: any) => {
     const waits: Promise<any>[] = []; let resp: Promise<Response> | null = null;
@@ -254,6 +254,40 @@ const text = async (r: Response | null) => (r ? r.clone().text() : '');
   e.net.fn = async (req: any) => (new URL(req.url).pathname === '/version.json' ? json({ v: 'nouvelle' }) : html());
   await e.fire('fetch', { request: get('/version.json') });
   ok(!e.cacheOf('df-runtime').has('/version.json') && ![...e.cacheOf('df-runtime').keys()].some(k => k.includes('version')), 'version.json n\'est jamais gardé (sinon plus de mise à jour du site)');
+}
+{
+  // --- photos Cloudinary : gardées pour le hors ligne (cache à part, 200 au maximum, mode cors) ---
+  const IMG = 'https://res.cloudinary.com/democloud/image/upload/p';
+  const img = (n: number | string, type = 'cors', status = 200) => { const r = new Response('jpg' + n, { status, headers: { 'content-type': 'image/jpeg' } }); Object.defineProperty(r, 'type', { value: type }); return r; };
+  const photoReq = (n: number | string, destination = 'image') => ({ url: `${IMG}${n}.jpg`, method: 'GET', mode: 'no-cors', destination });
+  const e = makeEnv(); online(e);
+  await e.fire('install', {});
+  const seen: string[] = [];
+  e.net.fn = async (req: any) => { seen.push(req.mode || 'string'); return img(req.url.split('/p')[1]); };
+  const r1 = await e.fire('fetch', { request: photoReq(1) });
+  ok(r1.handled && r1.response!.ok && (await r1.response!.text()) === 'jpg1.jpg', 'photo Cloudinary : affichée normalement');
+  ok(seen[0] === 'cors' && e.cacheOf('df-images').size === 1 && !e.cacheOf('df-runtime').has('/democloud/image/upload/p1.jpg'), 'photo demandée en mode cors, gardée dans le cache à part « df-images » (pas dans celui du site)');
+  e.net.fn = async () => { throw new TypeError('offline'); };
+  const r2 = await e.fire('fetch', { request: photoReq(1) });
+  ok(r2.handled && r2.response!.ok && (await r2.response!.text()) === 'jpg1.jpg', 'sans réseau : la photo déjà vue s\'affiche depuis le cache');
+  const r3 = await e.fire('fetch', { request: photoReq(2) });
+  ok(r3.handled && r3.response!.type === 'error', 'sans réseau, photo jamais vue : erreur nette (la page montre alors son cadre de remplacement)');
+  ok(!(await e.fire('fetch', { request: photoReq(1, 'script') })).handled && !(await e.fire('fetch', { request: { ...photoReq(1), method: 'POST' } })).handled && !(await e.fire('fetch', { request: { url: 'https://autre.site/p1.jpg', method: 'GET', mode: 'no-cors', destination: 'image' } })).handled, 'script, POST, ou images d\'un autre site : pas touchés');
+  const e2 = makeEnv(); online(e2); await e2.fire('install', {});
+  e2.net.fn = async (req: any) => img(req.url.split('/p')[1], req.mode === 'cors' ? 'opaque' : 'opaque');
+  const o = await e2.fire('fetch', { request: photoReq(7) });
+  ok(o.handled && o.response!.ok && e2.cacheOf('df-images').size === 0, 'réponse opaque (site sans CORS) : affichée mais jamais gardée');
+  e2.net.fn = async () => img('x', 'cors', 404);
+  const nf = await e2.fire('fetch', { request: photoReq(8) });
+  ok(nf.response!.status === 404 && e2.cacheOf('df-images').size === 0, 'photo introuvable (404) : rien n\'est gardé');
+  const e3 = makeEnv(); online(e3); await e3.fire('install', {});
+  e3.net.fn = async (req: any) => img(req.url.split('/p')[1]);
+  for (let i = 1; i <= 205; i++) await e3.fire('fetch', { request: photoReq(i) });
+  const keep = [...e3.cacheOf('df-images').keys()];
+  ok(keep.length === 200 && !keep.some(k => k.endsWith('/p1.jpg') || k.endsWith('/p5.jpg')) && keep.some(k => k.endsWith('/p6.jpg')) && keep.some(k => k.endsWith('/p205.jpg')), '205 photos vues : 200 gardées, les 5 plus anciennes retirées');
+  e3.net.fn = async () => { throw new TypeError('offline'); };
+  await e3.fire('activate', {});
+  ok(e3.cacheOf('df-images').size === 200, 'mise à jour du site : le nettoyage ne touche pas aux photos gardées');
 }
 {
   // --- mise à jour : on garde la version précédente, on retire les plus anciennes ---

@@ -1,7 +1,7 @@
 // Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo.
 // Utilisé par : CVViewerModal.tsx, ChatAbout.tsx, ChatDialogs.tsx, ChatView.tsx, NewsShareSheet.tsx, OperatorSheet.tsx, ProfilePhotoGate.tsx, Sidebar.tsx et 7 autres.
 // Pour modifier : props src, name et className (taille par défaut w-8 h-8).
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface AvatarProps {
   src?: string;
@@ -9,10 +9,20 @@ interface AvatarProps {
   className?: string;
 }
 
-// Photo de profil, ou initiales si aucune photo
+// Photo de profil, ou initiales si aucune photo OU si la photo ne se charge pas (hors ligne) : jamais l'icône « image cassée ».
+// La photo revient toute seule quand la connexion revient.
 export const Avatar: React.FC<AvatarProps> = ({ src, name, className = 'w-8 h-8' }) => {
-  if (src) {
-    return <img src={src} alt={name} className={`${className} rounded-full object-cover border border-slate-300/60 shrink-0`} />;
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
+  useEffect(() => { setFailed(false); }, [src]);
+  useEffect(() => {
+    if (!failed) return;
+    const retry = () => { setFailed(false); setTries(n => n + 1); };
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [failed]);
+  if (src && !failed) {
+    return <img key={tries} src={src} alt={name} onError={() => setFailed(true)} className={`${className} rounded-full object-cover border border-slate-300/60 shrink-0`} />;
   }
   const initials =
     name

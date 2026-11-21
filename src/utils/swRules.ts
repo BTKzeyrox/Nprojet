@@ -1,5 +1,5 @@
 // Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur.
-// `classify` et `pruneList` sont COPIÉS dans public/sw.js (entre les repères BEGIN/END) : `npm run check:offline-shell` prouve qu'ils donnent
+// `classify`, `pruneList`, `isPhotoRequest` et `photoOverflow` sont COPIÉS dans public/sw.js (entre les repères BEGIN/END) : `npm run check:offline-shell` prouve qu'ils donnent
 // les mêmes résultats. `buildPrecache` est utilisé à la construction du site (vite.config.ts) pour écrire /sw-precache.json.
 
 /** Fichiers qu'on ne garde JAMAIS en cache : le numéro de version (sinon plus de mise à jour), le service worker lui-même, la liste de fichiers. */
@@ -30,6 +30,17 @@ export function pruneList(cached: string[], current: string[], previous: string[
   const out: string[] = [];
   for (let i = 0; i < cached.length; i++) if (!keep[cached[i]]) out.push(cached[i]);
   return out;
+}
+
+/** Photos : seul le site d'images Cloudinary, et seulement ce qui sert à AFFICHER une image (destination « image »). Rien d'autre n'est jamais gardé (ni données, ni autres sites). */
+export const PHOTO_HOST = 'res.cloudinary.com';
+export const PHOTO_MAX = 200; // photos gardées au maximum ; au-delà, les plus anciennes partent d'abord
+export function isPhotoRequest(method: string, hostname: string, destination: string): boolean {
+  return method === 'GET' && hostname === PHOTO_HOST && destination === 'image';
+}
+/** Combien de photos retirer (les plus anciennes) pour rester sous la limite. */
+export function photoOverflow(count: number, max: number = PHOTO_MAX): number {
+  return Number.isFinite(count) && count > max ? count - max : 0;
 }
 
 export interface BundleItem { fileName: string; type: 'chunk' | 'asset'; isEntry?: boolean; imports?: string[]; dynamicImports?: string[]; importedCss?: string[] }

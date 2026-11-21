@@ -3,6 +3,7 @@
 // (2) au démarrage, remet ces changements sur les données ; (3) permet d'ouvrir l'appli sans réseau avec la dernière copie ; (4) garde dans « À revoir »
 // ce que le serveur refuse ou ce qui est en conflit. Il ne parle jamais au réseau. Jamais actif en mode démo.
 // Opérateur : copie automatique, sans code. Admin : seulement avec un code de verrouillage (écran du M13.6) ; tant qu'il n'y en a pas, rien n'est gardé.
+import { clearImageCache } from '../utils/imageCache';
 import type { User } from '../types';
 import { OFFLINE_DEFAULTS, type Bilingual, type OfflineLimits, type OfflineOp, type Queue, type Role, collectionPolicy, copyText, discard, requeue as requeueOp, reviewList, summary } from '../utils/offline';
 import { applyQueue, buildOps, reapply, rejectedToReview, textOf, type Arrays, type Changes, type RejectedItem, type Skipped, type SyncedJson } from '../utils/offlineSync';
@@ -367,6 +368,7 @@ export class OfflineController {
     if (this.cTimer) { clearTimeout(this.cTimer); this.cTimer = null; }
     this.vault = null; this.queue = []; this.skipped = []; this.locked = false; this.problem = null; this.copySavedAt = null; this.lastCopyAt = 0; this.frozen = false; this.enc = false; this.waitUntil = 0; this.pinFail = null; this.unsentCache = null;
     await this.serial(async () => { await this.io(wipeVault(this.store(), who.id), undefined); });
+    await clearImageCache(); // les photos gardées pour le hors ligne partent avec la copie locale
     this.writeWho(null);
     const again = this.lastUser;
     this.attachedFor = null; this.user = null; this.noVault = false;

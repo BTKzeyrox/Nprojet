@@ -1,9 +1,11 @@
 // Service worker de Gestion Pro : (1) reçoit les notifications (M6.4) ; (2) fait que l'appli S'OUVRE SANS RÉSEAU (module 13, M13.4).
 // Règles de cache : voir src/utils/swRules.ts (copiées entre les repères ci-dessous, contrôlées par `npm run check:offline-shell`).
-// Jamais mis en cache : /version.json (mise à jour du site), /sw.js, /sw-precache.json, tout autre site (données, photos), toute requête autre que GET.
+// Jamais mis en cache : /version.json (mise à jour du site), /sw.js, /sw-precache.json, tout autre site (données), toute requête autre que GET.
+// Seule exception : les PHOTOS de Cloudinary déjà vues (cache « df-images », 200 au maximum, les plus anciennes partent d'abord).
 // Mise à jour sûre : le nouveau service worker garde la version PRÉCÉDENTE en cache (un onglet resté ouvert peut en avoir besoin) et ne supprime que les plus anciennes.
 var RUNTIME = 'df-runtime';
 var META = 'df-meta';
+var PHOTOS = 'df-images'; // photos déjà vues (Cloudinary) : gardées pour le hors ligne, séparées du reste ; vidées par la page à la déconnexion
 var SHELL_KEY = '/__shell';
 var SHELL_TIMEOUT_MS = 4000;
 
@@ -24,6 +26,15 @@ function pruneList(cached, current, previous) {
   var out = [];
   for (var k = 0; k < cached.length; k++) if (!keep[cached[k]]) out.push(cached[k]);
   return out;
+}
+var PHOTO_HOST = 'res.cloudinary.com';
+var PHOTO_MAX = 200;
+function isPhotoRequest(method, hostname, destination) {
+  return method === 'GET' && hostname === PHOTO_HOST && destination === 'image';
+}
+function photoOverflow(count, max) {
+  if (max === undefined) max = PHOTO_MAX;
+  return isFinite(count) && count > max ? count - max : 0;
 }
 // ===== END SHELL RULES =====
 
@@ -137,8 +148,30 @@ function staleWhileRevalidate(req, url) {
     });
   });
 }
+// Photo : le cache d'abord ; sinon le réseau EN MODE « cors » (le cache garde alors une vraie copie, pas une réponse opaque qui pèserait ~7 Mo de quota).
+// Si le site d'images refuse le mode cors, on fait comme avant (rien n'est gardé). Le résultat est le même pour l'image affichée.
+function trimPhotos(cache) {
+  return cache.keys().then(function (reqs) {
+    var n = photoOverflow(reqs.length);
+    return Promise.all(reqs.slice(0, n).map(function (r) { return cache.delete(r); }));
+  });
+}
+function photo(req) {
+  return caches.open(PHOTOS).then(function (cache) {
+    return cache.match(req.url).then(function (hit) {
+      if (hit) return hit;
+      return fetch(new Request(req.url, { mode: 'cors', credentials: 'omit' })).then(function (res) {
+        if (res && res.ok && res.type === 'cors') {
+          return cache.put(req.url, res.clone()).then(function () { return trimPhotos(cache); }).catch(function () {}).then(function () { return res; });
+        }
+        return res;
+      }, function () { return fetch(req); });
+    });
+  });
+}
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
+  if (isPhotoRequest(req.method, url.hostname, req.destination)) { e.respondWith(photo(req).catch(function () { return Response.error(); })); return; }
   var kind = classify(req.method, url.origin === self.location.origin, url.pathname, req.mode);
   if (kind === 'network') return; // le navigateur fait comme avant
   if (kind === 'shell') { e.respondWith(shell(req)); return; }

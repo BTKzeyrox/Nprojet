@@ -57,6 +57,7 @@ import { PendingMark } from '../../components/PendingMark';
 import { todayMada } from '../../utils/stats';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../../utils/composerKeys';
 import { levelNow, levelLine } from '../../utils/monthLevel';
+import { SafeImage } from '../../components/SafeImage';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -851,7 +852,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                             className="w-16 h-11 rounded-lg border border-slate-700 overflow-hidden cursor-pointer hover:border-emerald-400 transition-colors relative group shrink-0 shadow-sm"
                             title={`Cliquer pour agrandir la photo ${idx + 1}`}
                           >
-                            <img
+                            <SafeImage
                               src={url}
                               alt={`Justificatif ${idx + 1}`}
                               className="w-full h-full object-cover"
@@ -1357,7 +1358,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         className="relative aspect-square rounded-lg overflow-hidden border border-amber-700/50 cursor-pointer"
                         title="Agrandir la photo"
                       >
-                        <img src={url} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
+                        <SafeImage src={url} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -1417,7 +1418,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         key={idx}
                         className="relative aspect-video rounded-lg overflow-hidden border-2 border-emerald-500 bg-black/60 group shadow-md"
                       >
-                        <img
+                        <SafeImage
                           src={photoUrl}
                           alt={`Justificatif ${idx + 1}`}
                           className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform"
@@ -1781,7 +1782,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       className="mt-3 relative aspect-video rounded-xl overflow-hidden border-2 border-cyan-500 cursor-pointer group shadow-lg"
                       title="Cliquer pour afficher la photo en plein écran"
                     >
-                      <img
+                      <SafeImage
                         src={endProofPreview}
                         alt="Justificatif Fin"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"

@@ -11,6 +11,7 @@ import { askConfirm } from './ConfirmModal';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { compressImageToDataUrl } from '../utils/imageUtils';
+import { SafeImage } from './SafeImage';
 
 const useL = () => useApp().theme === 'light';
 
@@ -203,7 +204,7 @@ export const GroupInfoModal: React.FC<{
       <div className="flex flex-col items-center text-center gap-2 pt-1">
         <div className="relative">
           {group.avatar_url ? (
-            <img src={group.avatar_url} alt="" className="w-24 h-24 rounded-full object-cover shadow-lg" />
+            <SafeImage src={group.avatar_url} alt="" className="w-24 h-24 rounded-full object-cover shadow-lg" />
           ) : (
             <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-extrabold text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
               {(group.name.trim()[0] || 'G').toUpperCase()}

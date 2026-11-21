@@ -11,6 +11,7 @@ import { proofsOf } from '../utils/proofs';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { showShift } from '../utils/shiftMode';
+import { SafeImage } from './SafeImage';
 
 interface DayDetailsModalProps {
   isOpen: boolean;
@@ -274,7 +275,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             <span className="text-slate-500">{shift.start_time}</span>
                           </div>
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
-                            <img
+                            <SafeImage
                               src={shift.start_proof_url}
                               alt="Photo de départ"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
@@ -307,7 +308,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                               <span className="text-slate-500">{shift.end_time || 'Terminé'}</span>
                             </div>
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
-                              <img
+                              <SafeImage
                                 src={shift.end_proof_url}
                                 alt="Photo de fin"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"

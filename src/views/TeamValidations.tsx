@@ -10,6 +10,7 @@ import type { PostSession, User } from '../types';
 import { teamPendingPosts } from '../utils/teamLead';
 import { isWorkLine } from '../utils/postPay';
 import { workLineDetail, workLineBy } from '../utils/workLineText';
+import { SafeImage } from '../components/SafeImage';
 
 type Lightbox = (p: { imageUrl: string; gallery?: string[]; title: string; subtitle?: string; score?: number; clientTag?: string; operatorName?: string; timestamp?: string }) => void;
 
@@ -73,7 +74,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {imgs.map((u, i) => (
                     <button key={i} type="button" onClick={() => onOpenProofLightbox({ imageUrl: u, gallery: imgs, title: end ? 'Preuve de fin' : 'Preuve de départ', subtitle: p.client_name, operatorName: p.employee_name, score: end ? (p.final_score ?? p.current_score) : p.initial_score })} className="shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-slate-600">
-                      <img src={u} alt={`Preuve ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                      <SafeImage src={u} alt={`Preuve ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                     </button>
                   ))}
                 </div>

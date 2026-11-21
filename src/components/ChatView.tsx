@@ -60,6 +60,7 @@ import { scheduleLabel } from '../utils/chatTemplates';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { takePastedImages } from '../utils/pasteImages';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
+import { SafeImage } from './SafeImage';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
@@ -706,7 +707,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         className={`w-full text-left pl-3 pr-3 py-2.5 flex items-center gap-3 rounded-2xl border-l-4 border cursor-pointer shadow-sm transition-colors select-none ${accent.bar} ${t.id === current.id && !onAssistant ? (L ? 'bg-[#dbeafe] border-[#93c5fd]' : 'bg-blue-500/20 border-blue-400/40') : (L ? 'bg-white border-slate-200 hover:bg-slate-50' : 'bg-white/5 border-white/10 hover:bg-white/10')} ${archivedRow ? 'opacity-70' : ''}`}
       >
         {t.kind === 'group' && t.group?.avatar_url ? (
-          <img src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+          <SafeImage src={t.group.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
         ) : t.kind === 'all' || t.kind === 'group' ? (
           <span className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${t.kind === 'all' ? 'bg-blue-600' : 'bg-violet-600'}`}>
             <Users className="w-5 h-5 text-white" />
@@ -833,7 +834,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 {(() => { const lv = liveOf(current.user); return lv ? <LiveDot info={lv} lang={chatLang} ring="border-blue-600" /> : null; })()}
               </span>
             ) : current.kind === 'group' && current.group?.avatar_url ? (
-              <img src={current.group.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-white/40" />
+              <SafeImage src={current.group.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-white/40" />
             ) : (
               <span className="w-11 h-11 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0">
                 {current.kind === 'pair' ? <EyeOff className="w-5 h-5 text-white" /> : <Users className="w-5 h-5 text-white" />}

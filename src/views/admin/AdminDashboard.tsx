@@ -78,6 +78,7 @@ import { FilterBar } from '../../components/FilterBar';
 import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
 import { getHealth } from '../../utils/healthDb';
+import { SafeImage } from '../../components/SafeImage';
 
 // Ordre d'affichage dans la carte « Équipe connectée » : opérateurs, puis chefs d'équipe, puis comptables
 const ROLE_RANK: Record<string, number> = { employee: 0, team_lead: 1, accountant: 2 };
@@ -764,7 +765,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               }
                               className="relative aspect-video rounded-lg overflow-hidden border border-amber-500/70 bg-black/60 group cursor-pointer shadow hover:border-amber-400 transition-colors"
                             >
-                              <img src={photoUrl || undefined} alt={`Photo ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <SafeImage src={photoUrl || undefined} alt={`Photo ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[11px] font-mono transition-opacity">
                                 <Eye className="w-4 h-4 text-amber-400" />
                               </div>
@@ -961,7 +962,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className="w-full h-full cursor-pointer"
                             title="Agrandir la photo"
                           >
-                            <img src={url || undefined} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
+                            <SafeImage src={url || undefined} alt={`Pièce jointe ${i + 1}`} className="w-full h-full object-cover" />
                           </button>
                           <button
                             type="button"
@@ -1708,7 +1709,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span className="text-slate-500">{post.start_time}</span>
                           </div>
                           <div className="relative aspect-video rounded overflow-hidden bg-black/60">
-                            <img
+                            <SafeImage
                               src={post.start_proof_url || undefined}
                               alt="Justificatif de départ"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
@@ -1741,7 +1742,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <span className="text-slate-500">{post.end_time || 'Clôture'}</span>
                             </div>
                             <div className="relative aspect-video rounded overflow-hidden bg-black/60">
-                              <img
+                              <SafeImage
                                 src={post.end_proof_url || undefined}
                                 alt="Justificatif Fin"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"

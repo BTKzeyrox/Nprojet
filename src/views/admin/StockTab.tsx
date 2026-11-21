@@ -15,6 +15,7 @@ import { categoryKey, categoryOptions, checkMoveDraft, cleanCategoryName, DEFAUL
 import { StockCategoriesDialog } from './StockCategoriesDialog';
 import { productNavId, STORAGE_FLASH_MS } from '../../utils/storageNav';
 import type { Product, StockMoveType } from '../../types';
+import { SafeImage } from '../../components/SafeImage';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
@@ -199,7 +200,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
                 <li key={p.id} data-nav={productNavId(p.id)} data-nav-flash={STORAGE_FLASH_MS} className="py-2 border-t border-slate-800 first:border-t-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <span aria-hidden="true" className={`w-3 h-3 rounded-full flex-shrink-0 ${r.low ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                    {p.photo_url && <button type="button" onClick={() => setZoom({ url: p.photo_url || '', name: p.name })} aria-label={t(`Agrandir la photo de ${p.name}`, `Enlarge photo of ${p.name}`)} className="flex-shrink-0"><img src={p.photo_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-slate-700" /></button>}
+                    {p.photo_url && <button type="button" onClick={() => setZoom({ url: p.photo_url || '', name: p.name })} aria-label={t(`Agrandir la photo de ${p.name}`, `Enlarge photo of ${p.name}`)} className="flex-shrink-0"><SafeImage src={p.photo_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-slate-700" /></button>}
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-white truncate">{p.name}{p.category ? <span className="text-slate-500"> · {p.category}</span> : null}</div>
                       <div className="text-[11px] text-slate-400 truncate">
@@ -281,7 +282,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
               <input autoFocus value={pEdit.name} maxLength={80} onChange={e => setPEdit({ ...pEdit, name: e.target.value })} className={`${field} mt-1`} />
             </label>
             <div className="flex items-center gap-3">
-              {pEdit.photo ? <img src={pEdit.photo} alt="" className="w-16 h-16 rounded-lg object-cover border border-slate-700" /> : <div aria-hidden="true" className="w-16 h-16 rounded-lg border border-dashed border-slate-700" />}
+              {pEdit.photo ? <SafeImage src={pEdit.photo} alt="" className="w-16 h-16 rounded-lg object-cover border border-slate-700" /> : <div aria-hidden="true" className="w-16 h-16 rounded-lg border border-dashed border-slate-700" />}
               <div className="flex-1 flex flex-wrap gap-2">
                 <label className={`min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-200 text-sm font-semibold flex items-center cursor-pointer ${photoBusy ? 'opacity-50 pointer-events-none' : ''}`}>
                   {photoBusy ? t('Envoi…', 'Sending…') : pEdit.photo ? t('Changer la photo', 'Change photo') : t('Ajouter une photo', 'Add a photo')}
@@ -393,7 +394,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
       )}
       {zoom && (
         <div role="dialog" aria-modal="true" aria-label={zoom.name} onClick={() => setZoom(null)} className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 gap-3">
-          <img src={zoom.url} alt={zoom.name} className="max-w-full max-h-[75vh] rounded-lg" />
+          <SafeImage src={zoom.url} alt={zoom.name} className="max-w-full max-h-[75vh] rounded-lg" />
           <div className="text-white text-sm">{zoom.name}</div>
           <button type="button" onClick={() => setZoom(null)} className="min-h-[44px] px-4 rounded-lg bg-slate-800 text-white text-sm font-semibold">{t('Fermer', 'Close')}</button>
         </div>
