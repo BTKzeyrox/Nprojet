@@ -1,6 +1,7 @@
 // Fenêtre « Signaler un problème » : texte libre et capture d'écran facultative, envoyés à l'administrateur avec les infos techniques.
 // Utilisé par : App.tsx et ErrorsLog.tsx.
 // Pour modifier : prop onClose ; envoi par db.submitProblemReport avec page, appareil et version ajoutés automatiquement. Description d'au moins 3 caractères. Textes en français seulement.
+import { takePastedImages } from '../utils/pasteImages';
 import React, { useState } from 'react';
 import { X, Camera, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../db/store';
@@ -22,7 +23,10 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
   const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = '';
-    if (!f) return;
+    if (f) await takeShot(f);
+  };
+  // Image choisie OU collée (Ctrl+V) : la première seulement
+  const takeShot = async (f: File) => {
     try {
       setShot(await compressProofImage(f));
     } catch {
@@ -66,6 +70,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
                 maxLength={1000}
                 value={text}
                 onChange={e => setText(e.target.value)}
+                onPaste={e => { takePastedImages(e, files => { void takeShot(files[0]); }); }}
                 placeholder="Décris ce que tu faisais et ce qui ne marche pas"
                 className="w-full bg-[#141e2a] border rounded-xl border-slate-600 p-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
               />

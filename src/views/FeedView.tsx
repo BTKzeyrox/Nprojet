@@ -1,6 +1,7 @@
 // Page Actualités : fil de publications avec images, fichiers, réactions, commentaires, épinglage, partage et validation des publications.
 // Utilisé par : App.tsx.
 // Pour modifier : les publications viennent de db.getNews() ; qui peut voir, modifier ou publier est décidé par utils/newsAccess.ts ; le responsable publie en direct, les autres peuvent passer par une validation.
+import { takePastedImages } from '../utils/pasteImages';
 import { useDraft } from '../utils/useDraft';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { saveFeedScroll, feedScrollFor, pinnedFeedScroll, FEED_TOP_EVENT } from '../utils/feedScroll';
@@ -136,6 +137,10 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
     e.target.value = '';
+    await addFiles(list);
+  };
+  // Fichiers choisis OU images collées (Ctrl+V) : même chemin
+  const addFiles = async (list: File[]) => {
     if (!list.length) return;
     setErr(''); setPreparing(true);
     const ok: DraftAttachment[] = [], errors: string[] = [];
@@ -158,7 +163,7 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
   return (
     <div data-post-editor className="space-y-2">
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
-      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} />
+      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} onPaste={e => { takePastedImages(e, f => { void addFiles(f); }); }} />
       {(kept.length > 0 || items.length > 0) && (
         <ul className="space-y-1.5" data-editor-files>
           {kept.map(f => (
@@ -276,6 +281,9 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
   const pickComment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
     e.target.value = '';
+    await addCommentFiles(list);
+  };
+  const addCommentFiles = async (list: File[]) => {
     if (!list.length) return;
     setMsg(''); setCPrep(true);
     const ok: DraftAttachment[] = [];
@@ -490,6 +498,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             </button>
             <textarea
               ref={cInput}
+              onPaste={e => { takePastedImages(e, f => { void addCommentFiles(f); }); }}
               rows={1}
               enterKeyHint="enter"
               value={text}
@@ -537,6 +546,10 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
     e.target.value = '';
+    await addFiles(list);
+  };
+  // Fichiers choisis OU images collées (Ctrl+V) : même chemin
+  const addFiles = async (list: File[]) => {
     if (!list.length) return;
     setErr(''); setInfo(''); setPreparing(true);
     const ok: DraftAttachment[] = [];
@@ -591,7 +604,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
       </div>
       {!direct && <div className={`text-xs ${muted}`}>Propose une publication à l’équipe. Le responsable doit la valider avant qu’elle soit visible.</div>}
       <input className={field} value={title} maxLength={120} disabled={busy} onChange={e => setTitle(e.target.value)} placeholder="Titre (facultatif)" />
-      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} placeholder={direct ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
+      <textarea className={`${field} min-h-[96px]`} value={text} maxLength={2000} disabled={busy} onChange={e => setText(e.target.value)} onPaste={e => { takePastedImages(e, f => { void addFiles(f); }); }} placeholder={direct ? 'Écris une publication pour l’équipe…' : 'Écris ta publication…'} />
       {extra && isAdmin && <ExtraForm value={extra} onChange={setExtra} onRemove={() => setExtra(null)} disabled={busy} light={light} />}
       <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
 

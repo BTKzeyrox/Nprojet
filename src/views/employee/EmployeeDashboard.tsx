@@ -1,6 +1,7 @@
 // Écran principal de l'employé : grille des missions, mission en cours (début, preuves, fin), avances sur salaire et messages.
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'onglet affiché dépend de activeSubTab (grid, active-post, advances, chat) ; les données viennent de db (posts, contrats). Fichier très long : chercher la zone par son nom d'état.
+import { usePasteImages } from '../../utils/usePasteImages';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
@@ -315,6 +316,13 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleMultipleStartPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    const list = Array.from(files);
+    e.target.value = '';
+    await addStartPhotos(list);
+  };
+  // Photos choisies OU collées (Ctrl+V) : même chemin, même limite de 5
+  const addStartPhotos = async (files: File[]) => {
+    if (files.length === 0) return;
 
     const availableSlots = 5 - startProofPhotos.length;
     if (availableSlots <= 0) {
@@ -322,14 +330,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       return;
     }
 
-    const filesToRead = Array.from(files).slice(0, availableSlots);
-    e.target.value = '';
+    const filesToRead = files.slice(0, availableSlots);
     for (const file of filesToRead) {
       const result = await prepareProof(file);
       if (result) setStartProofPhotos(prev => (prev.length >= 5 ? prev : [...prev, result]));
     }
   };
 
+  usePasteImages(files => { void addStartPhotos(files); }, showStartModal && startProofPhotos.length < 5);
   const handleRemoveStartPhoto = (index: number) => {
     setStartProofPhotos(prev => prev.filter((_, i) => i !== index));
   };

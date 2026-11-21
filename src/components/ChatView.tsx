@@ -58,6 +58,7 @@ import { MessageToItem } from './MessageToItem';
 import { ScheduleDialog, TemplatesDialog } from './MessageTools';
 import { scheduleLabel } from '../utils/chatTemplates';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
+import { takePastedImages } from '../utils/pasteImages';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
@@ -471,6 +472,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
     e.target.value = '';
+    takeFiles(list);
+  };
+  // Fichiers choisis OU images collées (Ctrl+V) : même chemin, mêmes limites
+  const takeFiles = (list: File[]) => {
     if (list.length === 0) return;
     setError(null);
     let picked = list;
@@ -1114,6 +1119,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
               </div>
               <textarea
                 ref={composerRef}
+                onPaste={e => { if (!current.readOnly) takePastedImages(e, takeFiles); }}
                 rows={1}
                 value={text}
                 onFocus={keep.pin}
