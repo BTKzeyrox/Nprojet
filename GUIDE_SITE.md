@@ -1095,6 +1095,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:guide` | (plusieurs contrôles) |
 | `npm run check:accounting` | Contrôle des règles de comptabilité (module 14, M14.1), sans réseau ni écran. Lancer : npm run check:accounting |
 | `npm run check:accounting-entries` | Contrôle des écritures automatiques (module 14, M14.2) : chaque total est comparé à celui des autres pages (créances, TVA, argent). Sans réseau. |
+| `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |
 | `npm run check:accounting-page` | Essai de la page Comptabilité (M14.4), sans écran réel ni réseau : démo, génération, saisie, annulation, FR et EN, rôles. Lancer : npm run check:accounting-page |

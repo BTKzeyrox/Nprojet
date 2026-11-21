@@ -26,6 +26,8 @@ interface LightboxModalProps {
 
 const MIN = 1;
 const MAX = 6;
+const SLIDE_MS = 360; // durée du glissement d'une image à l'autre
+const SLIDE_EASE = 'cubic-bezier(.22,.8,.3,1)';
 const clampScale = (s: number) => Math.min(MAX, Math.max(MIN, s));
 
 export const LightboxModal: React.FC<LightboxModalProps> = ({
@@ -48,7 +50,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const [idx, setIdx] = useState(startIdx);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const [entering, setEntering] = useState(false);
+  const [noAnim, setNoAnim] = useState(false); // coupe l'animation pendant le seul instant où l'image voisine devient l'image courante (rien ne bouge à l'écran)
   const [dismissY, setDismissY] = useState(0);
   const [dismissScale, setDismissScale] = useState(1);
 
@@ -58,6 +60,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const gestureStart = useRef<{ x: number; y: number } | null>(null);
   const gestureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doubleTap = useRef(false);
+  const idxRef = useRef(startIdx);
+  const busy = useRef(false); // un changement d'image est en cours : on ignore les gestes jusqu'à la fin
 
   useLockBodyScroll(isOpen);
 
@@ -67,38 +71,37 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       const s = clampScale(v.s * factor);
       return s === MIN ? { s, x: 0, y: 0 } : { ...v, s };
     });
-  const go = (d: number) => {
-    setIdx(i => {
-      const next = i + d;
-      return next < 0 || next >= imgs.length ? i : next;
-    });
-    resetView();
-  };
+  // Changement d'image : UNE seule transition continue. L'image voisine est déjà dans la page (voir le rendu plus bas) : elle glisse
+  // jusqu'au centre, puis on change seulement le numéro, sans animation, au moment où elle y est (aucun saut, aucun second chargement).
   const swipeTo = (d: -1 | 1, outDirection: -1 | 1) => {
-    const next = idx + d;
-    if (next < 0 || next >= imgs.length) return;
-    const width = window.innerWidth;
-    setEntering(false);
-    setView({ s: 1, x: outDirection * width, y: 0 });
+    const next = idxRef.current + d;
+    if (busy.current || next < 0 || next >= imgs.length) return;
+    busy.current = true;
+    setDismissY(0); setDismissScale(1);
+    setNoAnim(false);
     setDragging(false);
+    setView({ s: 1, x: outDirection * window.innerWidth, y: 0 });
     if (gestureTimer.current) clearTimeout(gestureTimer.current);
     gestureTimer.current = setTimeout(() => {
+      setNoAnim(true);
       setIdx(next);
-      setView({ s: 1, x: -outDirection * width, y: 0 });
-      setEntering(true);
-      setDragging(true);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        setView({ s: 1, x: 0, y: 0 });
-        setDragging(false);
-        setEntering(false);
-      }));
-    }, 220);
+      setView({ s: 1, x: 0, y: 0 });
+      requestAnimationFrame(() => requestAnimationFrame(() => { setNoAnim(false); busy.current = false; }));
+    }, SLIDE_MS + 20);
+  };
+  const go = (d: number) => {
+    if (d !== -1 && d !== 1) return;
+    if (view.s > 1) { setView({ s: 1, x: 0, y: 0 }); }
+    swipeTo(d, d < 0 ? 1 : -1);
   };
 
   // Ouverture : on se place sur l'image cliquée
   useEffect(() => {
     if (isOpen) {
       setIdx(startIdx);
+      idxRef.current = startIdx;
+      busy.current = false;
+      setNoAnim(false);
       resetView();
       setDragging(false);
     }
@@ -106,6 +109,13 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   }, [isOpen, imageUrl]);
 
   useEffect(() => () => { if (gestureTimer.current) clearTimeout(gestureTimer.current); }, []);
+
+  // Préchargement : les 2 images avant et les 2 images après sont demandées tout de suite (les voisines directes sont aussi dans la page).
+  useEffect(() => {
+    if (!isOpen) return;
+    for (const k of [-2, -1, 1, 2]) { const u = imgs[idx + k]; if (u) { const im = new Image(); im.decoding = 'async'; im.src = u; } }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, idx, imgs.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -122,11 +132,13 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   }, [isOpen, onClose, imgs.length]);
 
   if (!isOpen) return null;
+  idxRef.current = idx;
   const current = imgs[idx] || imageUrl;
 
   const onWheel = (e: React.WheelEvent) => zoomBy(Math.exp(-e.deltaY * 0.0015));
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (busy.current) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pts.current.size === 2) {
@@ -149,6 +161,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (busy.current) return;
     const prev = pts.current.get(e.pointerId);
     if (!prev) return;
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -182,6 +195,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    if (busy.current) { pts.current.delete(e.pointerId); return; } // changement d'image en cours : on ne touche à rien
     const start = gestureStart.current;
     const end = { x: e.clientX, y: e.clientY };
     const wasSingle = pts.current.size === 1;
@@ -215,10 +229,6 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     score !== undefined && { k: 'Quantité vérifiée', v: formatScoreM(score) },
     timestamp && { k: 'Horodatage', v: timestamp },
   ].filter(Boolean) as { k: string; v: string }[];
-  const neighborIdx = !entering && view.s === 1 && view.y === 0 && view.x !== 0
-    ? (view.x > 0 ? idx - 1 : idx + 1)
-    : -1;
-  const neighbor = neighborIdx >= 0 && neighborIdx < imgs.length ? imgs[neighborIdx] : null;
   // Le visualiseur reste opaque au repos ; la transparence ne suit que le glissement de fermeture.
   const backdropAlpha = dismissY > 0
     ? Math.max(0.18, 0.98 - Math.min(0.8, (dismissY / Math.max(1, window.innerHeight)) * 0.8))
@@ -236,32 +246,29 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <img
-            src={current}
-            alt="Justificatif"
-            draggable={false}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            style={{
-              transform: `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`,
-              transition: dragging && !dismissY ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
-            }}
-          />
-        </div>
-        {neighbor && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <img
-              src={neighbor}
-              alt=""
-              draggable={false}
-              className="max-h-[90vh] max-w-[90vw] object-contain"
-              style={{
-                transform: `translate(${view.x + (view.x > 0 ? -window.innerWidth : window.innerWidth)}px, 0)`,
-                transition: dragging ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
-              }}
-            />
-          </div>
-        )}
+        {/* Image d'avant, image courante, image d'après : toujours dans la page (donc déjà chargées), posées côte à côte. */}
+        {[-1, 0, 1].map(k => {
+          const i = idx + k;
+          const url = imgs[i];
+          if (!url) return null;
+          const isCur = k === 0;
+          return (
+            <div key={i} className="absolute inset-0 flex items-center justify-center pointer-events-none" style={isCur ? undefined : { visibility: view.s > 1 || view.x === 0 ? 'hidden' : 'visible' }}>
+              <img
+                src={url}
+                alt={isCur ? 'Justificatif' : ''}
+                draggable={false}
+                className="max-h-[90vh] max-w-[90vw] object-contain"
+                style={{
+                  transform: isCur
+                    ? `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`
+                    : `translate(${view.x + k * window.innerWidth}px, 0)`,
+                  transition: noAnim || (dragging && !(isCur && dismissY)) ? 'none' : `transform ${SLIDE_MS}ms ${SLIDE_EASE}`,
+                }}
+              />
+            </div>
+          );
+        })}
         {imgs.length > 1 && (
           <>
             <button type="button" disabled={idx === 0} onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute left-3 top-1/2 -translate-y-1/2 disabled:opacity-25 disabled:cursor-not-allowed`} aria-label="Précédent"><ChevronLeft className="w-6 h-6" /></button>
