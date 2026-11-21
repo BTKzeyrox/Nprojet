@@ -48,6 +48,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const [idx, setIdx] = useState(startIdx);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [entering, setEntering] = useState(false);
   const [dismissY, setDismissY] = useState(0);
   const [dismissScale, setDismissScale] = useState(1);
 
@@ -77,16 +78,19 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     const next = idx + d;
     if (next < 0 || next >= imgs.length) return;
     const width = window.innerWidth;
+    setEntering(false);
     setView({ s: 1, x: outDirection * width, y: 0 });
     setDragging(false);
     if (gestureTimer.current) clearTimeout(gestureTimer.current);
     gestureTimer.current = setTimeout(() => {
       setIdx(next);
       setView({ s: 1, x: -outDirection * width, y: 0 });
+      setEntering(true);
       setDragging(true);
       requestAnimationFrame(() => requestAnimationFrame(() => {
         setView({ s: 1, x: 0, y: 0 });
         setDragging(false);
+        setEntering(false);
       }));
     }, 220);
   };
@@ -211,9 +215,14 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     score !== undefined && { k: 'Quantité vérifiée', v: formatScoreM(score) },
     timestamp && { k: 'Horodatage', v: timestamp },
   ].filter(Boolean) as { k: string; v: string }[];
+  const neighborIdx = !entering && view.s === 1 && view.y === 0 && view.x !== 0
+    ? (view.x > 0 ? idx - 1 : idx + 1)
+    : -1;
+  const neighbor = neighborIdx >= 0 && neighborIdx < imgs.length ? imgs[neighborIdx] : null;
+  const backdropAlpha = Math.max(0.22, 0.88 - Math.min(0.62, (dismissY / Math.max(1, window.innerHeight)) * 0.62));
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black" data-lightbox role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[9999]" data-lightbox role="dialog" aria-modal="true" style={{ backgroundColor: `rgba(0, 0, 0, ${backdropAlpha})` }}>
       {/* Image plein écran : pincement, molette, double-tap, déplacement */}
       <div
         className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
@@ -224,16 +233,32 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <img
-          src={current}
-          alt="Justificatif"
-          draggable={false}
-          className="max-h-full max-w-full object-contain pointer-events-none"
-          style={{
-            transform: `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`,
-            transition: dragging && !dismissY ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
-          }}
-        />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img
+            src={current}
+            alt="Justificatif"
+            draggable={false}
+            className="max-h-full max-w-full object-contain"
+            style={{
+              transform: `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`,
+              transition: dragging && !dismissY ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
+            }}
+          />
+        </div>
+        {neighbor && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img
+              src={neighbor}
+              alt=""
+              draggable={false}
+              className="max-h-full max-w-full object-contain"
+              style={{
+                transform: `translate(${view.x + (view.x > 0 ? -window.innerWidth : window.innerWidth)}px, 0)`,
+                transition: dragging ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
+              }}
+            />
+          </div>
+        )}
         {imgs.length > 1 && (
           <>
             <button type="button" disabled={idx === 0} onClick={e => { e.stopPropagation(); go(-1); }} onPointerDown={e => e.stopPropagation()} className={`${round} absolute left-3 top-1/2 -translate-y-1/2 disabled:opacity-25 disabled:cursor-not-allowed`} aria-label="Précédent"><ChevronLeft className="w-6 h-6" /></button>
