@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { PageHelp } from './PageHelp';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, LayoutDashboard } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -303,7 +303,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
 
         {/* Messages : l’accès Actualités est désormais regroupé avec l’icône du projet. */}
         <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
-          {([['dashboard', 'Centre de contrôle', LayoutDashboard, 0, 'hidden md:flex'], ['health', 'Contrôle', ShieldCheck, 0, 'flex md:hidden'], ['chat', 'Messages', MessageSquare, chatUnread, 'flex']] as const).map(([view, label, Icon, n, visibility]) => (
+          {([['dashboard', 'Centre de contrôle', LayoutDashboard, 0], ['chat', 'Messages', MessageSquare, chatUnread]] as const).map(([view, label, Icon, n]) => (
             <button
               key={view}
               type="button"
@@ -312,7 +312,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               aria-label={label}
               data-header-shortcut={view}
               aria-current={activeView === view ? 'page' : undefined}
-              className={`${visibility} relative shrink-0 w-10 h-10 items-center justify-center rounded-full border cursor-pointer ${activeView === view ? (L ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-500 bg-emerald-950/50 text-emerald-300') : L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+              className={`flex relative shrink-0 w-10 h-10 items-center justify-center rounded-full border cursor-pointer ${activeView === view ? (L ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-500 bg-emerald-950/50 text-emerald-300') : L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
               <Icon className="w-5 h-5" />
               {n > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">{n > 99 ? '99+' : n}</span>}

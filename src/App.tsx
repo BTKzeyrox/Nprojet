@@ -118,6 +118,54 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const resumeRef = useRef(readResume(db.getCurrentUser()?.id)); // reprise après rechargement (moins de 30 min) : même page, même position
   const [activeView, setActiveView] = useState<string>(() => { const r = resumeRef.current; setBootChat(r && r.view === 'chat' ? r.chat : ''); return r && (isKnownView(r.view) || r.view === 'feed' || r.view === 'grid' || r.view === 'chat') ? r.view : 'feed'; });
+  const [mobileSwipeX, setMobileSwipeX] = useState(0);
+  const mobileSwipeXRef = useRef(0);
+  const mobileSwipe = useRef<{ x: number; y: number; edge: 'left' | 'right' } | null>(null);
+  const mobileSwipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewHistory = useRef<string[]>([]);
+  const previousView = useRef(activeView);
+  const skipViewHistory = useRef(false);
+  useEffect(() => {
+    if (previousView.current !== activeView) {
+      if (!skipViewHistory.current) viewHistory.current = [...viewHistory.current.slice(-19), previousView.current];
+      skipViewHistory.current = false;
+      previousView.current = activeView;
+    }
+  }, [activeView]);
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => {
+      if (window.innerWidth >= 768 || (e.target instanceof Element && e.target.closest('[data-lightbox]')) || activeView === 'chat' || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      if (t.clientX <= 24) mobileSwipe.current = { x: t.clientX, y: t.clientY, edge: 'left' };
+      else if (t.clientX >= window.innerWidth - 24) mobileSwipe.current = { x: t.clientX, y: t.clientY, edge: 'right' };
+    };
+    const onMove = (e: TouchEvent) => {
+      const s = mobileSwipe.current; if (!s || e.touches.length !== 1) return;
+      const t = e.touches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
+      if (Math.abs(dy) > Math.abs(dx) + 8) { mobileSwipe.current = null; mobileSwipeXRef.current = 0; setMobileSwipeX(0); return; }
+      const valid = s.edge === 'left' ? dx > 0 : dx < 0;
+      if (valid) { const x = Math.max(-window.innerWidth * 0.55, Math.min(window.innerWidth * 0.55, dx)); mobileSwipeXRef.current = x; setMobileSwipeX(x); }
+    };
+    const onEnd = () => {
+      const s = mobileSwipe.current; mobileSwipe.current = null;
+      if (!s) return;
+      const target = viewHistory.current[viewHistory.current.length - 1];
+      const accepted = Math.abs(mobileSwipeXRef.current) > 90 && !!target;
+      if (!accepted) { mobileSwipeXRef.current = 0; setMobileSwipeX(0); return; }
+      viewHistory.current.pop();
+      const out = s.edge === 'left' ? window.innerWidth : -window.innerWidth;
+      mobileSwipeXRef.current = out; setMobileSwipeX(out);
+      mobileSwipeTimer.current = setTimeout(() => { skipViewHistory.current = true; setActiveView(target); mobileSwipeXRef.current = 0; setMobileSwipeX(0); }, 220);
+    };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
+    return () => {
+      window.removeEventListener('touchstart', onStart); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); window.removeEventListener('touchcancel', onEnd);
+      if (mobileSwipeTimer.current) clearTimeout(mobileSwipeTimer.current);
+    };
+  }, [activeView]);
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
   const menuMode = useMenuMode(); // menu simplifié (12 entrées + onglets) ou ancien menu, réglage de cet appareil
   const [, setStatsTick] = useState(0);
@@ -552,7 +600,7 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         {showTabs && activeView === 'chat' && tabsRow}
-        <main style={activeView === 'chat' ? { top: `calc(var(--hdr, 57px) + ${showTabs ? MENU_TABS_H : 0}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - var(--hdr, 57px) - ${showTabs ? MENU_TABS_H : 0}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
+        <main style={{ ...(activeView === 'chat' ? { top: `calc(var(--hdr, 57px) + ${showTabs ? MENU_TABS_H : 0}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - var(--hdr, 57px) - ${showTabs ? MENU_TABS_H : 0}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : {}), ...(mobileSwipeX ? { transform: `translate3d(${mobileSwipeX}px, 0, 0)`, transition: 'transform 220ms cubic-bezier(.22,.8,.3,1)' } : {}) }} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
           {showTabs && activeView !== 'chat' && tabsRow}
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView + (activeView === 'stats' ? getStatsTab() : '')}>

@@ -48,14 +48,18 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const [idx, setIdx] = useState(startIdx);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [dismissY, setDismissY] = useState(0);
+  const [dismissScale, setDismissScale] = useState(1);
 
   const pts = useRef(new Map<number, { x: number; y: number }>());
   const lastDist = useRef(0);
   const lastTap = useRef(0);
+  const gestureStart = useRef<{ x: number; y: number } | null>(null);
+  const gestureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useLockBodyScroll(isOpen);
 
-  const resetView = () => setView({ s: 1, x: 0, y: 0 });
+  const resetView = () => { setView({ s: 1, x: 0, y: 0 }); setDismissY(0); setDismissScale(1); };
   const zoomBy = (factor: number) =>
     setView(v => {
       const s = clampScale(v.s * factor);
@@ -71,9 +75,12 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     if (isOpen) {
       setIdx(startIdx);
       resetView();
+      setDragging(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, imageUrl]);
+
+  useEffect(() => () => { if (gestureTimer.current) clearTimeout(gestureTimer.current); }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,6 +108,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       const [a, b] = Array.from(pts.current.values());
       lastDist.current = Math.hypot(a.x - b.x, a.y - b.y);
     } else if (pts.current.size === 1) {
+      gestureStart.current = { x: e.clientX, y: e.clientY };
       const now = Date.now();
       if (now - lastTap.current < 300) {
         // double-tap : zoom 2.5x ou retour à 100 %
@@ -125,14 +133,36 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     } else if (pts.current.size === 1) {
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
-      setView(v => (v.s > 1 ? { ...v, x: v.x + dx, y: v.y + dy } : v));
+      if (view.s > 1) setView(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
+      else if (gestureStart.current) setView(v => ({ ...v, x: e.clientX - gestureStart.current!.x, y: e.clientY - gestureStart.current!.y }));
     }
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    const start = gestureStart.current;
+    const end = { x: e.clientX, y: e.clientY };
+    const wasSingle = pts.current.size === 1;
     pts.current.delete(e.pointerId);
     if (pts.current.size < 2) lastDist.current = 0;
-    if (pts.current.size === 0) setDragging(false);
+    if (pts.current.size === 0) {
+      setDragging(false);
+      gestureStart.current = null;
+      if (wasSingle && start && view.s === 1) {
+        const dx = end.x - start.x, dy = end.y - start.y;
+        if (dy > 110 && dy > Math.abs(dx)) {
+          setDismissY(Math.min(window.innerHeight * 0.9, dy * 2.2));
+          setDismissScale(0.72);
+          if (gestureTimer.current) clearTimeout(gestureTimer.current);
+          gestureTimer.current = setTimeout(onClose, 260);
+        } else if (imgs.length > 1 && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) {
+          setView(v => ({ ...v, x: dx > 0 ? window.innerWidth : -window.innerWidth }));
+          if (gestureTimer.current) clearTimeout(gestureTimer.current);
+          gestureTimer.current = setTimeout(() => go(dx > 0 ? -1 : 1), 180);
+        } else {
+          resetView();
+        }
+      } else if (view.s === 1) resetView();
+    }
   };
 
   const round = 'w-11 h-11 rounded-full flex items-center justify-center bg-white/12 hover:bg-white/25 backdrop-blur text-white cursor-pointer transition-colors shrink-0';
@@ -144,7 +174,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   ].filter(Boolean) as { k: string; v: string }[];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[9999] bg-black" data-lightbox role="dialog" aria-modal="true" style={{ opacity: 1 - Math.min(0.55, dismissY / Math.max(1, window.innerHeight) * 0.55), transition: dismissY ? 'opacity 260ms ease-out' : undefined }}>
       {/* Image plein écran : pincement, molette, double-tap, déplacement */}
       <div
         className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
@@ -161,8 +191,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           draggable={false}
           className="max-h-full max-w-full object-contain pointer-events-none"
           style={{
-            transform: `translate(${view.x}px, ${view.y}px) scale(${view.s})`,
-            transition: dragging ? 'none' : 'transform 120ms ease-out',
+            transform: `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`,
+            transition: dragging && !dismissY ? 'none' : 'transform 260ms cubic-bezier(.22,.8,.3,1)',
           }}
         />
         {imgs.length > 1 && (
