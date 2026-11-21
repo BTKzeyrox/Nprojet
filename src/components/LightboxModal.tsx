@@ -219,7 +219,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     ? (view.x > 0 ? idx - 1 : idx + 1)
     : -1;
   const neighbor = neighborIdx >= 0 && neighborIdx < imgs.length ? imgs[neighborIdx] : null;
-  const backdropAlpha = Math.max(0.22, 0.88 - Math.min(0.62, (dismissY / Math.max(1, window.innerHeight)) * 0.62));
+  // Le visualiseur reste opaque au repos ; la transparence ne suit que le glissement de fermeture.
+  const backdropAlpha = dismissY > 0
+    ? Math.max(0.18, 0.98 - Math.min(0.8, (dismissY / Math.max(1, window.innerHeight)) * 0.8))
+    : 1;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999]" data-lightbox role="dialog" aria-modal="true" style={{ backgroundColor: `rgba(0, 0, 0, ${backdropAlpha})` }}>
@@ -238,7 +241,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             src={current}
             alt="Justificatif"
             draggable={false}
-            className="max-h-full max-w-full object-contain"
+            className="max-h-[90vh] max-w-[90vw] object-contain"
             style={{
               transform: `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`,
               transition: dragging && !dismissY ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
@@ -251,7 +254,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               src={neighbor}
               alt=""
               draggable={false}
-              className="max-h-full max-w-full object-contain"
+              className="max-h-[90vh] max-w-[90vw] object-contain"
               style={{
                 transform: `translate(${view.x + (view.x > 0 ? -window.innerWidth : window.innerWidth)}px, 0)`,
                 transition: dragging ? 'none' : 'transform 360ms cubic-bezier(.22,.8,.3,1)',
