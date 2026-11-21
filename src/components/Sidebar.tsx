@@ -164,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const listItems = mergedItems || navItems;
 
   // Déjà dans la barre du bas (téléphone) : on ne les répète pas dans le menu
-  /** Sur TOUS les écrans : Actualités et Messages sont dans l'en-tête (TopBar.tsx), plus dans le menu latéral ; il n'y a plus de barre de menu en bas (BTK 2026-11-06). */
+  /** Sur mobile, Actualités et Messages sont dans l'en-tête ; sur desktop, Actualités reste aussi dans le sidebar. */
   const MOVED_TO_HEADER = ['feed', 'chat', 'messages'];
 
   const handleItemClick = (id: string) => {
@@ -252,7 +252,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                                     aria-current={isActive ? 'page' : undefined}
-                  className={`df-sb-item w-full ${MOVED_TO_HEADER.includes(item.id) ? '!hidden' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
+                  className={`df-sb-item w-full ${item.id === 'feed' ? 'hidden md:flex' : MOVED_TO_HEADER.includes(item.id) ? '!hidden' : 'flex'} items-center justify-between pl-2 pr-3 py-2 rounded-lg text-left transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="df-sb-tile w-9 h-9 rounded-full flex items-center justify-center shrink-0">
