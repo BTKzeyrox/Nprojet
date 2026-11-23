@@ -37,3 +37,27 @@ export function takePastedImages(e: { clipboardData: ClipLike | null; preventDef
   take(files);
   return true;
 }
+
+/** Bouton « Coller » (téléphone surtout, où le collage dans un champ ne donne pas l'image) : lit l'image du presse-papiers à la demande.
+ *  Renvoie les images, ou la raison pour laquelle il n'y en a pas : 'unsupported' (navigateur sans cette fonction), 'denied' (refusé), 'none' (aucune image copiée). */
+export type ClipboardReadResult = { files: File[]; reason?: 'unsupported' | 'denied' | 'none' };
+interface NavLike { clipboard?: { read?: () => Promise<Array<{ types: readonly string[]; getType(t: string): Promise<Blob> }>> } }
+export async function readClipboardImages(nav: NavLike | undefined = typeof navigator === 'undefined' ? undefined : (navigator as unknown as NavLike), now: Date = new Date()): Promise<ClipboardReadResult> {
+  if (!nav?.clipboard?.read) return { files: [], reason: 'unsupported' };
+  let items: Awaited<ReturnType<NonNullable<NonNullable<NavLike['clipboard']>['read']>>>;
+  try { items = await nav.clipboard.read(); } catch { return { files: [], reason: 'denied' }; }
+  const blobs: Blob[] = [];
+  for (const it of items) {
+    const t = it.types.find(x => x.startsWith('image/'));
+    if (!t) continue;
+    try { blobs.push(await it.getType(t)); } catch { /* image illisible : on passe */ }
+  }
+  if (blobs.length === 0) return { files: [], reason: 'none' };
+  return { files: blobs.map((b, i) => new File([b], pastedName(now, b.type, blobs.length > 1 ? i + 1 : 1), { type: b.type, lastModified: now.getTime() })) };
+}
+/** Phrase affichée quand le bouton « Coller » ne donne rien. */
+export function pasteReasonText(reason: ClipboardReadResult['reason']): string {
+  if (reason === 'none') return "Aucune image copiée. Fais d'abord une capture ou copie une image.";
+  if (reason === 'denied') return "Collage refusé. Autorise « Coller » dans le navigateur, ou utilise le trombone.";
+  return "Ce navigateur ne permet pas de coller l'image ici. Utilise le trombone.";
+}

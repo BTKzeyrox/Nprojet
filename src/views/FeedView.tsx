@@ -14,6 +14,7 @@ import { Avatar } from '../components/Avatar';
 import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
+import { PasteImageButton } from '../components/PasteImageButton';
 import { PlusMenu, ExtraForm, newExtra, extraToPoll, type Extra } from '../components/ComposerExtras';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
 import type { NewsAttachment, NewsComment, NewsPost, User } from '../types';
@@ -188,6 +189,7 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
         <button type="button" disabled={busy || preparing} onClick={() => fileRef.current?.click()} data-add-file className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`}>
           {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}{preparing ? 'Préparation…' : 'Ajouter une photo / un fichier'}
         </button>
+        <PasteImageButton disabled={busy || preparing} onFiles={f => { void addFiles(f); }} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} />
       </div>
       <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
       {err && <div className="text-xs text-red-500" role="alert">{err}</div>}
@@ -497,6 +499,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             <button type="button" disabled={busy || cPrep} onClick={() => cFile.current?.click()} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} aria-label="Joindre une photo ou un fichier">
               {cPrep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </button>
+            <PasteImageButton compact disabled={busy || cPrep} onFiles={f => { void addCommentFiles(f); }} className={`px-2.5 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} />
             <textarea
               ref={cInput}
               onPaste={e => { takePastedImages(e, f => { void addCommentFiles(f); }); }}
@@ -633,6 +636,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
         <div className="flex items-center gap-3">
           <input ref={fileRef} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void onPick(e)} />
           <PlusMenu isAdmin={isAdmin} disabled={busy} preparing={preparing} light={light} hasExtra={!!extra} onFile={() => fileRef.current?.click()} onExtra={k => { setExtra(newExtra(k)); setErr(''); }} />
+          <PasteImageButton compact disabled={busy || preparing} onFiles={f => { void addFiles(f); }} className={`p-2 rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} />
           {isAdmin && (
             <label className={`flex items-center gap-2 text-sm ${light ? 'text-slate-700' : 'text-slate-300'}`}>
               <input type="checkbox" checked={pinned} disabled={busy} onChange={e => setPinned(e.target.checked)} />Épingler en haut

@@ -3,6 +3,7 @@
 // Pour modifier : prop onClose ; envoi par db.submitProblemReport avec page, appareil et version ajoutés automatiquement. Description d'au moins 3 caractères. Textes en français seulement.
 import { takePastedImages } from '../utils/pasteImages';
 import React, { useState } from 'react';
+import { PasteImageButton } from './PasteImageButton';
 import { X, Camera, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../db/store';
 import { compressProofImage } from '../utils/imageUtils';
@@ -80,6 +81,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
                 <Camera className="w-4 h-4" /> {shot ? 'Changer la photo' : 'Ajouter une photo (facultatif)'}
                 <input type="file" accept="image/*" onChange={pick} className="hidden" />
               </label>
+              <PasteImageButton onFiles={files => { void takeShot(files[0]); }} className="rounded-xl px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center gap-2" label="Coller" />
               {shot && <img src={shot} alt="capture" className="h-10 w-auto border border-slate-600" />}
             </div>
             <p className="text-[11px] text-slate-500">La page, ton appareil et la version du site sont ajoutés automatiquement. Jamais ton mot de passe.</p>

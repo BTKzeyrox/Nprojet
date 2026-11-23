@@ -1,6 +1,6 @@
 // Coller une image (capture d'écran) avec Ctrl+V : prise comme un fichier choisi, sans gêner le collage de texte. Lancer : npm run check:paste-images
 import { readFileSync } from 'node:fs';
-import { pastedImages, pastedName, imageWinsOverText, takePastedImages } from '../src/utils/pasteImages';
+import { pastedImages, pastedName, imageWinsOverText, takePastedImages, readClipboardImages, pasteReasonText } from '../src/utils/pasteImages';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
 const now = new Date(2026, 10, 21, 13, 5);
@@ -27,5 +27,22 @@ ok(/onPaste=\{e => \{ if \(!current\.readOnly\) takePastedImages\(e, takeFiles\)
 ok((feed.match(/takePastedImages\(e, f => \{ void addFiles\(f\); \}\)/g) || []).length === 2 && /takePastedImages\(e, f => \{ void addCommentFiles\(f\); \}\)/.test(feed), 'fil d\'actualités : collage dans les 2 champs de publication et dans le champ de commentaire');
 ok(/takePastedImages\(e, files => \{ void takeShot\(files\[0\]\); \}\)/.test(rep), 'signalement : collage dans le champ de description');
 ok(/usePasteImages\(files => \{ void addStartPhotos\(files\); \}, showStartModal && startProofPhotos\.length < 5\)/.test(emp) && /const files = e\.target\.files;[\s\S]{0,200}await addStartPhotos\(list\)/.test(emp), 'photos de début de mission : collage tant que la fenêtre est ouverte et qu\'il reste de la place (5 maximum)');
+// --- bouton « Coller » (téléphone) : lecture directe du presse-papiers ---
+const blobItem = (type: string) => ({ types: [type, 'text/plain'], getType: async (t: string) => (t === type ? new Blob([new Uint8Array([9, 9])], { type }) : new Blob(['x'], { type: t })) });
+const r1 = await readClipboardImages({ clipboard: { read: async () => [blobItem('image/png')] } }, now);
+ok(r1.files.length === 1 && r1.files[0].type === 'image/png' && r1.files[0].name === 'capture-2026-11-21-13h05.png' && !r1.reason, 'bouton Coller : une capture devient un fichier nommé capture-…png');
+const r2 = await readClipboardImages({ clipboard: { read: async () => [{ types: ['text/plain'], getType: async () => new Blob(['a']) }] } }, now);
+ok(r2.files.length === 0 && r2.reason === 'none', 'bouton Coller : du texte seulement = « aucune image »');
+const r3 = await readClipboardImages({ clipboard: { read: async () => { throw new Error('NotAllowedError'); } } }, now);
+ok(r3.files.length === 0 && r3.reason === 'denied', 'bouton Coller : permission refusée = « refusé »');
+const r4 = await readClipboardImages({}, now);
+ok(r4.reason === 'unsupported' && (await readClipboardImages(undefined as never, now)).reason !== undefined, 'bouton Coller : navigateur sans cette fonction = « non pris en charge »');
+const r5 = await readClipboardImages({ clipboard: { read: async () => [blobItem('image/png'), blobItem('image/jpeg')] } }, now);
+ok(r5.files.length === 2 && r5.files[1].name === 'capture-2026-11-21-13h05-2.jpg', 'bouton Coller : plusieurs images numérotées');
+ok(['none', 'denied', 'unsupported'].every(k => pasteReasonText(k as never).length > 20 && /trombone|capture|copie/i.test(pasteReasonText(k as never))), 'bouton Coller : une phrase claire pour chaque cas');
+const uiFiles = ['src/views/FeedView.tsx', 'src/components/ReportProblemModal.tsx', 'src/views/employee/EmployeeDashboard.tsx'];
+ok(uiFiles.every(f => /<PasteImageButton/.test(readFileSync(f, 'utf8'))), 'bouton Coller présent : fil, signalement, photos de mission');
+ok((readFileSync('src/views/FeedView.tsx', 'utf8').match(/<PasteImageButton/g) || []).length === 3, 'fil : publication, modification et commentaire ont leur bouton');
+ok(/\['paste', 'Coller une image'/.test(readFileSync('src/components/ChatView.tsx', 'utf8')) && /readClipboardImages\(\)\.then\(r => \{ if \(r\.files\.length\) takeFiles/.test(readFileSync('src/components/ChatView.tsx', 'utf8')), 'chat : « Coller une image » dans le menu +');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

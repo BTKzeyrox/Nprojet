@@ -988,6 +988,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `OperatorsTabs.tsx` | Barre à deux onglets de la page Opérateurs et sessions : la liste des opérateurs et le suivi des sessions. |
 | `PageHelp.tsx` | Bouton « ? » : l'aide de la page ouverte en 3 lignes (celles de la carte du site : siteKnowledge.ts), sans visite ni surbrillance. Guide G2 (2026-11-08). |
 | `PageSkeleton.tsx` | Page « squelette » grise et animée, affichée tout de suite pendant qu'une page se charge. |
+| `PasteImageButton.tsx` | Bouton « Coller » : prend l'image copiée (capture d'écran, image copiée ailleurs) et l'envoie comme « choisir un fichier ». Sur téléphone, c'est la façon fiable de coller. |
 | `PayrollAdmin.tsx` | Paie : choix de la période, fiches de paie des opérateurs, primes, retenues, paiement, clôture, réouverture et exports (CSV, Excel, PDF). |
 | `PendingMark.tsx` | Petite marque « En attente » sur un élément modifié ici et pas encore reçu par le serveur, avec deux aides pour les actions qui exigent le réseau. |
 | `PendingPostActions.tsx` | Boutons Modifier et Annuler sur la carte d'une mission en attente de validation, côté opérateur. |

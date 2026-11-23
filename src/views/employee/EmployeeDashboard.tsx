@@ -2,6 +2,7 @@
 // Utilisé par : App.tsx et prefetch.ts.
 // Pour modifier : l'onglet affiché dépend de activeSubTab (grid, active-post, advances, chat) ; les données viennent de db (posts, contrats). Fichier très long : chercher la zone par son nom d'état.
 import { usePasteImages } from '../../utils/usePasteImages';
+import { PasteImageButton } from '../../components/PasteImageButton';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
@@ -1405,6 +1406,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         className="hidden"
                       />
                     </label>
+                    <PasteImageButton onFiles={files => { void addStartPhotos(files); }} label="Coller une capture" className="cursor-pointer bg-[#1b1a2e] hover:bg-[#26244a] border border-violet-500/50 hover:border-violet-400 p-2.5 rounded-xl flex items-center justify-center gap-2 text-violet-300 text-xs font-mono font-bold transition-all shadow sm:col-span-2" />
                   </div>
                 )}
 

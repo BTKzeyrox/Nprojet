@@ -20,7 +20,7 @@ import { isComposerSwipe } from '../utils/chatSwipe';
 import { isHiddenFrom, isExpired, planEphemeral, VISIBLE_TO_SERVER_LIVE, EPHEMERAL_SERVER_LIVE } from '../utils/chatShared';
 import { AssistantChat, lastAssistantPreview } from './AssistantChat';
 import {
-  Send, Paperclip, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, Timer, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
+  Send, Paperclip, ClipboardPaste, FileText, Users, MessageSquare, BarChart3, CalendarDays, Clock, Eye, Lock, Timer, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X,
   Reply, Check, CheckCheck, Plus, Archive, ArchiveRestore, EyeOff, Ban, Info, Search, ChevronDown, Flag, Forward, ImageOff,
 } from 'lucide-react';
 import { db } from '../db/store';
@@ -58,7 +58,7 @@ import { MessageToItem } from './MessageToItem';
 import { ScheduleDialog, TemplatesDialog } from './MessageTools';
 import { scheduleLabel } from '../utils/chatTemplates';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
-import { takePastedImages } from '../utils/pasteImages';
+import { takePastedImages, readClipboardImages, pasteReasonText } from '../utils/pasteImages';
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 import { SafeImage } from './SafeImage';
 
@@ -1111,8 +1111,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} aria-hidden />
                     <div role="menu" data-chat-plus-menu className={`absolute bottom-12 left-0 z-50 w-60 rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
-                      {([['file', 'Importer (photo, fichier)', Paperclip], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ...(canOnly ? [['only', 'Visible seulement par…', Lock] as const] : []), ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
-                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'only') setOnlyOpen(true); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
+                      {([['file', 'Importer (photo, fichier)', Paperclip], ['paste', 'Coller une image', ClipboardPaste], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ...(canOnly ? [['only', 'Visible seulement par…', Lock] as const] : []), ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
+                        <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'paste') { void readClipboardImages().then(r => { if (r.files.length) takeFiles(r.files); else setError(pasteReasonText(r.reason)); }); } else if (k === 'only') setOnlyOpen(true); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
                       ))}
                     </div>
                   </>
