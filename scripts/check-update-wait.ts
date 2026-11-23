@@ -1,0 +1,24 @@
+// Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait
+import { readFileSync } from 'node:fs';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+import { isPageBusy } from '../src/utils/updateBusy';
+type F = { tagName: string; value: string; isContentEditable?: boolean };
+let active: F | null = null; let fields: F[] = []; let modal = false; let typedAt = 0;
+const isBusy = () => isPageBusy({ activeElement: active, querySelector: () => (modal ? {} : null), querySelectorAll: () => fields }, 0, typedAt);
+const markTyped = (at: number) => { typedAt = at; };
+const reset = () => { active = null; fields = []; modal = false; markTyped(0); };
+reset(); ok(!isBusy(), 'page au repos : pas occupée');
+const empty: F = { tagName: 'TEXTAREA', value: '' };
+reset(); active = empty; fields = [empty]; ok(!isBusy(), 'champ actif mais vide, pas de frappe récente (après un envoi) : la mise à jour peut s\'appliquer');
+reset(); active = empty; fields = [empty]; markTyped(Date.now() - 1000); ok(isBusy(), 'frappe il y a 1 s : on attend');
+reset(); active = empty; fields = [empty]; markTyped(Date.now() - 20000); ok(!isBusy(), 'frappe il y a 20 s dans un champ vide : on n\'attend plus');
+const full: F = { tagName: 'TEXTAREA', value: 'Bonjour' };
+reset(); fields = [full]; ok(isBusy(), 'texte écrit mais pas envoyé : on attend toujours');
+reset(); modal = true; ok(isBusy(), 'fenêtre ouverte : on attend toujours');
+reset(); active = { tagName: 'SELECT', value: '' }; ok(isBusy(), 'liste déroulante ouverte : on attend toujours');
+const src = readFileSync('src/utils/updateWatcher.ts', 'utf8');
+ok(/isPageBusy\(document, netBusy, lastTypedAt\)/.test(src), 'le rechargement utilise cette règle');
+ok(/border-radius:999px/.test(src) && /pointer-events:none/.test(src) && /bottom:calc\(76px/.test(src), 'la boîte est une pastille arrondie, au-dessus de la barre de saisie, qui ne bloque pas les clics');
+ok(/addEventListener\('keydown', typed, true\)/.test(src) && /addEventListener\('input', typed, true\)/.test(src), 'la frappe est suivie (clavier et saisie)');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);

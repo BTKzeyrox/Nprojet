@@ -795,6 +795,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `tourContent.ts` | Contenu de la visite guidée, écrit SÉPARÉMENT pour chaque rôle (M-guide) : l'opérateur apprend à FAIRE son travail, le responsable apprend à DÉCIDER et à CONTRÔLER. |
 | `treasuryCharts.ts` | Règles pures (sans écran, sans serveur) des graphiques de Trésorerie : reçu, dépenses et solde cumulé par jour, jamais de salaires. |
 | `unsentCopy.ts` | Filet de sécurité des textes envoyés SANS réseau et SANS copie protégée (BTK, 2026-11-12) : un responsable qui n'a pas créé son code de coffre n'a rien de gardé sur l'appareil ; |
+| `updateBusy.ts` | La personne est-elle occupée ? (règle pure, sans réseau) : le rechargement après une mise à jour attend tant que c'est vrai. |
 | `updateWatcher.ts` | Recharge le site tout seul après une mise à jour, en lisant /version.json toutes les 2 minutes ; touche le navigateur et le réseau. |
 | `useChatUnread.ts` | Hook React qui donne le nombre de messages non lus (pastille rouge de la messagerie) ; lit le store et les notifications. |
 | `useDraft.ts` | Branche un champ de texte sur les brouillons (utils/drafts.ts) : remet le texte gardé à l'ouverture (ou au changement de champ), le garde 1 s après la dernière frappe et en quittant l'application. |
@@ -1108,6 +1109,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:paste-images` | Coller une image (capture d'écran) avec Ctrl+V : prise comme un fichier choisi, sans gêner le collage de texte. Lancer : npm run check:paste-images |
 | `npm run check:page-swipe` | Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe |
 | `npm run check:page-zoom-lock` | Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock |
+| `npm run check:update-wait` | Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

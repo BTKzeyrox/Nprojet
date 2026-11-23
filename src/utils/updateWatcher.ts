@@ -3,6 +3,7 @@
 // Pour modifier : il attend que la personne ait fini d'écrire (isBusy) ; une seule tentative par version (sessionStorage) évite la boucle ; inactif en développement.
 import { APP_VERSION } from './errorReport';
 import { db } from '../db/store';
+import { isPageBusy } from './updateBusy';
 
 // Rechargement automatique après une mise à jour du site.
 // Le fichier /version.json est publié à chaque construction avec le numéro de version.
@@ -11,24 +12,14 @@ import { db } from '../db/store';
 const CHECK_EVERY_MS = 2 * 60 * 1000; // relecture toutes les 2 minutes
 const RETRY_BUSY_MS = 4000; // si la personne est occupée, on réessaie toutes les 4 secondes
 const GUARD_KEY = 'df_update_reload_for';
+let lastTypedAt = 0;
 
 let netBusy = 0;
 let pending: string | null = null;
 let banner: HTMLDivElement | null = null;
 let reloadTimer: ReturnType<typeof setTimeout> | null = null;
 
-// La personne est-elle occupée ? (champ actif, texte pas encore envoyé, fenêtre ouverte, envoi en cours)
-function isBusy(): boolean {
-  if (netBusy > 0) return true;
-  const a = document.activeElement as HTMLElement | null;
-  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable)) return true;
-  if (document.querySelector('.fixed.inset-0')) return true; // fenêtre, menu ou animation ouverte
-  const fields = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-    'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=button]):not([type=submit]), textarea'
-  );
-  for (const f of fields) if (f.value && f.value.trim() !== '') return true; // texte écrit mais pas encore envoyé
-  return false;
-}
+function isBusy(): boolean { return isPageBusy(document, netBusy, lastTypedAt); }
 
 function showBanner(text: string) {
   if (!banner) {
@@ -36,9 +27,9 @@ function showBanner(text: string) {
     banner.setAttribute('role', 'status');
     banner.setAttribute('aria-live', 'polite');
     banner.style.cssText =
-      'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:10000;' +
-      'max-width:calc(100% - 24px);padding:10px 14px;background:#0f1722;color:#e2e8f0;border:1px solid #3b82f6;' +
-      'font:600 12px/1.3 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5);text-align:center;';
+      'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:10000;pointer-events:none;' +
+      'max-width:calc(100% - 32px);padding:8px 14px;background:rgba(15,23,34,.92);color:#e2e8f0;border:1px solid rgba(59,130,246,.55);border-radius:999px;' +
+      'font:600 12px/1.3 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center;';
     document.body.appendChild(banner);
   }
   banner.textContent = text;
@@ -88,6 +79,9 @@ export function startUpdateWatcher(): void {
   // En développement ou en test local, il n'y a pas de numéro de version stable
   if (APP_VERSION === 'dev' || APP_VERSION.startsWith('local-')) return;
   db.onNetwork(n => { netBusy = n; });
+  const typed = () => { lastTypedAt = Date.now(); };
+  document.addEventListener('keydown', typed, true);
+  document.addEventListener('input', typed, true);
   setInterval(check, CHECK_EVERY_MS);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void check();
