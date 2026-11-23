@@ -22,4 +22,5 @@ off(); ok(Object.keys(ev).length === 0, 'tout se retire proprement');
 const lb = readFileSync('src/components/LightboxModal.tsx', 'utf8');
 ok(/onWheel=\{onWheel\}/.test(lb) && /zoomBy\(Math\.exp\(-e\.deltaY/.test(lb), 'la visionneuse garde son zoom à la molette / au pincement');
 ok(/installPageZoomLock\(\)/.test(readFileSync('src/main.tsx', 'utf8')), 'le blocage est installé au démarrage');
+ok((readFileSync('src/components/TopBar.tsx', 'utf8').match(/<ConnectionChip \/>/g) || []).length === 1, 'en-tête : un seul badge « Hors ligne » (plus de doublon)');
 console.log(fails ? `${fails} échec(s)` : 'Tout est bon.'); process.exit(fails ? 1 : 0);

@@ -395,8 +395,6 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        <div className="hidden md:block shrink-0" data-header-conn><ConnectionChip /></div>
-
         <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
