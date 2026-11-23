@@ -716,6 +716,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
 | `pagePreload.ts` | Prépare la page vers laquelle mène le glissement « Retour » AVANT de la faire apparaître (pas de vide ni de chargement visible). |
 | `pageSwipe.ts` | Glissement « Retour » sur téléphone (comme le retour d'iOS) : règles pures, sans écran. Utilisé par App.tsx. |
+| `pageZoomLock.ts` | Bloque le zoom de TOUTE la page sur ordinateur (pincement à deux doigts sur le pavé tactile, Ctrl + molette, Ctrl +, Ctrl −, Ctrl 0). |
 | `paperSheet.ts` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Règles pures, sans écran, sans serveur. |
 | `pasteImages.ts` | Coller une image (capture d'écran, image copiée) avec Ctrl+V / Cmd+V / « Coller » : règles pures, sans écran. |
 | `payrollClosed.ts` | Un jour est-il dans une période de paie déjà clôturée (ou payée) ? Règle pure, sans écran ni serveur. |
@@ -1105,6 +1106,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:safe-image` | Photos hors ligne : plus d'icône « image cassée », photos déjà vues gardées (200 max, Cloudinary seulement), cache vidé à la déconnexion. Lancer : npm run check:safe-image |
 | `npm run check:paste-images` | Coller une image (capture d'écran) avec Ctrl+V : prise comme un fichier choisi, sans gêner le collage de texte. Lancer : npm run check:paste-images |
 | `npm run check:page-swipe` | Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe |
+| `npm run check:page-zoom-lock` | Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

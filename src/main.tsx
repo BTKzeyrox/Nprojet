@@ -11,6 +11,7 @@ import { installGlobalErrorHandlers } from './utils/errorReport';
 import { startUpdateWatcher } from './utils/updateWatcher';
 import { installScrollRescue } from './utils/scrollRescue';
 import { installOfflineShell } from './utils/offlineShell';
+import { installPageZoomLock } from './utils/pageZoomLock';
 
 // Erreurs hors écran (réseau, échec de chargement après mise à jour) : enregistrées dans le journal
 installGlobalErrorHandlers();
@@ -20,6 +21,8 @@ startUpdateWatcher();
 installScrollRescue();
 // L'appli s'ouvre sans réseau : le service worker garde les fichiers de la dernière version (module 13)
 installOfflineShell();
+// Sur ordinateur, la page ne se zoome plus (pincement, Ctrl + molette, Ctrl +/−/0) ; le zoom des photos reste
+installPageZoomLock();
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary scope="app">

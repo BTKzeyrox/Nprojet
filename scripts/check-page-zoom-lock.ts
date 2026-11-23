@@ -1,0 +1,25 @@
+// Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock
+import { readFileSync } from 'node:fs';
+import { isPageZoomWheel, isPageZoomKey, installPageZoomLock } from '../src/utils/pageZoomLock';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+ok(isPageZoomWheel({ ctrlKey: true }) && !isPageZoomWheel({ ctrlKey: false }), 'pincement / Ctrl + molette bloqués, molette simple libre');
+const k = (key: string, ctrlKey = true, metaKey = false) => isPageZoomKey({ key, ctrlKey, metaKey });
+ok(['+', '=', '-', '_', '0'].every(x => k(x)) && k('+', false, true), 'Ctrl (ou Cmd) + « + », « − », « 0 » bloqués');
+ok(!k('+', false) && !k('a') && !k('c') && !k('v'), '« + » seul (zoom de la photo) et Ctrl+C / Ctrl+V restent libres');
+const ev: Record<string, { fn: (e: any) => void; opt?: any }> = {};
+const fake: any = { addEventListener: (n: string, fn: any, opt: any) => { ev[n] = { fn, opt }; }, removeEventListener: (n: string) => { delete ev[n]; } };
+const off = installPageZoomLock(fake);
+ok(!!ev.wheel && ev.wheel.opt?.passive === false, 'molette écoutée en mode non passif (sinon on ne peut pas bloquer)');
+let stopped = 0; let prevented = 0;
+const mk = (o: any) => ({ ...o, preventDefault: () => { prevented++; }, stopPropagation: () => { stopped++; } });
+ev.wheel.fn(mk({ ctrlKey: true })); ev.wheel.fn(mk({ ctrlKey: false }));
+ev.keydown.fn(mk({ key: '+', ctrlKey: true, metaKey: false })); ev.keydown.fn(mk({ key: 'a', ctrlKey: true, metaKey: false }));
+ev.gesturestart.fn(mk({}));
+ok(prevented === 3, 'zoom du navigateur annulé 3 fois (pincement, Ctrl+, geste Safari), le reste intact');
+ok(stopped === 0, 'l\'événement n\'est pas arrêté : la visionneuse de photos le reçoit encore');
+off(); ok(Object.keys(ev).length === 0, 'tout se retire proprement');
+const lb = readFileSync('src/components/LightboxModal.tsx', 'utf8');
+ok(/onWheel=\{onWheel\}/.test(lb) && /zoomBy\(Math\.exp\(-e\.deltaY/.test(lb), 'la visionneuse garde son zoom à la molette / au pincement');
+ok(/installPageZoomLock\(\)/.test(readFileSync('src/main.tsx', 'utf8')), 'le blocage est installé au démarrage');
+console.log(fails ? `${fails} échec(s)` : 'Tout est bon.'); process.exit(fails ? 1 : 0);

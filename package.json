@@ -21,6 +21,7 @@
     "check:safe-image": "npx --yes tsx scripts/check-safe-image.ts",
     "check:paste-images": "npx --yes tsx scripts/check-paste-images.ts",
     "check:page-swipe": "npx --yes tsx scripts/check-page-swipe.ts",
+    "check:page-zoom-lock": "npx --yes tsx scripts/check-page-zoom-lock.ts",
     "check:lightbox-gallery": "npx --yes tsx scripts/check-lightbox-gallery.ts",
     "check:accounting-server": "npx --yes tsx scripts/check-accounting-server.ts",
     "check:bank-recon": "npx --yes tsx scripts/check-bank-recon.ts",
