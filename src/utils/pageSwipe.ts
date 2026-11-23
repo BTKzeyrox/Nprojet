@@ -5,6 +5,8 @@ export const SWIPE_LOCK_PX = 10; // en dessous : on ne sait pas encore si c'est 
 export const SWIPE_MIN_PX = 90; // glissement accepté à partir de cette distance (vers la droite)
 export const SWIPE_AXIS_RATIO = 1.5; // il faut que le mouvement soit nettement plus horizontal que vertical
 export const SWIPE_MS = 220; // durée de l'animation
+export const SWIPE_SETTLE_MS = 60; // la page d'arrivée a ce court instant pour se dessiner, invisible, avant d'entrer
+export const SWIPE_PREPARE_MAX_MS = 1500; // attente maximale de la préparation de la page d'arrivée
 
 export type SwipeBack = { kind: 'tab'; tabId: string } | { kind: 'page'; view: string } | { kind: 'none' };
 

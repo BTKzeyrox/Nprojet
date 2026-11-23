@@ -714,6 +714,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `offlineText.ts` | Textes et décisions d'affichage du mode hors ligne (module 13, M13.6) : règles pures, sans écran, sans réseau. Contrôlé par `npm run check:offline-ui`. |
 | `offlineVault.ts` | Copie locale du mode hors ligne (module 13, M13.3) : garder sur l'appareil, PAR PERSONNE, la dernière copie des données et la file d'actions, |
 | `operatorList.ts` | Liste des opérateurs : recherche, filtres (vacation, compte, statut en direct, niveau de performance) et tri. Règles pures, sans écran ; |
+| `pagePreload.ts` | Prépare la page vers laquelle mène le glissement « Retour » AVANT de la faire apparaître (pas de vide ni de chargement visible). |
 | `pageSwipe.ts` | Glissement « Retour » sur téléphone (comme le retour d'iOS) : règles pures, sans écran. Utilisé par App.tsx. |
 | `paperSheet.ts` | Feuille papier imprimable et saisie groupée (module 26, M26.9). Règles pures, sans écran, sans serveur. |
 | `pasteImages.ts` | Coller une image (capture d'écran, image copiée) avec Ctrl+V / Cmd+V / « Coller » : règles pures, sans écran. |

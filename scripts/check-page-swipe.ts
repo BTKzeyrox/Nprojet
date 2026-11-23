@@ -1,5 +1,7 @@
 // Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe
 import { readFileSync } from 'node:fs';
+import { loaderKey, LOADER_KEYS } from '../src/utils/pagePreload';
+import { ADMIN_GROUPS } from '../src/utils/menuGroups';
 import { backTarget, swipeAxis, dragOffset, isBackSwipe, SWIPE_MIN_PX, SWIPE_LOCK_PX, SWIPE_BLOCK_SELECTOR } from '../src/utils/pageSwipe';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -22,5 +24,16 @@ ok(/transition: swipeAnim \?/.test(app) && /'none'/.test(app.slice(app.indexOf('
 ok(/if \(tb\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app) && /if \(t\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app), 'un retour n\'est jamais ajouté à la mémoire des pages');
 ok(/activeView === 'chat'/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)) && /window\.innerWidth >= 768/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)), 'pas dans la messagerie ni sur ordinateur');
 ok(!/viewHistory\.current\[viewHistory\.current\.length - 1\];\s*\n\s*const accepted/.test(app), 'l\'ancien glissement (page d\'avant dans les deux sens) n\'existe plus');
+// --- arrivée de la page sans saccade : préparée avant, entrée invisible puis en fondu ---
+ok(loaderKey('feed', 'admin') === 'feed' && loaderKey('advances', 'admin') === 'employees' && loaderKey('sheets', 'employee') === 'mySheets' && loaderKey('xyz', 'admin') === 'adminDashboard' && loaderKey('grid', 'employee') === 'employeeDashboard' && loaderKey('grid', 'team_lead') === null && loaderKey('chat', 'team_lead') === 'chat' && loaderKey('', 'admin') === 'adminDashboard', 'préparation : la bonne page pour chaque rôle (fil, avances → équipe, mes tableaux, tableau de bord par défaut)');
+const views = new Set(ADMIN_GROUPS.flatMap(g => g.tabs.map(t => t.view)));
+ok([...views].every(v => { const k = loaderKey(v, 'admin'); return k !== null && LOADER_KEYS.includes(k); }), 'chaque page du menu du responsable a un fichier à préparer');
+ok(['admin', 'employee', 'accountant', 'team_lead'].every(r => ['feed', 'chat', 'settings', 'calendar', 'stats', 'x'].every(v => { const k = loaderKey(v, r); return k === null || LOADER_KEYS.includes(k); })), 'jamais de clé inconnue, pour aucun rôle');
+const appSrc = readFileSync('src/App.tsx', 'utf8');
+ok(/if \(!s\.prepared\) \{[^}]*swipePrepared\.current = swipePreload\.current\(tg\)/.test(appSrc), 'la page d\'arrivée se prépare dès que le doigt commence à glisser');
+ok(/Promise\.race\(\[swipePrepared\.current, new Promise<void>\(r => setTimeout\(r, SWIPE_PREPARE_MAX_MS\)\)\]\)\.then\(leave\)/.test(appSrc), 'la page actuelle ne sort qu\'une fois la suivante prête (1,5 s au plus)');
+ok(/setSwipeOpacity\(0\);[\s\S]*?swipeDo\.current\(target\);[\s\S]*?setSwipeOpacity\(1\)[\s\S]*?SWIPE_SETTLE_MS\)/.test(appSrc), 'la page d\'arrivée se monte invisible, se dessine, puis entre en fondu');
+ok(/swipeSettling\.current = true;/.test(appSrc) && /swipeSettling\.current = false;/.test(appSrc) && /swipeSettling\.current \|\|/.test(appSrc), 'aucun nouveau glissement pendant l\'entrée de la page');
+ok(!/mobileSwipeTimer\.current = setTimeout\(\(\) => \{\s*\n\s*setSwipeAnim\(true\); setSwipeOpacity/.test(appSrc), 'les minuteries d\'entrée ne sont pas coupées quand la page change');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
