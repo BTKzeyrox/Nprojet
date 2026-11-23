@@ -1,0 +1,21 @@
+// « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image
+import { readFileSync } from 'node:fs';
+import { copyImage, copyImageText } from '../src/utils/copyImage';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+const png = new Blob([new Uint8Array([1])], { type: 'image/png' }), jpg = new Blob([new Uint8Array([2])], { type: 'image/jpeg' });
+let written: Blob | null = null; let converted = 0;
+const mk = (b: Blob, over: object = {}) => ({ fetchBlob: async () => b, toPng: async () => { converted++; return new Blob([new Uint8Array([3])], { type: 'image/png' }); }, write: async (p: Promise<Blob>) => { written = await p; }, supported: true, ...over });
+ok((await copyImage('u', mk(png))) === 'ok' && written!.type === 'image/png' && converted === 0, 'une image PNG est copiée telle quelle');
+written = null; converted = 0;
+ok((await copyImage('u', mk(jpg))) === 'ok' && written!.type === 'image/png' && converted === 1, 'une image JPEG est convertie en PNG avant la copie');
+ok((await copyImage('u', mk(png, { supported: false }))) === 'unsupported', 'navigateur sans cette fonction : « non pris en charge »');
+ok((await copyImage('u', mk(png, { fetchBlob: async () => { throw new Error('net'); } }))) === 'failed', 'image introuvable : « échec », sans planter');
+ok((await copyImage('u', mk(png, { write: async () => { throw new Error('NotAllowed'); } }))) === 'failed', 'refus du navigateur : « échec », sans planter');
+let order = '';
+await copyImage('u', mk(png, { fetchBlob: async () => { order += 'fetch,'; return png; }, write: async (p: Promise<Blob>) => { order += 'write,'; await p; } }));
+ok(order === 'fetch,write,', 'l\'écriture démarre tout de suite avec une promesse (exigé par Safari pendant le clic)');
+ok(['ok', 'unsupported', 'failed'].every(r => copyImageText(r as never).length > 8) && /Télécharger/.test(copyImageText('failed')), 'phrase claire pour chaque cas');
+const lb = readFileSync('src/components/LightboxModal.tsx', 'utf8');
+ok(/data-lightbox-copy>/.test(lb) && /copyImage\(current\)/.test(lb) && /title="Télécharger"/.test(lb), 'visionneuse : bouton « Copier l\'image » à côté de « Télécharger »');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);

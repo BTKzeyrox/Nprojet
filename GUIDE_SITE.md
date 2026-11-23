@@ -645,6 +645,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `clients.ts` | Clients (module 1) : statut calculé, chiffres et prix. Règles pures : pas d'écran, pas de serveur, pas de table. |
 | `companyRules.ts` | Conditions de l'entreprise (module 0) : valeurs de départ, validation et filtre employé. |
 | `composerKeys.ts` | Champs de message à plusieurs lignes (BTK, 2026-11-08) : même règle partout. |
+| `copyImage.ts` | Copier une image dans le presse-papiers (pour la coller ailleurs) sans la télécharger. Le presse-papiers n'accepte sûrement que le PNG : les autres formats sont convertis. |
 | `customWorkTypes.ts` | Types de travail créés par le responsable (module 26, M26.6b) : « Créer mon type de travail ». Règles pures, sans écran, sans serveur. |
 | `dataUrls.ts` | Photos « collées » dans un enregistrement (module 13, M13.5b) : quand l'envoi d'une photo échoue (pas de réseau), l'appli garde la version compressée |
 | `dayDetail.ts` | Règles pures (sans écran, sans serveur) du détail d'un employé pour un jour : connexions, missions et totaux. |
@@ -1110,6 +1111,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:page-swipe` | Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe |
 | `npm run check:page-zoom-lock` | Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock |
 | `npm run check:update-wait` | Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait |
+| `npm run check:copy-image` | « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

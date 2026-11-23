@@ -3,10 +3,11 @@
 // Pour modifier : props isOpen, imageUrl, gallery, names, title, canDelete et onDelete ; sans canDelete, pas de bouton Supprimer. Le zoom va de 1 à 6 (MIN, MAX).
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Copy, X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
 import { downloadFile } from '../utils/attachments';
+import { copyImage, copyImageText } from '../utils/copyImage';
 
 interface LightboxModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
 }) => {
   const imgs = gallery && gallery.length > 0 ? gallery : [imageUrl];
   const startIdx = Math.max(0, imgs.indexOf(imageUrl));
+  const [copyMsg, setCopyMsg] = useState('');
   const [idx, setIdx] = useState(startIdx);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -288,9 +290,12 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           {onDelete && (!canDelete || canDelete(current)) && (
             <button type="button" onClick={() => onDelete(current)} className={`${round} !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
           )}
+          <button type="button" onClick={() => { void copyImage(current).then(r => { setCopyMsg(copyImageText(r)); window.setTimeout(() => setCopyMsg(''), 2500); }); }} className={round} title="Copier l'image" aria-label="Copier l'image" data-lightbox-copy><Copy className="w-5 h-5" /></button>
           <a href={current} download={names?.[idx] || 'photo.png'} onClick={e => { if (names?.[idx]) { e.preventDefault(); void downloadFile(current, names[idx]); } }} className={round} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /></a>
         </div>
       </header>
+
+      {copyMsg && <div role="status" data-lightbox-copy-msg className="absolute left-1/2 -translate-x-1/2 top-20 z-10 px-4 py-2 rounded-full bg-black/80 text-white text-xs font-semibold pointer-events-none">{copyMsg}</div>}
 
       {/* Bas : compteur, zoom (ordinateur) et infos */}
       <footer className="absolute bottom-0 inset-x-0 flex flex-col items-center gap-2 px-3 pt-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
