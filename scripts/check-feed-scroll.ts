@@ -27,6 +27,9 @@ ok(/useLayoutEffect\(\(\) => \{[\s\S]{0,500}return \(\) => saveFeedScroll\(curre
 ok(/feedScrollFor\(currentUser\.id\)/.test(feed) && /setPos\(want\)/.test(feed), 'fil : position rétablie au retour (avec quelques essais si le contenu arrive après)');
 ok(/activeView !== 'feed' && !peekNavTarget\(\)\) window\.scrollTo\(0, 0\)/.test(app), 'application : les autres pages s\'ouvrent en haut, pas Actualités');
 ok(/view === 'feed' && activeView === 'feed'\) requestFeedTop\(\)/.test(top), 'en-tête : « Actualités » touché sur Actualités = retour en haut');
+const goHome = top.slice(top.indexOf('const goHomeAndRefresh'), top.indexOf('const pages = useMemo'));
+ok(/if \(activeView === 'feed'\) \{[\s\S]*?requestFeedTop\(\);[\s\S]*?db\.refreshNow\(\)[\s\S]*?return;\s*\}/.test(goHome), 'logo touché sur l\'accueil : retour en haut puis actualisation');
+ok(/onNavigate\(home\);\s*\};/.test(goHome) && !/requestFeedTop|refreshNow|scrollTo|resetFeedScroll/.test(goHome.slice(goHome.indexOf('onNavigate(home)') - 400, goHome.length).replace(/^[\s\S]*?return;\s*\}/, '')), 'logo touché depuis une autre page : retour à l\'accueil à la dernière position, sans remonter ni actualiser');
 
 
 // Recherche du téléphone : le fil ne bouge pas quand on ouvre / ferme la recherche

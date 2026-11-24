@@ -142,23 +142,9 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       window.setTimeout(() => { void db.refreshNow(); }, 650);
       return;
     }
-    const animateWindowTop = () => {
-      const from = window.scrollY;
-      if (from <= 1) return;
-      const started = performance.now();
-      const frame = (now: number) => {
-        const progress = Math.min(1, (now - started) / 520);
-        const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-        window.scrollTo(0, Math.round(from * (1 - eased)));
-        if (progress < 1) window.requestAnimationFrame(frame);
-      };
-      window.requestAnimationFrame(frame);
-    };
-    animateWindowTop();
+    // Depuis une autre page : on revient à l'accueil à la DERNIÈRE position laissée (le fil la rétablit lui-même), sans remonter ni actualiser.
+    // Pour remonter et actualiser, on touche l'accueil une deuxième fois (cas ci-dessus).
     onNavigate(home);
-    // Après le montage de l’accueil, on déclenche son vrai conteneur de scroll.
-    window.setTimeout(() => { requestFeedTop(); }, 240);
-    window.setTimeout(() => { void db.refreshNow(); }, 700);
   };
   const pages = useMemo(
     () =>
