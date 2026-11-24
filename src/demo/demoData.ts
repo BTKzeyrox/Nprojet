@@ -43,7 +43,7 @@ export const DEMO_COMPANY = {
   payroll: { pay_day: 5, pay_rounding: 'none' },
   leave: { leave_days_per_year: 30, work_days_per_week: 5, late_limit_time: '08:00' },
   missions: { validation_hours: 48, refusal_reason_required: true },
-  options: { invoice_per: 'client_month', quotes_enabled: true, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true },
+  options: { invoice_per: 'client_month', quotes_enabled: true, employee_sees_badges: true, employee_sees_attention: false, mission_requires_client: true, badges_enabled: true, keep_originals: false },
   texts: { internal_rules: 'Arriver avant 08:00.\nEnvoyer ses justificatifs au début et à la fin de chaque mission.\n(texte de démonstration)', customer_terms: 'Paiement à 30 jours. (texte de démonstration)' },
 } as const;
 const PRICE = 5000; // Ar par mission validée (tarif fixe de la démo)

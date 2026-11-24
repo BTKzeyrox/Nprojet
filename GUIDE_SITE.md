@@ -1112,6 +1112,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:page-zoom-lock` | Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock |
 | `npm run check:update-wait` | Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait |
 | `npm run check:copy-image` | « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image |
+| `npm run check:keep-originals` | Photos : toujours compressées dans le chat (plus de case « Compresser ») ; réglage admin « garder l'original », éteint au départ, jamais donné aux employés. Lancer : npm run check:keep-originals |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

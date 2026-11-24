@@ -465,7 +465,6 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   // Fichier choisi : on l'affiche d'abord avec l'option « Compresser » (activée par défaut), puis on l'envoie
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [compress, setCompress] = useState(true);
   const pendingFile = pendingFiles[0] || null;
   const pendingUrls = useMemo(() => pendingFiles.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : '')), [pendingFiles]);
   useEffect(() => () => { pendingUrls.forEach(u => { if (u) URL.revokeObjectURL(u); }); }, [pendingUrls]);
@@ -489,7 +488,6 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
     const good = picked.filter(f => f.size <= MAX_BYTES && OK_TYPES.includes(typeOfFile(f)));
     if (good.length < picked.length) setError(good.length === 0 ? (picked[0].size > MAX_BYTES ? 'Fichier trop gros (10 Mo maximum).' : 'Type non accepté : photo, PDF, Word, Excel ou texte seulement.') : 'Certains fichiers trop gros ou non acceptés ont été ignorés.');
     if (good.length === 0) return;
-    setCompress(true);
     setPendingFiles(good);
   };
   const sendPendingFile = async () => {
@@ -503,7 +501,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const isImage = file.type.startsWith('image/') && file.type !== 'image/gif';
-        let dataUrl = isImage && compress ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
+        let dataUrl = isImage ? await compressProofImage(file, 1600, 300 * 1024) : await readAsDataUrl(file);
         if (!file.type) dataUrl = dataUrl.replace(/^data:[^;,]*/, `data:${typeOfFile(file)}`);
         const url = await db.uploadFile(dataUrl);
         if (!url) { setError('Envoi impossible. Réessaie.'); break; }
@@ -1088,12 +1086,6 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFiles.length > 1 ? `${pendingFiles.length} photos` : pendingFile.name}</p>
                   <p className={`text-xs ${P.sub}`}>{sizeLabel(pendingFiles.reduce((n, f) => n + f.size, 0))}</p>
-                  {pendingFile.type.startsWith('image/') && pendingFile.type !== 'image/gif' && (
-                    <label className="mt-1 flex items-center gap-2 text-xs cursor-pointer">
-                      <input type="checkbox" checked={compress} onChange={e => setCompress(e.target.checked)} className="w-4 h-4 accent-blue-600" />
-                      <span className={P.title}>Compresser {pendingFiles.length > 1 ? 'les photos' : 'la photo'} <span className={P.sub}>{compress ? '(plus léger, recommandé)' : '(taille originale)'}</span></span>
-                    </label>
-                  )}
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
