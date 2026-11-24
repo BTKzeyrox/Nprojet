@@ -1,0 +1,25 @@
+// Détails des fichiers cachés (nom d'origine, taille) sauf pour l'admin ; chat : un seul envoi, aperçu, retrait d'une photo ; avertissement « pas de code » fermable. Lancer : npm run check:hide-file-details
+import { readFileSync } from 'node:fs';
+import { neutralFileLabel, shownFileName, shownFileSize } from '../src/utils/fileLabel';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+ok(neutralFileLabel('Facture_Client_Dupont_2026.pdf') === 'Document PDF' && neutralFileLabel('rapport.DOCX') === 'Document Word' && neutralFileLabel('compta.xlsx') === 'Tableur' && neutralFileLabel('IMG_1413.png') === 'Photo' && neutralFileLabel('truc.zip') === 'Fichier' && neutralFileLabel(undefined) === 'Fichier', 'noms neutres selon le type');
+ok(!/Dupont|2026|Facture/.test(shownFileName('Facture_Client_Dupont_2026.pdf', false)), 'un employé ne voit jamais le vrai nom');
+ok(shownFileName('Facture_Client_Dupont_2026.pdf', true) === 'Facture_Client_Dupont_2026.pdf' && shownFileSize('2,3 Mo', true) === '2,3 Mo' && shownFileSize('2,3 Mo', false) === '', 'l\'admin garde le nom et la taille, les autres non');
+const chat = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(!/>\{busy \? 'Envoi…' : 'Envoyer'\}</.test(chat) && /data-pending-clear/.test(chat), 'chat : plus de bouton « Envoyer » dans le cadre (reste « Tout annuler »)');
+ok(/pendingFiles\.length && !editingId\) \{ if \(!busy\) void sendPendingFile\(\)/.test(chat), 'chat : la flèche ronde (et Entrée) envoie les photos en attente');
+ok(/data-pending-remove/.test(chat) && /pendingFiles\.filter\(\(_, k\) => k !== i\)/.test(chat), 'chat : chaque photo choisie a sa croix pour la retirer');
+ok(/data-pending-open/.test(chat) && /setPreviewIdx\(pendingImageIdx\(pendingFiles, i\)\)/.test(chat) && /title="Photo à envoyer"/.test(chat), 'chat : appuyer sur une photo choisie l\'ouvre en grand');
+ok(!/sizeLabel/.test(chat) && !/pendingFile\.name/.test(chat), 'chat : ni taille ni nom dans le cadre des photos');
+ok(/shownFileName\(msg\.attachment_name, isAdmin\)/.test(chat) && /title=\{isAdmin \? \(viewer\.msg\.attachment_name \|\| 'Photo'\) : 'Photo'\}/.test(chat) && /names=\{isAdmin \?/.test(chat), 'chat : nom neutre pour tous sauf l\'admin (message, visionneuse, téléchargement)');
+const feed = readFileSync('src/views/FeedView.tsx', 'utf8');
+ok(!/title=\{f\.name\}/.test(feed) && !/alt=\{f\.name\}/.test(feed), 'publications : plus de nom de photo dans l\'info-bulle ni le texte alternatif');
+ok((feed.match(/shownFileName\(f\.name, isAdmin\)/g) || []).length === 2 && (feed.match(/isAdmin && f\.size/g) || []).length === 2, 'publications et commentaires : fichiers sans vrai nom ni taille (sauf admin)');
+ok(!/fmtBytes\(it\.before\)/.test(feed) && !/fmtBytes\(it\.after\)/.test(feed) && !/fmtBytes\(f\.size\)\s*:\s*''/.test(feed), 'rédaction : plus d\'avant → après en Ko');
+ok(/isAdmin=\{isAdmin\}/.test(feed) && /names: isAdmin \?/.test(feed), 'publications : visionneuses informées du rôle');
+const fv = readFileSync('src/components/FileViewerModal.tsx', 'utf8');
+ok(/shownFileName\(realName, !!isAdmin\)/.test(fv) && /saveAs/.test(fv), 'lecteur de fichier : nom neutre et téléchargement au nom neutre (admin : nom d\'origine)');
+const un = readFileSync('src/components/UnsentRecovery.tsx', 'utf8');
+ok(/data-no-code-close/.test(un) && /rounded-full/.test(un) && /setPillClosed\(false\)/.test(un) && /setPillClosed\(true\)/.test(un), 'avertissement « pas de code » : pastille fermable, qui revient à la prochaine coupure');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);

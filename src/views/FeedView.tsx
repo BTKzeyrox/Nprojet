@@ -14,6 +14,7 @@ import { Avatar } from '../components/Avatar';
 import { askReason } from '../components/ReasonModal';
 import { LightboxModal } from '../components/LightboxModal';
 import { FileViewerModal } from '../components/FileViewerModal';
+import { neutralFileLabel, shownFileName } from '../utils/fileLabel';
 import { PasteImageButton } from '../components/PasteImageButton';
 import { PlusMenu, ExtraForm, newExtra, extraToPoll, type Extra } from '../components/ComposerExtras';
 import { ACCEPT_ATTR, fmtBytes, prepareAttachment, uploadAttachments, type DraftAttachment } from '../utils/attachments';
@@ -35,8 +36,8 @@ const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen:
   if (images.length === 1) {
     const f = images[0];
     return (
-      <button type="button" onClick={() => onOpen(f.url)} className="block w-full overflow-hidden rounded-2xl" title={f.name}>
-        <SafeImage src={f.url} alt={f.name} loading="lazy" className={`w-full object-cover ${compact ? 'max-h-48' : 'max-h-[28rem]'}`} />
+      <button type="button" onClick={() => onOpen(f.url)} className="block w-full overflow-hidden rounded-2xl">
+        <SafeImage src={f.url} alt="Photo" loading="lazy" className={`w-full object-cover ${compact ? 'max-h-48' : 'max-h-[28rem]'}`} />
       </button>
     );
   }
@@ -49,8 +50,8 @@ const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen:
     <div>
       <div ref={ref} onScroll={onScroll} className="df-noscroll flex overflow-x-auto snap-x snap-mandatory rounded-2xl" style={{ touchAction: 'pan-x pan-y' }}>
         {images.map(f => (
-          <button key={f.url} type="button" onClick={() => onOpen(f.url)} className="snap-center shrink-0 w-full block" title={f.name}>
-            <SafeImage src={f.url} alt={f.name} loading="lazy" className={`w-full object-cover ${compact ? 'h-48' : 'aspect-[4/3]'}`} />
+          <button key={f.url} type="button" onClick={() => onOpen(f.url)} className="snap-center shrink-0 w-full block">
+            <SafeImage src={f.url} alt="Photo" loading="lazy" className={`w-full object-cover ${compact ? 'h-48' : 'aspect-[4/3]'}`} />
           </button>
         ))}
       </div>
@@ -171,14 +172,14 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
           {kept.map(f => (
             <li key={f.url} className={row}>
               {f.kind === 'image' ? <SafeImage src={f.url} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
-              <div className="min-w-0 flex-1"><div className="text-sm truncate">{f.name}</div><div className={`text-xs ${muted}`}>{f.size ? fmtBytes(f.size) : ''}</div></div>
+              <div className="min-w-0 flex-1"><div className="text-sm truncate">{f.kind === 'image' ? 'Photo' : neutralFileLabel(f.name)}</div></div>
               <button type="button" disabled={busy} onClick={() => setKept(prev => prev.filter(x => x.url !== f.url))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
             </li>
           ))}
           {items.map(it => (
             <li key={it.key} className={row}>
               {it.kind === 'image' ? <SafeImage src={it.dataUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
-              <div className="min-w-0 flex-1"><div className="text-sm truncate">{it.name}</div><div className={`text-xs ${muted}`}>{fmtBytes(it.after)} · nouveau</div></div>
+              <div className="min-w-0 flex-1"><div className="text-sm truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div><div className={`text-xs ${muted}`}>nouveau</div></div>
               <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
             </li>
           ))}
@@ -337,13 +338,13 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     return (
                       <div className="mt-1.5 space-y-1.5">
                         {cImgs.length > 0 && (
-                          <ImageCarousel compact images={cImgs} onOpen={url => setLb({ url, gallery: cImgs.map(i => i.url), names: cImgs.map(i => i.name) })} />
+                          <ImageCarousel compact images={cImgs} onOpen={url => setLb({ url, gallery: cImgs.map(i => i.url), names: isAdmin ? cImgs.map(i => i.name) : [] })} />
                         )}
                         {cOthers.map(f => (
                           <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${light ? 'bg-white hover:bg-slate-50' : 'bg-white/5 hover:bg-white/10'}`}>
                             <FileText className="w-4 h-4 shrink-0 text-emerald-600" />
-                            <span className="truncate flex-1 min-w-0">{f.name}</span>
-                            {f.size ? <span className={`shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
+                            <span className="truncate flex-1 min-w-0">{shownFileName(f.name, isAdmin)}</span>
+                            {isAdmin && f.size ? <span className={`shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
                           </button>
                         ))}
                       </div>
@@ -423,15 +424,15 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
       {post.poll && <PollBlock post={post} meId={me.id} isAdmin={isAdmin} light={light} busy={busy} users={users} onVote={optionId => { void run(() => db.voteNews(post.id, optionId)); }} />}
 
       {images.length > 0 && (
-        <ImageCarousel images={images} onOpen={url => setLb({ url, gallery: images.map(i => i.url), names: images.map(i => i.name) })} />
+        <ImageCarousel images={images} onOpen={url => setLb({ url, gallery: images.map(i => i.url), names: isAdmin ? images.map(i => i.name) : [] })} />
       )}
       {others.length > 0 && (
         <div className="space-y-1.5">
           {others.map(f => (
             <button key={f.url} type="button" onClick={() => setFv(f)} className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${light ? 'bg-slate-100 hover:bg-slate-200' : 'bg-white/5 hover:bg-white/10'}`}>
               <FileText className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span className="truncate flex-1 min-w-0">{f.name}</span>
-              {f.size ? <span className={`text-xs shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
+              <span className="truncate flex-1 min-w-0">{shownFileName(f.name, isAdmin)}</span>
+              {isAdmin && f.size ? <span className={`text-xs shrink-0 ${muted}`}>{fmtBytes(f.size)}</span> : null}
             </button>
           ))}
         </div>
@@ -480,8 +481,8 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     ? <SafeImage src={it.dataUrl} alt="" className="w-10 h-10 rounded-md object-cover shrink-0" />
                     : <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-4 h-4 text-emerald-600" /></div>}
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs truncate">{it.name}</div>
-                    <div className={`text-[11px] ${muted}`}>{it.kind === 'image' && it.after < it.before ? `${fmtBytes(it.before)} → ${fmtBytes(it.after)}` : fmtBytes(it.after)}{it.url ? ' · envoyé' : ''}</div>
+                    <div className="text-xs truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div>
+                    <div className={`text-[11px] ${muted}`}>{it.url ? 'Envoyée' : 'Prête'}</div>
                   </div>
                   <button type="button" disabled={busy} onClick={() => setCItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
                 </li>
@@ -519,8 +520,8 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           </div>}
         </div>
       )}
-      {lb && <LightboxModal isOpen onClose={() => setLb(null)} imageUrl={lb.url} gallery={lb.gallery} names={lb.names} title={post.title || 'Publication'} />}
-      {fv && <FileViewerModal url={fv.url} name={fv.name} onClose={() => setFv(null)} />}
+      {lb && <LightboxModal isOpen onClose={() => setLb(null)} imageUrl={lb.url} gallery={lb.gallery} names={lb.names.length ? lb.names : undefined} title={post.title || 'Publication'} />}
+      {fv && <FileViewerModal url={fv.url} name={fv.name} isAdmin={isAdmin} onClose={() => setFv(null)} />}
     </article>
   );
 };
@@ -620,10 +621,9 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
                 ? <SafeImage src={it.dataUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" />
                 : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
               <div className="min-w-0 flex-1">
-                <div className="text-sm truncate">{it.name}</div>
+                <div className="text-sm truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div>
                 <div className={`text-xs ${muted}`}>
-                  {it.kind === 'image' && it.after < it.before ? `${fmtBytes(it.before)} → ${fmtBytes(it.after)}` : fmtBytes(it.after)}
-                  {it.url ? ' · envoyé' : ''}
+                  {it.url ? 'Envoyée' : 'Prête'}
                 </div>
               </div>
               <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>

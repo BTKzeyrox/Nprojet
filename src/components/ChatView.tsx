@@ -59,6 +59,8 @@ import { ScheduleDialog, TemplatesDialog } from './MessageTools';
 import { scheduleLabel } from '../utils/chatTemplates';
 import { ACCEPT_ATTR, OK_TYPES, typeOfFile } from '../utils/attachments';
 import { takePastedImages, readClipboardImages, pasteReasonText } from '../utils/pasteImages';
+import { shownFileName } from '../utils/fileLabel';
+const pendingImageIdx = (files: File[], i: number) => files.slice(0, i).filter(f => f.type.startsWith('image/')).length;
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 import { SafeImage } from './SafeImage';
 
@@ -466,6 +468,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   // Fichier choisi : on l'affiche d'abord avec l'option « Compresser » (activée par défaut), puis on l'envoie
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const pendingFile = pendingFiles[0] || null;
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null); // photo choisie ouverte en grand avant l'envoi
+  useEffect(() => { if (previewIdx !== null && previewIdx >= pendingFiles.filter(f => f.type.startsWith('image/')).length) setPreviewIdx(null); }, [pendingFiles, previewIdx]);
   const pendingUrls = useMemo(() => pendingFiles.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : '')), [pendingFiles]);
   useEffect(() => () => { pendingUrls.forEach(u => { if (u) URL.revokeObjectURL(u); }); }, [pendingUrls]);
   const MAX_PHOTOS = 30;
@@ -516,8 +520,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
       setBusy(false);
     }
   };
-  const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
-
+  
   const menuOpenedAt = useRef(0); // heure d'ouverture du menu : le relâchement du doigt ne doit pas le refermer
   const pressXY = useRef<{ x: number; y: number } | null>(null);
   const rowXY = useRef<{ x: number; y: number } | null>(null);
@@ -965,18 +968,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                           {isAlbum && (
                             <div className={`grid gap-0.5 w-60 sm:w-64 ${msg.reply_to ? 'mt-1' : ''} ${album.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                               {album.slice(0, 4).map((m, k) => (
-                                <ChatImage key={m.id} src={m.attachment_url!} alt={m.attachment_name || 'photo'} onOpen={() => setViewer({ url: m.attachment_url!, msg: m })} frameClassName={`relative block overflow-hidden bg-slate-200 ${album.length === 3 && k === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${k === 0 ? 'rounded-tl-xl' : ''} ${k === 1 || (album.length === 3 && k === 0) ? 'rounded-tr-xl' : ''} ${k === 2 && album.length > 2 ? 'rounded-bl-xl' : ''} ${k === Math.min(album.length, 4) - 1 ? 'rounded-br-xl' : ''}`} imageClassName={`w-full h-full object-cover ${k === 3 && album.length > 4 ? 'blur-[3px] scale-110' : ''}`} overlay={k === 3 && album.length > 4 ? <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white text-2xl font-bold">+{album.length - 4}</span> : undefined} />
+                                <ChatImage key={m.id} src={m.attachment_url!} alt={isAdmin ? (m.attachment_name || 'photo') : 'photo'} onOpen={() => setViewer({ url: m.attachment_url!, msg: m })} frameClassName={`relative block overflow-hidden bg-slate-200 ${album.length === 3 && k === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${k === 0 ? 'rounded-tl-xl' : ''} ${k === 1 || (album.length === 3 && k === 0) ? 'rounded-tr-xl' : ''} ${k === 2 && album.length > 2 ? 'rounded-bl-xl' : ''} ${k === Math.min(album.length, 4) - 1 ? 'rounded-br-xl' : ''}`} imageClassName={`w-full h-full object-cover ${k === 3 && album.length > 4 ? 'blur-[3px] scale-110' : ''}`} overlay={k === 3 && album.length > 4 ? <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white text-2xl font-bold">+{album.length - 4}</span> : undefined} />
                               ))}
                             </div>
                           )}
                           {isAlbum && albumCaption && <span className="block whitespace-pre-line mt-1 px-1">{albumCaption}</span>}
                           {!isAlbum && msg.attachment_url && msg.attachment_kind === 'image' && (
-                            <ChatImage src={msg.attachment_url} alt={msg.attachment_name || 'photo'} onOpen={() => setViewer({ url: msg.attachment_url!, msg })} frameClassName={`block ${msg.message || msg.reply_to ? 'mb-1' : ''}`} imageClassName="max-h-56 w-auto max-w-full rounded-xl" />
+                            <ChatImage src={msg.attachment_url} alt={isAdmin ? (msg.attachment_name || 'photo') : 'photo'} onOpen={() => setViewer({ url: msg.attachment_url!, msg })} frameClassName={`block ${msg.message || msg.reply_to ? 'mb-1' : ''}`} imageClassName="max-h-56 w-auto max-w-full rounded-xl" />
                           )}
                           {!isAlbum && msg.attachment_url && msg.attachment_kind !== 'image' && (
                             <button type="button" onClick={() => setFileViewer(msg)} className={`flex items-center gap-1.5 min-h-[40px] font-semibold text-left cursor-pointer ${!msg.message && !msg.reply_to ? `px-3 py-2 rounded-2xl border ${L ? 'border-slate-300' : 'border-slate-600'}` : 'mb-1 underline'}`}>
                               <FileText className="w-4 h-4 shrink-0" />
-                              <span className="break-all">{msg.attachment_name || 'fichier'}</span>
+                              <span className="break-all">{shownFileName(msg.attachment_name, isAdmin)}</span>
                             </button>
                           )}
                           {msg.send_at && msg.sender_id === currentUser.id && <div data-scheduled-badge className="text-xs font-semibold mb-1 opacity-90">⏰ Part le {scheduleLabel(msg.send_at)} (visible par toi seul)</div>}
@@ -1072,29 +1075,30 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         {canWrite ? (
           <>
           {pendingFile && (
-            <div className={`px-3 pt-3 ${L ? 'bg-white' : 'bg-[#0f1b2d]'} border-t ${P.div}`}>
-              <div className={`rounded-2xl border p-3 flex items-center gap-3 ${L ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/15'}`}>
-                {pendingFiles.length > 1 ? (
-                  <div className="flex -space-x-3 shrink-0">
-                    {pendingFiles.slice(0, 3).map((f, i) => <img key={i} src={pendingUrls[i] || undefined} alt="" className="w-12 h-12 rounded-lg object-cover border-2 border-white" />)}
+            <div className={`px-3 pt-3 ${L ? 'bg-white' : 'bg-[#0f1b2d]'} border-t ${P.div}`} data-pending-box>
+              <div className={`rounded-2xl border p-2.5 ${L ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/15'}`}>
+                <div className="flex items-center gap-2 overflow-x-auto" data-pending-list>
+                  {pendingFiles.map((f, i) => (
+                    <div key={`${f.name}-${f.size}-${i}`} className="relative shrink-0" data-pending-item>
+                      {f.type.startsWith('image/') ? (
+                        <button type="button" onClick={() => setPreviewIdx(pendingImageIdx(pendingFiles, i))} className="block w-16 h-16 rounded-xl overflow-hidden cursor-pointer" aria-label="Voir la photo" data-pending-open>
+                          <img src={pendingUrls[i] || undefined} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      ) : (
+                        <span className="w-16 h-16 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center"><Paperclip className="w-5 h-5" /></span>
+                      )}
+                      <button type="button" disabled={busy} onClick={() => setPendingFiles(pendingFiles.filter((_, k) => k !== i))} className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-900/90 text-white flex items-center justify-center cursor-pointer border border-white/30 disabled:opacity-50" aria-label="Retirer cette photo" data-pending-remove><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ))}
+                  <div className="ml-auto shrink-0 pl-1 text-right">
+                    <p className={`text-xs ${P.sub}`}>{busy ? 'Envoi…' : pendingFiles.length > 1 ? `${pendingFiles.length} fichiers` : '1 fichier'}</p>
+                    <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`mt-0.5 text-xs font-semibold underline cursor-pointer disabled:opacity-50 ${P.sub}`} data-pending-clear>Tout annuler</button>
                   </div>
-                ) : pendingFile.type.startsWith('image/') ? (
-                  <img src={pendingUrls[0] || undefined} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
-                ) : (
-                  <span className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0"><Paperclip className="w-5 h-5" /></span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-semibold ${P.title}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pendingFiles.length > 1 ? `${pendingFiles.length} photos` : pendingFile.name}</p>
-                  <p className={`text-xs ${P.sub}`}>{sizeLabel(pendingFiles.reduce((n, f) => n + f.size, 0))}</p>
-                </div>
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <button type="button" disabled={busy} onClick={sendPendingFile} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'Envoi…' : 'Envoyer'}</button>
-                  <button type="button" disabled={busy} onClick={() => setPendingFiles([])} className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
                 </div>
               </div>
             </div>
           )}
-          <form data-composer-bar onTouchStart={e => { const t = e.touches[0]; swipe0.current = t ? { x: t.clientX, y: t.clientY } : null; }} onTouchEnd={e => { const t = e.changedTouches[0], a = swipe0.current; swipe0.current = null; if (canEph && a && t && isComposerSwipe(a, { x: t.clientX, y: t.clientY }, window.innerWidth, document.activeElement === composerRef.current)) { setEphErr(''); setEphOpen(true); } }} onSubmit={e => { e.preventDefault(); send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
+          <form data-composer-bar onTouchStart={e => { const t = e.touches[0]; swipe0.current = t ? { x: t.clientX, y: t.clientY } : null; }} onTouchEnd={e => { const t = e.changedTouches[0], a = swipe0.current; swipe0.current = null; if (canEph && a && t && isComposerSwipe(a, { x: t.clientX, y: t.clientY }, window.innerWidth, document.activeElement === composerRef.current)) { setEphErr(''); setEphOpen(true); } }} onSubmit={e => { e.preventDefault(); if (pendingFiles.length && !editingId) { if (!busy) void sendPendingFile(); return; } send(); }} className={`px-3 pt-2 pb-2 ${L ? 'bg-white border-slate-200' : 'bg-[#0f1b2d] border-white/10'} border-t shadow-[0_-6px_18px_-12px_rgba(15,30,58,0.35)] shrink-0`}>
             <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <div className="relative shrink-0">
@@ -1274,6 +1278,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         document.body
       )}
 
+      {/* Photos choisies, pas encore envoyées : on peut les voir en grand */}
+      {previewIdx !== null && (() => {
+        const imgs = pendingFiles.map((f, i) => ({ f, u: pendingUrls[i] })).filter(x => x.f.type.startsWith('image/') && x.u);
+        const cur = imgs[previewIdx];
+        return cur ? createPortal(<LightboxModal isOpen onClose={() => setPreviewIdx(null)} imageUrl={cur.u} gallery={imgs.map(x => x.u)} title="Photo à envoyer" />, document.body) : null;
+      })()}
+
       {/* Visionneuse d'image : zoom, retour, précédent / suivant */}
       {viewer && createPortal(
         <LightboxModal
@@ -1281,8 +1292,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           onClose={() => setViewer(null)}
           imageUrl={viewer.url}
           gallery={gallery.map(m => m.attachment_url!)}
-          names={gallery.map(m => m.attachment_name || 'photo.png')}
-          title={viewer.msg.attachment_name || 'Photo'}
+          names={isAdmin ? gallery.map(m => m.attachment_name || 'photo.png') : undefined}
+          title={isAdmin ? (viewer.msg.attachment_name || 'Photo') : 'Photo'}
           subtitle={viewer.msg.sender_name}
           timestamp={viewer.msg.timestamp}
           canDelete={u => { const m = gallery.find(g => g.attachment_url === u); return !!m && db.canDeleteForAll(m, currentUser.id); }}
@@ -1296,6 +1307,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
         <FileViewerModal
           url={fileViewer.attachment_url}
           name={fileViewer.attachment_name || 'fichier'}
+          isAdmin={isAdmin}
           subtitle={fileViewer.sender_name}
           onClose={() => setFileViewer(null)}
           onDelete={db.canDeleteForAll(fileViewer, currentUser.id) ? () => { const m = fileViewer; setFileViewer(null); confirmDelete(m); } : undefined}

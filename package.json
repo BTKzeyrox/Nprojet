@@ -25,6 +25,7 @@
     "check:update-wait": "npx --yes tsx scripts/check-update-wait.ts",
     "check:copy-image": "npx --yes tsx scripts/check-copy-image.ts",
     "check:keep-originals": "npx --yes tsx scripts/check-keep-originals.ts",
+    "check:hide-file-details": "npx --yes tsx scripts/check-hide-file-details.ts",
     "check:lightbox-gallery": "npx --yes tsx scripts/check-lightbox-gallery.ts",
     "check:accounting-server": "npx --yes tsx scripts/check-accounting-server.ts",
     "check:bank-recon": "npx --yes tsx scripts/check-bank-recon.ts",

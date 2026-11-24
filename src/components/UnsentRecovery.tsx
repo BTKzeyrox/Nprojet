@@ -3,7 +3,7 @@
 //  2. Hors ligne sans code de coffre : explication claire que les envois ne sont gardés qu'en mémoire, avec le chemin pour créer le code.
 // Utilisé par : App.tsx. Règles et stockage : utils/unsentCopy.ts. Contrôlé par `npm run check:unsent-copy`.
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, WifiOff } from 'lucide-react';
+import { AlertTriangle, WifiOff, X } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { bootRecover, dismissLeft, type Copy } from '../utils/unsentCopy';
@@ -17,7 +17,12 @@ export const UnsentRecovery: React.FC<{ uid: string }> = ({ uid }) => {
   useEffect(() => { setList(bootRecover(uid)); }, [uid]);
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   const st = db.getOfflineStatus();
-  const noCodeWarning = (db.isDemoCut() || !navigator.onLine) && st.can_offline && st.needs_code;
+  const noCodeNow = (db.isDemoCut() || !navigator.onLine) && st.can_offline && st.needs_code;
+  // Avertissement « pas de code » : petite pastille fermable ; fermée, elle ne revient qu'à la prochaine coupure de connexion
+  const [pillClosed, setPillClosed] = useState(false);
+  const [pillOpen, setPillOpen] = useState(false);
+  useEffect(() => { if (!noCodeNow) { setPillClosed(false); setPillOpen(false); } }, [noCodeNow]);
+  const noCodeWarning = noCodeNow && !pillClosed;
   if (!list.length && !noCodeWarning) return null;
   const box = `rounded-2xl border p-3 text-sm shadow-lg ${L ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-amber-950 border-amber-700 text-amber-50'}`;
   const btn = `min-h-[40px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`;
@@ -25,10 +30,22 @@ export const UnsentRecovery: React.FC<{ uid: string }> = ({ uid }) => {
   return (
     <div className="fixed left-0 right-0 z-[55] px-3 space-y-2 pointer-events-none" style={{ top: 'calc(70px + env(safe-area-inset-top, 0px))' }} data-unsent-recovery>
       {noCodeWarning && (
-        <div role="alert" className={`${box} pointer-events-auto max-w-xl mx-auto`} data-no-code-warning>
-          <div className="flex items-start gap-2 font-semibold"><WifiOff className="w-5 h-5 shrink-0" /><span>{t('Pas de réseau et pas de code : ce que tu envoies n\'est gardé qu\'en mémoire.', 'No network and no code: what you send is only kept in memory.')}</span></div>
-          <p className="mt-1 ml-7">{t('Si le téléphone recharge la page, ces envois peuvent être perdus. Crée ton code dans Réglages > Hors ligne pour les garder en sécurité.', 'If the phone reloads the page, these may be lost. Create your code in Settings > Offline to keep them safe.')}</p>
-          <button type="button" className={`${btn} mt-2 ml-7`} onClick={() => openView('settings')}>{t('Ouvrir les Réglages', 'Open Settings')}</button>
+        <div role="alert" className={`pointer-events-auto max-w-xl mx-auto ${pillOpen ? box : ''}`} data-no-code-warning>
+          {!pillOpen ? (
+            <div className={`mx-auto w-fit max-w-full flex items-center gap-1 rounded-full border pl-3 pr-1 py-1 text-xs font-semibold shadow-md ${L ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-amber-950/95 border-amber-700 text-amber-50'}`}>
+              <button type="button" onClick={() => setPillOpen(true)} className="flex items-center gap-1.5 min-h-[32px] cursor-pointer text-left" data-no-code-open><WifiOff className="w-3.5 h-3.5 shrink-0" /><span>{t('Hors ligne sans code : envois gardés en mémoire seulement', 'Offline without code: sends kept in memory only')}</span></button>
+              <button type="button" onClick={() => setPillClosed(true)} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-black/10" aria-label={t('Fermer', 'Close')} data-no-code-close><X className="w-4 h-4" /></button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start gap-2 font-semibold"><WifiOff className="w-5 h-5 shrink-0" /><span>{t('Pas de réseau et pas de code : ce que tu envoies n\'est gardé qu\'en mémoire.', 'No network and no code: what you send is only kept in memory.')}</span></div>
+              <p className="mt-1 ml-7">{t('Si le téléphone recharge la page, ces envois peuvent être perdus. Crée ton code dans Réglages > Hors ligne pour les garder en sécurité.', 'If the phone reloads the page, these may be lost. Create your code in Settings > Offline to keep them safe.')}</p>
+              <div className="mt-2 ml-7 flex gap-2">
+                <button type="button" className={btn} onClick={() => openView('settings')}>{t('Ouvrir les Réglages', 'Open Settings')}</button>
+                <button type="button" className={btn} onClick={() => setPillClosed(true)} data-no-code-close>{t('Fermer', 'Close')}</button>
+              </div>
+            </>
+          )}
         </div>
       )}
       {list.length > 0 && (

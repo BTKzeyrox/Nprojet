@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, Download, ExternalLink, FileText, Trash2 } from 'lucide-react';
 import { downloadFile } from '../utils/attachments';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
+import { shownFileName } from '../utils/fileLabel';
 
 interface FileViewerModalProps {
   url: string;
@@ -13,10 +14,14 @@ interface FileViewerModalProps {
   subtitle?: string;
   onClose: () => void;
   onDelete?: () => void; // absent : pas le droit de supprimer
+  isAdmin?: boolean; // seul l'admin voit le vrai nom du fichier ; les autres un nom neutre (« Document PDF »)
 }
 
 /** Visionneuse de fiches (PDF, texte) dans l'app : « Retour » et « Supprimer » toujours visibles. */
-export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name, subtitle, onClose, onDelete }) => {
+export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name: realName, subtitle, onClose, onDelete, isAdmin }) => {
+  const name = shownFileName(realName, !!isAdmin);
+  const ext = (/\.[a-z0-9]{1,5}$/i.exec(realName) || [''])[0];
+  const saveAs = isAdmin ? realName : `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}${ext}`; // nom neutre au téléchargement
   useLockBodyScroll(true);
   const round = 'h-11 min-w-11 px-3 rounded-full flex items-center justify-center gap-1.5 bg-white/12 hover:bg-white/25 text-white text-sm font-semibold cursor-pointer transition-colors shrink-0';
   return createPortal(
@@ -27,7 +32,7 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name, sub
           <h3 className="text-sm font-semibold text-white truncate leading-tight flex items-center gap-1.5"><FileText className="w-4 h-4 shrink-0 text-white/70" /><span className="truncate">{name}</span></h3>
           {subtitle && <p className="text-xs text-white/60 truncate leading-tight">{subtitle}</p>}
         </div>
-        <button type="button" onClick={() => void downloadFile(url, name)} className={`${round} !w-11 !px-0 sm:!w-auto sm:!px-4`} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /><span className="hidden sm:inline">Télécharger</span></button>
+        <button type="button" onClick={() => void downloadFile(url, saveAs)} className={`${round} !w-11 !px-0 sm:!w-auto sm:!px-4`} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /><span className="hidden sm:inline">Télécharger</span></button>
         <a href={url} target="_blank" rel="noreferrer" className={`${round} !w-11 !px-0`} title="Ouvrir à part" aria-label="Ouvrir à part"><ExternalLink className="w-5 h-5" /></a>
         {onDelete && (
           <button type="button" onClick={onDelete} className={`${round} !w-11 !px-0 !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>

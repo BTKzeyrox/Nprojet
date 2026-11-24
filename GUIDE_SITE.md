@@ -660,6 +660,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `exportDoc.ts` | Télécharger un document (bulletin, facture, reçu, rapport) en PDF ou en Excel, en plus d'« Imprimer ». |
 | `exportFile.ts` | Export complet et reprise (module 16, M16.5) : règles pures. Le fichier est exactement celui du bouton « Télécharger » des sauvegardes |
 | `feedScroll.ts` | Position de défilement du fil Actualités : gardée quand on va sur une autre page (recherche, menu…) et rétablie au retour, |
+| `fileLabel.ts` | Nom neutre d'un fichier joint : « Document PDF », « Tableur »… (le vrai nom d'origine et la taille ne sont montrés qu'à l'admin : c'est trop d'informations publiques). |
 | `filterBar.ts` | Barre de filtres commune (module 22, M22.7) : règles pures. Même texte partout : « Nom (3) » ; un filtre à 0 reste visible mais grisé. |
 | `finance.ts` | Finances : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Finances » et par le contrôle `npm run check:finance`. |
 | `financeNav.ts` | Adresses (data-nav) des cartes de la page Finances et de la page Graphiques : les liens des chiffres de l'assistant et des alertes |
@@ -1113,6 +1114,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:update-wait` | Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait |
 | `npm run check:copy-image` | « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image |
 | `npm run check:keep-originals` | Photos : toujours compressées dans le chat (plus de case « Compresser ») ; réglage admin « garder l'original », éteint au départ, jamais donné aux employés. Lancer : npm run check:keep-originals |
+| `npm run check:hide-file-details` | Détails des fichiers cachés (nom d'origine, taille) sauf pour l'admin ; chat : un seul envoi, aperçu, retrait d'une photo ; avertissement « pas de code » fermable. Lancer : npm run check:hide-file-details |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |
