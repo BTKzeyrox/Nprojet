@@ -21,7 +21,7 @@ ok(menuFor('admin')[0].id === 'home' && !bottomEntriesOf('admin').includes('home
 ok(/menuFor\(currentUser\.role, hiddenCsv\)/.test(sb) && /locate\(currentUser\.role, activeView, hiddenCsv, getStatsTab\(\)\)/.test(sb) && /goToEntry\(g, getLastTabs\(\)\[g\.id\], onNavigate\)/.test(sb), 'menu latéral : entrées, entrée active et clic viennent des règles');
 ok(/const listItems = mergedItems \|\| navItems/.test(sb), 'menu latéral : l\'ancien menu reste intact (navItems)');
 ok(!/inBottomBar/.test(sb) && /MOVED_TO_HEADER\.includes\(item\.id\) \? '!hidden'/.test(sb), 'menu latéral : plus de barre du bas ; seules Actualités et Messages (dans l\'en-tête) en sont absentes, sur tous les écrans');
-ok(!/<BottomNav/.test(app), 'App : la barre du bas n\'est plus affichée');
+ok(/<BottomNav/.test(app), 'App : la barre du bas (téléphone) est affichée (2026-11-24 : Accueil, Dashboard, Messages, Calendrier, Menu)');
 ok(/showTabs && activeView !== 'chat' && tabsRow/.test(app) && /showTabs && activeView === 'chat' && tabsRow/.test(app), 'appli : rangée d\'onglets sur chaque page (messagerie : fixe, sous la barre du haut)');
 ok(/MENU_TABS_H : 0/.test(app), 'messagerie : la zone de discussion est décalée de la hauteur des onglets');
 ok(/!merged && <OperatorsTabs active="operators"/.test(app) && /!merged && \(activeView === 'active-post'/.test(app), 'les anciens onglets Opérateurs / Sessions ne font pas doublon');

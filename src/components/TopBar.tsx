@@ -1,11 +1,11 @@
-// Barre du haut : bouton du menu, recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil.
+// Barre du haut : logo avec son nom (téléphone), recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil.
 // Utilisé par : App.tsx.
-// Pour modifier : props currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
+// Pour modifier : props currentUser, onNavigate, onOpenOperator, onOpenProfile, operatorMode. Les types de résultat de recherche sont dans KIND_LABEL.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FOCUS_SEARCH_EVENT } from '../utils/shortcutEvents';
 import { requestFeedTop, pinFeedScroll, unpinFeedScroll, readFeedPos, writeFeedPos } from '../utils/feedScroll';
 import { PageHelp } from './PageHelp';
-import { Bell, Menu, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, LayoutDashboard, ClipboardCheck } from 'lucide-react';
+import { Bell, Search, X, Users, ClipboardList, Calendar, FileText, MessageSquare, LayoutDashboard, ClipboardCheck } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
@@ -27,7 +27,6 @@ import { Avatar } from './Avatar';
 
 interface TopBarProps {
   currentUser: User;
-  onOpenMenu: () => void;
   onNavigate: (view: string) => void;
   onOpenOperator: (userId: string) => void;
   /** Ouvre le formulaire de profil de la personne connectée (tous les rôles). */
@@ -51,7 +50,7 @@ const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', mission: 'Missio
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false, activeView }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onNavigate, onOpenOperator, onOpenProfile, operatorMode = false, activeView }) => {
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -243,8 +242,9 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     <div className="h-[var(--hdr,65px)] shrink-0" aria-hidden="true" />
     <header style={{ top: 'calc(var(--vvt, 0px) + var(--hdr-gap, 0px))', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 md:right-3 z-30 df-topbar border-b md:border rounded-b-2xl md:rounded-2xl ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-[0_2px_12px_rgba(15,30,58,0.10)]`}>
       <div className="relative h-16 px-2.5 sm:px-4 flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 md:gap-3">
-        <button type="button" data-app-logo onClick={goHomeAndRefresh} title="Actualités" aria-label="Actualités" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
-          <ClipboardCheck className="w-5 h-5" />
+        <button type="button" data-app-logo onClick={goHomeAndRefresh} title="Accueil" aria-label="Accueil" className="md:hidden flex-1 min-w-0 flex items-center gap-2 cursor-pointer text-left">
+          <span className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border ${L ? 'border-slate-200 bg-slate-50 text-emerald-600' : 'border-slate-700 bg-slate-800 text-emerald-500'}`}><ClipboardCheck className="w-5 h-5" /></span>
+          <span data-app-name className={`truncate text-base font-extrabold leading-tight ${L ? 'text-slate-900' : 'text-white'}`}>Gestion Pro</span>
         </button>
         <button type="button" data-header-search onClick={() => { setMSearch(true); setOpen(true); }} title="Rechercher" aria-label="Rechercher" className={`md:hidden relative shrink-0 w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer ${L ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
           <Search className="w-5 h-5" />
@@ -289,7 +289,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
         </div>
 
         {/* Messages : l’accès Actualités est désormais regroupé avec l’icône du projet. */}
-        <div className="contents md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
+        <div className="hidden md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts>
           {([['dashboard', 'Centre de contrôle', LayoutDashboard, 0, 'flex', true], ['chat', 'Messages', MessageSquare, chatUnread, 'flex', false]] as const).map(([view, label, Icon, n, visibility, isDashboard]) => (
             <button
               key={view}
@@ -381,17 +381,13 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        <button type="button" data-header-menu onClick={onOpenMenu} title="Ouvrir le menu" aria-label="Ouvrir le menu" className={`md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer ${L ? 'border-slate-200 bg-slate-50' : 'border-slate-700 bg-slate-800'}`}>
-          <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
-        </button>
-
         <button
           type="button"
           data-profile-pill
           onClick={onOpenProfile}
           title="Mon profil · En ligne"
           aria-label="Mon profil"
-          className={`hidden md:block relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
+          className={`relative shrink-0 rounded-full p-0.5 border-2 cursor-pointer ${operatorMode ? 'border-amber-500' : L ? 'border-slate-200 hover:border-emerald-400' : 'border-slate-700 hover:border-emerald-500'}`}
         >
           <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8 rounded-full" />
           <span data-presence-dot className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${L ? 'border-white' : 'border-slate-900'} bg-emerald-500`} />

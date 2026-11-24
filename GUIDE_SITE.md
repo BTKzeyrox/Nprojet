@@ -624,6 +624,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `avatarColor.ts` | Couleur d'une personne tirée de sa photo de profil (sinon de son nom) ; lit l'image dans le navigateur, aucun serveur. |
 | `backupExcel.ts` | Sauvegarde Excel des données du store (une feuille par thème), téléchargée par le navigateur ; aucun mot de passe exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
+| `bottomNavItems.ts` | Les pages de la barre du bas (téléphone) selon le rôle. Utilisé par : components/BottomNav.tsx. Contrôlé par scripts/check-bottom-nav.ts. |
 | `budgetPlan.ts` | Budget prévu contre réel (module 15, M15.4). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:budget-plan`. |
 | `calendarGlobal.ts` | Calendrier GLOBAL (tous les employés) : mois, résumé et vue du jour. Règles pures, sans écran, sans réseau ; contrôlé par `npm run check:calendar-global`. |
 | `cashVoid.ts` | Paiements annulés (Module 23, M23.3a) : règle UNIQUE pour savoir quelles lignes de caisse comptent vraiment. |
@@ -938,6 +939,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `Avatar.tsx` | Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo. |
 | `BackupsSection.tsx` | Section des Réglages pour les sauvegardes : liste des sauvegardes de nuit, sauvegarde immédiate, export, import d'un fichier et restauration protégée par code. |
 | `BadgeCongrats.tsx` | Composant invisible qui affiche un petit message « Bravo ! » quand l'opérateur gagne un nouveau badge de performance. |
+| `BottomNav.tsx` | Barre de navigation du bas, sur téléphone seulement : Accueil, Tableau de bord, Messages, Calendrier et le menu (3 barres). |
 | `CVViewerModal.tsx` | Fenêtre « Profil » d'une personne : photo, nom, horaires, téléphone, statut, badges, changement de mot de passe et demande de modification du profil. |
 | `ChatAbout.tsx` | Fiche « À propos » de la messagerie : qui est la personne ou le groupe, ses informations et les actions possibles (écrire, épingler, cacher, voir le profil). |
 | `ChatDialogs.tsx` | Fenêtres de la messagerie : créer une discussion ou un groupe (NewChatModal) et gérer un groupe, membres, administrateurs et photo (GroupInfoModal). |
@@ -1022,7 +1024,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `TaskChecklist.tsx` | Tâches d'une mission : barre de progression sur la carte, liste à cocher pour l'opérateur et éditeur de la liste. |
 | `ThemeLangControls.tsx` | Petit interrupteur soleil et lune pour le thème, et petite liste pour la langue, dans les Réglages. |
 | `ToastHost.tsx` | Petite notification arrondie en bas de l'écran, qui remplace aussi les fenêtres alert() du navigateur. |
-| `TopBar.tsx` | Barre du haut : bouton du menu, recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil. |
+| `TopBar.tsx` | Barre du haut : logo avec son nom (téléphone), recherche globale (pages, missions, opérateurs, comptes, dates), cloche de notifications et profil. |
 | `TourGuide.tsx` | Guide animé « vidéo courte » : ouvre la vraie page, entoure un élément, simule le geste et explique, scène par scène. |
 | `TwoStepCard.tsx` | Réglages, carte de sécurité en deux étapes : activer, désactiver et refaire les codes de secours. |
 | `TypeHintBanner.tsx` | Bandeau qui propose de transformer une colonne de tableau (code, date, heure, téléphone, nombre ou liste de choix), avec Oui ou Non merci. |
@@ -1115,6 +1117,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:copy-image` | « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image |
 | `npm run check:keep-originals` | Photos : toujours compressées dans le chat (plus de case « Compresser ») ; réglage admin « garder l'original », éteint au départ, jamais donné aux employés. Lancer : npm run check:keep-originals |
 | `npm run check:hide-file-details` | Détails des fichiers cachés (nom d'origine, taille) sauf pour l'admin ; chat : un seul envoi, aperçu, retrait d'une photo ; avertissement « pas de code » fermable. Lancer : npm run check:hide-file-details |
+| `npm run check:bottom-nav` | Barre du bas (téléphone) : Accueil, Dashboard, Messages, Calendrier, Menu ; en-tête : logo + nom, recherche, notifications, profil. Lancer : npm run check:bottom-nav |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

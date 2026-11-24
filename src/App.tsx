@@ -19,6 +19,7 @@ import { PullToRefresh } from './components/PullToRefresh';
 import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
+import { BottomNav } from './components/BottomNav';
 import { TopBar } from './components/TopBar';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -637,10 +638,12 @@ export default function App() {
           onOpenProfile={() => setCvModalUser(currentUser)}
           operatorMode={operatorMode}
           activeView={activeView}
-          onOpenMenu={() => setIsMobileSidebarOpen(true)}
           onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }}
           onOpenOperator={id => { setFocusOperatorId(id); setActiveView('operator'); }}
         />
+
+        {/* Barre du bas (téléphone seulement) : Accueil, Tableau de bord, Messages, Calendrier, Menu */}
+        <BottomNav currentUser={viewUser} activeView={activeView} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} onOpenMenu={() => setIsMobileSidebarOpen(true)} />
 
         {currentUser && currentUser.role !== 'admin' && <AccessBanner user={currentUser} />}
 

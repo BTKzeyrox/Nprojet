@@ -1,0 +1,25 @@
+// Barre du bas (téléphone) : Accueil, Dashboard, Messages, Calendrier, Menu ; en-tête : logo + nom, recherche, notifications, profil. Lancer : npm run check:bottom-nav
+import { readFileSync } from 'node:fs';
+import { itemsFor } from '../src/utils/bottomNavItems';
+let fails = 0;
+const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
+const ids = (role: string, hidden = '', unread = 0) => itemsFor(role, unread, hidden).map(i => i.id).join(',');
+ok(ids('admin') === 'feed,dashboard,chat,calendar' && ids('employee') === 'feed,dashboard,chat,calendar', 'responsable et opérateur : Accueil, Dashboard, Messages, Calendrier');
+ok(ids('accountant') === 'feed,dashboard,chat' && ids('team_lead') === 'feed,dashboard,chat', 'comptable et chef d\'équipe : pas de calendrier');
+ok(!ids('admin', 'calendar').includes('calendar') && ids('admin', 'calendar') === 'feed,dashboard,chat', 'une page cachée dans les Conditions disparaît de la barre');
+ok(itemsFor('admin', 7, '').find(i => i.id === 'chat')?.badge === 7, 'les messages non lus s\'affichent sur Messages');
+const nav = readFileSync('src/components/BottomNav.tsx', 'utf8');
+ok(/md:hidden/.test(nav) && /data-bottom-menu onClick=\{onOpenMenu\}/.test(nav), 'téléphone seulement ; le bouton Menu ouvre le menu à 3 barres');
+ok(/isKeyboardOpen/.test(nav) && /if \(kb\) return null/.test(nav), 'clavier ouvert : la barre se cache');
+ok(/--bnh/.test(nav) && /removeProperty\('--bnh'\)/.test(nav), 'la hauteur de la barre est publiée (--bnh) pour la messagerie, les boutons Haut/Bas et les messages');
+ok(/\[overflow-wrap:normal\]/.test(nav) && /text-nowrap/.test(nav), 'les noms ne se coupent pas au milieu d\'un mot, même sur petit écran');
+const app = readFileSync('src/App.tsx', 'utf8');
+ok(/<BottomNav currentUser=\{viewUser\} activeView=\{activeView\}/.test(app) && /onOpenMenu=\{\(\) => setIsMobileSidebarOpen\(true\)\}/.test(app), 'application : la barre est affichée et ouvre le menu latéral');
+const top = readFileSync('src/components/TopBar.tsx', 'utf8');
+ok(/data-app-logo[^>]*md:hidden[^>]*>/.test(top) && /data-app-name[^>]*>Gestion Pro</.test(top), 'en-tête téléphone : logo avec son nom');
+ok(/hidden md:flex md:items-center md:gap-3 md:shrink-0" data-header-shortcuts/.test(top), 'dashboard et messages : plus dans l\'en-tête du téléphone (ils sont en bas)');
+ok(!/data-header-menu/.test(top), 'plus de bouton menu dans l\'en-tête (il est en bas)');
+ok(/data-header-search/.test(top) && /data-header-bell/.test(top) && /data-profile-pill/.test(top) && !/hidden md:block relative shrink-0 rounded-full p-0\.5/.test(top), 'en-tête téléphone : recherche, notifications et profil (le profil est visible sur téléphone)');
+const css = readFileSync('src/index.css', 'utf8');
+ok(/@media \(max-width: 767px\) \{ main:not\(\.fixed\) \{ padding-bottom: calc\(var\(--bnh, 0px\)/.test(css), 'téléphone : la fin de la page n\'est pas cachée par la barre');
+console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);
