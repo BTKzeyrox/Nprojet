@@ -12,5 +12,11 @@ ok(/busy\.current/.test(src) && /if \(busy\.current\) return;/.test(src) && /if 
 ok(/const go = \(d: number\) => \{[\s\S]*?swipeTo\(d, d < 0 \? 1 : -1\)/.test(src), 'flèches et clavier : la même transition que le glissement du doigt');
 ok(/idxRef\.current = idx;/.test(src) && /const next = idxRef\.current \+ d;/.test(src), 'le clavier ne lit jamais un ancien numéro d\'image');
 ok(/visibility: view\.s > 1 \|\| view\.x === 0 \? 'hidden' : 'visible'/.test(src), 'les voisines sont cachées au repos et pendant le zoom (mais restent chargées)');
+// --- l'image est vue en entier : les barres ne la couvrent plus, elle remplit l'espace ---
+ok(!/max-h-\[90vh\]|max-w-\[90vw\]/.test(src) && /className="w-full h-full object-contain" data-lightbox-img/.test(src), 'l\'image remplit tout l\'espace (plus limitée à 90 %, s\'agrandit sur grand écran)');
+ok(/paddingTop: 'var\(--lb-hdr\)', paddingBottom: 'var\(--lb-ftr\)'/.test(src), 'la place des barres est réservée : l\'image ne passe plus dessous');
+ok(/<header className="absolute top-0 inset-x-0[^"]*bg-black"/.test(src) && !/bg-gradient-to-[bt] from-black/.test(src), 'barre du haut pleine, sans voile par-dessus l\'image');
+ok(/<footer className=\{`absolute bottom-0 inset-x-0[^`]*bg-black/.test(src) && /max-sm:hidden/.test(src), 'barre du bas pleine ; sur téléphone elle disparaît s\'il n\'y a rien à y mettre');
+ok(/text-nowrap/.test(src) && !/whitespace-nowrap/.test(src), 'infos sur une seule ligne (text-nowrap : la règle globale annule whitespace-nowrap)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

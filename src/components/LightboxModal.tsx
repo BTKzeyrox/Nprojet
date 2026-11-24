@@ -231,13 +231,14 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     score !== undefined && { k: 'Quantité vérifiée', v: formatScoreM(score) },
     timestamp && { k: 'Horodatage', v: timestamp },
   ].filter(Boolean) as { k: string; v: string }[];
+  const showFooter = info.length > 0 || imgs.length > 1; // sur téléphone, pas de barre du bas s'il n'y a rien à y mettre
   // Le visualiseur reste opaque au repos ; la transparence ne suit que le glissement de fermeture.
   const backdropAlpha = dismissY > 0
     ? Math.max(0.18, 0.98 - Math.min(0.8, (dismissY / Math.max(1, window.innerHeight)) * 0.8))
     : 1;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999]" data-lightbox role="dialog" aria-modal="true" style={{ backgroundColor: `rgba(0, 0, 0, ${backdropAlpha})` }}>
+    <div className={`fixed inset-0 z-[9999] ${showFooter ? '[--lb-ftr:calc(3rem+env(safe-area-inset-bottom))]' : '[--lb-ftr:env(safe-area-inset-bottom)] sm:[--lb-ftr:calc(3rem+env(safe-area-inset-bottom))]'}`} data-lightbox role="dialog" aria-modal="true" style={{ backgroundColor: `rgba(0, 0, 0, ${backdropAlpha})`, ["--lb-hdr" as string]: "calc(env(safe-area-inset-top) + 3.75rem)" }}>
       {/* Image plein écran : pincement, molette, double-tap, déplacement */}
       <div
         className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
@@ -255,12 +256,12 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           if (!url) return null;
           const isCur = k === 0;
           return (
-            <div key={i} className="absolute inset-0 flex items-center justify-center pointer-events-none" style={isCur ? undefined : { visibility: view.s > 1 || view.x === 0 ? 'hidden' : 'visible' }}>
+            <div key={i} className="absolute inset-0 flex items-center justify-center pointer-events-none box-border" style={{ paddingTop: 'var(--lb-hdr)', paddingBottom: 'var(--lb-ftr)', ...(isCur ? {} : { visibility: view.s > 1 || view.x === 0 ? 'hidden' : 'visible' }) }}>
               <img
                 src={url}
                 alt={isCur ? 'Justificatif' : ''}
                 draggable={false}
-                className="max-h-[90vh] max-w-[90vw] object-contain"
+                className="w-full h-full object-contain" data-lightbox-img
                 style={{
                   transform: isCur
                     ? `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`
@@ -279,8 +280,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         )}
       </div>
 
-      {/* Haut : fermer, titre, actions (flottants sur l'image) */}
-      <header className="absolute top-0 inset-x-0 flex items-center gap-3 px-3 pb-6 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+      {/* Haut : fermer, titre, actions (une vraie barre : elle ne cache plus l'image) */}
+      <header className="absolute top-0 inset-x-0 flex items-center gap-3 px-3 pb-2 bg-black" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }} data-lightbox-header>
         <button type="button" onClick={onClose} className={`${round} pointer-events-auto`} title="Fermer (ESC)" aria-label="Fermer"><ArrowLeft className="w-5 h-5" /></button>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-white truncate leading-tight">{title}</h3>
@@ -295,18 +296,16 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         </div>
       </header>
 
-      {copyMsg && <div role="status" data-lightbox-copy-msg className="absolute left-1/2 -translate-x-1/2 top-20 z-10 px-4 py-2 rounded-full bg-black/80 text-white text-xs font-semibold pointer-events-none">{copyMsg}</div>}
+      {copyMsg && <div role="status" data-lightbox-copy-msg className="absolute left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+4.5rem)] z-10 px-4 py-2 rounded-full bg-white/15 backdrop-blur text-white text-xs font-semibold pointer-events-none">{copyMsg}</div>}
 
-      {/* Bas : compteur, zoom (ordinateur) et infos */}
-      <footer className="absolute bottom-0 inset-x-0 flex flex-col items-center gap-2 px-3 pt-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
-        {info.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 px-4 py-2 rounded-2xl bg-white/12 backdrop-blur text-xs text-white">
-            {info.map(i => (<span key={i.k}><span className="text-white/60">{i.k} : </span><span className="font-semibold">{i.v}</span></span>))}
-          </div>
-        )}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {imgs.length > 1 && <span className="px-3 py-1.5 rounded-full bg-white/12 backdrop-blur text-xs font-semibold text-white">{idx + 1} / {imgs.length}</span>}
-          <div className="hidden sm:flex items-center rounded-full bg-white/12 backdrop-blur text-white">
+      {/* Bas : infos sur une ligne, compteur et zoom (ordinateur) : une vraie barre, elle ne cache plus l'image */}
+      <footer className={`absolute bottom-0 inset-x-0 flex items-center gap-3 px-3 bg-black h-[var(--lb-ftr)] ${showFooter ? '' : 'max-sm:hidden'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} data-lightbox-footer>
+        <div className="min-w-0 flex-1 overflow-x-auto text-nowrap text-xs text-white [scrollbar-width:none]" data-lightbox-info>
+          {info.map((i, n) => (<span key={i.k}>{n > 0 && <span className="text-white/30 mx-2">·</span>}<span className="text-white/60">{i.k} : </span><span className="font-semibold">{i.v}</span></span>))}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {imgs.length > 1 && <span className="px-3 py-1.5 rounded-full bg-white/12 text-xs font-semibold text-white">{idx + 1} / {imgs.length}</span>}
+          <div className="hidden sm:flex items-center rounded-full bg-white/12 text-white">
             <button type="button" onClick={() => zoomBy(1 / 1.3)} className="p-2.5 rounded-full hover:bg-white/20 cursor-pointer" title="Zoom arrière"><ZoomOut className="w-4 h-4" /></button>
             <span className="text-[11px] font-mono px-1 min-w-11 text-center">{Math.round(view.s * 100)}%</span>
             <button type="button" onClick={() => zoomBy(1.3)} className="p-2.5 rounded-full hover:bg-white/20 cursor-pointer" title="Zoom avant"><ZoomIn className="w-4 h-4" /></button>
