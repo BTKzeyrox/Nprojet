@@ -212,7 +212,9 @@ export class AppStore {
     this.netListeners.forEach(fn => fn(this.netBusy));
   }
 
+  apiWrites = 0; // +1 à chaque envoi d'une action au serveur (hors synchro automatique) : preuve qu'un bouton a bien agi (actionFeedback.ts)
   async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+    { const m = (init?.method || 'GET').toUpperCase(); const base = path.split('?')[0]; if (m !== 'GET' && base !== 'sync' && base !== 'state') this.apiWrites++; }
     const visible = path.split('?')[0] !== 'state'; // la synchro automatique (state?since=…) ne montre pas de barre
     if (visible) this.netTick(1);
     try {

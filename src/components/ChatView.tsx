@@ -64,6 +64,7 @@ const pendingImageIdx = (files: File[], i: number) => files.slice(0, i).filter(f
 import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 import { SafeImage } from './SafeImage';
 import { fb } from '../utils/actionFeedback';
+import { isKeyboardOpen } from '../utils/keyboard';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
@@ -416,6 +417,18 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
 
   const lastSent = useRef<{ key: string; at: number }>({ key: '', at: 0 });
   const [plusOpen, setPlusOpen] = useState(false);
+  // « + » : si le clavier est ouvert, on le ferme d'abord et on n'ouvre le menu qu'après (sinon le menu passe derrière l'en-tête)
+  const togglePlus = () => {
+    if (plusOpen) { setPlusOpen(false); return; }
+    const composer = composerRef.current;
+    if (!isKeyboardOpen()) { setPlusOpen(true); return; }
+    if (composer) composer.readOnly = true; // Android : sans ça le clavier peut rester ouvert
+    composer?.blur();
+    const active = document.activeElement; if (active instanceof HTMLElement) active.blur();
+    let n = 0;
+    const wait = () => { n++; if (!isKeyboardOpen() || n >= 10) { setPlusOpen(true); window.setTimeout(() => { if (composer) composer.readOnly = false; }, 300); } else window.setTimeout(wait, 60); };
+    window.setTimeout(wait, 60);
+  };
   useEffect(() => { if (!plusOpen) return; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') setPlusOpen(false); }; window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f); }, [plusOpen]);
   const [itemMsg, setItemMsg] = useState<ChatMessage | null>(null); // message à transformer en rappel / tâche / événement
   const [tool, setTool] = useState<'schedule' | 'templates' | null>(null);
@@ -1103,11 +1116,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
             <div className={`flex items-end gap-1.5 rounded-3xl border pl-1.5 pr-1.5 py-1.5 ${L ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/15'}`}>
               <input ref={fileRef} type="file" multiple accept={ACCEPT_ATTR} onChange={onFile} className="hidden" />
               <div className="relative shrink-0">
-                <button type="button" data-chat-plus disabled={busy || !!editingId} aria-haspopup="menu" aria-expanded={plusOpen} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} onClick={fb('add', () => setPlusOpen(o => !o))} className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`} title="Ajouter : fichier, sondage…" aria-label="Ajouter : fichier, sondage…"><Plus className="w-5 h-5" /></button>
+                <button type="button" data-chat-plus disabled={busy || !!editingId} aria-haspopup="menu" aria-expanded={plusOpen} onClick={togglePlus} className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 ${L ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300 hover:bg-white/10'}`} title="Ajouter : fichier, sondage…" aria-label="Ajouter : fichier, sondage…"><Plus className="w-5 h-5" /></button>
                 {plusOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} aria-hidden />
-                    <div role="menu" data-chat-plus-menu className={`absolute bottom-12 left-0 z-50 w-60 rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
+                    <div role="menu" data-chat-plus-menu style={{ maxHeight: 'calc(var(--vvh, 100dvh) - var(--hdr, 65px) - 7rem)' }} className={`absolute bottom-12 left-0 z-50 w-60 overflow-y-auto rounded-xl border shadow-xl p-1 ${L ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0f1722] border-slate-700 text-slate-100'}`}>
                       {([['file', 'Importer (photo, fichier)', Paperclip], ['paste', 'Coller une image', ClipboardPaste], ['poll', 'Sondage', BarChart3], ['date', 'Choix de date', CalendarDays], ['ack', "« J'ai lu »", Eye], ['schedule', 'Programmer un message', Clock], ...(canOnly ? [['only', 'Visible seulement par…', Lock] as const] : []), ['templates', 'Mes modèles', FileText]] as const).map(([k, label, Icon]) => (
                         <button key={k} type="button" role="menuitem" data-chat-plus-item={k} onPointerDown={e => e.preventDefault()} onMouseDown={e => e.preventDefault()} onClick={() => { setPlusOpen(false); if (k === 'file') fileRef.current?.click(); else if (k === 'paste') { void readClipboardImages().then(r => { if (r.files.length) takeFiles(r.files); else setError(pasteReasonText(r.reason)); }); } else if (k === 'only') setOnlyOpen(true); else if (k === 'schedule' || k === 'templates') setTool(k); else setPollKind(k); }} className="w-full min-h-[48px] px-3 flex items-center gap-3 rounded-lg text-sm text-left cursor-pointer hover:bg-black/5"><Icon className="w-5 h-5 shrink-0" />{label}</button>
                       ))}

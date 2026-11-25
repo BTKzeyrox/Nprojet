@@ -17,6 +17,7 @@ export const getFontSize = (): string => {
 export const applyFontSize = (id: string = getFontSize()) => {
   const f = FONT_SIZES.find(x => x.id === (LEGACY[id] ?? id)) || FONT_SIZES[2];
   document.documentElement.style.fontSize = `${f.pct}%`;
+  document.documentElement.style.setProperty('--fs', String(f.pct / 100)); // facteur pour les textes en pixels fixes et les champs (index.css)
 };
 export const setFontSize = (id: string) => {
   try { localStorage.setItem(KEY, id); } catch { /* stockage indisponible */ }

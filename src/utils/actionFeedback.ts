@@ -55,7 +55,14 @@ function mark(el: HTMLElement | null, state: 'busy' | 'ok' | 'err', text: string
   const t = timers.get(el); if (t) window.clearTimeout(t);
   el.setAttribute('data-fb', state);
   if (hasOwnText(el) || el.hasAttribute('data-fb-text')) { el.setAttribute('data-fb-text', text); el.setAttribute('data-fb-label', '1'); } else el.removeAttribute('data-fb-label');
-  if (state !== 'busy') timers.set(el, window.setTimeout(() => { el.removeAttribute('data-fb'); el.removeAttribute('data-fb-text'); el.removeAttribute('data-fb-label'); timers.delete(el); }, state === 'err' ? 2600 : SHOW_MS));
+  // « en cours » ne reste jamais bloqué : 30 s au plus ; les autres états disparaissent après 1,5 s (échec : 2,6 s)
+  timers.set(el, window.setTimeout(() => { el.removeAttribute('data-fb'); el.removeAttribute('data-fb-text'); el.removeAttribute('data-fb-label'); timers.delete(el); }, state === 'busy' ? 30000 : state === 'err' ? 2600 : SHOW_MS));
+}
+function clearMark(el: HTMLElement | null) {
+  if (!el) return;
+  const t = timers.get(el); if (t) window.clearTimeout(t);
+  timers.delete(el);
+  el.removeAttribute('data-fb'); el.removeAttribute('data-fb-text'); el.removeAttribute('data-fb-label');
 }
 const isOffline = () => { try { return typeof navigator !== 'undefined' && navigator.onLine === false; } catch { return false; } };
 const errText = (e: unknown) => { const m = e instanceof Error ? e.message : typeof e === 'string' ? e : ''; return m && m.length < 140 ? m : ''; };
@@ -75,6 +82,8 @@ export function installActionEvidence(): void {
       const orig = cb && typeof cb[k] === 'function' ? (cb[k] as (...a: unknown[]) => Promise<unknown>).bind(cb) : null;
       if (cb && orig) { try { cb[k] = (...a: unknown[]) => { extra++; return orig(...a); }; } catch { /* lecture seule */ } }
     }
+    const ec = typeof document.execCommand === 'function' ? document.execCommand.bind(document) : null;
+    if (ec) document.execCommand = (cmd: string, ...r: [boolean?, string?]) => { if (cmd === 'copy' || cmd === 'cut') extra++; return ec(cmd, ...r); };
     const ac = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) { if (this.hasAttribute('download')) extra++; return ac.call(this); };
     const cu = URL.createObjectURL.bind(URL);
@@ -114,13 +123,17 @@ export function fb<A extends unknown[], R>(kind: FbKind, fn: (...args: A) => R):
     const el = feedbackTarget(args[0] as Ev);
     const offline = isOffline();
     const before = evidenceNow();
+    const t0 = Date.now();
     let errSeen = false, anyToast = false;
     const onToast = (e: Event) => { anyToast = true; if ((e as CustomEvent<{ type?: string }>).detail?.type === 'error') errSeen = true; };
     window.addEventListener('df:toast', onToast);
+    let asyncDone = false;
     const finish = (res: unknown) => {
       window.removeEventListener('df:toast', onToast);
-      const v = verdict(res, before, evidenceNow(), errSeen);
-      if (v === 'none') { if (el) { /* rien à montrer */ } return; }
+      // Une action asynchrone qui se termine sans erreur compte comme faite, sauf si elle a fini en moins de 40 ms sans rien laisser (refus immédiat : champ vide…)
+      const instantRefusal = asyncDone && Date.now() - t0 < 40 && evidenceNow() === before && !isSuccess(res);
+      const v = instantRefusal ? 'none' : asyncDone ? (isFailure(res) || errSeen ? 'fail' : 'ok') : verdict(res, before, evidenceNow(), errSeen);
+      if (v === 'none') { clearMark(el); return; } // le bouton a refusé : on le débloque et on n'affiche rien
       if (v === 'fail') {
         mark(el, 'err', T.fail);
         if (!anyToast) { const why = res && typeof res === 'object' ? errText((res as { error?: unknown }).error) : ''; showToast(why || `${T.fail} : l'action n'a pas marché`, 'error'); }
@@ -134,7 +147,7 @@ export function fb<A extends unknown[], R>(kind: FbKind, fn: (...args: A) => R):
     try { r = fn(...args); } catch (err) { window.removeEventListener('df:toast', onToast); mark(el, 'err', T.fail); showToast(errText(err) || `${T.fail} : l'action n'a pas marché`, 'error'); throw err; }
     if (r && typeof (r as unknown as Promise<unknown>).then === 'function') {
       mark(el, 'busy', T.busy);
-      (r as unknown as Promise<unknown>).then(finish, err => { window.removeEventListener('df:toast', onToast); mark(el, 'err', T.fail); showToast(errText(err) || `${T.fail} : l'action n'a pas marché`, 'error'); });
+      (r as unknown as Promise<unknown>).then(res => { asyncDone = true; finish(res); }, err => { window.removeEventListener('df:toast', onToast); mark(el, 'err', T.fail); showToast(errText(err) || `${T.fail} : l'action n'a pas marché`, 'error'); });
     } else if (isFailure(r) || isSuccess(r) || evidenceNow() !== before || errSeen) finish(r);
     else {
       // Pas encore de trace : on attend un instant (action lancée sans attente) ; sans trace, rien n'est affiché

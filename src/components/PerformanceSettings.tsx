@@ -158,7 +158,7 @@ export const PerformanceSettings: React.FC<{ lang: string }> = ({ lang }) => {
         {OTHER.map(field)}
       </section>
 
-      <div className="sticky bottom-2">
+      <div className="sticky bottom-[calc(var(--bnh,0px)+0.5rem)]">
         <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 text-white font-bold text-sm disabled:opacity-40 cursor-pointer">{t('Enregistrer', 'Save')}</button>
       </div>
     </div>

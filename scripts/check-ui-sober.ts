@@ -50,7 +50,7 @@ ok(tall.length >= 0 && round40.length >= 0, 'hauteurs des boutons non touchées 
 const g = globalThis as any;
 const mem: Record<string, string> = {};
 g.localStorage = { getItem: (k: string) => mem[k] ?? null, setItem: (k: string, v: string) => { mem[k] = v; }, removeItem: (k: string) => { delete mem[k]; } };
-g.document = { documentElement: { style: {} as Record<string, string> } };
+g.document = { documentElement: { style: { setProperty(k: string, v: string) { (this as Record<string, unknown>)[k] = v; } } as Record<string, any> } };
 const F = await import('../src/utils/fontSize');
 ok(F.FONT_SIZES.length === 4 && JSON.stringify(F.FONT_SIZES.map(f => f.label)) === JSON.stringify(['Très petite', 'Petite', 'Normale', 'Grande']), 'police : 4 choix (Très petite, Petite, Normale, Grande)');
 ok(F.FONT_SIZES.map(f => f.pct).join() === '80,90,100,110', 'police : 80 %, 90 %, 100 %, 110 % (plus de 120 %)');
@@ -59,7 +59,8 @@ ok(Math.min(...F.FONT_SIZES.map(f => f.pct)) < 90, 'police : un choix plus petit
 mem['gp_font_size'] = 'xl'; ok(F.getFontSize() === 'lg', 'police : une ancienne « Très grande » devient « Grande »');
 F.applyFontSize(); ok(g.document.documentElement.style.fontSize === '110%', 'police : appliquée à 110 % pour l\'ancienne « Très grande »');
 mem['gp_font_size'] = 'n importe quoi'; ok(F.getFontSize() === 'md', 'police : valeur inconnue → Normale');
-F.setFontSize('xxs'); ok(mem['gp_font_size'] === 'xxs' && g.document.documentElement.style.fontSize === '80%' && F.getFontSize() === 'xxs', 'police : « Très petite » enregistrée et appliquée à 80 %');
+F.setFontSize('xxs'); ok(g.document.documentElement.style['--fs'] === '0.8', 'police : le facteur --fs (0,8) suit « Très petite » pour les champs et les textes en pixels fixes');
+ok(mem['gp_font_size'] === 'xxs' && g.document.documentElement.style.fontSize === '80%' && F.getFontSize() === 'xxs', 'police : « Très petite » enregistrée et appliquée à 80 %');
 F.setFontSize('md'); ok(g.document.documentElement.style.fontSize === '100%', 'police : Normale = 100 %');
 const pk = fs.readFileSync('src/components/FontSizePicker.tsx', 'utf8');
 ok(/grid-cols-4/.test(pk) && /FONT_SIZES\.map/.test(pk), 'écran : le sélecteur affiche les 4 choix de la liste');

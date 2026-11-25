@@ -43,6 +43,22 @@ g.addEventListener('df:toast', (e: any) => toasts.push(e.detail));
   // 10) les mots
   eq(Object.entries(A.FB_TEXT).every(([, v]) => /✓$/.test(v.ok) && v.fail === 'Échec'), true, 'tous les mots finissent par ✓ ; échec = « Échec »');
   eq([A.FB_TEXT.save.ok, A.FB_TEXT.copy.ok, A.FB_TEXT.publish.ok, A.FB_TEXT.send.ok, A.FB_TEXT.download.ok, A.FB_TEXT.delete.ok], ['Enregistré ✓', 'Copié ✓', 'Publié ✓', 'Envoyé ✓', 'Téléchargé ✓', 'Supprimé ✓'], 'les six mots demandés');
+  // 12) action asynchrone sans trace (enregistrement direct au serveur) : « ✓ » à la fin, jamais bloquée « en cours »
+  { toasts.length = 0; const { a, el } = attrs(); await fbx('save', async () => { await new Promise(r => setTimeout(r, 80)); })({ currentTarget: el }); await new Promise(r => setTimeout(r, 5)); eq([a['data-fb'], a['data-fb-text']], ['ok', 'Enregistré ✓'], 'asynchrone sans trace : « Enregistré ✓ »'); }
+  // 13) refus immédiat (champ vide) : débloqué, rien d'affiché
+  { toasts.length = 0; const { a, el } = attrs(); await fbx('save', async () => { /* return; */ })({ currentTarget: el }); await new Promise(r => setTimeout(r, 5)); eq([a['data-fb'], toasts.length], [undefined, 0], 'refus immédiat : le bouton est débloqué, rien d\'affiché'); }
+  // 14) échec asynchrone : rouge, débloqué après
+  { toasts.length = 0; const { a, el } = attrs(); await fbx('save', async () => { await new Promise(r => setTimeout(r, 60)); return { success: false, error: 'Refusé par le serveur' }; })({ currentTarget: el }); await new Promise(r => setTimeout(r, 5)); eq([a['data-fb'], toasts[0]?.message], ['err', 'Refusé par le serveur'], 'échec asynchrone : rouge + raison'); }
+  // 15) jamais bloqué : après le délai, plus aucune marque
+  { const { a, el } = attrs(); fbx('save', () => { d.mutationSeq++; })({ currentTarget: el }); await new Promise(r => setTimeout(r, 1700)); eq(a['data-fb'], undefined, 'la marque disparaît après 1,5 s'); }
+  // 16) polices et boutons collés en bas
+  const css2 = readFileSync('src/index.css', 'utf8');
+  eq(/font-size: calc\(16px \* var\(--fs, 1\)\) !important/.test(css2) && /@supports \(-webkit-touch-callout: none\)/.test(css2) && /max\(16px, calc\(16px \* var\(--fs, 1\)\)\)/.test(css2), true, 'police : les champs suivent la taille choisie (16 px minimum seulement sur iPhone)');
+  eq(['10', '11', '12', '13', '14', '15', '22'].every(n => css2.includes(`.text-\\[${n}px\\] { font-size: calc(${n}px * var(--fs, 1)) !important; }`)), true, 'police : les textes en pixels fixes suivent la taille choisie');
+  eq(/setProperty\('--fs'/.test(readFileSync('src/utils/fontSize.ts', 'utf8')), true, 'police : le facteur --fs est posé');
+  eq(/sticky bottom-\[calc\(var\(--bnh,0px\)\+0\.5rem\)\]/.test(readFileSync('src/components/PerformanceSettings.tsx', 'utf8')), true, 'Performance : « Enregistrer » collé au-dessus de la barre du bas');
+  const chat2 = readFileSync('src/components/ChatView.tsx', 'utf8');
+  eq(/onClick=\{togglePlus\}/.test(chat2) && /composer\.readOnly = true/.test(chat2) && /isKeyboardOpen\(\)/.test(chat2) && /maxHeight: 'calc\(var\(--vvh, 100dvh\) - var\(--hdr, 65px\) - 7rem\)'/.test(chat2), true, 'chat : « + » ferme le clavier puis ouvre le menu, qui ne dépasse pas sous l\'en-tête');
   // 11) branchements dans le code
   const walk = (d0: string): string[] => readdirSync(d0).flatMap(n => { const p = join(d0, n); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.tsx') ? [p] : []; });
   const files = walk('src'); const used = files.filter(p => /\bfb\('/.test(readFileSync(p, 'utf8')));

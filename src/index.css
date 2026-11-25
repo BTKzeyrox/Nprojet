@@ -365,7 +365,7 @@ html.theme-light header.df-topbar {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
   select,
   textarea {
-    font-size: 16px !important;
+    font-size: calc(16px * var(--fs, 1)) !important; /* suit la taille du texte choisie */
   }
 }
 .fixed.inset-0,
@@ -751,9 +751,26 @@ html.theme-dark body { background-color: #0b1626; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
   textarea,
   select {
-    font-size: 16px !important;
+    font-size: calc(16px * var(--fs, 1)) !important; /* suit la taille du texte choisie */
   }
 }
+/* iPhone : un champ sous 16 px fait zoomer la page à la saisie, donc 16 px minimum seulement là */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, calc(16px * var(--fs, 1))) !important;
+  }
+}
+/* Textes en pixels fixes (text-[11px]…) : ils suivent aussi la taille du texte choisie */
+.text-\[10px\] { font-size: calc(10px * var(--fs, 1)) !important; }
+.text-\[11px\] { font-size: calc(11px * var(--fs, 1)) !important; }
+.text-\[12px\] { font-size: calc(12px * var(--fs, 1)) !important; }
+.text-\[13px\] { font-size: calc(13px * var(--fs, 1)) !important; }
+.text-\[14px\] { font-size: calc(14px * var(--fs, 1)) !important; }
+.text-\[15px\] { font-size: calc(15px * var(--fs, 1)) !important; }
+.text-\[22px\] { font-size: calc(22px * var(--fs, 1)) !important; }
+@media (min-width: 640px) { .text-\[11px\].sm\:text-xs { font-size: .75rem !important; } } /* texte en 11 px sur téléphone, « xs » (en rem, suit déjà la taille choisie) dès 640 px */
 
 
 /* ===== Menu de gauche : couleurs propres (clair et sombre), plus fortes que les anciennes règles globales ===== */

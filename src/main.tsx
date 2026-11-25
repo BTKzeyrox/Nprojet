@@ -25,7 +25,7 @@ installScrollRescue();
 installOfflineShell();
 // Sur ordinateur, la page ne se zoome plus (pincement, Ctrl + molette, Ctrl +/−/0) ; le zoom des photos reste
 installPageZoomLock();
-setEvidenceSource(() => (actionDb as unknown as { mutationSeq?: number }).mutationSeq || 0);
+setEvidenceSource(() => actionDb.mutationSeq + actionDb.apiWrites);
 installActionEvidence();
 
 createRoot(document.getElementById('root')!).render(
