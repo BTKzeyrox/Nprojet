@@ -20,6 +20,7 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
+import { useNavMode } from './utils/navMode';
 import { TopBar } from './components/TopBar';
 import { isKeyboardOpen } from './utils/keyboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -363,6 +364,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Menu de gauche : téléphone = tiroir ; tablette = bande d'icônes qui s'ouvre au clic ; grand écran = menu complet ou bande d'icônes (choix gardé)
   const wide = useViewportWidth(); // fiable après une rotation (voir viewportWidth.ts)
+  const navMode = useNavMode();
   const [sbCollapsed, setSbCollapsed] = useState(() => { try { return localStorage.getItem('df_sb_collapsed') === '1'; } catch { return false; } });
   const toggleSbCollapsed = () => setSbCollapsed(v => { const n = !v; try { localStorage.setItem('df_sb_collapsed', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const sbPhone = wide < 768;
@@ -634,6 +636,7 @@ export default function App() {
         <ScrollButtons hidden={activeView === 'chat'} />
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
+          onOpenMenu={() => setIsMobileSidebarOpen(true)}
           currentUser={viewUser}
           onOpenProfile={() => setCvModalUser(currentUser)}
           operatorMode={operatorMode}
@@ -643,7 +646,7 @@ export default function App() {
         />
 
         {/* Barre du bas (téléphone seulement) : Accueil, Tableau de bord, Messages, Calendrier, Menu */}
-        <BottomNav currentUser={viewUser} activeView={activeView} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} onOpenMenu={() => setIsMobileSidebarOpen(true)} />
+        {navMode === 'bottom' && <BottomNav currentUser={viewUser} activeView={activeView} onNavigate={view => { setFocusOperatorId(null); setActiveView(view); }} onOpenMenu={() => setIsMobileSidebarOpen(true)} />}
 
         {currentUser && currentUser.role !== 'admin' && <AccessBanner user={currentUser} />}
 

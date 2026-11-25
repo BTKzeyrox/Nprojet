@@ -5,12 +5,14 @@ import React from 'react';
 import { Languages, Moon, Sun } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { hapticOn, setHaptic, tap } from '../utils/haptic';
+import { useNavMode, writeNavMode } from '../utils/navMode';
 
 // Thème et langue, en petit (demande de BTK, 2026-10-29) : un interrupteur soleil / lune pour le thème, une petite liste pour la langue.
 // Réglé sur cet appareil, enregistré tout de suite (AppContext). Même contrôle dans toutes les vues de Réglages.
 export const ThemeLangControls: React.FC = () => {
   const { theme, toggleTheme, lang, setLang } = useApp();
   const dark = theme === 'dark';
+  const navMode = useNavMode();
   const [haptic, setHap] = React.useState(() => hapticOn());
   const flipHaptic = (v: boolean) => { setHaptic(v); setHap(v); if (v) tap('light'); }; // propre à cet appareil
   const row = 'flex items-center justify-between gap-3 min-h-[44px]';
@@ -31,6 +33,14 @@ export const ThemeLangControls: React.FC = () => {
       <div className={row}>
         <label htmlFor="df-haptic" className="text-sm text-slate-200">{lang === 'en' ? 'Touch feedback (vibration)' : 'Retour tactile (vibration)'}<span className="block text-[11px] text-slate-400">{lang === 'en' ? 'Android and recent iPhones. Off if your phone reduces motion.' : 'Android et iPhone récents. Coupé si ton téléphone réduit les animations.'}</span></label>
         <input id="df-haptic" type="checkbox" role="switch" aria-checked={haptic} checked={haptic} data-haptic-switch onChange={e => flipHaptic(e.target.checked)} className="w-6 h-6 accent-emerald-500 shrink-0 cursor-pointer" />
+      </div>
+      <div className={row}>
+        <label htmlFor="df-nav-mode" className="text-sm text-slate-200">{lang === 'en' ? 'Phone menu' : 'Menu du téléphone'}<span className="block text-[11px] text-slate-400">{lang === 'en' ? 'Bottom bar, or only the header. Follows your account on every device.' : 'Barre du bas, ou seulement le haut. Suit ton compte sur tous tes appareils.'}</span></label>
+        <select id="df-nav-mode" data-nav-mode value={navMode} onChange={e => writeNavMode(e.target.value === 'top' ? 'top' : 'bottom')}
+          className="min-h-[40px] rounded-lg border border-slate-600 bg-slate-900/60 text-slate-100 text-sm px-3 pr-8 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+          <option value="bottom">{lang === 'en' ? 'Bottom bar' : 'Barre du bas'}</option>
+          <option value="top">{lang === 'en' ? 'Header only' : 'Seulement le haut'}</option>
+        </select>
       </div>
       <div className={row}>
         <label htmlFor="df-lang-select" className="text-sm text-slate-200 inline-flex items-center gap-1.5"><Languages className="w-4 h-4 text-slate-400" aria-hidden="true" />{lang === 'en' ? 'Language' : 'Langue'}</label>

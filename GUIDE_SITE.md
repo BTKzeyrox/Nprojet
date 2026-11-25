@@ -704,6 +704,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `monthGrid.ts` | Grille de présence du mois (M27.10) : les personnes en lignes, les jours en colonnes, P / R / ½ / A et le total de jours. Règles pures, sans écran ni serveur. |
 | `monthLevel.ts` | Niveau de performance d'un opérateur = nombre de missions VALIDÉES dans le mois (du 1er au dernier jour, heure de Madagascar). Règle pure, calculée, jamais donnée à la main. |
 | `navIntent.ts` | Filtre à appliquer sur la page Validations quand on arrive depuis une notification |
+| `navMode.ts` | Réglage « Menu du téléphone » : barre du bas (défaut) ou seulement le haut, comme avant. Utilisé par : App.tsx, TopBar.tsx, BottomNav.tsx, ThemeLangControls.tsx. |
 | `navTarget.ts` | « Va exactement à cet élément » : une page marque ses éléments avec data-nav="...", |
 | `newsAccess.ts` | Actualités : qui peut publier, qui peut modifier, qui peut voir (règles pures, copie identique dans supabase/functions/df-api/index.ts, bloc NEWSACCESS ; contrôlé par scripts/check-news-access.ts) |
 | `newsLink.ts` | Lien direct vers une publication des Actualités, et lecture de ces liens dans un message (règles pures, sans écran, sans réseau ; contrôlé par scripts/check-news-link.ts) |
@@ -1118,6 +1119,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:keep-originals` | Photos : toujours compressées dans le chat (plus de case « Compresser ») ; réglage admin « garder l'original », éteint au départ, jamais donné aux employés. Lancer : npm run check:keep-originals |
 | `npm run check:hide-file-details` | Détails des fichiers cachés (nom d'origine, taille) sauf pour l'admin ; chat : un seul envoi, aperçu, retrait d'une photo ; avertissement « pas de code » fermable. Lancer : npm run check:hide-file-details |
 | `npm run check:bottom-nav` | Barre du bas (téléphone) : Accueil, Dashboard, Messages, Calendrier, Menu ; en-tête : logo + nom, recherche, notifications, profil. Lancer : npm run check:bottom-nav |
+| `npm run check:nav-mode` | Contrôle : réglage « Menu du téléphone » (barre du bas ou seulement le haut), synchronisé par compte. Lancer : npm run check:nav-mode |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

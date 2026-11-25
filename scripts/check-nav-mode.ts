@@ -1,0 +1,25 @@
+// Contrôle : réglage « Menu du téléphone » (barre du bas ou seulement le haut), synchronisé par compte. Lancer : npm run check:nav-mode
+import { readFileSync } from 'node:fs';
+import { parseNavMode, NAV_MODE_KEY } from '../src/utils/navMode';
+import * as P from '../src/utils/prefsRules';
+let f = 0, t = 0;
+const eq = (g: unknown, w: unknown, n: string) => { t++; if (JSON.stringify(g) !== JSON.stringify(w)) { f++; console.log(`ECHEC ${n}\n  obtenu ${JSON.stringify(g)}\n  attendu ${JSON.stringify(w)}`); } };
+const rd = (p: string) => readFileSync(p, 'utf8');
+eq(parseNavMode('top'), 'top', 'top = seulement le haut');
+eq(parseNavMode('bottom'), 'bottom', 'bottom = barre du bas');
+eq([parseNavMode(null), parseNavMode(undefined), parseNavMode('x'), parseNavMode(1)], ['bottom', 'bottom', 'bottom', 'bottom'], 'défaut = barre du bas');
+eq(P.PREF_NAMES.includes('nav_mode'), true, 'réglage nav_mode synchronisé par compte');
+eq(P.localKeyOf('nav_mode', 'u1'), NAV_MODE_KEY, 'clé locale du réglage');
+eq(P.nameOfLocalKey(NAV_MODE_KEY, 'u1'), 'nav_mode', 'clé inverse');
+eq(P.cleanPrefs({ nav_mode: 'top' }), { nav_mode: 'top' }, 'nav_mode accepté');
+eq(P.planPrefsSync({ nav_mode: 'top' }, { nav_mode: null }).toLocal, { nav_mode: 'top' }, 'un autre appareil reprend le choix du compte');
+eq(/'ai_optin', 'nav_mode'\]/.test(rd('supabase/functions/df-api/index.ts')), true, 'serveur : nav_mode dans la liste des réglages');
+const app = rd('src/App.tsx');
+eq(/navMode === 'bottom' && <BottomNav/.test(app), true, 'App : barre du bas seulement si le choix est « bottom »');
+eq(/<TopBar\s+onOpenMenu=/.test(app), true, 'App : le haut reçoit le bouton menu');
+const tb = rd('src/components/TopBar.tsx');
+eq(/topOnly && onOpenMenu && <button[^>]*data-header-menu/.test(tb), true, 'TopBar : bouton menu seulement en mode « haut »');
+eq(/topOnly \? 'contents' : 'hidden'/.test(tb), true, 'TopBar : raccourcis Dashboard / Messages en mode « haut »');
+eq(/data-nav-mode/.test(rd('src/components/ThemeLangControls.tsx')), true, 'Réglages : choix du menu du téléphone');
+console.log(f ? `${f} échec(s) sur ${t}` : `OK : ${t} contrôles`);
+process.exit(f ? 1 : 0);
