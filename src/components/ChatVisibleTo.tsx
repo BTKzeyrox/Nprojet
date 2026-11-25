@@ -1,6 +1,7 @@
 // « Visible seulement par… » (M28.3) : choix des personnes qui verront le prochain message. Le serveur cache ensuite le message à tous les autres (règles : utils/chatShared.ts).
 import React, { useState } from 'react';
 import { Lock, X } from 'lucide-react';
+import { fb } from '../utils/actionFeedback';
 
 export interface VisiblePerson { id: string; name: string }
 
@@ -23,7 +24,7 @@ export const ChatVisibleTo: React.FC<{ light: boolean; people: VisiblePerson[]; 
         </ul>
         <div className="p-3 border-t border-slate-500/30 flex gap-2">
           <button type="button" data-visible-to-ok disabled={sel.length === 0} onClick={() => onPick(sel)} className="flex-1 min-h-[44px] rounded-lg bg-emerald-600 text-white text-sm font-bold cursor-pointer disabled:opacity-40">{sel.length ? `Choisir (${sel.length})` : 'Choisis au moins une personne'}</button>
-          {initial.length > 0 && <button type="button" onClick={() => onPick([])} className="min-h-[44px] px-3 rounded-lg border border-slate-500/50 text-sm cursor-pointer">Retirer</button>}
+          {initial.length > 0 && <button type="button" onClick={fb('remove', () => onPick([]))} className="min-h-[44px] px-3 rounded-lg border border-slate-500/50 text-sm cursor-pointer">Retirer</button>}
         </div>
       </div>
     </div>

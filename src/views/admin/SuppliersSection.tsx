@@ -11,6 +11,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { MAX_LEAD_DAYS, supplierRanking } from '../../utils/purchasing';
 import type { Supplier } from '../../types';
+import { fb } from '../../utils/actionFeedback';
 
 // Section « Fournisseurs » de la page Achats (responsable seulement). Une fiche = nom, contact, délai habituel, note.
 // Un fournisseur qui a servi (bon, entrée de stock, dépense) ne se supprime pas : on l'archive.
@@ -120,14 +121,14 @@ export const SuppliersSection: React.FC<{ ver: number }> = ({ ver }) => {
                         <button type="button" onClick={() => { setError(''); setConfirmId(null); setEditor(toEditor(s)); }} className={btn}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>
                         {s.active === false
                           ? <button type="button" onClick={() => archive(s, true)} className={btn}><ArchiveRestore className="w-4 h-4" />{t('Réactiver', 'Reactivate')}</button>
-                          : <button type="button" onClick={() => archive(s, false)} className={btn}><Archive className="w-4 h-4" />{t('Archiver', 'Archive')}</button>}
+                          : <button type="button" onClick={fb('archive', () => archive(s, false))} className={btn}><Archive className="w-4 h-4" />{t('Archiver', 'Archive')}</button>}
                         {confirmId === s.id ? (
                           <>
-                            <button type="button" onClick={() => remove(s.id)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer la fiche', 'Delete the record')}</button>
+                            <button type="button" onClick={fb('delete', () => remove(s.id))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer la fiche', 'Delete the record')}</button>
                             <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                           </>
                         ) : (
-                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(s.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(s.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </div>
                     </div>
@@ -161,7 +162,7 @@ export const SuppliersSection: React.FC<{ ver: number }> = ({ ver }) => {
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', save)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

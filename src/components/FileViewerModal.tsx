@@ -7,6 +7,7 @@ import { ArrowLeft, Download, ExternalLink, FileText, Trash2 } from 'lucide-reac
 import { downloadFile } from '../utils/attachments';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { shownFileName } from '../utils/fileLabel';
+import { fb } from '../utils/actionFeedback';
 
 interface FileViewerModalProps {
   url: string;
@@ -32,10 +33,10 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name: rea
           <h3 className="text-sm font-semibold text-white truncate leading-tight flex items-center gap-1.5"><FileText className="w-4 h-4 shrink-0 text-white/70" /><span className="truncate">{name}</span></h3>
           {subtitle && <p className="text-xs text-white/60 truncate leading-tight">{subtitle}</p>}
         </div>
-        <button type="button" onClick={() => void downloadFile(url, saveAs)} className={`${round} !w-11 !px-0 sm:!w-auto sm:!px-4`} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /><span className="hidden sm:inline">Télécharger</span></button>
+        <button type="button" onClick={fb('download', () => void downloadFile(url, saveAs))} className={`${round} !w-11 !px-0 sm:!w-auto sm:!px-4`} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /><span className="hidden sm:inline">Télécharger</span></button>
         <a href={url} target="_blank" rel="noreferrer" className={`${round} !w-11 !px-0`} title="Ouvrir à part" aria-label="Ouvrir à part"><ExternalLink className="w-5 h-5" /></a>
         {onDelete && (
-          <button type="button" onClick={onDelete} className={`${round} !w-11 !px-0 !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
+          <button type="button" onClick={fb('delete', onDelete)} className={`${round} !w-11 !px-0 !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
         )}
       </header>
       <div className="flex-1 min-h-0 bg-white rounded-t-3xl overflow-hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>

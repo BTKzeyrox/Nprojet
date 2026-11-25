@@ -20,6 +20,7 @@ import { MissionsToLink } from './MissionsToLink';
 import { ImportDialog } from '../../components/ImportDialog';
 import { computeClientBadges } from '../../utils/clientBadges';
 import { ClientBadgeChips, ClientRelationCard } from '../../components/ClientBadges';
+import { fb } from '../../utils/actionFeedback';
 
 // Page « Clients » (responsable seulement) : liste, fiche, création, modification, archivage.
 // Le statut (Nouveau, Régulier, Stratégique, Inactif…) n'est JAMAIS saisi : il se calcule avec les missions validées (src/utils/clients.ts)
@@ -131,7 +132,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <button type="button" onClick={newClient} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau client', 'New client')}</button>
-          <button type="button" onClick={() => setImporting(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
+          <button type="button" onClick={fb('import', () => setImporting(true))} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
         </div>
       </div>
 
@@ -230,14 +231,14 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                         <button type="button" onClick={() => editClient(c)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold flex items-center gap-1.5"><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>
                         {c.active === false
                           ? <button type="button" onClick={() => archive(c, true)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold flex items-center gap-1.5"><ArchiveRestore className="w-4 h-4" />{t('Réactiver', 'Reactivate')}</button>
-                          : <button type="button" onClick={() => archive(c, false)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold flex items-center gap-1.5"><Archive className="w-4 h-4" />{t('Archiver', 'Archive')}</button>}
+                          : <button type="button" onClick={fb('archive', () => archive(c, false))} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold flex items-center gap-1.5"><Archive className="w-4 h-4" />{t('Archiver', 'Archive')}</button>}
                         {confirmId === c.id ? (
                           <>
-                            <button type="button" onClick={() => remove(c.id)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer la fiche', 'Delete the record')}</button>
+                            <button type="button" onClick={fb('delete', () => remove(c.id))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer la fiche', 'Delete the record')}</button>
                             <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                           </>
                         ) : (
-                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(c.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(c.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </div>
                     </div>
@@ -297,18 +298,18 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                     {[...new Set([...types, ...(row.type ? [row.type] : [])])].filter(x => x === row.type || !editor.types.some(o => o.type === x)).map(x => <option key={x} value={x}>{x}</option>)}
                   </select>
                   <input inputMode="numeric" value={row.price} aria-label={t('Prix (Ar)', 'Price (Ar)')} placeholder="Ar" onChange={e => setEditor({ ...editor, types: editor.types.map((x, j) => j === i ? { ...x, price: e.target.value } : x) })} className={`${field} w-28`} />
-                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={() => setEditor({ ...editor, types: editor.types.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>
+                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={fb('remove', () => setEditor({ ...editor, types: editor.types.filter((_, j) => j !== i) }))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>
                 </div>
               ))}
               {editor.types.length < CLIENT_LIMITS.types_max && types.some(x => !editor.types.some(o => o.type === x)) && (
-                <button type="button" onClick={() => setEditor({ ...editor, types: [...editor.types, { type: '', price: '' }] })} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter une exception', 'Add an exception')}</button>
+                <button type="button" onClick={fb('add', () => setEditor({ ...editor, types: [...editor.types, { type: '', price: '' }] }))} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter une exception', 'Add an exception')}</button>
               )}
             </div>
 
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', save)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

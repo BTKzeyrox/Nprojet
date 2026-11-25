@@ -8,6 +8,7 @@ import type { ChatMessage, NewsPost, User } from '../types';
 import { db } from '../db/store';
 import PollBlock from './PollBlock';
 import { POLL_MAX_OPTIONS, POLL_MAX_DATES, POLL_MAX_OPTION, POLL_MAX_QUESTION } from '../utils/pollRules';
+import { fb } from '../utils/actionFeedback';
 
 /** Icône du type de sondage (date, « J'ai lu », sondage) : titre de la carte, liste des discussions, message épinglé. */
 export const PollKindIcon: React.FC<{ kind?: string; size?: string }> = ({ kind, size = 'w-4 h-4' }) => {
@@ -51,10 +52,10 @@ export const PollComposer: React.FC<{ kind: Kind; light: boolean; onClose: () =>
         {kind !== 'ack' && opts.map((o, i) => (
           <input key={i} data-poll-opt value={o} maxLength={POLL_MAX_OPTION} onChange={e => setOpts(opts.map((x, j) => (j === i ? e.target.value : x)))} placeholder={kind === 'date' ? `Date ${i + 1} (ex. : lundi 10)` : `Choix ${i + 1}`} className={field} />
         ))}
-        {kind !== 'ack' && opts.length < max && <button type="button" data-poll-add onClick={() => setOpts([...opts, ''])} className="min-h-[44px] flex items-center gap-1 text-sm font-semibold cursor-pointer text-emerald-600"><Plus className="w-4 h-4" />{kind === 'date' ? 'Ajouter une date' : 'Ajouter un choix'}</button>}
+        {kind !== 'ack' && opts.length < max && <button type="button" data-poll-add onClick={fb('add', () => setOpts([...opts, '']))} className="min-h-[44px] flex items-center gap-1 text-sm font-semibold cursor-pointer text-emerald-600"><Plus className="w-4 h-4" />{kind === 'date' ? 'Ajouter une date' : 'Ajouter un choix'}</button>}
         {kind !== 'ack' && !unique && <p className="text-xs text-red-500">Deux choix identiques : change l'un des deux.</p>}
         <p className="text-xs opacity-70">{kind === 'ack' ? "Chacun touche « J'ai lu » ; seul toi vois qui a lu." : 'Tous voient les résultats ; seul toi vois les noms.'}</p>
-        <button type="button" data-poll-send disabled={!valid} onClick={() => onSend({ question: q.trim(), options: kind === 'ack' ? [] : clean, kind })} className="w-full min-h-[48px] rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 cursor-pointer">Envoyer</button>
+        <button type="button" data-poll-send disabled={!valid} onClick={fb('send', () => onSend({ question: q.trim(), options: kind === 'ack' ? [] : clean, kind }))} className="w-full min-h-[48px] rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 cursor-pointer">Envoyer</button>
       </div>
     </div>,
     document.body,

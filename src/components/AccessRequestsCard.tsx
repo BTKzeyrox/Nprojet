@@ -8,6 +8,7 @@ import { askReason } from './ReasonModal';
 import { ACCESS_HOURS, madaClock, shiftEndMs, resolveAccessUntil, untilFromClock } from '../utils/accessRequest';
 import type { AccessRequest, AppSettings } from '../types';
 import { effShift } from '../utils/shiftMode';
+import { fb } from '../utils/actionFeedback';
 
 const ROLE_FR: Record<string, string> = { employee: 'Opérateur', accountant: 'Comptable', team_lead: "Chef d'équipe" };
 
@@ -71,7 +72,7 @@ export const AccessRequestsCard: React.FC<{ requests: AccessRequest[]; cfg: AppS
           </div>
           <EndChoice r={r} cfg={cfg} value={choice[r.id] || 'shift_end'} onChange={v => setChoice(c => ({ ...c, [r.id]: v }))} clock={clock[r.id] || ''} onClock={v => setClock(c => ({ ...c, [r.id]: v }))} />
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" disabled={busy} onClick={() => askReason({ title: 'Refuser la demande ?', message: `${r.name} verra ce motif sur la page de connexion.`, onSubmit: reason => void db.decideAccess(r.id, { decision: 'refuse', reason }).then(x => { if (!x.success) setErr(x.error || 'Action impossible.'); }) })}
+            <button type="button" disabled={busy} onClick={fb('refuse', () => askReason({ title: 'Refuser la demande ?', message: `${r.name} verra ce motif sur la page de connexion.`, onSubmit: reason => void db.decideAccess(r.id, { decision: 'refuse', reason }).then(x => { if (!x.success) setErr(x.error || 'Action impossible.'); }) }))}
               className="min-h-[44px] px-3 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer">Refuser</button>
             <button type="button" disabled={busy} onClick={() => void decide(r, 'approve')} className="min-h-[44px] rounded-xl px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">Autoriser</button>
           </div>

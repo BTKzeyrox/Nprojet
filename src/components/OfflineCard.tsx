@@ -10,6 +10,7 @@ import { askConfirm } from './ConfirmModal';
 import { showToast } from './ToastHost';
 import { PinForm } from './OfflinePin';
 import { openOfflineCenter } from './OfflineCenter';
+import { fb } from '../utils/actionFeedback';
 
 /** Réglages > Travail hors ligne : état de la copie sur cet appareil, code de verrouillage, actions en attente, effacer la copie. */
 export const OfflineCard: React.FC = () => {
@@ -60,7 +61,7 @@ export const OfflineCard: React.FC = () => {
           {st.enabled && st.can_offline && (
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => openOfflineCenter('pending')} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{t(`Actions en attente (${un.count}) et à revoir (${st.review.length})`, `Waiting actions (${un.count}) and to review (${st.review.length})`)}</button>
-              <button type="button" onClick={() => setForm(form ? null : 'change')} className={`${btn} border-slate-600 text-slate-200`}>{st.encrypted ? t('Changer le code', 'Change the code') : t('Ajouter un code', 'Add a code')}</button>
+              <button type="button" onClick={fb('add', () => setForm(form ? null : 'change'))} className={`${btn} border-slate-600 text-slate-200`}>{st.encrypted ? t('Changer le code', 'Change the code') : t('Ajouter un code', 'Add a code')}</button>
               {operator && st.encrypted && <button type="button" onClick={removeCode} className={`${btn} border-slate-600 text-slate-200`}>{t('Retirer le code', 'Remove the code')}</button>}
             </div>
           )}

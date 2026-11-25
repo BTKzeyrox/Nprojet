@@ -6,6 +6,7 @@ import { ShieldCheck, Copy, Download } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { prettySecret } from '../utils/totp';
+import { fb } from '../utils/actionFeedback';
 
 // Sécurité en deux étapes (module 16, M16.4) : carte des Réglages, pour le responsable et le Comptable seulement (le serveur décide).
 // Le secret est montré UNE fois, au moment de l'ajouter dans l'appli d'authentification ; les codes de secours aussi.
@@ -106,8 +107,8 @@ export const TwoStepCard: React.FC = () => {
           <p className="text-sm text-amber-200">{t("Garde ces codes de secours en lieu sûr. Chacun ne sert qu'une fois, si tu perds ton téléphone. Ils ne seront plus montrés.", "Keep these backup codes somewhere safe. Each works once, if you lose your phone. They won't be shown again.")}</p>
           <ul className="grid grid-cols-2 gap-1 font-mono text-sm text-white bg-[#141e2a] rounded-lg p-3 select-all">{codes.map(c => <li key={c}>{c}</li>)}</ul>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={btn} onClick={copyCodes}><Copy className="w-4 h-4" />{t('Copier', 'Copy')}</button>
-            <button type="button" className={btn} onClick={downloadCodes}><Download className="w-4 h-4" />{t('Télécharger', 'Download')}</button>
+            <button type="button" className={btn} onClick={fb('copy', copyCodes)}><Copy className="w-4 h-4" />{t('Copier', 'Copy')}</button>
+            <button type="button" className={btn} onClick={fb('download', downloadCodes)}><Download className="w-4 h-4" />{t('Télécharger', 'Download')}</button>
             <button type="button" className={btnMain} onClick={() => { setCodes([]); reset(); }}>{t("C'est noté", 'Done')}</button>
           </div>
         </div>

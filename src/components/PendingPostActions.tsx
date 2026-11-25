@@ -10,6 +10,7 @@ import { PostSession } from '../types';
 import { askConfirm } from './ConfirmModal';
 import { ScoreInput } from './ScoreInput';
 import { compressProofImage } from '../utils/imageUtils';
+import { fb } from '../utils/actionFeedback';
 
 // Boutons « Modifier » et « Annuler » directement sur la carte d'une mission en attente de validation (opérateur)
 export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () => void }> = ({ post, onGoToPost }) => {
@@ -104,7 +105,7 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
             {err && <div className="text-red-300">{err}</div>}
             <div className="pt-1 flex justify-end gap-2">
               <button type="button" onClick={() => setEditing(false)} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded cursor-pointer">Fermer</button>
-              <button type="button" disabled={busy} onClick={save} className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded disabled:opacity-50 cursor-pointer">Enregistrer</button>
+              <button type="button" disabled={busy} onClick={fb('save', save)} className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded disabled:opacity-50 cursor-pointer">Enregistrer</button>
             </div>
           </div>
         </div>,

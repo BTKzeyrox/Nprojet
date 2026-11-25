@@ -16,6 +16,7 @@ import { StockCategoriesDialog } from './StockCategoriesDialog';
 import { productNavId, STORAGE_FLASH_MS } from '../../utils/storageNav';
 import type { Product, StockMoveType } from '../../types';
 import { SafeImage } from '../../components/SafeImage';
+import { fb } from '../../utils/actionFeedback';
 
 // Onglet « Stock » (responsable seulement) : produits, quantités calculées avec les mouvements, voyant rouge sous le seuil.
 // La quantité n'est JAMAIS saisie : on ajoute une entrée, une sortie ou un ajustement, et le total se recalcule.
@@ -155,7 +156,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
         <p className="text-[11px] text-slate-500">{t('Valeur = quantité × prix d\'achat. La quantité se calcule avec les entrées, sorties et ajustements : on ne la saisit jamais.', 'Value = quantity × purchase price. The quantity is calculated from entries, exits and adjustments: it is never typed in.')}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <button type="button" onClick={newProduct} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau produit', 'New product')}</button>
-          <button type="button" onClick={() => setImporting(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
+          <button type="button" onClick={fb('import', () => setImporting(true))} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
           <button type="button" onClick={() => setCatOpen(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><Tag className="w-4 h-4" />{t('Catégories', 'Categories')}</button>
         </div>
       </div>
@@ -211,19 +212,19 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
                     <div className={`text-sm font-bold whitespace-nowrap ${r.low ? 'text-rose-400' : 'text-white'}`}>{num(r.qty)} <span className="text-[11px] font-normal text-slate-400">{p.unit}</span></div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button type="button" aria-label={t(`Retirer 1 ${p.unit}`, `Remove 1 ${p.unit}`)} onClick={() => quickMove(p, 'out')} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-700 text-rose-300 text-base font-bold flex items-center justify-center">−1</button>
-                    <button type="button" aria-label={t(`Ajouter 1 ${p.unit}`, `Add 1 ${p.unit}`)} onClick={() => quickMove(p, 'in')} className="min-h-[44px] min-w-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-base font-bold flex items-center justify-center">+1</button>
+                    <button type="button" aria-label={t(`Retirer 1 ${p.unit}`, `Remove 1 ${p.unit}`)} onClick={fb('remove', () => quickMove(p, 'out'))} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-700 text-rose-300 text-base font-bold flex items-center justify-center">−1</button>
+                    <button type="button" aria-label={t(`Ajouter 1 ${p.unit}`, `Add 1 ${p.unit}`)} onClick={fb('add', () => quickMove(p, 'in'))} className="min-h-[44px] min-w-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-base font-bold flex items-center justify-center">+1</button>
                     <button type="button" onClick={() => newMove(p, 'in')} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Entrée', 'Entry')}</button>
                     <button type="button" onClick={() => newMove(p, 'out')} className="min-h-[44px] px-3 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Sortie', 'Exit')}</button>
                     <button type="button" aria-label={t('Historique', 'History')} aria-pressed={openHistory === p.id} onClick={() => setOpenHistory(openHistory === p.id ? null : p.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><History className="w-4 h-4" /></button>
                     <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => editProduct(p)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><Pencil className="w-4 h-4" /></button>
                     {confirmId === p.id ? (
                       <>
-                        <button type="button" onClick={() => removeProduct(p.id)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer avec ses mouvements', 'Delete with its movements')}</button>
+                        <button type="button" onClick={fb('delete', () => removeProduct(p.id))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer avec ses mouvements', 'Delete with its movements')}</button>
                         <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                       </>
                     ) : (
-                      <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(p.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                      <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(p.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                     )}
                   </div>
                   {openHistory === p.id && (
@@ -234,11 +235,11 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
                           <div className={`font-semibold whitespace-nowrap ${m.type === 'out' || m.qty < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{m.type === 'out' ? '−' : m.qty < 0 ? '−' : '+'}{num(Math.abs(m.qty))}</div>
                           {confirmMove === m.id ? (
                             <span className="flex gap-1">
-                              <button type="button" onClick={() => removeMove(m.id)} className="min-h-[44px] px-2 rounded-lg bg-rose-700 text-white text-xs font-semibold">{t('Supprimer', 'Delete')}</button>
+                              <button type="button" onClick={fb('delete', () => removeMove(m.id))} className="min-h-[44px] px-2 rounded-lg bg-rose-700 text-white text-xs font-semibold">{t('Supprimer', 'Delete')}</button>
                               <button type="button" onClick={() => setConfirmMove(null)} className="min-h-[44px] px-2 rounded-lg border border-slate-700 text-slate-200 text-xs">{t('Non', 'No')}</button>
                             </span>
                           ) : (
-                            <button type="button" aria-label={t('Supprimer ce mouvement', 'Delete this movement')} onClick={() => setConfirmMove(m.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-rose-300"><Trash2 className="w-3.5 h-3.5" /></button>
+                            <button type="button" aria-label={t('Supprimer ce mouvement', 'Delete this movement')} onClick={fb('delete', () => setConfirmMove(m.id))} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-rose-300"><Trash2 className="w-3.5 h-3.5" /></button>
                           )}
                         </div>
                       ))}
@@ -288,7 +289,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
                   {photoBusy ? t('Envoi…', 'Sending…') : pEdit.photo ? t('Changer la photo', 'Change photo') : t('Ajouter une photo', 'Add a photo')}
                   <input type="file" accept="image/*" className="sr-only" disabled={photoBusy} onChange={e => { void pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
                 </label>
-                {pEdit.photo && <button type="button" onClick={() => setPEdit({ ...pEdit, photo: '' })} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm">{t('Retirer', 'Remove')}</button>}
+                {pEdit.photo && <button type="button" onClick={fb('remove', () => setPEdit({ ...pEdit, photo: '' }))} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm">{t('Retirer', 'Remove')}</button>}
               </div>
             </div>
             {!pEdit.id && (
@@ -334,9 +335,9 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setPEdit(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={() => saveProduct(false)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', () => saveProduct(false))} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
-            {!pEdit.id && <button type="button" onClick={() => saveProduct(true)} className="w-full min-h-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold">{t('Enregistrer et ajouter un autre', 'Save and add another')}</button>}
+            {!pEdit.id && <button type="button" onClick={fb('save', () => saveProduct(true))} className="w-full min-h-[44px] rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold">{t('Enregistrer et ajouter un autre', 'Save and add another')}</button>}
           </div>
         </div>,
         document.body,
@@ -386,7 +387,7 @@ export const StockTab: React.FC<Props> = ({ lang, initialFilter, spaceId = DEFAU
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setMEdit(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={saveMove} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', saveMove)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

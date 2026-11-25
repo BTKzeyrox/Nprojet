@@ -6,6 +6,7 @@ import { AlertTriangle, RefreshCw, RotateCcw, LogOut, Copy, LifeBuoy } from 'luc
 import { db } from '../db/store';
 import { hideSplash } from '../utils/splash';
 import { captureCrash, reportToText, copyText, clearCacheAndReload, isChunkError, autoReloadForUpdate, ErrorReport } from '../utils/errorReport';
+import { fb } from '../utils/actionFeedback';
 
 interface Props {
   scope: 'app' | 'page'; // « app » : écran entier ; « page » : le menu reste utilisable
@@ -84,7 +85,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <button type="button" onClick={() => void clearCacheAndReload()} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">
             <RotateCcw className="w-4 h-4" /> Vider le cache et recharger
           </button>
-          <button type="button" onClick={this.copy} disabled={!report} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40">
+          <button type="button" onClick={fb('copy', this.copy)} disabled={!report} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40">
             <Copy className="w-4 h-4" /> {this.state.copied ? 'Rapport copié ✓' : 'Copier le rapport'}
           </button>
           <button type="button" onClick={this.logout} className="rounded-xl px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer">

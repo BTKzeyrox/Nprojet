@@ -21,6 +21,7 @@ import { fmtDuration } from '../../utils/performance';
 import type { User } from '../../types';
 import type { Slip } from '../../utils/payslip';
 import { formatCurrencyAr } from '../../utils/formatUtils';
+import { fb } from '../../utils/actionFeedback';
 
 const GRANS: [StatsGranularity, string][] = [['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois'], ['year', 'Année']];
 const VS: Record<StatsGranularity, string> = { day: 'par rapport à hier', week: 'par rapport à la semaine dernière', month: 'par rapport au mois dernier', year: 'par rapport à l\'année dernière' };
@@ -196,7 +197,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
         {onNavigate && (
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onNavigate('dashboard')} className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-100 text-sm font-semibold">Voir le tableau</button>
-            <button type="button" onClick={() => onNavigate('validations')} className="min-h-[44px] rounded-lg border border-amber-600/60 bg-amber-900/20 hover:bg-amber-900/40 text-amber-200 text-sm font-semibold">Valider</button>
+            <button type="button" onClick={fb('validate', () => onNavigate('validations'))} className="min-h-[44px] rounded-lg border border-amber-600/60 bg-amber-900/20 hover:bg-amber-900/40 text-amber-200 text-sm font-semibold">Valider</button>
           </div>
         )}
         <p className="text-[11px] text-slate-500">Les missions n'ont pas encore de date limite : les retards ne peuvent pas être affichés pour l'instant.</p>

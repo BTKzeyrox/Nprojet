@@ -18,6 +18,7 @@ import { WorkModeCard } from './WorkModeCard';
 import * as A from '../utils/sheetAuto';
 import { applyTypeHint, dismissHint, firstHint, retypeColumn } from '../utils/sheetRetype';
 import { TypeHintBanner } from './TypeHintBanner';
+import { fb } from '../utils/actionFeedback';
 
 // « Mes tableaux » (module 12) : saisie type Excel pour l'opérateur. Rangement provisoire sur l'appareil jusqu'à l'étape serveur (M12.4).
 const COLOR_CLS: Record<S.CondRule['color'], string> = { red: 'bg-red-500/25 text-red-200', green: 'bg-emerald-500/25 text-emerald-200', amber: 'bg-amber-500/25 text-amber-200', blue: 'bg-sky-500/25 text-sky-200' };
@@ -127,7 +128,7 @@ export const MySheets: React.FC = () => {
                 <span className="block text-sm font-semibold text-slate-100 truncate">{ro && s.owner_name ? `${s.owner_name} — ` : ''}{s.title}</span>
                 <span className="block text-[11px] text-slate-400">{S.activeRows(s).length} {t('ligne(s)', 'row(s)')} · {S.activeColumns(s).length} {t('colonne(s)', 'column(s)')} · {s.updated_at.slice(0, 10)}</span>
               </button>
-              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x)))}><Trash2 className="w-3.5 h-3.5" /></button>}
+              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x))))}><Trash2 className="w-3.5 h-3.5" /></button>}
             </li>);
 
   // ---------------- liste ----------------
@@ -144,7 +145,7 @@ export const MySheets: React.FC = () => {
         {!saveOk && <p className="text-xs text-red-300">{t('Cet appareil refuse l\'enregistrement (plein ou navigation privée). Télécharge ton travail avant de quitter.', 'This device refuses saving (full or private browsing). Download your work before leaving.')}</p>}
         {!ro && <div>
           <p data-tour="sheets-new" className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
-          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={() => setImporting(true)}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
+          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={fb('import', () => setImporting(true))}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
         </div>}
         {list.length === 0 && missionList.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (
           <>
@@ -160,7 +161,7 @@ export const MySheets: React.FC = () => {
         {!ro && trashed.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-slate-300 mb-2">{t('Corbeille (30 jours)', 'Trash (30 days)')}</p>
-            <ul className="space-y-1.5">{trashed.map(s => <li key={s.id} className="flex items-center gap-2 text-xs text-slate-400"><span className="flex-1 truncate">{s.title}</span><button className={btn} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.restoreSheet(x, nowIso()) : x)))}>{t('Restaurer', 'Restore')}</button></li>)}</ul>
+            <ul className="space-y-1.5">{trashed.map(s => <li key={s.id} className="flex items-center gap-2 text-xs text-slate-400"><span className="flex-1 truncate">{s.title}</span><button className={btn} onClick={fb('restore', () => setSheets(l => l.map(x => (x.id === s.id ? S.restoreSheet(x, nowIso()) : x))))}>{t('Restaurer', 'Restore')}</button></li>)}</ul>
           </div>
         )}
       </div>
@@ -202,7 +203,7 @@ export const MySheets: React.FC = () => {
         {!formMode && !ro && <button className={btn} onClick={() => setPanel(p => (p === 'rules' ? '' : 'rules'))}><Paintbrush className="w-3.5 h-3.5" />{t('Couleurs', 'Colors')}</button>}
         {!ro && <button className={btn} onClick={() => setPanel(p => (p === 'trash' ? '' : 'trash'))}><Trash2 className="w-3.5 h-3.5" />{t('Corbeille', 'Trash')}{trash.rows.length + trash.columns.length > 0 ? ` (${trash.rows.length + trash.columns.length})` : ''}</button>}
         {!formMode && <button className={btn} onClick={() => setPanel(p => (p === 'help' ? '' : 'help'))}>ƒx</button>}
-        <button className={btn} onClick={() => setPanel(p => (p === 'export' ? '' : 'export'))}><Download className="w-3.5 h-3.5" />{t('Télécharger', 'Download')}</button>
+        <button className={btn} onClick={fb('download', () => setPanel(p => (p === 'export' ? '' : 'export')))}><Download className="w-3.5 h-3.5" />{t('Télécharger', 'Download')}</button>
       </div>
 
       {panel === 'export' && (
@@ -226,14 +227,14 @@ export const MySheets: React.FC = () => {
         <div className="border border-slate-700 rounded-lg p-2.5 space-y-1.5 text-xs text-slate-300">
           <p className="text-slate-400">{t('Effacé pour de bon après 30 jours.', 'Erased for good after 30 days.')}</p>
           {trash.rows.length + trash.columns.length === 0 && <p>{t('La corbeille est vide.', 'The trash is empty.')}</p>}
-          {trash.columns.map(c => <div key={c.id} className="flex items-center gap-2"><span className="flex-1 truncate">{t('Colonne', 'Column')} « {c.name} »</span><button className={btn} onClick={() => apply(s => S.restoreColumn(s, c.id, nowIso()))}>{t('Restaurer', 'Restore')}</button></div>)}
-          {trash.rows.map(r => <div key={r.id} className="flex items-center gap-2"><span className="flex-1 truncate">{t('Ligne', 'Row')} : {Object.values(r.cells).slice(0, 3).join(' · ') || t('(vide)', '(empty)')}</span><button className={btn} onClick={() => apply(s => S.restoreRow(s, r.id, nowIso()))}>{t('Restaurer', 'Restore')}</button></div>)}
+          {trash.columns.map(c => <div key={c.id} className="flex items-center gap-2"><span className="flex-1 truncate">{t('Colonne', 'Column')} « {c.name} »</span><button className={btn} onClick={fb('restore', () => apply(s => S.restoreColumn(s, c.id, nowIso())))}>{t('Restaurer', 'Restore')}</button></div>)}
+          {trash.rows.map(r => <div key={r.id} className="flex items-center gap-2"><span className="flex-1 truncate">{t('Ligne', 'Row')} : {Object.values(r.cells).slice(0, 3).join(' · ') || t('(vide)', '(empty)')}</span><button className={btn} onClick={fb('restore', () => apply(s => S.restoreRow(s, r.id, nowIso())))}>{t('Restaurer', 'Restore')}</button></div>)}
         </div>
       )}
       {panel === 'rules' && (
         <div className="border border-slate-700 rounded-lg p-2.5 space-y-2 text-xs text-slate-300">
           <p className="text-slate-400">{t('Colore une case quand elle remplit une condition.', 'Colors a cell when it meets a condition.')}</p>
-          {cur.rules.map(r => <div key={r.id} className="flex items-center gap-2"><span className={`px-2 py-0.5 rounded ${COLOR_CLS[r.color]}`}>{cols.find(c => c.id === r.col)?.name || '?'} {r.op === 'empty' ? t('est vide', 'is empty') : `${r.op === 'contains' ? t('contient', 'contains') : r.op} ${r.value}`}</span><button className={btn} aria-label={t('Retirer', 'Remove')} onClick={() => apply(s => S.removeRule(s, r.id, nowIso()))}><X className="w-3.5 h-3.5" /></button></div>)}
+          {cur.rules.map(r => <div key={r.id} className="flex items-center gap-2"><span className={`px-2 py-0.5 rounded ${COLOR_CLS[r.color]}`}>{cols.find(c => c.id === r.col)?.name || '?'} {r.op === 'empty' ? t('est vide', 'is empty') : `${r.op === 'contains' ? t('contient', 'contains') : r.op} ${r.value}`}</span><button className={btn} aria-label={t('Retirer', 'Remove')} onClick={fb('remove', () => apply(s => S.removeRule(s, r.id, nowIso())))}><X className="w-3.5 h-3.5" /></button></div>)}
           <RuleForm cols={cols} t={t} onAdd={r => apply(s => S.addRule(s, r, nowIso()), t('20 règles au maximum.', '20 rules maximum.'))} />
         </div>
       )}
@@ -273,7 +274,7 @@ export const MySheets: React.FC = () => {
             <button className={btn} onClick={() => setView(v => ({ ...v, sortCol: undefined }))}>{t('Ordre d\'origine', 'Original order')}</button>
             <button className={btn} aria-label={t('Déplacer à gauche', 'Move left')} onClick={() => apply(s => S.moveColumn(s, col.id, -1, nowIso()))}><ChevronLeft className="w-3.5 h-3.5" /></button>
             <button className={btn} aria-label={t('Déplacer à droite', 'Move right')} onClick={() => apply(s => S.moveColumn(s, col.id, 1, nowIso()))}><ChevronRight className="w-3.5 h-3.5" /></button>
-            <button className={btn} onClick={() => { apply(s => S.deleteColumn(s, col.id, nowIso())); setColEdit(null); }}><Trash2 className="w-3.5 h-3.5" />{t('Supprimer la colonne', 'Delete column')}</button>
+            <button className={btn} onClick={fb('delete', () => { apply(s => S.deleteColumn(s, col.id, nowIso())); setColEdit(null); })}><Trash2 className="w-3.5 h-3.5" />{t('Supprimer la colonne', 'Delete column')}</button>
             <button className={btn} onClick={() => setColEdit(null)}>{t('Fermer', 'Close')}</button>
           </div>
         </div>
@@ -305,7 +306,7 @@ export const MySheets: React.FC = () => {
                     {cols.map((c, ci) => { const v = comp.grid[ri][ci]; return <Cell key={c.id} sheet={cur} row={row} col={c} t={t} lang={lang === 'en' ? 'en' : 'fr'} today={today} listId={`dl-${cur.id}-${c.id}`} err={isErr(v)} ro={ro} shown={showCell(v, c, lang)} color={S.ruleColor(cur, comp, ri, ci)} onCommit={val => apply(s => S.updateCell(s, row.id, c.id, val, nowIso()))} />; })}
                     {!ro && <td className="border-b border-slate-700/70 whitespace-nowrap">
                       <button className="p-1.5 text-slate-400 hover:text-sky-300 cursor-pointer" aria-label={t('Dupliquer la ligne', 'Duplicate row')} onClick={() => apply(s => S.duplicateRow(s, row.id, nowIso()), t('5 000 lignes au maximum.', '5,000 rows maximum.'))}><Copy className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 text-slate-400 hover:text-red-300 cursor-pointer" aria-label={t('Supprimer la ligne', 'Delete row')} onClick={() => apply(s => S.deleteRow(s, row.id, nowIso()))}><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button className="p-1.5 text-slate-400 hover:text-red-300 cursor-pointer" aria-label={t('Supprimer la ligne', 'Delete row')} onClick={fb('delete', () => apply(s => S.deleteRow(s, row.id, nowIso())))}><Trash2 className="w-3.5 h-3.5" /></button>
                     </td>}
                   </tr>
                 );
@@ -345,7 +346,7 @@ const RuleForm: React.FC<{ cols: S.Column[]; t: (a: string, b: string) => string
       <select aria-label={t('Condition', 'Condition')} className={sel} value={r.op} onChange={e => setR({ ...r, op: e.target.value as S.CondRule['op'] })}><option value=">">{'>'}</option><option value="<">{'<'}</option><option value="=">=</option><option value="<>">≠</option><option value="contains">{t('contient', 'contains')}</option><option value="empty">{t('est vide', 'is empty')}</option></select>
       {r.op !== 'empty' && <input aria-label={t('Valeur', 'Value')} className={`${sel} w-24`} value={r.value} onChange={e => setR({ ...r, value: e.target.value })} />}
       <select aria-label={t('Couleur', 'Color')} className={sel} value={r.color} onChange={e => setR({ ...r, color: e.target.value as S.CondRule['color'] })}><option value="red">{t('Rouge', 'Red')}</option><option value="green">{t('Vert', 'Green')}</option><option value="amber">{t('Orange', 'Amber')}</option><option value="blue">{t('Bleu', 'Blue')}</option></select>
-      <button className={btn} onClick={() => onAdd({ ...r, col: cols.some(c => c.id === r.col) ? r.col : cols[0].id })}><Plus className="w-3.5 h-3.5" />{t('Ajouter', 'Add')}</button>
+      <button className={btn} onClick={fb('add', () => onAdd({ ...r, col: cols.some(c => c.id === r.col) ? r.col : cols[0].id }))}><Plus className="w-3.5 h-3.5" />{t('Ajouter', 'Add')}</button>
     </div>
   );
 };

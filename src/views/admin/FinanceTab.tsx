@@ -15,6 +15,7 @@ import { BudgetsCard } from './BudgetsCard';
 import { PlanVsActualCard } from './PlanVsActualCard';
 import { FinanceInsights } from './FinanceInsights';
 import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
+import { fb } from '../../utils/actionFeedback';
 
 // Onglet « Finances » (responsable seulement) : paiements reçus des clients et dépenses, pour la période choisie en haut de la page.
 // Les salaires viennent des missions validées (calculés, jamais saisis) ; les avances sont des salaires versés d'avance : elles ne s'ajoutent pas.
@@ -134,13 +135,13 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr: salariesI
                 <div className={`text-sm font-bold whitespace-nowrap ${e.kind === 'in' ? 'text-emerald-400' : 'text-rose-400'}`}>{e.kind === 'in' ? '+' : '−'} {ar(e.amount_ar)}</div>
                 {confirmId === e.id ? (
                   <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => remove(e.id)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
+                    <button type="button" onClick={fb('delete', () => remove(e.id))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
                     <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                   </div>
                 ) : (
                   <div className="flex items-center">
                     <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => edit(e)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-white"><Pencil className="w-4 h-4" /></button>
-                    <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(e.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(e.id))} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 )}
               </li>
@@ -194,7 +195,7 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr: salariesI
             <OnlineOnlyNote kind="money" />
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} disabled={moneyGate.blocked} title={moneyGate.blocked ? moneyGate.why : undefined} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', save)} disabled={moneyGate.blocked} title={moneyGate.blocked ? moneyGate.why : undefined} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

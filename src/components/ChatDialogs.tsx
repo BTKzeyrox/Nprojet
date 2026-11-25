@@ -12,6 +12,7 @@ import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 import { compressImageToDataUrl } from '../utils/imageUtils';
 import { SafeImage } from './SafeImage';
+import { fb } from '../utils/actionFeedback';
 
 const useL = () => useApp().theme === 'light';
 
@@ -105,7 +106,7 @@ export const NewChatModal: React.FC<{
       {tab === 'group' && (
         <>
           {error && <p className="text-sm text-red-500">{error}</p>}
-          <button type="button" disabled={!name.trim() || picked.length === 0} onClick={create} className={`${btnCls} bg-blue-600 hover:bg-blue-500 text-white`}>
+          <button type="button" disabled={!name.trim() || picked.length === 0} onClick={fb('create', create)} className={`${btnCls} bg-blue-600 hover:bg-blue-500 text-white`}>
             Créer le groupe ({picked.length + 1} membres)
           </button>
         </>
@@ -242,7 +243,7 @@ export const GroupInfoModal: React.FC<{
           <div className="flex items-center justify-between mb-1">
             <span className={`text-xs font-semibold ${sub}`}>Description</span>
             {canManage && !editDesc && (
-              <button type="button" onClick={() => { setDesc(group.description || ''); setEditDesc(true); }} className="text-xs font-bold text-blue-600 cursor-pointer">{group.description ? 'Modifier' : 'Ajouter'}</button>
+              <button type="button" onClick={fb('add', () => { setDesc(group.description || ''); setEditDesc(true); })} className="text-xs font-bold text-blue-600 cursor-pointer">{group.description ? 'Modifier' : 'Ajouter'}</button>
             )}
           </div>
           {editDesc && canManage ? (
@@ -265,7 +266,7 @@ export const GroupInfoModal: React.FC<{
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold">{group.members.length} membres</span>
         {canManage && (
-          <button type="button" onClick={() => setAdding(a => !a)} className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={fb('add', () => setAdding(a => !a))} className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
             <UserPlus className="w-3.5 h-3.5" /> Ajouter
           </button>
         )}
@@ -291,12 +292,12 @@ export const GroupInfoModal: React.FC<{
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">Admin</span>
                   )}
                   {isOwnerLike && u.id !== currentUser.id && (
-                    <button type="button" onClick={() => toggleAdmin(u.id)} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>
+                    <button type="button" onClick={fb('remove', () => toggleAdmin(u.id))} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>
                       {(group.admins || []).includes(u.id) ? <ShieldOff className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                     </button>
                   )}
                   {canManage && u.id !== currentUser.id && (isOwnerLike || !(group.admins || []).includes(u.id)) && (
-                    <button type="button" onClick={() => setMembers(group.members.filter(m => m !== u.id))} className="w-9 h-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
+                    <button type="button" onClick={fb('remove', () => setMembers(group.members.filter(m => m !== u.id)))} className="w-9 h-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
                       <UserMinus className="w-5 h-5" />
                     </button>
                   )}
@@ -313,7 +314,7 @@ export const GroupInfoModal: React.FC<{
         </button>
       )}
       {isOwnerLike && (
-        <button type="button" onClick={remove} className={`${btnCls} border ${L ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'}`}>
+        <button type="button" onClick={fb('delete', remove)} className={`${btnCls} border ${L ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'}`}>
           <Trash2 className="w-4 h-4" /> Supprimer le groupe
         </button>
       )}

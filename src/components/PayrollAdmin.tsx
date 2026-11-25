@@ -12,6 +12,7 @@ import { formatCurrencyAr } from '../utils/formatUtils';
 import { downloadSlipExcel, downloadPdfFromHtml } from '../utils/exportDoc';
 import { Slip, pidLabel, fmtDay, fmtScore, printSlip, slipHtml, downloadCsv, companyForSlip } from '../utils/payslip';
 import { useApp } from '../context/AppContext';
+import { fb } from '../utils/actionFeedback';
 
 const p2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 // Les 12 dernières périodes, de la plus récente à la plus ancienne
@@ -144,7 +145,7 @@ export const PayrollAdmin: React.FC = () => {
           {status === 'closed' && (
             <button type="button" disabled={busy} onClick={reopen} className="rounded-lg inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"><Unlock className="w-4 h-4" />Rouvrir (motif)</button>
           )}
-          <button type="button" disabled={!slips.length} onClick={exportCsv} className="rounded-lg inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
+          <button type="button" disabled={!slips.length} onClick={fb('export', exportCsv)} className="rounded-lg inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40"><Download className="w-4 h-4" />Exporter (CSV)</button>
         </div>
       </div>
 
@@ -168,7 +169,7 @@ export const PayrollAdmin: React.FC = () => {
             <button type="button" onClick={() => setOpen(s)} className="px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer">Fiche</button>
             {!isClosed && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'bonus' })} className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-emerald-500/40 text-xs text-emerald-300 cursor-pointer"><Plus className="w-3.5 h-3.5" />Prime</button>}
             {!isClosed && cfg.penalties && <button type="button" onClick={() => setAmountFor({ slip: s, type: 'penalty' })} className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/40 text-xs text-red-300 cursor-pointer"><MinusCircle className="w-3.5 h-3.5" />Retenue</button>}
-            {isClosed && !s.paid && s.net > 0 && <button type="button" onClick={() => setPayFor(s)} className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white cursor-pointer">Marquer payé</button>}
+            {isClosed && !s.paid && s.net > 0 && <button type="button" onClick={fb('mark', () => setPayFor(s))} className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white cursor-pointer">Marquer payé</button>}
           </div>
         </div>
       ))}
@@ -223,7 +224,7 @@ export const PayrollAdmin: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => printSlip(open, { lang, company: companyForSlip(db.getSettings().company) })} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
-<button type="button" onClick={() => void exportSlipPdf(open, lang)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
+<button type="button" onClick={fb('download', () => void exportSlipPdf(open, lang))} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
 <button type="button" onClick={() => void downloadSlipExcel(open, lang === 'en' ? 'en' : 'fr')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Download className="w-4 h-4" />Excel</button>
               {isClosed && open.paid && (
                 <button type="button" className="rounded-lg px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/50 text-xs text-red-300 cursor-pointer" onClick={() => askReason({ title: 'Annuler le paiement ?', confirmLabel: 'Annuler le paiement', onSubmit: reason => void act('payroll-pay', { user_id: open.user_id, undo: true, reason }) })}>Annuler le paiement</button>
@@ -258,7 +259,7 @@ const AmountModal: React.FC<{ slip: Slip; type: 'bonus' | 'penalty'; onClose: ()
   const ok = Number.isFinite(n) && n >= 1 && reason.trim().length >= 3;
   return (
     <Shell title={`${type === 'bonus' ? 'Prime' : 'Retenue'} pour ${slip.name}`} onClose={onClose}>
-      <form className="space-y-3 text-xs font-mono" onSubmit={e => { e.preventDefault(); if (ok) onSubmit(n, reason.trim()); }}>
+      <form className="space-y-3 text-xs font-mono" onSubmit={fb('add', e => { e.preventDefault(); if (ok) onSubmit(n, reason.trim()); })}>
         <div><label className="block text-slate-300 uppercase mb-1">Montant (Ar)</label><input type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} className={inp} autoFocus /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Motif (obligatoire)</label><textarea rows={2} maxLength={200} value={reason} onChange={e => setReason(e.target.value)} className={inp} /></div>
         {type === 'penalty' && <p className="text-[11px] text-amber-300">Vérifie avec un comptable ou l'Inspection du travail que cette retenue est permise.</p>}
@@ -274,7 +275,7 @@ const PayModal: React.FC<{ slip: Slip; methods: string[]; onClose: () => void; o
   const [ref, setRef] = useState('');
   return (
     <Shell title={`Payer ${slip.name}`} onClose={onClose}>
-      <form className="space-y-3 text-xs font-mono" onSubmit={e => { e.preventDefault(); if (method) onSubmit(date, method, ref.trim()); }}>
+      <form className="space-y-3 text-xs font-mono" onSubmit={fb('mark', e => { e.preventDefault(); if (method) onSubmit(date, method, ref.trim()); })}>
         <div className="text-sm">Net à payer : <b className="text-emerald-300">{formatCurrencyAr(slip.net)}</b></div>
         <div><label className="block text-slate-300 uppercase mb-1">Date</label><input type="date" max={dayMada()} value={date} onChange={e => setDate(e.target.value)} className={inp} /></div>
         <div><label className="block text-slate-300 uppercase mb-1">Mode de paiement</label><select value={method} onChange={e => setMethod(e.target.value)} className={inp}>{methods.map(m => <option key={m} value={m}>{m}</option>)}</select></div>

@@ -79,6 +79,7 @@ import { useApp } from '../../context/AppContext';
 import { showShift } from '../../utils/shiftMode';
 import { getHealth } from '../../utils/healthDb';
 import { SafeImage } from '../../components/SafeImage';
+import { fb } from '../../utils/actionFeedback';
 
 // Ordre d'affichage dans la carte « Équipe connectée » : opérateurs, puis chefs d'équipe, puis comptables
 const ROLE_RANK: Record<string, number> = { employee: 0, team_lead: 1, accountant: 2 };
@@ -781,7 +782,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-amber-800/40">
                         <button
                           type="button"
-                          onClick={() => handleOpenReject(activeSessionForModal.id)}
+                          onClick={fb('refuse', () => handleOpenReject(activeSessionForModal.id))}
                           className="px-3.5 py-2 bg-red-950/80 hover:bg-red-900 border border-red-600/60 text-red-300 font-mono text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-4 h-4" />
@@ -789,7 +790,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleValidate(activeSessionForModal.id)}
+                          onClick={fb('validate', () => handleValidate(activeSessionForModal.id))}
                           className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/60 cursor-pointer"
                         >
                           <CheckCircle2 className="w-4 h-4" />
@@ -837,13 +838,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <label className="block text-slate-300 mb-1">{appLang === 'en' ? 'Save this mission as a template' : 'Enregistrer cette mission comme modèle'}</label>
                         <div className="flex gap-2">
                           <input value={tplName} maxLength={60} onChange={e => { setTplName(e.target.value); setTplMsg(null); }} placeholder={appLang === 'en' ? 'Template name' : 'Nom du modèle'} className="min-w-0 flex-1 bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white" />
-                          <button type="button" onClick={() => {
+                          <button type="button" onClick={fb('save', () => {
                             const c = selectedAdminContract;
                             if (!c) return;
                             const r = db.saveMissionTemplate(templateFromMission({ client_name: editClientName, post_type: c.post_type, description: editDescription, proof_mode: editProofMode }, tplName));
                             setTplMsg(r.success ? { ok: true, text: appLang === 'en' ? 'Template saved (Settings > Missions).' : 'Modèle enregistré (Réglages > Missions).' } : { ok: false, text: r.error || '' });
                             if (r.success) setTplName('');
-                          }} className="min-h-[44px] px-3 rounded-lg border border-emerald-500/50 text-emerald-300 text-xs font-semibold shrink-0">{appLang === 'en' ? 'Save as template' : 'Enregistrer comme modèle'}</button>
+                          })} className="min-h-[44px] px-3 rounded-lg border border-emerald-500/50 text-emerald-300 text-xs font-semibold shrink-0">{appLang === 'en' ? 'Save as template' : 'Enregistrer comme modèle'}</button>
                         </div>
                         {tplMsg && <p role="status" className={`text-[11px] ${tplMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{tplMsg.text}</p>}
                         <p className="text-[11px] text-slate-400">{appLang === 'en' ? 'Keeps the title, type, instruction and proof only: no price, client or date.' : 'Garde seulement le titre, le type, la consigne et le justificatif : ni prix, ni client, ni date.'}</p>
@@ -966,7 +967,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setEditAccountProofs(prev => prev.filter((_, k) => k !== i))}
+                            onClick={fb('remove', () => setEditAccountProofs(prev => prev.filter((_, k) => k !== i)))}
                             className="absolute top-1 right-1 min-w-[32px] min-h-[32px] flex items-center justify-center bg-black/80 border border-red-600 text-red-400 rounded cursor-pointer"
                             title="Retirer cette photo"
                           >
@@ -1215,11 +1216,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                 <button
                   type="button"
-                  onClick={() => askReason({
+                  onClick={fb('refuse', () => askReason({
                     title: "Refuser l'inscription ?",
                     message: `${r.name} verra ce motif quand il essaiera de se connecter.`,
                     onSubmit: reason => void db.decideSignup(r.id, false, reason),
-                  })}
+                  }))}
                   className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
@@ -1264,23 +1265,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                 <button
                   type="button"
-                  onClick={() => askReason({
+                  onClick={fb('refuse', () => askReason({
                     title: 'Refuser la demande ?',
                     message: `Le mot de passe de ${r.name} ne changera pas. Il verra ce motif quand il essaiera de se connecter.`,
                     onSubmit: reason => void db.decidePasswordReset(r.id, false, reason),
-                  })}
+                  }))}
                   className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
                 </button>
                 <button
                   type="button"
-                  onClick={() => askConfirm({
+                  onClick={fb('validate', () => askConfirm({
                     title: 'Valider la demande ?',
                     message: `${r.name} pourra se connecter avec le nouveau mot de passe qu'il a choisi.`,
                     confirmLabel: 'Valider',
                     onConfirm: () => void db.decidePasswordReset(r.id, true),
-                  })}
+                  }))}
                   className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                 >
                   Valider
@@ -1329,18 +1330,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                   <button
                     type="button"
-                    onClick={() => askReason({
+                    onClick={fb('refuse', () => askReason({
                       title: 'Refuser la modification ?',
                       message: `Le profil de ${r.old.name} ne changera pas. Il verra ce motif dans son profil.`,
                       onSubmit: reason => { setProfileErr(null); void db.decideProfileRequest(r.id, false, reason); },
-                    })}
+                    }))}
                     className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                   >
                     Refuser
                   </button>
                   <button
                     type="button"
-                    onClick={() => askConfirm({
+                    onClick={fb('validate', () => askConfirm({
                       title: 'Valider la modification ?',
                       message: `Le profil de ${r.old.name} sera mis à jour.`,
                       confirmLabel: 'Valider',
@@ -1349,7 +1350,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         const res = await db.decideProfileRequest(r.id, true);
                         if (!res.success) setProfileErr(res.error || 'Erreur.');
                       },
-                    })}
+                    }))}
                     className="rounded-xl px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                   >
                     Valider
@@ -1381,11 +1382,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                 <button
                   type="button"
-                  onClick={() => askReason({
+                  onClick={fb('refuse', () => askReason({
                     title: "Refuser l'avance ?",
                     message: `${a.employee_name} verra ce motif.`,
                     onSubmit: reason => { db.reviewAdvanceRequest(a.id, false, reason); },
-                  })}
+                  }))}
                   className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border rounded-xl border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
                   Refuser
@@ -1782,7 +1783,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         {/* Reject button */}
                         <button
-                          onClick={() => handleOpenReject(post.id)}
+                          onClick={fb('refuse', () => handleOpenReject(post.id))}
                           className="w-full sm:w-auto px-4 py-2 sm:py-1.5 bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 rounded text-xs font-mono font-bold transition-colors flex items-center justify-center gap-1.5"
                         >
                           <XCircle className="w-4 h-4" />
@@ -1791,7 +1792,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         {/* Validate button */}
                         <button
-                          onClick={() => handleValidate(post.id)}
+                          onClick={fb('validate', () => handleValidate(post.id))}
                           className="w-full sm:w-auto px-5 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-tactical font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/60"
                         >
                           <CheckCircle2 className="w-4 h-4" />

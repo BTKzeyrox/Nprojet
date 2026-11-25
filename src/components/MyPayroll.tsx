@@ -8,6 +8,7 @@ import { formatCurrencyAr } from '../utils/formatUtils';
 import { downloadSlipExcel, downloadPdfFromHtml } from '../utils/exportDoc';
 import { Slip, pidLabel, fmtDay, fmtScore, printSlip, slipHtml, companyForSlip } from '../utils/payslip';
 import { useApp } from '../context/AppContext';
+import { fb } from '../utils/actionFeedback';
 
 const exportSlipPdf = (s: Slip, lang: string) => downloadPdfFromHtml(slipHtml(s, { lang: lang === 'en' ? 'en' : 'fr', company: companyForSlip(db.getSettings().company) }), `bulletin-${s.username || s.user_id}-${s.period_end}`).catch(() => { alert(lang === 'en' ? 'PDF export failed.' : 'Export PDF impossible.'); });
 export interface AdvanceRoom {
@@ -101,7 +102,7 @@ export const MyPayroll: React.FC = () => {
                   {s.advance_carry > 0 && <div className="flex justify-between text-slate-400"><span>Avance restant à rembourser</span><span>{formatCurrencyAr(s.advance_carry)}</span></div>}
                   {s.paid && <div className="text-emerald-300">Payé le {fmtDay(s.paid.at)} par {s.paid.method}{s.paid.ref ? ` (réf. ${s.paid.ref})` : ''}</div>}
                   <button type="button" onClick={() => printSlip(s, { lang, company: companyForSlip(db.getSettings().company) })} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Printer className="w-4 h-4" />Imprimer</button>
-<button type="button" onClick={() => void exportSlipPdf(s, lang)} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
+<button type="button" onClick={fb('download', () => void exportSlipPdf(s, lang))} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><FileText className="w-4 h-4" />{lang === 'en' ? 'Download PDF' : 'Télécharger PDF'}</button>
 <button type="button" onClick={() => void downloadSlipExcel(s, lang === 'en' ? 'en' : 'fr')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-xs text-slate-200 cursor-pointer"><Download className="w-4 h-4" />Excel</button>
                 </div>
               )}

@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { XCircle, CheckCircle } from 'lucide-react';
 import { backdropDown, backdropShouldClose } from '../utils/modalGuard';
+import { fb } from '../utils/actionFeedback';
 
 export interface ReasonOptions {
   title: string;
@@ -31,13 +32,13 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
       <form
         className="w-full max-w-sm bg-[#0d1624] border rounded-2xl border-slate-600 p-5 space-y-3 text-slate-100"
         onClick={e => e.stopPropagation()}
-        onSubmit={e => {
+        onSubmit={fb('validate', e => {
           e.preventDefault();
           if (!ok) return;
           const fn = options.onSubmit;
           onClose();
           fn(clean);
-        }}
+        })}
       >
         <div className="flex items-start gap-3">
           {optional ? <CheckCircle className="w-6 h-6 shrink-0 text-emerald-400" /> : <XCircle className="w-6 h-6 shrink-0 text-red-400" />}

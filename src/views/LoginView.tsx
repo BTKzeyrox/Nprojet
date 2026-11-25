@@ -23,6 +23,7 @@ import { User, AccessRequestState } from '../types';
 import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
 import { useApp } from '../context/AppContext';
 import { effShift, showShift, type ShiftMode } from '../utils/shiftMode';
+import { fb } from '../utils/actionFeedback';
 
 interface LoginViewProps {
   onLoginSuccess: (user: User) => void;
@@ -262,7 +263,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         className="w-full rounded-2xl border p-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500/50" style={{ backgroundColor: C.card, borderColor: C.line, color: C.text }}
                         placeholder={lang === 'en' ? 'Why do you need to work now?' : 'Pourquoi dois-tu travailler maintenant ?'} />
                       {axErr && <div className="text-[13px] font-semibold" style={{ color: C.errText }}>{axErr}</div>}
-                      <button type="button" onClick={() => void sendAccessRequest()} disabled={axBusy}
+                      <button type="button" onClick={fb('send', () => void sendAccessRequest())} disabled={axBusy}
                         className="w-full h-12 rounded-2xl text-[15px] font-bold cursor-pointer disabled:opacity-60" style={{ background: btnGrad, color: '#ffffff' }}>
                         {axBusy ? '…' : (lang === 'en' ? 'Send my request' : 'Envoyer ma demande')}
                       </button>
@@ -315,7 +316,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </form>
               <div className="mt-5 pt-4 border-t text-center text-[14px]" style={{ borderColor: C.line }}>
                 <span style={{ color: C.sub }}>Pas encore de compte ?</span>{' '}
-                <button type="button" onClick={() => setSignupOpen(true)} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                <button type="button" onClick={fb('create', () => setSignupOpen(true))} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
                   Créer un compte
                 </button>
               </div>
@@ -330,7 +331,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <button type="button" onClick={closeForgot} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>Retour à la connexion</button>
               </div>
             ) : (
-              <form onSubmit={submitForgot} className="space-y-4">
+              <form onSubmit={fb('send', submitForgot)} className="space-y-4">
                 <p className="text-[13px] leading-relaxed" style={{ color: C.sub }}>
                   Entre ton pseudo et le nouveau mot de passe que tu veux. Il sera actif quand l'administrateur aura validé.
                 </p>
@@ -381,7 +382,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <button type="button" onClick={closeSignup} className={primaryBtn} style={{ background: btnGrad, color: '#ffffff' }}>Retour à la connexion</button>
               </div>
             ) : (
-              <form onSubmit={submitSignup} className="space-y-4">
+              <form onSubmit={fb('send', submitSignup)} className="space-y-4">
                 {sgError && errBox(sgError)}
                 <div>
                   <label className={labelCls}>Nom complet</label>

@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { clientChoices, normalizeName } from '../utils/clients';
+import { fb } from '../utils/actionFeedback';
 
 // Choix du client d'une mission (module 1, M1.5) : liste des clients actifs + création rapide « Nouveau client ».
 // Réservé au responsable : un opérateur ne reçoit jamais la liste des clients (le serveur ne l'envoie pas) ; on n'affiche alors rien.
@@ -83,7 +84,7 @@ export const ClientPicker: React.FC<Props> = ({ value, onChange, required, error
           {qErr && <div role="alert" className="text-xs text-rose-500 font-semibold">{qErr}</div>}
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => { setQuick(false); setQErr(''); }} className="min-h-[44px] rounded-xl border border-slate-500/60 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-            <button type="button" onClick={create} className="min-h-[44px] rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Créer et choisir', 'Create and choose')}</button>
+            <button type="button" onClick={fb('create', create)} className="min-h-[44px] rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Créer et choisir', 'Create and choose')}</button>
           </div>
         </div>
       )}

@@ -9,6 +9,7 @@ import { todayMada } from '../../utils/stats';
 import { DEFAULT_STORAGE_ID, inSpace, runOutSoon, stockRows, stockValue } from '../../utils/stock';
 import { OpenGraphsButton } from '../../components/OpenGraphsButton';
 import type { StockFilter } from './StockTab';
+import { fb } from '../../utils/actionFeedback';
 
 // Tableau de bord du Stockage (responsable seulement) : l'essentiel d'un coup d'œil. Lecture seule : rien ne se saisit ici.
 interface Props { lang: 'fr' | 'en'; onOpenProducts: (filter: StockFilter) => void; spaceId?: string }
@@ -32,7 +33,7 @@ export const StockDashboard: React.FC<Props> = ({ lang, onOpenProducts, spaceId 
     return (
       <div className={`${card} text-center`}>
         <div className="text-sm text-slate-300">{t('Aucun produit pour l\'instant.', 'No products yet.')}</div>
-        <button type="button" onClick={() => onOpenProducts('all')} className="min-h-[44px] px-4 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold inline-flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter le premier produit', 'Add the first product')}</button>
+        <button type="button" onClick={fb('add', () => onOpenProducts('all'))} className="min-h-[44px] px-4 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold inline-flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter le premier produit', 'Add the first product')}</button>
       </div>
     );
   }

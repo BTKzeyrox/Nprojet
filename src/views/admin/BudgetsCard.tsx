@@ -11,6 +11,7 @@ import { todayMada } from '../../utils/stats';
 import { categoriesFor } from '../../utils/finance';
 import { budgetRows, type BudgetStatus } from '../../utils/purchasing';
 import { FIN_NAV } from '../../utils/financeNav';
+import { fb } from '../../utils/actionFeedback';
 
 // Budgets par catégorie (M4.4, responsable seulement) : un plafond mensuel par catégorie de dépense, une barre d'avancement pour le mois en cours
 // (80 % et plus : attention, plus de 100 % : dépassé). L'alerte de l'accueil est calculée dans src/utils/alerts.ts.
@@ -83,7 +84,7 @@ export const BudgetsCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className="min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm font-semibold">{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', save)} className="min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
             </div>
           </div>
         </div>,

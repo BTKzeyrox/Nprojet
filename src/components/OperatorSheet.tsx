@@ -15,6 +15,7 @@ import { effShift, showShift } from '../utils/shiftMode';
 import { madaClock } from '../utils/accessRequest';
 import { levelNow, levelLine } from '../utils/monthLevel';
 import { isOpenMission } from '../utils/postPay';
+import { fb } from '../utils/actionFeedback';
 
 /** Libellé d'une mission ouverte. */
 const OPEN_LABEL: Record<string, { fr: string; en: string }> = {
@@ -167,7 +168,7 @@ export const OperatorSheet: React.FC<OperatorSheetProps> = ({ user, cfg, lang, n
 
           {/* Danger */}
           <section className="pt-3 border-t border-slate-700">
-            <button type="button" onClick={onDelete} data-testid="act-delete" className={`${act} bg-red-950/80 hover:bg-red-900 border-red-800 text-red-300`}>
+            <button type="button" onClick={fb('delete', onDelete)} data-testid="act-delete" className={`${act} bg-red-950/80 hover:bg-red-900 border-red-800 text-red-300`}>
               <Trash2 className="w-5 h-5 shrink-0" /> {t('Supprimer le compte et ses données', 'Delete account and its data')}
             </button>
             <p className="mt-1.5 text-[11px] text-slate-500">{t('Irréversible : missions, messages et fichiers sont effacés. Une confirmation est demandée.', 'Irreversible: missions, messages and files are erased. A confirmation is asked.')}</p>

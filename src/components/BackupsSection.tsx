@@ -6,6 +6,7 @@ import { Database, Download, RefreshCw, RotateCcw } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { checkBackupFile, EXPORT_ERROR_TEXT, EXPORT_LIMITS, exportFileName } from '../utils/exportFile';
+import { fb } from '../utils/actionFeedback';
 
 type Row = { id: number; taken_at: string; tables: number; bytes: number };
 
@@ -155,7 +156,7 @@ export const BackupsSection: React.FC = () => {
                 <div className="text-sm text-white">{fmtDate(r.taken_at)}</div>
                 <div className="text-[11px] text-slate-400">{fmtSize(r.bytes)}</div>
               </div>
-              <button type="button" disabled={downloading === r.id} onClick={() => download(r)} className="shrink-0 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+              <button type="button" disabled={downloading === r.id} onClick={fb('download', () => download(r))} className="shrink-0 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
                 <Download className="w-3.5 h-3.5" /> Télécharger
               </button>
               <button type="button" disabled={!verified || busy} onClick={() => { setTarget(r); setStep('warn'); setWord(''); setCode(''); setMsg(null); }} className="shrink-0 px-3 py-2 rounded-lg bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">

@@ -8,6 +8,7 @@ import { User } from '../types';
 import { db } from '../db/store';
 import { compressImageToDataUrl } from '../utils/imageUtils';
 import { Avatar } from './Avatar';
+import { fb } from '../utils/actionFeedback';
 
 interface Props {
   user: User;
@@ -92,7 +93,7 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
 
         <button
           type="button"
-          onClick={save}
+          onClick={fb('save', save)}
           disabled={busy}
           className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold disabled:opacity-60"
         >

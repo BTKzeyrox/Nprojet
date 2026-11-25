@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';
 import { inSpace, STOCK_SPACE_MAX } from '../../utils/stock';
+import { fb } from '../../utils/actionFeedback';
 
 // Fenêtre « Stockages » (responsable seulement) : créer, renommer, supprimer (un stockage VIDE seulement). Les stockages ne se mélangent jamais.
 interface Props { lang: 'fr' | 'en'; onClose: () => void; onSelect: (id: string) => void }
@@ -59,14 +60,14 @@ export const StockSpacesDialog: React.FC<Props> = ({ lang, onClose, onSelect }) 
               ) : confirmDel === s.id ? (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-rose-300 flex-1">{t(`Supprimer « ${s.name} » ?`, `Delete “${s.name}”?`)}</span>
-                  <button type="button" onClick={() => remove(s.id)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
+                  <button type="button" onClick={fb('delete', () => remove(s.id))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
                   <button type="button" onClick={() => setConfirmDel(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm">{t('Garder', 'Keep')}</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => { onSelect(s.id); onClose(); }} className="flex-1 min-w-0 min-h-[44px] text-left text-sm text-white truncate">{s.name} <span className="text-[11px] text-slate-400">· {t(`${count(s.id)} produit${count(s.id) > 1 ? 's' : ''}`, `${count(s.id)} product${count(s.id) === 1 ? '' : 's'}`)}</span></button>
                   <button type="button" onClick={() => { setError(''); setEditing(s.id); setEditText(s.name); }} aria-label={t(`Renommer ${s.name}`, `Rename ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-200 flex items-center justify-center"><Pencil className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => { setError(''); setConfirmDel(s.id); }} aria-label={t(`Supprimer ${s.name}`, `Delete ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={fb('delete', () => { setError(''); setConfirmDel(s.id); })} aria-label={t(`Supprimer ${s.name}`, `Delete ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                 </div>
               )}
             </li>
@@ -75,7 +76,7 @@ export const StockSpacesDialog: React.FC<Props> = ({ lang, onClose, onSelect }) 
 
         <div className="flex gap-2">
           <input value={newName} maxLength={40} placeholder={t('Nouveau stockage (ex. Dépôt)', 'New storage (e.g. Warehouse)')} aria-label={t('Nouveau stockage', 'New storage')} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} className={field} />
-          <button type="button" onClick={add} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
+          <button type="button" onClick={fb('add', add)} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
         </div>
         {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
       </div>

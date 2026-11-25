@@ -7,6 +7,7 @@ import * as S from '../utils/sheets';
 import * as A from '../utils/sheetAuto';
 import { isErr, isFormula, showVal } from '../utils/sheetFormula';
 import { SmartField } from './SmartField';
+import { fb } from '../utils/actionFeedback';
 
 // Vue « Formulaire » d'un tableau (module 19, M19.4) : UNE fiche par ligne, champs étiquetés, lisible sur téléphone.
 // Mêmes données que la grille (on passe de l'une à l'autre sans rien perdre) ; mêmes champs intelligents (SmartField) ; mêmes règles (annuler, corbeille, limites).
@@ -94,7 +95,7 @@ export const SheetForm: React.FC<{
       {cols.filter(c => c.type === 'text').map(c => <datalist key={c.id} id={`dlf-${sheet.id}-${c.id}`}>{(sug[c.id] || []).map(v => <option key={v} value={v} />)}</datalist>)}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[140px]"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" /><input type="search" aria-label={t('Chercher une fiche', 'Search a record')} className="w-full pl-8 pr-2 py-2.5 rounded-lg bg-slate-800/60 border border-slate-600 text-sm text-slate-100 outline-none" placeholder={t('Chercher une fiche', 'Search a record')} value={search} onChange={e => setSearch(e.target.value)} /></div>
-        {!ro && <button className={btn} onClick={add}><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>}
+        {!ro && <button className={btn} onClick={fb('add', add)}><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>}
       </div>
 
       {cols.length === 0 ? <p className="text-sm text-slate-400">{t('Ajoute une colonne (vue Grille) pour commencer.', 'Add a column (Grid view) to start.')}</p>
@@ -118,7 +119,7 @@ export const SheetForm: React.FC<{
               <div className="space-y-3">{cols.map(field)}</div>
               {!ro && <div className="flex flex-wrap gap-2 pt-1">
                 <button className={btn} onClick={dup}><Copy className="w-4 h-4" />{t('Dupliquer', 'Duplicate')}</button>
-                <button className={`${btn} border-red-500/50 text-red-300`} onClick={del}><Trash2 className="w-4 h-4" />{t('Supprimer la fiche', 'Delete the record')}</button>
+                <button className={`${btn} border-red-500/50 text-red-300`} onClick={fb('delete', del)}><Trash2 className="w-4 h-4" />{t('Supprimer la fiche', 'Delete the record')}</button>
                 <span className="text-[11px] text-slate-500 self-center">{t('Enregistré automatiquement. Supprimé = corbeille 30 jours.', 'Saved automatically. Deleted = trash for 30 days.')}</span>
               </div>}
             </div>

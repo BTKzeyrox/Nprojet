@@ -25,6 +25,7 @@ import { downloadInvoiceExcel, downloadPdfFromHtml } from '../../utils/exportDoc
 import type { Invoice } from '../../types';
 import { QuotesSection } from './QuotesSection';
 import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
+import { fb } from '../../utils/actionFeedback';
 
 // Page « Facturation » (responsable seulement) : liste, brouillon, émission, paiement, avoir.
 // Le numéro, le reçu et les totaux définitifs sont toujours posés par le serveur ; l'état (payée, en retard…) se calcule (src/utils/invoices.ts).
@@ -263,7 +264,7 @@ export const InvoicesView: React.FC = () => {
                 <div className="flex items-center justify-between gap-2"><span className="font-bold text-white text-sm">{r.client_name}</span><span className="text-rose-300 text-sm font-bold whitespace-nowrap">{ar(r.total)} · {r.max_days} {t('j', 'd')}</span></div>
                 <ul className="text-xs text-slate-300 space-y-0.5">{r.invoices.map(i => <li key={i.id}>{i.number} · {t('échue le', 'due')} {fmtDate(i.due_date)} · {ar(i.balance)} · {i.days_late} {t('j de retard', 'd late')}</li>)}</ul>
                 <textarea readOnly value={text} rows={8} className={`${field} py-2 font-mono text-xs`} aria-label={t('Texte de relance', 'Reminder text')} />
-                <button type="button" onClick={() => copy(r.client_id, text)} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{copied === r.client_id ? t('Copié !', 'Copied!') : t('Copier le texte', 'Copy the text')}</button>
+                <button type="button" onClick={fb('copy', () => copy(r.client_id, text))} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{copied === r.client_id ? t('Copié !', 'Copied!') : t('Copier le texte', 'Copy the text')}</button>
                 {(() => {
                   const phone = clients.find(c => c.id === r.client_id)?.phone;
                   const wa = whatsappLink(phone, text), sms = smsLink(phone, text);
@@ -304,15 +305,15 @@ export const InvoicesView: React.FC = () => {
         {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="button" onClick={() => printDoc(invoiceHtml(open, { lang, company, paid: openInfo.paid, creditOfNumber: invoices.find(i => i.id === open.credit_of)?.number }))} className={`${btn} border-slate-600 text-slate-100`}><Printer className="w-4 h-4" />{t('Imprimer', 'Print')}</button>
-          <button type="button" onClick={() => void downloadPdfFromHtml(invoiceHtml(open, { lang, company, paid: openInfo.paid, creditOfNumber: invoices.find(i => i.id === open.credit_of)?.number }), `${open.type === 'credit_note' ? 'avoir' : 'facture'}-${open.number || open.id}`).catch(() => setError(t('Export PDF impossible.', 'PDF export failed.')))} className={`${btn} border-slate-600 text-slate-100`}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
+          <button type="button" onClick={fb('download', () => void downloadPdfFromHtml(invoiceHtml(open, { lang, company, paid: openInfo.paid, creditOfNumber: invoices.find(i => i.id === open.credit_of)?.number }), `${open.type === 'credit_note' ? 'avoir' : 'facture'}-${open.number || open.id}`).catch(() => setError(t('Export PDF impossible.', 'PDF export failed.'))))} className={`${btn} border-slate-600 text-slate-100`}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
           <button type="button" onClick={() => void downloadInvoiceExcel(open, lang === 'en' ? 'en' : 'fr')} className={`${btn} border-slate-600 text-slate-100`}><Download className="w-4 h-4" />Excel</button>
           {open.status === 'draft' && <>
             <button type="button" disabled={busy} onClick={() => { setError(''); setEditor(editDraft(open)); }} className={`${btn} border-slate-600 text-slate-100`}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>
             <button type="button" disabled={busy || issueGate.blocked} title={issueGate.blocked ? issueGate.why : undefined} onClick={() => issue(open)} className={`${btn} bg-emerald-600 border-emerald-500 text-white disabled:opacity-50`}><Send className="w-4 h-4" />{t('Émettre', 'Issue')}</button>
-            <button type="button" disabled={busy} onClick={() => remove(open)} className={`${btn} border-rose-700 text-rose-200`}><Trash2 className="w-4 h-4" />{t('Supprimer', 'Delete')}</button>
+            <button type="button" disabled={busy} onClick={fb('delete', () => remove(open))} className={`${btn} border-rose-700 text-rose-200`}><Trash2 className="w-4 h-4" />{t('Supprimer', 'Delete')}</button>
             <OnlineOnlyNote kind="invoice" className="w-full" />
           </>}
-          {open.status === 'issued' && open.type !== 'credit_note' && openInfo.balance > 0 && <button type="button" disabled={busy || payGate.blocked} title={payGate.blocked ? payGate.why : undefined} onClick={() => { setError(''); setPay({ id: open.id, amount: String(openInfo.balance), date: today, method: '', note: '' }); }} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Wallet className="w-4 h-4" />{t('Enregistrer un paiement', 'Record a payment')}</button>}
+          {open.status === 'issued' && open.type !== 'credit_note' && openInfo.balance > 0 && <button type="button" disabled={busy || payGate.blocked} title={payGate.blocked ? payGate.why : undefined} onClick={fb('save', () => { setError(''); setPay({ id: open.id, amount: String(openInfo.balance), date: today, method: '', note: '' }); })} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Wallet className="w-4 h-4" />{t('Enregistrer un paiement', 'Record a payment')}</button>}
           {canCancel(open, openInfo) && <button type="button" disabled={busy} onClick={() => cancel(open)} className={`${btn} border-rose-700 text-rose-200`}><Ban className="w-4 h-4" />{t('Annuler (avoir)', 'Cancel (credit note)')}</button>}
           {openInfo.state === 'paid' && <span className="inline-flex items-center gap-1 text-emerald-300 text-sm"><CheckCircle2 className="w-4 h-4" />{t('Payée en totalité', 'Fully paid')}</span>}
         </div>
@@ -335,7 +336,7 @@ export const InvoicesView: React.FC = () => {
           <p className="text-xs font-bold text-slate-300">{t('Missions validées à facturer', 'Approved missions to invoice')} ({available.length})</p>
           {available.length === 0 ? <p className="text-xs text-slate-400">{t('Aucune mission validée sans facture pour ce client.', 'No approved mission without an invoice for this client.')}</p> : <>
             <ul className="max-h-40 overflow-y-auto space-y-1">{available.map(m => <li key={m.session_id}><label className="flex items-center gap-2 text-sm text-slate-200 min-h-[36px]"><input type="checkbox" checked={editor.picked.includes(m.session_id)} onChange={e => patch({ picked: e.target.checked ? [...editor.picked, m.session_id] : editor.picked.filter(x => x !== m.session_id) })} />{fmtDate(m.date)} · {m.title || '—'} · {ar(m.price_ar)}</label></li>)}</ul>
-            <div className="flex gap-2"><button type="button" onClick={() => patch({ picked: available.map(m => m.session_id) })} className={`${btn} border-slate-600 text-slate-100`}>{t('Tout cocher', 'Select all')}</button><button type="button" disabled={editor.picked.length === 0} onClick={addPicked} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{t('Ajouter à la facture', 'Add to invoice')}</button></div></>}
+            <div className="flex gap-2"><button type="button" onClick={() => patch({ picked: available.map(m => m.session_id) })} className={`${btn} border-slate-600 text-slate-100`}>{t('Tout cocher', 'Select all')}</button><button type="button" disabled={editor.picked.length === 0} onClick={fb('add', addPicked)} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{t('Ajouter à la facture', 'Add to invoice')}</button></div></>}
         </div>}
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-300">{t('Lignes', 'Lines')}</p>
@@ -345,10 +346,10 @@ export const InvoicesView: React.FC = () => {
               <input aria-label={t('Quantité', 'Quantity')} inputMode="decimal" value={l.qty} onChange={e => patch({ lines: editor.lines.map((x, j) => j === i ? { ...x, qty: e.target.value } : x) })} className={`${field} col-span-3 sm:col-span-2`} />
               <input aria-label={t('Prix unitaire', 'Unit price')} inputMode="numeric" value={l.price} onChange={e => patch({ lines: editor.lines.map((x, j) => j === i ? { ...x, price: e.target.value } : x) })} className={`${field} col-span-5 sm:col-span-2`} />
               <span className="col-span-3 sm:col-span-1 text-right text-xs text-slate-300 pb-3">{ar(draftLines[i])}</span>
-              <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={() => patch({ lines: editor.lines.filter((_, j) => j !== i) })} className="col-span-1 min-h-[44px] text-rose-300 cursor-pointer"><Trash2 className="w-4 h-4 mx-auto" /></button>
+              <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={fb('remove', () => patch({ lines: editor.lines.filter((_, j) => j !== i) }))} className="col-span-1 min-h-[44px] text-rose-300 cursor-pointer"><Trash2 className="w-4 h-4 mx-auto" /></button>
             </div>
           ))}
-          <button type="button" onClick={() => patch({ lines: [...editor.lines, { description: '', qty: '1', price: '' }] })} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne libre', 'Add a free line')}</button>
+          <button type="button" onClick={fb('add', () => patch({ lines: [...editor.lines, { description: '', qty: '1', price: '' }] }))} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne libre', 'Add a free line')}</button>
         </div>
         <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}<textarea value={editor.note} maxLength={500} onChange={e => patch({ note: e.target.value })} className={`${field} mt-1 py-2`} rows={2} /></label>
         <div className="text-sm text-slate-200 text-right space-y-0.5">
@@ -357,7 +358,7 @@ export const InvoicesView: React.FC = () => {
           <p className="font-bold text-white">{t('Total', 'Total')} : {ar(preview.total_ar)}</p>
         </div>
         {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
-        <div className="flex gap-2"><button type="button" onClick={save} className={`${btn} bg-emerald-600 border-emerald-500 text-white flex-1`}>{t('Enregistrer le brouillon', 'Save draft')}</button><button type="button" onClick={() => setEditor(null)} className={`${btn} border-slate-600 text-slate-100`}>{t('Annuler', 'Cancel')}</button></div>
+        <div className="flex gap-2"><button type="button" onClick={fb('save', save)} className={`${btn} bg-emerald-600 border-emerald-500 text-white flex-1`}>{t('Enregistrer le brouillon', 'Save draft')}</button><button type="button" onClick={() => setEditor(null)} className={`${btn} border-slate-600 text-slate-100`}>{t('Annuler', 'Cancel')}</button></div>
         <p className="text-[11px] text-slate-400">{t('Le brouillon n\'a pas de numéro. Le numéro est attribué quand tu cliques sur « Émettre ».', 'A draft has no number. The number is assigned when you click “Issue”.')}</p>
       </>, () => setEditor(null))}
 
@@ -371,7 +372,7 @@ export const InvoicesView: React.FC = () => {
         <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}<input value={pay.note} maxLength={300} onChange={e => setPay({ ...pay, note: e.target.value })} className={`${field} mt-1`} /></label>
         {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
         <p className="text-[11px] text-slate-400">{t('Le paiement ne peut pas dépasser ce qui reste à payer. Un numéro de reçu est attribué et la ligne apparaît dans Finances.', 'A payment cannot exceed what is left to pay. A receipt number is assigned and the line appears in Finances.')}</p>
-        <button type="button" disabled={busy} onClick={submitPay} className={`${btn} bg-emerald-600 border-emerald-500 text-white w-full`}>{t('Enregistrer', 'Save')}</button>
+        <button type="button" disabled={busy} onClick={fb('save', submitPay)} className={`${btn} bg-emerald-600 border-emerald-500 text-white w-full`}>{t('Enregistrer', 'Save')}</button>
       </>, () => setPay(null))}
       {voidPay && modal(<>
         <div className="flex items-center justify-between"><h2 className="text-base font-bold text-white">{t('Annuler ce paiement ?', 'Void this payment?')}</h2>{closeBtn(() => setVoidPay(null))}</div>

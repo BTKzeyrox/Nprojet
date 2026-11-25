@@ -11,6 +11,7 @@ import { audienceLabel, isRestricted } from '../utils/newsAccess';
 import { newsLink, newsShareText, withShareNote, SHARE_NOTE_MAX } from '../utils/newsLink';
 import { LinkedText } from './LinkedText';
 import type { NewsPost, User } from '../types';
+import { fb } from '../utils/actionFeedback';
 
 /** Partager une publication : l'envoyer dans un message (le lien ouvre directement la publication), copier le lien, ou le partage du téléphone. */
 export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean; onClose: () => void; onShared: () => void }> = ({ post, me, light, onClose, onShared }) => {
@@ -69,8 +70,8 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
           {restricted && <div className="rounded-lg px-3 py-2 text-xs bg-sky-500/10 text-sky-600" data-share-restricted>Cette publication est réservée à : {audienceLabel(post.audience, 'fr', post.audience_users)}. Le message ne contient que le lien : les autres personnes verront « publication introuvable ».</div>}
           <div className={`whitespace-pre-line break-words text-xs rounded-lg p-2 ${light ? 'bg-slate-100' : 'bg-white/5'}`} data-share-preview><LinkedText text={text} /></div>
           <div className="flex flex-col">
-            <button type="button" onClick={() => void copy()} className={btn} data-share-copy><Copy className="w-4 h-4" />Copier le lien</button>
-            {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && <button type="button" onClick={() => void nativeShare()} className={btn} data-share-native><Link2 className="w-4 h-4" />Partager avec une autre appli</button>}
+            <button type="button" onClick={fb('copy', () => void copy())} className={btn} data-share-copy><Copy className="w-4 h-4" />Copier le lien</button>
+            {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && <button type="button" onClick={fb('share', () => void nativeShare())} className={btn} data-share-native><Link2 className="w-4 h-4" />Partager avec une autre appli</button>}
           </div>
           <div className={`text-xs font-semibold pt-1 flex items-center gap-1.5 ${sub}`}><Send className="w-3.5 h-3.5" />Envoyer dans un message</div>
           <div className="relative">

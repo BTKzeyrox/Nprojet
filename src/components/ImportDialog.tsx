@@ -14,6 +14,7 @@ import {
 import { downloadCsv, FILE_PROBLEM_TEXT, matrixFromFile } from '../utils/importFile';
 import type { Sheet } from '../utils/sheets';
 import { MERGE_FAIL_TEXT, MERGE_REASON_TEXT, mergeMatrixIntoSheet } from '../utils/sheetMerge';
+import { fb } from '../utils/actionFeedback';
 
 // Import Excel et CSV (module 16, M16.1) : choisir un fichier, VOIR l'aperçu ligne par ligne, puis valider. Rien n'est écrit avant « Importer ».
 // Les règles sont dans src/utils/importRules.ts ; chaque ligne bonne passe par les mêmes règles que la saisie à la main, le serveur revérifie.
@@ -127,7 +128,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
             <div className="flex flex-wrap gap-2">
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={e => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
               <button type="button" className={btnMain} onClick={() => fileRef.current?.click()} disabled={busy}><FileSpreadsheet className="w-4 h-4" />{t('Choisir un fichier', 'Choose a file')}</button>
-              {kind !== 'sheet' && <button type="button" className={btn} onClick={template}><Download className="w-4 h-4" />{t('Télécharger le modèle', 'Download the template')}</button>}
+              {kind !== 'sheet' && <button type="button" className={btn} onClick={fb('download', template)}><Download className="w-4 h-4" />{t('Télécharger le modèle', 'Download the template')}</button>}
             </div>
             {busy && !matrix && <div className="text-sm text-slate-300">{t('Lecture du fichier…', 'Reading the file…')}</div>}
             {problem && <div className="text-sm text-rose-300 flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{problem}</div>}
@@ -160,7 +161,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
                     {kind === 'employees' && counts!.ok > 0 && <div className="text-xs text-amber-300">{t("Un mot de passe provisoire sera créé pour chaque compte. Il sera montré une seule fois, à la fin : tu devras le noter ou télécharger la liste.", 'A temporary password will be created for each account. It is shown only once, at the end: you will have to note it or download the list.')}</div>}
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
-                      <button type="button" className={btnMain} disabled={counts!.ok === 0 || busy} onClick={() => void run()}><Check className="w-4 h-4" />{busy ? t('Import…', 'Importing…') : t(`Importer ${counts!.ok} ligne(s)`, `Import ${counts!.ok} row(s)`)}</button>
+                      <button type="button" className={btnMain} disabled={counts!.ok === 0 || busy} onClick={fb('import', () => void run())}><Check className="w-4 h-4" />{busy ? t('Import…', 'Importing…') : t(`Importer ${counts!.ok} ligne(s)`, `Import ${counts!.ok} row(s)`)}</button>
                     </div>
                   </>}
               </div>
@@ -188,7 +189,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
                     )}
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
-                      <button type="button" className={btnMain} disabled={mergePrev.added === 0} onClick={() => { if (mergePrev.sheet && onMerge) { onMerge(mergePrev.sheet); onClose(); } }} data-testid="merge-confirm"><Check className="w-4 h-4" />{t(`Ajouter ${mergePrev.added} ligne(s) à mon tableau`, `Add ${mergePrev.added} row(s) to my table`)}</button>
+                      <button type="button" className={btnMain} disabled={mergePrev.added === 0} onClick={fb('add', () => { if (mergePrev.sheet && onMerge) { onMerge(mergePrev.sheet); onClose(); } })} data-testid="merge-confirm"><Check className="w-4 h-4" />{t(`Ajouter ${mergePrev.added} ligne(s) à mon tableau`, `Add ${mergePrev.added} row(s) to my table`)}</button>
                     </div>
                   </>}
               </div>
@@ -210,7 +211,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
                     {sheetPrev.shortened > 0 && <div className="text-xs text-amber-300">{t(`${sheetPrev.shortened} case(s) trop longue(s) ont été raccourcies à 500 signes.`, `${sheetPrev.shortened} cell(s) were too long and were shortened to 500 characters.`)}</div>}
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button type="button" className={btn} onClick={onClose}>{t('Annuler', 'Cancel')}</button>
-                      <button type="button" className={btnMain} onClick={() => { if (sheetPrev.sheet && onSheet) { onSheet(sheetPrev.sheet); onClose(); } }}><Check className="w-4 h-4" />{t('Créer le tableau', 'Create the table')}</button>
+                      <button type="button" className={btnMain} onClick={fb('create', () => { if (sheetPrev.sheet && onSheet) { onSheet(sheetPrev.sheet); onClose(); } })}><Check className="w-4 h-4" />{t('Créer le tableau', 'Create the table')}</button>
                     </div>
                   </>}
               </div>
@@ -229,7 +230,7 @@ export const ImportDialog: React.FC<{ kind: ImportKind; onClose: () => void; onS
               <div className="space-y-2 rounded-lg border border-amber-700 bg-amber-950/30 p-3">
                 <div className="text-sm text-amber-200">{t("Mots de passe provisoires : ils ne seront plus jamais montrés. Télécharge la liste maintenant et remets chaque mot de passe à son salarié.", 'Temporary passwords: they will never be shown again. Download the list now and hand each password to its employee.')}</div>
                 <ul className="text-xs text-slate-200 font-mono space-y-0.5 max-h-40 overflow-y-auto">{done.creds.map(c => <li key={c.username}>{c.username} — {c.password}</li>)}</ul>
-                <button type="button" className={btnMain} onClick={() => downloadCsv('mots-de-passe-provisoires.csv', matrixToCsv(credentialsMatrix(done.creds, en ? 'en' : 'fr')))}><Download className="w-4 h-4" />{t('Télécharger la liste', 'Download the list')}</button>
+                <button type="button" className={btnMain} onClick={fb('download', () => downloadCsv('mots-de-passe-provisoires.csv', matrixToCsv(credentialsMatrix(done.creds, en ? 'en' : 'fr'))))}><Download className="w-4 h-4" />{t('Télécharger la liste', 'Download the list')}</button>
               </div>
             )}
             <div className="flex justify-end"><button type="button" className={btnMain} onClick={onClose}>{t('Fermer', 'Close')}</button></div>

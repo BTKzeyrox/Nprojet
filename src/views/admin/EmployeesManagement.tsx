@@ -52,6 +52,7 @@ import { OnlineOnlyNote, useOnlineOnly } from '../../components/PendingMark';
 import { effShift, showShift } from '../../utils/shiftMode';
 import { cleanLevels, levelNow, BADGE_BY_INDEX } from '../../utils/monthLevel';
 import { todayMada } from '../../utils/stats';
+import { fb } from '../../utils/actionFeedback';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -349,7 +350,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={fb('add', () => setShowAddModal(true))}
             className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -357,7 +358,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setImporting(true)}
+            onClick={fb('import', () => setImporting(true))}
             className="w-full sm:w-auto px-4 py-2 min-h-[44px] border border-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -546,14 +547,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                   <button
-                    onClick={() => handleOpenReviewAdvance(adv, false)}
+                    onClick={fb('refuse', () => handleOpenReviewAdvance(adv, false))}
                     className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-700 rounded text-xs transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Refuser</span>
                   </button>
                   <button
-                    onClick={() => handleOpenReviewAdvance(adv, true)}
+                    onClick={fb('validate', () => handleOpenReviewAdvance(adv, true))}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -721,7 +722,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
+            <form onSubmit={fb('create', handleCreateUser)} className="space-y-4">
               {WORK_SETTINGS_LIVE && (
               <label data-entry-only-toggle className="flex items-start gap-3 min-h-[44px] text-slate-200 cursor-pointer rounded-lg border border-slate-700 p-3">
                 <input type="checkbox" checked={newEntryOnly} onChange={e => setNewEntryOnly(e.target.checked)} className="w-5 h-5 mt-0.5 accent-emerald-500" />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Paperclip, BarChart3, CalendarDays, CheckCheck, X, Loader2 } from 'lucide-react';
 import { POLL_MAX_DATES, POLL_MAX_OPTIONS, pollClean } from '../utils/pollRules';
 import { ackQuestion } from '../utils/assistantPublish';
+import { fb } from '../utils/actionFeedback';
 
 // Bouton « + » du formulaire des Actualités (BTK 2026-11-09) : Photo / fichier, Sondage, Choix de date, « J'ai lu ».
 // Les trois derniers : réservés au responsable (le serveur ne garde un sondage que s'il vient de lui) ; même moteur que l'assistant (pollRules).
@@ -34,7 +35,7 @@ export const PlusMenu: React.FC<{ isAdmin: boolean; disabled?: boolean; preparin
   const pick = (fn: () => void) => () => { setOpen(false); fn(); };
   return (
     <div ref={ref} className="relative">
-      <button type="button" data-composer-plus aria-label="Ajouter" aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={() => setOpen(o => !o)}
+      <button type="button" data-composer-plus aria-label="Ajouter" aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={fb('add', () => setOpen(o => !o))}
         className={`flex items-center gap-1.5 min-h-[44px] px-3 text-sm font-semibold rounded-lg disabled:opacity-50 cursor-pointer ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/10 text-slate-200'}`}>
         {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
         {preparing ? 'Préparation…' : 'Ajouter'}
@@ -64,7 +65,7 @@ export const ExtraForm: React.FC<{ value: Extra; onChange: (v: Extra) => void; o
     <div data-composer-extra={value.kind} className={`rounded-xl border p-3 space-y-2 ${light ? 'border-emerald-300 bg-emerald-50/50' : 'border-emerald-700/60 bg-emerald-900/10'}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-bold">{title}</div>
-        <button type="button" data-extra-remove disabled={disabled} onClick={onRemove} aria-label={`Retirer : ${title}`} className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-40"><X className="w-4 h-4" /></button>
+        <button type="button" data-extra-remove disabled={disabled} onClick={fb('remove', onRemove)} aria-label={`Retirer : ${title}`} className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-40"><X className="w-4 h-4" /></button>
       </div>
       {value.kind === 'ack' ? (
         <div className={`text-xs ${muted}`}>Chaque personne touche « J’ai lu » sous ta publication. Tout le monde voit combien l’ont lu ; toi seul vois qui a lu et qui n’a pas encore lu. Le texte de la publication sert de question.</div>
@@ -75,12 +76,12 @@ export const ExtraForm: React.FC<{ value: Extra; onChange: (v: Extra) => void; o
             {value.options.map((o, i) => (
               <div key={i} className="flex items-center gap-1.5">
                 <input className={field} data-extra-option value={o} maxLength={100} disabled={disabled} onChange={e => setOpt(i, e.target.value)} placeholder={value.kind === 'date' ? `Date ${i + 1} (ex. lundi 10 à 9 h)` : `Choix ${i + 1}`} aria-label={`${value.kind === 'date' ? 'Date' : 'Choix'} ${i + 1}`} />
-                {value.options.length > 2 && <button type="button" disabled={disabled} onClick={() => onChange({ ...value, options: value.options.filter((_, j) => j !== i) })} aria-label={`Retirer le choix ${i + 1}`} className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-40"><X className="w-4 h-4" /></button>}
+                {value.options.length > 2 && <button type="button" disabled={disabled} onClick={fb('remove', () => onChange({ ...value, options: value.options.filter((_, j) => j !== i) }))} aria-label={`Retirer le choix ${i + 1}`} className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-40"><X className="w-4 h-4" /></button>}
               </div>
             ))}
           </div>
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <button type="button" data-extra-add disabled={disabled || value.options.length >= max} onClick={() => onChange({ ...value, options: [...value.options, ''] })} className={`min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer disabled:opacity-40 ${light ? 'border-slate-300 hover:bg-slate-100' : 'border-slate-600 hover:bg-white/10'}`}>+ Ajouter {value.kind === 'date' ? 'une date' : 'un choix'}</button>
+            <button type="button" data-extra-add disabled={disabled || value.options.length >= max} onClick={fb('add', () => onChange({ ...value, options: [...value.options, ''] }))} className={`min-h-[36px] px-3 rounded-lg border text-xs font-semibold cursor-pointer disabled:opacity-40 ${light ? 'border-slate-300 hover:bg-slate-100' : 'border-slate-600 hover:bg-white/10'}`}>+ Ajouter {value.kind === 'date' ? 'une date' : 'un choix'}</button>
             <span className={`text-[11px] ${muted}`}>{value.kind === 'date' ? `2 à ${max} dates. Chacun coche toutes les dates où il est disponible.` : `2 à ${max} choix. Chacun vote pour un seul choix.`}</span>
           </div>
         </>

@@ -6,6 +6,7 @@ import { Link2, Plus } from 'lucide-react';
 import { db } from '../../db/store';
 import { useApp } from '../../context/AppContext';
 import { clientChoices, missionsToLink, type MissionToLink } from '../../utils/clients';
+import { fb } from '../../utils/actionFeedback';
 
 // Outil « Rattacher les anciennes missions » (module 1, M1.5), dans la page Clients.
 // Les anciennes missions n'ont qu'un titre en texte libre. Pour chaque titre, on propose le client de même nom (sans accents ni majuscules) ;
@@ -75,7 +76,7 @@ export const MissionsToLink: React.FC = () => {
                   </button>
                 )}
                 {!sug && !row.suggestion.ambiguous && (
-                  <button type="button" onClick={() => createAndAttach(row)} className="w-full min-h-[44px] rounded-lg border border-emerald-600/60 text-emerald-300 text-sm font-semibold px-3 inline-flex items-center justify-center gap-1.5">
+                  <button type="button" onClick={fb('create', () => createAndAttach(row))} className="w-full min-h-[44px] rounded-lg border border-emerald-600/60 text-emerald-300 text-sm font-semibold px-3 inline-flex items-center justify-center gap-1.5">
                     <Plus className="w-4 h-4" />{t(`Créer le client « ${row.text} » et rattacher`, `Create client “${row.text}” and link`)}
                   </button>
                 )}

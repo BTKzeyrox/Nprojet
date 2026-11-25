@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext';
 import { usePerformance, previousMonth } from '../../utils/usePerformance';
 import { employeeOfMonth, rankByScore, type EmployeeOfMonth } from '../../utils/performanceScore';
 import { BadgeChips, PerformanceCard, ScoreRing, TrendDelta } from '../../components/PerformanceBadges';
+import { fb } from '../../utils/actionFeedback';
 
 // « Scores et badges » (responsable seulement) : classement des 30 derniers jours, employé du mois, fiche de chaque salarié.
 // Tout est calculé (src/utils/performanceScore.ts) : rien n'est saisi à la main, chaque score et chaque badge dit pourquoi.
@@ -70,7 +71,7 @@ export const PerformanceScores: React.FC = () => {
                 const done = !!post && db.getNews().some(n => n.title === post.title && n.status !== 'rejected');
                 return done
                   ? <div className="text-[11px] text-emerald-400 mt-1">{t('Déjà publié dans Actualités.', 'Already published in News.')}</div>
-                  : <button type="button" onClick={() => publish(m.ym, m.result)} className="mt-1.5 min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-xs font-bold inline-flex items-center gap-1.5 hover:border-emerald-500 cursor-pointer"><Megaphone className="w-4 h-4" aria-hidden="true" />{t('Publier dans Actualités', 'Publish in News')}</button>;
+                  : <button type="button" onClick={fb('publish', () => publish(m.ym, m.result))} className="mt-1.5 min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-xs font-bold inline-flex items-center gap-1.5 hover:border-emerald-500 cursor-pointer"><Megaphone className="w-4 h-4" aria-hidden="true" />{t('Publier dans Actualités', 'Publish in News')}</button>;
               })()}
             </li>
           ))}

@@ -10,6 +10,7 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { todayMada } from '../../utils/stats';
 import { HR_CONTRACT_LABELS, currentRate, endOfTermIn, seniorityMonths, seniorityText, type HrContract, type HrFile } from '../../utils/hrFile';
 import type { User } from '../../types';
+import { fb } from '../../utils/actionFeedback';
 
 // Dossier du salarié (M5.1). Le responsable remplit et modifie ; le salarié lit le sien (« Mon dossier »).
 // Les liens des documents sont des liens https (le site ne stocke pas de fichier ici). Le serveur revérifie tout.
@@ -162,10 +163,10 @@ export const DossiersSection: React.FC<{ ver: number }> = ({ ver }) => {
               <div key={d.id} className="flex gap-2">
                 <input className={field} placeholder={t('Nom', 'Name')} value={d.name} maxLength={80} onChange={e => set({ docs: editor.docs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} aria-label={t('Nom du document', 'Document name')} />
                 <input className={field} placeholder="https://…" value={d.url} maxLength={500} onChange={e => set({ docs: editor.docs.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} aria-label={t('Lien du document', 'Document link')} />
-                <button type="button" className={btn} onClick={() => set({ docs: editor.docs.filter((_, j) => j !== i) })} aria-label={t('Retirer le document', 'Remove the document')}><Trash2 className="w-4 h-4" /></button>
+                <button type="button" className={btn} onClick={fb('remove', () => set({ docs: editor.docs.filter((_, j) => j !== i) }))} aria-label={t('Retirer le document', 'Remove the document')}><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
-            {editor.docs.length < 10 && <button type="button" className={btn} onClick={() => set({ docs: [...editor.docs, { id: uid('hd'), name: '', url: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter un document', 'Add a document')}</button>}
+            {editor.docs.length < 10 && <button type="button" className={btn} onClick={fb('add', () => set({ docs: [...editor.docs, { id: uid('hd'), name: '', url: '' }] }))}><Plus className="w-4 h-4" />{t('Ajouter un document', 'Add a document')}</button>}
             <p className="text-[11px] font-semibold text-slate-400">{t('Historique des tarifs (information : la paie utilise les tarifs des Réglages)', 'Rate history (information: payroll uses the rates in Settings)')}</p>
             {editor.rates.map((r, i) => (
               <div key={r.id} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center">
@@ -173,13 +174,13 @@ export const DossiersSection: React.FC<{ ver: number }> = ({ ver }) => {
                 <input className={field} inputMode="numeric" placeholder={t('Avant (Ar)', 'Before (Ar)')} value={r.from} onChange={e => set({ rates: editor.rates.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)) })} aria-label={t('Ancien tarif', 'Old rate')} />
                 <input className={field} inputMode="numeric" placeholder={t('Après (Ar)', 'After (Ar)')} value={r.to} onChange={e => set({ rates: editor.rates.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)) })} aria-label={t('Nouveau tarif', 'New rate')} />
                 <input className={field} placeholder={t('Motif', 'Reason')} value={r.reason} maxLength={200} onChange={e => set({ rates: editor.rates.map((x, j) => (j === i ? { ...x, reason: e.target.value } : x)) })} aria-label={t('Motif', 'Reason')} />
-                <button type="button" className={btn} onClick={() => set({ rates: editor.rates.filter((_, j) => j !== i) })} aria-label={t('Retirer la ligne', 'Remove the row')}><Trash2 className="w-4 h-4" /></button>
+                <button type="button" className={btn} onClick={fb('remove', () => set({ rates: editor.rates.filter((_, j) => j !== i) }))} aria-label={t('Retirer la ligne', 'Remove the row')}><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
-            {editor.rates.length < 50 && <button type="button" className={btn} onClick={() => set({ rates: [...editor.rates, { id: uid('hr'), date: today, from: '', to: '', reason: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter un tarif', 'Add a rate')}</button>}
+            {editor.rates.length < 50 && <button type="button" className={btn} onClick={fb('add', () => set({ rates: [...editor.rates, { id: uid('hr'), date: today, from: '', to: '', reason: '' }] }))}><Plus className="w-4 h-4" />{t('Ajouter un tarif', 'Add a rate')}</button>}
             {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
             <div className="flex gap-2 pt-1">
-              <button type="button" className={`${btn} flex-1 justify-center bg-emerald-700 border-emerald-500 text-white`} onClick={save}>{t('Enregistrer', 'Save')}</button>
+              <button type="button" className={`${btn} flex-1 justify-center bg-emerald-700 border-emerald-500 text-white`} onClick={fb('save', save)}>{t('Enregistrer', 'Save')}</button>
               <button type="button" className={`${btn} flex-1 justify-center`} onClick={() => setEditor(null)}>{t('Annuler', 'Cancel')}</button>
             </div>
           </div>

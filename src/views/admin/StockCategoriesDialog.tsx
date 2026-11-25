@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../db/store';
 import { categoryKey, categoryOptions, cleanCategoryName, DEFAULT_STOCK_CATEGORIES, STOCK_CATEGORY_MAX } from '../../utils/stock';
+import { fb } from '../../utils/actionFeedback';
 
 // Fenêtre « Catégories » du Stockage (responsable seulement) : la liste par défaut, qu'on peut ajouter, renommer, supprimer, remettre.
 interface Props { lang: 'fr' | 'en'; onClose: () => void }
@@ -68,14 +69,14 @@ export const StockCategoriesDialog: React.FC<Props> = ({ lang, onClose }) => {
               ) : confirmDel === c ? (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-rose-300 flex-1">{count(c) > 0 ? t(`Supprimer « ${c} » ? ${count(c)} produit${count(c) > 1 ? 's' : ''} sans catégorie.`, `Delete “${c}”? ${count(c)} product${count(c) > 1 ? 's' : ''} without category.`) : t(`Supprimer « ${c} » ?`, `Delete “${c}”?`)}</span>
-                  <button type="button" onClick={() => remove(c)} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
+                  <button type="button" onClick={fb('delete', () => remove(c))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer', 'Delete')}</button>
                   <button type="button" onClick={() => setConfirmDel(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-300 text-sm">{t('Garder', 'Keep')}</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="flex-1 min-w-0 text-sm text-white truncate">{c} <span className="text-[11px] text-slate-400">· {count(c)}</span></span>
                   <button type="button" onClick={() => { setError(''); setEditing(c); setEditText(c); }} aria-label={t(`Renommer ${c}`, `Rename ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-200 flex items-center justify-center"><Pencil className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => { setError(''); setConfirmDel(c); }} aria-label={t(`Supprimer ${c}`, `Delete ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={fb('delete', () => { setError(''); setConfirmDel(c); })} aria-label={t(`Supprimer ${c}`, `Delete ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                 </div>
               )}
             </li>
@@ -85,7 +86,7 @@ export const StockCategoriesDialog: React.FC<Props> = ({ lang, onClose }) => {
 
         <div className="flex gap-2">
           <input value={newName} maxLength={40} placeholder={t('Nouvelle catégorie', 'New category')} aria-label={t('Nouvelle catégorie', 'New category')} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} className={field} />
-          <button type="button" onClick={add} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
+          <button type="button" onClick={fb('add', add)} className="min-h-[44px] px-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center gap-1"><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
         </div>
         {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
 

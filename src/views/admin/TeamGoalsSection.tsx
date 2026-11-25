@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext';
 import { askConfirm } from '../../components/ConfirmModal';
 import { todayMada } from '../../utils/stats';
 import { TEAM_GOAL_LIMITS, TEAM_GOAL_METRIC_LABEL, TEAM_GOAL_STATUS_LABEL, teamGoalActual, teamGoalAppliesTo, teamGoalProgress, teamGoalStatus, type TeamGoal, type TeamGoalMetric, type TeamGoalStatus } from '../../utils/teamGoals';
+import { fb } from '../../utils/actionFeedback';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -75,7 +76,7 @@ export const TeamGoalsSection: React.FC = () => {
                   </div>
                   <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${STATUS_CLS[st]}`}>{TEAM_GOAL_STATUS_LABEL[st][lang === 'en' ? 'en' : 'fr']}</span>
                   <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => { setError(''); setDraft({ id: g.id, name: g.name, scope: g.scope, employee_id: g.employee_id || '', metric: g.metric, target: String(g.target), allMonths: g.month === '', month: g.month || month }); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-slate-600 text-slate-200"><Pencil className="w-4 h-4" /></button>
-                  <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => remove(g)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-red-500/50 text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => remove(g))} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-red-500/50 text-red-400"><Trash2 className="w-4 h-4" /></button>
                 </div>
                 <div className="h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pr.pct}><div className={`h-full ${BAR_CLS[st]}`} style={{ width: `${pr.pct}%` }} /></div>
                 <div className="flex flex-wrap justify-between gap-x-3 text-xs font-mono text-slate-300">
@@ -112,7 +113,7 @@ export const TeamGoalsSection: React.FC = () => {
             <label className="flex items-center gap-2 text-sm text-slate-200"><input type="checkbox" checked={draft.allMonths} onChange={e => set({ allMonths: e.target.checked })} className="w-5 h-5" />{t('Chaque mois', 'Every month')}</label>
             {!draft.allMonths && <div><label className={labelCls}>{t('Mois', 'Month')}</label><input type="month" value={draft.month} onChange={e => set({ month: e.target.value })} className={inputCls} /></div>}
             <div className="flex gap-2">
-              <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
+              <button type="button" onClick={fb('save', save)} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer', 'Save')}</button>
               <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
             </div>
           </div>

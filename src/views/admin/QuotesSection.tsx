@@ -12,6 +12,7 @@ import { todayMada } from '../../utils/stats';
 import { readCompany } from '../../utils/companyRules';
 import { QUOTE_NAMES, canDeleteQuote, canInvoiceQuote, canQuoteTransition, checkQuoteDraft, quoteLabel } from '../../utils/quotes';
 import type { Quote } from '../../types';
+import { fb } from '../../utils/actionFeedback';
 
 // Onglet « Devis » de la page Facturation (facultatif : réglage « Devis activés »). Mêmes lignes qu'une facture ;
 // Brouillon (modifiable) → Envoyé (figé) → Accepté ou Refusé ; un devis accepté se transforme en facture brouillon en un clic.
@@ -100,14 +101,14 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                       {error && openId === x.id && !editor && <div role="alert" className="text-sm text-rose-300">{error}</div>}
                       <div className="flex flex-wrap items-center gap-1.5">
                         {x.status === 'draft' && <button type="button" onClick={() => { setError(''); setEditor(toEditor(x)); }} className={`${btn} border-slate-600 text-slate-100`}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>}
-                        {canQuoteTransition(x, 'sent') && <button type="button" onClick={() => act(() => db.setQuoteStatus(x.id, 'sent'))} className={`${btn} bg-sky-700 border-sky-600 text-white`}><Send className="w-4 h-4" />{t('Marquer envoyé', 'Mark as sent')}</button>}
+                        {canQuoteTransition(x, 'sent') && <button type="button" onClick={fb('mark', () => act(() => db.setQuoteStatus(x.id, 'sent')))} className={`${btn} bg-sky-700 border-sky-600 text-white`}><Send className="w-4 h-4" />{t('Marquer envoyé', 'Mark as sent')}</button>}
                         {canQuoteTransition(x, 'accepted') && <button type="button" onClick={() => act(() => db.setQuoteStatus(x.id, 'accepted'))} className={`${btn} bg-emerald-700 border-emerald-600 text-white`}>{t('Accepté', 'Accepted')}</button>}
                         {canQuoteTransition(x, 'refused') && <button type="button" onClick={() => act(() => db.setQuoteStatus(x.id, 'refused'))} className={`${btn} border-slate-600 text-slate-100`}>{t('Refusé', 'Refused')}</button>}
                         {canInvoiceQuote(x) && <button type="button" onClick={() => toInvoice(x)} className={`${btn} bg-violet-700 border-violet-600 text-white`}><FilePlus2 className="w-4 h-4" />{t('Transformer en facture', 'Turn into invoice')}</button>}
                         {x.invoice_id && <button type="button" onClick={() => onOpenInvoice(x.invoice_id!)} className={`${btn} border-slate-600 text-slate-100`}>{t('Voir la facture', 'See the invoice')}</button>}
                         {canDeleteQuote(x) && (confirmId === x.id ? (
-                          <><button type="button" onClick={() => act(() => db.deleteQuote(x.id))} className={`${btn} bg-rose-700 border-rose-600 text-white`}>{t('Supprimer le devis', 'Delete the quote')}</button><button type="button" onClick={() => setConfirmId(null)} className={`${btn} border-slate-600 text-slate-200`}>{t('Non', 'No')}</button></>
-                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(x.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
+                          <><button type="button" onClick={fb('delete', () => act(() => db.deleteQuote(x.id)))} className={`${btn} bg-rose-700 border-rose-600 text-white`}>{t('Supprimer le devis', 'Delete the quote')}</button><button type="button" onClick={() => setConfirmId(null)} className={`${btn} border-slate-600 text-slate-200`}>{t('Non', 'No')}</button></>
+                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(x.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
                       </div>
                     </div>
                   )}
@@ -138,7 +139,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                 <div key={i} className="rounded-lg border border-slate-800 p-2 space-y-2">
                   <div className="flex items-center gap-2">
                     <input aria-label={t('Description', 'Description')} placeholder={t('Description', 'Description')} value={l.description} maxLength={200} onChange={e => setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} className={field} />
-                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={() => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-rose-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
+                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={fb('remove', () => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) }))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-rose-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <input aria-label={t('Quantité', 'Quantity')} inputMode="decimal" placeholder={t('Quantité', 'Quantity')} value={l.qty} onChange={e => setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, qty: e.target.value } : x) })} className={field} />
@@ -146,7 +147,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                   </div>
                 </div>
               ))}
-              {editor.lines.length < 200 && <button type="button" onClick={() => setEditor({ ...editor, lines: [...editor.lines, { description: '', qty: '1', price: '' }] })} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
+              {editor.lines.length < 200 && <button type="button" onClick={fb('add', () => setEditor({ ...editor, lines: [...editor.lines, { description: '', qty: '1', price: '' }] }))} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
             </div>
             <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}<textarea value={editor.note} maxLength={500} rows={2} onChange={e => setEditor({ ...editor, note: e.target.value })} className={`${field} mt-1 py-2`} /></label>
             <div className="text-sm text-slate-200">{t('Total', 'Total')} : <b>{preview && preview.ok ? ar(preview.clean.total_ar) : '—'}</b>{preview && preview.ok && preview.clean.tax_ar > 0 ? <span className="text-slate-400"> ({t('TVA', 'VAT')} {preview.clean.tax_rate} %)</span> : null}</div>
@@ -154,7 +155,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
             {error && <div role="alert" className="text-sm text-rose-300">{error}</div>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setEditor(null)} className={`${btn} border-slate-600 text-slate-200`}>{t('Annuler', 'Cancel')}</button>
-              <button type="button" onClick={save} className={`${btn} bg-emerald-700 border-emerald-600 text-white`}>{t('Enregistrer le brouillon', 'Save draft')}</button>
+              <button type="button" onClick={fb('save', save)} className={`${btn} bg-emerald-700 border-emerald-600 text-white`}>{t('Enregistrer le brouillon', 'Save draft')}</button>
             </div>
           </div>
         </div>,

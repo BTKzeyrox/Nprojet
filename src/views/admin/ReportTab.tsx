@@ -11,6 +11,7 @@ import { db } from '../../db/store';
 import { buildReport, downloadReportExcel, reportHtml } from '../../utils/report';
 import { readCompany } from '../../utils/companyRules';
 import { todayMada } from '../../utils/stats';
+import { fb } from '../../utils/actionFeedback';
 
 // Rapport du mois : résumé, 3 points forts, 3 points d'attention, objectifs, prévision. Excel et PDF (impression) réservés à l'admin.
 export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anchor, lang }) => {
@@ -42,7 +43,7 @@ export const ReportTab: React.FC<{ anchor: string; lang: 'fr' | 'en' }> = ({ anc
         <p className="text-[11px] text-slate-400">{t('Le mois choisi en haut de la page. Il contient des chiffres d\'argent : ne le partage qu\'avec des personnes de confiance.', 'The month chosen at the top of the page. It contains money figures: share it only with people you trust.')}</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button type="button" className={btn} onClick={print}><Printer className="w-4 h-4" />{t('Imprimer', 'Print')}</button>
-          <button type="button" className={btn} onClick={() => void pdf()} disabled={busy}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
+          <button type="button" className={btn} onClick={fb('download', () => void pdf())} disabled={busy}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
           <button type="button" className={btn} onClick={() => void excel()} disabled={busy}><Download className="w-4 h-4" />{busy ? t('Export…', 'Exporting…') : 'Excel (.xlsx)'}</button>
         </div>
         <p className="text-[11px] text-slate-500">{t('« Télécharger PDF » donne une image de la page (texte non sélectionnable). Pour un PDF avec texte : « Imprimer », puis « Enregistrer au format PDF ».', '“Download PDF” gives a picture of the page (text not selectable). For a text PDF: “Print”, then “Save as PDF”.')}</p>

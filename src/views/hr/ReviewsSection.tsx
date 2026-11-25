@@ -11,6 +11,7 @@ import { LEVEL_NAMES } from '../../utils/performanceScore';
 import { reviewReasonText, snapshotOf, type Review, type ReviewObjective, type ReviewSnapshot } from '../../utils/reviews';
 import { reviewGoalLines, TEAM_GOAL_METRIC_LABEL, TEAM_GOAL_STATUS_LABEL, type TeamGoalMetric } from '../../utils/teamGoals';
 import { field, card, btn } from './DossiersSection';
+import { fb } from '../../utils/actionFeedback';
 
 // Évaluation périodique (M5.4). Responsable : crée la fiche (photo des scores du module 3), la partage. Salarié : lit ses fiches partagées et accuse lecture.
 // Les « points à améliorer » ne sont jamais envoyés au salarié (le serveur les retire).
@@ -77,10 +78,10 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
           <div key={o.id} className="flex gap-2 items-center">
             <input type="checkbox" className="w-5 h-5 shrink-0" checked={!!o.done} onChange={e => set({ objectives: form.objectives.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) })} aria-label={t('Atteint', 'Reached')} />
             <input className={field} value={o.text} maxLength={200} onChange={e => set({ objectives: form.objectives.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} aria-label={t('Objectif', 'Objective')} />
-            <button type="button" className={btn} onClick={() => set({ objectives: form.objectives.filter((_, j) => j !== i) })} aria-label={t('Retirer', 'Remove')}><Trash2 className="w-4 h-4" /></button>
+            <button type="button" className={btn} onClick={fb('remove', () => set({ objectives: form.objectives.filter((_, j) => j !== i) }))} aria-label={t('Retirer', 'Remove')}><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
-        {form.objectives.length < 10 && <button type="button" className={btn} onClick={() => set({ objectives: [...form.objectives, { id: uid(), text: '' }] })}><Plus className="w-4 h-4" />{t('Ajouter un objectif', 'Add an objective')}</button>}
+        {form.objectives.length < 10 && <button type="button" className={btn} onClick={fb('add', () => set({ objectives: [...form.objectives, { id: uid(), text: '' }] }))}><Plus className="w-4 h-4" />{t('Ajouter un objectif', 'Add an objective')}</button>}
         {form.employee_id && (() => {
           const lines = reviewGoalLines(db.getTeamGoals(), db.getPosts(), form.employee_id, form.period_start, form.period_end, today);
           if (!lines.length) return null;
@@ -101,8 +102,8 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
           <select aria-label="Note" className={field} value={form.rating} onChange={e => set({ rating: e.target.value })}><option value="">—</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} / 5</option>)}</select></div>
         {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          {!shared && <button type="button" className={`${btn} flex-1 justify-center`} onClick={() => save('draft')}>{t('Enregistrer le brouillon', 'Save the draft')}</button>}
-          <button type="button" className={`${btn} flex-1 justify-center bg-emerald-700 border-emerald-500 text-white`} onClick={() => save('shared')}><Send className="w-4 h-4" />{shared ? t('Enregistrer', 'Save') : t('Partager avec le salarié', 'Share with the employee')}</button>
+          {!shared && <button type="button" className={`${btn} flex-1 justify-center`} onClick={fb('save', () => save('draft'))}>{t('Enregistrer le brouillon', 'Save the draft')}</button>}
+          <button type="button" className={`${btn} flex-1 justify-center bg-emerald-700 border-emerald-500 text-white`} onClick={fb('save', () => save('shared'))}><Send className="w-4 h-4" />{shared ? t('Enregistrer', 'Save') : t('Partager avec le salarié', 'Share with the employee')}</button>
           <button type="button" className={btn} onClick={() => setForm(null)}>{t('Annuler', 'Cancel')}</button>
         </div>
       </div>
@@ -128,7 +129,7 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
           {isAdmin && r.improvements && <p className="text-sm text-amber-200"><span className="text-amber-400">{t('Privé — à améliorer', 'Private — to improve')} : </span>{r.improvements}</p>}
           <div className="flex flex-wrap gap-2">
             {isAdmin && <button type="button" className={btn} onClick={() => edit(r)}><Pencil className="w-4 h-4" />{t('Modifier', 'Edit')}</button>}
-            {isAdmin && <button type="button" className={btn} onClick={() => { const x = db.deleteReview(r.id); if (!x.success) setError(reviewReasonText(x.error || '', l)); }} aria-label={t('Supprimer', 'Delete')}><Trash2 className="w-4 h-4" /></button>}
+            {isAdmin && <button type="button" className={btn} onClick={fb('delete', () => { const x = db.deleteReview(r.id); if (!x.success) setError(reviewReasonText(x.error || '', l)); })} aria-label={t('Supprimer', 'Delete')}><Trash2 className="w-4 h-4" /></button>}
             {!isAdmin && !r.acknowledged_at && <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={() => db.acknowledgeReview(r.id)}><Check className="w-4 h-4" />{t('J\'ai lu cette évaluation', 'I have read this review')}</button>}
           </div>
         </div>

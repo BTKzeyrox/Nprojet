@@ -9,6 +9,7 @@ import { useApp } from '../context/AppContext';
 import { PROOF_MODES, type ProofMode } from '../utils/missionTemplates';
 import { PROOF_LABEL } from './MissionTemplatesSection';
 import { RECURRING_LIMITS, describeRule, madagascarDate, nextRun, type RecurringRule } from '../utils/recurring';
+import { fb } from '../utils/actionFeedback';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -82,7 +83,7 @@ export const RecurringMissionsSection: React.FC = () => {
               </div>
               <button type="button" aria-label={r.active ? t('Arrêter', 'Pause') : t('Relancer', 'Resume')} onClick={() => toggle(r)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-slate-600 text-slate-200">{r.active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}</button>
               <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => { setError(''); setDraft(fromRule(r)); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-slate-600 text-slate-200"><Pencil className="w-4 h-4" /></button>
-              <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => remove(r)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-red-500/50 text-red-400"><Trash2 className="w-4 h-4" /></button>
+              <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => remove(r))} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-red-500/50 text-red-400"><Trash2 className="w-4 h-4" /></button>
             </li>
           );
         })}
@@ -143,7 +144,7 @@ export const RecurringMissionsSection: React.FC = () => {
             <div><label className={labelCls}>{t('Fin (facultatif)', 'End (optional)')}</label><input type="date" value={draft.end_date} onChange={e => set({ end_date: e.target.value })} className={inputCls} /></div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
+            <button type="button" onClick={fb('save', save)} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer la règle', 'Save rule')}</button>
             <button type="button" onClick={() => { setDraft(null); setError(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm">{t('Annuler', 'Cancel')}</button>
           </div>
         </div>

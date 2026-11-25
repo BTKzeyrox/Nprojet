@@ -7,6 +7,7 @@ import { MEASURES, PAY_MODES, ENTRY_BY, MEASURE_LABEL, PAY_LABEL, ENTRY_LABEL, c
 import { CW_MAX_TYPES } from '../utils/customWorkTypes';
 import { workRuleLines } from '../utils/workRulesText';
 import { findModel } from '../utils/workTypes';
+import { fb } from '../utils/actionFeedback';
 
 const input = 'w-full bg-[#141e2a] border border-slate-700 rounded-lg px-3 py-2 min-h-[44px] text-sm text-white focus:outline-none focus:border-emerald-500';
 
@@ -57,12 +58,12 @@ export const CustomWorkTypes: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
               <div className="text-sm font-bold text-white">{t(x.name.fr, x.name.en)}</div>
               <div className="text-[11px] text-slate-300">{t(describeWorkType(x).fr, describeWorkType(x).en)}</div>
             </div>
-            <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => del(x.id, x.name.fr)} className="shrink-0 w-11 h-11 -mt-1 -mr-2 flex items-center justify-center text-rose-300 cursor-pointer"><Trash2 className="w-5 h-5" /></button>
+            <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => del(x.id, x.name.fr))} className="shrink-0 w-11 h-11 -mt-1 -mr-2 flex items-center justify-center text-rose-300 cursor-pointer"><Trash2 className="w-5 h-5" /></button>
           </li>
         ))}
       </ul>
       {!open ? (
-        <button type="button" data-cwt-open onClick={() => setOpen(true)} disabled={list.length >= CW_MAX_TYPES} className="min-h-[44px] px-3 rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-40"><Plus className="w-4 h-4" />{t('Créer mon type de travail', 'Create my work type')}</button>
+        <button type="button" data-cwt-open onClick={fb('create', () => setOpen(true))} disabled={list.length >= CW_MAX_TYPES} className="min-h-[44px] px-3 rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-40"><Plus className="w-4 h-4" />{t('Créer mon type de travail', 'Create my work type')}</button>
       ) : (
         <div className="rounded-lg border border-slate-700 p-3 space-y-3">
           <label className="block space-y-1"><span className="text-xs text-slate-300">{t('Nom en français', 'Name in French')}</span><input data-cwt-fr value={fr} maxLength={60} onChange={e => setFr(e.target.value)} className={input} placeholder="Emballage" /></label>
@@ -82,7 +83,7 @@ export const CustomWorkTypes: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
           </fieldset>
           {err && <div role="alert" className="text-rose-300 text-xs">{err}</div>}
           <div className="flex gap-2">
-            <button type="button" data-cwt-save onClick={save} className="flex-1 min-h-[44px] rounded-lg bg-emerald-600 text-white text-sm font-bold cursor-pointer">{t('Créer', 'Create')}</button>
+            <button type="button" data-cwt-save onClick={fb('create', save)} className="flex-1 min-h-[44px] rounded-lg bg-emerald-600 text-white text-sm font-bold cursor-pointer">{t('Créer', 'Create')}</button>
             <button type="button" onClick={() => { setOpen(false); setErr(''); }} className="min-h-[44px] px-4 rounded-lg border border-slate-600 text-slate-200 text-sm cursor-pointer">{t('Annuler', 'Cancel')}</button>
           </div>
         </div>

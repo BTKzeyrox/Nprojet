@@ -602,6 +602,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `accounting.ts` | Comptabilité (module 14, M14.1) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:accounting`. |
 | `accountingEntries.ts` | Écritures AUTOMATIQUES (module 14, M14.2) : règles pures qui transforment chaque pièce du site en écriture comptable. Sans écran, sans serveur, sans table. |
 | `accountingExport.ts` | Export pour le comptable (module 14, M14.8) : règles pures, sans écran, sans serveur. Contrôlé par `npm run check:accounting-export`. |
+| `actionFeedback.ts` | Retour visible après un bouton d'action (Enregistrer, Copier, Publier, Envoyer, Télécharger, Supprimer…). Utilisé par : les boutons d'action de tout le site. |
 | `advice.ts` | Solutions proposées (suggestions) pour chaque règle de la Santé du site. Texte fixe, FR/EN, jamais d'accusation : ce sont des pistes que l'admin juge lui-même. |
 | `aiAssist.ts` | Assistant IA externe (niveau B, M11.13) côté site. ADMIN SEULEMENT, DÉSACTIVÉ PAR DÉFAUT (case dans Réglages, réglée sur cet appareil). |
 | `alerts.ts` | Alertes de l'accueil admin (sans écran, sans serveur). Contrôlé par `npm run check:phase4`. |
@@ -1120,6 +1121,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:hide-file-details` | Détails des fichiers cachés (nom d'origine, taille) sauf pour l'admin ; chat : un seul envoi, aperçu, retrait d'une photo ; avertissement « pas de code » fermable. Lancer : npm run check:hide-file-details |
 | `npm run check:bottom-nav` | Barre du bas (téléphone) : Accueil, Dashboard, Messages, Calendrier, Menu ; en-tête : logo + nom, recherche, notifications, profil. Lancer : npm run check:bottom-nav |
 | `npm run check:nav-mode` | Contrôle : réglage « Menu du téléphone » (barre du bas ou seulement le haut), synchronisé par compte. Lancer : npm run check:nav-mode |
+| `npm run check:action-feedback` | Contrôle : retour visible après les boutons d'action (Enregistré ✓, Copié ✓, Supprimé ✓…), sans faux « ✓ ». Lancer : npm run check:action-feedback |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

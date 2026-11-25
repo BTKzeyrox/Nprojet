@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, Trash2 } from 'lucide-react';
 import { addTemplate, getTemplates, removeTemplate, scheduleAt, scheduleLabel, TPL_MAX_LEN } from '../utils/chatTemplates';
 import { remAddDays, remDateOf } from '../utils/reminderRules';
+import { fb } from '../utils/actionFeedback';
 
 const Shell: React.FC<{ tag: string; title: string; light: boolean; onClose: () => void; children: React.ReactNode }> = ({ tag, title, light, onClose, children }) => createPortal(
   <div {...{ [tag]: '' }} className="fixed inset-0 z-[90] bg-black/50 flex items-end sm:items-center justify-center p-3" onClick={onClose}>
@@ -41,7 +42,7 @@ export const TemplatesDialog: React.FC<{ light: boolean; uid: string; draft: str
       {list.map((t, i) => (
         <div key={i} className="flex items-stretch gap-1">
           <button type="button" data-tpl-pick onClick={() => onPick(t)} className={`flex-1 min-h-[48px] text-left px-3 py-2 rounded-lg border text-sm cursor-pointer ${light ? 'border-slate-300' : 'border-slate-600'}`}>{t.length > 120 ? t.slice(0, 120) + '…' : t}</button>
-          <button type="button" data-tpl-del aria-label="Supprimer ce modèle" onClick={() => setList(removeTemplate(uid, i))} className="min-w-[44px] flex items-center justify-center cursor-pointer text-red-500"><Trash2 className="w-4 h-4" /></button>
+          <button type="button" data-tpl-del aria-label="Supprimer ce modèle" onClick={fb('delete', () => setList(removeTemplate(uid, i)))} className="min-w-[44px] flex items-center justify-center cursor-pointer text-red-500"><Trash2 className="w-4 h-4" /></button>
         </div>
       ))}
       <button type="button" data-tpl-save disabled={!draft.trim()} onClick={() => setList(addTemplate(uid, draft))} className="w-full min-h-[48px] rounded-xl border font-semibold disabled:opacity-50 cursor-pointer">{draft.trim() ? `Garder mon texte en modèle (max ${TPL_MAX_LEN} caractères)` : 'Écris d\'abord un texte pour le garder'}</button>

@@ -8,6 +8,7 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { bootRecover, dismissLeft, type Copy } from '../utils/unsentCopy';
 import { openView } from './WorksheetShortcut';
+import { fb } from '../utils/actionFeedback';
 
 const COL: Record<string, [string, string]> = { messages: ['Message', 'Message'], news: ['Publication', 'Post'], posts: ['Saisie', 'Entry'], sheets: ['Feuille', 'Sheet'], contracts: ['Mission', 'Mission'], clients: ['Client', 'Client'], stock: ['Stock', 'Stock'], products: ['Produit', 'Product'] };
 export const UnsentRecovery: React.FC<{ uid: string }> = ({ uid }) => {
@@ -57,7 +58,7 @@ export const UnsentRecovery: React.FC<{ uid: string }> = ({ uid }) => {
               <li key={c.key + c.at} className={`rounded-xl border p-2 ${L ? 'bg-white border-amber-200' : 'bg-black/30 border-amber-800'}`} data-recovered-item>
                 <div className="text-[11px] opacity-70">{(COL[c.col] || [c.col, c.col])[en ? 1 : 0]} · {new Date(c.at).toLocaleString(en ? 'en-GB' : 'fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
                 <p className="whitespace-pre-wrap break-words select-text">{c.text}</p>
-                <div className="mt-1 flex gap-2"><button type="button" className={btn} onClick={() => void copy(c)}>{t('Copier', 'Copy')}</button><button type="button" data-recovered-dismiss className={btn} onClick={() => setList(dismissLeft(uid, c))}>{t('Ignorer', 'Dismiss')}</button></div>
+                <div className="mt-1 flex gap-2"><button type="button" className={btn} onClick={fb('copy', () => void copy(c))}>{t('Copier', 'Copy')}</button><button type="button" data-recovered-dismiss className={btn} onClick={() => setList(dismissLeft(uid, c))}>{t('Ignorer', 'Dismiss')}</button></div>
               </li>
             ))}
           </ul>

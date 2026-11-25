@@ -8,6 +8,7 @@ import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
 import { downloadFile } from '../utils/attachments';
 import { copyImage, copyImageText } from '../utils/copyImage';
+import { fb } from '../utils/actionFeedback';
 
 interface LightboxModalProps {
   isOpen: boolean;
@@ -289,9 +290,9 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
           {onDelete && (!canDelete || canDelete(current)) && (
-            <button type="button" onClick={() => onDelete(current)} className={`${round} !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
+            <button type="button" onClick={fb('delete', () => onDelete(current))} className={`${round} !bg-red-600/80 hover:!bg-red-600`} title="Supprimer" aria-label="Supprimer"><Trash2 className="w-5 h-5" /></button>
           )}
-          <button type="button" onClick={() => { void copyImage(current).then(r => { setCopyMsg(copyImageText(r)); window.setTimeout(() => setCopyMsg(''), 2500); }); }} className={round} title="Copier l'image" aria-label="Copier l'image" data-lightbox-copy><Copy className="w-5 h-5" /></button>
+          <button type="button" onClick={fb('copy', () => { void copyImage(current).then(r => { setCopyMsg(copyImageText(r)); window.setTimeout(() => setCopyMsg(''), 2500); }); })} className={round} title="Copier l'image" aria-label="Copier l'image" data-lightbox-copy><Copy className="w-5 h-5" /></button>
           <a href={current} download={names?.[idx] || 'photo.png'} onClick={e => { if (names?.[idx]) { e.preventDefault(); void downloadFile(current, names[idx]); } }} className={round} title="Télécharger" aria-label="Télécharger"><Download className="w-5 h-5" /></a>
         </div>
       </header>

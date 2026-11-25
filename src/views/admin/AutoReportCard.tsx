@@ -12,6 +12,7 @@ import { buildReport, reportHtml } from '../../utils/report';
 import { readCompany } from '../../utils/companyRules';
 import { periodLabel, todayMada } from '../../utils/stats';
 import { describeAutoReport, nextAutoReport, type AutoReportSetting, type ReportFrequency, type ReportRecord } from '../../utils/autoReport';
+import { fb } from '../../utils/actionFeedback';
 
 type Row = Omit<ReportRecord, 'html'>;
 
@@ -140,7 +141,7 @@ export const AutoReportCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
             <p className="text-[11px] text-slate-400">{t(`Copie figée le ${String(open.frozen_at || '').slice(0, 10)}. Elle contient des chiffres d'argent : ne la partage qu'avec des personnes de confiance.`, `Copy frozen on ${String(open.frozen_at || '').slice(0, 10)}. It contains money figures: share it only with people you trust.`)}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button type="button" className={btn} onClick={print}><Printer className="w-4 h-4" />{t('Imprimer', 'Print')}</button>
-              <button type="button" className={btn} onClick={() => void pdf()} disabled={busy !== null}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
+              <button type="button" className={btn} onClick={fb('download', () => void pdf())} disabled={busy !== null}><FileText className="w-4 h-4" />{t('Télécharger PDF', 'Download PDF')}</button>
               <button type="button" className={btn} onClick={() => setOpen(null)}>{t('Fermer', 'Close')}</button>
             </div>
           </div>

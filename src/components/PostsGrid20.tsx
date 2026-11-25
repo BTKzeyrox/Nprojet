@@ -43,6 +43,7 @@ import { applyTemplate } from '../utils/missionTemplates';
 import { TaskBar, TaskListEditor } from './TaskChecklist';
 import { tasksFromLines } from '../utils/taskList';
 import { showShift } from '../utils/shiftMode';
+import { fb } from '../utils/actionFeedback';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -283,7 +284,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             {currentUser.role === 'admin' && (
               <button
                 type="button"
-                onClick={() => { setAddError(null); setShowAdd(true); }}
+                onClick={fb('add', () => { setAddError(null); setShowAdd(true); })}
                 disabled={contractsList.length >= 100}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shrink-0"
               >
@@ -496,7 +497,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         )}
                         {col.id === 'pending' ? (
                           isAdminView ? (
-                            <button type="button" onClick={() => onSelectContract(contract)} className="w-full py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-black inline-flex items-center justify-center gap-1.5">
+                            <button type="button" onClick={fb('validate', () => onSelectContract(contract))} className="w-full py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-black inline-flex items-center justify-center gap-1.5">
                               <Clock className="w-3.5 h-3.5" />Valider
                             </button>
                           ) : (
@@ -538,7 +539,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
       {showAdd && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/70 overflow-y-auto" onClick={() => setShowAdd(false)}>
-          <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className={`w-full max-w-md my-auto rounded-3xl border p-5 space-y-4 text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
+          <form onSubmit={fb('create', submitAdd)} onClick={e => e.stopPropagation()} className={`w-full max-w-md my-auto rounded-3xl border p-5 space-y-4 text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
             <h3 className="font-bold text-lg">Nouvelle mission</h3>
             {addError && <div className="p-2.5 rounded-xl border border-red-500/60 bg-red-500/10 text-red-500 font-semibold text-xs">{addError}</div>}
             {templates.length > 0 && (

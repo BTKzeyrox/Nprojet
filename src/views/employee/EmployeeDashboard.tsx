@@ -59,6 +59,7 @@ import { todayMada } from '../../utils/stats';
 import { composerEnter, isDesktopPointer, useAutoGrow } from '../../utils/composerKeys';
 import { levelNow, levelLine } from '../../utils/monthLevel';
 import { SafeImage } from '../../components/SafeImage';
+import { fb } from '../../utils/actionFeedback';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -879,10 +880,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         />
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={fb('update', () => {
                             if (progressInput !== null) db.updateCurrentScore(activePost.id, progressInput);
                             setProgressInput(null);
-                          }}
+                          })}
                           className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded font-bold transition-colors cursor-pointer"
                         >
                           Mettre à jour
@@ -1140,7 +1141,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
           {/* Send Input */}
           <form
-            onSubmit={handleSendMessage}
+            onSubmit={fb('send', handleSendMessage)}
             className="p-3 bg-[#131d2a] border-t border-slate-800 flex items-end gap-2"
           >
             <textarea
@@ -1292,7 +1293,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmitStartForm} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
+            <form onSubmit={fb('send', handleSubmitStartForm)} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
               {/* READ-ONLY ACCOUNT INFORMATION (Managed exclusively by Admin) */}
               <div className="bg-[#141e2a] border border-slate-700/80 rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -1458,7 +1459,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         {/* Delete Button */}
                         <button
                           type="button"
-                          onClick={() => handleRemoveStartPhoto(idx)}
+                          onClick={fb('delete', () => handleRemoveStartPhoto(idx))}
                           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold shadow transition-colors cursor-pointer"
                           title="Supprimer cette photo"
                         >
@@ -1705,7 +1706,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmitEndForm} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
+            <form onSubmit={fb('send', handleSubmitEndForm)} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
               <div className="bg-[#121922] p-3 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
                   <span className="text-[11px] text-slate-500 uppercase block">Quantité de départ</span>
@@ -1812,7 +1813,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => setEndProofPreview(null)}
+                        onClick={fb('delete', () => setEndProofPreview(null))}
                         className="text-xs font-mono text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />

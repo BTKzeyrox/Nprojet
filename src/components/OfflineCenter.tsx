@@ -11,6 +11,7 @@ import { actionLabel, collectionLabel, copyLine, pick } from '../utils/offlineTe
 import { askConfirm } from './ConfirmModal';
 import { showToast } from './ToastHost';
 import { PinForm } from './OfflinePin';
+import { fb } from '../utils/actionFeedback';
 
 const EVENT = 'df:offline-center';
 /** Ouvre la fenêtre « Hors ligne » (actions en attente et à revoir). */
@@ -138,9 +139,9 @@ export const OfflineCenterView: React.FC<{ tab: 'pending' | 'review'; onTab: (t:
                   {op.review_note && <p className="text-[11px] text-slate-400">{t('Raison du serveur : ', 'Server reason: ')}{op.review_note}</p>}
                   {op.text && <p className="text-sm text-slate-100 bg-black/20 rounded-lg p-2 break-words whitespace-pre-wrap line-clamp-6">{op.text}</p>}
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => void copy(op)} className={`${btn} border-slate-600 text-slate-200`}><Copy className="w-3.5 h-3.5" />{t('Copier', 'Copy')}</button>
-                    {op.kind === 'record' && <button type="button" onClick={() => resend(op)} className={`${btn} bg-blue-600 border-blue-500 text-white`}><RotateCcw className="w-3.5 h-3.5" />{t('Renvoyer', 'Send again')}</button>}
-                    <button type="button" onClick={() => drop(op)} className={`${btn} border-red-500/60 text-red-300`}><Trash2 className="w-3.5 h-3.5" />{t('Supprimer', 'Delete')}</button>
+                    <button type="button" onClick={fb('copy', () => void copy(op))} className={`${btn} border-slate-600 text-slate-200`}><Copy className="w-3.5 h-3.5" />{t('Copier', 'Copy')}</button>
+                    {op.kind === 'record' && <button type="button" onClick={fb('resend', () => resend(op))} className={`${btn} bg-blue-600 border-blue-500 text-white`}><RotateCcw className="w-3.5 h-3.5" />{t('Renvoyer', 'Send again')}</button>}
+                    <button type="button" onClick={fb('delete', () => drop(op))} className={`${btn} border-red-500/60 text-red-300`}><Trash2 className="w-3.5 h-3.5" />{t('Supprimer', 'Delete')}</button>
                   </div>
                 </div>
               );

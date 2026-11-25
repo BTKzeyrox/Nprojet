@@ -8,6 +8,7 @@ import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { copyText } from '../../utils/errorReport';
 import { useApp } from '../../context/AppContext';
+import { fb } from '../../utils/actionFeedback';
 
 interface Row {
   id: string;
@@ -172,11 +173,11 @@ export const ErrorsLog: React.FC = () => {
               </details>
             )}
             <div className="flex flex-wrap gap-2 pt-1">
-              <button type="button" onClick={() => copy(r.id, forClaude(r))} className={`${btn} bg-blue-600 hover:bg-blue-500 text-white`}>
+              <button type="button" onClick={fb('copy', () => copy(r.id, forClaude(r)))} className={`${btn} bg-blue-600 hover:bg-blue-500 text-white`}>
                 <Copy className="w-3.5 h-3.5" /> {copied === r.id ? 'Copié ✓' : 'Copier pour Claude'}
               </button>
               {r.status === 'open' ? (
-                <button type="button" onClick={() => setRowStatus(r, 'resolved')} className={`${btn} bg-emerald-600 hover:bg-emerald-500 text-white`}>
+                <button type="button" onClick={fb('mark', () => setRowStatus(r, 'resolved'))} className={`${btn} bg-emerald-600 hover:bg-emerald-500 text-white`}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> Marquer résolue
                 </button>
               ) : (
@@ -184,7 +185,7 @@ export const ErrorsLog: React.FC = () => {
                   <RotateCcw className="w-3.5 h-3.5" /> Rouvrir
                 </button>
               )}
-              <button type="button" onClick={() => remove(r)} className={`${btn} ml-auto border ${L ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'}`}>
+              <button type="button" onClick={fb('delete', () => remove(r))} className={`${btn} ml-auto border ${L ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100' : 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'}`}>
                 <Trash2 className="w-3.5 h-3.5" /> Supprimer
               </button>
             </div>

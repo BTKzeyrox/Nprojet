@@ -30,6 +30,7 @@ import { SignupSettings } from '../../components/SignupSettings';
 import { AiSettingsSection } from '../../components/AiSettingsSection';
 import { WatchSettingsSection } from '../../components/WatchSettingsSection';
 import { cleanLevels } from '../../utils/monthLevel';
+import { fb } from '../../utils/actionFeedback';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -488,7 +489,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
           {s.post_types.map(t => (
             <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">
               {t}
-              <button type="button" onClick={() => set('post_types', s.post_types.filter(x => x !== t))} className="text-slate-400 hover:text-red-400 cursor-pointer" title="Retirer">
+              <button type="button" onClick={fb('remove', () => set('post_types', s.post_types.filter(x => x !== t)))} className="text-slate-400 hover:text-red-400 cursor-pointer" title="Retirer">
                 <X className="w-3.5 h-3.5" />
               </button>
             </span>
@@ -501,7 +502,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addType(); } }}
             placeholder="Nouveau type, ex: NO READ" className={inputCls}
           />
-          <button type="button" onClick={addType} className="px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
+          <button type="button" onClick={fb('add', addType)} className="px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0" title="Ajouter">
             <Plus className="w-5 h-5" />
           </button>
         </div>

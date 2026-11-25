@@ -17,6 +17,7 @@ import { workLineDetail } from '../utils/workLineText';
 import { missingPeople, dayTotals, copyFromDay } from '../utils/sheetDay';
 import { remAddDays } from '../utils/reminderRules';
 import { paperSheetHtml, printPaperSheet, applyGroup } from '../utils/paperSheet';
+import { fb } from '../utils/actionFeedback';
 
 type Row = { presence?: string; hours?: string; quantity?: string; rejected?: string; late_minutes?: string; absence_reason?: string };
 const REASON_FR: Record<string, string> = {
@@ -135,9 +136,9 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
               <div className="flex flex-wrap gap-2 items-end">
                 {showPresence && <button type="button" data-group-present onClick={() => groupApply({ presence: 'present' })} className="min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer bg-emerald-600 border-emerald-600 text-white">{t('Tous présents', 'All present')}</button>}
                 {showHours && <><label className="block space-y-1"><span className={label}>{t('Heures pour tous', 'Hours for all')}</span><input inputMode="decimal" data-group-hours value={grp.hours} onChange={e => setGrp({ ...grp, hours: e.target.value })} className={`${input} !w-28`} /></label>
-                  <button type="button" data-group-hours-apply onClick={() => groupApply({ hours: grp.hours })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
+                  <button type="button" data-group-hours-apply onClick={fb('apply', () => groupApply({ hours: grp.hours }))} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
                 {showQty && <><label className="block space-y-1"><span className={label}>{t('Quantité pour tous', 'Quantity for all')}</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
-                  <button type="button" data-group-qty-apply onClick={() => groupApply({ quantity: grp.quantity })} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
+                  <button type="button" data-group-qty-apply onClick={fb('apply', () => groupApply({ quantity: grp.quantity }))} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
                 <button type="button" data-copy-yesterday onClick={copyYesterday} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Copier la veille', 'Copy the day before')}</button>
                 <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Imprimer la feuille papier', 'Print the paper sheet')}</button>
               </div>

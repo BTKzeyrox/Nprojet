@@ -9,6 +9,7 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { todayMada } from '../../utils/stats';
 import { CONFLICT_LABEL, SHIFT_ERROR_MESSAGE, SHIFT_LABEL, coverage, isOnLeave, mondayOf, planAddDays, planConflicts, shiftId, weekDates, type ShiftKind } from '../../utils/planning';
 import { card, btn } from './DossiersSection';
+import { fb } from '../../utils/actionFeedback';
 
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -139,7 +140,7 @@ export const PlanningSection: React.FC<{ ver: number; isAdmin: boolean; myId: st
         )}
         <p className="text-[11px] text-slate-500">{t('J = Jour, N = Nuit, R = Repos, C = congé accepté (cadre rouge = conflit).', 'D = Day, N = Night, R = Off, L = approved leave (red frame = conflict).')}</p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={copyPrevious} className={btn}><Copy className="w-4 h-4" />{t('Copier la semaine précédente', 'Copy last week')}</button>
+          <button type="button" onClick={fb('copy', copyPrevious)} className={btn}><Copy className="w-4 h-4" />{t('Copier la semaine précédente', 'Copy last week')}</button>
           <button type="button" onClick={clearWeek} className={`${btn} text-red-300`}><Eraser className="w-4 h-4" />{t('Vider la semaine', 'Clear week')}</button>
         </div>
       </div>

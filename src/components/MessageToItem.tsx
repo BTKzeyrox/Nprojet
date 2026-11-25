@@ -7,6 +7,7 @@ import type { ChatMessage } from '../types';
 import { buildItem, type ActionIntent, type ActionKind } from '../utils/assistantActions';
 import { remSave } from '../utils/remindersState';
 import { remDateOf, remAddDays, remMs } from '../utils/reminderRules';
+import { fb } from '../utils/actionFeedback';
 
 const KINDS: { k: ActionKind; type: ActionIntent['type']; label: string }[] = [
   { k: 'reminder', type: 'simple', label: 'Rappel' },
@@ -56,7 +57,7 @@ export const MessageToItem: React.FC<{ msg: ChatMessage; light: boolean; onClose
             {kind !== 'reminder' && <p className="text-xs opacity-70">Heure vide = toute la journée.</p>}
             {past && <p className="text-xs text-red-500">Cette date est déjà passée.</p>}
             {err && <p role="alert" className="text-xs text-red-500">{err}</p>}
-            <button type="button" data-mti-save disabled={!valid || state === 'busy'} onClick={save} className="w-full min-h-[48px] rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 cursor-pointer">Créer (visible par moi seul)</button>
+            <button type="button" data-mti-save disabled={!valid || state === 'busy'} onClick={fb('create', save)} className="w-full min-h-[48px] rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 cursor-pointer">Créer (visible par moi seul)</button>
           </>
         )}
       </div>

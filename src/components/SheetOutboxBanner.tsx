@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
+import { fb } from '../utils/actionFeedback';
 
 const dmy = (d: string) => d.split('-').reverse().join('/');
 export const SheetOutboxBanner: React.FC = () => {
@@ -23,7 +24,7 @@ export const SheetOutboxBanner: React.FC = () => {
           <div className="flex items-start gap-2 font-semibold"><Clock className="w-5 h-5 shrink-0" /><span>{pending.length} {pending.length > 1 ? t('feuilles en attente', 'sheets waiting') : t('feuille en attente', 'sheet waiting')} {t("d'envoi (", 'to send (')}{box.lines} {box.lines > 1 ? t('lignes', 'lines') : t('ligne', 'line')})</span></div>
           <ul className="mt-1 ml-7 list-disc">{pending.map(i => <li key={i.id}>{i.type || t('Feuille', 'Sheet')} · {dmy(i.date)} · {i.lines} {i.lines > 1 ? t('lignes', 'lines') : t('ligne', 'line')}</li>)}</ul>
           <p className="mt-1 ml-7">{t('Elles partent toutes seules au retour du réseau, une seule fois.', 'They are sent by themselves when the network is back, once only.')}</p>
-          <button type="button" data-sheet-outbox-send disabled={busy} onClick={send} className={`${btn} mt-2 ml-7 disabled:opacity-60`}>{busy ? t('Envoi…', 'Sending…') : t('Envoyer maintenant', 'Send now')}</button>
+          <button type="button" data-sheet-outbox-send disabled={busy} onClick={fb('send', send)} className={`${btn} mt-2 ml-7 disabled:opacity-60`}>{busy ? t('Envoi…', 'Sending…') : t('Envoyer maintenant', 'Send now')}</button>
         </div>
       )}
       {review.map(i => (
@@ -32,8 +33,8 @@ export const SheetOutboxBanner: React.FC = () => {
           <p className="mt-1 ml-7" data-sheet-outbox-reason>{i.reason}</p>
           <p className="mt-1 ml-7">{t("Rien n'est perdu : la feuille reste ici tant que tu ne la retires pas.", 'Nothing is lost: the sheet stays here until you remove it.')}</p>
           <div className="mt-2 ml-7 flex flex-wrap gap-2">
-            <button type="button" data-sheet-outbox-retry onClick={() => db.sheetRequeue(i.id)} className={btn}>{t('Renvoyer', 'Send again')}</button>
-            <button type="button" data-sheet-outbox-discard onClick={() => { if (window.confirm(t('Retirer cette feuille de la liste ? Elle ne sera pas enregistrée.', 'Remove this sheet from the list? It will not be saved.'))) db.sheetDiscard(i.id); }} className={btn}>{t('Retirer', 'Remove')}</button>
+            <button type="button" data-sheet-outbox-retry onClick={fb('resend', () => db.sheetRequeue(i.id))} className={btn}>{t('Renvoyer', 'Send again')}</button>
+            <button type="button" data-sheet-outbox-discard onClick={fb('remove', () => { if (window.confirm(t('Retirer cette feuille de la liste ? Elle ne sera pas enregistrée.', 'Remove this sheet from the list? It will not be saved.'))) db.sheetDiscard(i.id); })} className={btn}>{t('Retirer', 'Remove')}</button>
           </div>
         </div>
       ))}

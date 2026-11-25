@@ -1217,3 +1217,13 @@ html.theme-light [class*="rounded-2xl"][class*="border"], html.theme-light [clas
   border-color: var(--gp-line);
   box-shadow: 0 1px 2px rgba(11, 42, 74, 0.10), 0 8px 20px -14px rgba(11, 42, 74, 0.30);
 }
+
+/* Retour visible après un bouton d'action (voir utils/actionFeedback.ts) : en cours, fait ✓, échec */
+[data-fb="busy"] { pointer-events: none; opacity: .7; }
+[data-fb="ok"] { box-shadow: 0 0 0 2px #10b981 !important; }
+[data-fb="err"] { box-shadow: 0 0 0 2px #ef4444 !important; }
+[data-fb][data-fb-label] { position: relative; color: transparent !important; box-shadow: none !important; min-width: 8.5em; }
+[data-fb][data-fb-label] > * { visibility: hidden; }
+[data-fb][data-fb-label]::after { content: attr(data-fb-text); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; white-space: nowrap; color: #fff; background: #059669; border-radius: inherit; }
+[data-fb="busy"][data-fb-label]::after { background: #475569; }
+[data-fb="err"][data-fb-label]::after { background: #dc2626; }

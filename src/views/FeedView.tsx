@@ -28,6 +28,7 @@ import { composerEnter, isDesktopPointer, useAutoGrow } from '../utils/composerK
 import { AUDIENCE_ROLES, audienceLabel, canEditNews, canSeeNews, newsAudience, isRestricted, publishModeFor, roleLabel, type NewsRole } from '../utils/newsAccess';
 import { markNewsSeen } from '../utils/notifications';
 import { SafeImage } from '../components/SafeImage';
+import { fb } from '../utils/actionFeedback';
 
 // Images d'une publication : une seule = grande image ; plusieurs = défilement de côté avec des points « • • • »
 const ImageCarousel: React.FC<{ images: { url: string; name: string }[]; onOpen: (url: string) => void; compact?: boolean }> = ({ images, onOpen, compact }) => {
@@ -173,21 +174,21 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
             <li key={f.url} className={row}>
               {f.kind === 'image' ? <SafeImage src={f.url} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
               <div className="min-w-0 flex-1"><div className="text-sm truncate">{f.kind === 'image' ? 'Photo' : neutralFileLabel(f.name)}</div></div>
-              <button type="button" disabled={busy} onClick={() => setKept(prev => prev.filter(x => x.url !== f.url))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={fb('remove', () => setKept(prev => prev.filter(x => x.url !== f.url)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
             </li>
           ))}
           {items.map(it => (
             <li key={it.key} className={row}>
               {it.kind === 'image' ? <SafeImage src={it.dataUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
               <div className="min-w-0 flex-1"><div className="text-sm truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div><div className={`text-xs ${muted}`}>nouveau</div></div>
-              <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={fb('remove', () => setItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
       )}
       <div>
         <input ref={fileRef} type="file" accept={ACCEPT_ATTR} multiple hidden onChange={e => void onPick(e)} />
-        <button type="button" disabled={busy || preparing} onClick={() => fileRef.current?.click()} data-add-file className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`}>
+        <button type="button" disabled={busy || preparing} onClick={fb('add', () => fileRef.current?.click())} data-add-file className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`}>
           {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}{preparing ? 'Préparation…' : 'Ajouter une photo / un fichier'}
         </button>
         <PasteImageButton disabled={busy || preparing} onFiles={f => { void addFiles(f); }} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/5 text-slate-200'}`} />
@@ -195,7 +196,7 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
       <AudiencePicker value={aud} onChange={setAud} disabled={busy} light={light} />
       {err && <div className="text-xs text-red-500" role="alert">{err}</div>}
       <div className="flex gap-2">
-        <button type="button" disabled={busy || preparing || empty} onClick={() => void save()} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />}Enregistrer</button>
+        <button type="button" disabled={busy || preparing || empty} onClick={fb('save', () => void save())} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />}Enregistrer</button>
         <button type="button" disabled={busy} onClick={onDone} className={`px-4 py-2 rounded-lg text-sm font-semibold ${light ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
       </div>
     </div>
@@ -328,7 +329,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     <button type="button" onClick={() => openProfile(c.user_id)} className="text-xs font-bold truncate cursor-pointer" title="Voir le profil">{c.role === 'admin' ? 'Responsable' : c.user_name}</button>
                     <span className={`text-[11px] ${muted}`}>{timeAgo(c.created_at)}</span>
                     {(isAdmin || mine) && (
-                      <button type="button" title="Supprimer" onClick={() => void run(() => db.deleteCommentNews(post.id, c.id))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button type="button" title="Supprimer" onClick={fb('delete', () => void run(() => db.deleteCommentNews(post.id, c.id)))} className="ml-auto text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                     )}
                   </div>
                   <p className="text-sm whitespace-pre-wrap break-words">{c.reply_to_name && <span className="font-semibold text-emerald-600">@{c.reply_to_name} </span>}{c.text}</p>
@@ -390,7 +391,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void run(() => db.decideNews(post.id, 'approve'))}
+                onClick={fb('validate', () => void run(() => db.decideNews(post.id, 'approve')))}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50"
               >
                 <Check className="w-4 h-4" />Valider
@@ -398,11 +399,11 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => askReason({
+                onClick={fb('refuse', () => askReason({
                   title: 'Refuser cette publication ?',
                   message: 'Les fichiers joints seront supprimés. L’auteur verra ton motif.',
                   onSubmit: reason => { void run(() => db.decideNews(post.id, 'reject', reason)); },
-                })}
+                }))}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold disabled:opacity-50"
               >
                 <X className="w-4 h-4" />Refuser
@@ -410,7 +411,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
             </div>
           )}
           {mine && (
-            <button type="button" disabled={busy} onClick={() => void run(() => db.withdrawNews(post.id))} className="underline font-semibold disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={fb('remove', () => void run(() => db.withdrawNews(post.id)))} className="underline font-semibold disabled:opacity-50">
               Retirer cette publication
             </button>
           )}
@@ -449,7 +450,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
           <Heart className="w-3.5 h-3.5 shrink-0" fill={loved ? 'currentColor' : 'none'} />J’adore
         </button>
         <button type="button" data-comment-toggle aria-expanded={open} onClick={() => { if (open) setReply(null); setOpen(v => !v); }} className={btn}><MessageCircle className="w-3.5 h-3.5 shrink-0" />Commenter</button>
-        <button type="button" onClick={share} data-share-open className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
+        <button type="button" onClick={fb('share', share)} data-share-open className={btn}><Share2 className="w-3.5 h-3.5 shrink-0" />Partager</button>
       </div>
       </>)}
 
@@ -484,7 +485,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     <div className="text-xs truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div>
                     <div className={`text-[11px] ${muted}`}>{it.url ? 'Envoyée' : 'Prête'}</div>
                   </div>
-                  <button type="button" disabled={busy} onClick={() => setCItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+                  <button type="button" disabled={busy} onClick={fb('remove', () => setCItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
                 </li>
               ))}
             </ul>
@@ -514,7 +515,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
               className={`flex-1 min-w-0 resize-none max-h-36 rounded-lg border px-3 py-2 text-sm leading-5 outline-none focus:border-emerald-500 ${light ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0b1118] border-slate-600 text-slate-100'}`}
               style={{ height: 38 }}
             />
-            <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={() => void send()} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
+            <button type="button" disabled={busy || cPrep || (!text.trim() && cItems.length === 0)} onClick={fb('send', () => void send())} className="px-3 rounded-lg bg-emerald-600 text-white disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold" aria-label="Envoyer">
               {cProg ? `${cProg.d}/${cProg.t}` : <Send className="w-4 h-4" />}
             </button>
           </div>}
@@ -626,7 +627,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
                   {it.url ? 'Envoyée' : 'Prête'}
                 </div>
               </div>
-              <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={fb('remove', () => setItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
@@ -643,7 +644,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
             </label>
           )}
         </div>
-        <button type="button" onClick={() => void submit()} disabled={busy || preparing || (!text.trim() && items.length === 0 && !(extra && extra.kind !== 'ack' && extra.question.trim()))} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+        <button type="button" onClick={fb('publish', () => void submit())} disabled={busy || preparing || (!text.trim() && items.length === 0 && !(extra && extra.kind !== 'ack' && extra.question.trim()))} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2">
           {busy && <Loader2 className="w-4 h-4 animate-spin" />}
           {busy ? (progress ? `Envoi ${progress.d}/${progress.t}…` : 'Envoi…') : direct ? 'Publier' : 'Envoyer pour validation'}
         </button>

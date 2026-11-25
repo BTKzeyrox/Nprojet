@@ -9,6 +9,7 @@ import { todayMada } from '../../utils/stats';
 import { readCompany } from '../../utils/companyRules';
 import { LEAVE_STATUS_LABELS, LEAVE_TYPE_LABELS, LEAVE_TYPES, leaveBalance, leaveReasonText, workingDays, type Leave, type LeaveType } from '../../utils/leaves';
 import { field, card, btn } from './DossiersSection';
+import { fb } from '../../utils/actionFeedback';
 
 // Congés (M5.2). Salarié : solde, demande, annulation. Responsable : décider, enregistrer un congé, annuler, supprimer.
 const lbl = 'block text-[11px] font-semibold text-slate-400 mb-1';
@@ -109,17 +110,17 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
               <div className="space-y-2">
                 <input className={field} autoFocus placeholder={t('Motif (3 caractères au moins)', 'Reason (at least 3 characters)')} maxLength={300} value={ask.text} onChange={e => setAsk({ ...ask, text: e.target.value })} aria-label={t('Motif', 'Reason')} />
                 <div className="flex gap-2">
-                  <button type="button" className={`${btn} flex-1 justify-center bg-red-800 border-red-600 text-white`} onClick={() => decide(x.id, ask.status, ask.text)}>{ask.status === 'rejected' ? t('Refuser', 'Refuse') : t('Annuler le congé', 'Cancel the leave')}</button>
+                  <button type="button" className={`${btn} flex-1 justify-center bg-red-800 border-red-600 text-white`} onClick={fb('refuse', () => decide(x.id, ask.status, ask.text))}>{ask.status === 'rejected' ? t('Refuser', 'Refuse') : t('Annuler le congé', 'Cancel the leave')}</button>
                   <button type="button" className={`${btn} flex-1 justify-center`} onClick={() => setAsk(null)}>{t('Retour', 'Back')}</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {isAdmin && x.status === 'pending' && <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={() => decide(x.id, 'approved')}><Check className="w-4 h-4" />{t('Accepter', 'Approve')}</button>}
-                {isAdmin && x.status === 'pending' && <button type="button" className={btn} onClick={() => setAsk({ id: x.id, status: 'rejected', text: '' })}><X className="w-4 h-4" />{t('Refuser', 'Refuse')}</button>}
+                {isAdmin && x.status === 'pending' && <button type="button" className={btn} onClick={fb('refuse', () => setAsk({ id: x.id, status: 'rejected', text: '' }))}><X className="w-4 h-4" />{t('Refuser', 'Refuse')}</button>}
                 {isAdmin && x.status === 'approved' && <button type="button" className={btn} onClick={() => setAsk({ id: x.id, status: 'cancelled', text: '' })}>{t('Annuler', 'Cancel')}</button>}
                 {!isAdmin && (x.status === 'pending' || (x.status === 'approved' && !started)) && <button type="button" className={btn} onClick={() => decide(x.id, 'cancelled')}>{t('Annuler ma demande', 'Cancel my request')}</button>}
-                {isAdmin && (x.status === 'cancelled' || x.status === 'rejected') && <button type="button" className={btn} onClick={() => remove(x.id)} aria-label={t('Supprimer', 'Delete')}><Trash2 className="w-4 h-4" /></button>}
+                {isAdmin && (x.status === 'cancelled' || x.status === 'rejected') && <button type="button" className={btn} onClick={fb('delete', () => remove(x.id))} aria-label={t('Supprimer', 'Delete')}><Trash2 className="w-4 h-4" /></button>}
               </div>
             )}
           </div>
