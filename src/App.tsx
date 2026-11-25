@@ -330,6 +330,8 @@ export default function App() {
       // On suit la vue visible seulement si le clavier est ouvert (la vue rétrécit de plus de 100 px).
       // Sans clavier (ou en zoom), la barre reste fixe en haut : l'effet élastique de l'iPhone ne la déplace plus.
       const keyboardOpen = isKeyboardOpen(vv);
+      // Clavier ouvert : la barre du bas est cachée tout de suite pour la mise en page (--bnh = 0), sans attendre sa propre détection : la page ne saute pas sous le doigt
+      if (keyboardOpen) root.setAttribute('data-kb', '1'); else root.removeAttribute('data-kb');
       if (vv.scale > 1.01 || !keyboardOpen) {
         root.style.removeProperty('--vvh');
         root.style.removeProperty('--vvt');
@@ -352,6 +354,7 @@ export default function App() {
       document.removeEventListener('focusout', onFocus);
       root.style.removeProperty('--vvh');
       root.style.removeProperty('--vvt');
+      root.removeAttribute('data-kb');
     };
   }, []);
   // Recherche ou notification : défiler jusqu'à l'élément exact et le faire clignoter

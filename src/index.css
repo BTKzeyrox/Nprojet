@@ -1227,3 +1227,6 @@ html.theme-light [class*="rounded-2xl"][class*="border"], html.theme-light [clas
 [data-fb][data-fb-label]::after { content: attr(data-fb-text); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; white-space: nowrap; color: #fff; background: #059669; border-radius: inherit; }
 [data-fb="busy"][data-fb-label]::after { background: #475569; }
 [data-fb="err"][data-fb-label]::after { background: #dc2626; }
+
+/* Clavier ouvert (téléphone) : la barre du bas ne compte plus dans la mise en page (voir App.tsx, data-kb) */
+html[data-kb="1"] { --bnh: 0px !important; }

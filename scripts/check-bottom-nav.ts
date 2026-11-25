@@ -22,4 +22,9 @@ ok(/topOnly && onOpenMenu && <button[^>]*data-header-menu/.test(top), 'bouton me
 ok(/data-header-search/.test(top) && /data-header-bell/.test(top) && /data-profile-pill/.test(top) && !/hidden md:block relative shrink-0 rounded-full p-0\.5/.test(top), 'en-tête téléphone : recherche, notifications et profil (le profil est visible sur téléphone)');
 const css = readFileSync('src/index.css', 'utf8');
 ok(/@media \(max-width: 767px\) \{ main:not\(\.fixed\) \{ padding-bottom: calc\(var\(--bnh, 0px\)/.test(css), 'téléphone : la fin de la page n\'est pas cachée par la barre');
+// Clavier ouvert (2026-11-25) : le « + » du chat ne perd plus le focus, la mise en page ne saute plus
+const chat = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(/data-chat-plus [^>]*onPointerDown=\{e => e\.preventDefault\(\)\} onMouseDown=\{e => e\.preventDefault\(\)\}/.test(chat), 'chat : le bouton « + » garde le clavier ouvert (comme la flèche d\'envoi)');
+ok(/data-chat-plus-item=\{k\} onPointerDown=\{e => e\.preventDefault\(\)\} onMouseDown=\{e => e\.preventDefault\(\)\}/.test(chat), 'chat : les lignes du menu « + » gardent le clavier ouvert');
+ok(/setAttribute\('data-kb', '1'\)/.test(app) && /removeAttribute\('data-kb'\)/.test(app) && /html\[data-kb="1"\] \{ --bnh: 0px !important; \}/.test(css), 'clavier ouvert : la barre du bas ne compte plus dans la mise en page tout de suite (data-kb)');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);
