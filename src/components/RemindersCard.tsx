@@ -148,7 +148,7 @@ const ReminderForm: React.FC<FormProps> = ({ item, onClose, L, lang, role, cfg, 
                 <div key={s.id} className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={s.done} onChange={e => setSubs(subs.map(x => x.id === s.id ? { ...x, done: e.target.checked } : x))} />
                   <span className="flex-1 min-w-0 break-words">{s.text}</span>
-                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={fb('remove', () => setSubs(subs.filter(x => x.id !== s.id)))} className="cursor-pointer text-red-500"><X className="w-3.5 h-3.5" /></button>
+                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={() => setSubs(subs.filter(x => x.id !== s.id))} className="cursor-pointer text-red-500"><X className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
               <div className="flex gap-2">
@@ -181,7 +181,7 @@ const ReminderForm: React.FC<FormProps> = ({ item, onClose, L, lang, role, cfg, 
             {fires.map(f => (
               <span key={f.id} className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full text-xs border ${L ? 'bg-white border-slate-300' : 'bg-white/10 border-slate-600'}`}>
                 {fireLabel(f, lang)}
-                <button type="button" aria-label={t('Retirer ce rappel', 'Remove this reminder')} className="w-5 h-5 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-500/20" onClick={fb('remove', () => { setFires(fires.filter(x => x.id !== f.id)); setTouchedFires(true); })}><X className="w-3 h-3" /></button>
+                <button type="button" aria-label={t('Retirer ce rappel', 'Remove this reminder')} className="w-5 h-5 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-500/20" onClick={() => { setFires(fires.filter(x => x.id !== f.id)); setTouchedFires(true); }}><X className="w-3 h-3" /></button>
               </span>
             ))}
           </div>
@@ -238,7 +238,7 @@ const ReminderSettings: React.FC<{ L: boolean; lang: 'fr' | 'en'; cfg: RemCfg; o
         <div className="text-sm font-bold">{t('Mes modèles de tâche', 'My task templates')}</div>
         <div className="space-y-1">
           {tpls.length === 0 && <div className="text-xs opacity-70">{t('Aucun modèle. Un modèle garde un nom, un type et la série de rappels.', 'No template yet. A template keeps a name, a type and a reminder series.')}</div>}
-          {tpls.map(m => <div key={m.id} className="flex items-center justify-between text-sm"><span>★ {m.name} <span className="opacity-60">({REM_TYPE_LABEL[m.base as RemType]?.[lang] || m.base}, {m.fires.length} {t('rappels', 'reminders')})</span></span><button type="button" aria-label={t('Retirer', 'Remove')} className="text-red-500 cursor-pointer" onClick={fb('remove', () => setTpls(tpls.filter(x => x.id !== m.id)))}><X className="w-3.5 h-3.5" /></button></div>)}
+          {tpls.map(m => <div key={m.id} className="flex items-center justify-between text-sm"><span>★ {m.name} <span className="opacity-60">({REM_TYPE_LABEL[m.base as RemType]?.[lang] || m.base}, {m.fires.length} {t('rappels', 'reminders')})</span></span><button type="button" aria-label={t('Retirer', 'Remove')} className="text-red-500 cursor-pointer" onClick={() => setTpls(tpls.filter(x => x.id !== m.id))}><X className="w-3.5 h-3.5" /></button></div>)}
           <div className="flex flex-wrap gap-2 pt-1">
             <input className={`${fieldCls} flex-1 min-w-[8rem]`} value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder={t('Ex. Contrôle de la caisse', 'e.g. Cash check')} />
             <select className={fieldCls} value={base} onChange={e => setBase(e.target.value as RemType)}>{allowed.map(ty => <option key={ty} value={ty}>{REM_TYPE_LABEL[ty][lang]}</option>)}</select>
@@ -247,7 +247,7 @@ const ReminderSettings: React.FC<{ L: boolean; lang: 'fr' | 'en'; cfg: RemCfg; o
           <div className="text-[11px] opacity-70">{t('La série de rappels du modèle est celle conseillée pour son type.', 'The template uses the suggested reminder series for its type.')}</div>
         </div>
         {msg && <div className="text-sm" role="status">{msg}</div>}
-        <button type="button" onClick={save} className="w-full h-11 rounded-xl text-sm font-bold bg-blue-600 text-white cursor-pointer">{t('Enregistrer', 'Save')}</button>
+        <button type="button" onClick={fb('save', save)} className="w-full h-11 rounded-xl text-sm font-bold bg-blue-600 text-white cursor-pointer">{t('Enregistrer', 'Save')}</button>
       </div>
     </div>,
     document.body
@@ -307,7 +307,7 @@ export const RemindersCard: React.FC<{ day?: string }> = ({ day }) => {
         </button>
         <div className="flex items-center gap-2">
           <button type="button" aria-label={t('Réglages des rappels', 'Reminder settings')} onClick={() => setSettings(true)} className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer ${L ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-slate-300'}`}><BellRing className="w-4 h-4" /></button>
-          <button type="button" onClick={fb('add', () => setForm({ item: null }))} className="h-9 px-3 rounded-xl bg-blue-600 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer" data-reminder-add><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
+          <button type="button" onClick={() => setForm({ item: null })} className="h-9 px-3 rounded-xl bg-blue-600 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer" data-reminder-add><Plus className="w-4 h-4" />{t('Ajouter', 'Add')}</button>
         </div>
       </div>
       {open && (
@@ -339,7 +339,7 @@ export const RemindersCard: React.FC<{ day?: string }> = ({ day }) => {
                     <div className="flex items-center gap-1 shrink-0">
                       {(i.status === 'todo' || i.status === 'doing') && <button type="button" aria-label={t('Reporter', 'Snooze')} onClick={() => setSnoozeFor(snoozeFor === i.id ? null : i.id)} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-slate-500/20"><Clock className="w-4 h-4" /></button>}
                       <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => setForm({ item: i })} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-slate-500/20"><Pencil className="w-4 h-4" /></button>
-                      <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setSure(sure === i.id ? null : i.id))} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
+                      <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setSure(sure === i.id ? null : i.id)} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>

@@ -11,6 +11,7 @@ import { WATCH_FIELDS } from '../utils/health/watchPrefs';
 import { HEALTH_THRESHOLDS_DEFAULT } from '../utils/health/types';
 import { BUSINESS_MODELS, PAY_MODES, PAY_LABEL, WORK_SETTINGS_LIVE } from '../utils/workTypes';
 import type { CompanySettings } from '../types';
+import { fb } from '../utils/actionFeedback';
 
 // Conditions de l'entreprise (module 0). Admin : modifie. Opérateur : lit seulement le règlement et les congés (le serveur ne lui envoie rien d'autre).
 type Kind = 'text' | 'area' | 'int' | 'num' | 'bool' | 'select' | 'lines' | 'time';
@@ -205,7 +206,7 @@ export const CompanyConditions: React.FC<{ lang: 'fr' | 'en'; openAll?: boolean;
       })}
 
       <div className={`${boxCls} p-4 space-y-3`}>
-        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold cursor-pointer inline-flex items-center justify-center gap-2"><Save className="w-4 h-4" />{t('Enregistrer les conditions', 'Save conditions')}</button>
+        <button type="button" onClick={fb('save', save)} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold cursor-pointer inline-flex items-center justify-center gap-2"><Save className="w-4 h-4" />{t('Enregistrer les conditions', 'Save conditions')}</button>
         {touched && <p className="text-[11px] text-amber-300">{t('Modifications non enregistrées.', 'Unsaved changes.')}</p>}
         <button type="button" onClick={() => setShowLog(v => !v)} aria-expanded={showLog} className="min-h-[44px] text-xs font-mono text-slate-300 hover:text-emerald-400 cursor-pointer inline-flex items-center gap-2"><History className="w-4 h-4" />{t('Historique des changements', 'Change history')} ({log.length})</button>
         {showLog && (log.length === 0 ? <p className="text-[11px] text-slate-400">{t('Aucun changement enregistré pour l\'instant.', 'No change recorded yet.')}</p> : (

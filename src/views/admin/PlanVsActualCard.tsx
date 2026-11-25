@@ -7,6 +7,7 @@ import { formatCurrencyAr } from '../../utils/formatUtils';
 import { todayMada } from '../../utils/stats';
 import { budgetVsActual, plannedExpenses, PLAN_STATUS_LABEL, type PlanLine, type PlanStatus } from '../../utils/budgetPlan';
 import { FIN_NAV } from '../../utils/financeNav';
+import { fb } from '../../utils/actionFeedback';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -65,7 +66,7 @@ export const PlanVsActualCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
       </div>
       <div className="text-xs font-mono text-slate-400">{t('Dépenses prévues / mois (budgets par catégorie)', 'Planned expenses / month (category budgets)')} : {exp > 0 ? ar(exp) : t('aucun budget réglé', 'no budget set')}</div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={save} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer le plan', 'Save plan')}</button>
+        <button type="button" onClick={fb('save', save)} className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">{t('Enregistrer le plan', 'Save plan')}</button>
         {msg && <span role="status" className={`text-xs font-semibold ${msg.ok ? 'text-emerald-300' : 'text-red-400'}`}>{msg.text}</span>}
       </div>
       <ul className="space-y-2">

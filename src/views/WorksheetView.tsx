@@ -139,7 +139,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
                   <button type="button" data-group-hours-apply onClick={fb('apply', () => groupApply({ hours: grp.hours }))} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
                 {showQty && <><label className="block space-y-1"><span className={label}>{t('Quantité pour tous', 'Quantity for all')}</span><input inputMode="decimal" data-group-qty value={grp.quantity} onChange={e => setGrp({ ...grp, quantity: e.target.value })} className={`${input} !w-28`} /></label>
                   <button type="button" data-group-qty-apply onClick={fb('apply', () => groupApply({ quantity: grp.quantity }))} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Appliquer', 'Apply')}</button></>}
-                <button type="button" data-copy-yesterday onClick={copyYesterday} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Copier la veille', 'Copy the day before')}</button>
+                <button type="button" data-copy-yesterday onClick={fb('copy', copyYesterday)} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Copier la veille', 'Copy the day before')}</button>
                 <button type="button" data-worksheet-print onClick={printPaper} className={`min-h-[44px] px-3 rounded-xl border text-sm font-semibold cursor-pointer ${L ? 'bg-white border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-200'}`}>{t('Imprimer la feuille papier', 'Print the paper sheet')}</button>
               </div>
             </div>
@@ -217,7 +217,7 @@ export const WorksheetView: React.FC<{ currentUser: User }> = ({ currentUser }) 
               <div className="text-xs mt-1 opacity-80">{t("Tu peux enregistrer quand même (absent, en congé…).", 'You can still save (absent, on leave…).')}</div>
             </div>
           )}
-          <button type="button" data-worksheet-save onClick={save} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
+          <button type="button" data-worksheet-save onClick={fb('save', save)} disabled={busy || people.length === 0} className="w-full min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
             <Save className="w-5 h-5" />{busy ? t('Enregistrement…', 'Saving…') : t('Enregistrer la feuille', 'Save the sheet')}
           </button>
 

@@ -1068,7 +1068,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
           <div data-only-chip className={`mx-2 mb-1 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold ${L ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-amber-900/30 text-amber-100 border border-amber-700/50'}`}>
             <Lock className="w-4 h-4 shrink-0" aria-hidden />
             <span className="flex-1 min-w-0 truncate">Visible seulement par {onlyTo.map(id => onlyPeople.find(p => p.id === id)?.name || '?').join(', ')}</span>
-            <button type="button" aria-label="Retirer la restriction" onClick={fb('remove', () => setOnlyTo([]))} className="w-8 h-8 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
+            <button type="button" aria-label="Retirer la restriction" onClick={() => setOnlyTo([])} className="w-8 h-8 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
           </div>
         )}
         {replyTo && !editingId && (
@@ -1101,7 +1101,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
                       ) : (
                         <span className="w-16 h-16 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center"><Paperclip className="w-5 h-5" /></span>
                       )}
-                      <button type="button" disabled={busy} onClick={fb('remove', () => setPendingFiles(pendingFiles.filter((_, k) => k !== i)))} className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-900/90 text-white flex items-center justify-center cursor-pointer border border-white/30 disabled:opacity-50" aria-label="Retirer cette photo" data-pending-remove><X className="w-3.5 h-3.5" /></button>
+                      <button type="button" disabled={busy} onClick={() => setPendingFiles(pendingFiles.filter((_, k) => k !== i))} className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-900/90 text-white flex items-center justify-center cursor-pointer border border-white/30 disabled:opacity-50" aria-label="Retirer cette photo" data-pending-remove><X className="w-3.5 h-3.5" /></button>
                     </div>
                   ))}
                   <div className="ml-auto shrink-0 pl-1 text-right">

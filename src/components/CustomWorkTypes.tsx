@@ -63,7 +63,7 @@ export const CustomWorkTypes: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
         ))}
       </ul>
       {!open ? (
-        <button type="button" data-cwt-open onClick={fb('create', () => setOpen(true))} disabled={list.length >= CW_MAX_TYPES} className="min-h-[44px] px-3 rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-40"><Plus className="w-4 h-4" />{t('Créer mon type de travail', 'Create my work type')}</button>
+        <button type="button" data-cwt-open onClick={() => setOpen(true)} disabled={list.length >= CW_MAX_TYPES} className="min-h-[44px] px-3 rounded-lg border border-emerald-600 text-emerald-300 text-sm font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-40"><Plus className="w-4 h-4" />{t('Créer mon type de travail', 'Create my work type')}</button>
       ) : (
         <div className="rounded-lg border border-slate-700 p-3 space-y-3">
           <label className="block space-y-1"><span className="text-xs text-slate-300">{t('Nom en français', 'Name in French')}</span><input data-cwt-fr value={fr} maxLength={60} onChange={e => setFr(e.target.value)} className={input} placeholder="Emballage" /></label>

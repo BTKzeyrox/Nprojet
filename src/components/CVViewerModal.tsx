@@ -15,6 +15,7 @@ import { BadgeChips, ScoreRing } from './PerformanceBadges';
 import { ROLE_NAMES } from '../utils/roles';
 import type { ViewAs } from '../utils/roles';
 import { effShift, showShift } from '../utils/shiftMode';
+import { fb } from '../utils/actionFeedback';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -305,7 +306,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                   <button type="button" onClick={() => { setEditing(false); setError(''); }} className="rounded-lg px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
                     Annuler
                   </button>
-                  <button type="button" disabled={busy} onClick={sendRequest} className="rounded-lg px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
+                  <button type="button" disabled={busy} onClick={fb('send', sendRequest)} className="rounded-lg px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
                     {busy ? 'Envoi…' : 'Envoyer'}
                   </button>
                 </div>

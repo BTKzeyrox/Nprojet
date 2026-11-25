@@ -128,7 +128,7 @@ export const MySheets: React.FC = () => {
                 <span className="block text-sm font-semibold text-slate-100 truncate">{ro && s.owner_name ? `${s.owner_name} — ` : ''}{s.title}</span>
                 <span className="block text-[11px] text-slate-400">{S.activeRows(s).length} {t('ligne(s)', 'row(s)')} · {S.activeColumns(s).length} {t('colonne(s)', 'column(s)')} · {s.updated_at.slice(0, 10)}</span>
               </button>
-              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x))))}><Trash2 className="w-3.5 h-3.5" /></button>}
+              {!ro && <button className={btn} aria-label={t('Supprimer', 'Delete')} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.deleteSheet(x, nowIso()) : x)))}><Trash2 className="w-3.5 h-3.5" /></button>}
             </li>);
 
   // ---------------- liste ----------------
@@ -145,7 +145,7 @@ export const MySheets: React.FC = () => {
         {!saveOk && <p className="text-xs text-red-300">{t('Cet appareil refuse l\'enregistrement (plein ou navigation privée). Télécharge ton travail avant de quitter.', 'This device refuses saving (full or private browsing). Download your work before leaving.')}</p>}
         {!ro && <div>
           <p data-tour="sheets-new" className="text-xs font-semibold text-slate-300 mb-2">{t('Nouveau tableau', 'New table')}</p>
-          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={fb('import', () => setImporting(true))}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
+          <div className="flex flex-wrap gap-2">{S.TEMPLATES.map(tp => <button key={tp.id} className={btn} onClick={() => addSheet(S.fromTemplate(tp, '', nowIso(), lang === 'en' ? 'en' : 'fr'))}><Plus className="w-3.5 h-3.5" />{lang === 'en' ? tp.en : tp.fr}</button>)}<button className={btn} onClick={() => setImporting(true)}><FileSpreadsheet className="w-3.5 h-3.5" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button></div>
         </div>}
         {list.length === 0 && missionList.length === 0 ? <p className="text-sm text-slate-400">{ro ? t('Aucun opérateur n\'a encore de tableau.', 'No operator has a table yet.') : t('Aucun tableau pour le moment.', 'No table yet.')}</p> : (
           <>
@@ -161,7 +161,7 @@ export const MySheets: React.FC = () => {
         {!ro && trashed.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-slate-300 mb-2">{t('Corbeille (30 jours)', 'Trash (30 days)')}</p>
-            <ul className="space-y-1.5">{trashed.map(s => <li key={s.id} className="flex items-center gap-2 text-xs text-slate-400"><span className="flex-1 truncate">{s.title}</span><button className={btn} onClick={fb('restore', () => setSheets(l => l.map(x => (x.id === s.id ? S.restoreSheet(x, nowIso()) : x))))}>{t('Restaurer', 'Restore')}</button></li>)}</ul>
+            <ul className="space-y-1.5">{trashed.map(s => <li key={s.id} className="flex items-center gap-2 text-xs text-slate-400"><span className="flex-1 truncate">{s.title}</span><button className={btn} onClick={() => setSheets(l => l.map(x => (x.id === s.id ? S.restoreSheet(x, nowIso()) : x)))}>{t('Restaurer', 'Restore')}</button></li>)}</ul>
           </div>
         )}
       </div>
@@ -203,7 +203,7 @@ export const MySheets: React.FC = () => {
         {!formMode && !ro && <button className={btn} onClick={() => setPanel(p => (p === 'rules' ? '' : 'rules'))}><Paintbrush className="w-3.5 h-3.5" />{t('Couleurs', 'Colors')}</button>}
         {!ro && <button className={btn} onClick={() => setPanel(p => (p === 'trash' ? '' : 'trash'))}><Trash2 className="w-3.5 h-3.5" />{t('Corbeille', 'Trash')}{trash.rows.length + trash.columns.length > 0 ? ` (${trash.rows.length + trash.columns.length})` : ''}</button>}
         {!formMode && <button className={btn} onClick={() => setPanel(p => (p === 'help' ? '' : 'help'))}>ƒx</button>}
-        <button className={btn} onClick={fb('download', () => setPanel(p => (p === 'export' ? '' : 'export')))}><Download className="w-3.5 h-3.5" />{t('Télécharger', 'Download')}</button>
+        <button className={btn} onClick={() => setPanel(p => (p === 'export' ? '' : 'export'))}><Download className="w-3.5 h-3.5" />{t('Télécharger', 'Download')}</button>
       </div>
 
       {panel === 'export' && (

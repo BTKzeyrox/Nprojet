@@ -108,7 +108,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                         {x.invoice_id && <button type="button" onClick={() => onOpenInvoice(x.invoice_id!)} className={`${btn} border-slate-600 text-slate-100`}>{t('Voir la facture', 'See the invoice')}</button>}
                         {canDeleteQuote(x) && (confirmId === x.id ? (
                           <><button type="button" onClick={fb('delete', () => act(() => db.deleteQuote(x.id)))} className={`${btn} bg-rose-700 border-rose-600 text-white`}>{t('Supprimer le devis', 'Delete the quote')}</button><button type="button" onClick={() => setConfirmId(null)} className={`${btn} border-slate-600 text-slate-200`}>{t('Non', 'No')}</button></>
-                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(x.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
+                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(x.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
                       </div>
                     </div>
                   )}
@@ -139,7 +139,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                 <div key={i} className="rounded-lg border border-slate-800 p-2 space-y-2">
                   <div className="flex items-center gap-2">
                     <input aria-label={t('Description', 'Description')} placeholder={t('Description', 'Description')} value={l.description} maxLength={200} onChange={e => setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, description: e.target.value } : x) })} className={field} />
-                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={fb('remove', () => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) }))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-rose-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
+                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={() => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-rose-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <input aria-label={t('Quantité', 'Quantity')} inputMode="decimal" placeholder={t('Quantité', 'Quantity')} value={l.qty} onChange={e => setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, qty: e.target.value } : x) })} className={field} />
@@ -147,7 +147,7 @@ export const QuotesSection: React.FC<{ ver: number; onOpenInvoice: (id: string) 
                   </div>
                 </div>
               ))}
-              {editor.lines.length < 200 && <button type="button" onClick={fb('add', () => setEditor({ ...editor, lines: [...editor.lines, { description: '', qty: '1', price: '' }] }))} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
+              {editor.lines.length < 200 && <button type="button" onClick={() => setEditor({ ...editor, lines: [...editor.lines, { description: '', qty: '1', price: '' }] })} className={`${btn} border-slate-600 text-slate-100`}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
             </div>
             <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}<textarea value={editor.note} maxLength={500} rows={2} onChange={e => setEditor({ ...editor, note: e.target.value })} className={`${field} mt-1 py-2`} /></label>
             <div className="text-sm text-slate-200">{t('Total', 'Total')} : <b>{preview && preview.ok ? ar(preview.clean.total_ar) : '—'}</b>{preview && preview.ok && preview.clean.tax_ar > 0 ? <span className="text-slate-400"> ({t('TVA', 'VAT')} {preview.clean.tax_rate} %)</span> : null}</div>

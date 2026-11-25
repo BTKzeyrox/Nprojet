@@ -284,7 +284,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             {currentUser.role === 'admin' && (
               <button
                 type="button"
-                onClick={fb('add', () => { setAddError(null); setShowAdd(true); })}
+                onClick={() => { setAddError(null); setShowAdd(true); }}
                 disabled={contractsList.length >= 100}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shrink-0"
               >

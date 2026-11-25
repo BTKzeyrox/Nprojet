@@ -98,7 +98,7 @@ export const NewsShareSheet: React.FC<{ post: NewsPost; me: User; light: boolean
           <div className="flex items-center gap-2">
           <span className={`text-xs flex-1 ${sub}`}>{picked.length === 0 ? 'Choisis une ou plusieurs personnes.' : `${picked.length} sélectionné${picked.length > 1 ? 's' : ''}`}</span>
           <button type="button" onClick={onClose} disabled={sending} data-share-cancel className={`min-h-[44px] px-4 rounded-lg text-sm font-semibold cursor-pointer ${light ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
-          <button type="button" onClick={send} disabled={sending || picked.length === 0 || !!done} data-share-send className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2 cursor-pointer">{sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Envoyer{picked.length > 1 ? ` (${picked.length})` : ''}</button>
+          <button type="button" onClick={fb('send', send)} disabled={sending || picked.length === 0 || !!done} data-share-send className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-2 cursor-pointer">{sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Envoyer{picked.length > 1 ? ` (${picked.length})` : ''}</button>
           </div>
         </div>
       </div>

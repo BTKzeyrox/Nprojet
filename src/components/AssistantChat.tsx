@@ -31,6 +31,7 @@ import { setNavTarget } from '../utils/navTarget';
 import { buildNotifications } from '../utils/notifications';
 import { setValFilterIntent, type ValFilter } from '../utils/navIntent';
 import { isKnownView } from '../utils/health/menu';
+import { fb } from '../utils/actionFeedback';
 
 const ENABLE_AI = '__enable_ai';
 interface Msg { id: string; who: 'me' | 'bot'; text?: string; reply?: Reply; at: number }
@@ -226,7 +227,7 @@ export const AssistantChat: React.FC<{ userId: string; onBack: () => void; onNav
             <div className="flex gap-2"><button type="button" onClick={fill} className="min-h-[40px] px-3 rounded-lg bg-sky-600 text-white text-xs font-semibold cursor-pointer">{t('Préparer le message', 'Prepare the message')}</button><button type="button" onClick={() => setComposing(false)} className="min-h-[40px] px-3 rounded-lg border border-slate-400/50 text-xs cursor-pointer">{t('Fermer', 'Close')}</button></div>
             {problem && <p className="text-xs text-rose-500" role="alert">{problem}</p>}
             {draft != null && <><textarea aria-label={t('Message à modifier', 'Message to edit')} value={draft} onChange={e => { setDraft(e.target.value); setCopied(false); }} rows={4} className={`w-full rounded-lg border p-2 text-sm ${L ? 'bg-white border-slate-300' : 'bg-[#16243a] border-white/15'}`} />
-              <div className="flex items-center gap-2"><button type="button" onClick={copy} className="min-h-[40px] px-3 rounded-lg bg-emerald-700 text-white text-xs font-semibold cursor-pointer">{t('Copier', 'Copy')}</button>{copied && <span className="text-xs text-emerald-500">{t('Copié. Rien n\'a été envoyé : collez-le où vous voulez.', 'Copied. Nothing was sent: paste it where you want.')}</span>}</div></>}
+              <div className="flex items-center gap-2"><button type="button" onClick={fb('copy', copy)} className="min-h-[40px] px-3 rounded-lg bg-emerald-700 text-white text-xs font-semibold cursor-pointer">{t('Copier', 'Copy')}</button>{copied && <span className="text-xs text-emerald-500">{t('Copié. Rien n\'a été envoyé : collez-le où vous voulez.', 'Copied. Nothing was sent: paste it where you want.')}</span>}</div></>}
           </div>
         )}
         <form onSubmit={e => { e.preventDefault(); ask(text); inputRef.current?.focus(); }}>

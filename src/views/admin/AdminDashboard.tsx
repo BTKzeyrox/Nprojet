@@ -967,7 +967,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={fb('remove', () => setEditAccountProofs(prev => prev.filter((_, k) => k !== i)))}
+                            onClick={() => setEditAccountProofs(prev => prev.filter((_, k) => k !== i))}
                             className="absolute top-1 right-1 min-w-[32px] min-h-[32px] flex items-center justify-center bg-black/80 border border-red-600 text-red-400 rounded cursor-pointer"
                             title="Retirer cette photo"
                           >
@@ -1013,7 +1013,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="flex justify-end pt-1">
                     <button
                       type="button"
-                      onClick={handleSaveAdminModifications}
+                      onClick={fb('save', handleSaveAdminModifications)}
                       className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow cursor-pointer"
                     >
                       <Check className="w-4 h-4" />
@@ -1024,7 +1024,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="pt-3 border-t border-slate-700/60">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={fb('delete', () => {
                         const c = selectedAdminContract;
                         const label = `P${String(c.post_number).padStart(2, '0')}`;
                         askConfirm({
@@ -1044,7 +1044,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             setSelectedAdminContract(null);
                           },
                         });
-                      }}
+                      })}
                       className="w-full min-h-[46px] flex items-center justify-center gap-2 bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-300 font-tactical font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
                     >
                       <Trash2 className="w-5 h-5" />

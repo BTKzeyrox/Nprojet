@@ -109,7 +109,7 @@ export const AutoReportCard: React.FC<{ lang: 'fr' | 'en' }> = ({ lang }) => {
           )}
         </div>
         <p className="text-[11px] text-slate-400">{describeAutoReport(draft, lang)}{nextTxt ? ` · ${t('prochain', 'next')} : ${nextTxt}` : ''}</p>
-        <button type="button" className={btn + ' w-full sm:w-auto'} onClick={save}>{t('Enregistrer', 'Save')}</button>
+        <button type="button" className={btn + ' w-full sm:w-auto'} onClick={fb('save', save)}>{t('Enregistrer', 'Save')}</button>
         {saved && <p className="text-xs text-emerald-400" role="status">{t('Enregistré.', 'Saved.')}</p>}
       </div>
 

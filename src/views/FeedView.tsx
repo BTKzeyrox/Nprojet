@@ -174,14 +174,14 @@ const PostEditor: React.FC<{ post: NewsPost; light: boolean; onDone: () => void 
             <li key={f.url} className={row}>
               {f.kind === 'image' ? <SafeImage src={f.url} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
               <div className="min-w-0 flex-1"><div className="text-sm truncate">{f.kind === 'image' ? 'Photo' : neutralFileLabel(f.name)}</div></div>
-              <button type="button" disabled={busy} onClick={fb('remove', () => setKept(prev => prev.filter(x => x.url !== f.url)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={() => setKept(prev => prev.filter(x => x.url !== f.url))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier" data-remove-file><X className="w-4 h-4" /></button>
             </li>
           ))}
           {items.map(it => (
             <li key={it.key} className={row}>
               {it.kind === 'image' ? <SafeImage src={it.dataUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" /> : <div className="w-12 h-12 rounded-md flex items-center justify-center shrink-0 bg-emerald-600/15"><FileText className="w-5 h-5 text-emerald-600" /></div>}
               <div className="min-w-0 flex-1"><div className="text-sm truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div><div className={`text-xs ${muted}`}>nouveau</div></div>
-              <button type="button" disabled={busy} onClick={fb('remove', () => setItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
@@ -485,7 +485,7 @@ const PostCard: React.FC<{ post: NewsPost; me: User; isAdmin: boolean; light: bo
                     <div className="text-xs truncate">{it.kind === 'image' ? 'Photo' : neutralFileLabel(it.name)}</div>
                     <div className={`text-[11px] ${muted}`}>{it.url ? 'Envoyée' : 'Prête'}</div>
                   </div>
-                  <button type="button" disabled={busy} onClick={fb('remove', () => setCItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+                  <button type="button" disabled={busy} onClick={() => setCItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
                 </li>
               ))}
             </ul>
@@ -627,7 +627,7 @@ const Composer: React.FC<{ isAdmin: boolean; mode: 'direct' | 'review'; light: b
                   {it.url ? 'Envoyée' : 'Prête'}
                 </div>
               </div>
-              <button type="button" disabled={busy} onClick={fb('remove', () => setItems(prev => prev.filter(x => x.key !== it.key)))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
+              <button type="button" disabled={busy} onClick={() => setItems(prev => prev.filter(x => x.key !== it.key))} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 disabled:opacity-40" aria-label="Retirer ce fichier"><X className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>

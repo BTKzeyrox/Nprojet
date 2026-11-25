@@ -6,6 +6,7 @@ import { Download, Mail, RotateCcw, ShieldAlert } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { downloadBackupExcel } from '../utils/backupExcel';
+import { fb } from '../utils/actionFeedback';
 
 type Step = 'idle' | 'warn' | 'code';
 
@@ -83,7 +84,7 @@ export const RestoreSection: React.FC = () => {
         Vos finances (paiements reçus et dépenses) et votre stock sont gardés : elle ne les efface pas. Les salaires calculés repartent à 0, car les missions sont effacées.
       </p>
 
-      <button type="button" onClick={backup} className={`${btn} bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200`}>
+      <button type="button" onClick={fb('save', backup)} className={`${btn} bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200`}>
         <Download className="w-4 h-4" /> Sauvegarder (Excel)
       </button>
 
@@ -94,7 +95,7 @@ export const RestoreSection: React.FC = () => {
         </label>
         <input type="email" inputMode="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nom@gmail.com" className={inputCls} />
         {(!verified || email.trim().toLowerCase() !== savedEmail) && (
-          <button type="button" disabled={busy || !email.trim()} onClick={saveEmail} className={`${btn} bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white`}>
+          <button type="button" disabled={busy || !email.trim()} onClick={fb('save', saveEmail)} className={`${btn} bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white`}>
             {savedEmail && !verified ? 'Renvoyer le code de vérification' : 'Enregistrer et envoyer le code'}
           </button>
         )}

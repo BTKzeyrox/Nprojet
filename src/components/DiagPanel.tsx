@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getLockInfo } from '../utils/useLockBodyScroll';
 import { getRescueInfo } from '../utils/scrollRescue';
+import { fb } from '../utils/actionFeedback';
 
 // Panneau de diagnostic du défilement : affiché seulement avec ?diag=1 dans l'adresse.
 // Il ne lit que l'état de la page (tailles, styles, éléments au centre de l'écran) : aucune donnée de l'entreprise.
@@ -75,7 +76,7 @@ export const DiagPanel: React.FC = () => {
     <div className="fixed left-2 bottom-2 z-[99990] max-w-[min(96vw,44rem)] rounded-lg border border-amber-400 bg-black/90 text-[11px] leading-snug text-amber-100 shadow-2xl" style={{ fontFamily: 'ui-monospace, monospace' }}>
       <div className="flex items-center gap-2 px-2 py-1 border-b border-amber-400/50">
         <b className="flex-1">Diagnostic du défilement</b>
-        <button type="button" onClick={copy} className="px-2 py-0.5 rounded bg-amber-500 text-black font-bold cursor-pointer">{copied ? 'Copié' : 'Copier'}</button>
+        <button type="button" onClick={fb('copy', copy)} className="px-2 py-0.5 rounded bg-amber-500 text-black font-bold cursor-pointer">{copied ? 'Copié' : 'Copier'}</button>
         <button type="button" onClick={() => setOpen(o => !o)} className="px-2 py-0.5 rounded bg-slate-700 cursor-pointer">{open ? 'Réduire' : 'Ouvrir'}</button>
       </div>
       {open && <pre className="m-0 px-2 py-1 whitespace-pre-wrap break-all max-h-[45vh] overflow-y-auto select-text" style={{ userSelect: 'text' }}>{text}</pre>}

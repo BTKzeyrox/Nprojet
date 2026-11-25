@@ -139,12 +139,12 @@ export const BackupsSection: React.FC = () => {
         </div>
       )}
 
-      <button type="button" disabled={busy} onClick={now} className="w-full min-h-[46px] px-4 rounded-lg bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+      <button type="button" disabled={busy} onClick={fb('save', now)} className="w-full min-h-[46px] px-4 rounded-lg bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
         <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /> Sauvegarder maintenant
       </button>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <button type="button" disabled={busy} onClick={exportAll} className="min-h-[46px] px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
+        <button type="button" disabled={busy} onClick={fb('export', exportAll)} className="min-h-[46px] px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"><Download className="w-4 h-4" /> Exporter toutes les données</button>
         {<label className={`min-h-[46px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}><Database className="w-4 h-4" /> Importer un fichier d'export<input type="file" accept=".json,application/json" className="sr-only" onChange={e => { void importFile(e.target.files?.[0]); e.target.value = ''; }} /></label>}
       </div>
 
@@ -187,7 +187,7 @@ export const BackupsSection: React.FC = () => {
               <input inputMode="numeric" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="Code à 6 chiffres" className="w-full bg-[#0d1622] border border-slate-600 p-2.5 text-white text-sm" />
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={closeRestore} className="min-h-[44px] px-3 text-xs font-bold bg-slate-800 border border-slate-600 text-slate-200 cursor-pointer">Annuler</button>
-                <button type="button" disabled={code.length !== 6 || busy} onClick={runRestore} className="min-h-[44px] px-3 text-xs font-bold bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 cursor-pointer">Restaurer</button>
+                <button type="button" disabled={code.length !== 6 || busy} onClick={fb('restore', runRestore)} className="min-h-[44px] px-3 text-xs font-bold bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 cursor-pointer">Restaurer</button>
               </div>
             </>
           )}

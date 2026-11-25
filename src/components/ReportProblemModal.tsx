@@ -8,6 +8,7 @@ import { X, Camera, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../db/store';
 import { compressProofImage } from '../utils/imageUtils';
 import { APP_VERSION, deviceInfo, getCurrentPage } from '../utils/errorReport';
+import { fb } from '../utils/actionFeedback';
 
 interface Props {
   onClose: () => void;
@@ -86,7 +87,7 @@ export const ReportProblemModal: React.FC<Props> = ({ onClose }) => {
             </div>
             <p className="text-[11px] text-slate-500">La page, ton appareil et la version du site sont ajoutés automatiquement. Jamais ton mot de passe.</p>
             {error && <div className="text-red-300">{error}</div>}
-            <button type="button" onClick={send} disabled={busy} className="rounded-xl w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
+            <button type="button" onClick={fb('send', send)} disabled={busy} className="rounded-xl w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 cursor-pointer">
               <Send className="w-4 h-4" /> {busy ? 'Envoi…' : 'Envoyer'}
             </button>
           </div>

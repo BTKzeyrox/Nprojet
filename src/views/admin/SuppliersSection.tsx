@@ -128,7 +128,7 @@ export const SuppliersSection: React.FC<{ ver: number }> = ({ ver }) => {
                             <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                           </>
                         ) : (
-                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(s.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(s.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </div>
                     </div>

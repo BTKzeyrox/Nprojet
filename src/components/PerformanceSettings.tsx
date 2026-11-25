@@ -7,6 +7,7 @@ import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
 import { PERFORMANCE_DEFAULTS, cleanPerformanceConfig, type PerformanceConfig } from '../utils/performanceScore';
 import { performanceConfigOf } from '../utils/usePerformance';
+import { fb } from '../utils/actionFeedback';
 
 // Réglages > Performance (module 3, M3.4) : période, minimums, poids du score, seuils des badges.
 // Tout est facultatif : les valeurs de départ sont prudentes. Le serveur revérifie tout à l'enregistrement (bloc PERFORMANCE de df-api).
@@ -159,7 +160,7 @@ export const PerformanceSettings: React.FC<{ lang: string }> = ({ lang }) => {
       </section>
 
       <div className="sticky bottom-[calc(var(--bnh,0px)+0.5rem)]">
-        <button type="button" onClick={save} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 text-white font-bold text-sm disabled:opacity-40 cursor-pointer">{t('Enregistrer', 'Save')}</button>
+        <button type="button" onClick={fb('save', save)} disabled={!touched} className="w-full min-h-[48px] rounded-lg bg-emerald-600 text-white font-bold text-sm disabled:opacity-40 cursor-pointer">{t('Enregistrer', 'Save')}</button>
       </div>
     </div>
   );

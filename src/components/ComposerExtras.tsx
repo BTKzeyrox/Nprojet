@@ -35,7 +35,7 @@ export const PlusMenu: React.FC<{ isAdmin: boolean; disabled?: boolean; preparin
   const pick = (fn: () => void) => () => { setOpen(false); fn(); };
   return (
     <div ref={ref} className="relative">
-      <button type="button" data-composer-plus aria-label="Ajouter" aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={fb('add', () => setOpen(o => !o))}
+      <button type="button" data-composer-plus aria-label="Ajouter" aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={() => setOpen(o => !o)}
         className={`flex items-center gap-1.5 min-h-[44px] px-3 text-sm font-semibold rounded-lg disabled:opacity-50 cursor-pointer ${light ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-white/10 text-slate-200'}`}>
         {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
         {preparing ? 'Préparation…' : 'Ajouter'}

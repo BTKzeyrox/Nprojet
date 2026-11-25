@@ -76,7 +76,7 @@ export const StockCategoriesDialog: React.FC<Props> = ({ lang, onClose }) => {
                 <div className="flex items-center gap-2">
                   <span className="flex-1 min-w-0 text-sm text-white truncate">{c} <span className="text-[11px] text-slate-400">· {count(c)}</span></span>
                   <button type="button" onClick={() => { setError(''); setEditing(c); setEditText(c); }} aria-label={t(`Renommer ${c}`, `Rename ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-200 flex items-center justify-center"><Pencil className="w-4 h-4" /></button>
-                  <button type="button" onClick={fb('delete', () => { setError(''); setConfirmDel(c); })} aria-label={t(`Supprimer ${c}`, `Delete ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => { setError(''); setConfirmDel(c); }} aria-label={t(`Supprimer ${c}`, `Delete ${c}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                 </div>
               )}
             </li>

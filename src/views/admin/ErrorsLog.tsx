@@ -177,7 +177,7 @@ export const ErrorsLog: React.FC = () => {
                 <Copy className="w-3.5 h-3.5" /> {copied === r.id ? 'Copié ✓' : 'Copier pour Claude'}
               </button>
               {r.status === 'open' ? (
-                <button type="button" onClick={fb('mark', () => setRowStatus(r, 'resolved'))} className={`${btn} bg-emerald-600 hover:bg-emerald-500 text-white`}>
+                <button type="button" onClick={() => setRowStatus(r, 'resolved')} className={`${btn} bg-emerald-600 hover:bg-emerald-500 text-white`}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> Marquer résolue
                 </button>
               ) : (

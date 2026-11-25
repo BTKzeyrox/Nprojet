@@ -91,7 +91,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
               ) : (
                 <div className="flex gap-2">
                   <button type="button" disabled={busy === p.id} onClick={fb('validate', () => void decide(p, true))} className="flex-1 min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2"><CheckCircle2 className="w-4 h-4" /> Valider</button>
-                  <button type="button" disabled={busy === p.id} onClick={fb('refuse', () => { setRefusing(p.id); setReason(''); setError(''); })} className="flex-1 min-h-[44px] rounded-lg bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 text-sm font-bold flex items-center justify-center gap-2"><XCircle className="w-4 h-4" /> Refuser</button>
+                  <button type="button" disabled={busy === p.id} onClick={() => { setRefusing(p.id); setReason(''); setError(''); }} className="flex-1 min-h-[44px] rounded-lg bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 text-sm font-bold flex items-center justify-center gap-2"><XCircle className="w-4 h-4" /> Refuser</button>
                 </div>
               )}
             </li>

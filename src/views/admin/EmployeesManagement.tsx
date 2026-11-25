@@ -350,7 +350,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={fb('add', () => setShowAddModal(true))}
+            onClick={() => setShowAddModal(true)}
             className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -358,7 +358,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </button>
           <button
             type="button"
-            onClick={fb('import', () => setImporting(true))}
+            onClick={() => setImporting(true)}
             className="w-full sm:w-auto px-4 py-2 min-h-[44px] border border-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -585,7 +585,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               Modifier Opérateur: {editingUser.name}
             </h3>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4">
+            <form onSubmit={fb('save', handleSaveEdit)} className="space-y-4">
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input

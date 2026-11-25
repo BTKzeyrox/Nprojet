@@ -67,7 +67,7 @@ export const StockSpacesDialog: React.FC<Props> = ({ lang, onClose, onSelect }) 
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => { onSelect(s.id); onClose(); }} className="flex-1 min-w-0 min-h-[44px] text-left text-sm text-white truncate">{s.name} <span className="text-[11px] text-slate-400">· {t(`${count(s.id)} produit${count(s.id) > 1 ? 's' : ''}`, `${count(s.id)} product${count(s.id) === 1 ? '' : 's'}`)}</span></button>
                   <button type="button" onClick={() => { setError(''); setEditing(s.id); setEditText(s.name); }} aria-label={t(`Renommer ${s.name}`, `Rename ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-200 flex items-center justify-center"><Pencil className="w-4 h-4" /></button>
-                  <button type="button" onClick={fb('delete', () => { setError(''); setConfirmDel(s.id); })} aria-label={t(`Supprimer ${s.name}`, `Delete ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => { setError(''); setConfirmDel(s.id); }} aria-label={t(`Supprimer ${s.name}`, `Delete ${s.name}`)} className="min-h-[44px] min-w-[44px] rounded-lg border border-rose-800 text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                 </div>
               )}
             </li>

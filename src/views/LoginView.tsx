@@ -316,7 +316,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </form>
               <div className="mt-5 pt-4 border-t text-center text-[14px]" style={{ borderColor: C.line }}>
                 <span style={{ color: C.sub }}>Pas encore de compte ?</span>{' '}
-                <button type="button" onClick={fb('create', () => setSignupOpen(true))} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                <button type="button" onClick={() => setSignupOpen(true)} className="font-bold cursor-pointer" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
                   Créer un compte
                 </button>
               </div>

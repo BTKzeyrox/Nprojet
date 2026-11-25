@@ -1642,7 +1642,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleSaveEditPending}
+                onClick={fb('save', handleSaveEditPending)}
                 className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded"
               >
                 Enregistrer Modifications
@@ -1813,7 +1813,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
                       <button
                         type="button"
-                        onClick={fb('delete', () => setEndProofPreview(null))}
+                        onClick={() => setEndProofPreview(null)}
                         className="text-xs font-mono text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />

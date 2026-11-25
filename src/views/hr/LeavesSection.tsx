@@ -86,7 +86,7 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
         {isAdmin && <label className="flex items-center gap-2 text-sm text-slate-200 min-h-[44px]"><input type="checkbox" checked={form.approved} onChange={e => setForm({ ...form, approved: e.target.checked })} className="w-5 h-5" />{t('Déjà accepté', 'Already approved')}</label>}
         {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
         {notice && <p className="text-sm text-emerald-400" role="status">{notice}</p>}
-        <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white justify-center`} onClick={submit}><Plus className="w-4 h-4" />{isAdmin ? t('Enregistrer', 'Record') : t('Envoyer la demande', 'Send the request')}</button>
+        <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white justify-center`} onClick={fb('save', submit)}><Plus className="w-4 h-4" />{isAdmin ? t('Enregistrer', 'Record') : t('Envoyer la demande', 'Send the request')}</button>
       </div>
       {isAdmin && (
         <div className="flex gap-1.5" role="tablist">
@@ -117,7 +117,7 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
             ) : (
               <div className="flex flex-wrap gap-2">
                 {isAdmin && x.status === 'pending' && <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={() => decide(x.id, 'approved')}><Check className="w-4 h-4" />{t('Accepter', 'Approve')}</button>}
-                {isAdmin && x.status === 'pending' && <button type="button" className={btn} onClick={fb('refuse', () => setAsk({ id: x.id, status: 'rejected', text: '' }))}><X className="w-4 h-4" />{t('Refuser', 'Refuse')}</button>}
+                {isAdmin && x.status === 'pending' && <button type="button" className={btn} onClick={() => setAsk({ id: x.id, status: 'rejected', text: '' })}><X className="w-4 h-4" />{t('Refuser', 'Refuse')}</button>}
                 {isAdmin && x.status === 'approved' && <button type="button" className={btn} onClick={() => setAsk({ id: x.id, status: 'cancelled', text: '' })}>{t('Annuler', 'Cancel')}</button>}
                 {!isAdmin && (x.status === 'pending' || (x.status === 'approved' && !started)) && <button type="button" className={btn} onClick={() => decide(x.id, 'cancelled')}>{t('Annuler ma demande', 'Cancel my request')}</button>}
                 {isAdmin && (x.status === 'cancelled' || x.status === 'rejected') && <button type="button" className={btn} onClick={fb('delete', () => remove(x.id))} aria-label={t('Supprimer', 'Delete')}><Trash2 className="w-4 h-4" /></button>}

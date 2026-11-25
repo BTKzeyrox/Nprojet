@@ -7,6 +7,7 @@ import { db } from '../db/store';
 import { useApp } from '../context/AppContext';
 import { disablePush, enablePush, pushEndpoint, pushState, type PushState } from '../utils/push';
 import { PUSH_CATS, type PushCat } from '../utils/pushEvents';
+import { fb } from '../utils/actionFeedback';
 
 /** Réglages > Notifications : recevoir sur ce téléphone les validations, refus et échéances des missions. */
 export const NotificationsCard: React.FC = () => {
@@ -67,7 +68,7 @@ export const NotificationsCard: React.FC = () => {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={test} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{t('Envoyer un test', 'Send a test')}</button>
+          <button type="button" disabled={busy} onClick={fb('send', test)} className={`${btn} bg-blue-600 border-blue-500 text-white`}>{t('Envoyer un test', 'Send a test')}</button>
           <button type="button" disabled={busy} onClick={disable} className={`${btn} border-slate-600 text-slate-200`}>{t('Désactiver', 'Turn off')}</button>
         </div>
         </>

@@ -141,7 +141,7 @@ export const FinanceTab: React.FC<Props> = ({ range, lang, salariesAr: salariesI
                 ) : (
                   <div className="flex items-center">
                     <button type="button" aria-label={t('Modifier', 'Edit')} onClick={() => edit(e)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-white"><Pencil className="w-4 h-4" /></button>
-                    <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(e.id))} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(e.id)} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 )}
               </li>

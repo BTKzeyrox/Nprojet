@@ -219,12 +219,12 @@ export const GroupInfoModal: React.FC<{
           )}
         </div>
         {canManage && group.avatar_url && (
-          <button type="button" onClick={removePhoto} className="text-xs font-semibold text-red-500 cursor-pointer">Retirer la photo</button>
+          <button type="button" onClick={fb('remove', removePhoto)} className="text-xs font-semibold text-red-500 cursor-pointer">Retirer la photo</button>
         )}
         {editing && canManage ? (
           <div className="flex gap-2 w-full">
             <input autoFocus value={name} onChange={e => setName(e.target.value)} maxLength={40} className={fieldCls(L)} />
-            <button type="button" onClick={saveName} disabled={!name.trim() || name.trim() === group.name} className="w-11 h-11 shrink-0 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center disabled:opacity-50 cursor-pointer" title="Enregistrer"><Check className="w-5 h-5" /></button>
+            <button type="button" onClick={fb('save', saveName)} disabled={!name.trim() || name.trim() === group.name} className="w-11 h-11 shrink-0 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center disabled:opacity-50 cursor-pointer" title="Enregistrer"><Check className="w-5 h-5" /></button>
           </div>
         ) : (
           <div className="flex items-center gap-2 max-w-full">
@@ -243,7 +243,7 @@ export const GroupInfoModal: React.FC<{
           <div className="flex items-center justify-between mb-1">
             <span className={`text-xs font-semibold ${sub}`}>Description</span>
             {canManage && !editDesc && (
-              <button type="button" onClick={fb('add', () => { setDesc(group.description || ''); setEditDesc(true); })} className="text-xs font-bold text-blue-600 cursor-pointer">{group.description ? 'Modifier' : 'Ajouter'}</button>
+              <button type="button" onClick={() => { setDesc(group.description || ''); setEditDesc(true); }} className="text-xs font-bold text-blue-600 cursor-pointer">{group.description ? 'Modifier' : 'Ajouter'}</button>
             )}
           </div>
           {editDesc && canManage ? (
@@ -251,7 +251,7 @@ export const GroupInfoModal: React.FC<{
               <textarea autoFocus value={desc} onChange={e => setDesc(e.target.value)} maxLength={200} rows={3} placeholder="À quoi sert ce groupe ?" className={`w-full rounded-2xl border px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-500 ${L ? 'bg-white border-slate-300' : 'bg-[#0a1424] border-slate-600'}`} />
               <div className="flex gap-2">
                 <button type="button" onClick={() => setEditDesc(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold cursor-pointer ${L ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-200'}`}>Annuler</button>
-                <button type="button" onClick={saveDesc} className="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Enregistrer</button>
+                <button type="button" onClick={fb('save', saveDesc)} className="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer">Enregistrer</button>
               </div>
             </div>
           ) : (
@@ -266,7 +266,7 @@ export const GroupInfoModal: React.FC<{
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold">{group.members.length} membres</span>
         {canManage && (
-          <button type="button" onClick={fb('add', () => setAdding(a => !a))} className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={() => setAdding(a => !a)} className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5 cursor-pointer">
             <UserPlus className="w-3.5 h-3.5" /> Ajouter
           </button>
         )}
@@ -292,12 +292,12 @@ export const GroupInfoModal: React.FC<{
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">Admin</span>
                   )}
                   {isOwnerLike && u.id !== currentUser.id && (
-                    <button type="button" onClick={fb('remove', () => toggleAdmin(u.id))} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>
+                    <button type="button" onClick={() => toggleAdmin(u.id)} className="w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-500/10 cursor-pointer" title={(group.admins || []).includes(u.id) ? 'Retirer des administrateurs' : 'Nommer administrateur'}>
                       {(group.admins || []).includes(u.id) ? <ShieldOff className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                     </button>
                   )}
                   {canManage && u.id !== currentUser.id && (isOwnerLike || !(group.admins || []).includes(u.id)) && (
-                    <button type="button" onClick={fb('remove', () => setMembers(group.members.filter(m => m !== u.id)))} className="w-9 h-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
+                    <button type="button" onClick={() => setMembers(group.members.filter(m => m !== u.id))} className="w-9 h-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 cursor-pointer" title="Retirer du groupe">
                       <UserMinus className="w-5 h-5" />
                     </button>
                   )}

@@ -174,7 +174,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                             <button type="button" onClick={fb('delete', () => act(() => db.deletePurchase(o.id)))} className="min-h-[44px] px-3 rounded-lg bg-rose-700 text-white text-sm font-semibold">{t('Supprimer le bon', 'Delete the order')}</button>
                             <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                           </>
-                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(o.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
+                        ) : <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(o.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>)}
                       </div>
                     </div>
                   )}
@@ -211,7 +211,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                       <option value="">{t('Produit…', 'Product…')}</option>
                       {products.filter(p => p.id === l.product_id || !editor.lines.some(x => x.product_id === p.id)).map(p => <option key={p.id} value={p.id}>{p.name}{sp(p)}</option>)}
                     </select>
-                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={fb('remove', () => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) }))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
+                    {editor.lines.length > 1 && <button type="button" aria-label={t('Retirer la ligne', 'Remove line')} onClick={() => setEditor({ ...editor, lines: editor.lines.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <input inputMode="decimal" value={l.qty} aria-label={t('Quantité', 'Quantity')} placeholder={t('Quantité', 'Quantity')} onChange={e => setEditor({ ...editor, lines: editor.lines.map((x, j) => j === i ? { ...x, qty: e.target.value } : x) })} className={field} />
@@ -219,7 +219,7 @@ export const PurchaseOrdersSection: React.FC<{ ver: number }> = ({ ver }) => {
                   </div>
                 </div>
               ))}
-              {editor.lines.length < 50 && <button type="button" onClick={fb('add', () => setEditor({ ...editor, lines: [...editor.lines, { product_id: '', qty: '', cost: '' }] }))} className={btn}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
+              {editor.lines.length < 50 && <button type="button" onClick={() => setEditor({ ...editor, lines: [...editor.lines, { product_id: '', qty: '', cost: '' }] })} className={btn}><Plus className="w-4 h-4" />{t('Ajouter une ligne', 'Add a line')}</button>}
             </div>
             <label className="block text-xs text-slate-400">{t('Note (facultatif)', 'Note (optional)')}<textarea value={editor.note} maxLength={300} rows={2} onChange={e => setEditor({ ...editor, note: e.target.value })} className={`${field} mt-1 py-2`} /></label>
             <p className="text-[11px] text-slate-500">{t('Un bon commandé ne change plus (seule la quantité reçue avance). Un prix vide pourra être complété plus tard : sans prix, aucune dépense n\'est calculée pour la ligne.', 'An ordered order no longer changes (only the received quantity moves). An empty price can be filled in later: without a price, no expense is calculated for the line.')}</p>

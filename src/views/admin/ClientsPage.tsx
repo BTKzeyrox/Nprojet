@@ -132,7 +132,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <button type="button" onClick={newClient} className="w-full min-h-[44px] rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" />{t('Nouveau client', 'New client')}</button>
-          <button type="button" onClick={fb('import', () => setImporting(true))} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
+          <button type="button" onClick={() => setImporting(true)} className="w-full sm:w-auto sm:px-4 min-h-[44px] rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center justify-center gap-1.5 whitespace-nowrap"><FileSpreadsheet className="w-4 h-4" />{t('Importer (Excel, CSV)', 'Import (Excel, CSV)')}</button>
         </div>
       </div>
 
@@ -238,7 +238,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                             <button type="button" onClick={() => setConfirmId(null)} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm">{t('Non', 'No')}</button>
                           </>
                         ) : (
-                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={fb('delete', () => setConfirmId(c.id))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                          <button type="button" aria-label={t('Supprimer', 'Delete')} onClick={() => setConfirmId(c.id)} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 hover:text-rose-300 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                         )}
                       </div>
                     </div>
@@ -298,11 +298,11 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
                     {[...new Set([...types, ...(row.type ? [row.type] : [])])].filter(x => x === row.type || !editor.types.some(o => o.type === x)).map(x => <option key={x} value={x}>{x}</option>)}
                   </select>
                   <input inputMode="numeric" value={row.price} aria-label={t('Prix (Ar)', 'Price (Ar)')} placeholder="Ar" onChange={e => setEditor({ ...editor, types: editor.types.map((x, j) => j === i ? { ...x, price: e.target.value } : x) })} className={`${field} w-28`} />
-                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={fb('remove', () => setEditor({ ...editor, types: editor.types.filter((_, j) => j !== i) }))} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>
+                  <button type="button" aria-label={t('Retirer', 'Remove')} onClick={() => setEditor({ ...editor, types: editor.types.filter((_, j) => j !== i) })} className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 text-slate-300 flex items-center justify-center"><X className="w-4 h-4" /></button>
                 </div>
               ))}
               {editor.types.length < CLIENT_LIMITS.types_max && types.some(x => !editor.types.some(o => o.type === x)) && (
-                <button type="button" onClick={fb('add', () => setEditor({ ...editor, types: [...editor.types, { type: '', price: '' }] }))} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter une exception', 'Add an exception')}</button>
+                <button type="button" onClick={() => setEditor({ ...editor, types: [...editor.types, { type: '', price: '' }] })} className="min-h-[44px] px-3 rounded-lg border border-slate-700 text-slate-200 text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" />{t('Ajouter une exception', 'Add an exception')}</button>
               )}
             </div>
 
