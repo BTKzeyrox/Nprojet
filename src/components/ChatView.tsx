@@ -65,6 +65,7 @@ import { accentOf, accentStyles, useAccentVersion } from '../utils/avatarColor';
 import { SafeImage } from './SafeImage';
 import { fb } from '../utils/actionFeedback';
 import { isKeyboardOpen } from '../utils/keyboard';
+import { registerChatBack } from '../utils/chatBack';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
@@ -154,6 +155,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string; o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showList, setShowList] = useState(() => !(bootChat && !initialThreadId && window.innerWidth < 768)); // mobile : liste ou conversation (rouverte après un rechargement si elle était ouverte)
+  useEffect(() => registerChatBack(() => window.innerWidth < 768 && !showList, () => setShowList(true)), [showList]); // glissement « Retour » : discussion ouverte (téléphone) -> la liste
   useEffect(() => { noteResume(currentUser.id, { chat: window.innerWidth < 768 && showList ? '' : threadId }); }, [threadId, showList, currentUser.id]); // reprise : discussion ouverte ('' = la liste)
   const [hidden, setHidden] = useState<Set<string>>(() => getHiddenMessages(currentUser.id)); // « supprimés pour moi »
   const [archived, setArchived] = useState<Record<string, number>>(() => getArchivedThreads(currentUser.id));

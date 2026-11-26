@@ -1,5 +1,5 @@
 // Glissement « Retour » sur téléphone (comme le retour d'iOS) : règles pures, sans écran. Utilisé par App.tsx.
-// Glisser vers la DROITE = retour : d'abord l'onglet d'avant dans la page ; sur le premier onglet (ou une page sans onglets), la page d'avant ;
+// Glisser vers la DROITE = retour direct à l'étape d'avant, dans l'ordre d'entrée (pages, onglets, discussion ouverte du chat) ;
 // sinon rien (la page bouge un peu puis revient). Glisser vers la gauche ne fait rien. Contrôlé par scripts/check-page-swipe.ts.
 export const SWIPE_LOCK_PX = 10; // en dessous : on ne sait pas encore si c'est un défilement ou un glissement
 export const SWIPE_MIN_PX = 90; // glissement accepté à partir de cette distance (vers la droite)
@@ -8,14 +8,17 @@ export const SWIPE_MS = 220; // durée de l'animation
 export const SWIPE_SETTLE_MS = 60; // la page d'arrivée a ce court instant pour se dessiner, invisible, avant d'entrer
 export const SWIPE_PREPARE_MAX_MS = 1500; // attente maximale de la préparation de la page d'arrivée
 
-export type SwipeBack = { kind: 'tab'; tabId: string } | { kind: 'page'; view: string } | { kind: 'none' };
+export type SwipeBack = { kind: 'chat' } | { kind: 'page'; view: string; statsTab?: 'finance' } | { kind: 'none' };
 
-/** Où mène le « Retour » : l'onglet d'avant dans la même page, sinon la page d'avant, sinon nulle part. */
-export function backTarget(tabIds: string[], activeTab: string | undefined, history: string[]): SwipeBack {
-  const i = activeTab ? tabIds.indexOf(activeTab) : -1;
-  if (i > 0) return { kind: 'tab', tabId: tabIds[i - 1] };
+/** Une étape de l'historique : une page, ou « stats:finance » (la page Statistiques sur son onglet Finances). */
+export const stepOf = (view: string, statsTab?: string): string => (view === 'stats' && statsTab === 'finance' ? 'stats:finance' : view);
+export const parseStep = (step: string): { view: string; statsTab?: 'finance' } => (step === 'stats:finance' ? { view: 'stats', statsTab: 'finance' } : { view: step });
+
+/** Où mène le « Retour » : dans l'ordre d'entrée, directement à l'étape juste avant. Une discussion ouverte (chat, téléphone) se referme d'abord vers la liste ; sans étape avant : nulle part. */
+export function backTarget(history: string[], chatOpen = false): SwipeBack {
+  if (chatOpen) return { kind: 'chat' };
   const last = history[history.length - 1];
-  return last ? { kind: 'page', view: last } : { kind: 'none' };
+  return last ? { kind: 'page', ...parseStep(last) } : { kind: 'none' };
 }
 
 /** Le doigt va-t-il vers un défilement ('y'), un glissement ('x') ou on ne sait pas encore (null) ? */
@@ -35,7 +38,7 @@ export function dragOffset(dx: number, canGo: boolean, width: number): number {
 export const isBackSwipe = (dx: number, canGo: boolean): boolean => canGo && Number.isFinite(dx) && dx >= SWIPE_MIN_PX;
 
 /** Endroits où un glissement ne doit jamais partir : champs de texte, image ouverte, zone marquée, zone qui défile de côté. Les boutons et les cartes sont permis. */
-export const SWIPE_BLOCK_SELECTOR = 'input,textarea,select,[contenteditable="true"],[data-lightbox],[data-no-page-swipe]';
+export const SWIPE_BLOCK_SELECTOR = 'input,textarea,select,[contenteditable="true"],[data-lightbox],[data-no-page-swipe],[data-composer-bar],.fixed.inset-0'; // .fixed.inset-0 = fenêtres et menus ouverts par-dessus la page
 export function swipeBlocked(el: Element | null): boolean {
   if (!el) return false;
   if (el.closest(SWIPE_BLOCK_SELECTOR)) return true;

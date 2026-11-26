@@ -2,15 +2,24 @@
 import { readFileSync } from 'node:fs';
 import { loaderKey, LOADER_KEYS } from '../src/utils/pagePreload';
 import { ADMIN_GROUPS } from '../src/utils/menuGroups';
-import { backTarget, swipeAxis, dragOffset, isBackSwipe, SWIPE_MIN_PX, SWIPE_LOCK_PX, SWIPE_BLOCK_SELECTOR } from '../src/utils/pageSwipe';
+import { backTarget, stepOf, parseStep, swipeAxis, dragOffset, isBackSwipe, SWIPE_MIN_PX, SWIPE_LOCK_PX, SWIPE_BLOCK_SELECTOR } from '../src/utils/pageSwipe';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
-const tabs = ['a', 'b', 'c'];
-ok(JSON.stringify(backTarget(tabs, 'c', ['x'])) === '{"kind":"tab","tabId":"b"}' && JSON.stringify(backTarget(tabs, 'b', [])) === '{"kind":"tab","tabId":"a"}', 'onglet qui n\'est pas le premier : retour = onglet d\'avant');
-ok(JSON.stringify(backTarget(tabs, 'a', ['x', 'y'])) === '{"kind":"page","view":"y"}', 'premier onglet : retour = page d\'avant');
-ok(JSON.stringify(backTarget([], undefined, ['x'])) === '{"kind":"page","view":"x"}' && JSON.stringify(backTarget(['a'], 'a', ['x'])) === '{"kind":"page","view":"x"}', 'page sans onglets : retour = page d\'avant');
-ok(backTarget(tabs, 'a', []).kind === 'none' && backTarget([], undefined, []).kind === 'none', 'rien où revenir : nulle part');
-ok(backTarget(tabs, 'zzz', ['x']).kind === 'page', 'onglet inconnu : on ne plante pas, page d\'avant');
+// --- retour direct, dans l'ordre d'entrée (pages, onglets, discussion du chat) ---
+const J = JSON.stringify;
+ok(J(backTarget(['feed', 'chat'])) === '{"kind":"page","view":"chat"}', 'retour direct : l\'étape juste avant (la dernière de la liste)');
+ok(J(backTarget([])) === '{"kind":"none"}', 'rien avant : nulle part');
+// Accueil -> Messages -> discussion : 1er glissement = la liste, 2e = l'Accueil
+{ const h: string[] = ['feed']; // on est dans « chat » ; l'historique garde l'Accueil
+  const t1 = backTarget(h, true); const t2 = backTarget(h, false);
+  ok(t1.kind === 'chat' && J(t2) === '{"kind":"page","view":"feed"}', 'Accueil -> Messages -> discussion : glissement 1 = liste, glissement 2 = Accueil'); }
+// ordre d'entrée : Accueil -> Finances -> Missions -> Stock ; trois retours : Missions, Finances, Accueil (pas l'ordre des onglets)
+{ const h = ['feed', 'stats:finance', 'missions']; const seen: string[] = []; while (h.length) { const t = backTarget(h); if (t.kind !== 'page') break; seen.push(stepOf(t.view, t.statsTab)); h.pop(); }
+  ok(J(seen) === J(['missions', 'stats:finance', 'feed']), 'trois retours suivent exactement l\'ordre d\'entrée à l\'envers'); }
+ok(stepOf('stats', 'finance') === 'stats:finance' && stepOf('stats', 'stats') === 'stats' && stepOf('chat', 'finance') === 'chat', 'la page Statistiques garde son onglet Finances dans l\'historique');
+ok(J(parseStep('stats:finance')) === '{"view":"stats","statsTab":"finance"}' && J(parseStep('feed')) === '{"view":"feed"}', 'une étape se relit en page + onglet');
+ok(J(backTarget(['stats:finance'])) === '{"kind":"page","view":"stats","statsTab":"finance"}', 'retour vers Statistiques > Finances rouvre l\'onglet Finances');
+ok(backTarget(['x'], true).kind === 'chat' && backTarget([], true).kind === 'chat', 'discussion ouverte : le retour referme la discussion, même sans historique');
 ok(swipeAxis(3, 4) === null && swipeAxis(SWIPE_LOCK_PX, 0) === 'x' && swipeAxis(40, 5) === 'x', 'petit mouvement : on attend ; net horizontal : glissement');
 ok(swipeAxis(5, 40) === 'y' && swipeAxis(30, 30) === 'y' && swipeAxis(NaN, 3) === 'y', 'vertical, en diagonale ou illisible : défilement (jamais de glissement)');
 ok(dragOffset(-80, true, 400) === 0 && dragOffset(0, true, 400) === 0 && dragOffset(NaN, true, 400) === 0, 'vers la gauche : la page ne bouge jamais');
@@ -21,8 +30,11 @@ ok(/input/.test(SWIPE_BLOCK_SELECTOR) && /textarea/.test(SWIPE_BLOCK_SELECTOR) &
 const app = readFileSync('src/App.tsx', 'utf8');
 ok(/swipeBackFn\.current = \(\) => backTarget\(/.test(app) && /swipeDo\.current = t =>/.test(app), 'App.tsx : le retour calcule sa cible avec backTarget à chaque affichage');
 ok(/transition: swipeAnim \?/.test(app) && /'none'/.test(app.slice(app.indexOf('transition: swipeAnim ?'), app.indexOf('transition: swipeAnim ?') + 160)), 'la page suit le doigt SANS animation (animation seulement à la fin)');
-ok(/if \(tb\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app) && /if \(t\.view !== previousView\.current\) skipViewHistory\.current = true/.test(app), 'un retour n\'est jamais ajouté à la mémoire des pages');
-ok(/activeView === 'chat'/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)) && /window\.innerWidth >= 768/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)), 'pas dans la messagerie ni sur ordinateur');
+ok(/if \(t\.view !== previousView\.current\) skipViewHistory\.current = true; viewHistory\.current\.pop\(\)/.test(app), 'un retour n\'est jamais ajouté à la mémoire des pages (sinon le prochain retour reviendrait ici)');
+ok(/window\.innerWidth >= 768/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)) && !/activeView === 'chat'/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)), 'le glissement est actif sur téléphone, y compris dans le chat ; jamais sur ordinateur');
+const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
+ok(/registerChatBack\(\(\) => window\.innerWidth < 768 && !showList, \(\) => setShowList\(true\)\)/.test(cv) && /chatCanBack\(\)/.test(app) && /chatBack\(\)/.test(app), 'chat : une discussion ouverte se referme vers la liste');
+ok(/\[data-composer-bar\]/.test(SWIPE_BLOCK_SELECTOR) && /\.fixed\.inset-0/.test(SWIPE_BLOCK_SELECTOR), 'jamais depuis la zone d\'écriture du chat ni depuis une fenêtre ou un menu ouvert');
 ok(!/viewHistory\.current\[viewHistory\.current\.length - 1\];\s*\n\s*const accepted/.test(app), 'l\'ancien glissement (page d\'avant dans les deux sens) n\'existe plus');
 // --- arrivée de la page sans saccade : préparée avant, entrée invisible puis en fondu ---
 ok(loaderKey('feed', 'admin') === 'feed' && loaderKey('advances', 'admin') === 'employees' && loaderKey('sheets', 'employee') === 'mySheets' && loaderKey('xyz', 'admin') === 'adminDashboard' && loaderKey('grid', 'employee') === 'employeeDashboard' && loaderKey('grid', 'team_lead') === null && loaderKey('chat', 'team_lead') === 'chat' && loaderKey('', 'admin') === 'adminDashboard', 'préparation : la bonne page pour chaque rôle (fil, avances → équipe, mes tableaux, tableau de bord par défaut)');

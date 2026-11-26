@@ -6,7 +6,8 @@ import { readResume, noteResume, clearResume, setBootChat } from './utils/resume
 import { saveFeedScroll } from './utils/feedScroll';
 import { clearImageCache } from './utils/imageCache';
 import { preloadView } from './utils/pagePreload';
-import { backTarget, swipeAxis, dragOffset, isBackSwipe, swipeBlocked, SWIPE_MS, SWIPE_SETTLE_MS, SWIPE_PREPARE_MAX_MS, type SwipeBack } from './utils/pageSwipe';
+import { chatCanBack, chatBack } from './utils/chatBack';
+import { backTarget, stepOf, parseStep, swipeAxis, dragOffset, isBackSwipe, swipeBlocked, SWIPE_MS, SWIPE_SETTLE_MS, SWIPE_PREPARE_MAX_MS, type SwipeBack } from './utils/pageSwipe';
 import { isKnownView } from './utils/health/menu';
 import { useViewportWidth } from './utils/viewportWidth';
 import { closeDigestNotifications } from './utils/pushDigest';
@@ -32,7 +33,7 @@ import { MenuTabs, MENU_TABS_H } from './components/MenuTabs';
 import { menuFor, locate } from './utils/menuGroups';
 import { mergedFor, useMenuMode, rememberTab } from './utils/menuMode';
 import { goToTab } from './utils/menuNav';
-import { getStatsTab } from './utils/statsNav';
+import { getStatsTab, setStatsTab } from './utils/statsNav';
 import { OfflineCenter } from './components/OfflineCenter';
 import { OfflineUnlockView } from './components/OfflineUnlockView';
 import { ReportProblemModal } from './components/ReportProblemModal';
@@ -140,7 +141,7 @@ export default function App() {
   const skipViewHistory = useRef(false);
   useEffect(() => {
     if (previousView.current !== activeView) {
-      if (!skipViewHistory.current) viewHistory.current = [...viewHistory.current.slice(-19), previousView.current];
+      if (!skipViewHistory.current) viewHistory.current = [...viewHistory.current.slice(-19), stepOf(previousView.current, getStatsTab())];
       skipViewHistory.current = false;
       previousView.current = activeView;
     }
@@ -149,7 +150,7 @@ export default function App() {
   useEffect(() => {
     const settle = () => { mobileSwipeXRef.current = 0; setMobileSwipeX(0); };
     const onStart = (e: TouchEvent) => {
-      if (swipeBusy.current || swipeSettling.current || window.innerWidth >= 768 || activeView === 'chat' || e.touches.length !== 1) return;
+      if (swipeBusy.current || swipeSettling.current || window.innerWidth >= 768 || e.touches.length !== 1) return;
       if (e.target instanceof Element && swipeBlocked(e.target)) return;
       const t = e.touches[0];
       setSwipeAnim(false);
@@ -588,12 +589,12 @@ export default function App() {
   const tabBadges: Record<string, number> = viewUser.role === 'admin' ? { validations: countPending().total } : {};
   const tabsRow = showTabs && grp && loc ? <MenuTabs group={grp} activeTab={loc.tab} badges={tabBadges} fixed={activeView === 'chat'} onPick={id => { const tb = grp.tabs.find(x => x.id === id); if (tb) { setFocusOperatorId(null); goToTab(tb, view => setActiveView(view)); } }} /> : null;
   // « Retour » par glissement : où il mène depuis la page ouverte (onglet d'avant, sinon page d'avant), et comment y aller
-  swipeBackFn.current = () => backTarget(showTabs && grp ? grp.tabs.map(x => x.id) : [], loc?.tab, viewHistory.current);
-  swipePreload.current = t => preloadView(t.kind === 'tab' ? (grp?.tabs.find(x => x.id === t.tabId)?.view || '') : t.kind === 'page' ? t.view : '', viewUser.role);
+  swipeBackFn.current = () => backTarget(viewHistory.current, activeView === 'chat' && chatCanBack());
+  swipePreload.current = t => preloadView(t.kind === 'page' ? t.view : '', viewUser.role);
   swipeDo.current = t => {
     // un retour ne s'ajoute jamais à la mémoire des pages (sinon le prochain retour reviendrait ici) ; seulement si la page change vraiment
-    if (t.kind === 'tab') { const tb = grp?.tabs.find(x => x.id === t.tabId); if (tb) { if (tb.view !== previousView.current) skipViewHistory.current = true; setFocusOperatorId(null); goToTab(tb, view => setActiveView(view)); } }
-    else if (t.kind === 'page') { if (t.view !== previousView.current) skipViewHistory.current = true; viewHistory.current.pop(); setActiveView(t.view); }
+    if (t.kind === 'chat') chatBack();
+    else if (t.kind === 'page') { if (t.view !== previousView.current) skipViewHistory.current = true; viewHistory.current.pop(); if (t.statsTab) setStatsTab(t.statsTab); setFocusOperatorId(null); setActiveView(t.view); }
   };
   // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
   return (

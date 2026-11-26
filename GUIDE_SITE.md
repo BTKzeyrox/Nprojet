@@ -633,6 +633,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `chartParts.ts` | Règles pures des graphiques « C3 » : parts de l'anneau, barres de classement, jauge d'objectif, mini-courbe. |
 | `chartScale.ts` | Calculs des graphiques (purs, sans écran) : graduations rondes, courbe douce, point le plus proche, statistiques. |
 | `chatAbout.ts` | Fiche « À propos » d'une personne ou d'un groupe dans la messagerie : règles pures (quoi montrer, quelles actions), sans écran ni serveur. |
+| `chatBack.ts` | Pont « Retour » du chat : le glissement de retour (App.tsx) demande à la messagerie si une discussion est ouverte (téléphone) et la referme vers la liste. |
 | `chatMarks.ts` | Repères sur les messages du chat (2026-11-12) : Important (privé, gardé sur l'appareil), Épinglé (existant), Transféré (nouveau). |
 | `chatMarksList.ts` | Liste « Importants et épinglés » du chat (étape 1 de la demande de BTK, 2026-11-12) : règles pures, sans écran ni serveur. |
 | `chatPrefs.ts` | Préférences de messagerie propres à chaque personne, gardées sur son appareil : |
