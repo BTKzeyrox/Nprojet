@@ -194,9 +194,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         onClick={e => { if (compact && onToggleCompact && !(e.target as HTMLElement).closest('button')) onToggleCompact(); }}
-        className={`df-sb ${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-3 bottom-3 left-3 z-40 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
+        className={`df-sb ${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-3 bottom-3 right-3 md:right-auto md:left-3 z-40 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
           isLight ? 'bg-white border-slate-200 text-slate-800 shadow-sm' : 'bg-[#0a1628] border-slate-800 text-slate-100'
-        } ${isOpenMobile ? 'translate-x-0' : '-translate-x-[110%] md:translate-x-0'}`}
+        } ${isOpenMobile ? 'translate-x-0' : 'translate-x-[110%] md:translate-x-0'}`}
       >
         {/* 1. En-tête : logo et nom */}
         <div className="shrink-0 p-4 pb-2 flex items-center justify-between">

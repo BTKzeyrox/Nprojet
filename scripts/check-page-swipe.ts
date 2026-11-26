@@ -56,5 +56,6 @@ const css = readFileSync('src/index.css', 'utf8');
 ok(/\.df-back-bubble\s*\{[^}]*position:\s*fixed/.test(css) && /\.df-back-bubble\[data-armed\]/.test(css) && /prefers-reduced-motion[\s\S]*df-back-bubble/.test(css), 'bulle : style fixe, couleur validée, mouvement réduit respecté');
 ok(/swipeBusy\.current = true;[\s\S]*?SWIPE_SETTLE_MS \+ SWIPE_MS/.test(appSrc) && /swipeBusy\.current \|\|/.test(appSrc), 'aucun nouveau glissement pendant le changement de page');
 ok(/<LoadingBar pageKey=\{activeView\} \/>/.test(appSrc) && /setPageBusy\(true\)/.test(readFileSync('src/components/LoadingBar.tsx', 'utf8')) && /df-fade-a 0\.3s/.test(css), 'changement de page : fondu doux (0,3 s) + petite barre de chargement');
+{ const sb = readFileSync('src/components/Sidebar.tsx', 'utf8'); ok(/right-3 md:right-auto md:left-3/.test(sb) && /'translate-x-\[110%\] md:translate-x-0'/.test(sb) && !/-translate-x-\[110%\]/.test(sb), 'menu latéral : à droite sur téléphone, à gauche sur grand écran'); }
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
