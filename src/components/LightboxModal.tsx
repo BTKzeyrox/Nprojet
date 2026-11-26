@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Copy, X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
+import { useSoftImage } from '../utils/softImage';
 import { formatScoreM } from '../utils/formatUtils';
 import { downloadFile } from '../utils/attachments';
 import { copyImage, copyImageText } from '../utils/copyImage';
@@ -31,6 +32,12 @@ const MAX = 6;
 const SLIDE_MS = 360; // durée du glissement d'une image à l'autre
 const SLIDE_EASE = 'cubic-bezier(.22,.8,.3,1)';
 const clampScale = (s: number) => Math.min(MAX, Math.max(MIN, s));
+
+/** Une photo de la visionneuse : fond qui respire pendant le téléchargement, puis fondu (voir utils/softImage.ts). */
+const LbImg: React.FC<{ src: string; alt: string; style: React.CSSProperties }> = ({ src, alt, style }) => {
+  const soft = useSoftImage(src);
+  return <img ref={soft.ref} src={src} alt={alt} draggable={false} className={`w-full h-full object-contain ${soft.className}`} data-lightbox-img style={style} onLoad={soft.onLoad} />;
+};
 
 export const LightboxModal: React.FC<LightboxModalProps> = ({
   isOpen,
@@ -258,11 +265,9 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           const isCur = k === 0;
           return (
             <div key={i} className="absolute inset-0 flex items-center justify-center pointer-events-none box-border" style={{ paddingTop: 'var(--lb-hdr)', paddingBottom: 'var(--lb-ftr)', ...(isCur ? {} : { visibility: view.s > 1 || view.x === 0 ? 'hidden' : 'visible' }) }}>
-              <img
+              <LbImg
                 src={url}
                 alt={isCur ? 'Justificatif' : ''}
-                draggable={false}
-                className="w-full h-full object-contain" data-lightbox-img
                 style={{
                   transform: isCur
                     ? `translate(${view.x}px, ${view.y + dismissY}px) scale(${view.s * dismissScale})`

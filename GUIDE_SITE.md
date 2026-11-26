@@ -786,6 +786,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `siteKnowledge.ts` | Carte du site (module 11, M11.8) : pour CHAQUE page du menu, à quoi elle sert, comment l'utiliser, ses règles et ses chiffres avec leur formule. FR et EN. |
 | `siteSnapshot.ts` | Instantané du site et « Pourquoi ce chiffre ? » (module 11, M11.9). Pur : pas d'écran, pas de serveur. ADMIN SEULEMENT (chiffres d'argent). |
 | `snapshotDb.ts` | Relie l'instantané et « Pourquoi ce chiffre ? » aux données du site. ADMIN SEULEMENT : sans admin, aucune donnée n'est lue. |
+| `softImage.ts` | Chargement doux des images : pendant le téléchargement, un fond qui « respire » (même taille que l'image, donc pas de saut de mise en page) ; |
 | `splash.ts` | Écran de démarrage « BTK » (défini dans index.html) : retrait en fondu quand le site est prêt. |
 | `stats.ts` | Règles pures (sans écran, sans serveur) des périodes jour, semaine, mois, année et des chiffres de la page Statistiques. |
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
@@ -1123,6 +1124,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:bottom-nav` | Barre du bas (téléphone) : Accueil, Dashboard, Messages, Calendrier, Menu ; en-tête : logo + nom, recherche, notifications, profil. Lancer : npm run check:bottom-nav |
 | `npm run check:nav-mode` | Contrôle : réglage « Menu du téléphone » (barre du bas ou seulement le haut), synchronisé par compte. Lancer : npm run check:nav-mode |
 | `npm run check:action-feedback` | Contrôle : retour visible après les boutons d'action (Enregistré ✓, Copié ✓, Supprimé ✓…), sans faux « ✓ ». Lancer : npm run check:action-feedback |
+| `npm run check:soft-image` | Contrôle : chargement doux des images (fond qui respire, puis fondu ; image déjà en mémoire = tout de suite). Lancer : npm run check:soft-image |
 | `npm run check:lightbox-gallery` | Galerie plein écran (LightboxModal) : une seule transition continue, images voisines toujours dans la page et préchargées, pas de « rechargement » après le changement. Lancer : npm run check:lightbox-gallery |
 | `npm run check:accounting-server` | Contrôle du serveur de comptabilité (module 14, M14.3) : copie exacte des règles du site, mêmes résultats, protections, anonymat de la paie, migration. |
 | `npm run check:bank-recon` | Contrôle du rapprochement bancaire et Mobile Money (M14.7), sans réseau. Lancer : npm run check:bank-recon |

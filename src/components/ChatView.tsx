@@ -66,6 +66,7 @@ import { SafeImage } from './SafeImage';
 import { fb } from '../utils/actionFeedback';
 import { isKeyboardOpen } from '../utils/keyboard';
 import { registerChatBack } from '../utils/chatBack';
+import { useSoftImage } from '../utils/softImage';
 
 /** Une seule ligne avec « … » : la règle globale « Mots jamais coupés » (index.css) neutralise la classe `truncate` (avec !important), il faut donc ce style en ligne, sans cette classe. Pour les aperçus, qu'un long message ne doit jamais gonfler. */
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
@@ -74,6 +75,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 const ChatImage: React.FC<{ src: string; alt: string; frameClassName: string; imageClassName?: string; onOpen: () => void; overlay?: React.ReactNode }> = ({ src, alt, frameClassName, imageClassName = '', onOpen, overlay }) => {
   const [failed, setFailed] = useState(false);
+  const soft = useSoftImage(src);
   if (failed) {
     return (
       <div className={`${frameClassName} flex items-center justify-center border border-dashed border-slate-300 bg-slate-100 text-slate-500`} role="img" aria-label="Image indisponible hors ligne">
@@ -82,8 +84,8 @@ const ChatImage: React.FC<{ src: string; alt: string; frameClassName: string; im
     );
   }
   return (
-    <button type="button" onClick={onOpen} className={`${frameClassName} cursor-zoom-in`} title="Agrandir">
-      <img src={src} alt={alt} className={imageClassName} loading="lazy" onError={() => setFailed(true)} />
+    <button type="button" onClick={onOpen} className={`${frameClassName} cursor-zoom-in ${soft.state === 'loading' ? 'df-img-loading' : ''}`} title="Agrandir">
+      <img ref={soft.ref} src={src} alt={alt} className={`${imageClassName} ${soft.state === 'fade' ? 'df-img-in' : ''}`} loading="lazy" onLoad={soft.onLoad} onError={() => setFailed(true)} />
       {overlay}
     </button>
   );

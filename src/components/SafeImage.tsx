@@ -5,12 +5,14 @@
 import React, { useEffect, useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { isCompactClass, placeholderLabel } from '../utils/safeImage';
+import { useSoftImage } from '../utils/softImage';
 
 type Props = React.ImgHTMLAttributes<HTMLImageElement> & { compact?: boolean };
 
-export const SafeImage: React.FC<Props> = ({ compact, onError, className = '', alt, src, style, ...rest }) => {
+export const SafeImage: React.FC<Props> = ({ compact, onError, onLoad, className = '', alt, src, style, ...rest }) => {
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
+  const soft = useSoftImage(typeof src === 'string' ? src : undefined);
   useEffect(() => { setFailed(false); }, [src]);
   useEffect(() => {
     if (!failed) return;
@@ -32,5 +34,5 @@ export const SafeImage: React.FC<Props> = ({ compact, onError, className = '', a
       </span>
     );
   }
-  return <img key={tries} src={src} alt={alt} className={className} style={style} onError={e => { setFailed(true); onError?.(e); }} {...rest} />;
+  return <img key={tries} ref={soft.ref} src={src} alt={alt} className={`${className} ${soft.className}`.trim()} style={style} onLoad={e => { soft.onLoad(); onLoad?.(e); }} onError={e => { setFailed(true); onError?.(e); }} {...rest} />;
 };

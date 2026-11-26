@@ -1247,3 +1247,10 @@ html.theme-light [class*="rounded-2xl"][class*="border"], html.theme-light [clas
 
 /* Clavier ouvert (téléphone) : la barre du bas ne compte plus dans la mise en page (voir App.tsx, data-kb) */
 html[data-kb="1"] { --bnh: 0px !important; }
+
+/* Chargement doux des images (voir utils/softImage.ts) : fond qui respire pendant le téléchargement, puis fondu à l'arrivée */
+@keyframes df-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes df-img-in { from { opacity: 0; } to { opacity: 1; } }
+.df-img-loading { background: rgba(148, 163, 184, 0.22); color: transparent; animation: df-breathe 1.4s ease-in-out infinite; }
+.df-img-in { animation: df-img-in 0.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .df-img-loading { animation: none; } .df-img-in { animation: none; } }

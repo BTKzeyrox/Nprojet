@@ -29,6 +29,7 @@
     "check:bottom-nav": "npx --yes tsx scripts/check-bottom-nav.ts",
     "check:nav-mode": "npx --yes tsx scripts/check-nav-mode.ts",
     "check:action-feedback": "npx --yes tsx scripts/check-action-feedback.ts",
+    "check:soft-image": "npx --yes tsx scripts/check-soft-image.ts",
     "check:lightbox-gallery": "npx --yes tsx scripts/check-lightbox-gallery.ts",
     "check:accounting-server": "npx --yes tsx scripts/check-accounting-server.ts",
     "check:bank-recon": "npx --yes tsx scripts/check-bank-recon.ts",
