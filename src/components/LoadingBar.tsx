@@ -1,19 +1,27 @@
 // Fine barre verte sous l'en-tête, visible tant qu'une action est en cours d'envoi au serveur.
 // Utilisé par : App.tsx.
 // Pour modifier : elle écoute db.onNetwork et reste 250 ms après la fin pour être vue.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { db } from '../db/store';
 
 // Fine barre sous l'en-tête : visible dès qu'une action envoyée au serveur est en cours
-export const LoadingBar: React.FC = () => {
+export const LoadingBar: React.FC<{ pageKey?: string }> = ({ pageKey }) => {
   const [busy, setBusy] = useState(0);
   const [show, setShow] = useState(false);
+  const [pageBusy, setPageBusy] = useState(false); // petit chargement à chaque changement de page (la page est déjà prête : on laisse juste le temps de voir l'animation)
+  const firstKey = useRef(pageKey);
+  useEffect(() => {
+    if (pageKey === firstKey.current) return;
+    firstKey.current = pageKey; setPageBusy(true);
+    const t = setTimeout(() => setPageBusy(false), 380);
+    return () => clearTimeout(t);
+  }, [pageKey]);
   useEffect(() => db.onNetwork(setBusy), []);
   useEffect(() => {
-    if (busy > 0) { setShow(true); return; }
+    if (busy > 0 || pageBusy) { setShow(true); return; }
     const t = setTimeout(() => setShow(false), 250); // reste un instant pour qu'on la voie, même si c'était très rapide
     return () => clearTimeout(t);
-  }, [busy]);
+  }, [busy, pageBusy]);
   if (!show) return null;
   return (
     <div role="progressbar" aria-label="Chargement" style={{ left: 'var(--sbw, 0px)' }} className="df-loadbar pointer-events-none fixed top-[64px] left-0 right-0 z-[25] h-[3px] overflow-hidden">

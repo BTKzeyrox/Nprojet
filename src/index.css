@@ -378,8 +378,8 @@ html.theme-light header.df-topbar {
 /* Fondu à chaque changement de page (opacité seulement : ne gêne pas les fenêtres plein écran) */
 @keyframes df-fade-a { from { opacity: 0; } to { opacity: 1; } }
 @keyframes df-fade-b { from { opacity: 0; } to { opacity: 1; } }
-.df-fade-a { animation: df-fade-a 0.18s ease-out both; }
-.df-fade-b { animation: df-fade-b 0.18s ease-out both; }
+.df-fade-a { animation: df-fade-a 0.3s ease-out both; }
+.df-fade-b { animation: df-fade-b 0.3s ease-out both; }
 
 /* Barre de chargement sous l'en-tête */
 @keyframes df-loadbar-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }

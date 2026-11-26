@@ -611,7 +611,7 @@ export default function App() {
       {/* Main Container with Sidebar offset */}
       <div style={{ paddingLeft: 'var(--sbw, 0px)' }} className="flex-1 flex flex-col min-h-screen">
         
-        <LoadingBar />
+        <LoadingBar pageKey={activeView} />
         <ConnectionBanner />
         {currentUser && <UnsentRecovery uid={currentUser.id} />}
         <OfflineCenter />
