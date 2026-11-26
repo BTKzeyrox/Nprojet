@@ -7,6 +7,7 @@ import { saveFeedScroll } from './utils/feedScroll';
 import { clearImageCache } from './utils/imageCache';
 import { preloadView } from './utils/pagePreload';
 import { chatCanBack, chatBack } from './utils/chatBack';
+import { bubbleMove, bubbleConfirm, bubbleCancel, bubbleHide } from './utils/backBubble';
 import { backTarget, stepOf, parseStep, swipeAxis, dragOffset, isBackSwipe, swipeBlocked, SWIPE_MS, SWIPE_SETTLE_MS, SWIPE_PREPARE_MAX_MS, type SwipeBack } from './utils/pageSwipe';
 import { isKnownView } from './utils/health/menu';
 import { useViewportWidth } from './utils/viewportWidth';
@@ -124,18 +125,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const resumeRef = useRef(readResume(db.getCurrentUser()?.id)); // reprise après rechargement (moins de 30 min) : même page, même position
   const [activeView, setActiveView] = useState<string>(() => { const r = resumeRef.current; setBootChat(r && r.view === 'chat' ? r.chat : ''); return r && (isKnownView(r.view) || r.view === 'feed' || r.view === 'grid' || r.view === 'chat') ? r.view : 'feed'; });
-  const [mobileSwipeX, setMobileSwipeX] = useState(0);
-  const [swipeAnim, setSwipeAnim] = useState(false); // vrai pendant l'animation seulement (jamais quand la page suit le doigt)
-  const mobileSwipeXRef = useRef(0);
   const mobileSwipe = useRef<{ x: number; y: number; axis: 'x' | 'y' | null; prepared?: boolean } | null>(null);
   const mobileSwipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeBusy = useRef(false);
-  const swipeSettling = useRef(false); // vrai de la sortie de la page jusqu'à la fin de l'entrée de la nouvelle (le nettoyage de l'effet ne le touche pas)
   const swipeBackFn = useRef<() => SwipeBack>(() => ({ kind: 'none' })); // remplie à chaque affichage (voir plus bas) : où mène « Retour »
   const swipeDo = useRef<(t: SwipeBack) => void>(() => {});
   const swipePreload = useRef<(t: SwipeBack) => Promise<void>>(() => Promise.resolve()); // prépare la page d'arrivée (voir utils/pagePreload.ts)
   const swipePrepared = useRef<Promise<void>>(Promise.resolve());
-  const [swipeOpacity, setSwipeOpacity] = useState(1); // la page d'arrivée entre en fondu
   const viewHistory = useRef<string[]>([]);
   const previousView = useRef(activeView);
   const skipViewHistory = useRef(false);
@@ -146,54 +142,39 @@ export default function App() {
       previousView.current = activeView;
     }
   }, [activeView]);
-  // Glissement « Retour » (téléphone) : droite = onglet d'avant, sinon page d'avant (règles dans utils/pageSwipe.ts)
+  // Glissement « Retour » (téléphone) : la page ne bouge pas, une bulle à flèche sort du bord gauche (utils/backBubble.ts) ; règles dans utils/pageSwipe.ts
   useEffect(() => {
-    const settle = () => { mobileSwipeXRef.current = 0; setMobileSwipeX(0); };
     const onStart = (e: TouchEvent) => {
-      if (swipeBusy.current || swipeSettling.current || window.innerWidth >= 768 || e.touches.length !== 1) return;
+      if (swipeBusy.current || window.innerWidth >= 768 || e.touches.length !== 1) return;
       if (e.target instanceof Element && swipeBlocked(e.target)) return;
       const t = e.touches[0];
-      setSwipeAnim(false);
       mobileSwipe.current = { x: t.clientX, y: t.clientY, axis: null };
     };
     const onMove = (e: TouchEvent) => {
       const s = mobileSwipe.current; if (!s) return;
-      if (e.touches.length !== 1) { mobileSwipe.current = null; settle(); return; }
+      if (e.touches.length !== 1) { mobileSwipe.current = null; bubbleHide(); return; }
       const t = e.touches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
       if (!s.axis) s.axis = swipeAxis(dx, dy);
-      if (s.axis === 'y') { mobileSwipe.current = null; settle(); return; }
+      if (s.axis === 'y') { mobileSwipe.current = null; bubbleHide(); return; }
       if (s.axis !== 'x') return;
-      if (!s.prepared) { s.prepared = true; const tg = swipeBackFn.current(); if (tg.kind !== 'none') swipePrepared.current = swipePreload.current(tg); } // dès que le doigt glisse : la page d'arrivée se prépare en secret
-      const x = dragOffset(dx, swipeBackFn.current().kind !== 'none', window.innerWidth);
-      mobileSwipeXRef.current = x; setMobileSwipeX(x);
+      const tg = swipeBackFn.current();
+      if (!s.prepared) { s.prepared = true; if (tg.kind !== 'none') swipePrepared.current = swipePreload.current(tg); } // dès que le doigt glisse : la page d'arrivée se prépare en secret
+      bubbleMove(dx, tg.kind !== 'none', t.clientY);
     };
     const onEnd = (e: TouchEvent) => {
       const s = mobileSwipe.current; mobileSwipe.current = null;
-      if (!s || s.axis !== 'x') return;
+      if (!s || s.axis !== 'x') { bubbleHide(); return; }
       const target = swipeBackFn.current();
       const t = e.changedTouches[0];
-      const dx = t ? t.clientX - s.x : mobileSwipeXRef.current;
-      if (!isBackSwipe(dx, target.kind !== 'none')) { setSwipeAnim(true); settle(); return; }
+      const dx = t ? t.clientX - s.x : 0;
+      if (e.type === 'touchcancel' || !isBackSwipe(dx, target.kind !== 'none')) { bubbleCancel(); return; }
       swipeBusy.current = true;
-      const leave = () => {
-        swipeSettling.current = true;
-        setSwipeAnim(true);
-        mobileSwipeXRef.current = window.innerWidth; setMobileSwipeX(window.innerWidth); // la page sort à droite
-        mobileSwipeTimer.current = setTimeout(() => {
-          setSwipeAnim(false);
-          setSwipeOpacity(0);
-          mobileSwipeXRef.current = -window.innerWidth * 0.3; setMobileSwipeX(-window.innerWidth * 0.3); // la page d'avant se monte hors de vue, invisible
-          swipeDo.current(target);
-          // on laisse la page d'arrivée se dessiner (2 images + un court instant), PUIS elle entre en glissant et en fondu : rien n'apparaît d'un coup
-          // (minuteries simples : l'effet se relance quand la page change et ne doit pas les couper en route)
-          requestAnimationFrame(() => requestAnimationFrame(() => { setTimeout(() => {
-            setSwipeAnim(true); setSwipeOpacity(1); settle();
-            setTimeout(() => { swipeBusy.current = false; swipeSettling.current = false; setSwipeAnim(false); }, SWIPE_MS + 20);
-          }, SWIPE_SETTLE_MS); }));
-        }, SWIPE_MS);
-      };
-      // la page d'arrivée est préparée AVANT que l'actuelle ne sorte (au plus 1,5 s : si c'est lent, on y va quand même)
-      void Promise.race([swipePrepared.current, new Promise<void>(r => setTimeout(r, SWIPE_PREPARE_MAX_MS))]).then(leave);
+      bubbleConfirm();
+      // la page d'arrivée est préparée AVANT d'y aller (au plus 1,5 s : si c'est lent, on y va quand même) ; elle entre avec le fondu habituel des pages
+      void Promise.race([swipePrepared.current, new Promise<void>(r => setTimeout(r, SWIPE_PREPARE_MAX_MS))]).then(() => {
+        swipeDo.current(target);
+        mobileSwipeTimer.current = setTimeout(() => { swipeBusy.current = false; }, SWIPE_SETTLE_MS + SWIPE_MS);
+      });
     };
     window.addEventListener('touchstart', onStart, { passive: true });
     window.addEventListener('touchmove', onMove, { passive: true });
@@ -201,8 +182,7 @@ export default function App() {
     window.addEventListener('touchcancel', onEnd);
     return () => {
       window.removeEventListener('touchstart', onStart); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); window.removeEventListener('touchcancel', onEnd);
-      if (mobileSwipeTimer.current) clearTimeout(mobileSwipeTimer.current);
-      swipeBusy.current = false;
+      bubbleHide();
     };
   }, [activeView]);
   const [focusOperatorId, setFocusOperatorId] = useState<string | null>(null); // opérateur ouvert depuis la recherche
@@ -656,7 +636,7 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         {showTabs && activeView === 'chat' && tabsRow}
-        <main style={{ ...(activeView === 'chat' ? { top: `calc(var(--hdr, 65px) + ${showTabs ? MENU_TABS_H : 0}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - var(--hdr, 65px) - ${showTabs ? MENU_TABS_H : 0}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : {}), ...(mobileSwipeX ? { transform: `translate3d(${mobileSwipeX}px, 0, 0)`, opacity: swipeOpacity < 1 ? swipeOpacity : undefined, transition: swipeAnim ? `transform ${SWIPE_MS}ms cubic-bezier(.22,.8,.3,1), opacity ${SWIPE_MS}ms ease-out` : 'none' } : {}) }} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
+        <main style={{ ...(activeView === 'chat' ? { top: `calc(var(--hdr, 65px) + ${showTabs ? MENU_TABS_H : 0}px + var(--vvt, 0px))`, height: `calc(var(--vvh, 100dvh) - var(--hdr, 65px) - ${showTabs ? MENU_TABS_H : 0}px - var(--bnh, 0px))`, left: 'var(--sbw, 0px)' } : {}) }} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 pt-3 sm:p-3 sm:pt-4 lg:p-4 lg:pt-5 max-w-none w-full mx-auto'}>
           {showTabs && activeView !== 'chat' && tabsRow}
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView + (activeView === 'stats' ? getStatsTab() : '')}>

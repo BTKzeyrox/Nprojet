@@ -623,6 +623,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `auditRules.ts` | Journal d'audit (M7.2) : règles pures, sans écran ni serveur. Le serveur (bloc AUDIT de df-api) a la même copie ; `npm run check:audit` compare les deux. |
 | `autoReport.ts` | Rapport automatique (module 15, M15.5). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:auto-report`. |
 | `avatarColor.ts` | Couleur d'une personne tirée de sa photo de profil (sinon de son nom) ; lit l'image dans le navigateur, aucun serveur. |
+| `backBubble.ts` | Bulle de « Retour » (comme le geste des Redmi / d'Android) : la page ne bouge pas ; une bulle à flèche sort du bord gauche, suit le doigt de haut en bas, |
 | `backupExcel.ts` | Sauvegarde Excel des données du store (une feuille par thème), téléchargée par le navigateur ; aucun mot de passe exporté. |
 | `bankRecon.ts` | Rapprochement bancaire et Mobile Money (module 14, M14.7) : règles pures, sans écran, sans serveur, sans table. Contrôlé par `npm run check:bank-recon`. |
 | `bottomNavItems.ts` | Les pages de la barre du bas (téléphone) selon le rôle. Utilisé par : components/BottomNav.tsx. Contrôlé par scripts/check-bottom-nav.ts. |

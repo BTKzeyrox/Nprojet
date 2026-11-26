@@ -1254,3 +1254,10 @@ html[data-kb="1"] { --bnh: 0px !important; }
 .df-img-loading { background: rgba(148, 163, 184, 0.22); color: transparent; animation: df-breathe 1.4s ease-in-out infinite; }
 .df-img-in { animation: df-img-in 0.2s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .df-img-loading { animation: none; } .df-img-in { animation: none; } }
+
+/* Bulle de « Retour » par glissement (voir utils/backBubble.ts) : la page ne bouge pas, seule la bulle sort du bord gauche */
+.df-back-bubble { position: fixed; left: 0; top: 0; width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.9); color: #fff; opacity: 0; pointer-events: none; z-index: 2147483000; transform: translate3d(-44px, 0, 0); will-change: transform, opacity; }
+.df-back-bubble[data-shown] { opacity: 1; }
+.df-back-bubble[data-armed] { background: #059669; }
+.df-back-bubble[data-anim] { transition: transform 0.18s ease-out, opacity 0.18s ease-out; }
+@media (prefers-reduced-motion: reduce) { .df-back-bubble[data-anim] { transition: none; } }

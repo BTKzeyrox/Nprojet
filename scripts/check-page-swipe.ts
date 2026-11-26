@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { loaderKey, LOADER_KEYS } from '../src/utils/pagePreload';
 import { ADMIN_GROUPS } from '../src/utils/menuGroups';
+import { BUBBLE_SIZE, bubbleGeometry } from '../src/utils/backBubble';
 import { backTarget, stepOf, parseStep, swipeAxis, dragOffset, isBackSwipe, SWIPE_MIN_PX, SWIPE_LOCK_PX, SWIPE_BLOCK_SELECTOR } from '../src/utils/pageSwipe';
 let fails = 0;
 const ok = (c: boolean, m: string) => { if (!c) { fails++; console.log('ECHEC', m); } else console.log('OK   ', m); };
@@ -29,7 +30,8 @@ ok(isBackSwipe(SWIPE_MIN_PX, true) && !isBackSwipe(SWIPE_MIN_PX - 1, true) && !i
 ok(/input/.test(SWIPE_BLOCK_SELECTOR) && /textarea/.test(SWIPE_BLOCK_SELECTOR) && /data-lightbox/.test(SWIPE_BLOCK_SELECTOR) && /data-no-page-swipe/.test(SWIPE_BLOCK_SELECTOR) && !/button|\ba\b/.test(SWIPE_BLOCK_SELECTOR), 'bloqué sur les champs, l\'image ouverte et les zones marquées ; PAS sur les boutons ni les cartes');
 const app = readFileSync('src/App.tsx', 'utf8');
 ok(/swipeBackFn\.current = \(\) => backTarget\(/.test(app) && /swipeDo\.current = t =>/.test(app), 'App.tsx : le retour calcule sa cible avec backTarget à chaque affichage');
-ok(/transition: swipeAnim \?/.test(app) && /'none'/.test(app.slice(app.indexOf('transition: swipeAnim ?'), app.indexOf('transition: swipeAnim ?') + 160)), 'la page suit le doigt SANS animation (animation seulement à la fin)');
+ok(!/mobileSwipeX|swipeAnim|swipeOpacity|swipeSettling/.test(app), 'la page ne bouge plus du tout pendant le glissement (plus de décalage ni de transformation)');
+ok(/bubbleMove\(dx, tg\.kind !== 'none', t\.clientY\)/.test(app) && /bubbleConfirm\(\)/.test(app) && /bubbleCancel\(\)/.test(app), 'la bulle suit le doigt, se referme à la validation, rentre à l\'annulation');
 ok(/if \(t\.view !== previousView\.current\) skipViewHistory\.current = true; viewHistory\.current\.pop\(\)/.test(app), 'un retour n\'est jamais ajouté à la mémoire des pages (sinon le prochain retour reviendrait ici)');
 ok(/window\.innerWidth >= 768/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)) && !/activeView === 'chat'/.test(app.slice(app.indexOf('const onStart'), app.indexOf('const onStart') + 300)), 'le glissement est actif sur téléphone, y compris dans le chat ; jamais sur ordinateur');
 const cv = readFileSync('src/components/ChatView.tsx', 'utf8');
@@ -43,9 +45,15 @@ ok([...views].every(v => { const k = loaderKey(v, 'admin'); return k !== null &&
 ok(['admin', 'employee', 'accountant', 'team_lead'].every(r => ['feed', 'chat', 'settings', 'calendar', 'stats', 'x'].every(v => { const k = loaderKey(v, r); return k === null || LOADER_KEYS.includes(k); })), 'jamais de clé inconnue, pour aucun rôle');
 const appSrc = readFileSync('src/App.tsx', 'utf8');
 ok(/if \(!s\.prepared\) \{[^}]*swipePrepared\.current = swipePreload\.current\(tg\)/.test(appSrc), 'la page d\'arrivée se prépare dès que le doigt commence à glisser');
-ok(/Promise\.race\(\[swipePrepared\.current, new Promise<void>\(r => setTimeout\(r, SWIPE_PREPARE_MAX_MS\)\)\]\)\.then\(leave\)/.test(appSrc), 'la page actuelle ne sort qu\'une fois la suivante prête (1,5 s au plus)');
-ok(/setSwipeOpacity\(0\);[\s\S]*?swipeDo\.current\(target\);[\s\S]*?setSwipeOpacity\(1\)[\s\S]*?SWIPE_SETTLE_MS\)/.test(appSrc), 'la page d\'arrivée se monte invisible, se dessine, puis entre en fondu');
-ok(/swipeSettling\.current = true;/.test(appSrc) && /swipeSettling\.current = false;/.test(appSrc) && /swipeSettling\.current \|\|/.test(appSrc), 'aucun nouveau glissement pendant l\'entrée de la page');
-ok(!/mobileSwipeTimer\.current = setTimeout\(\(\) => \{\s*\n\s*setSwipeAnim\(true\); setSwipeOpacity/.test(appSrc), 'les minuteries d\'entrée ne sont pas coupées quand la page change');
+ok(/Promise\.race\(\[swipePrepared\.current, new Promise<void>\(r => setTimeout\(r, SWIPE_PREPARE_MAX_MS\)\)\]\)\.then\(\(\) => \{\s*swipeDo\.current\(target\)/.test(appSrc), 'on change de page une fois la suivante prête (1,5 s au plus)');
+{ const g0 = bubbleGeometry(0, true, 300, 800), g1 = bubbleGeometry(SWIPE_MIN_PX, true, 300, 800), gx = bubbleGeometry(500, true, 300, 800), gn = bubbleGeometry(SWIPE_MIN_PX, false, 300, 800), gy = bubbleGeometry(50, true, 5, 800);
+  ok(g0.x === -BUBBLE_SIZE && !g0.armed, 'bulle : cachée à gauche au départ');
+  ok(g1.armed && g1.x > g0.x && g1.scale > g0.scale, 'bulle : sortie, plus grosse et validée à la distance du retour');
+  ok(gx.x <= 56 - BUBBLE_SIZE && gx.scale <= 1.001, 'bulle : ne sort pas plus que prévu, ne grossit pas sans fin');
+  ok(!gn.armed && gn.x <= 18 - BUBBLE_SIZE + 0.001, 'bulle : sans page d\'avant, jamais validée et montre juste le bout');
+  ok(gy.y >= 0 && bubbleGeometry(50, true, 9999, 800).y + BUBBLE_SIZE <= 800, 'bulle : reste dans l\'écran en haut et en bas'); }
+const css = readFileSync('src/index.css', 'utf8');
+ok(/\.df-back-bubble\s*\{[^}]*position:\s*fixed/.test(css) && /\.df-back-bubble\[data-armed\]/.test(css) && /prefers-reduced-motion[\s\S]*df-back-bubble/.test(css), 'bulle : style fixe, couleur validée, mouvement réduit respecté');
+ok(/swipeBusy\.current = true;[\s\S]*?SWIPE_SETTLE_MS \+ SWIPE_MS/.test(appSrc) && /swipeBusy\.current \|\|/.test(appSrc), 'aucun nouveau glissement pendant le changement de page');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
