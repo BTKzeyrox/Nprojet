@@ -54,7 +54,7 @@ export const StoragePage: React.FC = () => {
     <button type="button" role="tab" aria-selected={tab === id} onClick={() => open(id)} className={`flex-1 min-h-[44px] rounded-lg text-xs sm:text-sm font-semibold border px-1.5 sm:px-3 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-300'}`}>{t(fr, en)}</button>
   );
   return (
-    <div className="space-y-3 max-w-3xl mx-auto" {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-3xl lg:max-w-none lg:px-4 mx-auto" {...(l === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-2">
         <div>
           <h1 className="text-base sm:text-lg font-bold text-white">{t('Stockage', 'Storage')} · {current.name}</h1>

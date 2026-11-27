@@ -41,7 +41,7 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
   const u = db.getUsers().find(x => x.id === userId);
   if (!u) {
     return (
-      <div className="max-w-3xl mx-auto p-3 space-y-3">
+      <div className="max-w-3xl lg:max-w-none lg:px-4 mx-auto p-3 space-y-3">
         <button onClick={onBack} className="text-sm text-emerald-400 flex items-center gap-1.5 cursor-pointer"><ArrowLeft className="w-4 h-4" />Retour</button>
         <div className="text-slate-300 text-sm">Opérateur introuvable.</div>
       </div>
@@ -60,7 +60,7 @@ export const OperatorPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV }
   const link = 'flex items-center gap-2.5 p-3 bg-[#141e2a] border border-slate-700 hover:border-emerald-500 text-left text-sm text-slate-100 cursor-pointer';
 
   return (
-    <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-3xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       <button onClick={onBack} className="text-sm text-emerald-400 flex items-center gap-1.5 cursor-pointer"><ArrowLeft className="w-4 h-4" />Retour</button>
 
       <div className={`${card} flex items-center gap-3`}>

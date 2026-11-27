@@ -76,7 +76,7 @@ export const HistoryPage: React.FC<{ initialOperatorId?: string }> = ({ initialO
   const filtered = q || kind !== 'all' || status !== 'all' || operator !== 'all' || period !== 'all';
 
   return (
-    <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-4xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-tactical font-black text-white text-base sm:text-lg">Historique</h2>

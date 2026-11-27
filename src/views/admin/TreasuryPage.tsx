@@ -27,7 +27,7 @@ export const TreasuryPage: React.FC = () => {
   const since = cashSinceStart(db.getCashNet(), today);
   const nav = 'min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 bg-slate-900/60 text-slate-200 flex items-center justify-center disabled:opacity-40 cursor-pointer';
   return (
-    <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-3xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       <div className="flex items-center gap-2.5">
         <Landmark className="w-6 h-6 text-emerald-500 shrink-0" />
         <h2 className="font-tactical font-black text-lg text-white">{l === 'en' ? 'Treasury' : 'Trésorerie'}</h2>

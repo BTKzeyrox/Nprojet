@@ -25,7 +25,7 @@ export const HrPage: React.FC<{ currentUser: User; initialTab?: HrTab }> = ({ cu
     <button type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-semibold border px-3 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-200'}`}>{t(fr, en)}</button>
   );
   return (
-    <div className="space-y-3 max-w-3xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-3xl lg:max-w-none lg:px-4 mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className={card}>
         <h1 className="text-base sm:text-lg font-bold text-white">{isAdmin ? t('Ressources humaines', 'Human resources') : t('Mon dossier et mes congés', 'My file and my leave')}</h1>
         <p className="text-[11px] text-slate-400">{isAdmin ? t('Dossiers des salariés et demandes de congé.', 'Employee files and leave requests.') : t('Ton dossier (lecture seule) et tes demandes de congé.', 'Your file (read only) and your leave requests.')}</p>

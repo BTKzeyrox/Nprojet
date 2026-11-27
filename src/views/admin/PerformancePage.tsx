@@ -60,7 +60,7 @@ export const PerformancePage: React.FC = () => {
   const scoresOn = badgeAccess().enabled;
 
   return (
-    <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-4xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       <div role="tablist" className="flex gap-1.5">
         {tabBtn('table', t('Tableau', 'Table'))}
         {tabBtn('levels', t('Niveaux', 'Levels'))}

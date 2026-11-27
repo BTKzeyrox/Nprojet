@@ -54,7 +54,7 @@ export const NotificationsPage: React.FC<{ currentUser: User; onNavigate: (view:
   const text = L ? 'text-slate-900' : 'text-white';
   const sub = L ? 'text-slate-500' : 'text-slate-400';
   return (
-    <section className="max-w-5xl mx-auto space-y-4" data-testid="notifications-page">
+    <section className="max-w-5xl lg:max-w-none lg:px-4 mx-auto space-y-4" data-testid="notifications-page">
       <div className={`${card} rounded-2xl border p-4 sm:p-6 shadow-sm`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3"><span className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0"><Bell className="w-6 h-6" /></span><div><h1 className={`text-xl sm:text-2xl font-bold ${text}`}>{t('Centre de notifications', 'Notification center')}</h1><p className={`text-sm mt-1 ${sub}`}>{t('Toutes les alertes importantes au même endroit, synchronisées avec la cloche et l’Assistant.', 'All important alerts in one place, synchronized with the bell and Assistant.')}</p></div></div>

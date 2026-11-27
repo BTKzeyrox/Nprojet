@@ -23,7 +23,7 @@ export const PurchasingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
     <button type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex-1 min-h-[44px] rounded-lg text-sm font-semibold border px-3 ${tab === id ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-900/60 border-slate-700 text-slate-200'}`}>{t(fr, en)}</button>
   );
   return (
-    <div className="space-y-3 max-w-3xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-3xl lg:max-w-none lg:px-4 mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4">
         <h1 className="text-base sm:text-lg font-bold text-white">{t('Achats', 'Purchasing')}</h1>
         <p className="text-[11px] text-slate-400">{t('Fournisseurs, bons de commande et inventaire du stock.', 'Suppliers, purchase orders and stock inventory.')}</p>

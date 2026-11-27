@@ -1268,3 +1268,8 @@ html[data-kb="1"] { --bnh: 0px !important; }
   .df-form-cols > *:not([class*="mb-"]):not([class*="mt-"]) { margin-block: 0; }
   .df-form-cols > :last-child, .df-form-cols > [data-span-all] { grid-column: 1 / -1; }
 }
+
+/* Formulaire = contenu de page sur grand écran : plus de fenêtre par-dessus, il prend la place de la liste (téléphone : fenêtre comme avant) */
+@media (min-width: 1024px) {
+  .df-page-form { position: static !important; display: block !important; background: transparent !important; backdrop-filter: none !important; padding: 0 !important; overflow: visible !important; z-index: auto !important; }
+}

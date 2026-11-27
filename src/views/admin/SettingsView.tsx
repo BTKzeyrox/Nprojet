@@ -134,7 +134,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
 
   if (personalOnly) {
     return (
-      <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-4">
+      <div className="max-w-3xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-4">
         <div className="flex items-center gap-2.5">
           <Settings className="w-6 h-6 text-emerald-500 shrink-0" />
           <h2 className="font-tactical font-black text-lg text-white">Réglages</h2>
@@ -181,7 +181,7 @@ export const SettingsView: React.FC<{ personalOnly?: boolean }> = ({ personalOnl
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-1.5 sm:px-3 py-3 space-y-4">
+    <div className="max-w-3xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-4">
       <div className="flex items-center gap-2.5">
         <Settings className="w-6 h-6 text-emerald-500 shrink-0" />
         <div>

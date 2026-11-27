@@ -182,7 +182,7 @@ export const AccountingPage: React.FC<{ initialTab?: Tab }> = ({ initialTab }) =
   const vat = useMemo(() => vatByMonth(entries, range.from, range.to), [entries, range]);
 
   return (
-    <div className="space-y-3 max-w-5xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-5xl lg:max-w-none lg:px-4 mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className={card}>
         <h1 className="text-base sm:text-lg font-bold text-white">{t('Comptabilité', 'Accounting')}</h1>
         <p className="text-[11px] text-amber-300">{t('Plan comptable minimal de départ : à faire valider par un expert-comptable avant tout usage officiel.', 'Minimal starting chart of accounts: have an accountant validate it before any official use.')}</p>

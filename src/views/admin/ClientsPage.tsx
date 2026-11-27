@@ -118,7 +118,7 @@ export const ClientsPage: React.FC<{ initialOpen?: string }> = ({ initialOpen })
   const termsOf = (c: Client) => (c.payment_terms_days !== undefined ? { v: c.payment_terms_days, own: true } : { v: company.billing.payment_days, own: false });
 
   return (
-    <div className="space-y-3 max-w-3xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-3xl lg:max-w-none lg:px-4 mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className={card}>
         <div>
           <h1 className="text-base sm:text-lg font-bold text-white">{t('Clients', 'Clients')}</h1>

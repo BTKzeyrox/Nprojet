@@ -46,7 +46,7 @@ export const TeamValidations: React.FC<{ currentUser: User; onOpenProofLightbox:
   const proofs = (p: PostSession) => (p.status === 'pending_end' ? (p.end_proof_urls?.length ? p.end_proof_urls : p.end_proof_url ? [p.end_proof_url] : []) : (p.start_proof_urls?.length ? p.start_proof_urls : p.start_proof_url ? [p.start_proof_url] : []));
 
   return (
-    <section className="space-y-3 max-w-3xl mx-auto">
+    <section className="space-y-3 max-w-3xl lg:max-w-none lg:px-4 mx-auto">
       <h2 className="font-tactical font-bold text-white text-lg flex items-center gap-2"><Clock className="w-5 h-5 text-emerald-400" /> Validations de mon équipe</h2>
       <WorksheetShortcut />
       {!team && <div className="text-sm text-amber-300 bg-amber-950/40 border border-amber-800 rounded-xl p-3">Tu n'as pas encore d'équipe. Demande au responsable de t'en attribuer une : tu verras alors les sessions des opérateurs de la même équipe.</div>}

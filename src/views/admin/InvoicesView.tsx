@@ -186,7 +186,7 @@ export const InvoicesView: React.FC = () => {
   const closeBtn = (onClose: () => void) => <button type="button" aria-label={t('Fermer', 'Close')} onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 cursor-pointer"><X className="w-5 h-5" /></button>;
 
   return (
-    <div className="max-w-5xl mx-auto px-1.5 sm:px-3 py-3 space-y-4" data-testid="invoices-page">
+    <div className="max-w-5xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-4" data-testid="invoices-page">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-tactical font-black text-lg text-white flex items-center gap-2"><FilePlus2 className="w-6 h-6 text-emerald-500" />{t('Facturation', 'Invoicing')}</h2>
         <button type="button" onClick={() => { setError(''); setEditor(newEditor()); }} className={`${btn} bg-emerald-600 border-emerald-500 text-white`}><Plus className="w-4 h-4" />{t('Nouvelle facture', 'New invoice')}</button>

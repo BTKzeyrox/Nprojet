@@ -100,7 +100,7 @@ export const ErrorsLog: React.FC = () => {
   const kindCls = KIND_CLS(L);
 
   return (
-    <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-4xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       <div className={`${card} flex items-center gap-3 flex-wrap`}>
         <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${L ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/15 text-blue-400'}`}><Bug className="w-5 h-5" /></span>
         <div className="min-w-0 flex-1">

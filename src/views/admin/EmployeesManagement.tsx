@@ -147,6 +147,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
   // Lock background scroll during employee modals
   useLockBodyScroll(showAddModal || !!editingUser || !!reviewAdvanceModal);
+  useEffect(() => { if ((showAddModal || editingUser) && window.matchMedia?.('(min-width: 1024px)').matches) window.scrollTo({ top: 0 }); }, [showAddModal, editingUser]); // le formulaire remplace la liste : on remonte en haut
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -326,12 +327,13 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const sheetUser = sheetId ? users.find(u => u.id === sheetId) || null : null;
 
   const pendingAdvances = advances.filter(a => a.status === 'pending');
+  const formOpen = section === 'employees' && (showAddModal || !!editingUser); // grand écran : le formulaire prend la place de la liste (contenu de page, pas de fenêtre)
 
   return (
     <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       
       {section === 'employees' && (
-        <>
+        <div className={formOpen ? 'lg:hidden' : ''}>
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1722] p-4 sm:p-6 rounded-xl border border-slate-800 shadow-xl">
         <div className="flex items-center gap-3">
@@ -503,7 +505,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           onOpen={onOpenOperator && sheetUser.role === 'employee' ? view => { const id = sheetUser.id; setSheetId(null); onOpenOperator(id, view); } : undefined} />
       )}
 
-        </>
+        </div>
       )}
 
       {section === 'advances' && (
@@ -579,8 +581,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {/* EDIT USER MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-3xl rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
+        <div className="df-page-form fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-none rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6 lg:my-0">
+            <button type="button" onClick={() => setEditingUser(null)} className="hidden lg:inline-flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-bold min-h-[44px]" data-page-back>← Retour à la liste</button>
             <h3 className="font-tactical font-bold text-white text-base">
               Modifier Opérateur: {editingUser.name}
             </h3>
@@ -710,8 +713,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {/* ADD USER MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-3xl rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
+        <div className="df-page-form fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-none rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6 lg:my-0">
+            <button type="button" onClick={() => setShowAddModal(false)} className="hidden lg:inline-flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-bold min-h-[44px]" data-page-back>← Retour à la liste</button>
             <h3 className="font-tactical font-bold text-white text-base">
               Enregistrer un Nouvel Opérateur
             </h3>

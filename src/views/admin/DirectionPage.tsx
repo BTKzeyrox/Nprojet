@@ -45,7 +45,7 @@ export const DirectionPage: React.FC<{ onNavigate?: (view: string) => void }> = 
   const u = sum.alerts.urgent, w = sum.alerts.watch;
 
   return (
-    <div className="space-y-3 max-w-5xl mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
+    <div className="space-y-3 max-w-5xl lg:max-w-none lg:px-4 mx-auto" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>
       <div className={card}>
         <h1 className="text-base sm:text-lg font-bold text-white">{t('Direction', 'Management')}</h1>
         <p className="text-[11px] text-slate-400">{t('Le mois en cours en une page :', 'The current month on one page:')} {periodLabel('month', today, lang === 'en' ? 'en' : 'fr')}. {t('Aucun calcul nouveau : ce sont les chiffres des autres pages.', 'No new calculation: these are the figures of the other pages.')}</p>

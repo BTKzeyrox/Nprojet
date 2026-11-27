@@ -93,7 +93,7 @@ export const StatsPage: React.FC<{ onNavigate?: (view: string) => void; onOpenEm
   if (db.getCurrentUser()?.role !== 'admin') return null; // page réservée à l'admin
 
   return (
-    <div className="max-w-4xl mx-auto px-1.5 sm:px-3 py-3 space-y-3">
+    <div className="max-w-4xl lg:max-w-none lg:px-4 mx-auto px-1.5 sm:px-3 py-3 space-y-3">
       {/* Filtre : jour / semaine / mois / année, avec flèches */}
       <div className="bg-[#0f1722] border rounded-xl border-slate-700 p-3 sm:p-4 space-y-3">
         <div className="grid grid-cols-4 gap-1.5" role="tablist" aria-label="Période">
