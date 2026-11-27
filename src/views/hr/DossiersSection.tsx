@@ -111,6 +111,7 @@ export const DossiersSection: React.FC<{ ver: number }> = ({ ver }) => {
         {error && !editor && <p className="text-sm text-red-400">{error}</p>}
       </div>
       {rows.length === 0 && <div className={card}><p className="text-sm text-slate-400">{t('Aucun salarié.', 'No employee.')}</p></div>}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
       {rows.map(u => {
         const open = openId === u.id;
         const end = endOfTermIn(u.hr, today);
@@ -134,6 +135,7 @@ export const DossiersSection: React.FC<{ ver: number }> = ({ ver }) => {
           </div>
         );
       })}
+      </div>
       {editor && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
           <div className="w-full sm:max-w-xl max-h-[92vh] overflow-y-auto bg-[#0f1722] border border-slate-700 rounded-t-2xl sm:rounded-2xl p-4 space-y-3" {...(lang === 'en' ? { 'data-notranslate': '' } : {})}>

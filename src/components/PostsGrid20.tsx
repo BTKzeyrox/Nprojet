@@ -93,6 +93,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   // Admin : ajout d'une mission
   const [showAdd, setShowAdd] = useState(false);
   useLockBodyScroll(showAdd);
+  useEffect(() => { if (showAdd && window.matchMedia?.('(min-width: 1024px)').matches) window.scrollTo({ top: 0 }); }, [showAdd]);
   const [addName, setAddName] = useState('');
   const [addInitial, setAddInitial] = useState(0);
   const [addObjective, setAddObjective] = useState(0);
@@ -240,7 +241,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const isAdminView = currentUser.role === 'admin';
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-4 animate-in fade-in duration-300" {...(showAdd ? { 'data-form-open': '' } : {})}>
       {!isAdminView && settings.rules.trim() && (
         <div className="border-l-4 border-amber-500 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed whitespace-pre-line break-words text-slate-200">
           <strong className="block text-amber-400 font-mono uppercase mb-0.5">Règles</strong>
@@ -538,8 +539,8 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       })()}
 
       {showAdd && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/70 overflow-y-auto" onClick={() => setShowAdd(false)}>
-          <form onSubmit={fb('create', submitAdd)} onClick={e => e.stopPropagation()} className={`w-full max-w-md lg:max-w-3xl my-auto rounded-3xl border p-5 space-y-4 df-form-cols text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
+        <div className="df-page-form fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/70 overflow-y-auto" onClick={() => setShowAdd(false)}>
+          <form onSubmit={fb('create', submitAdd)} onClick={e => e.stopPropagation()} className={`w-full max-w-md lg:max-w-none lg:my-0 my-auto rounded-3xl border p-5 space-y-4 df-form-cols text-sm ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0f1b2d] border-slate-700 text-slate-100'}`}>
             <h3 data-span-all className="font-bold text-lg">Nouvelle mission</h3>
             {addError && <div data-span-all className="p-2.5 rounded-xl border border-red-500/60 bg-red-500/10 text-red-500 font-semibold text-xs">{addError}</div>}
             {templates.length > 0 && (

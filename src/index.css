@@ -1271,5 +1271,6 @@ html[data-kb="1"] { --bnh: 0px !important; }
 
 /* Formulaire = contenu de page sur grand écran : plus de fenêtre par-dessus, il prend la place de la liste (téléphone : fenêtre comme avant) */
 @media (min-width: 1024px) {
+  [data-form-open] > :not(.df-page-form):not(.fixed) { display: none !important; }
   .df-page-form { position: static !important; display: block !important; background: transparent !important; backdrop-filter: none !important; padding: 0 !important; overflow: visible !important; z-index: auto !important; }
 }

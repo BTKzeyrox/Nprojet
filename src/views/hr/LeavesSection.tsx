@@ -94,6 +94,7 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
         </div>
       )}
       {list.length === 0 && <div className={card}><p className="text-sm text-slate-400">{t('Aucune demande.', 'No request.')}</p></div>}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
       {list.map(x => {
         const started = x.start_date <= today;
         return (
@@ -126,6 +127,7 @@ export const LeavesSection: React.FC<{ ver: number; isAdmin: boolean; myId: stri
           </div>
         );
       })}
+      </div>
     </div>
   );
 };
