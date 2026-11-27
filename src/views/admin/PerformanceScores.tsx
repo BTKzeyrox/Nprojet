@@ -56,7 +56,7 @@ export const PerformanceScores: React.FC = () => {
   if (!res.team.size) return <div className="text-sm text-slate-400 font-mono p-4">{t('Aucun salarié actif pour l\'instant.', 'No active employee yet.')}</div>;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 df-cards-2">
       <div className={card}>
         <div className="flex items-center gap-2"><Trophy className="w-5 h-5 text-amber-400" aria-hidden="true" /><h3 className="font-tactical font-black text-white text-base">{t('Employé du mois', 'Employee of the month')}</h3></div>
         <ul className="space-y-1.5 text-xs">

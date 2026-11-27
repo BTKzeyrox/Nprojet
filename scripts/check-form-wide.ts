@@ -21,4 +21,5 @@ ok(/\.df-page-form \{ position: static !important/.test(css), 'style : le formul
   ok(pages.every(f => !/max-w-(2xl|3xl|4xl|5xl|6xl|7xl) mx-auto/.test(readFileSync(f, 'utf8'))), 'onglets et pages : plus de marges vides sur les côtés en grand écran (largeur pleine dès 1024 px)'); }
 ok(/\[data-form-open\] > :not\(\.df-page-form\):not\(\.fixed\)/.test(css), 'style : la page derrière est cachée, pas les messages flottants');
 ok(/xl:grid-cols-2/.test(readFileSync('src/views/hr/LeavesSection.tsx', 'utf8')) && /xl:grid-cols-2/.test(readFileSync('src/views/hr/DossiersSection.tsx', 'utf8')), 'RH : congés et dossiers en deux colonnes sur très grand écran');
+ok(/df-cards-2/.test(readFileSync('src/views/admin/PerformanceScores.tsx', 'utf8')) && /xl:grid-cols-2/.test(readFileSync('src/views/hr/ReviewsSection.tsx', 'utf8')) && /\.df-cards-2 \{ display: grid/.test(css), 'performance (scores) et évaluations : cartes côte à côte sur très grand écran');
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.'); process.exit(fails ? 1 : 0);

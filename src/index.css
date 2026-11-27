@@ -1274,3 +1274,9 @@ html[data-kb="1"] { --bnh: 0px !important; }
   [data-form-open] > :not(.df-page-form):not(.fixed) { display: none !important; }
   .df-page-form { position: static !important; display: block !important; background: transparent !important; backdrop-filter: none !important; padding: 0 !important; overflow: visible !important; z-index: auto !important; }
 }
+
+/* Cartes côte à côte sur très grand écran (au lieu d'une seule colonne étroite) */
+@media (min-width: 1280px) {
+  .df-cards-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: start; }
+  .df-cards-2 > * { margin-block: 0; }
+}

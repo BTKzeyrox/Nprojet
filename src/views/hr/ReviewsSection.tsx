@@ -114,6 +114,7 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
     <div className="space-y-3">
       {isAdmin && <button type="button" className={`${btn} bg-emerald-700 border-emerald-500 text-white`} onClick={start}><Plus className="w-4 h-4" />{t('Nouvelle fiche d\'évaluation', 'New review')}</button>}
       {reviews.length === 0 && <div className={card}><p className="text-sm text-slate-400">{isAdmin ? t('Aucune fiche pour l\'instant.', 'No review yet.') : t('Aucune évaluation partagée pour l\'instant.', 'No shared review yet.')}</p></div>}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
       {reviews.map(r => (
         <div key={r.id} className={card}>
           <div className="flex flex-wrap items-center gap-2">
@@ -134,6 +135,7 @@ export const ReviewsSection: React.FC<{ ver: number; isAdmin: boolean; myId: str
           </div>
         </div>
       ))}
+      </div>
       {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
     </div>
   );
