@@ -1255,7 +1255,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl lg:max-w-4xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
             <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button
@@ -1293,7 +1293,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
             )}
 
-            <form onSubmit={fb('send', handleSubmitStartForm)} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
+            <form onSubmit={fb('send', handleSubmitStartForm)} className="p-4 sm:p-6 space-y-4 df-form-cols text-xs font-mono overflow-y-auto flex-1">
               {/* READ-ONLY ACCOUNT INFORMATION (Managed exclusively by Admin) */}
               <div className="bg-[#141e2a] border border-slate-700/80 rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -1660,7 +1660,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto overscroll-contain"
         >
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-xl lg:max-w-4xl rounded-xl shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-65px-2.5rem-env(safe-area-inset-bottom))] flex flex-col animate-in fade-in zoom-in-95">
             <div className="rounded-xl bg-[#141f2d] px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <button
@@ -1706,7 +1706,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
             )}
 
-            <form onSubmit={fb('send', handleSubmitEndForm)} className="p-4 sm:p-6 space-y-4 text-xs font-mono overflow-y-auto flex-1">
+            <form onSubmit={fb('send', handleSubmitEndForm)} className="p-4 sm:p-6 space-y-4 df-form-cols text-xs font-mono overflow-y-auto flex-1">
               <div className="bg-[#121922] p-3 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
                   <span className="text-[11px] text-slate-500 uppercase block">Quantité de départ</span>

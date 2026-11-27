@@ -580,12 +580,12 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       {/* EDIT USER MODAL */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-3xl rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
             <h3 className="font-tactical font-bold text-white text-base">
               Modifier Opérateur: {editingUser.name}
             </h3>
 
-            <form onSubmit={fb('save', handleSaveEdit)} className="space-y-4">
+            <form onSubmit={fb('save', handleSaveEdit)} className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-8 items-start" data-form-wide>
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
@@ -611,7 +611,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               {editingUser && (editingUser as any).entry_only && (
-                <div data-give-account className="rounded-lg border border-emerald-700 p-2 space-y-2">
+                <div data-give-account className="lg:col-span-2 rounded-lg border border-emerald-700 p-2 space-y-2">
                   <p className="text-slate-300 uppercase">Donner un compte</p>
                   <p className="text-[11px] text-slate-400">Cet employé est suivi par saisie seulement. S'il a maintenant un téléphone, donne-lui un identifiant et un mot de passe : son historique et sa paie restent.</p>
                   <input data-give-username value={giveName} onChange={e => setGiveName(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Identifiant" className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white" />
@@ -636,7 +636,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>}
 
               {editingUser && editingUser.role === 'accountant' && (
-                <div className="rounded-lg border border-slate-700 p-2 space-y-1">
+                <div className="lg:col-span-2 rounded-lg border border-slate-700 p-2 space-y-1">
                   <p className="text-slate-300 uppercase">Sécurité en deux étapes</p>
                   <p className="text-[11px] text-slate-400">Téléphone perdu et plus de code de secours : remets la double étape à zéro. Il pourra la réactiver ensuite.</p>
                   <button type="button" className="min-h-[44px] px-3 rounded-lg border border-slate-600 text-slate-100 text-sm font-semibold cursor-pointer" onClick={async () => {
@@ -683,10 +683,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
               )}
 
-              <div className="text-[11px] text-slate-400" data-level-auto>Niveau : calculé automatiquement sur les missions validées du mois (seuils dans Réglages).</div>
+              <div className="lg:col-span-2 text-[11px] text-slate-400" data-level-auto>Niveau : calculé automatiquement sur les missions validées du mois (seuils dans Réglages).</div>
 
-              <OnlineOnlyNote kind="account" />
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="lg:col-span-2"><OnlineOnlyNote kind="account" /></div>
+              <div className="lg:col-span-2 pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
@@ -711,7 +711,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       {/* ADD USER MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
+          <div className="bg-[#0f1722] border border-slate-700 w-full max-w-md lg:max-w-3xl rounded-xl p-5 sm:p-6 space-y-4 text-xs font-mono shadow-2xl my-6">
             <h3 className="font-tactical font-bold text-white text-base">
               Enregistrer un Nouvel Opérateur
             </h3>
@@ -729,8 +729,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <span>{lang === 'en' ? 'Tracked by entry only' : 'Suivi par saisie seulement'}<span className="block text-[11px] text-slate-400 font-normal normal-case">{lang === 'en' ? 'No account, no password, no phone: never logs in. You or the team lead enter their work in the Daily sheet.' : "Sans compte, sans mot de passe, sans téléphone : il ne se connecte jamais. Toi ou le chef d'équipe saisissez son travail dans la Feuille du jour."}</span></span>
               </label>
               )}
-
-              {!newEntryOnly && (<>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 items-start">
+              {!newEntryOnly && (
+              <section className="space-y-4" data-form-section="compte">
+                <h4 className="hidden lg:block text-emerald-400 uppercase tracking-wide text-[11px] font-bold border-b border-slate-700 pb-1">Compte</h4>
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Identifiant Unique (Username)</label>
                 <input
@@ -757,8 +759,20 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 />
               </div>}
 
-              </>)}
-
+              <div>
+                <label className="block text-slate-300 uppercase mb-1">Rôle</label>
+                <select
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value as (typeof CREATABLE_ROLES)[number])}
+                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
+                >
+                  {CREATABLE_ROLES.map(r => <option key={r} value={r}>{ROLE_NAMES[r][0]}</option>)}
+                </select>
+              </div>
+              </section>
+              )}
+              <section className={`space-y-4 ${newEntryOnly ? 'lg:col-span-2' : ''}`} data-form-section="profil">
+                <h4 className="hidden lg:block text-emerald-400 uppercase tracking-wide text-[11px] font-bold border-b border-slate-700 pb-1">Profil</h4>
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
@@ -784,18 +798,6 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>
-
-              <div>
-                <label className="block text-slate-300 uppercase mb-1">Rôle</label>
-                <select
-                  value={newRole}
-                  onChange={e => setNewRole(e.target.value as (typeof CREATABLE_ROLES)[number])}
-                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
-                >
-                  {CREATABLE_ROLES.map(r => <option key={r} value={r}>{ROLE_NAMES[r][0]}</option>)}
-                </select>
-              </div>
-
               </>)}
 
               {(newRole === 'employee' || newRole === 'team_lead' || newEntryOnly) && (
@@ -820,6 +822,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 </select>
               </div>
               )}
+              </section>
+              </div>
 
               <OnlineOnlyNote kind="account" />
               <div className="pt-2 flex justify-end gap-2">

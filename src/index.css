@@ -1261,3 +1261,10 @@ html[data-kb="1"] { --bnh: 0px !important; }
 .df-back-bubble[data-armed] { background: #059669; }
 .df-back-bubble[data-anim] { transition: transform 0.18s ease-out, opacity 0.18s ease-out; }
 @media (prefers-reduced-motion: reduce) { .df-back-bubble[data-anim] { transition: none; } }
+
+/* Formulaires en fenêtre : sur grand écran, deux colonnes (ou sections) au lieu d'une longue colonne étroite. Le dernier bloc (boutons) et les blocs [data-span-all] prennent toute la largeur. */
+@media (min-width: 1024px) {
+  .df-form-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 2rem; align-items: start; }
+  .df-form-cols > *:not([class*="mb-"]):not([class*="mt-"]) { margin-block: 0; }
+  .df-form-cols > :last-child, .df-form-cols > [data-span-all] { grid-column: 1 / -1; }
+}

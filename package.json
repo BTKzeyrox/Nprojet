@@ -21,6 +21,7 @@
     "check:safe-image": "npx --yes tsx scripts/check-safe-image.ts",
     "check:paste-images": "npx --yes tsx scripts/check-paste-images.ts",
     "check:page-swipe": "npx --yes tsx scripts/check-page-swipe.ts",
+    "check:form-wide": "npx --yes tsx scripts/check-form-wide.ts",
     "check:page-zoom-lock": "npx --yes tsx scripts/check-page-zoom-lock.ts",
     "check:update-wait": "npx --yes tsx scripts/check-update-wait.ts",
     "check:copy-image": "npx --yes tsx scripts/check-copy-image.ts",
