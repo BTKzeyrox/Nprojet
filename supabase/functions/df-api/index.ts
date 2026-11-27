@@ -297,9 +297,13 @@ const weSelfEntered = (me: any, post: any): boolean => !!me && !!post && typeof 
 const NEWS_AUDIENCE_ROLES = ["employee", "team_lead", "accountant"];
 const newsIsMode = (v: unknown): boolean => v === "off" || v === "review" || v === "direct";
 const cleanNewsPolicy = (v: any): any => {
-  if (!v || typeof v !== "object") return { employee: "review", team_lead: "review", accountant: "review", allow_edit: false }; // réglage jamais touché : comme avant (les trois rôles proposent, le responsable valide)
+  if (!v || typeof v !== "object") return { employee: "review", team_lead: "review", accountant: "review", allow_edit: false, users: [], story: { all: false, roles: [], users: [] } }; // réglage jamais touché : comme avant (les trois rôles proposent, le responsable valide)
   const o = v;
-  return { employee: newsIsMode(o.employee) ? o.employee : "off", team_lead: newsIsMode(o.team_lead) ? o.team_lead : "off", accountant: newsIsMode(o.accountant) ? o.accountant : "off", allow_edit: o.allow_edit === true };
+  return { employee: newsIsMode(o.employee) ? o.employee : "off", team_lead: newsIsMode(o.team_lead) ? o.team_lead : "off", accountant: newsIsMode(o.accountant) ? o.accountant : "off", allow_edit: o.allow_edit === true, users: cleanAudienceUsers(o.users), story: cleanStoryWho(o.story) };
+};
+const cleanStoryWho = (v: any): any => {
+  const o = v && typeof v === "object" ? v : {};
+  return { all: o.all === true, roles: Array.isArray(o.roles) ? NEWS_AUDIENCE_ROLES.filter((r) => o.roles.includes(r)) : [], users: cleanAudienceUsers(o.users) };
 };
 const cleanAudience = (v: unknown): string[] | undefined => {
   if (!Array.isArray(v)) return undefined;
@@ -324,10 +328,19 @@ const pickAudience = (roles: unknown, users: unknown): any => {
   if (a.open) return {};
   return { ...(a.roles.length ? { audience: a.roles } : {}), ...(a.users.length ? { audience_users: a.users } : {}) };
 };
-const publishModeFor = (role: unknown, policy: unknown): string => {
+const publishModeFor = (role: unknown, policy: unknown, userId?: unknown): string => {
   if (role === "admin") return "direct";
   if (role !== "employee" && role !== "team_lead" && role !== "accountant") return "off";
-  return cleanNewsPolicy(policy)[role as string];
+  const p = cleanNewsPolicy(policy);
+  if (typeof userId === "string" && p.users.includes(userId)) return "direct";
+  return p[role as string];
+};
+const canPostStory = (me: any, policy: unknown): boolean => {
+  if (!me) return false;
+  if (me.role === "admin") return true;
+  if (me.role !== "employee" && me.role !== "team_lead" && me.role !== "accountant") return false;
+  const w = cleanNewsPolicy(policy).story;
+  return w.all || w.roles.includes(me.role) || (!!me.id && w.users.includes(me.id));
 };
 const canSeeNews = (post: any, me: any): boolean => {
   if (!post || !me) return false;
@@ -343,7 +356,7 @@ const canEditNews = (post: any, me: any, policy: unknown): boolean => {
   if (me.role === "admin") return true;
   if (post.author_id !== me.id) return false;
   if (post.status !== undefined && post.status !== "published") return false;
-  return cleanNewsPolicy(policy).allow_edit && publishModeFor(me.role, policy) !== "off";
+  return cleanNewsPolicy(policy).allow_edit && publishModeFor(me.role, policy, me.id) !== "off";
 };
 // ===== END NEWSACCESS =====
 
@@ -5559,7 +5572,7 @@ async function newsPolicy(): Promise<any> {
 }
 async function newsSubmit(req: any, res: any, me: any) {
   if (me.role === 'admin') return res.status(403).json({ error: 'Le responsable publie directement.' });
-  const mode = publishModeFor(me.role, await newsPolicy());
+  const mode = publishModeFor(me.role, await newsPolicy(), me.id);
   if (mode === 'off') return res.status(403).json({ error: 'Le responsable n’a pas autorisé ton rôle à publier.' });
   const b = req.body || {};
   const text = String(b.text || '').trim().slice(0, NEWS_MAX_TEXT);
@@ -5628,6 +5641,83 @@ async function newsDelete(req: any, res: any, me: any) {
   if (!canEditNews(row.data, me, await newsPolicy())) return res.status(403).json({ error: 'Tu ne peux pas supprimer cette publication.' });
   await dropFiles(newsFilesOf(row.data));
   await sb.from(T.news).delete().eq('id', id);
+  return res.json({ ok: true, deleted: id });
+}
+
+// ===== Stories (24 h) : table df_stories, hors de T (jamais écrite par la synchro). Photo ou texte sur fond de couleur. Public : mêmes règles que les publications (canSeeNews). Seuls l'auteur et le responsable voient QUI l'a vue. =====
+const STORIES = "df_stories";
+const STORY_TTL_MS = 24 * 3600 * 1000;
+const STORY_MAX_TEXT = 280;
+const STORY_MAX_ACTIVE = 10; // stories actives par personne
+const STORY_MAX_VIEWERS = 500;
+const STORY_BG = ['#0f766e', '#1d4ed8', '#7c3aed', '#be123c', '#c2410c', '#15803d', '#334155', '#a16207'];
+const storyView = (d: any, me: any): any => {
+  if (!d || typeof d !== 'object') return null;
+  if (new Date(d.expires_at).getTime() <= Date.now()) return null;
+  if (!canSeeNews({ author_id: d.author_id, audience: d.audience, audience_users: d.audience_users }, me)) return null;
+  const mine = d.author_id === me.id;
+  const viewers = d.viewers && typeof d.viewers === 'object' ? d.viewers : {};
+  return {
+    id: d.id, author_id: d.author_id, author_name: d.author_name, author_role: d.author_role, kind: d.kind, text: d.text || '', bg: d.bg, file: d.file || null,
+    created_at: d.created_at, expires_at: d.expires_at, seen: mine || !!viewers[me.id], audience: d.audience, audience_users: d.audience_users,
+    ...(mine || me.role === 'admin' ? { viewers: Object.entries(viewers).map(([id, v]: [string, any]) => ({ id, name: String(v?.name || ''), at: String(v?.at || '') })).sort((a, b) => (a.at < b.at ? 1 : -1)) } : {}),
+  };
+};
+async function storyPurge() {
+  const { data: old } = await sb.from(STORIES).select('id,data').lt('data->>expires_at', new Date().toISOString()).limit(100);
+  if (!old || !old.length) return;
+  await dropFiles(old.flatMap((r: any) => (r.data?.file ? [r.data.file] : [])));
+  await sb.from(STORIES).delete().in('id', old.map((r: any) => r.id));
+}
+async function storyList(_req: any, res: any, me: any) {
+  await storyPurge().catch((e: any) => console.error('story purge:', e));
+  const { data: rows } = await sb.from(STORIES).select('data').order('updated_at', { ascending: true }).limit(400);
+  const stories = (rows || []).map((r: any) => storyView(r.data, me)).filter((x: any) => !!x).sort((a: any, b: any) => (a.created_at < b.created_at ? -1 : 1));
+  return res.json({ ok: true, stories, can_post: canPostStory(me, await newsPolicy()) });
+}
+async function storyCreate(req: any, res: any, me: any) {
+  if (!canPostStory(me, await newsPolicy())) return res.status(403).json({ error: 'Le responsable ne t’a pas autorisé à publier une story.' });
+  const b = req.body || {};
+  const kind = b.kind === 'photo' ? 'photo' : 'text';
+  const text = String(b.text || '').trim().slice(0, STORY_MAX_TEXT);
+  let file: any = null;
+  if (kind === 'photo') {
+    file = cleanFiles(b.files, me.id).find(f => f.kind === 'image') || null;
+    if (!file) return res.status(400).json({ error: 'Ajoute une photo.' });
+  } else if (!text) return res.status(400).json({ error: 'Écris un texte.' });
+  const { count } = await sb.from(STORIES).select('id', { count: 'exact', head: true }).eq('data->>author_id', me.id).gt('data->>expires_at', new Date().toISOString());
+  if ((count || 0) >= STORY_MAX_ACTIVE) return res.status(400).json({ error: `Tu as déjà ${STORY_MAX_ACTIVE} stories actives. Attends qu’elles disparaissent ou supprime-en une.` });
+  const now = Date.now();
+  const id = `story-${now}-${randomBytes(3).toString('hex')}`;
+  const d = {
+    id, author_id: me.id, author_name: String(me.name || '').slice(0, 80), author_role: me.role, kind, text, bg: STORY_BG.includes(b.bg) ? b.bg : STORY_BG[0],
+    ...(file ? { file } : {}), ...pickAudience(b.audience, b.audience_users),
+    created_at: new Date(now).toISOString(), expires_at: new Date(now + STORY_TTL_MS).toISOString(), viewers: {},
+  };
+  await sb.from(STORIES).upsert({ id, data: d, updated_at: new Date().toISOString() });
+  return res.json({ ok: true, story: storyView(d, me) });
+}
+async function storySeen(req: any, res: any, me: any) {
+  const id = String((req.body || {}).id || '');
+  if (!id) return res.status(400).json({ error: 'Story inconnue.' });
+  const { data: row } = await sb.from(STORIES).select('data').eq('id', id).maybeSingle();
+  const d: any = row?.data;
+  if (!storyView(d, me)) return res.status(404).json({ error: 'Story introuvable.' });
+  const viewers = d.viewers && typeof d.viewers === 'object' ? d.viewers : {};
+  if (d.author_id !== me.id && !viewers[me.id] && Object.keys(viewers).length < STORY_MAX_VIEWERS) {
+    viewers[me.id] = { name: String(me.name || '').slice(0, 80), at: new Date().toISOString() };
+    await sb.from(STORIES).update({ data: { ...d, viewers } }).eq('id', id);
+  }
+  return res.json({ ok: true });
+}
+async function storyDelete(req: any, res: any, me: any) {
+  const id = String((req.body || {}).id || '');
+  const { data: row } = await sb.from(STORIES).select('data').eq('id', id).maybeSingle();
+  const d: any = row?.data;
+  if (!d) return res.status(404).json({ error: 'Story introuvable.' });
+  if (d.author_id !== me.id && me.role !== 'admin') return res.status(403).json({ error: 'Tu ne peux pas supprimer cette story.' });
+  if (d.file) await dropFiles([d.file]);
+  await sb.from(STORIES).delete().eq('id', id);
   return res.json({ ok: true, deleted: id });
 }
 
@@ -6707,6 +6797,10 @@ Deno.serve(async (request: Request) => {
     if (action === "news-withdraw" && req.method === "POST") return await newsWithdraw(req, res, me);
     if (action === "news-edit" && req.method === "POST") return await newsEdit(req, res, me);
     if (action === "news-delete" && req.method === "POST") return await newsDelete(req, res, me);
+    if (action === "story-list" && req.method === "GET") return await storyList(req, res, me);
+    if (action === "story-create" && req.method === "POST") return await storyCreate(req, res, me);
+    if (action === "story-seen" && req.method === "POST") return await storySeen(req, res, me);
+    if (action === "story-delete" && req.method === "POST") return await storyDelete(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "give-account" && req.method === "POST") return await giveAccount(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);

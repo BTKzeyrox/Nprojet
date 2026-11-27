@@ -10,14 +10,14 @@ const ok = (c: boolean, name: string) => eq(!!c, true, name);
 const src = readFileSync('supabase/functions/df-api/index.ts', 'utf8');
 const m = src.match(/\/\/ ===== BEGIN NEWSACCESS[^\n]*\n([\s\S]*?)\/\/ ===== END NEWSACCESS =====/);
 if (!m) throw new Error('bloc NEWSACCESS introuvable');
-new Function(transformSync(m[1] + '\n;globalThis.__n = { cleanNewsPolicy, cleanAudience, cleanAudienceUsers, newsAudience, pickAudience, publishModeFor, canSeeNews, canEditNews };', { loader: 'ts' }).code)();
+new Function(transformSync(m[1] + '\n;globalThis.__n = { cleanNewsPolicy, cleanAudience, cleanAudienceUsers, newsAudience, pickAudience, publishModeFor, canSeeNews, canEditNews, canPostStory, cleanStoryWho };', { loader: 'ts' }).code)();
 const S = (globalThis as any).__n;
 
 // ---- Règles de base ----
 const P = (o: object) => ({ ...N.DEFAULT_NEWS_POLICY, employee: 'off', team_lead: 'off', accountant: 'off', ...o });
-eq(N.cleanNewsPolicy(undefined), { employee: 'review', team_lead: 'review', accountant: 'review', allow_edit: false }, 'réglage jamais touché : comme avant (les trois proposent, le responsable valide), personne ne modifie');
-eq(N.cleanNewsPolicy({}), { employee: 'off', team_lead: 'off', accountant: 'off', allow_edit: false }, 'réglage enregistré vide : rien d\'autorisé');
-eq(N.cleanNewsPolicy({ employee: 'direct', team_lead: 'bizarre', accountant: 'review', allow_edit: 'oui' }), { employee: 'direct', team_lead: 'off', accountant: 'review', allow_edit: false }, 'réglage inconnu = off, « oui » n\'est pas vrai');
+eq(N.cleanNewsPolicy(undefined), { employee: 'review', team_lead: 'review', accountant: 'review', allow_edit: false, users: [], story: { all: false, roles: [], users: [] } }, 'réglage jamais touché : comme avant (les trois proposent, le responsable valide), personne ne modifie');
+eq(N.cleanNewsPolicy({}), { employee: 'off', team_lead: 'off', accountant: 'off', allow_edit: false, users: [], story: { all: false, roles: [], users: [] } }, 'réglage enregistré vide : rien d\'autorisé');
+eq(N.cleanNewsPolicy({ employee: 'direct', team_lead: 'bizarre', accountant: 'review', allow_edit: 'oui' }), { employee: 'direct', team_lead: 'off', accountant: 'review', allow_edit: false, users: [], story: { all: false, roles: [], users: [] } }, 'réglage inconnu = off, « oui » n\'est pas vrai');
 eq(N.cleanAudience(undefined), undefined, 'public absent = tous');
 eq(N.cleanAudience([]), undefined, 'public vide = tous');
 eq(N.cleanAudience(['employee', 'team_lead', 'accountant']), undefined, 'les trois rôles = tous');
@@ -79,7 +79,7 @@ total += same;
 // ---- Protections du serveur (le tri ne se fait pas seulement à l'écran) ----
 const has = (re: RegExp, name: string) => ok(re.test(src), name);
 has(/canSeeNews\(r\.data, me\)/, 'état : le tri par public se fait côté serveur pour chaque publication');
-has(/async function newsSubmit[\s\S]*?publishModeFor\(me\.role, await newsPolicy\(\)\)/, 'news-submit : le réglage décide (direct, validation ou refus)');
+has(/async function newsSubmit[\s\S]*?publishModeFor\(me\.role, await newsPolicy\(\), me\.id\)/, 'news-submit : le réglage décide (direct, validation ou refus)');
 has(/async function newsSubmit[\s\S]*?status = 'published'|status: mode === 'direct' \? 'published' : 'pending'/, 'news-submit : publication directe possible');
 has(/async function newsEdit[\s\S]*?canEditNews\(/, 'news-edit : le serveur vérifie le droit de modifier');
 has(/async function newsAction[\s\S]*?canSeeNews\(/, 'réactions, commentaires, partages : refusés hors public');
@@ -116,5 +116,23 @@ for (const au of [undefined, [], ['employee'], ['team_lead', 'accountant'], ['em
 }
 total += sameU;
 
+// ---- Personnes choisies et stories ----
+{
+  const withUsers = P({ employee: 'off', users: ['u1'] });
+  eq(N.publishModeFor('employee', withUsers, 'u1'), 'direct', 'personne choisie : publie directement même si son rôle ne peut pas');
+  eq(N.publishModeFor('employee', withUsers, 'u2'), 'off', 'autre personne du même rôle : réglage du rôle');
+  eq(N.publishModeFor('inconnu', withUsers, 'u1'), 'off', 'rôle inconnu : jamais, même nommé');
+  eq(N.canPostStory({ id: 'a', role: 'admin' }, undefined), true, 'story : le responsable peut toujours');
+  eq(N.canPostStory({ id: 'e1', role: 'employee' }, undefined), false, 'story : par défaut seul le responsable');
+  eq(N.canPostStory({ id: 'e1', role: 'employee' }, { story: { all: true } }), true, 'story : tout le monde');
+  eq(N.canPostStory({ id: 'e1', role: 'employee' }, { story: { roles: ['team_lead'] } }), false, 'story : un autre rôle choisi');
+  eq(N.canPostStory({ id: 'l1', role: 'team_lead' }, { story: { roles: ['team_lead'] } }), true, 'story : rôle choisi');
+  eq(N.canPostStory({ id: 'e1', role: 'employee' }, { story: { users: ['e1'] } }), true, 'story : personne choisie');
+  eq(N.canPostStory({ id: 'x', role: 'inconnu' }, { story: { all: true } }), false, 'story : rôle inconnu non');
+  for (const r of roles) for (const pol of [undefined, {}, { story: { all: true } }, { story: { roles: ['employee', 'accountant', 'x'], users: ['u1', 'u1', 3] } }, { users: ['u1', 'u2', 7] }]) for (const id of ['u1', 'zz', undefined]) {
+    if (S.canPostStory({ id, role: r }, pol) !== N.canPostStory({ id, role: r }, pol) || S.publishModeFor(r, pol, id) !== N.publishModeFor(r, pol, id) || JSON.stringify(S.cleanNewsPolicy(pol)) !== JSON.stringify(N.cleanNewsPolicy(pol))) { fails++; console.log('ECHEC story/personnes : site et serveur différents', r, JSON.stringify(pol)); }
+    total++;
+  }
+}
 console.log(fails ? `${fails} ÉCHEC(S) sur ${total}` : `${total}/${total} contrôles réussis`);
 process.exit(fails ? 1 : 0);

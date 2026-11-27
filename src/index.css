@@ -1280,3 +1280,6 @@ html[data-kb="1"] { --bnh: 0px !important; }
   .df-cards-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: start; }
   .df-cards-2 > * { margin-block: 0; }
 }
+
+/* Stories : barre de progression de la story en cours (5 s). Le minuteur réel est en JavaScript ; ceci n'est que le dessin. */
+@keyframes df-story-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }

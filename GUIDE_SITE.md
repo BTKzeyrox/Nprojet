@@ -537,7 +537,7 @@ Remarques : le dossier salarié n'a pas de table (champ `hr` dans `df_users`). L
 ### Les actions du serveur (AUTO)
 
 <!-- AUTO:actions -->
-`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `work-line-cancel`, `chat-mark`, `chat-ephemeral`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-vote`, `news-poll-close`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `create-user`, `give-account`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
+`login`, `forgot`, `access-request`, `signup`, `signup-info`, `report-error`, `push-due`, `recurring-due`, `reminders-due`, `report-due`, `state`, `attendance`, `errors`, `error-update`, `backups`, `backup-get`, `backup-import`, `backup-now`, `audit-list`, `report-list`, `report-open`, `report-freeze`, `post-decide`, `work-entry`, `work-line-cancel`, `chat-mark`, `chat-ephemeral`, `sync`, `prefs`, `prefs-set`, `reminders`, `reminder-save`, `reminder-delete`, `reminder-snooze`, `reminder-cfg`, `assistant-memory`, `assistant-memory-save`, `assistant-memory-delete`, `push-key`, `push-subscribe`, `push-prefs`, `push-unsubscribe`, `push-test`, `news-vote`, `news-poll-close`, `news-react`, `news-comment`, `news-comment-delete`, `news-comment-react`, `typing`, `news-share`, `news-submit`, `news-decision`, `news-withdraw`, `news-edit`, `news-delete`, `story-list`, `story-create`, `story-seen`, `story-delete`, `create-user`, `give-account`, `set-password`, `totp-status`, `totp-start`, `totp-enable`, `totp-disable`, `totp-new-backup`, `totp-reset`, `logout`, `reset-decision`, `access-decide`, `force-logout`, `signup-decision`, `invoice-issue`, `invoice-cancel`, `invoice-pay`, `invoice-void-payment`, `accounting-sync`, `accounting-post`, `accounting-reverse`, `accounting-close`, `payroll-period`, `payroll-close`, `payroll-reopen`, `payroll-pay`, `payroll-bonus`, `payroll-bonus-delete`, `payroll-mine`, `chat-read`, `queue`, `upload`, `profile-request`, `profile-decision`
 <!-- /AUTO:actions -->
 
 Les collections passent par `state` (lecture) et `sync` (écriture) ; les autres actions sont des opérations précises (connexion, validation, paie, facture, notifications…).
@@ -793,6 +793,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `statsNav.ts` | Onglet de la page Statistiques gardé d'une visite à l'autre (et réglable depuis l'accueil : un clic sur une alerte ouvre le bon onglet). |
 | `stock.ts` | Stock : règles pures (sans écran, sans serveur). Utilisées par l'onglet « Stock » et par le contrôle `npm run check:stock`. |
 | `storageNav.ts` | « Va exactement au bon endroit du Stockage » : une alerte ou une notification dit QUEL stockage, QUEL filtre et QUEL produit. |
+| `stories.ts` | Stories (24 h) des Actualités : type, couleurs de fond, durée d'une story et regroupement par auteur. |
 | `swRules.ts` | Règles du service worker « l'appli s'ouvre sans réseau » (module 13, M13.4). Pures, sans navigateur. |
 | `taskGuides.ts` | Guides par tâche (guide G3, 2026-11-08) : « Que veux-tu faire ? ». 2 à 3 étapes par tâche, une phrase par étape, mêmes bulles et même doigt que la visite guidée. |
 | `taskList.ts` | Liste de tâches dans une mission (module 6, M6.3). Règles pures : sans écran, sans serveur. Contrôlé par `npm run check:tasks`. |
@@ -940,6 +941,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `AdvanceHistory.tsx` | Historique des demandes d'avance de salaire avec recherche, filtres (statut, mois, opérateur, montant), totaux par statut et liste des demandes. |
 | `AiSettingsSection.tsx` | Section des Réglages pour activer ou non l'IA externe de l'assistant (Gemini), avec l'avertissement de confidentialité et le nombre de questions restantes. |
 | `AssistantChat.tsx` | Assistant « Admin IA Pro » (niveau A) DANS la messagerie : conversation épinglée, ADMIN SEULEMENT. |
+| `AudiencePicker.tsx` | Choix « Visible par » d'une publication ou d'une story : Tous (par défaut), des rôles entiers, et/ou des personnes choisies une à une (BTK 2026-11-09). Le responsable et l'auteur voient toujours le contenu. |
 | `AuditSection.tsx` | Journal d'audit des Réglages : qui a fait quoi et quand, avec filtres par action, texte et dates, regroupé par jour. |
 | `Avatar.tsx` | Photo de profil ronde, ou les initiales du nom sur fond bleu quand il n'y a pas de photo. |
 | `BackupsSection.tsx` | Section des Réglages pour les sauvegardes : liste des sauvegardes de nuit, sauvegarde immédiate, export, import d'un fichier et restauration protégée par code. |
@@ -1026,6 +1028,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `SignupSettings.tsx` | Réglages, section Inscriptions : le responsable ouvre ou ferme la création de compte. |
 | `SmartField.tsx` | Champ de saisie intelligent d'une colonne de tableau : dates, nombres, montants, téléphone, heure et suggestions de texte. |
 | `StatCard.tsx` | Carte de chiffre clé : libellé, valeur, unité, variation en pourcentage et mini-courbe. |
+| `Stories.tsx` | Stories (24 h) en haut des Actualités : rangée de ronds, lecteur plein écran, création (photo ou texte sur fond de couleur). |
 | `TaskChecklist.tsx` | Tâches d'une mission : barre de progression sur la carte, liste à cocher pour l'opérateur et éditeur de la liste. |
 | `ThemeLangControls.tsx` | Petit interrupteur soleil et lune pour le thème, et petite liste pour la langue, dans les Réglages. |
 | `ToastHost.tsx` | Petite notification arrondie en bas de l'écran, qui remplace aussi les fenêtres alert() du navigateur. |
@@ -1036,6 +1039,7 @@ Versions du serveur en ligne : voir `AI_STUDIO.md` (chaque déploiement note la 
 | `UnsentRecovery.tsx` | « À récupérer » + avertissement « pas de code » (BTK, 2026-11-12). Deux bandeaux, en haut de l'écran : |
 | `WatchSettingsSection.tsx` | Réglages, section Surveillance : seuils de la Santé du site et notifications, réglés sur cet appareil. |
 | `WelcomeAnimation.tsx` | Écran de bienvenue après la connexion : photo, « Bonjour » et barre de progression pendant environ 1,5 seconde. |
+| `WhoPicker.tsx` | Choix de « qui » dans les Réglages : tout le monde, des rôles entiers et/ou des personnes une à une. |
 | `WhyFigure.tsx` | Bouton « Pourquoi ce chiffre ? » qui ouvre une fenêtre avec la formule, la période, les composantes, les plus grosses lignes et les sources. |
 | `WorkModeCard.tsx` | Carte « Ma façon de travailler » : tableau préparé sur le site ou fichier Excel externe, mission par mission. |
 | `WorksheetShortcut.tsx` | Raccourci « Saisir la feuille du jour » (module 26) : visible sur le Tableau de bord du responsable et sur la page du chef d'équipe, seulement quand le module est ouvert. |
@@ -1118,6 +1122,7 @@ Un fichier nouveau ou changé de rôle met son en-tête à jour dans le même co
 | `npm run check:paste-images` | Coller une image (capture d'écran) avec Ctrl+V : prise comme un fichier choisi, sans gêner le collage de texte. Lancer : npm run check:paste-images |
 | `npm run check:page-swipe` | Glissement « Retour » (comme iOS) : droite = onglet d'avant, sinon page d'avant, sinon rien ; gauche ne fait rien. Lancer : npm run check:page-swipe |
 | `npm run check:form-wide` | Formulaires en fenêtre : sur grand écran, sections / colonnes (pas une longue colonne étroite comme sur mobile). Lancer : npm run check:form-wide |
+| `npm run check:stories` | Stories (24 h) : règles du site et du serveur, réglage « qui peut publier », écrans. Lancer : npm run check:stories |
 | `npm run check:page-zoom-lock` | Zoom de la page bloqué sur ordinateur (pincement, Ctrl + molette, Ctrl +/−/0), zoom des photos gardé. Lancer : npm run check:page-zoom-lock |
 | `npm run check:update-wait` | Mise à jour du site : un champ resté actif mais vide (après l'envoi d'un message) ne bloque plus la mise à jour ; la frappe récente, le texte non envoyé et les fenêtres la retardent encore. Lancer : npm run check:update-wait |
 | `npm run check:copy-image` | « Copier l'image » dans la visionneuse : mise au presse-papiers en PNG, sans télécharger. Lancer : npm run check:copy-image |

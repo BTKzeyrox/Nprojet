@@ -3,19 +3,28 @@ import type { UserRole } from '../types';
 
 export type NewsRole = 'employee' | 'team_lead' | 'accountant';
 export type PublishMode = 'off' | 'review' | 'direct';
-export interface NewsPolicy { employee: PublishMode; team_lead: PublishMode; accountant: PublishMode; allow_edit: boolean }
+/** Qui peut publier une story : tout le monde, des rôles entiers et/ou des personnes choisies (le responsable peut toujours). */
+export interface StoryWho { all: boolean; roles: NewsRole[]; users: string[] }
+/** `users` = personnes choisies qui publient directement, en plus du réglage par rôle. */
+export interface NewsPolicy { employee: PublishMode; team_lead: PublishMode; accountant: PublishMode; allow_edit: boolean; users: string[]; story: StoryWho }
 
 export const AUDIENCE_ROLES: NewsRole[] = ['employee', 'team_lead', 'accountant'];
 // Par défaut (réglage jamais touché) : comme avant, les trois rôles peuvent proposer une publication, le responsable la valide ; personne ne modifie une publication déjà publiée.
-export const DEFAULT_NEWS_POLICY: NewsPolicy = { employee: 'review', team_lead: 'review', accountant: 'review', allow_edit: false };
+export const DEFAULT_NEWS_POLICY: NewsPolicy = { employee: 'review', team_lead: 'review', accountant: 'review', allow_edit: false, users: [], story: { all: false, roles: [], users: [] } };
 
 const isMode = (v: unknown): v is PublishMode => v === 'off' || v === 'review' || v === 'direct';
 
 /** Réglage « Publications des équipes » : absent = valeurs par défaut ; une valeur inconnue dans un réglage enregistré = pas de publication ; la modification n'est autorisée que si `allow_edit` vaut vrai. */
 export function cleanNewsPolicy(v: unknown): NewsPolicy {
-  if (!v || typeof v !== 'object') return { ...DEFAULT_NEWS_POLICY };
+  if (!v || typeof v !== 'object') return { ...DEFAULT_NEWS_POLICY, users: [], story: { all: false, roles: [], users: [] } };
   const o = v as Record<string, unknown>;
-  return { employee: isMode(o.employee) ? o.employee : 'off', team_lead: isMode(o.team_lead) ? o.team_lead : 'off', accountant: isMode(o.accountant) ? o.accountant : 'off', allow_edit: o.allow_edit === true };
+  return { employee: isMode(o.employee) ? o.employee : 'off', team_lead: isMode(o.team_lead) ? o.team_lead : 'off', accountant: isMode(o.accountant) ? o.accountant : 'off', allow_edit: o.allow_edit === true, users: cleanAudienceUsers(o.users), story: cleanStoryWho(o.story) };
+}
+
+/** Réglage « Qui peut publier une story » : absent = seul le responsable. */
+export function cleanStoryWho(v: unknown): StoryWho {
+  const o = v && typeof v === 'object' ? v as Record<string, unknown> : {};
+  return { all: o.all === true, roles: Array.isArray(o.roles) ? AUDIENCE_ROLES.filter(r => (o.roles as unknown[]).includes(r)) : [], users: cleanAudienceUsers(o.users) };
 }
 
 /** Public d'une publication : liste de rôles, ou `undefined` = tout le monde (vide, inconnu ou les trois rôles = tout le monde). */
@@ -49,10 +58,21 @@ export function pickAudience(roles: unknown, users: unknown): { audience?: NewsR
 }
 
 /** Comment une personne publie : `direct` (responsable ou réglage), `review` (en attente de validation) ou `off` (pas de publication). */
-export function publishModeFor(role: unknown, policy: unknown): PublishMode {
+export function publishModeFor(role: unknown, policy: unknown, userId?: unknown): PublishMode {
   if (role === 'admin') return 'direct';
   if (role !== 'employee' && role !== 'team_lead' && role !== 'accountant') return 'off';
-  return cleanNewsPolicy(policy)[role];
+  const p = cleanNewsPolicy(policy);
+  if (typeof userId === 'string' && p.users.includes(userId)) return 'direct'; // personne choisie par le responsable
+  return p[role];
+}
+
+/** Peut-on publier une story ? Le responsable toujours ; les autres si le réglage dit « tout le monde », leur rôle ou leur nom. */
+export function canPostStory(me: { id?: string; role?: unknown } | null | undefined, policy: unknown): boolean {
+  if (!me) return false;
+  if (me.role === 'admin') return true;
+  if (me.role !== 'employee' && me.role !== 'team_lead' && me.role !== 'accountant') return false;
+  const w = cleanNewsPolicy(policy).story;
+  return w.all || w.roles.includes(me.role) || (!!me.id && w.users.includes(me.id));
 }
 
 /** Une personne peut-elle voir cette publication ? Le responsable voit tout ; l'auteur voit toujours la sienne (même en attente ou refusée). */
@@ -72,7 +92,7 @@ export function canEditNews(post: { author_id?: string; status?: string } | null
   if (me.role === 'admin') return true;
   if (post.author_id !== me.id) return false;
   if (post.status !== undefined && post.status !== 'published') return false;
-  return cleanNewsPolicy(policy).allow_edit && publishModeFor(me.role, policy) !== 'off';
+  return cleanNewsPolicy(policy).allow_edit && publishModeFor(me.role, policy, me.id) !== 'off';
 }
 
 const LABELS: Record<NewsRole, [string, string]> = { employee: ['Opérateurs', 'Operators'], team_lead: ['Chefs d\'équipe', 'Team leads'], accountant: ['Comptables', 'Accountants'] };

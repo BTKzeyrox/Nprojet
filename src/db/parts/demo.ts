@@ -71,7 +71,7 @@ export const demoMethods = defineMethods({
       }
       case 'news-submit': {
         if (!me) return fail('Connexion perdue.');
-        const mode = publishModeFor(me.role, this.getSettings().news_publish);
+        const mode = publishModeFor(me.role, this.getSettings().news_publish, me.id);
         if (mode === 'off') return fail('Le responsable n’a pas autorisé ton rôle à publier.');
         const aud = pickAudience(body.audience, body.audience_users);
         const n: NewsPost = {

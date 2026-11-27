@@ -30,6 +30,7 @@ import { demoMethods, type DemoMethods } from './parts/demo';
 import { financeMethods, type FinanceMethods } from './parts/finance';
 import { hrMethods, type HrMethods } from './parts/hr';
 import { newsMethods, type NewsMethods } from './parts/news';
+import { storiesMethods, type StoriesMethods } from './parts/stories';
 import { offlineMethods, type OfflineMethods } from './parts/offline';
 import { postsMethods, type PostsMethods } from './parts/posts';
 import { purchasingMethods, type PurchasingMethods } from './parts/purchasing';
@@ -819,8 +820,8 @@ export class AppStore {
 }
 
 // Ajoute les méthodes rangées dans db/parts/* à la classe (et à son type).
-export interface AppStore extends AccountsMethods, AdminToolsMethods, ChatMethods, ClientsMethods, DemoMethods, FinanceMethods, HrMethods, NewsMethods, OfflineMethods, PostsMethods, PurchasingMethods, SettingsMethods, SheetOutboxMethods, SheetsMethods, StockMethods {}
-Object.assign(AppStore.prototype, accountsMethods, adminToolsMethods, chatMethods, clientsMethods, demoMethods, financeMethods, hrMethods, newsMethods, offlineMethods, postsMethods, purchasingMethods, settingsMethods, sheetOutboxMethods, sheetsMethods, stockMethods);
+export interface AppStore extends AccountsMethods, AdminToolsMethods, ChatMethods, ClientsMethods, DemoMethods, FinanceMethods, HrMethods, NewsMethods, StoriesMethods, OfflineMethods, PostsMethods, PurchasingMethods, SettingsMethods, SheetOutboxMethods, SheetsMethods, StockMethods {}
+Object.assign(AppStore.prototype, accountsMethods, adminToolsMethods, chatMethods, clientsMethods, demoMethods, financeMethods, hrMethods, newsMethods, storiesMethods, offlineMethods, postsMethods, purchasingMethods, settingsMethods, sheetOutboxMethods, sheetsMethods, stockMethods);
 
 
 export const db = new AppStore();

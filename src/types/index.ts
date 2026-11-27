@@ -35,7 +35,7 @@ export interface PasswordResetRequest {
 export interface AppSettings {
   chat_ephemeral_all_ms?: number; // messages éphémères de la discussion générale (M28.4) ; écrit par la route chat-ephemeral seulement
   id: 'general';
-  news_publish?: { employee: 'off' | 'review' | 'direct'; team_lead: 'off' | 'review' | 'direct'; accountant: 'off' | 'review' | 'direct'; allow_edit: boolean }; // « Publications des équipes » : qui peut publier dans les Actualités (absent = seul le responsable)
+  news_publish?: { employee: 'off' | 'review' | 'direct'; team_lead: 'off' | 'review' | 'direct'; accountant: 'off' | 'review' | 'direct'; allow_edit: boolean; users?: string[]; story?: { all: boolean; roles: ('employee' | 'team_lead' | 'accountant')[]; users: string[] } }; // « Publications des équipes » : qui peut publier dans les Actualités (absent = seul le responsable)
   price_per_million: number; // Ar pour 1M de score (sert encore aux pénalités automatiques)
   price_per_mission: number; // Ar versés pour chaque mission validée (tarif fixe, quelle que soit la quantité)
   client_price_default_ar?: number; // Ar payés par le client pour une mission validée (prix par défaut, 0 = pas encore réglé)

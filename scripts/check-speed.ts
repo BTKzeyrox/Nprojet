@@ -82,7 +82,9 @@ const KNOWN = ['ConnectionBanner.tsx', 'AccessBanner.tsx', 'TourGuide.tsx', 'Top
   // Mode hors ligne (M13.6) : minuteurs LOCAUX (rafraîchir un compteur, une attente de code) ; aucun ne parle au serveur
   'OfflineCenter.tsx', 'OfflineCard.tsx', 'OfflinePin.tsx', 'useOfflineStatus.ts',
   // Statut en direct (calendrier global, messagerie, gestion des employés) : horloge LOCALE qui fait redessiner l'écran toutes les 15 s, rien vers le serveur
-  'useNow.ts'];
+  'useNow.ts',
+  // Stories (2026-11-27) : la rangée se recharge toutes les 60 s SEULEMENT si l'onglet est visible (une seule lecture légère story-list)
+  'Stories.tsx'];
 ok(loops.every(l => KNOWN.some(k => l.includes(k))), `minuteurs : seulement ceux déjà connus (${loops.length}) ; un nouveau minuteur fait échouer ce contrôle`);
 const timerCalls = loops.filter(l => /fetch|db\.|api\(|pull/.test(l.split(': ').slice(1).join(': ')));
 ok(timerCalls.length === 0 || timerCalls.every(l => l.includes('updateWatcher.ts') || l.includes('ConnectionBanner.tsx')), 'minuteurs : à part le vérificateur de version (2 min) et la bannière de connexion, aucun ne parle au serveur');
